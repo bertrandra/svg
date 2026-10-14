@@ -15,8 +15,10 @@ s'embarque aussi comme composant React dans un autre produit.
   (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…).
 - **Éditer en plein écran** comme dans un logiciel de dessin :
   - sélection au clic ou au cadre, Tout et Aucun, déplacement, coins pour redimensionner (Maj :
-    proportions), miroirs, rotations, alignements, empilement, dupliquer, masquer, verrouiller,
-    supprimer ;
+    proportions) ; une rangée contextuelle avec alignements, miroirs, rotations, empilement,
+    combiner, séparer, dupliquer, masquer, verrouiller, supprimer ;
+  - copier, couper, coller ; les couleurs courantes dans la barre ; une grille magnétique ; le zoom
+    sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+S, Ctrl+C/X/V, Ctrl+G, G, Z…) ;
   - outils de tracé : rectangle, ellipse, étoile, ligne, plume ;
   - points et poignées : glisser une ancre, tirer une poignée, ajouter un point sans changer la
     courbe, redresser ou courber un segment, retirer un point ;

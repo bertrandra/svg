@@ -18,6 +18,15 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   points, Entrée ou double-clic ferme, Retour arrière retire un point, Échap abandonne), avec le
   style courant (remplissage, contour, épaisseur) réglé dans l'inspecteur.
 - **Tout et Aucun** en tête des calques, pour tout sélectionner ou rien.
+- **Une barre d'outils étendue pour aller vite** : les deux couleurs courantes (remplissage, contour)
+  à portée de main, qui changent la sélection ou les formes à venir ; copier, couper, coller
+  (Ctrl+C, Ctrl+X, Ctrl+V) ; une grille magnétique (G) au pas lisible du plan, qui aimante les
+  tracés, les points, les poignées et les déplacements ; le zoom sur la sélection (Z) ; Ctrl+S
+  enregistre. Quand une sélection existe, une rangée contextuelle réunit alignements, miroirs,
+  rotations, empilement (Ctrl+] et Ctrl+[), **Combiner** (Ctrl+G : plusieurs formes en un seul
+  tracé, au style de la plus haute), **Séparer** (Ctrl+Maj+G : une forme en un tracé par
+  sous-chemin, pour recolorer les parties d'une silhouette de la bibliothèque), dupliquer, masquer,
+  verrouiller, supprimer.
 - **Convertir une image en SVG** (ADR-0002) : PNG, JPG, GIF ou WebP ramené à 1 024 px, fond détouré
   par propagation (tolérance réglable), puis vectorisé par vtracer embarqué en WASM et chargé à la
   demande (modes aplats, trait, fidèle ; trois grains), ou enveloppé tel quel. Le résultat se voit

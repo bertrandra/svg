@@ -10,10 +10,10 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ajouterForme, ajusterPlan, aligner, ancre, basculerSegment, boiteDe, boiteForme, couleursDuDessin, deplacer, deplacerAncre, deplacerPoignee,
-  depart, diviserSegment, dupliquer, ecrireChemin, ecrireDessin, ellipse, etoile, idsDeCouleur, inserer, lireDessin, modifier, ordonner, polygone,
-  rectangle, redimensionner, regrouper, remplacerCouleur, retirerPetites, retourner, seCroisent, statistiques, supprimer, supprimerAncre, tourner,
-  STYLE_DEFAUT, type Alignement, type Boite, type Commande, type DessinSvg, type Forme, type Ordre, type Reglage, type Style
+  aimanter, ajouterForme, ajusterPlan, aligner, ancre, basculerSegment, boiteDe, boiteForme, coller, combiner, couleursDuDessin, deplacer, deplacerAncre,
+  deplacerPoignee, depart, diviserSegment, dupliquer, ecrireChemin, ecrireDessin, ellipse, etoile, idsDeCouleur, inserer, lireDessin, modifier, ordonner,
+  pasGrille, polygone, rectangle, redimensionner, regrouper, remplacerCouleur, retirerPetites, retourner, seCroisent, separer, sousChemins, statistiques,
+  supprimer, supprimerAncre, tourner, STYLE_DEFAUT, type Alignement, type Boite, type Commande, type DessinSvg, type Forme, type Ordre, type Reglage, type Style
 } from '../engine/editionSvg.js';
 import { annuler, avancer, clore, historique, retablir, type Historique } from '../util/historique.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -48,7 +48,7 @@ type Point = readonly [number, number];
 interface Vue { zoom: number; x: number; y: number }
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
-  | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; cle: string }
+  | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string }
   | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string }
   | { type: 'cadre'; x0: number; y0: number; ajout: boolean }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
@@ -67,6 +67,7 @@ const ALIGNEMENTS: ReadonlyArray<readonly [Alignement, string, string]> = [
   ['haut', '⤒', 'Aligner en haut'], ['centreV', '↕', 'Centrer verticalement'], ['bas', '⤓', 'Aligner en bas']
 ];
 const ORDRES: ReadonlyArray<readonly [Ordre, string]> = [['premier', 'Premier plan'], ['avant', 'Avancer'], ['arriere', 'Reculer'], ['dernier', 'Arrière-plan']];
+const ORDRES_COURTS: ReadonlyArray<readonly [Ordre, string, string]> = [['premier', '⤒', 'Premier plan (Ctrl+Maj+])'], ['avant', '↑', 'Avancer (Ctrl+])'], ['arriere', '↓', 'Reculer (Ctrl+[)'], ['dernier', '⤓', 'Arrière-plan (Ctrl+Maj+[)']];
 
 const cacheChemins = new WeakMap<Forme, string>();
 function cheminDe(f: Forme): string {
@@ -151,6 +152,12 @@ interface Edition {
   bibliotheque: Bibliotheque | 'a-charger' | null;
   style: Style;
   trace: readonly Point[];
+  presse: readonly Forme[];
+  grille: boolean;
+  pas: number;
+  /** La valeur aimantee a la grille quand elle est active, telle quelle sinon. */
+  aimant: (v: number) => number;
+  poserGrille: (g: boolean) => void;
   choisir: (ids: string[]) => void;
   poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void;
@@ -165,6 +172,15 @@ interface Edition {
   nouvelleCle: () => string;
   supprimerSelection: () => void;
   dupliquerSelection: () => void;
+  copierSelection: () => void;
+  couperSelection: () => void;
+  collerPresse: () => void;
+  combinerSelection: () => void;
+  separerSelection: () => void;
+  masquerSelection: () => void;
+  verrouillerSelection: () => void;
+  zoomerSelection: () => void;
+  enregistrerTout: () => void;
   insererForme: (svgForme: string) => void;
 }
 
@@ -182,6 +198,8 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const [point, poserPoint] = useState<number | null>(null);
   const [style, poserStyle] = useState<Style>(() => ({ ...STYLE_DEFAUT, remplissage: nuancier[0]?.hex ?? STYLE_DEFAUT.remplissage }));
   const [trace, poserTrace] = useState<readonly Point[]>([]);
+  const [presse, poserPresse] = useState<readonly Forme[]>([]);
+  const [grille, poserGrille] = useState(false);
   const [contours, poserContours] = useState(false);
   const [fond, poserFond] = useState<'damier' | 'blanc' | 'sombre'>('damier');
   const [message, dire] = useState('');
@@ -191,6 +209,7 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const modifie = h.passe.length > 0;
   const vues = useVue(toile, svgRef, dessin.vb);
 
+  const pas = useMemo(() => pasGrille(dessin.vb), [dessin.vb]);
   const presentes = useMemo(() => new Set(dessin.formes.map(f => f.id)), [dessin]);
   const sel = useMemo(() => selection.filter(id => presentes.has(id)), [selection, presentes]);
   const formeSeule = sel.length === 1 ? dessin.formes.find(f => f.id === sel[0]) ?? null : null;
@@ -204,70 +223,26 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const refaire = useCallback(() => { poserH(x => retablir(x)); poserPoint(null); poserTrace([]); dire(''); }, []);
   const poserOutil = useCallback((o: Outil) => { poserOutilBrut(o); poserTrace([]); poserPoint(null); }, []);
 
-  const supprimerSelection = () => {
-    if (outil === 'points' && formeSeule && point !== null) {
-      const r = supprimerAncre(dessin, formeSeule.id, point);
-      if ('erreur' in r) { dire(r.erreur); return; }
-      appliquer(() => r);
-      poserPoint(null);
-      return;
-    }
-    if (!sel.length) return;
-    appliquer(d => supprimer(d, sel));
-    dire(sel.length + ' forme' + (sel.length > 1 ? 's' : '') + ' supprimée' + (sel.length > 1 ? 's' : '') + '.');
-    choisir([]);
-  };
-  const dupliquerSelection = () => {
-    if (!sel.length) return;
-    const pas = dessin.vb[2] * 0.02, r = dupliquer(dessin, sel, pas, pas);
-    appliquer(() => r.dessin);
-    choisir(r.ids);
-  };
-  const finirTrace = (fermerTrace: boolean) => {
-    const points = sansDoublons(trace, Math.max(dessin.vb[2], dessin.vb[3]) / 1000);
-    poserTrace([]);
-    if (points.length < 2) return;
-    const r = ajouterForme(dessin, polygone(points, fermerTrace && points.length > 2), fermerTrace && points.length > 2 ? style : styleLigne(style));
-    if (!r.id) return;
-    appliquer(() => r.dessin);
-    choisir([r.id]);
-    poserOutilBrut('selection');
-    dire('Tracé ajouté : ' + points.length + ' points.');
-  };
-  const insererForme = (svgForme: string) => {
-    const autre = lireDessin(svgForme);
-    if ('erreur' in autre) { dire(autre.erreur); return; }
-    const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh) / 3;
-    const r = inserer(dessin, autre.dessin, { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
-    if (!r.ids.length) return;
-    appliquer(() => r.dessin);
-    choisir(r.ids);
-    poserOutil('selection');
-    dire('Forme insérée au centre : déplacez-la, redimensionnez-la, recolorez-la.');
-  };
   const demanderFermeture = () => { if (modifie) poserQuitter(true); else fermer(); };
 
+  const base = { dessin, sel, formeSeule, outil, point, style, trace, presse, poserPresse, appliquer, choisir, poserPoint, poserOutil, poserOutilBrut, poserTrace, dire, vues, enregistrer, toile };
   const ed: Edition = {
-    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, choisir, poserPoint, poserOutil, poserStyle, poserTrace, finirTrace,
-    appliquer, finir, annulerGeste, dire, supprimerSelection, dupliquerSelection, insererForme,
+    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, pas, poserGrille, choisir, poserPoint, poserOutil, poserStyle, poserTrace,
+    appliquer, finir, annulerGeste, dire, ...actionsEdition(base),
+    aimant: v => (grille ? aimanter(v, pas, dessin.vb[0] % pas) : v),
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
     nouvelleCle: () => 'geste-' + ++compteur.current
   };
   useClavier(ed, { defaire, refaire, poserContours, demanderFermeture, vues });
   const gestes = useGestes(ed, vues, svgRef);
-
-  const enregistrerTout = () => {
-    const propre = nettoyerSvg(ecrireDessin(dessin, 3));
-    if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return; }
-    enregistrer(propre.svg);
-  };
   const z = vues.vue.zoom;
   const [vx, vy, vl, vh] = dessin.vb;
 
   return (
     <div className={'editeur-cadre outil-' + outil}>
       <Barre ed={ed} titre={titre} nom={nom} vues={vues} contours={contours} poserContours={poserContours} fond={fond} poserFond={poserFond}
-        defaire={defaire} refaire={refaire} demanderFermeture={demanderFermeture} enregistrerTout={enregistrerTout} modifie={modifie} />
+        defaire={defaire} refaire={refaire} demanderFermeture={demanderFermeture} modifie={modifie} />
+      {sel.length ? <BarreSelection ed={ed} /> : null}
       {quitter ? (
         <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications">
           <span>Abandonner les {h.passe.length} modification{h.passe.length > 1 ? 's' : ''} non enregistrée{h.passe.length > 1 ? 's' : ''} ?</span>
@@ -287,6 +262,7 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
               </pattern>
             </defs>
             <rect className="plan-travail" x={vx} y={vy} width={vl} height={vh} fill={fond === 'damier' ? 'url(#damier-editeur)' : undefined} pointerEvents="none" />
+            {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
             {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} />)}
             <g className="surcouche">{surcouche(ed, 1 / z, gestes.cadre)}</g>
           </g>
@@ -304,6 +280,135 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   );
 }
 
+interface BaseActions {
+  dessin: DessinSvg; sel: string[]; formeSeule: Forme | null; outil: Outil; point: number | null; style: Style; trace: readonly Point[];
+  presse: readonly Forme[]; poserPresse: (p: readonly Forme[]) => void;
+  appliquer: (f: (d: DessinSvg) => DessinSvg, cle?: string | null) => void; choisir: (ids: string[]) => void; poserPoint: (i: number | null) => void;
+  poserOutil: (o: Outil) => void; poserOutilBrut: (o: Outil) => void; poserTrace: (t: readonly Point[]) => void; dire: (t: string) => void;
+  vues: Vues; enregistrer: (svg: string) => void; toile: RefObject<HTMLDivElement | null>;
+}
+
+type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme'>;
+
+/** Les actions de la barre et des raccourcis, sur l'etat du moment. */
+function actionsEdition(b: BaseActions): Actions {
+  const { dessin, sel, appliquer, choisir, dire } = b;
+  const pl = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
+  const choisies = () => dessin.formes.filter(f => sel.includes(f.id));
+  const pas = () => Math.max(dessin.vb[2], dessin.vb[3]) * 0.02;
+  const supprimerSelection = () => {
+    if (b.outil === 'points' && b.formeSeule && b.point !== null) {
+      const r = supprimerAncre(dessin, b.formeSeule.id, b.point);
+      if ('erreur' in r) { dire(r.erreur); return; }
+      appliquer(() => r);
+      b.poserPoint(null);
+      return;
+    }
+    if (!sel.length) return;
+    appliquer(d => supprimer(d, sel));
+    dire(pl(sel.length, 'forme') + ' supprimée' + (sel.length > 1 ? 's' : '') + '.');
+    choisir([]);
+  };
+  return {
+    supprimerSelection,
+    dupliquerSelection: () => {
+      if (!sel.length) return;
+      const r = dupliquer(dessin, sel, pas(), pas());
+      appliquer(() => r.dessin);
+      choisir(r.ids);
+    },
+    copierSelection: () => {
+      const c = choisies();
+      if (!c.length) return;
+      b.poserPresse(c);
+      dire(pl(c.length, 'forme') + ' copiée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+    },
+    couperSelection: () => {
+      const c = choisies();
+      if (!c.length) return;
+      b.poserPresse(c);
+      appliquer(d => supprimer(d, sel));
+      choisir([]);
+      dire(pl(c.length, 'forme') + ' coupée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+    },
+    collerPresse: () => {
+      if (!b.presse.length) return;
+      const r = coller(dessin, b.presse, pas(), pas());
+      appliquer(() => r.dessin);
+      choisir(r.ids);
+      b.poserOutil('selection');
+      dire(pl(r.ids.length, 'forme') + ' collée' + (r.ids.length > 1 ? 's' : '') + '.');
+    },
+    combinerSelection: () => {
+      const r = combiner(dessin, sel);
+      if (!r.id) { dire('Choisissez au moins deux formes déverrouillées à combiner.'); return; }
+      appliquer(() => r.dessin);
+      choisir([r.id]);
+      dire('Formes combinées en une seule ; « Trous : pair-impair » creuse les recouvrements.');
+    },
+    separerSelection: () => {
+      const f = b.formeSeule;
+      if (!f) { dire('Choisissez une seule forme à séparer.'); return; }
+      const r = separer(dessin, f.id);
+      if (r.ids.length < 2) { dire('Cette forme n’a qu’un seul tracé : rien à séparer.'); return; }
+      appliquer(() => r.dessin);
+      choisir(r.ids);
+      dire('Forme séparée en ' + pl(r.ids.length, 'tracé') + '.');
+    },
+    masquerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); } },
+    verrouillerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire('Formes verrouillées : déverrouillez-les dans les calques.'); } },
+    zoomerSelection: () => {
+      const bo = boiteDe(dessin, sel), el = b.toile.current;
+      if (!bo || !el || !(bo.l > 0) || !(bo.h > 0)) { b.vues.ajuster(); return; }
+      const zoom = Math.max(0.02, Math.min(64, Math.min(el.clientWidth / bo.l, el.clientHeight / bo.h) * 0.8));
+      b.vues.poserVue({ zoom, x: (el.clientWidth - bo.l * zoom) / 2 - bo.x * zoom, y: (el.clientHeight - bo.h * zoom) / 2 - bo.y * zoom });
+    },
+    enregistrerTout: () => {
+      const propre = nettoyerSvg(ecrireDessin(dessin, 3));
+      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return; }
+      b.enregistrer(propre.svg);
+    },
+    finirTrace: (fermerTrace: boolean) => {
+      const points = sansDoublons(b.trace, Math.max(dessin.vb[2], dessin.vb[3]) / 1000);
+      b.poserTrace([]);
+      if (points.length < 2) return;
+      const ferme = fermerTrace && points.length > 2;
+      const r = ajouterForme(dessin, polygone(points, ferme), ferme ? b.style : styleLigne(b.style));
+      if (!r.id) return;
+      appliquer(() => r.dessin);
+      choisir([r.id]);
+      b.poserOutilBrut('selection');
+      dire('Tracé ajouté : ' + points.length + ' points.');
+    },
+    insererForme: (svgForme: string) => {
+      const autre = lireDessin(svgForme);
+      if ('erreur' in autre) { dire(autre.erreur); return; }
+      const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh) / 3;
+      const r = inserer(dessin, autre.dessin, { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
+      if (!r.ids.length) return;
+      appliquer(() => r.dessin);
+      choisir(r.ids);
+      b.poserOutil('selection');
+      dire('Forme insérée au centre : déplacez-la, redimensionnez-la, recolorez-la.');
+    }
+  };
+}
+
+/** La grille, en lignes fines a l'ecran quel que soit le zoom. */
+function Grille({ vb, pas }: { vb: DessinSvg['vb']; pas: number }) {
+  const [x, y, l, h] = vb, ox = x % pas, oy = y % pas;
+  return (
+    <>
+      <defs>
+        <pattern id="grille-editeur" patternUnits="userSpaceOnUse" x={ox} y={oy} width={pas} height={pas}>
+          <path className="grille" d={`M${pas} 0L0 0L0 ${pas}`} fill="none" />
+        </pattern>
+      </defs>
+      <rect x={x} y={y} width={l} height={h} fill="url(#grille-editeur)" pointerEvents="none" />
+    </>
+  );
+}
+
 function etatParDefaut(ed: Edition): string {
   if (ed.outil === 'plume') return ed.trace.length ? ed.trace.length + ' point' + (ed.trace.length > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé.';
   if (FORMES.has(ed.outil)) return 'Glissez sur la toile pour tracer (Maj : proportions).';
@@ -314,10 +419,10 @@ function etatParDefaut(ed: Edition): string {
 interface ProprietesBarre {
   ed: Edition; titre: string; nom: string; vues: Vues; contours: boolean; poserContours: (f: (c: boolean) => boolean) => void;
   fond: 'damier' | 'blanc' | 'sombre'; poserFond: (f: 'damier' | 'blanc' | 'sombre') => void;
-  defaire: () => void; refaire: () => void; demanderFermeture: () => void; enregistrerTout: () => void; modifie: boolean;
+  defaire: () => void; refaire: () => void; demanderFermeture: () => void; modifie: boolean;
 }
 
-function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond, defaire, refaire, demanderFermeture, enregistrerTout, modifie }: ProprietesBarre) {
+function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond, defaire, refaire, demanderFermeture, modifie }: ProprietesBarre) {
   const z = vues.vue.zoom;
   return (
     <header className="editeur-barre">
@@ -325,18 +430,26 @@ function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond,
       <div className="mini-onglets" role="group" aria-label="Outil">
         {OUTILS.map(([o, texte, aide]) => <button key={o} type="button" aria-pressed={ed.outil === o} title={aide} aria-label={aide} onClick={() => ed.poserOutil(o)}>{texte}</button>)}
       </div>
+      <StyleCourant ed={ed} />
       <div className="groupe">
-        <button type="button" onClick={defaire} disabled={!ed.h.passe.length} title="Annuler (Ctrl+Z)">↶ Annuler</button>
-        <button type="button" onClick={refaire} disabled={!ed.h.futur.length} title="Rétablir (Ctrl+Maj+Z)">↷ Rétablir</button>
+        <button type="button" onClick={defaire} disabled={!ed.h.passe.length} title="Annuler (Ctrl+Z)">↶</button>
+        <button type="button" onClick={refaire} disabled={!ed.h.futur.length} title="Rétablir (Ctrl+Maj+Z)">↷</button>
+      </div>
+      <div className="groupe">
+        <button type="button" onClick={ed.copierSelection} disabled={!ed.sel.length} title="Copier (Ctrl+C)">Copier</button>
+        <button type="button" onClick={ed.couperSelection} disabled={!ed.sel.length} title="Couper (Ctrl+X)">Couper</button>
+        <button type="button" onClick={ed.collerPresse} disabled={!ed.presse.length} title="Coller (Ctrl+V)">Coller</button>
       </div>
       <div className="groupe">
         <button type="button" onClick={() => vues.zoomer(0.8)} title="Dézoomer (−)" aria-label="Dézoomer">−</button>
         <span className="zoom" aria-live="polite">{Math.round(z * 100)} %</span>
         <button type="button" onClick={() => vues.zoomer(1.25)} title="Zoomer (+)" aria-label="Zoomer">+</button>
         <button type="button" onClick={vues.ajuster} title="Ajuster à l’écran (0)">Ajuster</button>
+        <button type="button" onClick={ed.zoomerSelection} disabled={!ed.sel.length} title="Zoomer sur la sélection (Z)">Sélection</button>
         <button type="button" onClick={vues.centrer100} title="Taille réelle (1)">100 %</button>
       </div>
       <div className="groupe">
+        <button type="button" aria-pressed={ed.grille} onClick={() => ed.poserGrille(!ed.grille)} title={'Grille magnétique (G) · pas ' + ed.pas}>Grille</button>
         <button type="button" aria-pressed={contours} onClick={() => poserContours(c => !c)} title="Contours (O)">Contours</button>
         <select aria-label="Fond" value={fond} onChange={e => poserFond(e.target.value as typeof fond)}>
           <option value="damier">Fond damier</option>
@@ -348,9 +461,65 @@ function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond,
       <div className="groupe">
         <button type="button" className="discret" onClick={() => { void proposer(nom + '.svg', texteOctets(ecrireDessin(ed.dessin, 3))).then(ed.dire); }}>Télécharger</button>
         <button type="button" className="discret" onClick={demanderFermeture}>Fermer</button>
-        <button type="button" className="primaire" onClick={enregistrerTout} disabled={!modifie}>Enregistrer</button>
+        <button type="button" className="primaire" onClick={ed.enregistrerTout} disabled={!modifie} title="Enregistrer (Ctrl+S)">Enregistrer</button>
       </div>
     </header>
+  );
+}
+
+/**
+ * Les deux couleurs a portee de main : celles de la selection quand il y en a une (un clic les change
+ * pour toutes les formes choisies), celles des formes a venir sinon.
+ */
+function StyleCourant({ ed }: { ed: Edition }) {
+  const premiere = ed.sel.length ? ed.dessin.formes.find(f => f.id === ed.sel[0]) ?? null : null;
+  const remplissage = premiere ? premiere.remplissage : ed.style.remplissage, contour = premiere ? premiere.contour : ed.style.contour;
+  const poser = (r: Partial<Pick<Style, 'remplissage' | 'contour'>>, cle: string) => {
+    if (premiere) ed.appliquer(d => modifier(d, ed.sel, r), cle + ':' + ed.sel.join(','));
+    else ed.poserStyle({ ...ed.style, ...r });
+  };
+  const pastille = (libelle: string, valeur: string | null, cle: 'remplissage' | 'contour') => (
+    <span className="pastille-style" title={libelle + (premiere ? ' de la sélection' : ' des formes à venir') + ' : ' + (valeur ?? 'aucun')}>
+      <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser({ [cle]: e.target.value }, cle)} onBlur={ed.finir} />
+      <button type="button" className={'discret' + (valeur === null ? ' aucun' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ed.finir(); }}>∅</button>
+    </span>
+  );
+  return (
+    <div className="groupe style-courant" role="group" aria-label="Couleurs">
+      {pastille('Remplissage', remplissage, 'remplissage')}
+      {pastille('Contour', contour, 'contour')}
+    </div>
+  );
+}
+
+/** La rangee de la selection : aligner, retourner, tourner, empiler, combiner, separer, et le reste d'un geste. */
+function BarreSelection({ ed }: { ed: Edition }) {
+  const { sel } = ed;
+  const separable = !!ed.formeSeule && sousChemins(ed.formeSeule.d).length > 1;
+  return (
+    <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
+      <span className="aide">{sel.length} sélectionnée{sel.length > 1 ? 's' : ''}</span>
+      <div className="groupe" role="group" aria-label="Aligner">
+        {ALIGNEMENTS.map(([a, s, t]) => <button key={a} type="button" title={t + (sel.length > 1 ? '' : ' (sur le plan)')} aria-label={t} onClick={() => ed.faire(d => aligner(d, sel, a))}>{s}</button>)}
+      </div>
+      <div className="groupe" role="group" aria-label="Transformer">
+        <button type="button" title="Miroir horizontal" onClick={() => ed.faire(d => retourner(d, sel, 'h'))}>↔</button>
+        <button type="button" title="Miroir vertical" onClick={() => ed.faire(d => retourner(d, sel, 'v'))}>↕</button>
+        <button type="button" title="Tourner de 90° vers la gauche" onClick={() => ed.faire(d => tourner(d, sel, -90))}>↺</button>
+        <button type="button" title="Tourner de 90° vers la droite" onClick={() => ed.faire(d => tourner(d, sel, 90))}>↻</button>
+      </div>
+      <div className="groupe" role="group" aria-label="Empiler">
+        {ORDRES_COURTS.map(([o, s, t]) => <button key={o} type="button" title={t} aria-label={t} onClick={() => ed.faire(d => ordonner(d, sel, o))}>{s}</button>)}
+      </div>
+      <div className="groupe">
+        <button type="button" disabled={sel.length < 2} title="Combiner en une forme (Ctrl+G)" onClick={ed.combinerSelection}>Combiner</button>
+        <button type="button" disabled={!separable} title="Séparer les tracés (Ctrl+Maj+G)" onClick={ed.separerSelection}>Séparer</button>
+        <button type="button" title="Dupliquer (Ctrl+D)" onClick={ed.dupliquerSelection}>Dupliquer</button>
+        <button type="button" title="Masquer" onClick={ed.masquerSelection}>Masquer</button>
+        <button type="button" title="Verrouiller" onClick={ed.verrouillerSelection}>Verrouiller</button>
+        <button type="button" className="danger" title="Supprimer (Suppr)" onClick={ed.supprimerSelection}>Supprimer</button>
+      </div>
+    </div>
   );
 }
 
@@ -414,9 +583,15 @@ function useClavier(ed: Edition, c: Commandes) {
       const mod = e.ctrlKey || e.metaKey, t = e.key.toLowerCase();
       if (mod && t === 'z') { e.preventDefault(); if (e.shiftKey) k.refaire(); else k.defaire(); return; }
       if (mod && t === 'y') { e.preventDefault(); k.refaire(); return; }
+      if (mod && t === 's') { e.preventDefault(); x.enregistrerTout(); return; }
       if (cible && /^(INPUT|SELECT|TEXTAREA)$/.test(cible.tagName)) { if (e.key === 'Escape') cible.blur(); return; }
       if (mod && t === 'a') { e.preventDefault(); x.choisir(x.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)); return; }
       if (mod && t === 'd') { e.preventDefault(); x.dupliquerSelection(); return; }
+      if (mod && t === 'c') { e.preventDefault(); x.copierSelection(); return; }
+      if (mod && t === 'x') { e.preventDefault(); x.couperSelection(); return; }
+      if (mod && t === 'v') { e.preventDefault(); x.collerPresse(); return; }
+      if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) x.separerSelection(); else x.combinerSelection(); return; }
+      if (mod && (e.key === ']' || e.key === '[') && x.sel.length) { e.preventDefault(); x.faire(d => ordonner(d, x.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere')); return; }
       if (x.outil === 'plume' && x.trace.length) {
         if (e.key === 'Enter') { e.preventDefault(); x.finirTrace(true); return; }
         if (e.key === 'Backspace') { e.preventDefault(); x.poserTrace(x.trace.slice(0, -1)); return; }
@@ -433,6 +608,8 @@ function useClavier(ed: Edition, c: Commandes) {
       const outil = RACCOURCIS_OUTILS[t];
       if (outil) x.poserOutil(outil);
       else if (t === 'o') k.poserContours(v => !v);
+      else if (t === 'g') x.poserGrille(!x.grille);
+      else if (t === 'z') x.zoomerSelection();
       else if (t === '+' || t === '=') k.vues.zoomer(1.25);
       else if (t === '-') k.vues.zoomer(0.8);
       else if (t === '0') k.vues.ajuster();
@@ -491,14 +668,16 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
     const r = svgRef.current?.getBoundingClientRect();
     return r ? [(e.clientX - r.left - vue.x) / vue.zoom, (e.clientY - r.top - vue.y) / vue.zoom] : [0, 0];
   };
+  // Le point aimante a la grille : les traces, les points et les poignees s'y posent ; la selection s'y deplace par sa boite.
+  const versGrille = (e: { clientX: number; clientY: number }): [number, number] => { const [x, y] = versDoc(e); return [ed.aimant(x), ed.aimant(y)]; };
 
   const appuyer = (e: PE<SVGSVGElement>) => {
     const t = e.target as Element;
     e.currentTarget.setPointerCapture(e.pointerId);
     const [x, y] = versDoc(e);
     if (e.button === 1 || ed.outil === 'main' || espace.current) { geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
-    if (ed.outil === 'plume') { ed.poserTrace([...ed.trace, [x, y]]); return; }
-    if (FORMES.has(ed.outil)) { geste.current = { type: 'tracer', outil: ed.outil as OutilForme, x0: x, y0: y, base: ed.dessin, cle: ed.nouvelleCle() }; return; }
+    if (ed.outil === 'plume') { ed.poserTrace([...ed.trace, versGrille(e)]); return; }
+    if (FORMES.has(ed.outil)) { const [gx, gy] = versGrille(e); geste.current = { type: 'tracer', outil: ed.outil as OutilForme, x0: gx, y0: gy, base: ed.dessin, cle: ed.nouvelleCle() }; return; }
     const coin = t.getAttribute('data-coin') as Coin | null, iAncre = t.getAttribute('data-ancre'), poignee = t.getAttribute('data-poignee');
     if (coin && ed.boite) { geste.current = { type: 'echelle', coin, b: ed.boite, base: ed.dessin, ids: ed.sel, cle: ed.nouvelleCle() }; return; }
     if (ed.formeSeule && iAncre !== null) {
@@ -517,7 +696,7 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
       const ids = e.shiftKey ? (sel.includes(id) ? sel.filter(s => s !== id) : [...sel, id]) : sel.includes(id) ? sel : [id];
       ed.choisir(ids);
       if (ed.outil === 'points') { ed.poserPoint(null); return; }
-      if (ids.includes(id)) geste.current = { type: 'deplacer', x0: x, y0: y, base: ed.dessin, ids, cle: ed.nouvelleCle() };
+      if (ids.includes(id)) geste.current = { type: 'deplacer', x0: x, y0: y, base: ed.dessin, ids, b: boiteDe(ed.dessin, ids), cle: ed.nouvelleCle() };
       return;
     }
     if (ed.outil === 'points' && ed.point !== null) { ed.poserPoint(null); return; }
@@ -533,12 +712,16 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
     if (g.type === 'deplacer') {
       let dx = x - g.x0, dy = y - g.y0;
       if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+      if (g.b) { dx = ed.aimant(g.b.x + dx) - g.b.x; dy = ed.aimant(g.b.y + dy) - g.b.y; }
       ed.appliquer(() => deplacer(g.base, g.ids, dx, dy), g.cle);
-    } else if (g.type === 'echelle') ed.appliquer(() => etirer(g, x, y, e.shiftKey, ed.dessin.vb), g.cle);
+      return;
+    }
+    const [gx, gy] = [ed.aimant(x), ed.aimant(y)];
+    if (g.type === 'echelle') ed.appliquer(() => etirer(g, gx, gy, e.shiftKey, ed.dessin.vb), g.cle);
     else if (g.type === 'cadre') poserCadre({ x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) });
-    else if (g.type === 'ancre') ed.appliquer(() => deplacerAncre(g.base, g.id, g.i, x, y), g.cle);
-    else if (g.type === 'poignee') ed.appliquer(() => deplacerPoignee(g.base, g.id, g.i, g.k, x, y), g.cle);
-    else ed.appliquer(() => ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey), g.outil === 'ligne' ? styleLigne(ed.style) : ed.style).dessin, g.cle);
+    else if (g.type === 'ancre') ed.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
+    else if (g.type === 'poignee') ed.appliquer(() => deplacerPoignee(g.base, g.id, g.i, g.k, gx, gy), g.cle);
+    else ed.appliquer(() => ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey), g.outil === 'ligne' ? styleLigne(ed.style) : ed.style).dessin, g.cle);
   };
 
   const lacher = (e: PE<SVGSVGElement>) => {
@@ -546,7 +729,7 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
     geste.current = null;
     if (!g) return;
     if (g.type === 'tracer') {
-      const [x, y] = versDoc(e);
+      const [x, y] = versGrille(e);
       const r = ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey), g.outil === 'ligne' ? styleLigne(ed.style) : ed.style);
       const b = r.id ? boiteDe(r.dessin, [r.id]) : null;
       // Un trace sans surface a l'ecran n'est pas une forme : rien ne reste dans l'historique.
@@ -720,7 +903,9 @@ function Inspecteur({ ed }: { ed: Edition }) {
       </fieldset>
       <div className="boutons">
         <button type="button" onClick={ed.dupliquerSelection} title="Ctrl+D">Dupliquer</button>
-        <button type="button" onClick={() => { ed.faire(d => modifier(d, sel, { visible: false })); ed.choisir([]); }}>Masquer</button>
+        <button type="button" disabled={sel.length < 2} onClick={ed.combinerSelection} title="Ctrl+G">Combiner</button>
+        <button type="button" disabled={!ed.formeSeule || sousChemins(ed.formeSeule.d).length < 2} onClick={ed.separerSelection} title="Ctrl+Maj+G">Séparer</button>
+        <button type="button" onClick={ed.masquerSelection}>Masquer</button>
         <button type="button" className="danger" onClick={ed.supprimerSelection} title="Suppr">Supprimer</button>
       </div>
       {ed.outil === 'points' && ed.formeSeule ? <PanneauPoint ed={ed} forme={ed.formeSeule} /> : sel.length === 1 ? <p className="aide">Double-cliquez la forme pour éditer ses points.</p> : null}
@@ -799,7 +984,9 @@ function PanneauDessin({ ed }: { ed: Edition }) {
           <li>V sélection · A points · H ou espace : main · O contours</li>
           <li>R rectangle · E ellipse · T étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point)</li>
           <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
-          <li>Suppr supprimer · Ctrl+D dupliquer · Ctrl+A tout sélectionner</li>
+          <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
+          <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
+          <li>G grille magnétique · Z zoom sur la sélection · Ctrl+S enregistrer</li>
           <li>Flèches : déplacer (Maj : ×10) · Maj en glissant : contraindre</li>
           <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
         </ul>
