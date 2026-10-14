@@ -1,0 +1,34 @@
+# Integration continue : ce qu'un contributeur lance avant de pousser, lance pour lui.
+# Chaque etape est une commande de package.json ; aucune ne demande le reseau.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Cliquet de rigueur
+        run: npm run cliquet
+      - name: Tests (couches, purete, moteur)
+        run: npm test
+      - name: Page autonome (le moteur se compile pour la page)
+        run: npm run construire
