@@ -1,4 +1,4 @@
-// Configuration a plat (ESLint 9), reprise de crea (ADR-0001) : aucun `any` dans le moteur, aucune
+// Configuration a plat (ESLint 9) : aucun `any` dans le moteur, aucune
 // assertion `!`, aucune fonction de plus de 150 lignes.
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';

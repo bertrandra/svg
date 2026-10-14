@@ -3,7 +3,7 @@ import {
   lireChemin, ecrireChemin, lireDessin, ecrireDessin, boiteChemin, lireTransformation, lirePeinture,
   deplacer, retourner, aligner, modifier, supprimer, dupliquer, ordonner, couleursDuDessin, remplacerCouleur,
   retirerPetites, regrouper, ajusterPlan, deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment,
-  basculerSegment, redimensionner, boiteDe, tourner, statistiques, type DessinSvg
+  basculerSegment, redimensionner, boiteDe, tourner, statistiques, rectangle, ellipse, etoile, polygone, ajouterForme, inserer, STYLE_DEFAUT, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 
 const dessin = (svg: string): DessinSvg => {
@@ -152,5 +152,33 @@ describe('points', () => {
     expect('erreur' in supprimerAncre(d, 'f1', 0)).toBe(true);
     const tri = dessin(svg('<path d="M0 0L10 0L10 10Z"/>'));
     expect('erreur' in supprimerAncre(tri, 'f1', 1)).toBe(true);
+  });
+});
+
+describe('dessiner et inserer', () => {
+  it('construit rectangle, ellipse, etoile et polygone dans leur boite', () => {
+    expect(ecrireChemin(rectangle(1, 2, 3, 4))).toBe('M1 2L4 2L4 6L1 6Z');
+    expect(rectangle(0, 0, 0, 4)).toEqual([]);
+    const e = boiteChemin(ellipse(10, 20, 30, 40));
+    expect(e && [e.x, e.y, e.l, e.h].map(v => Math.round(v * 100) / 100)).toEqual([10, 20, 30, 40]);
+    const s = etoile(0, 0, 100, 100);
+    expect(s.filter(c => c.c !== 'Z').length).toBe(10);
+    expect(boiteChemin(s)?.y).toBeCloseTo(0, 6);
+    expect(ecrireChemin(polygone([[0, 0], [10, 0], [10, 10]], true))).toBe('M0 0L10 0L10 10Z');
+    expect(ecrireChemin(polygone([[0, 0], [10, 0]], true))).toBe('M0 0L10 0');
+    expect(polygone([[0, 0]], false)).toEqual([]);
+  });
+
+  it('ajoute une forme au premier plan avec le style courant, et insere un dessin centre dans une boite', () => {
+    const d = dessin(svg(carre(0, 0, 10)));
+    const a = ajouterForme(d, rectangle(20, 20, 5, 5), { remplissage: null, contour: '#123456', epaisseur: 0 });
+    expect(a.id).toBe('f2');
+    expect(a.dessin.formes[1]).toMatchObject({ id: 'f2', remplissage: null, contour: '#123456', epaisseur: 1 });
+    expect(ajouterForme(d, [], STYLE_DEFAUT).id).toBeNull();
+    const autre = dessin(svg(carre(100, 100, 50) + carre(100, 150, 50, '#000'), '0 0 400 400'));
+    const i = inserer(d, autre, { x: 10, y: 10, l: 40, h: 40 });
+    expect(i.ids).toEqual(['f2', 'f3']);
+    expect(boiteDe(i.dessin, i.ids)).toEqual({ x: 20, y: 10, l: 20, h: 40 });
+    expect(d.formes.length).toBe(1);
   });
 });

@@ -3,12 +3,12 @@ import { existsSync as existe, readdirSync, readFileSync, statSync } from 'node:
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
 // Une regle d'architecture qu'aucun test ne verifie n'est pas une regle, c'est un souhait.
-// Repris de crea (tests/unit/architecture.test.ts), avec la meme table de couches (ADR-0001).
+// Les couches sont fixees ici une fois pour toutes (ADR-0001), les reservees comprises.
 
 const src = resolve(__dirname, '../../src');
 
 /**
- * Les couches, de la plus pure a la plus dependante, telles que crea les a fixees. Une couche ne
+ * Les couches, de la plus pure a la plus dependante. Une couche ne
  * peut importer que d'un niveau inferieur ou egal au sien. Les couches reservees sont classees avant
  * d'exister : un dossier qui apparait a deja sa place.
  *

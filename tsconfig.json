@@ -1,5 +1,5 @@
 {
-  // La configuration stricte de crea, reprise telle quelle (ADR-0001) : rien a monter plus tard.
+  // La configuration stricte, des le premier jour : rien a monter plus tard.
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

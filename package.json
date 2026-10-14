@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "svg : le canvas SVG de crea, repris en editeur autonome et en composant reutilisable.",
+  "description": "svg : un editeur SVG autonome, un convertisseur d'image en SVG et une bibliotheque de 4 000 formes.",
   "engines": {
     "node": ">=20"
   },
@@ -14,10 +14,12 @@
     "lint": "eslint src tests",
     "cliquet": "node scripts/cliquet.mjs",
     "verifier": "npm run typecheck && npm run lint && npm run cliquet && npm test",
-    "construire": "node scripts/construire.mjs"
+    "construire": "node scripts/construire.mjs && node scripts/bibliotheque.mjs",
+    "bibliotheque": "node scripts/bibliotheque.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@iconify-json/game-icons": "1.2.4",
     "@types/node": "^22.10.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -29,6 +31,7 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "@visioncortex/vtracer": "1.0.0-alpha.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   }

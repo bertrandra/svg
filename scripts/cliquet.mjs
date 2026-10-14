@@ -1,6 +1,5 @@
-// Le cliquet de rigueur, repris de crea (ADR-0001). La configuration stricte est en place des le
-// premier jour : le cliquet est le rapport par dossier, et la garde contre une regression dans l'un
-// d'eux.
+// Le cliquet de rigueur. La configuration stricte est en place des le premier jour : le cliquet
+// est le rapport par dossier, et la garde contre une regression dans l'un d'eux.
 //
 // `tsconfig.json` ne sait pas faire cette garde lui-meme : restreindre `include` ne restreint rien,
 // puisque les fichiers importes entrent quand meme dans le programme. D'ou ce script : il lance

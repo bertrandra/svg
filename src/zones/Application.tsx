@@ -1,9 +1,12 @@
-// La page autonome : ouvrir un SVG (fichier, glisser-deposer, code colle ou exemple), l'editer en
-// plein ecran, puis reprendre le resultat (apercu, telechargement, copie du code). L'editeur
-// lui-meme ne sait rien de cette page : il recoit un SVG et en rend un.
+// La page autonome : ouvrir un SVG (fichier, glisser-deposer, code colle ou exemple), convertir une
+// image en SVG, choisir une forme de la bibliotheque, editer en plein ecran, puis reprendre le
+// resultat (apercu, telechargement, copie du code). L'editeur lui-meme ne sait rien de cette page :
+// il recoit un SVG et en rend un.
 
 import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { EditeurSvg } from './EditeurSvg.js';
+import { SectionBibliotheque } from './Bibliotheque.js';
+import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
 import { lireDessin, statistiques } from '../engine/editionSvg.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -25,11 +28,8 @@ const sansExtension = (nom: string) => nom.replace(/\.svg$/i, '').trim() || 'des
 export function Application() {
   const [fichier, poserFichier] = useState<Fichier | null>(null);
   const [edition, poserEdition] = useState(false);
-  const [code, poserCode] = useState('');
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
   const [message, dire] = useState('');
-  const [survol, poserSurvol] = useState(false);
-  const entree = useRef<HTMLInputElement>(null);
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
 
   /** Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. */
@@ -41,18 +41,7 @@ export function Application() {
     poserFichier({ nom: sansExtension(nom), svg: propre.svg });
     poserEdition(true);
     dire('');
-  };
-  const ouvrirFichier = (f: File | undefined) => {
-    if (!f) return;
-    void f.text().then(t => ouvrir(f.name, t)).catch(() => dire('Le fichier ne se lit pas.'));
-  };
-  const deposer = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    poserSurvol(false);
-    const f = e.dataTransfer.files[0];
-    if (f) { ouvrirFichier(f); return; }
-    const t = e.dataTransfer.getData('text/plain');
-    if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
+    window.scrollTo(0, 0);
   };
   const stats = useMemo(() => {
     if (!fichier) return null;
@@ -64,31 +53,8 @@ export function Application() {
     <main className="accueil">
       <header className="tete">
         <h1>Éditeur SVG</h1>
-        <p>Ouvrez un dessin vectoriel, retouchez-le en plein écran comme dans un logiciel de dessin, et récupérez un SVG propre. Rien ne quitte votre navigateur.</p>
+        <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un SVG propre. Rien ne quitte votre navigateur.</p>
       </header>
-
-      <section className={'depot' + (survol ? ' survol' : '')} aria-label="Ouvrir un SVG"
-        onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={deposer}>
-        <p>Déposez un fichier SVG ici, ou</p>
-        <div className="actions">
-          <button type="button" onClick={() => entree.current?.click()}>Choisir un fichier…</button>
-          <button type="button" className="discret" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
-        </div>
-        <input ref={entree} type="file" accept=".svg,image/svg+xml" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
-      </section>
-
-      <section className="colonnes">
-        <label className="champ">
-          <span>Coller le code d’un SVG</span>
-          <textarea rows={6} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)} />
-          <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>Ouvrir ce code</button>
-        </label>
-        <label className="champ">
-          <span>Nuancier proposé dans l’éditeur <span className="aide">· une teinte par ligne, « Nom #rrggbb »</span></span>
-          <textarea rows={6} value={nuancierTexte} spellCheck={false} onChange={e => poserNuancierTexte(e.target.value)} />
-          <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue : l’éditeur proposera seulement le sélecteur.'}</span>
-        </label>
-      </section>
 
       {message ? <p className="message" role="alert">{message}</p> : null}
 
@@ -108,11 +74,67 @@ export function Application() {
         </section>
       ) : null}
 
+      <OuvrirSvg ouvrir={ouvrir} />
+
+      <Vectoriser ouvrir={ouvrir} />
+
+      <SectionBibliotheque ouvrir={x => ouvrir(x.id, x.svg)} />
+
+      <section className="nuancier-page" aria-label="Nuancier">
+        <h2>Nuancier proposé dans l’éditeur</h2>
+        <label className="champ">
+          <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
+          <textarea rows={5} value={nuancierTexte} spellCheck={false} onChange={e => poserNuancierTexte(e.target.value)} />
+          <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue : l’éditeur proposera seulement le sélecteur.'}</span>
+        </label>
+      </section>
+
+      <footer className="pied">
+        <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> (licence CC BY 3.0) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
+      </footer>
+
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier}
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger"
           fermer={() => poserEdition(false)}
           enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); poserEdition(false); dire('Dessin enregistré : téléchargez-le ou copiez son code.'); }} />
       ) : null}
     </main>
+  );
+}
+
+/** Deposer un fichier SVG, en coller le code, ou ouvrir l'exemple. */
+function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void }) {
+  const [code, poserCode] = useState('');
+  const [survol, poserSurvol] = useState(false);
+  const entree = useRef<HTMLInputElement>(null);
+  const ouvrirFichier = (f: File | undefined) => {
+    if (!f) return;
+    void f.text().then(t => ouvrir(f.name, t)).catch(() => ouvrir(f.name, ''));
+  };
+  const deposer = (e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    poserSurvol(false);
+    const f = e.dataTransfer.files[0];
+    if (f) { ouvrirFichier(f); return; }
+    const t = e.dataTransfer.getData('text/plain');
+    if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
+  };
+  return (
+    <section className="ouvrir" aria-label="Ouvrir un SVG">
+      <h2>Ouvrir un SVG</h2>
+      <div className={'depot' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={deposer}>
+        <p>Déposez un fichier SVG ici, ou</p>
+        <div className="actions">
+          <button type="button" onClick={() => entree.current?.click()}>Choisir un fichier…</button>
+          <button type="button" className="discret" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
+        </div>
+        <input ref={entree} type="file" accept=".svg,image/svg+xml" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
+      </div>
+      <label className="champ">
+        <span>Ou collez le code d’un SVG</span>
+        <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)} />
+        <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>Ouvrir ce code</button>
+      </label>
+    </section>
   );
 }

@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Les jetons de l'interface, repris de l'atelier de crea : un chrome neutre et froid, une seule
-   couleur d'outil. Le dessin edite garde ses propres couleurs. */
+/* Les jetons de l'interface : un chrome neutre et froid, une seule couleur d'outil. Le dessin
+   edite garde ses propres couleurs. */
 :root {
   --table: #e9ecef;
   --panneau: #f7f8f9;
@@ -71,14 +71,40 @@ input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid v
 .fiche { display: grid; gap: 8px; align-content: start; }
 .fiche h2 { font-size: 1rem; margin: 0; font-family: var(--mono); font-weight: 500; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .resultat { grid-template-columns: minmax(0, 1fr); } }
+section h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.ouvrir, .vectoriser, .bibliotheque, .nuancier-page { display: grid; gap: 10px; border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 16px; }
+.depot.petit { padding: 16px; }
+.case { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; }
+.reglages-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
+.reglages-image .actions { grid-column: 1 / -1; align-items: center; }
+.resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
+@media (max-width: 640px) { .resultat-image { grid-template-columns: minmax(0, 1fr); } }
+.pied p { margin: 0; }
+.pied a { color: var(--cyan); }
+/* La bibliotheque : une grille de vignettes, dans la page et dans l'editeur. */
+.recherche-formes { display: grid; gap: 8px; }
+.recherche-formes .filtres { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.recherche-formes.compact .filtres { grid-template-columns: minmax(0, 1fr); }
+.recherche-formes input[type="search"] { font: inherit; font-size: 0.85rem; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--filet); border-radius: 5px; background: var(--table); color: var(--encre); }
+.recherche-formes > button { justify-self: start; }
+.grille-formes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.recherche-formes.compact .grille-formes { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; }
+.vignette { width: 100%; display: grid; justify-items: center; gap: 4px; padding: 6px 4px; background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: 6px; font-weight: 400; font-size: 0.68rem; line-height: 1.2; text-align: center; }
+.vignette:hover { border-color: var(--cyan); }
+.vignette img { width: 64px; height: 64px; background: #ffffff; border-radius: 4px; padding: 4px; }
+.recherche-formes.compact .vignette img { width: 44px; height: 44px; }
+.recherche-formes.compact .vignette span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.bibliotheque-editeur summary { font-size: 0.78rem; font-weight: 600; cursor: pointer; color: var(--encre-douce); }
+.bibliotheque-editeur[open] summary { margin-bottom: 6px; }
 
-/* L'editeur SVG plein ecran (repris de crea). Il se pose par-dessus la page, en portail. */
+/* L'editeur SVG plein ecran. Il se pose par-dessus la page, en portail. */
 .editeur-svg { position: fixed; inset: 0; z-index: 1000; background: var(--table); color: var(--encre); }
 .editeur-cadre { display: grid; height: 100%; grid-template-columns: 220px minmax(0, 1fr) 300px; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "barre barre barre" "confirmer confirmer confirmer" "calques toile inspecteur" "etat etat etat"; }
 .editeur-barre { grid-area: barre; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-bottom: 1px solid var(--filet); background: var(--panneau); }
 .editeur-barre .groupe { display: flex; align-items: center; gap: 4px; }
 .editeur-barre button { padding: 5px 9px; font-size: 0.78rem; }
-.editeur-barre .mini-onglets { flex: none; }
+.editeur-barre .mini-onglets { flex: none; flex-wrap: wrap; }
+.editeur-barre .mini-onglets button { flex: none; min-width: 34px; }
 .editeur-barre select { font-size: 0.78rem; padding: 4px 6px; }
 .editeur-titre { font-size: 0.85rem; }
 .editeur-barre .espace, .editeur-etat .espace { flex: 1; }
@@ -87,6 +113,8 @@ input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid v
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.82rem; }
 .editeur-calques { grid-area: calques; overflow: auto; border-right: 1px solid var(--filet); background: var(--panneau); padding: 8px; }
 .editeur-calques h3, .editeur-inspecteur h3 { font-size: 0.8rem; margin: 2px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
+.calques-actions { display: flex; gap: 4px; margin-bottom: 6px; }
+.calques-actions button { padding: 2px 8px; font-size: 0.72rem; }
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
@@ -108,6 +136,8 @@ input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid v
 .editeur-svg-toile .ancre-choisie { fill: var(--cyan); }
 .editeur-svg-toile .poignee { fill: var(--cyan); stroke: var(--panneau); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: move; }
 .lien-poignee { stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.trace-en-cours { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.outil-rectangle .editeur-svg-toile, .outil-ellipse .editeur-svg-toile, .outil-etoile .editeur-svg-toile, .outil-ligne .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
 .cadre-selection { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .editeur-toile.fond-blanc .plan-travail { fill: #ffffff; }
 .editeur-toile.fond-sombre .plan-travail { fill: #1b1d20; }
