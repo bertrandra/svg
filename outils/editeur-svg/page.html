@@ -99,7 +99,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 
 /* L'editeur SVG plein ecran. Il se pose par-dessus la page, en portail. */
 .editeur-svg { position: fixed; inset: 0; z-index: 1000; background: var(--table); color: var(--encre); }
-.editeur-cadre { display: grid; height: 100%; grid-template-columns: 220px minmax(0, 1fr) 300px; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "barre barre barre" "confirmer confirmer confirmer" "calques toile inspecteur" "etat etat etat"; }
+.editeur-cadre { display: grid; height: 100%; grid-template-columns: 220px minmax(0, 1fr) 300px; grid-template-rows: auto auto auto minmax(0, 1fr) auto; grid-template-areas: "barre barre barre" "selection selection selection" "confirmer confirmer confirmer" "calques toile inspecteur" "etat etat etat"; }
 .editeur-barre { grid-area: barre; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border-bottom: 1px solid var(--filet); background: var(--panneau); }
 .editeur-barre .groupe { display: flex; align-items: center; gap: 4px; }
 .editeur-barre button { padding: 5px 9px; font-size: 0.78rem; }
@@ -110,6 +110,17 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .editeur-barre .espace, .editeur-etat .espace { flex: 1; }
 .editeur-barre .zoom { font-family: var(--mono); font-size: 0.75rem; min-width: 48px; text-align: center; }
 .editeur-barre button:disabled, .editeur-inspecteur button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* La rangee de la selection, sous la barre : aligner, transformer, empiler, combiner, separer. */
+.editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 12px; border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); }
+.editeur-barre-selection .groupe { display: flex; align-items: center; gap: 2px; }
+.editeur-barre-selection button { padding: 3px 7px; font-size: 0.75rem; min-width: 28px; }
+.editeur-barre-selection > .aide { min-width: 96px; }
+.style-courant { gap: 6px; }
+.pastille-style { display: inline-flex; align-items: center; gap: 1px; }
+.pastille-style input[type="color"] { width: 28px; height: 26px; padding: 0; border: 1px solid var(--filet); border-radius: 4px 0 0 4px; background: transparent; }
+.pastille-style button { padding: 3px 5px; font-size: 0.72rem; border-radius: 0 4px 4px 0; border-left: 0; }
+.pastille-style button.aucun { background: var(--cyan); color: var(--sur-cyan); }
+.editeur-svg-toile .grille { stroke: color-mix(in srgb, var(--cyan) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.82rem; }
 .editeur-calques { grid-area: calques; overflow: auto; border-right: 1px solid var(--filet); background: var(--panneau); padding: 8px; }
 .editeur-calques h3, .editeur-inspecteur h3 { font-size: 0.8rem; margin: 2px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
@@ -170,7 +181,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .editeur-aide summary { font-size: 0.75rem; cursor: pointer; }
 .editeur-aide ul { margin: 6px 0 0; padding-left: 16px; font-size: 0.72rem; color: var(--encre-douce); display: grid; gap: 2px; }
 @media (max-width: 900px) {
-  .editeur-cadre { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(280px, 1fr) auto auto auto; grid-template-areas: "barre" "confirmer" "toile" "inspecteur" "calques" "etat"; }
+  .editeur-cadre { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto minmax(280px, 1fr) auto auto auto; grid-template-areas: "barre" "selection" "confirmer" "toile" "inspecteur" "calques" "etat"; }
   .editeur-calques, .editeur-inspecteur { max-height: 32vh; border: 0; border-top: 1px solid var(--filet); }
 }
 </style>

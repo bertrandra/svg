@@ -3,7 +3,7 @@ import {
   lireChemin, ecrireChemin, lireDessin, ecrireDessin, boiteChemin, lireTransformation, lirePeinture,
   deplacer, retourner, aligner, modifier, supprimer, dupliquer, ordonner, couleursDuDessin, remplacerCouleur,
   retirerPetites, regrouper, ajusterPlan, deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment,
-  basculerSegment, redimensionner, boiteDe, tourner, statistiques, rectangle, ellipse, etoile, polygone, ajouterForme, inserer, STYLE_DEFAUT, type DessinSvg
+  basculerSegment, redimensionner, boiteDe, tourner, statistiques, rectangle, ellipse, etoile, polygone, ajouterForme, inserer, STYLE_DEFAUT, combiner, separer, sousChemins, coller, pasGrille, aimanter, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 
 const dessin = (svg: string): DessinSvg => {
@@ -180,5 +180,42 @@ describe('dessiner et inserer', () => {
     expect(i.ids).toEqual(['f2', 'f3']);
     expect(boiteDe(i.dessin, i.ids)).toEqual({ x: 20, y: 10, l: 20, h: 40 });
     expect(d.formes.length).toBe(1);
+  });
+});
+
+describe('combiner, separer, coller, grille', () => {
+  it('combine la selection en une forme au style de la plus haute, et la separe en sous-chemins', () => {
+    const d = dessin(svg(carre(0, 0, 10) + carre(20, 0, 10, '#1428a0') + carre(40, 0, 10)));
+    const c = combiner(d, ['f1', 'f2']);
+    expect(c.id).toBe('f2');
+    expect(c.dessin.formes.map(f => f.id)).toEqual(['f2', 'f3']);
+    expect(c.dessin.formes[0]?.remplissage).toBe('#1428a0');
+    expect(sousChemins(c.dessin.formes[0]?.d ?? []).length).toBe(2);
+    expect(combiner(d, ['f1']).id).toBeNull();
+    const s = separer(c.dessin, 'f2');
+    expect(s.ids).toEqual(['f2', 'f4']);
+    expect(s.dessin.formes.map(f => f.id)).toEqual(['f2', 'f4', 'f3']);
+    expect(boiteDe(s.dessin, ['f4'])).toEqual({ x: 20, y: 0, l: 10, h: 10 });
+    expect(separer(d, 'f1').ids).toEqual(['f1']);
+  });
+
+  it('colle des formes copiees au premier plan, decalees, visibles et deverrouillees', () => {
+    const d = dessin(svg(carre(0, 0, 10)));
+    const copie = { ...(d.formes[0] as NonNullable<typeof d.formes[0]>), verrouille: true, visible: false };
+    const p = coller(d, [copie], 5, 5);
+    expect(p.ids).toEqual(['f2']);
+    expect(p.dessin.formes[1]).toMatchObject({ id: 'f2', verrouille: false, visible: true });
+    expect(boiteDe(p.dessin, ['f2'])).toEqual({ x: 5, y: 5, l: 10, h: 10 });
+    expect(coller(d, []).dessin).toBe(d);
+  });
+
+  it('propose un pas de grille lisible et aimante une valeur', () => {
+    expect(pasGrille([0, 0, 512, 512])).toBe(20);
+    expect(pasGrille([0, 0, 240, 160])).toBe(10);
+    expect(pasGrille([0, 0, 100, 100])).toBe(5);
+    expect(pasGrille([0, 0, 2000, 1000])).toBe(100);
+    expect(aimanter(23, 10)).toBe(20);
+    expect(aimanter(27, 10, 3)).toBe(23);
+    expect(aimanter(7, 0)).toBe(7);
   });
 });
