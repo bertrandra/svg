@@ -18,6 +18,10 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   points, Entrée ou double-clic ferme, Retour arrière retire un point, Échap abandonne), avec le
   style courant (remplissage, contour, épaisseur) réglé dans l'inspecteur.
 - **Tout et Aucun** en tête des calques, pour tout sélectionner ou rien.
+- **Une barre d'outils à icônes** : chaque bouton de la barre et de la rangée de sélection est une
+  icône vectorielle dessinée dans la page (`zones/icones.tsx`, 46 icônes, aucune police ni réseau),
+  avec son infobulle et son raccourci ; boutons carrés neutres, groupes séparés, état actif en
+  couleur d'outil, fonds damier, blanc et sombre en trois boutons. Lisible dans les deux thèmes.
 - **Une barre d'outils étendue pour aller vite** : les deux couleurs courantes (remplissage, contour)
   à portée de main, qui changent la sélection ou les formes à venir ; copier, couper, coller
   (Ctrl+C, Ctrl+X, Ctrl+V) ; une grille magnétique (G) au pas lisible du plan, qui aimante les

@@ -21,6 +21,7 @@ import { proposer, texteOctets } from '../io/fichiers.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
+import { Icone, type NomIcone } from './icones.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
@@ -55,11 +56,22 @@ type Geste =
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string };
 
-const OUTILS: ReadonlyArray<readonly [Outil, string, string]> = [
-  ['selection', 'Sélection', 'Sélection (V)'], ['points', 'Points', 'Points et poignées (A)'], ['main', 'Main', 'Main : déplacer la vue (H, ou espace)'],
-  ['rectangle', '▭', 'Rectangle (R) · Maj : carré'], ['ellipse', '◯', 'Ellipse (E) · Maj : cercle'], ['etoile', '☆', 'Étoile (T)'],
-  ['ligne', '╱', 'Ligne (L) · Maj : droite'], ['plume', '✎', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne']
+const OUTILS: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
+  ['selection', 'selection', 'Sélection (V)'], ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)'],
+  ['rectangle', 'rectangle', 'Rectangle (R) · Maj : carré'], ['ellipse', 'ellipse', 'Ellipse (E) · Maj : cercle'], ['etoile', 'etoile', 'Étoile (T)'],
+  ['ligne', 'ligne', 'Ligne (L) · Maj : droite'], ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne']
 ];
+const FONDS: ReadonlyArray<readonly ['damier' | 'blanc' | 'sombre', NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
+const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
+  ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
+  ['haut', 'aligner-haut', 'Aligner en haut'], ['centreV', 'aligner-centre-v', 'Centrer verticalement'], ['bas', 'aligner-bas', 'Aligner en bas']
+];
+const ORDRES_ICONES: ReadonlyArray<readonly [Ordre, NomIcone, string]> = [['premier', 'premier-plan', 'Premier plan (Ctrl+Maj+])'], ['avant', 'avancer', 'Avancer (Ctrl+])'], ['arriere', 'reculer', 'Reculer (Ctrl+[)'], ['dernier', 'arriere-plan', 'Arrière-plan (Ctrl+Maj+[)']];
+
+/** Un bouton d'outil : une icone, une infobulle qui dit le geste et son raccourci. */
+function Bouton({ icone, aide, onClick, pressed, disabled, className }: { icone: NomIcone; aide: string; onClick: () => void; pressed?: boolean; disabled?: boolean; className?: string }) {
+  return <button type="button" className={'icone-bouton' + (className ? ' ' + className : '')} title={aide} aria-label={aide} aria-pressed={pressed} disabled={disabled} onClick={onClick}><Icone nom={icone} /></button>;
+}
 const FORMES = new Set<Outil>(['rectangle', 'ellipse', 'etoile', 'ligne']);
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 const ALIGNEMENTS: ReadonlyArray<readonly [Alignement, string, string]> = [
@@ -67,7 +79,6 @@ const ALIGNEMENTS: ReadonlyArray<readonly [Alignement, string, string]> = [
   ['haut', '⤒', 'Aligner en haut'], ['centreV', '↕', 'Centrer verticalement'], ['bas', '⤓', 'Aligner en bas']
 ];
 const ORDRES: ReadonlyArray<readonly [Ordre, string]> = [['premier', 'Premier plan'], ['avant', 'Avancer'], ['arriere', 'Reculer'], ['dernier', 'Arrière-plan']];
-const ORDRES_COURTS: ReadonlyArray<readonly [Ordre, string, string]> = [['premier', '⤒', 'Premier plan (Ctrl+Maj+])'], ['avant', '↑', 'Avancer (Ctrl+])'], ['arriere', '↓', 'Reculer (Ctrl+[)'], ['dernier', '⤓', 'Arrière-plan (Ctrl+Maj+[)']];
 
 const cacheChemins = new WeakMap<Forme, string>();
 function cheminDe(f: Forme): string {
@@ -427,41 +438,37 @@ function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond,
   return (
     <header className="editeur-barre">
       <strong className="editeur-titre">{titre}</strong>
-      <div className="mini-onglets" role="group" aria-label="Outil">
-        {OUTILS.map(([o, texte, aide]) => <button key={o} type="button" aria-pressed={ed.outil === o} title={aide} aria-label={aide} onClick={() => ed.poserOutil(o)}>{texte}</button>)}
+      <div className="groupe outils" role="group" aria-label="Outil">
+        {OUTILS.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={ed.outil === o} onClick={() => ed.poserOutil(o)} />)}
       </div>
       <StyleCourant ed={ed} />
-      <div className="groupe">
-        <button type="button" onClick={defaire} disabled={!ed.h.passe.length} title="Annuler (Ctrl+Z)">↶</button>
-        <button type="button" onClick={refaire} disabled={!ed.h.futur.length} title="Rétablir (Ctrl+Maj+Z)">↷</button>
+      <div className="groupe" role="group" aria-label="Historique">
+        <Bouton icone="annuler" aide="Annuler (Ctrl+Z)" disabled={!ed.h.passe.length} onClick={defaire} />
+        <Bouton icone="retablir" aide="Rétablir (Ctrl+Maj+Z)" disabled={!ed.h.futur.length} onClick={refaire} />
       </div>
-      <div className="groupe">
-        <button type="button" onClick={ed.copierSelection} disabled={!ed.sel.length} title="Copier (Ctrl+C)">Copier</button>
-        <button type="button" onClick={ed.couperSelection} disabled={!ed.sel.length} title="Couper (Ctrl+X)">Couper</button>
-        <button type="button" onClick={ed.collerPresse} disabled={!ed.presse.length} title="Coller (Ctrl+V)">Coller</button>
+      <div className="groupe" role="group" aria-label="Presse-papiers">
+        <Bouton icone="copier" aide="Copier (Ctrl+C)" disabled={!ed.sel.length} onClick={ed.copierSelection} />
+        <Bouton icone="couper" aide="Couper (Ctrl+X)" disabled={!ed.sel.length} onClick={ed.couperSelection} />
+        <Bouton icone="coller" aide="Coller (Ctrl+V)" disabled={!ed.presse.length} onClick={ed.collerPresse} />
       </div>
-      <div className="groupe">
-        <button type="button" onClick={() => vues.zoomer(0.8)} title="Dézoomer (−)" aria-label="Dézoomer">−</button>
-        <span className="zoom" aria-live="polite">{Math.round(z * 100)} %</span>
-        <button type="button" onClick={() => vues.zoomer(1.25)} title="Zoomer (+)" aria-label="Zoomer">+</button>
-        <button type="button" onClick={vues.ajuster} title="Ajuster à l’écran (0)">Ajuster</button>
-        <button type="button" onClick={ed.zoomerSelection} disabled={!ed.sel.length} title="Zoomer sur la sélection (Z)">Sélection</button>
-        <button type="button" onClick={vues.centrer100} title="Taille réelle (1)">100 %</button>
+      <div className="groupe" role="group" aria-label="Zoom">
+        <Bouton icone="zoom-moins" aide="Dézoomer (−)" onClick={() => vues.zoomer(0.8)} />
+        <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster} aria-live="polite">{Math.round(z * 100)} %</button>
+        <Bouton icone="zoom-plus" aide="Zoomer (+)" onClick={() => vues.zoomer(1.25)} />
+        <Bouton icone="ajuster" aide="Ajuster à l’écran (0)" onClick={vues.ajuster} />
+        <Bouton icone="zoom-selection" aide="Zoomer sur la sélection (Z)" disabled={!ed.sel.length} onClick={ed.zoomerSelection} />
+        <Bouton icone="taille-reelle" aide="Taille réelle, 100 % (1)" onClick={vues.centrer100} />
       </div>
-      <div className="groupe">
-        <button type="button" aria-pressed={ed.grille} onClick={() => ed.poserGrille(!ed.grille)} title={'Grille magnétique (G) · pas ' + ed.pas}>Grille</button>
-        <button type="button" aria-pressed={contours} onClick={() => poserContours(c => !c)} title="Contours (O)">Contours</button>
-        <select aria-label="Fond" value={fond} onChange={e => poserFond(e.target.value as typeof fond)}>
-          <option value="damier">Fond damier</option>
-          <option value="blanc">Fond blanc</option>
-          <option value="sombre">Fond sombre</option>
-        </select>
+      <div className="groupe" role="group" aria-label="Affichage">
+        <Bouton icone="grille" aide={'Grille magnétique (G) · pas ' + ed.pas} pressed={ed.grille} onClick={() => ed.poserGrille(!ed.grille)} />
+        <Bouton icone="contours" aide="Vue contours (O)" pressed={contours} onClick={() => poserContours(c => !c)} />
+        {FONDS.map(([f, icone, aide]) => <Bouton key={f} icone={icone} aide={aide} pressed={fond === f} onClick={() => poserFond(f)} />)}
       </div>
       <span className="espace" />
-      <div className="groupe">
-        <button type="button" className="discret" onClick={() => { void proposer(nom + '.svg', texteOctets(ecrireDessin(ed.dessin, 3))).then(ed.dire); }}>Télécharger</button>
-        <button type="button" className="discret" onClick={demanderFermeture}>Fermer</button>
-        <button type="button" className="primaire" onClick={ed.enregistrerTout} disabled={!modifie} title="Enregistrer (Ctrl+S)">Enregistrer</button>
+      <div className="groupe fin" role="group" aria-label="Fichier">
+        <Bouton icone="telecharger" aide="Télécharger le SVG" onClick={() => { void proposer(nom + '.svg', texteOctets(ecrireDessin(ed.dessin, 3))).then(ed.dire); }} />
+        <Bouton icone="fermer" aide="Fermer (Échap)" onClick={demanderFermeture} />
+        <button type="button" className="primaire texte" title="Enregistrer (Ctrl+S)" onClick={ed.enregistrerTout} disabled={!modifie}><Icone nom="enregistrer" /> Enregistrer</button>
       </div>
     </header>
   );
@@ -481,7 +488,7 @@ function StyleCourant({ ed }: { ed: Edition }) {
   const pastille = (libelle: string, valeur: string | null, cle: 'remplissage' | 'contour') => (
     <span className="pastille-style" title={libelle + (premiere ? ' de la sélection' : ' des formes à venir') + ' : ' + (valeur ?? 'aucun')}>
       <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser({ [cle]: e.target.value }, cle)} onBlur={ed.finir} />
-      <button type="button" className={'discret' + (valeur === null ? ' aucun' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ed.finir(); }}>∅</button>
+      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + (valeur === null ? ' : aucun (cliquez pour en mettre un)' : ' : retirer')} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ed.finir(); }}><Icone nom="fermer" taille={12} /></button>
     </span>
   );
   return (
@@ -496,28 +503,29 @@ function StyleCourant({ ed }: { ed: Edition }) {
 function BarreSelection({ ed }: { ed: Edition }) {
   const { sel } = ed;
   const separable = !!ed.formeSeule && sousChemins(ed.formeSeule.d).length > 1;
+  const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
   return (
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{sel.length} sélectionnée{sel.length > 1 ? 's' : ''}</span>
       <div className="groupe" role="group" aria-label="Aligner">
-        {ALIGNEMENTS.map(([a, s, t]) => <button key={a} type="button" title={t + (sel.length > 1 ? '' : ' (sur le plan)')} aria-label={t} onClick={() => ed.faire(d => aligner(d, sel, a))}>{s}</button>)}
+        {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => ed.faire(d => aligner(d, sel, a))} />)}
       </div>
       <div className="groupe" role="group" aria-label="Transformer">
-        <button type="button" title="Miroir horizontal" onClick={() => ed.faire(d => retourner(d, sel, 'h'))}>↔</button>
-        <button type="button" title="Miroir vertical" onClick={() => ed.faire(d => retourner(d, sel, 'v'))}>↕</button>
-        <button type="button" title="Tourner de 90° vers la gauche" onClick={() => ed.faire(d => tourner(d, sel, -90))}>↺</button>
-        <button type="button" title="Tourner de 90° vers la droite" onClick={() => ed.faire(d => tourner(d, sel, 90))}>↻</button>
+        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => ed.faire(d => retourner(d, sel, 'h'))} />
+        <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => ed.faire(d => retourner(d, sel, 'v'))} />
+        <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => ed.faire(d => tourner(d, sel, -90))} />
+        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => ed.faire(d => tourner(d, sel, 90))} />
       </div>
       <div className="groupe" role="group" aria-label="Empiler">
-        {ORDRES_COURTS.map(([o, s, t]) => <button key={o} type="button" title={t} aria-label={t} onClick={() => ed.faire(d => ordonner(d, sel, o))}>{s}</button>)}
+        {ORDRES_ICONES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} onClick={() => ed.faire(d => ordonner(d, sel, o))} />)}
       </div>
-      <div className="groupe">
-        <button type="button" disabled={sel.length < 2} title="Combiner en une forme (Ctrl+G)" onClick={ed.combinerSelection}>Combiner</button>
-        <button type="button" disabled={!separable} title="Séparer les tracés (Ctrl+Maj+G)" onClick={ed.separerSelection}>Séparer</button>
-        <button type="button" title="Dupliquer (Ctrl+D)" onClick={ed.dupliquerSelection}>Dupliquer</button>
-        <button type="button" title="Masquer" onClick={ed.masquerSelection}>Masquer</button>
-        <button type="button" title="Verrouiller" onClick={ed.verrouillerSelection}>Verrouiller</button>
-        <button type="button" className="danger" title="Supprimer (Suppr)" onClick={ed.supprimerSelection}>Supprimer</button>
+      <div className="groupe" role="group" aria-label="Formes">
+        <Bouton icone="combiner" aide="Combiner en une forme (Ctrl+G)" disabled={sel.length < 2} onClick={ed.combinerSelection} />
+        <Bouton icone="separer" aide="Séparer les tracés (Ctrl+Maj+G)" disabled={!separable} onClick={ed.separerSelection} />
+        <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ed.dupliquerSelection} />
+        <Bouton icone="masquer" aide="Masquer" onClick={ed.masquerSelection} />
+        <Bouton icone="verrouiller" aide="Verrouiller" onClick={ed.verrouillerSelection} />
+        <Bouton icone="supprimer" aide="Supprimer (Suppr)" className="danger" onClick={ed.supprimerSelection} />
       </div>
     </div>
   );
