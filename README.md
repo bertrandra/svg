@@ -19,15 +19,24 @@ s'embarque aussi comme composant React dans un autre produit.
     combiner, séparer, dupliquer, masquer, verrouiller, supprimer ;
   - copier, couper, coller ; les couleurs courantes dans la barre ; une grille magnétique ; le zoom
     sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+S, Ctrl+C/X/V, Ctrl+G, G, Z…) ;
-  - outils de tracé : rectangle, ellipse, étoile, ligne, plume ;
+  - outils de tracé : rectangle, ellipse, étoile, ligne, plume ; texte en formes (neuf fontes libres
+    ou la vôtre), une forme par lettre ;
+  - booléens : union, soustraction, intersection, exclusion ;
+  - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
+    inclinaison, échelle) et poignée de rotation ;
+  - recoloration par palettes d'événements, par le nuancier ou d'une seule couleur ;
   - points et poignées : glisser une ancre, tirer une poignée, ajouter un point sans changer la
     courbe, redresser ou courber un segment, retirer un point ;
   - couleurs : sélecteur, code, nuancier, remplacement d'une couleur partout ;
   - nettoyage du tracé : poussières sous un seuil, voisines de même couleur regroupées si le rendu
     reste identique, plan de travail ajusté ;
-  - insertion d'une forme de la bibliothèque au centre du dessin ;
+  - insertion d'une forme de la bibliothèque au centre du dessin, d'un panier en grille, ou d'une
+    scène prête par événement ;
+  - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
-- **Récupérer le résultat** : aperçu, téléchargement, copie du code. Rien ne quitte le navigateur.
+- **Récupérer le résultat** : SVG, SVG de découpe (contours seuls), PNG à la largeur voulue, PDF
+  vectoriel, copie du code. Rien ne quitte le navigateur.
+- **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, zoom à deux doigts.
 
 Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, `<use>`.
 On n'édite pas ce qu'on ne saurait pas réécrire ; une image se vectorise d'abord.
@@ -39,7 +48,7 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page, vtracer compris) et dist/bibliotheque.js
+npm run construire   # dist/editeur-svg.html (la page, vtracer compris), dist/bibliotheque.js, dist/polices.js
 ```
 
 | Commande | Ce qu'elle fait |
@@ -50,9 +59,11 @@ npm run construire   # dist/editeur-svg.html (la page, vtracer compris) et dist/
 | `npm test` | Couches, cycles, pureté du cœur, lecture et écriture du dessin, opérations, points, historique, vectorisation réelle, bibliothèque entière |
 | `npm run construire` | La page autonome et la bibliothèque, dans `dist/` |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
+| `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
-statique ; `bibliotheque.js` doit rester à côté d'elle, il se charge à la demande (7 Mo).
+statique ; `bibliotheque.js` (7 Mo) et `polices.js` (2,7 Mo) doivent rester à côté d'elle, ils se
+chargent à la demande.
 
 ## Embarquer l'éditeur
 
@@ -81,9 +92,11 @@ image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
 |---|---|
 | `src/util/` | Primitives pures : lecture XML sans DOM, nettoyage d'un SVG, historique immuable, couleur (OKLab), lecture indexée sûre (`au`) |
 | `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme |
-| `src/engine/` | Le dessin à plat (`editionSvg.ts`), le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
-| `src/io/` | Ce qui touche au navigateur : décoder une image, appeler vtracer (WASM), charger la bibliothèque, télécharger, copier |
-| `src/zones/` | `EditeurSvg.tsx` (le composant), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
+| `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
+| `src/export/` | Le PDF vectoriel et le SVG de découpe. Pur |
+| `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
+| `src/zones/` | `EditeurSvg.tsx` (le composant), ses panneaux (`Texte`, `Palettes`, `Versions`, `Exporter`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page), `session.ts` |
+| `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page et son point d'entrée ; `scripts/construire.mjs` y embarque le moteur, `scripts/bibliotheque.mjs` construit la bibliothèque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `docs/adr/` | Les décisions, une par fichier |
@@ -99,3 +112,7 @@ l'impose.
   [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), par le paquet `@iconify-json/game-icons`.
 - La vectorisation emploie [vtracer](https://github.com/visioncortex/vtracer) (Vision Cortex),
   compilé en WebAssembly, par le paquet `@visioncortex/vtracer`.
+- Les booléens emploient [polygon-clipping](https://github.com/mfogel/polygon-clipping) (MIT) ; le
+  texte, [opentype.js](https://opentype.js.org) (MIT) et neuf fontes sous licence SIL OFL 1.1
+  (Inter, Oswald, Bebas Neue, Playfair Display, Lobster, Pacifico, Caveat, Fredoka), par les paquets
+  `@expo-google-fonts/*`.

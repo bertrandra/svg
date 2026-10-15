@@ -13,7 +13,9 @@ export type NomIcone =
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
-  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'verrouiller' | 'supprimer';
+  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'verrouiller' | 'supprimer'
+  | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
+  | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -66,7 +68,22 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   dupliquer: [t('M9 9h11v11H9z'), t('M15 9V5H4v11h5'), t('M14.5 12.5v5'), t('M12 15h5')],
   masquer: [t('M3 3l18 18'), t('M10.6 10.6a2 2 0 0 0 2.8 2.8'), t('M9.9 5.2A10 10 0 0 1 12 5c5 0 9 4 10 7a13 13 0 0 1-2.8 3.8'), t('M6.6 6.6A13 13 0 0 0 2 12c1 3 5 7 10 7a10 10 0 0 0 3.5-.6')],
   verrouiller: [t('M5 11h14v10H5z'), t('M8 11V7a4 4 0 0 1 8 0v4')],
-  supprimer: [t('M4 7h16'), t('M10 11v6'), t('M14 11v6'), t('M6 7l1 13h10l1-13'), t('M9 7V4h6v3')]
+  supprimer: [t('M4 7h16'), t('M10 11v6'), t('M14 11v6'), t('M6 7l1 13h10l1-13'), t('M9 7V4h6v3')],
+  union: [t('M4 4h11v11H4z M9 9h11v11H9z', true)],
+  soustraction: [t('M4 4h11v11H4z', true), t('M9 9h11v11H9z')],
+  intersection: [t('M4 4h11v11H4z'), t('M9 9h11v11H9z'), t('M9 9h6v6H9z', true)],
+  exclusion: [t('M4 4h11v5H9v6H4z', true), t('M15 9h5v11H9v-5h6z', true)],
+  texte: [t('M5 5h14'), t('M5 5v3'), t('M19 5v3'), t('M12 5v15'), t('M9 20h6')],
+  aimant: [t('M6 3v8a6 6 0 0 0 12 0V3'), t('M6 3h4v8H6z', true), t('M14 3h4v8h-4z', true), t('M6 11a6 6 0 0 0 12 0')],
+  exporter: [t('M12 15V3'), t('M7 8l5-5 5 5'), t('M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5')],
+  palette: [t('M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a4 4 0 0 0 4-4 10 10 0 0 0-9-10z'), t('M7 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true), t('M9 7.5a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true), t('M14 7.5a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true)],
+  versions: [t('M3 12a9 9 0 1 0 3-6.7'), t('M3 4v5h5'), t('M12 7v5l3 2')],
+  'panneau-gauche': [t('M3 4h18v16H3z'), t('M9 4v16'), t('M5 8h2'), t('M5 11h2')],
+  'panneau-droit': [t('M3 4h18v16H3z'), t('M15 4v16'), t('M17 8h2'), t('M17 11h2')],
+  scene: [t('M3 3h8v8H3z'), t('M13 3h8v8h-8z'), t('M3 13h8v8H3z'), t('M13 13h8v8h-8z')],
+  ajouter: [t('M12 5v14'), t('M5 12h14')],
+  rotation: [t('M21 12a9 9 0 1 1-3-6.7'), t('M21 4v5h-5'), t('M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
+  reprendre: [t('M5 4l14 8-14 8z', true)]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

@@ -157,6 +157,20 @@ export function construireBibliotheque(icones: Readonly<Record<string, IconeSour
   }).filter(x => x.svg);
 }
 
+/** Une correction posee a la main sur une forme : son nom, ses evenements, ou les deux. */
+export interface Correction { nom?: string; evenements?: readonly string[] }
+export type Corrections = Readonly<Record<string, Correction>>;
+
+/** Les entrees corrigees : le nom et le classement du fichier l'emportent sur ceux du code. */
+export function appliquerCorrections(entrees: readonly EntreeBibliotheque[], corrections: Corrections): EntreeBibliotheque[] {
+  return entrees.map(e => {
+    const c = corrections[e.id];
+    if (!c) return e;
+    const nom = c.nom?.trim();
+    return { ...e, ...(nom ? { nom } : {}), ...(c.evenements ? { evenements: [...c.evenements] } : {}) };
+  });
+}
+
 const sansAccents = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').toLowerCase();
 
 /** Les entrees dont le nom francais ou l'identifiant contient chaque mot cherche, et qui portent l'evenement s'il est donne. */

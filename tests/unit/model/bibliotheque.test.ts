@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { EVENEMENTS, chercher, classer, construireBibliotheque, motsInconnus, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
+import { EVENEMENTS, appliquerCorrections, chercher, classer, construireBibliotheque, motsInconnus, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { lireDessin } from '../../../src/engine/editionSvg.js';
 
 const jeu = JSON.parse(readFileSync(resolve(__dirname, '../../../node_modules/@iconify-json/game-icons/icons.json'), 'utf8')) as { width: number; icons: Record<string, IconeSource> };
@@ -61,5 +61,15 @@ describe('la bibliotheque construite depuis game-icons', () => {
     expect(noel.map(x => x.id)).toContain('snowman');
     expect(chercher(entrees, 'COEUR brise', null).map(x => x.id)).toContain('broken-heart');
     expect(chercher(entrees, 'xyzzy', null)).toEqual([]);
+  });
+});
+
+describe('appliquerCorrections', () => {
+  it('remplace le nom et les evenements donnes, et laisse le reste', () => {
+    const e = [{ id: 'a', nom: 'un', evenements: ['x'], svg: '<svg/>' }, { id: 'b', nom: 'deux', evenements: ['y'], svg: '<svg/>' }];
+    const r = appliquerCorrections(e, { a: { nom: ' Un corrigé ' }, b: { evenements: ['z'] }, c: { nom: 'absent' } });
+    expect(r[0]).toMatchObject({ nom: 'Un corrigé', evenements: ['x'] });
+    expect(r[1]).toMatchObject({ nom: 'deux', evenements: ['z'] });
+    expect(r.length).toBe(2);
   });
 });

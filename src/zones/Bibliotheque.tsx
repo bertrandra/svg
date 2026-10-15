@@ -3,8 +3,14 @@
 // l'editeur, pour inserer une forme dans le dessin en cours.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { chercher, type EntreeBibliotheque, type Evenement, type FamilleEvenement } from '../model/bibliotheque.js';
+import { appliquerCorrections, chercher, type Correction, type Corrections, type EntreeBibliotheque, type Evenement, type FamilleEvenement } from '../model/bibliotheque.js';
 import { chargerBibliotheque, type Bibliotheque } from '../io/bibliotheque.js';
+import { proposer, texteOctets } from '../io/fichiers.js';
+import { Icone } from './icones.js';
+
+const CLE_CORRECTIONS = 'svg.corrections';
+const lireCorrections = (): Corrections => { try { return JSON.parse(localStorage.getItem(CLE_CORRECTIONS) ?? '{}') as Corrections; } catch { return {}; } };
+const garderCorrections = (c: Corrections) => { try { localStorage.setItem(CLE_CORRECTIONS, JSON.stringify(c)); } catch { /* sans stockage, la correction vit le temps de la page */ } };
 
 export const enImage = (svg: string): string => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
@@ -37,31 +43,73 @@ export function useBibliotheque(): { bibliotheque: Bibliotheque | null; erreur: 
   return { bibliotheque, erreur };
 }
 
+interface ProprietesRecherche {
+  bibliotheque: Bibliotheque;
+  choisir: (e: EntreeBibliotheque) => void;
+  /** Un second geste par vignette : mettre dans un panier. */
+  ajouter?: (e: EntreeBibliotheque) => void;
+  /** Permettre de corriger le nom et le classement d'une forme (la page, pas l'editeur). */
+  corriger?: boolean;
+  parPage?: number;
+  compact?: boolean;
+}
+
 /** La recherche et la grille : `choisir` recoit la forme cliquee. */
-export function RechercheFormes({ bibliotheque, choisir, parPage = 48, compact = false }: { bibliotheque: Bibliotheque; choisir: (e: EntreeBibliotheque) => void; parPage?: number; compact?: boolean }) {
+export function RechercheFormes({ bibliotheque, choisir, ajouter, corriger = false, parPage = 48, compact = false }: ProprietesRecherche) {
   const [texte, poserTexte] = useState('');
   const [evenement, poserEvenement] = useState<string | null>(null);
   const [page, poserPage] = useState(1);
-  const resultats = useMemo(() => chercher(bibliotheque.entrees, texte, evenement), [bibliotheque, texte, evenement]);
+  const [corrections, poserCorrections] = useState<Corrections>(() => (corriger ? lireCorrections() : {}));
+  const [enEdition, poserEnEdition] = useState<string | null>(null);
+  const entrees = useMemo(() => (Object.keys(corrections).length ? appliquerCorrections(bibliotheque.entrees, corrections) : bibliotheque.entrees), [bibliotheque, corrections]);
+  const resultats = useMemo(() => chercher(entrees, texte, evenement), [entrees, texte, evenement]);
   const montres = resultats.slice(0, page * parPage);
+  const poserCorrection = (id: string, c: Correction) => { const n = { ...corrections, [id]: c }; poserCorrections(n); garderCorrections(n); };
+  const nCorrections = Object.keys(corrections).length;
   return (
     <div className={'recherche-formes' + (compact ? ' compact' : '')}>
       <div className="filtres">
         <input type="search" aria-label="Chercher une forme" placeholder="Chercher : sapin, lapin, guitare…" value={texte} onChange={e => { poserTexte(e.target.value); poserPage(1); }} />
         <ChoixEvenement evenements={bibliotheque.evenements} valeur={evenement} poser={v => { poserEvenement(v); poserPage(1); }} />
       </div>
-      <p className="aide" aria-live="polite">{resultats.length} forme{resultats.length > 1 ? 's' : ''}{resultats.length !== bibliotheque.entrees.length ? ' sur ' + bibliotheque.entrees.length : ''}</p>
+      <p className="aide" aria-live="polite">{resultats.length} forme{resultats.length > 1 ? 's' : ''}{resultats.length !== entrees.length ? ' sur ' + entrees.length : ''}
+        {corriger && nCorrections ? <> · {nCorrections} correction{nCorrections > 1 ? 's' : ''} <button type="button" className="discret" onClick={() => { void proposer('corrections.json', texteOctets(JSON.stringify(corrections, null, 1))).then(() => undefined); }}>Exporter les corrections</button></> : null}
+      </p>
       <ul className="grille-formes">
         {montres.map(x => (
-          <li key={x.id}>
+          <li key={x.id} className={enEdition === x.id ? 'en-edition' : undefined}>
             <button type="button" className="vignette" title={x.nom + ' (' + x.id + ')'} onClick={() => choisir(x)}>
               <img src={enImage(x.svg)} alt="" loading="lazy" width={64} height={64} />
               <span>{x.nom}</span>
             </button>
+            {ajouter ? <button type="button" className="icone-bouton plus" title={'Mettre « ' + x.nom + ' » dans le panier'} aria-label={'Mettre ' + x.nom + ' dans le panier'} onClick={() => ajouter(x)}><Icone nom="ajouter" taille={14} /></button> : null}
+            {corriger ? <button type="button" className="icone-bouton plus" title={'Corriger « ' + x.nom + ' »'} aria-label={'Corriger ' + x.nom} onClick={() => poserEnEdition(enEdition === x.id ? null : x.id)}><Icone nom="texte" taille={14} /></button> : null}
+            {corriger && enEdition === x.id ? <Correcteur entree={x} evenements={bibliotheque.evenements} poser={c => { poserCorrection(x.id, c); poserEnEdition(null); }} fermer={() => poserEnEdition(null)} /> : null}
           </li>
         ))}
       </ul>
       {montres.length < resultats.length ? <button type="button" className="discret" onClick={() => poserPage(p => p + 1)}>Afficher {Math.min(parPage, resultats.length - montres.length)} de plus</button> : null}
+    </div>
+  );
+}
+
+/** Corriger une forme : son nom, ses evenements ; la correction reste dans ce navigateur et s'exporte en JSON. */
+function Correcteur({ entree, evenements, poser, fermer }: { entree: EntreeBibliotheque; evenements: readonly Evenement[]; poser: (c: Correction) => void; fermer: () => void }) {
+  const [nom, poserNom] = useState(entree.nom);
+  const [choisis, poserChoisis] = useState<string[]>([...entree.evenements]);
+  return (
+    <div className="correcteur" role="dialog" aria-label={'Corriger ' + entree.id}>
+      <label className="champ-ligne"><span>Nom</span><input type="text" value={nom} onChange={e => poserNom(e.target.value)} /></label>
+      <div className="cases-evenements">
+        {evenements.map(ev => (
+          <label key={ev.id} className="case"><input type="checkbox" checked={choisis.includes(ev.id)} onChange={e => poserChoisis(c => (e.target.checked ? [...c, ev.id] : c.filter(x => x !== ev.id)))} /> {ev.nom}</label>
+        ))}
+      </div>
+      <div className="boutons">
+        <button type="button" onClick={() => poser({ nom, evenements: choisis })}>Garder la correction</button>
+        <button type="button" className="discret" onClick={fermer}>Annuler</button>
+      </div>
+      <p className="aide">Identifiant : {entree.id}. « Exporter les corrections » donne le fichier à poser dans bibliotheque/corrections.json.</p>
     </div>
   );
 }
@@ -83,5 +131,5 @@ function Chargee({ ouvrir }: { ouvrir: (e: EntreeBibliotheque) => void }) {
   const { bibliotheque, erreur } = useBibliotheque();
   if (erreur) return <p className="message" role="alert">{erreur}</p>;
   if (!bibliotheque) return <p className="aide" role="status">Chargement de la bibliothèque…</p>;
-  return <RechercheFormes bibliotheque={bibliotheque} choisir={ouvrir} />;
+  return <RechercheFormes bibliotheque={bibliotheque} choisir={ouvrir} corriger />;
 }

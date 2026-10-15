@@ -8,7 +8,7 @@
 //   npm run bibliotheque       -> dist/bibliotheque.js
 
 import { build } from 'esbuild';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -21,7 +21,10 @@ export async function construireBibliotheque() {
   const modele = await import(pathToFileURL(sortieModele).href);
   const jeu = JSON.parse(readFileSync(join(racine, 'node_modules/@iconify-json/game-icons/icons.json'), 'utf8'));
   const info = JSON.parse(readFileSync(join(racine, 'node_modules/@iconify-json/game-icons/info.json'), 'utf8'));
-  const entrees = modele.construireBibliotheque(jeu.icons, jeu.width);
+  // Les corrections posees a la main depuis la page (bibliotheque/corrections.json) l'emportent sur les regles.
+  const cheminCorrections = join(racine, 'bibliotheque/corrections.json');
+  const corrections = existsSync(cheminCorrections) ? JSON.parse(readFileSync(cheminCorrections, 'utf8')) : {};
+  const entrees = modele.appliquerCorrections(modele.construireBibliotheque(jeu.icons, jeu.width), corrections);
   const evenements = modele.EVENEMENTS;
   const texte = 'window.__bibliothequeSvg=' + JSON.stringify({ source: info.name, licence: info.license.title, url: 'https://game-icons.net', evenements, entrees }) + ';';
   if (texte.includes('</script')) throw new Error('la bibliotheque contient « </script » : la page serait coupee');
