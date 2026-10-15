@@ -15,7 +15,7 @@ Ce que lance la CI (`.github/workflows/ci.yml`, job `verifier`) — tout doit pa
 
 ```bash
 npm run verifier     # typecheck && lint && cliquet && test
-npm run construire   # la page et la bibliothèque se construisent
+npm run construire   # la page, la bibliothèque et les fontes se construisent
 ```
 
 - `tests/unit/architecture.test.ts` impose les couches : `util/shell` → `geometry` →
@@ -57,6 +57,12 @@ npm run construire   # la page et la bibliothèque se construisent
 - **Rien ne s'écrit sans « Enregistrer »** ; le SVG réécrit passe par `nettoyerSvg`.
 - **La vectorisation est vtracer en WASM, épinglé, chargé à la demande** (ADR-0002) ; le réglage
   est pur et déterministe ; une image entièrement détourée n'est jamais tracée.
+- **Les booléens aplatissent** (ADR-0004) : le résultat est en segments droits, au style de la forme
+  la plus basse ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
+- **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
+  `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts`. Jamais de `<text>` dans un SVG écrit.
+- **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
+  marche sans lui, et le cœur pur ne le voit jamais.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

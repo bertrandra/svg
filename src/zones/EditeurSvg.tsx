@@ -18,9 +18,19 @@ import {
 import { annuler, avancer, clore, historique, retablir, type Historique } from '../util/historique.js';
 import { nettoyerSvg } from '../util/svg.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
-import type { Bibliotheque } from '../io/bibliotheque.js';
+import { appliquerBooleen, type Booleen } from '../engine/booleens.js';
+import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, incliner, mettreALEchelle, tournerAutour, type Aimant } from '../engine/transformations.js';
+import { inserer as insererDessin } from '../engine/editionSvg.js';
+import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
+import { SCENES } from '../model/scenes.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
+import { MenuExport } from './Exporter.js';
+import { Icone, type NomIcone } from './icones.js';
+import { PanneauPalettes } from './Palettes.js';
+import { garderVersions, idVersion, lireVersions, type Version } from './session.js';
+import { PanneauTexte } from './Texte.js';
+import { PanneauVersions } from './Versions.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
@@ -39,10 +49,12 @@ export interface ProprietesEditeur {
   fermer: () => void;
   /** Recoit le SVG retouche, deja nettoye par `nettoyerSvg`. */
   enregistrer: (svg: string) => void;
+  /** Recoit le SVG du moment apres chaque modification (une seconde de repos) : de quoi reprendre apres un rechargement. */
+  brouillon?: (svg: string) => void;
 }
 
 type OutilForme = 'rectangle' | 'ellipse' | 'etoile' | 'ligne';
-type Outil = 'selection' | 'points' | 'main' | 'plume' | OutilForme;
+type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme;
 type Coin = 'nw' | 'ne' | 'sw' | 'se';
 type Point = readonly [number, number];
 interface Vue { zoom: number; x: number; y: number }
@@ -53,13 +65,31 @@ type Geste =
   | { type: 'cadre'; x0: number; y0: number; ajout: boolean }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
-  | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string };
+  | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
+  | { type: 'rotation'; centre: readonly [number, number]; angle0: number; base: DessinSvg; ids: string[]; cle: string }
+  | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue };
 
-const OUTILS: ReadonlyArray<readonly [Outil, string, string]> = [
-  ['selection', 'Sélection', 'Sélection (V)'], ['points', 'Points', 'Points et poignées (A)'], ['main', 'Main', 'Main : déplacer la vue (H, ou espace)'],
-  ['rectangle', '▭', 'Rectangle (R) · Maj : carré'], ['ellipse', '◯', 'Ellipse (E) · Maj : cercle'], ['etoile', '☆', 'Étoile (T)'],
-  ['ligne', '╱', 'Ligne (L) · Maj : droite'], ['plume', '✎', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne']
+const OUTILS: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
+  ['selection', 'selection', 'Sélection (V)'], ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)'],
+  ['rectangle', 'rectangle', 'Rectangle (R) · Maj : carré'], ['ellipse', 'ellipse', 'Ellipse (E) · Maj : cercle'], ['etoile', 'etoile', 'Étoile (S)'],
+  ['ligne', 'ligne', 'Ligne (L) · Maj : droite'], ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'],
+  ['texte', 'texte', 'Texte en formes (T)']
 ];
+const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]> = [
+  ['union', 'union', 'Union : réunir les formes en une seule'], ['soustraction', 'soustraction', 'Soustraction : la plus basse moins les autres'],
+  ['intersection', 'intersection', 'Intersection : ce que les formes ont en commun'], ['exclusion', 'exclusion', 'Exclusion : tout sauf les recouvrements']
+];
+const FONDS: ReadonlyArray<readonly ['damier' | 'blanc' | 'sombre', NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
+const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
+  ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
+  ['haut', 'aligner-haut', 'Aligner en haut'], ['centreV', 'aligner-centre-v', 'Centrer verticalement'], ['bas', 'aligner-bas', 'Aligner en bas']
+];
+const ORDRES_ICONES: ReadonlyArray<readonly [Ordre, NomIcone, string]> = [['premier', 'premier-plan', 'Premier plan (Ctrl+Maj+])'], ['avant', 'avancer', 'Avancer (Ctrl+])'], ['arriere', 'reculer', 'Reculer (Ctrl+[)'], ['dernier', 'arriere-plan', 'Arrière-plan (Ctrl+Maj+[)']];
+
+/** Un bouton d'outil : une icone, une infobulle qui dit le geste et son raccourci. */
+function Bouton({ icone, aide, onClick, pressed, disabled, className }: { icone: NomIcone; aide: string; onClick: () => void; pressed?: boolean; disabled?: boolean; className?: string }) {
+  return <button type="button" className={'icone-bouton' + (className ? ' ' + className : '')} title={aide} aria-label={aide} aria-pressed={pressed} disabled={disabled} onClick={onClick}><Icone nom={icone} /></button>;
+}
 const FORMES = new Set<Outil>(['rectangle', 'ellipse', 'etoile', 'ligne']);
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 const ALIGNEMENTS: ReadonlyArray<readonly [Alignement, string, string]> = [
@@ -67,7 +97,6 @@ const ALIGNEMENTS: ReadonlyArray<readonly [Alignement, string, string]> = [
   ['haut', '⤒', 'Aligner en haut'], ['centreV', '↕', 'Centrer verticalement'], ['bas', '⤓', 'Aligner en bas']
 ];
 const ORDRES: ReadonlyArray<readonly [Ordre, string]> = [['premier', 'Premier plan'], ['avant', 'Avancer'], ['arriere', 'Reculer'], ['dernier', 'Arrière-plan']];
-const ORDRES_COURTS: ReadonlyArray<readonly [Ordre, string, string]> = [['premier', '⤒', 'Premier plan (Ctrl+Maj+])'], ['avant', '↑', 'Avancer (Ctrl+])'], ['arriere', '↓', 'Reculer (Ctrl+[)'], ['dernier', '⤓', 'Arrière-plan (Ctrl+Maj+[)']];
 
 const cacheChemins = new WeakMap<Forme, string>();
 function cheminDe(f: Forme): string {
@@ -109,7 +138,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon }: ProprietesEditeur) {
   const lu = useMemo(() => lireDessin(svg), [svg]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   useEffect(() => {
@@ -124,7 +153,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
           <p>{lu.erreur}</p>
           <button type="button" onClick={fermer}>Fermer</button>
         </div>
-      ) : <Atelier initial={lu.dessin} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} />}
+      ) : <Atelier initial={lu.dessin} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} />}
     </div>,
     document.body
   );
@@ -140,7 +169,7 @@ const Calque = memo(function Calque({ f, contours }: { f: Forme; contours: boole
 });
 
 /** Ce que les panneaux partagent : le dessin, la selection, et les gestes d'edition. */
-interface Edition {
+export interface Edition {
   h: Historique<DessinSvg>;
   dessin: DessinSvg;
   sel: string[];
@@ -154,10 +183,19 @@ interface Edition {
   trace: readonly Point[];
   presse: readonly Forme[];
   grille: boolean;
+  aimants: boolean;
+  guides: readonly Aimant[];
+  versions: readonly Version[];
+  tiroir: 'calques' | 'inspecteur' | null;
   pas: number;
   /** La valeur aimantee a la grille quand elle est active, telle quelle sinon. */
   aimant: (v: number) => number;
   poserGrille: (g: boolean) => void;
+  poserAimants: (a: boolean) => void;
+  poserGuides: (g: readonly Aimant[]) => void;
+  poserTiroir: (t: 'calques' | 'inspecteur' | null) => void;
+  garderVersion: (nom: string, svg: string) => void;
+  supprimerVersion: (id: string) => void;
   choisir: (ids: string[]) => void;
   poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void;
@@ -182,6 +220,9 @@ interface Edition {
   zoomerSelection: () => void;
   enregistrerTout: () => void;
   insererForme: (svgForme: string) => void;
+  insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number }[]) => void;
+  booleen: (op: Booleen) => void;
+  transformerNumerique: (t: { rotation?: number; inclinaisonX?: number; inclinaisonY?: number; echelle?: number }) => void;
 }
 
 /** Le style d'une ligne : son contour est la couleur courante, sans remplissage, sinon elle serait invisible. */
@@ -191,7 +232,7 @@ const styleLigne = (s: Style): Style => ({ remplissage: null, contour: s.contour
 const sansDoublons = (points: readonly Point[], eps: number): Point[] =>
   points.filter((p, i) => { const q = points[i - 1]; return !q || Math.hypot(p[0] - q[0], p[1] - q[1]) > eps; });
 
-function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregistrer }: { initial: DessinSvg; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null; fermer: () => void; enregistrer: (svg: string) => void }) {
+function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregistrer, brouillon }: { initial: DessinSvg; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null; fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined }) {
   const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(initial));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
@@ -200,6 +241,10 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const [trace, poserTrace] = useState<readonly Point[]>([]);
   const [presse, poserPresse] = useState<readonly Forme[]>([]);
   const [grille, poserGrille] = useState(false);
+  const [aimants, poserAimants] = useState(true);
+  const [guides, poserGuides] = useState<readonly Aimant[]>([]);
+  const [versions, poserVersionsEtat] = useState<readonly Version[]>(() => lireVersions());
+  const [tiroir, poserTiroir] = useState<'calques' | 'inspecteur' | null>(null);
   const [contours, poserContours] = useState(false);
   const [fond, poserFond] = useState<'damier' | 'blanc' | 'sombre'>('damier');
   const [message, dire] = useState('');
@@ -222,12 +267,22 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const defaire = useCallback(() => { poserH(x => annuler(clore(x))); poserPoint(null); poserTrace([]); dire(''); }, []);
   const refaire = useCallback(() => { poserH(x => retablir(x)); poserPoint(null); poserTrace([]); dire(''); }, []);
   const poserOutil = useCallback((o: Outil) => { poserOutilBrut(o); poserTrace([]); poserPoint(null); }, []);
+  const poserVersions = useCallback((v: readonly Version[]) => { poserVersionsEtat(v); garderVersions(v); }, []);
+  // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
+  useEffect(() => {
+    if (!brouillon || !modifie) return;
+    const t = setTimeout(() => brouillon(ecrireDessin(dessin, 3)), 1000);
+    return () => clearTimeout(t);
+  }, [brouillon, dessin, modifie]);
 
   const demanderFermeture = () => { if (modifie) poserQuitter(true); else fermer(); };
 
   const base = { dessin, sel, formeSeule, outil, point, style, trace, presse, poserPresse, appliquer, choisir, poserPoint, poserOutil, poserOutilBrut, poserTrace, dire, vues, enregistrer, toile };
   const ed: Edition = {
-    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, pas, poserGrille, choisir, poserPoint, poserOutil, poserStyle, poserTrace,
+    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, aimants, guides, versions, tiroir, pas,
+    poserGrille, poserAimants, poserGuides, poserTiroir, choisir, poserPoint, poserOutil, poserStyle, poserTrace,
+    garderVersion: (nomVersion, svgVersion) => { const quand = Date.now(); poserVersions([{ id: idVersion(quand, versions.length), nom: nomVersion, svg: svgVersion, quand }, ...versions]); dire('Version « ' + nomVersion + ' » gardée dans ce navigateur.'); },
+    supprimerVersion: id => poserVersions(versions.filter(v => v.id !== id)),
     appliquer, finir, annulerGeste, dire, ...actionsEdition(base),
     aimant: v => (grille ? aimanter(v, pas, dessin.vb[0] % pas) : v),
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
@@ -239,7 +294,7 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
   const [vx, vy, vl, vh] = dessin.vb;
 
   return (
-    <div className={'editeur-cadre outil-' + outil}>
+    <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '')}>
       <Barre ed={ed} titre={titre} nom={nom} vues={vues} contours={contours} poserContours={poserContours} fond={fond} poserFond={poserFond}
         defaire={defaire} refaire={refaire} demanderFermeture={demanderFermeture} modifie={modifie} />
       {sel.length ? <BarreSelection ed={ed} /> : null}
@@ -269,10 +324,14 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
         </svg>
       </div>
       <aside className="editeur-inspecteur" aria-label="Inspecteur">
-        {sel.length && !FORMES.has(outil) && outil !== 'plume' ? <Inspecteur ed={ed} /> : <PanneauDessin ed={ed} />}
+        {sel.length && !FORMES.has(outil) && outil !== 'plume' && outil !== 'texte' ? <Inspecteur ed={ed} /> : <PanneauDessin ed={ed} />}
       </aside>
       <footer className="editeur-etat" role="status">
-        {message || etatParDefaut(ed)}
+        <span className="tiroirs">
+          <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => poserTiroir(tiroir === 'calques' ? null : 'calques')} />
+          <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
+        </span>
+        <span className="message-etat">{message || etatParDefaut(ed)}</span>
         <span className="espace" />
         {h.passe.length} modification{h.passe.length > 1 ? 's' : ''}
       </footer>
@@ -288,7 +347,7 @@ interface BaseActions {
   vues: Vues; enregistrer: (svg: string) => void; toile: RefObject<HTMLDivElement | null>;
 }
 
-type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme'>;
+type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
 /** Les actions de la barre et des raccourcis, sur l'etat du moment. */
 function actionsEdition(b: BaseActions): Actions {
@@ -390,6 +449,39 @@ function actionsEdition(b: BaseActions): Actions {
       choisir(r.ids);
       b.poserOutil('selection');
       dire('Forme insérée au centre : déplacez-la, redimensionnez-la, recolorez-la.');
+    },
+    // Plusieurs formes d'un coup, chacune a sa place relative (0 a 1) dans le carre inscrit au plan.
+    insererPlusieurs: elements => {
+      const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh), ox = vx + (vl - c) / 2, oy = vy + (vh - c) / 2;
+      let d = dessin;
+      const ids: string[] = [];
+      for (const e of elements) {
+        const autre = lireDessin(e.svg);
+        if ('erreur' in autre) continue;
+        const r = insererDessin(d, autre.dessin, { x: ox + e.x * c, y: oy + e.y * c, l: e.taille * c, h: e.taille * c });
+        d = r.dessin;
+        ids.push(...r.ids);
+      }
+      if (!ids.length) return;
+      appliquer(() => d);
+      choisir(ids);
+      b.poserOutil('selection');
+      dire(pl(ids.length, 'forme') + ' insérée' + (ids.length > 1 ? 's' : '') + '.');
+    },
+    booleen: op => {
+      const r = appliquerBooleen(dessin, sel, op);
+      if (r.erreur) { dire(r.erreur); return; }
+      appliquer(() => r.dessin);
+      choisir(r.id ? [r.id] : []);
+      dire(r.id ? 'Opération appliquée : le résultat est en segments droits, au style de la forme la plus basse.' : 'Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.');
+    },
+    transformerNumerique: t => {
+      if (!sel.length) return;
+      let d = dessin;
+      if (t.rotation) d = tournerAutour(d, sel, t.rotation);
+      if (t.inclinaisonX || t.inclinaisonY) d = incliner(d, sel, t.inclinaisonX ?? 0, t.inclinaisonY ?? 0);
+      if (t.echelle && t.echelle !== 100) d = mettreALEchelle(d, sel, t.echelle / 100);
+      if (d !== dessin) appliquer(() => d);
     }
   };
 }
@@ -427,41 +519,39 @@ function Barre({ ed, titre, nom, vues, contours, poserContours, fond, poserFond,
   return (
     <header className="editeur-barre">
       <strong className="editeur-titre">{titre}</strong>
-      <div className="mini-onglets" role="group" aria-label="Outil">
-        {OUTILS.map(([o, texte, aide]) => <button key={o} type="button" aria-pressed={ed.outil === o} title={aide} aria-label={aide} onClick={() => ed.poserOutil(o)}>{texte}</button>)}
+      <div className="groupe outils" role="group" aria-label="Outil">
+        {OUTILS.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={ed.outil === o} onClick={() => ed.poserOutil(o)} />)}
       </div>
       <StyleCourant ed={ed} />
-      <div className="groupe">
-        <button type="button" onClick={defaire} disabled={!ed.h.passe.length} title="Annuler (Ctrl+Z)">↶</button>
-        <button type="button" onClick={refaire} disabled={!ed.h.futur.length} title="Rétablir (Ctrl+Maj+Z)">↷</button>
+      <div className="groupe" role="group" aria-label="Historique">
+        <Bouton icone="annuler" aide="Annuler (Ctrl+Z)" disabled={!ed.h.passe.length} onClick={defaire} />
+        <Bouton icone="retablir" aide="Rétablir (Ctrl+Maj+Z)" disabled={!ed.h.futur.length} onClick={refaire} />
       </div>
-      <div className="groupe">
-        <button type="button" onClick={ed.copierSelection} disabled={!ed.sel.length} title="Copier (Ctrl+C)">Copier</button>
-        <button type="button" onClick={ed.couperSelection} disabled={!ed.sel.length} title="Couper (Ctrl+X)">Couper</button>
-        <button type="button" onClick={ed.collerPresse} disabled={!ed.presse.length} title="Coller (Ctrl+V)">Coller</button>
+      <div className="groupe" role="group" aria-label="Presse-papiers">
+        <Bouton icone="copier" aide="Copier (Ctrl+C)" disabled={!ed.sel.length} onClick={ed.copierSelection} />
+        <Bouton icone="couper" aide="Couper (Ctrl+X)" disabled={!ed.sel.length} onClick={ed.couperSelection} />
+        <Bouton icone="coller" aide="Coller (Ctrl+V)" disabled={!ed.presse.length} onClick={ed.collerPresse} />
       </div>
-      <div className="groupe">
-        <button type="button" onClick={() => vues.zoomer(0.8)} title="Dézoomer (−)" aria-label="Dézoomer">−</button>
-        <span className="zoom" aria-live="polite">{Math.round(z * 100)} %</span>
-        <button type="button" onClick={() => vues.zoomer(1.25)} title="Zoomer (+)" aria-label="Zoomer">+</button>
-        <button type="button" onClick={vues.ajuster} title="Ajuster à l’écran (0)">Ajuster</button>
-        <button type="button" onClick={ed.zoomerSelection} disabled={!ed.sel.length} title="Zoomer sur la sélection (Z)">Sélection</button>
-        <button type="button" onClick={vues.centrer100} title="Taille réelle (1)">100 %</button>
+      <div className="groupe" role="group" aria-label="Zoom">
+        <Bouton icone="zoom-moins" aide="Dézoomer (−)" onClick={() => vues.zoomer(0.8)} />
+        <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster} aria-live="polite">{Math.round(z * 100)} %</button>
+        <Bouton icone="zoom-plus" aide="Zoomer (+)" onClick={() => vues.zoomer(1.25)} />
+        <Bouton icone="ajuster" aide="Ajuster à l’écran (0)" onClick={vues.ajuster} />
+        <Bouton icone="zoom-selection" aide="Zoomer sur la sélection (Z)" disabled={!ed.sel.length} onClick={ed.zoomerSelection} />
+        <Bouton icone="taille-reelle" aide="Taille réelle, 100 % (1)" onClick={vues.centrer100} />
       </div>
-      <div className="groupe">
-        <button type="button" aria-pressed={ed.grille} onClick={() => ed.poserGrille(!ed.grille)} title={'Grille magnétique (G) · pas ' + ed.pas}>Grille</button>
-        <button type="button" aria-pressed={contours} onClick={() => poserContours(c => !c)} title="Contours (O)">Contours</button>
-        <select aria-label="Fond" value={fond} onChange={e => poserFond(e.target.value as typeof fond)}>
-          <option value="damier">Fond damier</option>
-          <option value="blanc">Fond blanc</option>
-          <option value="sombre">Fond sombre</option>
-        </select>
+      <div className="groupe" role="group" aria-label="Affichage">
+        <Bouton icone="grille" aide={'Grille magnétique (G) · pas ' + ed.pas} pressed={ed.grille} onClick={() => ed.poserGrille(!ed.grille)} />
+        <Bouton icone="aimant" aide="Aimants : bords et centres des autres formes (M)" pressed={ed.aimants} onClick={() => ed.poserAimants(!ed.aimants)} />
+        <Bouton icone="contours" aide="Vue contours (O)" pressed={contours} onClick={() => poserContours(c => !c)} />
+        {FONDS.map(([f, icone, aide]) => <Bouton key={f} icone={icone} aide={aide} pressed={fond === f} onClick={() => poserFond(f)} />)}
       </div>
       <span className="espace" />
-      <div className="groupe">
-        <button type="button" className="discret" onClick={() => { void proposer(nom + '.svg', texteOctets(ecrireDessin(ed.dessin, 3))).then(ed.dire); }}>Télécharger</button>
-        <button type="button" className="discret" onClick={demanderFermeture}>Fermer</button>
-        <button type="button" className="primaire" onClick={ed.enregistrerTout} disabled={!modifie} title="Enregistrer (Ctrl+S)">Enregistrer</button>
+      <div className="groupe fin" role="group" aria-label="Fichier">
+        <Bouton icone="telecharger" aide="Télécharger le SVG" onClick={() => { void proposer(nom + '.svg', texteOctets(ecrireDessin(ed.dessin, 3))).then(ed.dire); }} />
+        <MenuExport svg="" dessin={ed.dessin} nom={nom} dire={ed.dire} compact />
+        <Bouton icone="fermer" aide="Fermer (Échap)" onClick={demanderFermeture} />
+        <button type="button" className="primaire texte" title="Enregistrer (Ctrl+S)" onClick={ed.enregistrerTout} disabled={!modifie}><Icone nom="enregistrer" /> Enregistrer</button>
       </div>
     </header>
   );
@@ -481,7 +571,7 @@ function StyleCourant({ ed }: { ed: Edition }) {
   const pastille = (libelle: string, valeur: string | null, cle: 'remplissage' | 'contour') => (
     <span className="pastille-style" title={libelle + (premiere ? ' de la sélection' : ' des formes à venir') + ' : ' + (valeur ?? 'aucun')}>
       <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser({ [cle]: e.target.value }, cle)} onBlur={ed.finir} />
-      <button type="button" className={'discret' + (valeur === null ? ' aucun' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ed.finir(); }}>∅</button>
+      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + (valeur === null ? ' : aucun (cliquez pour en mettre un)' : ' : retirer')} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ed.finir(); }}><Icone nom="fermer" taille={12} /></button>
     </span>
   );
   return (
@@ -496,28 +586,32 @@ function StyleCourant({ ed }: { ed: Edition }) {
 function BarreSelection({ ed }: { ed: Edition }) {
   const { sel } = ed;
   const separable = !!ed.formeSeule && sousChemins(ed.formeSeule.d).length > 1;
+  const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
   return (
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{sel.length} sélectionnée{sel.length > 1 ? 's' : ''}</span>
       <div className="groupe" role="group" aria-label="Aligner">
-        {ALIGNEMENTS.map(([a, s, t]) => <button key={a} type="button" title={t + (sel.length > 1 ? '' : ' (sur le plan)')} aria-label={t} onClick={() => ed.faire(d => aligner(d, sel, a))}>{s}</button>)}
+        {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => ed.faire(d => aligner(d, sel, a))} />)}
       </div>
       <div className="groupe" role="group" aria-label="Transformer">
-        <button type="button" title="Miroir horizontal" onClick={() => ed.faire(d => retourner(d, sel, 'h'))}>↔</button>
-        <button type="button" title="Miroir vertical" onClick={() => ed.faire(d => retourner(d, sel, 'v'))}>↕</button>
-        <button type="button" title="Tourner de 90° vers la gauche" onClick={() => ed.faire(d => tourner(d, sel, -90))}>↺</button>
-        <button type="button" title="Tourner de 90° vers la droite" onClick={() => ed.faire(d => tourner(d, sel, 90))}>↻</button>
+        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => ed.faire(d => retourner(d, sel, 'h'))} />
+        <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => ed.faire(d => retourner(d, sel, 'v'))} />
+        <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => ed.faire(d => tourner(d, sel, -90))} />
+        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => ed.faire(d => tourner(d, sel, 90))} />
       </div>
       <div className="groupe" role="group" aria-label="Empiler">
-        {ORDRES_COURTS.map(([o, s, t]) => <button key={o} type="button" title={t} aria-label={t} onClick={() => ed.faire(d => ordonner(d, sel, o))}>{s}</button>)}
+        {ORDRES_ICONES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} onClick={() => ed.faire(d => ordonner(d, sel, o))} />)}
       </div>
-      <div className="groupe">
-        <button type="button" disabled={sel.length < 2} title="Combiner en une forme (Ctrl+G)" onClick={ed.combinerSelection}>Combiner</button>
-        <button type="button" disabled={!separable} title="Séparer les tracés (Ctrl+Maj+G)" onClick={ed.separerSelection}>Séparer</button>
-        <button type="button" title="Dupliquer (Ctrl+D)" onClick={ed.dupliquerSelection}>Dupliquer</button>
-        <button type="button" title="Masquer" onClick={ed.masquerSelection}>Masquer</button>
-        <button type="button" title="Verrouiller" onClick={ed.verrouillerSelection}>Verrouiller</button>
-        <button type="button" className="danger" title="Supprimer (Suppr)" onClick={ed.supprimerSelection}>Supprimer</button>
+      <div className="groupe" role="group" aria-label="Booléens">
+        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => ed.booleen(op)} />)}
+      </div>
+      <div className="groupe" role="group" aria-label="Formes">
+        <Bouton icone="combiner" aide="Combiner en une forme (Ctrl+G)" disabled={sel.length < 2} onClick={ed.combinerSelection} />
+        <Bouton icone="separer" aide="Séparer les tracés (Ctrl+Maj+G)" disabled={!separable} onClick={ed.separerSelection} />
+        <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ed.dupliquerSelection} />
+        <Bouton icone="masquer" aide="Masquer" onClick={ed.masquerSelection} />
+        <Bouton icone="verrouiller" aide="Verrouiller" onClick={ed.verrouillerSelection} />
+        <Bouton icone="supprimer" aide="Supprimer (Suppr)" className="danger" onClick={ed.supprimerSelection} />
       </div>
     </div>
   );
@@ -570,7 +664,7 @@ interface Commandes {
   poserContours: (f: (c: boolean) => boolean) => void; demanderFermeture: () => void; vues: Vues;
 }
 
-const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', t: 'etoile', l: 'ligne', p: 'plume' };
+const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte' };
 
 /** Les raccourcis, ecoutes sur la fenetre tant que l'editeur est ouvert ; jamais dans un champ. */
 function useClavier(ed: Edition, c: Commandes) {
@@ -609,6 +703,7 @@ function useClavier(ed: Edition, c: Commandes) {
       if (outil) x.poserOutil(outil);
       else if (t === 'o') k.poserContours(v => !v);
       else if (t === 'g') x.poserGrille(!x.grille);
+      else if (t === 'm') x.poserAimants(!x.aimants);
       else if (t === 'z') x.zoomerSelection();
       else if (t === '+' || t === '=') k.vues.zoomer(1.25);
       else if (t === '-') k.vues.zoomer(0.8);
@@ -652,6 +747,8 @@ function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: nu
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
 function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | null>) {
   const geste = useRef<Geste | null>(null), espace = useRef(false);
+  // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
+  const pointeurs = useRef(new Map<number, { x: number; y: number }>());
   const [cadre, poserCadre] = useState<Boite | null>(null);
   useEffect(() => {
     const bas = (e: KeyboardEvent) => {
@@ -673,9 +770,21 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
 
   const appuyer = (e: PE<SVGSVGElement>) => {
     const t = e.target as Element;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Un pointeur deja parti (ou synthetique) refuse la capture : le geste se fait sans elle.
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* sans capture, la toile suit quand meme le pointeur tant qu'il la survole */ }
+    pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointeurs.current.size === 2) {
+      const [a, b] = [...pointeurs.current.values()];
+      if (a && b) {
+        if (geste.current && geste.current.type !== 'pan' && geste.current.type !== 'cadre' && 'cle' in geste.current) ed.annulerGeste(geste.current.cle);
+        geste.current = { type: 'pincer', d0: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vue };
+      }
+      return;
+    }
     const [x, y] = versDoc(e);
     if (e.button === 1 || ed.outil === 'main' || espace.current) { geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
+    const rot = t.getAttribute('data-rotation');
+    if (rot !== null && ed.boite) { geste.current = { type: 'rotation', centre: centre(ed.boite), angle0: angleVers(centre(ed.boite), [x, y]), base: ed.dessin, ids: ed.sel, cle: ed.nouvelleCle() }; return; }
     if (ed.outil === 'plume') { ed.poserTrace([...ed.trace, versGrille(e)]); return; }
     if (FORMES.has(ed.outil)) { const [gx, gy] = versGrille(e); geste.current = { type: 'tracer', outil: ed.outil as OutilForme, x0: gx, y0: gy, base: ed.dessin, cle: ed.nouvelleCle() }; return; }
     const coin = t.getAttribute('data-coin') as Coin | null, iAncre = t.getAttribute('data-ancre'), poignee = t.getAttribute('data-poignee');
@@ -706,13 +815,34 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
 
   const bouger = (e: PE<SVGSVGElement>) => {
     const g = geste.current;
+    if (pointeurs.current.has(e.pointerId)) pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!g) return;
+    if (g.type === 'pincer') {
+      const [a, b] = [...pointeurs.current.values()];
+      if (!a || !b) return;
+      const r = svgRef.current?.getBoundingClientRect(), ox = r?.left ?? 0, oy = r?.top ?? 0;
+      const d = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), k = Math.max(0.02, Math.min(64, g.vue.zoom * (d / g.d0))) / g.vue.zoom;
+      const mx = (a.x + b.x) / 2 - ox, my = (a.y + b.y) / 2 - oy, px = g.cx - ox, py = g.cy - oy;
+      vues.poserVue({ zoom: g.vue.zoom * k, x: mx - (px - g.vue.x) * k, y: my - (py - g.vue.y) * k });
+      return;
+    }
     if (g.type === 'pan') { vues.poserVue({ ...g.vue, x: g.vue.x + e.clientX - g.x0, y: g.vue.y + e.clientY - g.y0 }); return; }
     const [x, y] = versDoc(e);
+    if (g.type === 'rotation') {
+      let a = angleVers(g.centre, [x, y]) - g.angle0;
+      if (e.shiftKey) a = Math.round(a / 15) * 15;
+      ed.appliquer(() => tournerAutour(g.base, g.ids, a, g.centre), g.cle);
+      return;
+    }
     if (g.type === 'deplacer') {
       let dx = x - g.x0, dy = y - g.y0;
       if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
       if (g.b) { dx = ed.aimant(g.b.x + dx) - g.b.x; dy = ed.aimant(g.b.y + dy) - g.b.y; }
+      if (g.b && ed.aimants && !ed.grille) {
+        const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, ciblesAimants(g.base, g.ids), 6 / vue.zoom);
+        dx += a.dx; dy += a.dy;
+        ed.poserGuides(a.lignes);
+      }
       ed.appliquer(() => deplacer(g.base, g.ids, dx, dy), g.cle);
       return;
     }
@@ -726,7 +856,10 @@ function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGElement | nu
 
   const lacher = (e: PE<SVGSVGElement>) => {
     const g = geste.current;
+    pointeurs.current.delete(e.pointerId);
+    if (g?.type === 'pincer') { if (pointeurs.current.size === 0) geste.current = null; return; }
     geste.current = null;
+    if (ed.guides.length) ed.poserGuides([]);
     if (!g) return;
     if (g.type === 'tracer') {
       const [x, y] = versGrille(e);
@@ -783,6 +916,14 @@ function surcouche(ed: Edition, px: number, cadre: Boite | null): ReactNode[] {
     r.push(<rect key="boite" className="boite-choisie" x={b.x} y={b.y} width={b.l} height={b.h} pointerEvents="none" />);
     const coins: [Coin, number, number][] = [['nw', b.x, b.y], ['ne', b.x + b.l, b.y], ['sw', b.x, b.y + b.h], ['se', b.x + b.l, b.y + b.h]];
     for (const [c, cx, cy] of coins) r.push(<rect key={c} data-coin={c} className={'coin coin-' + c} x={cx - 4 * px} y={cy - 4 * px} width={8 * px} height={8 * px} />);
+    // La poignee de rotation, au-dessus du milieu du bord haut.
+    r.push(<line key="lien-rot" className="lien-poignee" x1={b.x + b.l / 2} y1={b.y} x2={b.x + b.l / 2} y2={b.y - 22 * px} pointerEvents="none" />);
+    r.push(<circle key="rot" data-rotation="1" className="poignee-rotation" cx={b.x + b.l / 2} cy={b.y - 22 * px} r={5 * px} />);
+  }
+  for (const [i, g] of ed.guides.entries()) {
+    r.push(g.axe === 'x'
+      ? <line key={'g' + i} className="guide" x1={g.valeur} y1={g.de} x2={g.valeur} y2={g.a} pointerEvents="none" />
+      : <line key={'g' + i} className="guide" x1={g.de} y1={g.valeur} x2={g.a} y2={g.valeur} pointerEvents="none" />);
   }
   const fs = ed.formeSeule, p = ed.point;
   if (ed.outil === 'points' && fs) {
@@ -894,7 +1035,17 @@ function Inspecteur({ ed }: { ed: Edition }) {
           <button type="button" onClick={() => ed.faire(d => tourner(d, sel, -90))}>↺ 90°</button>
           <button type="button" onClick={() => ed.faire(d => tourner(d, sel, 90))}>↻ 90°</button>
         </div>
+        <TransformationsNumeriques ed={ed} />
       </fieldset>
+      {sel.length > 1 ? (
+        <fieldset className="editeur-groupe">
+          <legend>Booléens</legend>
+          <div className="boutons">
+            {BOOLEENS_ICONES.map(([op, icone, aide]) => <button key={op} type="button" title={aide} onClick={() => ed.booleen(op)}><Icone nom={icone} taille={14} /> {op === 'union' ? 'Union' : op === 'soustraction' ? 'Soustraction' : op === 'intersection' ? 'Intersection' : 'Exclusion'}</button>)}
+          </div>
+          <p className="aide">La forme la plus basse donne son style ; le résultat est en segments droits.</p>
+        </fieldset>
+      ) : null}
       <fieldset className="editeur-groupe">
         <legend>Empilement</legend>
         <div className="boutons">
@@ -910,6 +1061,33 @@ function Inspecteur({ ed }: { ed: Edition }) {
       </div>
       {ed.outil === 'points' && ed.formeSeule ? <PanneauPoint ed={ed} forme={ed.formeSeule} /> : sel.length === 1 ? <p className="aide">Double-cliquez la forme pour éditer ses points.</p> : null}
     </>
+  );
+}
+
+/** Tourner d'un angle, incliner, mettre a l'echelle : des champs qui s'appliquent a la validation, en relatif. */
+function TransformationsNumeriques({ ed }: { ed: Edition }) {
+  const [rotation, poserRotation] = useState('0');
+  const [ix, poserIx] = useState('0');
+  const [iy, poserIy] = useState('0');
+  const [echelle, poserEchelle] = useState('100');
+  const n = (t: string) => Number(t.replace(',', '.'));
+  const appliquer = () => {
+    ed.transformerNumerique({ rotation: n(rotation) || 0, inclinaisonX: n(ix) || 0, inclinaisonY: n(iy) || 0, echelle: n(echelle) || 100 });
+    poserRotation('0'); poserIx('0'); poserIy('0'); poserEchelle('100');
+  };
+  const champ = (libelle: string, v: string, poser: (t: string) => void, titre: string) => (
+    <label className="champ-ligne nombre" title={titre}><span>{libelle}</span><input type="text" inputMode="decimal" value={v} onChange={e => poser(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') appliquer(); }} /></label>
+  );
+  return (
+    <div className="transformations-numeriques">
+      <div className="grille-2">
+        {champ('Rotation °', rotation, poserRotation, 'Angle, dans le sens horaire ; Maj en tirant la poignée ronde arrondit à 15°')}
+        {champ('Échelle %', echelle, poserEchelle, 'Pourcentage, autour du centre')}
+        {champ('Incl. X °', ix, poserIx, 'Inclinaison horizontale')}
+        {champ('Incl. Y °', iy, poserIy, 'Inclinaison verticale')}
+      </div>
+      <button type="button" className="discret" onClick={appliquer}>Appliquer</button>
+    </div>
   );
 }
 
@@ -937,13 +1115,16 @@ function PanneauDessin({ ed }: { ed: Edition }) {
   const couleurs = useMemo(() => couleursDuDessin(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
   const pl = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
-  const trace = FORMES.has(ed.outil) || ed.outil === 'plume';
+  const trace = FORMES.has(ed.outil) || ed.outil === 'plume' || ed.outil === 'texte';
   return (
     <>
-      <h3>{trace ? 'Nouvelle forme' : 'Dessin'}</h3>
+      <h3>{ed.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
+      {ed.outil === 'texte' ? <PanneauTexte ed={ed} /> : null}
       {trace ? <StyleNouvelleForme ed={ed} /> : null}
       <p className="aide">{pl(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pl(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {ed.bibliotheque ? <PanneauBibliotheque ed={ed} /> : null}
+      <PanneauPalettes ed={ed} />
+      <PanneauVersions ed={ed} />
       <fieldset className="editeur-groupe">
         <legend>Couleurs du dessin</legend>
         <ul className="couleurs-dessin">
@@ -982,7 +1163,8 @@ function PanneauDessin({ ed }: { ed: Edition }) {
         <summary>Raccourcis</summary>
         <ul>
           <li>V sélection · A points · H ou espace : main · O contours</li>
-          <li>R rectangle · E ellipse · T étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point)</li>
+          <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
+          <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
           <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
           <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
           <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
@@ -1009,10 +1191,12 @@ function StyleNouvelleForme({ ed }: { ed: Edition }) {
 }
 
 /** La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. */
+let bibliothequeOuverte = false;
+
 function PanneauBibliotheque({ ed }: { ed: Edition }) {
-  const [voulue, vouloir] = useState(ed.bibliotheque !== 'a-charger');
+  const [voulue, vouloir] = useState(ed.bibliotheque !== 'a-charger' || bibliothequeChargee());
   return (
-    <details className="editeur-groupe bibliotheque-editeur">
+    <details className="editeur-groupe bibliotheque-editeur" open={bibliothequeOuverte} onToggle={e => { bibliothequeOuverte = (e.currentTarget as HTMLDetailsElement).open; }}>
       <summary>Insérer une forme de la bibliothèque</summary>
       {voulue ? <BibliothequeChargee ed={ed} /> : <button type="button" className="discret" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
     </details>
@@ -1021,11 +1205,43 @@ function PanneauBibliotheque({ ed }: { ed: Edition }) {
 
 function BibliothequeChargee({ ed }: { ed: Edition }) {
   const chargee = useBibliotheque();
+  const [panier, poserPanier] = useState<EntreeBibliotheque[]>([]);
+  const [sceneId, poserSceneId] = useState(SCENES[0]?.id ?? '');
   const b = ed.bibliotheque !== 'a-charger' && ed.bibliotheque ? ed.bibliotheque : chargee.bibliotheque;
   if (chargee.erreur && !b) return <p className="aide" role="alert">{chargee.erreur}</p>;
   if (!b) return <p className="aide" role="status">Chargement…</p>;
   const choisir = (x: EntreeBibliotheque) => ed.insererForme(x.svg);
-  return <RechercheFormes bibliotheque={b} choisir={choisir} parPage={24} compact />;
+  // Le panier en grille : autant de colonnes que la racine du nombre, chaque case a 80 % de sa cellule.
+  const insererPanier = () => {
+    const n = panier.length, cols = Math.ceil(Math.sqrt(n)), lignes = Math.ceil(n / cols), cellule = 1 / Math.max(cols, lignes);
+    ed.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
+    poserPanier([]);
+  };
+  const insererScene = () => {
+    const sc = SCENES.find(x => x.id === sceneId);
+    if (!sc) return;
+    const parId = new Map(b.entrees.map(x => [x.id, x.svg]));
+    ed.insererPlusieurs(sc.elements.flatMap(e => { const svg = parId.get(e.id); return svg ? [{ svg, x: e.x, y: e.y, taille: e.taille }] : []; }));
+  };
+  return (
+    <>
+      <div className="champ-ligne scene">
+        <span>Scène</span>
+        <select aria-label="Scène prête" value={sceneId} onChange={e => poserSceneId(e.target.value)}>{SCENES.map(sc => <option key={sc.id} value={sc.id}>{sc.nom}</option>)}</select>
+        <button type="button" title="Insérer la scène : ses formes, à leur place" aria-label="Insérer la scène" onClick={insererScene}><Icone nom="scene" taille={14} /></button>
+      </div>
+      <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact />
+      {panier.length ? (
+        <div className="panier">
+          <span className="aide">{panier.length} dans le panier : {panier.map(x => x.nom).join(', ')}</span>
+          <div className="boutons">
+            <button type="button" onClick={insererPanier}>Insérer en grille</button>
+            <button type="button" className="discret" onClick={() => poserPanier([])}>Vider</button>
+          </div>
+        </div>
+      ) : <p className="aide">Un clic insère au centre ; « + » met dans le panier pour insérer plusieurs formes en grille.</p>}
+    </>
+  );
 }
 
 /** Une couleur : selecteur, code, « aucune », et le nuancier. */

@@ -14,6 +14,9 @@ export interface Bibliotheque {
 
 export const FICHIER_BIBLIOTHEQUE = 'bibliotheque.js';
 
+/** Vrai quand le script est deja arrive : un panneau qui se rouvre n'a pas a redemander le chargement. */
+export const bibliothequeChargee = (): boolean => (window as unknown as { __bibliothequeSvg?: Bibliotheque }).__bibliothequeSvg !== undefined;
+
 let promesse: Promise<Bibliotheque> | null = null;
 
 export function chargerBibliotheque(): Promise<Bibliotheque> {

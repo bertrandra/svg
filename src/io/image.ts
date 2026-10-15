@@ -124,3 +124,12 @@ export function resumeConversion(r: ImageConvertie): string {
   const forme = r.traces !== null ? r.traces + ' tracé' + (r.traces > 1 ? 's' : '') + ' vectoriel' + (r.traces > 1 ? 's' : '') : 'image enveloppée';
   return fond + ' · ' + forme + ' · ' + Math.max(1, Math.round(r.svg.length / 1024)) + ' Ko';
 }
+
+/** Le dessin en PNG, a la largeur donnee (la hauteur suit le plan), fond transparent. */
+export async function versPng(svg: string, largeur: number): Promise<Blob> {
+  const img = await chargerImage(new Blob([svg], { type: 'image/svg+xml' }));
+  const l = Math.max(1, Math.round(largeur)), h = Math.max(1, Math.round((img.naturalHeight / Math.max(1, img.naturalWidth)) * l));
+  const { t, ctx } = toile(l, h);
+  ctx.drawImage(img, 0, 0, l, h);
+  return new Promise((ok, ko) => t.toBlob(b => (b ? ok(b) : ko(new Error('rendu refusé'))), 'image/png'));
+}

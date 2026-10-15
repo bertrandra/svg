@@ -1,0 +1,98 @@
+// Les icones de la barre d'outils : des traces vectoriels dessines ici, sur une grille de 24, au
+// trait de la couleur courante. Aucune police d'icones, aucun reseau : la page reste autonome et
+// chaque icone se lit dans les deux themes.
+
+import type { CSSProperties } from 'react';
+
+export type NomIcone =
+  | 'selection' | 'points' | 'main' | 'rectangle' | 'ellipse' | 'etoile' | 'ligne' | 'plume'
+  | 'annuler' | 'retablir' | 'copier' | 'couper' | 'coller'
+  | 'zoom-moins' | 'zoom-plus' | 'ajuster' | 'zoom-selection' | 'taille-reelle'
+  | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
+  | 'telecharger' | 'fermer' | 'enregistrer'
+  | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
+  | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
+  | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
+  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'verrouiller' | 'supprimer'
+  | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
+  | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre';
+
+interface Trace { d: string; plein?: boolean; pointille?: boolean }
+
+const t = (d: string, plein = false): Trace => (plein ? { d, plein } : { d });
+
+/** Chaque icone : un ou plusieurs traces ; `plein` remplit au lieu de tracer. */
+const ICONES: Record<NomIcone, readonly Trace[]> = {
+  selection: [t('M5 3l14 8-6.5 1.8L10 19.5z')],
+  points: [t('M5 19C5 9 15 15 19 5'), t('M3 17h4v4H3z', true), t('M17 3h4v4h-4z', true)],
+  main: [t('M8 13V5.5a1.5 1.5 0 0 1 3 0V11'), t('M11 11V4.5a1.5 1.5 0 0 1 3 0V11'), t('M14 11V6a1.5 1.5 0 0 1 3 0v7'), t('M17 13v-1.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1.5a6 6 0 0 1-5-2.7L3.4 14.4a1.6 1.6 0 0 1 2.6-1.8L8 15')],
+  rectangle: [t('M4 6h16v12H4z')],
+  ellipse: [t('M3 12a9 6 0 1 0 18 0a9 6 0 1 0-18 0')],
+  etoile: [t('M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z')],
+  ligne: [t('M6 18L18 6'), t('M4 20a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true), t('M16 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
+  plume: [t('M12 19l7-7 3 3-7 7-3-3z'), t('M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z'), t('M2 2l7.6 7.6'), t('M9 11a2 2 0 1 0 4 0a2 2 0 1 0-4 0')],
+  annuler: [t('M3 7v6h6'), t('M3.5 13a9 9 0 1 0 2.5-6.3L3 9')],
+  retablir: [t('M21 7v6h-6'), t('M20.5 13a9 9 0 1 1-2.5-6.3L21 9')],
+  copier: [t('M9 9h11v11H9z'), t('M15 9V5H4v11h5')],
+  couper: [t('M4 6a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0'), t('M4 18a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0'), t('M20 4L8.3 15.7'), t('M14.5 14.5L20 20'), t('M8.3 8.3L12 12')],
+  coller: [t('M9 3h6v3H9z'), t('M7 4.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-1'), t('M9 12h6'), t('M9 16h6')],
+  'zoom-moins': [t('M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0'), t('M21 21l-5-5'), t('M8 11h6')],
+  'zoom-plus': [t('M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0'), t('M21 21l-5-5'), t('M8 11h6'), t('M11 8v6')],
+  ajuster: [t('M8 3H5a2 2 0 0 0-2 2v3'), t('M21 8V5a2 2 0 0 0-2-2h-3'), t('M3 16v3a2 2 0 0 0 2 2h3'), t('M16 21h3a2 2 0 0 0 2-2v-3')],
+  'zoom-selection': [t('M8 3H5a2 2 0 0 0-2 2v3'), t('M21 8V5a2 2 0 0 0-2-2h-3'), t('M3 16v3a2 2 0 0 0 2 2h3'), t('M16 21h3a2 2 0 0 0 2-2v-3'), t('M9 9h6v6H9z', true)],
+  'taille-reelle': [t('M3 5h18v14H3z'), t('M8 15V9l-1.5 1'), t('M12 10.5v.1'), t('M12 13.5v.1'), t('M16.5 15V9L15 10')],
+  grille: [t('M3 3h18v18H3z'), t('M3 9h18'), t('M3 15h18'), t('M9 3v18'), t('M15 3v18')],
+  contours: [{ d: 'M4 4h16v16H4z', pointille: true }, t('M9 9h6v6H9z')],
+  'fond-damier': [t('M3 3h18v18H3z'), t('M3 3h6v6H3z', true), t('M15 3h6v6h-6z', true), t('M9 9h6v6H9z', true), t('M3 15h6v6H3z', true), t('M15 15h6v6h-6z', true)],
+  'fond-blanc': [t('M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0'), t('M12 2v2'), t('M12 20v2'), t('M2 12h2'), t('M20 12h2'), t('M4.9 4.9l1.4 1.4'), t('M17.7 17.7l1.4 1.4'), t('M4.9 19.1l1.4-1.4'), t('M17.7 6.3l1.4-1.4')],
+  'fond-sombre': [t('M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z')],
+  telecharger: [t('M12 3v12'), t('M7 10l5 5 5-5'), t('M4 20h16')],
+  fermer: [t('M6 6l12 12'), t('M18 6L6 18')],
+  enregistrer: [t('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'), t('M17 21v-8H7v8'), t('M7 3v5h8')],
+  'aligner-gauche': [t('M4 3v18'), t('M8 7h11v4H8z'), t('M8 13h7v4H8z')],
+  'aligner-centre-h': [t('M12 3v18'), t('M6 7h12v4H6z'), t('M8 13h8v4H8z')],
+  'aligner-droite': [t('M20 3v18'), t('M5 7h11v4H5z'), t('M9 13h7v4H9z')],
+  'aligner-haut': [t('M3 4h18'), t('M7 8h4v11H7z'), t('M13 8h4v7h-4z')],
+  'aligner-centre-v': [t('M3 12h18'), t('M7 6h4v12H7z'), t('M13 8h4v8h-4z')],
+  'aligner-bas': [t('M3 20h18'), t('M7 5h4v11H7z'), t('M13 9h4v7h-4z')],
+  'miroir-h': [t('M12 3v18'), t('M9 7L4 12l5 5z'), t('M15 7l5 5-5 5z', true)],
+  'miroir-v': [t('M3 12h18'), t('M7 9l5-5 5 5z'), t('M7 15l5 5 5-5z', true)],
+  'rotation-gauche': [t('M3 12a9 9 0 1 0 3.2-6.9'), t('M3 4v5h5')],
+  'rotation-droite': [t('M21 12a9 9 0 1 1-3.2-6.9'), t('M21 4v5h-5')],
+  'premier-plan': [t('M4 3h16'), t('M12 21V8'), t('M7 13l5-5 5 5')],
+  avancer: [t('M12 20V5'), t('M6 11l6-6 6 6')],
+  reculer: [t('M12 4v15'), t('M6 13l6 6 6-6')],
+  'arriere-plan': [t('M4 21h16'), t('M12 3v13'), t('M7 11l5 5 5-5')],
+  combiner: [t('M4 4h11v11H4z'), t('M9 9h11v11H9z'), t('M9 9h6v6H9z', true)],
+  separer: [t('M3 5h7v14H3z'), t('M14 5h7v14h-7z'), t('M12 3v18')],
+  dupliquer: [t('M9 9h11v11H9z'), t('M15 9V5H4v11h5'), t('M14.5 12.5v5'), t('M12 15h5')],
+  masquer: [t('M3 3l18 18'), t('M10.6 10.6a2 2 0 0 0 2.8 2.8'), t('M9.9 5.2A10 10 0 0 1 12 5c5 0 9 4 10 7a13 13 0 0 1-2.8 3.8'), t('M6.6 6.6A13 13 0 0 0 2 12c1 3 5 7 10 7a10 10 0 0 0 3.5-.6')],
+  verrouiller: [t('M5 11h14v10H5z'), t('M8 11V7a4 4 0 0 1 8 0v4')],
+  supprimer: [t('M4 7h16'), t('M10 11v6'), t('M14 11v6'), t('M6 7l1 13h10l1-13'), t('M9 7V4h6v3')],
+  union: [t('M4 4h11v11H4z M9 9h11v11H9z', true)],
+  soustraction: [t('M4 4h11v11H4z', true), t('M9 9h11v11H9z')],
+  intersection: [t('M4 4h11v11H4z'), t('M9 9h11v11H9z'), t('M9 9h6v6H9z', true)],
+  exclusion: [t('M4 4h11v5H9v6H4z', true), t('M15 9h5v11H9v-5h6z', true)],
+  texte: [t('M5 5h14'), t('M5 5v3'), t('M19 5v3'), t('M12 5v15'), t('M9 20h6')],
+  aimant: [t('M6 3v8a6 6 0 0 0 12 0V3'), t('M6 3h4v8H6z', true), t('M14 3h4v8h-4z', true), t('M6 11a6 6 0 0 0 12 0')],
+  exporter: [t('M12 15V3'), t('M7 8l5-5 5 5'), t('M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5')],
+  palette: [t('M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a4 4 0 0 0 4-4 10 10 0 0 0-9-10z'), t('M7 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true), t('M9 7.5a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true), t('M14 7.5a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0', true)],
+  versions: [t('M3 12a9 9 0 1 0 3-6.7'), t('M3 4v5h5'), t('M12 7v5l3 2')],
+  'panneau-gauche': [t('M3 4h18v16H3z'), t('M9 4v16'), t('M5 8h2'), t('M5 11h2')],
+  'panneau-droit': [t('M3 4h18v16H3z'), t('M15 4v16'), t('M17 8h2'), t('M17 11h2')],
+  scene: [t('M3 3h8v8H3z'), t('M13 3h8v8h-8z'), t('M3 13h8v8H3z'), t('M13 13h8v8h-8z')],
+  ajouter: [t('M12 5v14'), t('M5 12h14')],
+  rotation: [t('M21 12a9 9 0 1 1-3-6.7'), t('M21 4v5h-5'), t('M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
+  reprendre: [t('M5 4l14 8-14 8z', true)]
+};
+
+export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];
+
+export function Icone({ nom, taille = 18, style }: { nom: NomIcone; taille?: number; style?: CSSProperties }) {
+  return (
+    <svg className="icone" width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={style}
+      fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      {ICONES[nom].map((x, i) => <path key={i} d={x.d} fill={x.plein ? 'currentColor' : 'none'} stroke={x.plein ? 'none' : undefined} strokeDasharray={x.pointille ? '3 2' : undefined} />)}
+    </svg>
+  );
+}

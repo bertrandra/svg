@@ -1,0 +1,78 @@
+// Un PDF vectoriel du dessin (ADR-0004), ecrit a la main : une page a la taille du plan, chaque
+// forme en operateurs de trace (m, l, c, h), remplie et contournee avec ses couleurs, son opacite et
+// sa regle de remplissage. Pur et deterministe : ni date, ni identifiant tire au sort, pour que le
+// meme dessin donne toujours les memes octets.
+
+import { depart, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+
+const nb = (v: number) => { const r = Number(v.toFixed(3)); return Object.is(r, -0) ? '0' : String(r); };
+
+/** Les composantes 0..1 d'une couleur #rrggbb ; noir si elle ne se lit pas. */
+export function composantes(hex: string): [number, number, number] {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1] ?? '0', 16) / 255, parseInt(m[2] ?? '0', 16) / 255, parseInt(m[3] ?? '0', 16) / 255] : [0, 0, 0];
+}
+
+/** Les operateurs de trace d'un chemin, dans le repere du PDF (origine en bas a gauche). */
+export function operateurs(d: Chemin, vb: DessinSvg['vb']): string {
+  const [vx, vy, , vh] = vb;
+  const X = (x: number) => nb(x - vx), Y = (y: number) => nb(vh - (y - vy));
+  const parts: string[] = [];
+  d.forEach((c, i) => {
+    const p = c.p;
+    if (c.c === 'M') parts.push(X(p[0] ?? 0) + ' ' + Y(p[1] ?? 0) + ' m');
+    else if (c.c === 'L') parts.push(X(p[0] ?? 0) + ' ' + Y(p[1] ?? 0) + ' l');
+    else if (c.c === 'C') parts.push([X(p[0] ?? 0), Y(p[1] ?? 0), X(p[2] ?? 0), Y(p[3] ?? 0), X(p[4] ?? 0), Y(p[5] ?? 0)].join(' ') + ' c');
+    else if (c.c === 'Q') {
+      // Une quadratique en cubique equivalente : les poignees aux deux tiers.
+      const [x0, y0] = depart(d, i), [x1, y1, x, y] = [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0, p[3] ?? 0];
+      parts.push([X(x0 + (2 / 3) * (x1 - x0)), Y(y0 + (2 / 3) * (y1 - y0)), X(x + (2 / 3) * (x1 - x)), Y(y + (2 / 3) * (y1 - y)), X(x), Y(y)].join(' ') + ' c');
+    } else parts.push('h');
+  });
+  return parts.join('\n');
+}
+
+function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null): string {
+  const lignes: string[] = ['q'];
+  if (etat) lignes.push('/' + etat + ' gs');
+  if (f.remplissage) lignes.push(composantes(f.remplissage).map(nb).join(' ') + ' rg');
+  if (f.contour) lignes.push(composantes(f.contour).map(nb).join(' ') + ' RG', nb(f.epaisseur) + ' w', '1 j');
+  lignes.push(operateurs(f.d, vb));
+  const pair = f.regle === 'evenodd' ? '*' : '';
+  lignes.push(f.remplissage && f.contour ? 'B' + pair : f.remplissage ? 'f' + pair : f.contour ? 'S' : 'n', 'Q');
+  return lignes.join('\n');
+}
+
+/** Le PDF complet, en octets. Les formes masquees ne s'ecrivent pas, comme dans le SVG. */
+export function ecrirePdf(dessin: DessinSvg): Uint8Array {
+  const [, , l, h] = dessin.vb;
+  const visibles = dessin.formes.filter(f => f.visible);
+  // Un etat graphique par opacite distincte, nomme de facon stable.
+  const opacites = [...new Set(visibles.filter(f => f.opacite < 1).map(f => nb(f.opacite)))].sort();
+  const etats = new Map(opacites.map((o, i) => [o, 'GS' + i]));
+  const contenu = visibles.map(f => contenuForme(f, dessin.vb, f.opacite < 1 ? etats.get(nb(f.opacite)) ?? null : null)).join('\n');
+  const extg = opacites.length ? ' /ExtGState << ' + opacites.map(o => '/' + etats.get(o) + ' << /ca ' + o + ' /CA ' + o + ' >>').join(' ') + ' >>' : '';
+  const objets = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + nb(l) + ' ' + nb(h) + '] /Contents 4 0 R /Resources <<' + extg + ' >> >>',
+    '<< /Length ' + octetsDe(contenu) + ' >>\nstream\n' + contenu + '\nendstream',
+    '<< /Producer (svg) >>'
+  ];
+  let corps = '%PDF-1.4\n%âãÏÓ\n';
+  const positions: number[] = [];
+  objets.forEach((o, i) => { positions.push(octetsDe(corps)); corps += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const xref = octetsDe(corps);
+  corps += 'xref\n0 ' + (objets.length + 1) + '\n0000000000 65535 f \n' + positions.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('');
+  corps += 'trailer\n<< /Size ' + (objets.length + 1) + ' /Root 1 0 R /Info 5 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
+  return latin1(corps);
+}
+
+/** La longueur en octets d'un texte ecrit en latin-1 : un octet par caractere. */
+const octetsDe = (t: string) => t.length;
+
+function latin1(t: string): Uint8Array {
+  const out = new Uint8Array(t.length);
+  for (let i = 0; i < t.length; i++) out[i] = t.charCodeAt(i) & 0xff;
+  return out;
+}

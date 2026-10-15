@@ -7,6 +7,26 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Ajouté
 
+- **Neuf chantiers pour créer, pas seulement retoucher** (ADR-0004) :
+  - **booléens** : union, soustraction, intersection, exclusion, dans la rangée de sélection et
+    l'inspecteur ; le résultat est en segments droits, au style de la forme la plus basse ;
+  - **texte en formes** (outil T) : neuf fontes libres chargées à la demande, ou une fonte TTF/OTF
+    déposée ; taille, interlettrage, retour à la ligne ; une forme par lettre, au centre du plan ;
+  - **aimants** (M) : en déplaçant, les bords et centres des autres formes et du plan attirent la
+    sélection et se dessinent en pointillés ;
+  - **transformations numériques** : rotation, inclinaison X et Y, échelle en pourcentage dans
+    l'inspecteur, et une poignée de rotation sur la boîte (Maj : par 15°) ;
+  - **recolorer** : douze palettes d'événements et trois neutres, le nuancier, « une couleur », ou
+    la sienne ; la couleur la plus présente prend la première ;
+  - **bibliothèque** : un panier (« + » sur une vignette) inséré en grille, sept scènes prêtes par
+    événement, et la correction du nom ou du classement d'une forme dans la page, exportée en JSON
+    vers `bibliotheque/corrections.json` ;
+  - **exports** : SVG, SVG de découpe (contours seuls), PNG à 512, 1 024, 2 048 ou 4 096 px, PDF
+    vectoriel, depuis la barre de l'éditeur et depuis la page ;
+  - **reprise** : le dessin en cours survit à un rechargement (« Reprendre ») ; des versions nommées
+    gardées dans le navigateur, avec retour et export ;
+  - **tablette et mobile** : barres sur une ligne qui défile, calques et inspecteur en tiroirs
+    depuis la barre d'état, zoom à deux doigts.
 - **L'éditeur SVG plein écran** (ADR-0001) : un moteur pur (`engine/editionSvg.ts` : lecture d'un SVG
   en formes à plat, transformations appliquées, peintures résolues, opérations immuables, points et
   poignées, couleurs, nettoyage du tracé, écriture), un lecteur XML sans DOM, le nettoyage d'un
@@ -14,10 +34,14 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   miroirs, rotations, alignements, empilement, dupliquer, masquer, verrouiller, supprimer ; points
   et poignées ; couleurs au sélecteur, au code ou au nuancier ; poussières, regroupement, plan de
   travail ; zoom, main, contours, fonds ; annuler et rétablir chaque geste.
-- **Des outils de tracé** : rectangle, ellipse, étoile, ligne (Maj contraint), plume (cliquer les
+- **Des outils de tracé** : rectangle, ellipse, étoile (S), ligne (Maj contraint), plume (cliquer les
   points, Entrée ou double-clic ferme, Retour arrière retire un point, Échap abandonne), avec le
   style courant (remplissage, contour, épaisseur) réglé dans l'inspecteur.
 - **Tout et Aucun** en tête des calques, pour tout sélectionner ou rien.
+- **Une barre d'outils à icônes** : chaque bouton de la barre et de la rangée de sélection est une
+  icône vectorielle dessinée dans la page (`zones/icones.tsx`, 46 icônes, aucune police ni réseau),
+  avec son infobulle et son raccourci ; boutons carrés neutres, groupes séparés, état actif en
+  couleur d'outil, fonds damier, blanc et sombre en trois boutons. Lisible dans les deux thèmes.
 - **Une barre d'outils étendue pour aller vite** : les deux couleurs courantes (remplissage, contour)
   à portée de main, qui changent la sélection ou les formes à venir ; copier, couper, coller
   (Ctrl+C, Ctrl+X, Ctrl+V) ; une grille magnétique (G) au pas lisible du plan, qui aimante les
