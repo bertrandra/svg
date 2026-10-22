@@ -57,6 +57,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Rien ne s'écrit sans « Enregistrer »** ; le SVG réécrit passe par `nettoyerSvg`.
 - **La vectorisation est vtracer en WASM, épinglé, chargé à la demande** (ADR-0002) ; le réglage
   est pur et déterministe ; une image entièrement détourée n'est jamais tracée.
+- **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
+  du mode se retire ; les valeurs par défaut se calculent (`valeursParDefaut`), elles ne se recopient
+  pas dans l'interface ; le temps d'un essai se mesure dans `io`, jamais dans le moteur.
 - **Les booléens aplatissent** (ADR-0004) : le résultat est en segments droits, au style de la forme
   la plus basse ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
 - **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface

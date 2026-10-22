@@ -77,6 +77,41 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .case { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; }
 .reglages-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
 .reglages-image .actions { grid-column: 1 / -1; align-items: center; }
+/* L'atelier du resultat : la visionneuse a gauche, les reglages du trace a droite, les essais dessous. */
+.depot .miniature { max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid var(--filet); border-radius: 6px; padding: 4px; background-color: #ffffff; background-image: linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%), linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%); background-size: 12px 12px; background-position: 0 0, 6px 6px; }
+.atelier-vecto { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
+.atelier-vecto[aria-busy="true"] .visionneuse { opacity: 0.7; }
+.colonne-resultat { display: grid; gap: 8px; min-width: 0; }
+.barre-visionneuse { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.barre-visionneuse select { width: auto; font-size: 0.78rem; }
+.barre-visionneuse .groupe { display: flex; gap: 1px; }
+.visionneuse { display: flex; max-height: 520px; overflow: auto; border: 1px solid var(--filet); border-radius: 8px; padding: 8px; background-color: #ffffff; transition: opacity 0.15s; }
+.visionneuse.fond-damier { background-image: linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%), linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.visionneuse.fond-sombre { background: #1b1d20; }
+.visionneuse .plan { position: relative; margin: auto; line-height: 0; }
+.visionneuse .calque { display: block; }
+.visionneuse .calque.base { image-rendering: auto; }
+.visionneuse .calque.cache { opacity: 0; }
+.visionneuse .calque.haut { position: absolute; inset: 0; width: 100%; height: 100%; }
+.visionneuse .ligne-rideau { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--cyan); box-shadow: 0 0 0 1px var(--panneau); pointer-events: none; }
+.rideau { display: flex; align-items: center; gap: 8px; }
+.rideau input[type="range"] { flex: 1; min-width: 0; }
+.fiche-resultat { display: grid; gap: 6px; }
+.fiche-resultat p { margin: 0; }
+.essais h3 { font-size: 0.8rem; margin: 4px 0 6px; display: flex; gap: 8px; align-items: baseline; }
+.essais ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.essais li button { display: grid; gap: 2px; justify-items: center; width: 118px; padding: 6px 4px; background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: 6px; font-weight: 400; font-size: 0.68rem; line-height: 1.25; text-align: center; }
+.essais li button[aria-pressed="true"] { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.essais li button img { width: 64px; height: 64px; object-fit: contain; background: #ffffff; border-radius: 4px; padding: 2px; }
+.reglages-vecto { display: grid; gap: 10px; min-width: 0; }
+.reglages-fins .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: 6px; font-size: 0.78rem; }
+.reglages-fins .fin-libelle { color: var(--encre-douce); }
+.reglages-fins .fin.touche .fin-libelle, .reglages-fins .champ-ligne.touche > span:first-child { color: var(--cyan); font-weight: 600; }
+.reglages-fins .fin.touche .fin-libelle::before, .reglages-fins .champ-ligne.touche > span:first-child::before { content: "● "; }
+.reglages-fins output { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
+.icone-bouton.petit { width: 22px; height: 22px; }
+.reglages-fins .champ-ligne select { flex: 1; min-width: 0; font-size: 0.75rem; }
+@media (max-width: 900px) { .atelier-vecto { grid-template-columns: minmax(0, 1fr); } }
 .resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
 @media (max-width: 640px) { .resultat-image { grid-template-columns: minmax(0, 1fr); } }
 .pied p { margin: 0; }

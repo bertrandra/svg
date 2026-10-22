@@ -7,9 +7,12 @@ s'embarque aussi comme composant React dans un autre produit.
 ## Ce que fait la page
 
 - **Ouvrir un SVG** : un fichier déposé, un code collé, ou l'exemple.
-- **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, fond détouré (tolérance réglable), puis
-  vectorisé par vtracer (modes aplats, trait, fidèle ; trois grains) ou enveloppé tel quel. Le
-  résultat se voit en rendu et en contours, se télécharge, se copie, s'ouvre dans l'éditeur.
+- **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, affiché dès le dépôt, fond détouré
+  (tolérance et portée réglables), puis vectorisé par vtracer (modes aplats, trait, fidèle ; trois
+  grains) ou enveloppé tel quel. Un atelier sous le dépôt montre l'image et son tracé (rideau de
+  comparaison, rendu, contours, zoom, fond), expose huit réglages fins du traceur qui se rejouent à
+  chaque changement, et garde les huit derniers essais pour comparer et revenir. Le résultat se
+  télécharge, se copie, s'ouvre dans l'éditeur.
 - **Choisir une forme** dans la bibliothèque : 4 134 silhouettes nommées en français, cherchées par
   nom et par événement du calendrier (Noël, Pâques, Halloween, 14 Juillet…), de la vie
   (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…).

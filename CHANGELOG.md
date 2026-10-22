@@ -51,6 +51,20 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   tracé, au style de la plus haute), **Séparer** (Ctrl+Maj+G : une forme en un tracé par
   sous-chemin, pour recolorer les parties d'une silhouette de la bibliothèque), dupliquer, masquer,
   verrouiller, supprimer.
+- **Un atelier de résultat sous « Convertir une image en SVG »** (ADR-0005) :
+  - **l'image déposée s'affiche aussitôt**, en miniature dans la zone de dépôt, puis dans la
+    visionneuse en « Originale » et « Détourée » ;
+  - **une visionneuse** : comparer (un rideau entre l'image détourée et les vecteurs), rendu,
+    contours, détourée, originale ; zoom ajusté, 100, 200 et 400 % ; fond damier, blanc ou sombre ;
+    le poids, le nombre de tracés, le temps et les réglages du résultat ;
+  - **des réglages fins du traceur** : couleurs retenues, poussières, simplification, angles vifs,
+    précision des couleurs, écart entre couches, courbes lissées ou segments droits, formes empilées
+    ou découpées. Chaque curseur montre la valeur du mode, se marque quand on s'en écarte et revient
+    d'un clic ; chaque mode ne propose que ceux qui y changent quelque chose ;
+  - **rejouer** à chaque changement (après une courte pause, désactivable) ou à la demande ; un
+    résultat qui arrive après un lancement plus récent est jeté ;
+  - **les huit derniers essais**, avec miniature, résumé des réglages, tracés, poids et temps : un
+    clic reprend les réglages et le résultat, sans relancer le traceur.
 - **Détourage sur toute l'image** : une case « Sur toute l'image : transparence complète de cette
   couleur » efface la couleur du fond partout, y compris à l'intérieur des formes, au lieu des
   seuls pixels reliés au bord. Le résumé dit la portée choisie.
