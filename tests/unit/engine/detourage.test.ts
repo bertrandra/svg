@@ -21,6 +21,17 @@ describe('detourer', () => {
     expect(r.part).toBeCloseTo(r.retires / 441, 3);
   });
 
+  it('sur toute l image, efface aussi la couleur du fond enfermee dans une forme', () => {
+    const anneau = (x: number, y: number): [number, number, number, number] => { const d = Math.hypot(x - 10, y - 10); return d >= 4 && d <= 8 ? [232, 71, 28, 255] : [255, 255, 255, 255]; };
+    const bord = image(21, 21, anneau), partout = image(21, 21, anneau);
+    const rb = detourer(bord, 21, 21, 0.08, 'bord'), rp = detourer(partout, 21, 21, 0.08, 'partout');
+    expect(alpha(bord, 21, 10, 10)).toBe(255);
+    expect(alpha(partout, 21, 10, 10)).toBe(0);
+    expect(alpha(partout, 21, 10, 4)).toBe(255);
+    expect(rp.retires).toBeGreaterThan(rb.retires);
+    expect(rp.fond).toBe('#ffffff');
+  });
+
   it('tolere un fond legerement bruite, et ne touche pas une image deja transparente', () => {
     const p = image(10, 10, (x, y) => (x === 5 && y === 5 ? [0, 0, 0, 255] : [250 + ((x + y) % 3), 250, 250, 255]));
     expect(detourer(p, 10, 10).retires).toBe(99);

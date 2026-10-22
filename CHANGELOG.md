@@ -51,6 +51,9 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   tracé, au style de la plus haute), **Séparer** (Ctrl+Maj+G : une forme en un tracé par
   sous-chemin, pour recolorer les parties d'une silhouette de la bibliothèque), dupliquer, masquer,
   verrouiller, supprimer.
+- **Détourage sur toute l'image** : une case « Sur toute l'image : transparence complète de cette
+  couleur » efface la couleur du fond partout, y compris à l'intérieur des formes, au lieu des
+  seuls pixels reliés au bord. Le résumé dit la portée choisie.
 - **Convertir une image en SVG** (ADR-0002) : PNG, JPG, GIF ou WebP ramené à 1 024 px, fond détouré
   par propagation (tolérance réglable), puis vectorisé par vtracer embarqué en WASM et chargé à la
   demande (modes aplats, trait, fidèle ; trois grains), ou enveloppé tel quel. Le résultat se voit
