@@ -7,7 +7,7 @@
 
 import { nettoyerSvg } from '../util/svg.js';
 import { couleursPixels, type CouleurExtraite } from '../engine/extraction.js';
-import { detourer, TOLERANCE_DEFAUT, type Detourage } from '../engine/detourage.js';
+import { detourer, TOLERANCE_DEFAUT, type Detourage, type PorteeDetourage } from '../engine/detourage.js';
 import { aTracer, compterTraces, optionsTraceur, svgDuTraceur, TRACES_MAX, type Finesse, type ModeVectorisation, type Traceur } from '../engine/vectorisation.js';
 import { chargerTraceur } from './vtracer.js';
 
@@ -19,11 +19,13 @@ export interface Traitement {
   detourer: boolean;
   /** L'ecart percu jusqu'auquel un pixel est encore du fond. */
   tolerance: number;
+  /** Depuis le bord seulement, ou partout dans l'image (transparence complete de cette couleur). */
+  portee: PorteeDetourage;
   /** Null : l'image reste une image, enveloppee dans un SVG. */
   vecteurs: null | { mode: ModeVectorisation; finesse: Finesse };
 }
 
-export const TRAITEMENT_DEFAUT: Traitement = { detourer: true, tolerance: TOLERANCE_DEFAUT, vecteurs: { mode: 'aplats', finesse: 'normale' } };
+export const TRAITEMENT_DEFAUT: Traitement = { detourer: true, tolerance: TOLERANCE_DEFAUT, portee: 'bord', vecteurs: { mode: 'aplats', finesse: 'normale' } };
 
 export interface ImageConvertie {
   svg: string;
@@ -83,7 +85,7 @@ const raison = (e: unknown): string => (e instanceof Error ? e.message : String(
 export async function traiterImage(source: SourceImage, traitement: Traitement, traceur?: Traceur): Promise<ImageConvertie | { erreur: string }> {
   const { largeur: l, hauteur: h } = source;
   const pixels = new Uint8ClampedArray(source.pixels);
-  const detourage = traitement.detourer ? detourer(pixels, l, h, traitement.tolerance) : null;
+  const detourage = traitement.detourer ? detourer(pixels, l, h, traitement.tolerance, traitement.portee) : null;
   const { t, ctx } = toile(l, h);
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
   const couleurs = couleursDe(t);
@@ -120,7 +122,7 @@ export async function lireSource(fichier: Blob): Promise<SourceImage | { erreur:
 
 /** Ce que l'image est devenue, en une ligne. */
 export function resumeConversion(r: ImageConvertie): string {
-  const fond = r.detourage ? 'fond ' + r.detourage.fond.toUpperCase() + ' retiré (' + Math.round(r.detourage.part * 100) + ' %)' : r.traitement.detourer ? 'aucun fond à retirer' : 'fond gardé';
+  const fond = r.detourage ? 'fond ' + r.detourage.fond.toUpperCase() + ' retiré ' + (r.traitement.portee === 'partout' ? 'partout' : 'depuis le bord') + ' (' + Math.round(r.detourage.part * 100) + ' %)' : r.traitement.detourer ? 'aucun fond à retirer' : 'fond gardé';
   const forme = r.traces !== null ? r.traces + ' tracé' + (r.traces > 1 ? 's' : '') + ' vectoriel' + (r.traces > 1 ? 's' : '') : 'image enveloppée';
   return fond + ' · ' + forme + ' · ' + Math.max(1, Math.round(r.svg.length / 1024)) + ' Ko';
 }

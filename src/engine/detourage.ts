@@ -1,7 +1,8 @@
-// Retirer le fond d'une image matricielle : les pixels relies au bord et de la couleur du bord
-// deviennent transparents. Pur : un tableau RGBA en entree, modifie en place, un compte en sortie.
-// Un remplissage par propagation, jamais un seuil global : un blanc au coeur du dessin (l'oeil d'une
-// lettre fermee, un aplat) reste.
+// Retirer le fond d'une image matricielle : les pixels de la couleur du bord deviennent
+// transparents. Pur : un tableau RGBA en entree, modifie en place, un compte en sortie. Deux
+// portees : depuis le bord, par propagation, un blanc au coeur du dessin (l'oeil d'une lettre
+// fermee, un aplat) reste ; sur toute l'image, chaque pixel de cette couleur s'efface, ou qu'il
+// soit, pour une transparence complete.
 
 import { ecartPercu, versHex, type Rgb } from '../util/couleur.js';
 
@@ -16,6 +17,9 @@ export interface Detourage {
 
 /** Au-dela de cet ecart percu avec le bord, un pixel n'est plus du fond. */
 export const TOLERANCE_DEFAUT = 0.08;
+
+/** Ou le fond s'efface : `bord`, les pixels relies au pourtour ; `partout`, chaque pixel de cette couleur. */
+export type PorteeDetourage = 'bord' | 'partout';
 
 const lire = (p: Uint8ClampedArray, i: number): Rgb => ({ r: p[i * 4] ?? 0, g: p[i * 4 + 1] ?? 0, b: p[i * 4 + 2] ?? 0 });
 
@@ -36,16 +40,22 @@ export function couleurDuBord(pixels: Uint8ClampedArray, largeur: number, hauteu
 }
 
 /**
- * Rend transparents les pixels du fond, en place. Le fond est la couleur du bord, propagee depuis
- * chaque pixel du pourtour vers ses voisins de meme couleur, a `tolerance` pres (ecart percu).
- * Une image deja transparente sur ses bords n'est pas touchee.
+ * Rend transparents les pixels du fond, en place. Le fond est la couleur du bord, a `tolerance`
+ * pres (ecart percu) : propagee depuis chaque pixel du pourtour vers ses voisins de meme couleur
+ * (`bord`), ou effacee ou qu'elle soit (`partout`). Une image deja transparente sur ses bords n'est
+ * pas touchee.
  */
-export function detourer(pixels: Uint8ClampedArray, largeur: number, hauteur: number, tolerance = TOLERANCE_DEFAUT): Detourage {
+export function detourer(pixels: Uint8ClampedArray, largeur: number, hauteur: number, tolerance = TOLERANCE_DEFAUT, portee: PorteeDetourage = 'bord'): Detourage {
   const fond = couleurDuBord(pixels, largeur, hauteur);
   const n = largeur * hauteur;
+  const estFond = (i: number) => (pixels[i * 4 + 3] ?? 0) >= 128 && ecartPercu(lire(pixels, i), fond) <= tolerance;
+  if (portee === 'partout') {
+    let retires = 0;
+    for (let i = 0; i < n; i++) if (estFond(i)) { pixels[i * 4 + 3] = 0; retires++; }
+    return { fond: versHex(fond), retires, part: n ? Math.round((retires / n) * 1000) / 1000 : 0 };
+  }
   const vu = new Uint8Array(n);
   const pile: number[] = [];
-  const estFond = (i: number) => (pixels[i * 4 + 3] ?? 0) >= 128 && ecartPercu(lire(pixels, i), fond) <= tolerance;
   const pousser = (i: number) => { if (!vu[i] && estFond(i)) { vu[i] = 1; pile.push(i); } };
   for (let x = 0; x < largeur; x++) { pousser(x); pousser((hauteur - 1) * largeur + x); }
   for (let y = 0; y < hauteur; y++) { pousser(y * largeur); pousser(y * largeur + largeur - 1); }

@@ -64,11 +64,17 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
             <legend>Fond</legend>
             <label className="case"><input type="checkbox" checked={t.detourer} onChange={e => poserT({ ...t, detourer: e.target.checked })} /> Détourer le fond</label>
             {t.detourer ? (
-              <label className="champ-ligne"><span>Tolérance</span>
-                <select value={String(t.tolerance)} onChange={e => poserT({ ...t, tolerance: Number(e.target.value) })}>
-                  {TOLERANCES.map(([v, l]) => <option key={v} value={String(v)}>{l}</option>)}
-                </select>
-              </label>
+              <>
+                <label className="champ-ligne"><span>Tolérance</span>
+                  <select value={String(t.tolerance)} onChange={e => poserT({ ...t, tolerance: Number(e.target.value) })}>
+                    {TOLERANCES.map(([v, l]) => <option key={v} value={String(v)}>{l}</option>)}
+                  </select>
+                </label>
+                <label className="case" title="Rend transparente la couleur de fond partout, y compris à l’intérieur des formes : l’œil d’une lettre, un aplat de la même couleur">
+                  <input type="checkbox" checked={t.portee === 'partout'} onChange={e => poserT({ ...t, portee: e.target.checked ? 'partout' : 'bord' })} /> Sur toute l’image : transparence complète de cette couleur
+                </label>
+                <p className="aide">{t.portee === 'partout' ? 'Chaque pixel de la couleur du bord s’efface, où qu’il soit.' : 'Seuls les pixels reliés au bord s’effacent ; un blanc enfermé dans une forme reste.'}</p>
+              </>
             ) : null}
           </fieldset>
           <fieldset className="editeur-groupe">
