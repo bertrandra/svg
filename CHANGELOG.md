@@ -5,6 +5,22 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Modifié
+
+- **Passe d'interface : menus, sections, trois voies** (ADR-0006) :
+  - la barre de l'éditeur ne garde que les outils, les couleurs, l'historique et le zoom ; les formes
+    se rangent derrière un outil à chevron, et les menus **Vue**, **Édition** et **Fichier** portent le
+    reste, avec leurs raccourcis, au clavier comme à la souris ;
+  - l'accueil devient une entrée et trois voies côte à côte (ouvrir un SVG, convertir une image,
+    bibliothèque) ; le nuancier est replié ;
+  - l'inspecteur est à plat, en sections repliables, et ne répète plus la rangée de sélection ;
+  - un bouton est secondaire par défaut, une seule action par panneau est pleine ; « Supprimer » est
+    un contour rouge ;
+  - les tiroirs mobiles glissent et se ferment sur un voile, la toile prend le focus clavier avec un
+    anneau visible, `prefers-reduced-motion` coupe les animations ;
+  - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
+    agrandies.
+
 ### Ajouté
 
 - **Neuf chantiers pour créer, pas seulement retoucher** (ADR-0004) :

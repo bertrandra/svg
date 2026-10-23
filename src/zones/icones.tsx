@@ -15,7 +15,8 @@ export type NomIcone =
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'verrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
-  | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre';
+  | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -83,7 +84,13 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   scene: [t('M3 3h8v8H3z'), t('M13 3h8v8h-8z'), t('M3 13h8v8H3z'), t('M13 13h8v8h-8z')],
   ajouter: [t('M12 5v14'), t('M5 12h14')],
   rotation: [t('M21 12a9 9 0 1 1-3-6.7'), t('M21 4v5h-5'), t('M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
-  reprendre: [t('M5 4l14 8-14 8z', true)]
+  reprendre: [t('M5 4l14 8-14 8z', true)],
+  'chevron-bas': [t('M6 9l6 6 6-6')],
+  coche: [t('M5 12.5l4.5 4.5L19 7.5')],
+  ouvrir: [t('M4 20V5a1 1 0 0 1 1-1h5l2 3h7a1 1 0 0 1 1 1v3'), t('M3.5 20l2.2-8.2a1 1 0 0 1 1-.8H21l-2.3 8.2a1 1 0 0 1-1 .8z')],
+  image: [t('M3 4h18v16H3z'), t('M8.5 10a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0', true), t('M21 16l-5-5-8 8')],
+  'tout-selectionner': [t('M4 4h16v16H4z'), t('M8 8h8v8H8z', true)],
+  'aucune-selection': [{ d: 'M4 4h16v16H4z', pointille: true }]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

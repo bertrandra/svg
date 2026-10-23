@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ecrireDessin, lireDessin } from '../engine/editionSvg.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import type { Edition } from './EditeurSvg.js';
+import { Section } from './Section.js';
 import { dateCourte } from './session.js';
 
 export function PanneauVersions({ ed }: { ed: Edition }) {
@@ -18,8 +19,7 @@ export function PanneauVersions({ ed }: { ed: Edition }) {
     ed.dire('Retour à « ' + nomVersion + ' » ; Ctrl+Z revient en arrière.');
   };
   return (
-    <details className="editeur-groupe">
-      <summary>Versions nommées{ed.versions.length ? ' (' + ed.versions.length + ')' : ''}</summary>
+    <Section titre="Versions nommées" note={ed.versions.length || undefined}>
       <div className="champ-ligne">
         <input type="text" value={nom} placeholder="avant recoloration…" aria-label="Nom de la version" onChange={e => poserNom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') garder(); }} />
         <button type="button" onClick={garder}>Garder</button>
@@ -37,6 +37,6 @@ export function PanneauVersions({ ed }: { ed: Edition }) {
         </ul>
       ) : <p className="aide">Aucune version gardée. Les versions restent dans ce navigateur.</p>}
       {ed.versions.length ? <button type="button" className="discret" onClick={() => { void proposer('versions.json', texteOctets(JSON.stringify(ed.versions, null, 1))).then(ed.dire); }}>Exporter les versions (JSON)</button> : null}
-    </details>
+    </Section>
   );
 }

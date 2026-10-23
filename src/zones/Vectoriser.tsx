@@ -72,11 +72,11 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
 
   return (
     <section className="vectoriser" aria-label="Convertir une image en SVG">
-      <h2>Convertir une image en SVG</h2>
+      <h2 className="sr-only">Convertir une image en SVG</h2>
       <div className={'depot petit' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={glisser}>
         {source ? <img className="miniature" src={source.original} alt={'Image déposée : ' + source.nom} /> : null}
         <p>{source ? source.nom + ' · ' + source.image.largeur + ' × ' + source.image.hauteur + ' px' : 'Déposez un PNG, un JPG, un GIF ou un WebP, ou'}</p>
-        <button type="button" className={source ? 'discret' : undefined} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>
+        <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>
         <input ref={entree} type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onChange={e => { deposer(e.target.files?.[0]); e.target.value = ''; }} />
       </div>
       {source ? (

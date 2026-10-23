@@ -7,6 +7,7 @@ import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import { EditeurSvg } from './EditeurSvg.js';
 import { SectionBibliotheque } from './Bibliotheque.js';
 import { MenuExport } from './Exporter.js';
+import { Icone, type NomIcone } from './icones.js';
 import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
@@ -24,12 +25,20 @@ const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
 
 const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
 
+type Voie = 'svg' | 'image' | 'formes';
+const VOIES: ReadonlyArray<readonly [Voie, NomIcone, string, string]> = [
+  ['svg', 'ouvrir', 'Ouvrir un SVG', 'Un fichier, du code collé, ou l’exemple'],
+  ['image', 'image', 'Convertir une image', 'PNG, JPG… en vecteurs, fond détouré'],
+  ['formes', 'scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
+];
+
 const sansExtension = (nom: string) => nom.replace(/\.svg$/i, '').trim() || 'dessin';
 
 export function Application() {
   const [fichier, poserFichier] = useState<Fichier | null>(null);
   const [edition, poserEdition] = useState(false);
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
+  const [voie, poserVoie] = useState<Voie>('svg');
   const [message, dire] = useState('');
   const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon());
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
@@ -66,7 +75,7 @@ export function Application() {
         <section className="reprise" aria-label="Reprendre">
           <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
           <div className="actions">
-            <button type="button" onClick={() => { ouvrir(brouillon.nom, brouillon.svg); }}>Reprendre</button>
+            <button type="button" className="primaire" onClick={() => { ouvrir(brouillon.nom, brouillon.svg); }}>Reprendre</button>
             <button type="button" className="discret" onClick={() => { oublierBrouillon(); poserBrouillon(null); }}>Oublier</button>
           </div>
         </section>
@@ -79,7 +88,7 @@ export function Application() {
             <h2>{fichier.nom}.svg</h2>
             {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
             <div className="actions">
-              <button type="button" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
+              <button type="button" className="primaire" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
               <MenuExport svg={fichier.svg} nom={fichier.nom} dire={dire} />
               <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(); poserBrouillon(null); dire(''); }}>Fermer</button>
             </div>
@@ -87,20 +96,38 @@ export function Application() {
         </section>
       ) : null}
 
-      <OuvrirSvg ouvrir={ouvrir} />
+      <section className="voies" aria-label="Par où commencer">
+        <div className="voies-choix" role="tablist" aria-label="Point de départ">
+          {VOIES.map(([id, icone, titre, aide], i) => (
+            <button key={id} type="button" role="tab" id={'voie-' + id} aria-selected={voie === id} aria-controls={'panneau-' + id} tabIndex={voie === id ? 0 : -1} className="voie"
+              onClick={() => poserVoie(id)}
+              onKeyDown={e => {
+                const pas = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                if (!pas) return;
+                e.preventDefault();
+                const suite = VOIES[(i + pas + VOIES.length) % VOIES.length];
+                if (suite) { poserVoie(suite[0]); document.getElementById('voie-' + suite[0])?.focus(); }
+              }}>
+              <Icone nom={icone} taille={22} />
+              <span className="voie-titre">{titre}</span>
+              <span className="voie-aide">{aide}</span>
+            </button>
+          ))}
+        </div>
+        {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
+        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, x.svg)} /></div>
+      </section>
 
-      <Vectoriser ouvrir={ouvrir} />
-
-      <SectionBibliotheque ouvrir={x => ouvrir(x.id, x.svg)} />
-
-      <section className="nuancier-page" aria-label="Nuancier">
-        <h2>Nuancier proposé dans l’éditeur</h2>
+      <details className="nuancier-page">
+        <summary>Nuancier proposé dans l’éditeur <span className="aide">{nuancier.length} teinte{nuancier.length > 1 ? 's' : ''}</span></summary>
         <label className="champ">
           <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
           <textarea rows={5} value={nuancierTexte} spellCheck={false} onChange={e => poserNuancierTexte(e.target.value)} />
           <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue : l’éditeur proposera seulement le sélecteur.'}</span>
         </label>
-      </section>
+      </details>
 
       <footer className="pied">
         <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> (licence CC BY 3.0) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
@@ -134,12 +161,12 @@ function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void })
   };
   return (
     <section className="ouvrir" aria-label="Ouvrir un SVG">
-      <h2>Ouvrir un SVG</h2>
+      <h2 className="sr-only">Ouvrir un SVG</h2>
       <div className={'depot' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={deposer}>
         <p>Déposez un fichier SVG ici, ou</p>
         <div className="actions">
-          <button type="button" onClick={() => entree.current?.click()}>Choisir un fichier…</button>
-          <button type="button" className="discret" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
+          <button type="button" className="primaire" onClick={() => entree.current?.click()}>Choisir un fichier…</button>
+          <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
         </div>
         <input ref={entree} type="file" accept=".svg,image/svg+xml" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
       </div>

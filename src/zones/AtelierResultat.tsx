@@ -100,7 +100,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
           <div className="fiche-resultat">
             <p className="aide">{resumeConversion(resultat)} · {resultat.duree} ms{resultat.traitement.vecteurs ? ' · ' + resumeReglages(resultat.traitement.vecteurs) : ''}</p>
             <div className="actions">
-              <button type="button" disabled={!vecteurs} title={vecteurs ? undefined : 'Une image enveloppée ne s’édite pas : vectorisez-la.'} onClick={() => ouvrir(nom, resultat.svg)}>Ouvrir dans l’éditeur</button>
+              <button type="button" className="primaire" disabled={!vecteurs} title={vecteurs ? undefined : 'Une image enveloppée ne s’édite pas : vectorisez-la.'} onClick={() => ouvrir(nom, resultat.svg)}>Ouvrir dans l’éditeur</button>
               <button type="button" className="discret" onClick={() => { void proposer(nom + '.svg', texteOctets(resultat.svg)).then(dire); }}>Télécharger le SVG</button>
               <button type="button" className="discret" onClick={() => { void copier(resultat.svg).then(ok => dire(ok ? 'Code SVG copié.' : 'Cette page n’a pas le droit de copier : téléchargez le SVG.')); }}>Copier le code</button>
             </div>
@@ -148,7 +148,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
           <input type="checkbox" checked={auto} onChange={e => poserAuto(e.target.checked)} /> Rejouer à chaque changement
         </label>
         <div className="actions">
-          <button type="button" disabled={enCours} onClick={rejouer}>{enCours ? 'En cours…' : resultat ? 'Rejouer' : v ? 'Vectoriser' : 'Envelopper'}</button>
+          <button type="button" className={resultat ? undefined : 'primaire'} disabled={enCours} onClick={rejouer}>{enCours ? 'En cours…' : resultat ? 'Rejouer' : v ? 'Vectoriser' : 'Envelopper'}</button>
           <span className="aide" role="status">{message}</span>
         </div>
       </aside>

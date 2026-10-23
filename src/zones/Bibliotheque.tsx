@@ -119,9 +119,9 @@ export function SectionBibliotheque({ ouvrir, enfants }: { ouvrir: (e: EntreeBib
   const [voulue, vouloir] = useState(false);
   return (
     <section className="bibliotheque" aria-label="Bibliothèque de formes">
-      <h2>Bibliothèque de formes</h2>
+      <h2 className="sr-only">Bibliothèque de formes</h2>
       <p className="aide">Plus de 4 000 silhouettes nommées en français et classées par événement du calendrier (Noël, Pâques, Halloween…), par événement de la vie (naissance, anniversaire, concert…) et par catégorie (personnage, bâtiment, animal…). Une forme s’ouvre dans l’éditeur, où elle se recolore et se retouche. Source : game-icons.net, licence CC BY 3.0.</p>
-      {voulue ? <Chargee ouvrir={ouvrir} /> : <button type="button" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
+      {voulue ? <Chargee ouvrir={ouvrir} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
       {enfants}
     </section>
   );

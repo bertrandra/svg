@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { appliquerPalette, PALETTES, uneCouleur } from '../engine/palettes.js';
 import type { Edition } from './EditeurSvg.js';
+import { Section } from './Section.js';
 
 const estHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
 
@@ -14,8 +15,7 @@ export function PanneauPalettes({ ed }: { ed: Edition }) {
   const nuancier = ed.nuancier.map(t => t.hex);
   const appliquer = (palette: readonly string[], texte: string) => { if (palette.length) ed.faire(d => appliquerPalette(d, palette), texte); };
   return (
-    <fieldset className="editeur-groupe">
-      <legend>Recolorer</legend>
+    <Section titre="Recolorer">
       <label className="champ-ligne">
         <span>Palette</span>
         <select value={choix} onChange={e => poserChoix(e.target.value)}>
@@ -25,7 +25,7 @@ export function PanneauPalettes({ ed }: { ed: Edition }) {
       </label>
       <div className="nuancier" aria-hidden="true">{(PALETTES.find(p => p.id === choix)?.couleurs ?? []).map(c => <span key={c} className="echantillon" style={{ background: c }} />)}</div>
       <div className="boutons">
-        <button type="button" onClick={() => { const p = PALETTES.find(x => x.id === choix); if (p) appliquer(p.couleurs, 'Palette « ' + p.nom + ' » appliquée : la couleur la plus présente a pris la première.'); }}>Appliquer la palette</button>
+        <button type="button" className="primaire" onClick={() => { const p = PALETTES.find(x => x.id === choix); if (p) appliquer(p.couleurs, 'Palette « ' + p.nom + ' » appliquée : la couleur la plus présente a pris la première.'); }}>Appliquer la palette</button>
         {nuancier.length ? <button type="button" onClick={() => appliquer(nuancier, 'Nuancier appliqué au dessin.')}>Appliquer le nuancier</button> : null}
         <button type="button" onClick={() => ed.faire(d => uneCouleur(d, ed.style.remplissage ?? '#000000'), 'Tout le dessin d’une seule couleur.')}>Une couleur ({(ed.style.remplissage ?? '#000000').toUpperCase()})</button>
       </div>
@@ -34,6 +34,6 @@ export function PanneauPalettes({ ed }: { ed: Edition }) {
         <input type="text" value={propre} onChange={e => poserPropre(e.target.value)} placeholder="#rrggbb #rrggbb …" />
         <button type="button" className="discret" disabled={!couleurs.length} onClick={() => appliquer(couleurs, 'Palette appliquée.')}>OK</button>
       </label>
-    </fieldset>
+    </Section>
   );
 }
