@@ -13,7 +13,7 @@ les panneaux sur tablette.
 ## Décisions
 
 1. **Les booléens passent par un moteur de découpe** (`polygon-clipping`, Martinez, épinglé) sur des
-   courbes aplaties à une tolérance géométrique (écart maximal d'un vingt-millième du plan, borne de Wang, 512 segments au plus par courbe ; l'option `lisser` du moteur rebâtit des cubiques vérifiées). Le résultat est une forme en segments droits, au style
+   courbes aplaties à une tolérance géométrique (écart maximal d'un vingt-millième du plan, borne de Wang, 512 segments au plus par courbe ; l'option `lisser` du moteur rebâtit des cubiques vérifiées ; l'éditeur l'active par défaut, menu Édition, réglage de session). Le résultat est une forme en segments droits (ou en courbes rebâties), au style
    de la plus basse ; le remplissage se lit comme le navigateur le peint (pair-impair, ou selon le
    sens du tracé, approché par l'union d'un sens moins l'autre). Une forme sans remplissage n'a pas
    d'aire et se refuse en le disant. Déterministe, testé sur des aires.
@@ -49,8 +49,8 @@ les panneaux sur tablette.
 - Deux dépendances d'exécution de plus, pures et épinglées : `polygon-clipping` (MIT) et
   `opentype.js` (MIT). Les fontes (OFL) et le jeu d'icônes (CC BY 3.0) restent des dépendances de
   construction : `dist/` porte trois fichiers annexes, `bibliotheque.js`, `polices.js` et la page.
-- Un booléen remplace des courbes par des segments : c'est dit dans le message d'état et dans la
-  documentation. Une version du moteur de découpe peut déplacer un sommet : épinglage exact.
+- Un booléen remplace des courbes par des segments, sauf si le réglage « rebâtir les courbes » est actif :
+  le message d'état dit « courbes rebâties » ou « segments droits » selon le résultat. Une version du moteur de découpe peut déplacer un sommet : épinglage exact.
 - Le stockage du navigateur ne porte que des conforts (brouillon, versions, corrections) : la page
   marche sans lui.
 - Le crénage du texte se lit dans la table GPOS (`io/crenageGpos.ts`, paires de format 1 et 2, directes ou

@@ -83,6 +83,9 @@ empreintes.
 
 ### Corrigé
 
+- **« Ajuster le plan de travail » compte l'étendue réelle du trait** : les pointes des jonctions en
+  pointe (jusqu'à limite × épaisseur / 2) et les coins des bouts carrés ne sont plus coupés. Un trait
+  ordinaire garde exactement le même plan.
 - Les sections ouvertes ou repliées de l'inspecteur ne se partagent plus entre deux éditeurs d'une même
   page hôte (mémoire par éditeur).
 - « Enregistrer » d'un dessin sans forme visible rendait un `<svg>` vide à l'hôte (`onEnregistrer`) au
@@ -92,6 +95,11 @@ empreintes.
 
 ### Ajouté
 
+- **Menu Édition, « Booléens : rebâtir les courbes »** (actif par défaut, propre à la session, rien n'est
+  écrit) : l'union de deux cercles reste ronde, avec une vingtaine de points au lieu de plus de deux cents.
+  Le moteur garde `lisser` faux par défaut, donc `appliquerBooleen` et les références ne changent pas. La
+  barre d'état dit ce que le booléen a fait : « Union faite : 2 formes, 21 points (courbes rebâties). »
+  ou « … en segments droits. ».
 - **Un stockage injectable** (`io/stockage.ts`) : l'éditeur reçoit `stockage` (le magasin du navigateur,
   celui de l'hôte, ou rien) et ne touche plus `localStorage` ; l'embarquement l'expose comme option
   (`false` pour ne rien garder). 7 tests de navigateur de plus.

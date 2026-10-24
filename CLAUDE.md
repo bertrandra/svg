@@ -64,8 +64,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
   du mode se retire ; les valeurs par défaut se calculent (`valeursParDefaut`), elles ne se recopient
   pas dans l'interface ; le temps d'un essai se mesure dans `io`, jamais dans le moteur.
-- **Les booléens aplatissent** (ADR-0004) : le résultat est en segments droits, au style de la forme
-  la plus basse ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
+- **Les booléens aplatissent, l'éditeur rebâtit** (ADR-0004) : le moteur rend des segments droits, au style
+  de la forme la plus basse ; l'éditeur rebâtit les courbes par défaut (`lisserBooleens`, réglage de session) ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
 - **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
   `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts`. Jamais de `<text>` dans un SVG écrit.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
