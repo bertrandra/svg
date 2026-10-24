@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <!-- H, V, l et z : un L explicite, des relatifs, une fermeture -->
+  <path d="M10 10 L50 10 l0 30 H10 v-10 z" fill="#c81e28"/>
+  <!-- c, s, q, t relatifs ; lineto implicite apres m ; m apres z repart du debut du sous-chemin -->
+  <path d="m60,10 c10,0 20,10 20,20 s-10,20 -20,20 q-10,-5 -10,-15 t10,-10 z m5 5 l5 0 5 5 -5 5 z" fill="#1428a0"/>
+  <!-- C, S, Q, T absolus ; nombres colles (.5.5), exposant (1e1) -->
+  <path d="M100 10C110 0 130 0 140 10S150 30 140 40Q120 50 110 40T100 20ZM150 10h.5.5v-1e1z" fill="#228b22"/>
+  <!-- virgules, espaces multiples, sous-chemins sans Z -->
+  <path d="M 160 10 L 190 10 190 40 Z M170,20 L180,20 180,30" fill="#d4a537"/>
+  <!-- valeurs proches de zero et decimales longues -->
+  <path d="M5 60 L-0.0004 80 L 0.0005 90.12345 L 33.3333333 66.6666666 L 1e-7 5.0004" fill="#555c66"/>
+</svg>

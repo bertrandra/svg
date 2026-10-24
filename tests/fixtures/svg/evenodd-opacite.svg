@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- anneau pair-impair -->
+  <path d="M10 10h40v40h-40zM20 20h20v20h-20z" fill="#c81e28" fill-rule="evenodd"/>
+  <!-- meme trace, regle par defaut -->
+  <path d="M60 10h30v30h-30zM65 15h20v20h-20z" fill="#c81e28"/>
+  <!-- la regle et l'opacite du groupe se transmettent ; celle de l'enfant s'y multiplie -->
+  <g opacity="0.5" fill-rule="evenodd" fill="#1428a0">
+    <path d="M10 60h30v30h-30zM15 65h20v20h-20z"/>
+    <path d="M50 60h20v30h-20z" opacity="0.5"/>
+    <path d="M75 60h20v30h-20z" fill-opacity="0.8"/>
+  </g>
+  <!-- opacite hors bornes ramenee dans [0, 1], opacite nulle conservee -->
+  <path d="M0 95h10v5h-10z" fill="#228b22" opacity="2"/>
+  <path d="M20 95h10v5h-10z" fill="#228b22" opacity="0"/>
+  <path d="M40 95h10v5h-10z" fill="#228b22" opacity="0.3333333"/>
+</svg>

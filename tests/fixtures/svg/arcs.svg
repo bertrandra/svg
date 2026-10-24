@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <!-- demi-ellipse, balayage positif -->
+  <path d="M10 50 A30 20 0 0 1 70 50" fill="#c81e28"/>
+  <!-- grand arc relatif, balayage negatif -->
+  <path d="M10 80 a20 20 0 1 0 40 0" fill="#1428a0"/>
+  <!-- rayons trop petits : l'arc est agrandi jusqu'a joindre les deux points -->
+  <path d="M60 80 A5 5 0 0 1 100 80z" fill="#228b22"/>
+  <!-- ellipse tournee de 30 degres -->
+  <path d="M120 50 A30 15 30 0 1 170 70 A30 15 30 1 1 120 50z" fill="#d4a537"/>
+  <!-- rayon nul : un segment ; memes points : rien -->
+  <path d="M180 10 A0 0 0 0 1 190 20 A5 5 0 0 1 190 20 L195 5z" fill="#555c66"/>
+  <!-- drapeaux colles aux nombres -->
+  <path d="M110 10a5 5 0 1110 0a5 5 0 11-10 0z" fill="#6a2c91"/>
+</svg>

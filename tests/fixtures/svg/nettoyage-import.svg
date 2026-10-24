@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Un SVG venu d'ailleurs : ce que nettoyerSvg doit retirer, et ce qu'il doit garder -->
+<svg viewBox="0 0 40 20" onload="alert(1)">
+  <script>alert('x')</script>
+  <script src="https://exemple.invalid/a.js"/>
+  <foreignObject width="10" height="10"><div>html</div></foreignObject>
+  <style>@import url(https://exemple.invalid/s.css); .a { fill: url(https://exemple.invalid/p.svg#x) }</style>
+  <a href="javascript:alert(2)"><path onclick="alert(3)" d="M0 0h10v10h-10z" fill="#c81e28"/></a>
+  <image href="https://exemple.invalid/photo.png" width="10" height="10"/>
+  <image href="data:image/png;base64,AAAA" x="10" width="10" height="10"/>
+  <path d="M20 0h10v10h-10z" fill="url(#degrade)"/>
+  <path d="M30 0h10v10h-10z" fill="#1428a0" xlink:href="#ancre"/>
+</svg>
