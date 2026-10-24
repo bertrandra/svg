@@ -2,7 +2,7 @@
    l'apparition d'un panneau. */
 .message { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.85rem; }
 @keyframes apparition { from { opacity: 0; transform: translateY(4px); } }
-.case { display: flex; gap: 6px; align-items: center; font-size: 0.82rem; }
+.case { display: flex; gap: 6px; align-items: center; min-height: 24px; font-size: 0.82rem; }
 .bibliotheque { display: grid; gap: 10px; }
 /* La bibliotheque : une grille de vignettes, dans la page et dans l'editeur. */
 .recherche-formes { display: grid; gap: 8px; }
@@ -48,26 +48,30 @@
 .icone-bouton.danger { color: var(--echec); }
 .icone-bouton.danger:hover:not(:disabled) { background: var(--echec-fond); }
 .icone { display: block; }
+/* Le petit bouton d'icone des reglages fins : 24 px au moins (la page le dit 22 ; la specificite d'un bouton l'emporte). */
+button.icone-bouton.petit { width: 24px; height: 24px; }
 .editeur-barre .zoom { height: 30px; min-width: 52px; padding: 0 4px; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: 6px; }
 .editeur-barre .zoom:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre .zoom:hover { background: var(--repli-cyan-12); } }
 .editeur-barre button.texte, .editeur-etat button.texte { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; font-size: 0.78rem; margin-left: 4px; }
 .editeur-barre button.texte:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Un bouton grise par aria-disabled (Enregistrer : il dit pourquoi, et reste dans l'ordre de Tab) se lit comme un bouton desactive, sans survol ni enfoncement. */
+button[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+button.primaire[aria-disabled="true"]:hover:not(:disabled) { background: var(--cyan); }
+button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .style-courant { gap: 6px; }
 .pastille-style { position: relative; display: inline-flex; align-items: center; }
 .pastille-style input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--filet); border-radius: 6px; background: transparent; cursor: pointer; }
-.pastille-style button.aucun { position: absolute; right: -4px; top: -4px; width: 16px; height: 16px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--panneau); color: var(--encre-douce); border: 1px solid var(--filet); }
-.pastille-style button.aucun.actif { background: var(--echec); color: var(--panneau); border-color: var(--echec); }
-.pastille-style button.aucun:hover { color: var(--echec); border-color: var(--echec); }
+/* « Aucun » : 24 px de surface (WCAG 2.5.8), mais un disque de 16 px a l'oeil : la marge de 4 px est une bordure transparente que le fond ne peint pas
+   (background-clip), et le filet est une ombre interne. Au doigt (bloc plus bas), il redevient un bouton carre de 40 px a bordure. */
+.pastille-style button.aucun { position: absolute; right: -6px; top: -6px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border: 4px solid transparent; border-radius: 50%; background-color: var(--panneau); background-clip: padding-box; box-shadow: inset 0 0 0 1px var(--filet); color: var(--encre-douce); }
+.pastille-style button.aucun.actif { background-color: var(--echec); color: var(--panneau); box-shadow: inset 0 0 0 1px var(--echec); }
+.pastille-style button.aucun:hover { color: var(--echec); box-shadow: inset 0 0 0 1px var(--echec); }
 .editeur-inspecteur button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* La rangee de la selection, sous la barre : aligner, transformer, empiler, combiner, separer. */
 .editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; padding: 2px 10px; border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background: var(--repli-cyan-6-panneau); } }
 .editeur-barre-selection > .aide { min-width: 96px; padding-right: 6px; }
-/* Un bouton grise par aria-disabled (Enregistrer : il dit pourquoi, et reste dans l'ordre de Tab) se lit comme un bouton desactive, sans survol ni enfoncement. */
-button[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
-button.primaire[aria-disabled="true"]:hover:not(:disabled) { background: var(--cyan); }
-button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-barre-selection .icone-bouton { width: 28px; height: 28px; }
 .editeur-svg-toile .grille { stroke: color-mix(in srgb, var(--cyan) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .grille { stroke: var(--repli-cyan-35); } }
@@ -91,7 +95,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .par-couleur .couleur-choix .echantillon { flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
 .par-couleur .icone-bouton { width: 26px; height: 26px; }
 .par-couleur .menu-deroulant { flex: none; }
-.par-couleur input[type="color"].recolorer { flex: none; width: 22px; height: 22px; margin: 0 2px; padding: 0; border: 1px solid var(--filet); border-radius: 4px; background: transparent; cursor: pointer; }
+.par-couleur input[type="color"].recolorer { flex: none; width: 24px; height: 24px; margin: 0 2px; padding: 0; border: 1px solid var(--filet); border-radius: 4px; background: transparent; cursor: pointer; }
 .par-couleur .recolorer::-webkit-color-swatch-wrapper { padding: 0; }
 .par-couleur .recolorer::-webkit-color-swatch { border: 0; border-radius: 3px; }
 .par-couleur .recolorer::-moz-color-swatch { border: 0; border-radius: 3px; }
@@ -116,7 +120,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-calques li.choisi { background: var(--repli-cyan-18); } }
 .editeur-calques .calque-nom { flex: 1; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--encre); border: 0; padding: 3px 4px; font-weight: 400; font-size: 0.75rem; text-align: left; }
-.editeur-calques .calque-bascule { width: 24px; height: 24px; color: var(--encre-douce); }
+.editeur-calques .calque-bascule { width: 26px; height: 26px; color: var(--encre-douce); }
 .editeur-calques .calque-bascule[aria-pressed="true"] { color: var(--sur-cyan); }
 .editeur-calques .echantillon { width: 14px; height: 14px; border-radius: 3px; }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
@@ -176,7 +180,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .grille-2 .champ-ligne > span:first-child { min-width: 14px; }
 .grille-2 .champ-ligne input { width: 100%; min-width: 0; }
 .nuancier { display: flex; flex-wrap: wrap; gap: 4px; }
-.nuancier .echantillon { width: 22px; height: 22px; padding: 0; border: 1px solid var(--filet); cursor: pointer; }
+.nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .couleurs-dessin li { display: flex; gap: 6px; align-items: center; min-width: 0; }
@@ -196,7 +200,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .menu-bouton.texte:hover:not(:disabled), .menu-bouton.texte[aria-expanded="true"] { background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--encre); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-bouton.texte:hover:not(:disabled), .menu-bouton.texte[aria-expanded="true"] { background: var(--repli-cyan-12); } }
 .outil-formes { display: inline-flex; align-items: center; }
-.chevron-seul .icone-bouton { width: 14px; padding: 0; border-radius: 4px; margin-left: -3px; }
+.chevron-seul .icone-bouton { width: 24px; padding: 0; border-radius: 4px; margin-left: -3px; }
 /* 100dvh : la hauteur visible quand la barre d'adresse d'un mobile occupe l'ecran ; 100vh, qui la compte, reste la ligne d'avant pour qui n'a pas dvh. */
 .menu-panneau { position: fixed; z-index: 1100; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 72px); max-height: calc(100dvh - 72px); overflow: auto; padding: 4px; background: var(--panneau); border: 1px solid var(--filet); border-radius: 8px; box-shadow: 0 8px 24px var(--ombre-menu); transform-origin: top left; animation: menu-entree 0.12s ease-out; outline: 0; }
 @keyframes menu-entree { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
@@ -212,11 +216,14 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .menu-raccourci { font-family: var(--mono); font-size: 0.68rem; color: var(--encre-douce); }
 .menu-libre { padding: 6px 8px 8px; }
 .menu-titre { margin: 4px 0 6px; font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
+/* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
+.menu-rubrique > .menu-titre { margin: 8px 8px 2px; }
+.menu-rubrique + .menu-rubrique { margin-top: 4px; border-top: 1px solid var(--filet); }
 .contenu-export { display: grid; gap: 6px; min-width: 260px; }
 .contenu-export button { font-size: 0.78rem; padding: 5px 9px; justify-self: start; }
 .ligne-export { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ligne-export select { width: auto; font-size: 0.75rem; }
-.ligne-export input[type="color"] { width: 26px; height: 24px; }
+.ligne-export input[type="color"] { width: 28px; height: 26px; }
 /* Les options partagees des exports : une colonne de champs, chacun sur toute la largeur du menu. */
 .options-export { display: grid; gap: 8px; min-width: 0; }
 .options-export .aide { margin: 0; }
@@ -225,18 +232,15 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .options-export .grille-2 .champ-ligne input[type="text"] { width: 100%; }
 .transformations-numeriques { display: grid; gap: 6px; margin-top: 4px; }
 .transformations-numeriques > button { justify-self: start; }
-/* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
-.menu-rubrique > .menu-titre { margin: 8px 8px 2px; }
-.menu-rubrique + .menu-rubrique { margin-top: 4px; border-top: 1px solid var(--filet); }
 .versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .versions li { display: flex; gap: 4px; align-items: center; font-size: 0.75rem; }
 .versions .nom-version { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .versions button { padding: 2px 6px; font-size: 0.7rem; }
 .panier { display: grid; gap: 6px; padding: 6px; border: 1px dashed var(--cyan); border-radius: 6px; }
 .grille-formes li { position: relative; }
-.grille-formes .plus { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; background: var(--panneau); border-color: var(--filet); opacity: 0; }
+.grille-formes .plus { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; background: var(--panneau); border-color: var(--filet); opacity: 0; }
 .grille-formes li:hover .plus, .grille-formes li:focus-within .plus, .grille-formes li.en-edition .plus { opacity: 1; }
-.grille-formes .plus + .plus { right: 26px; }
+.grille-formes .plus + .plus { right: 28px; }
 .correcteur { grid-column: 1 / -1; display: grid; gap: 8px; padding: 10px; background: var(--table); border: 1px solid var(--cyan); border-radius: 8px; }
 .grille-formes li.en-edition { grid-column: 1 / -1; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; }
 .cases-evenements { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.75rem; max-height: 140px; overflow: auto; }
@@ -288,19 +292,6 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-etat button.texte { order: 4; }
   .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
 }
-  input[type="text"], input[type="search"], select { min-height: 40px; }
-  input[type="color"], .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 44px; height: 40px; }
-  .pastille-style input[type="color"] { width: 40px; height: 40px; }
-  .pastille-style { gap: 2px; }
-  .pastille-style button.aucun { position: static; width: 40px; height: 40px; border-radius: 6px; }
-  .nuancier .echantillon { width: 32px; height: 32px; }
-  input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
-  .reglages-pretraitement input[type="range"] { min-height: 40px; }
-  .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
-  .section > summary { padding: 13px 2px; }
-  .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
-  .options-export .case { min-height: 40px; }
-  .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
   .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
@@ -314,6 +305,20 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
   .nuances-proches input[type="range"] { min-height: 40px; }
   .calques-actions button { min-width: 56px; min-height: 40px; }
+  input[type="text"], input[type="search"], select { min-height: 40px; }
+  input[type="color"], .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 44px; height: 40px; }
+  .pastille-style input[type="color"] { width: 40px; height: 40px; }
+  .pastille-style { gap: 2px; }
+  .pastille-style button.aucun { position: static; width: 40px; height: 40px; border: 1px solid var(--filet); border-radius: 6px; background-clip: border-box; box-shadow: none; }
+  .pastille-style button.aucun.actif, .pastille-style button.aucun:hover { border-color: var(--echec); box-shadow: none; }
+  .nuancier .echantillon { width: 32px; height: 32px; }
+  input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
+  .reglages-pretraitement input[type="range"] { min-height: 40px; }
+  .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
+  .section > summary { padding: 13px 2px; }
+  .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
+  .options-export .case { min-height: 40px; }
+  .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
@@ -335,6 +340,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   button:disabled, button[aria-disabled="true"] { color: GrayText; border-color: GrayText; opacity: 1; }
   .icone-bouton[aria-pressed="true"], button.primaire, .pastille-style button.aucun.actif { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: HighlightText; }
   .icone-bouton[aria-pressed="true"] .icone, button.primaire .icone { color: HighlightText; }
+  .pastille-style button.aucun { border: 1px solid ButtonText; background-clip: border-box; box-shadow: none; }
   .icone-bouton[aria-expanded="true"], .menu-bouton.texte[aria-expanded="true"] { border: 2px solid Highlight; }
   .icone-bouton:hover:not(:disabled), .menu-bouton.texte:hover:not(:disabled) { border-color: Highlight; }
   .menu-panneau { border: 2px solid CanvasText; }

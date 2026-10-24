@@ -19,6 +19,9 @@ button.discret { border-color: transparent; background: transparent; color: var(
 button.discret:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 10%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { button.discret:hover:not(:disabled) { background: var(--repli-cyan-10); } }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Une cible fait 24 x 24 px au moins (WCAG 2.5.8) : un plancher pour tout ce qu'on clique, que les regles plus fines depassent. */
+button, summary, input[type="text"], input[type="search"], select { min-height: 24px; }
+input[type="range"] { min-height: 24px; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 input[type="text"], select, textarea { font: inherit; font-size: 0.85rem; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--filet); border-radius: 5px; background: var(--table); color: var(--encre); }
