@@ -202,13 +202,23 @@ function conditionVraie(c: Condition, n: Noeud, parents: Parents): boolean {
 const composeVrai = (p: Compose, n: Noeud, parents: Parents): boolean =>
   (p.type === null || p.type === n.nom) && p.conditions.every(c => conditionVraie(c, n, parents));
 
-function correspondDepuis(s: Selecteur, i: number, n: Noeud, parents: Parents): boolean {
-  if (!composeVrai(au(s.parties, i), n, parents)) return false;
-  if (i === 0) return true;
+/**
+ * Un echec se retient : « le compose `i` ne tient pas sur ce noeud » ne depend que du noeud, et sans cette memoire un
+ * selecteur a plusieurs descendants (`a * * * * b`) sur un arbre profond essayerait toutes les combinaisons d'ancetres.
+ */
+function correspondDepuis(s: Selecteur, i: number, n: Noeud, parents: Parents, echecs: readonly Set<Noeud>[]): boolean {
+  const deja = au(echecs, i);
+  if (deja.has(n)) return false;
+  const ok = composeVrai(au(s.parties, i), n, parents) && (i === 0 || ancetreVrai(s, i, n, parents, echecs));
+  if (!ok) deja.add(n);
+  return ok;
+}
+
+function ancetreVrai(s: Selecteur, i: number, n: Noeud, parents: Parents, echecs: readonly Set<Noeud>[]): boolean {
   const parent = parents.get(n);
   if (!parent) return false;
-  if (s.liens[i - 1] === 'enfant') return correspondDepuis(s, i - 1, parent, parents);
-  for (let a: Noeud | undefined = parent; a; a = parents.get(a)) if (correspondDepuis(s, i - 1, a, parents)) return true;
+  if (s.liens[i - 1] === 'enfant') return correspondDepuis(s, i - 1, parent, parents, echecs);
+  for (let a: Noeud | undefined = parent; a; a = parents.get(a)) if (correspondDepuis(s, i - 1, a, parents, echecs)) return true;
   return false;
 }
 
@@ -216,4 +226,7 @@ function correspondDepuis(s: Selecteur, i: number, n: Noeud, parents: Parents): 
  * Vrai si le noeud est vise par le selecteur. De droite a gauche : le dernier compose se verifie sur le noeud, les
  * autres sur ses ancetres (`parents` : chaque element vers son parent, la racine vers rien).
  */
-export const correspond = (s: Selecteur, n: Noeud, parents: Parents): boolean => correspondDepuis(s, s.parties.length - 1, n, parents);
+export function correspond(s: Selecteur, n: Noeud, parents: Parents): boolean {
+  if (s.parties.length === 1) return composeVrai(au(s.parties, 0), n, parents);
+  return correspondDepuis(s, s.parties.length - 1, n, parents, s.parties.map(() => new Set<Noeud>()));
+}

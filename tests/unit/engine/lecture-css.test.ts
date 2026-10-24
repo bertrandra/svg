@@ -78,6 +78,16 @@ describe('les selecteurs de la feuille', () => {
   });
 });
 
+describe('la confrontation ne s emballe pas', () => {
+  it('un selecteur a dix descendants qui ne peut pas tenir sur un arbre de six cents groupes imbriques se juge vite', () => {
+    const profond = '<g>'.repeat(600) + P + '/>' + '</g>'.repeat(600);
+    const t0 = Date.now();
+    const d = lire('<style>b * * * * * * * * * * path { fill: #ff0000 } g > g > g > g > g > g > g > g > path { stroke: #0000ff }</style>' + profond);
+    expect(Date.now() - t0).toBeLessThan(3000);
+    expect(d.formes[0]).toMatchObject({ remplissage: '#000000', contour: '#0000ff' });
+  });
+});
+
 describe('la specificite, l ordre et !important', () => {
   it('l identifiant l emporte sur la classe, la classe sur le type, quel que soit l ordre', () => {
     expect(fonds('<style>#a { fill: #111111 } .b { fill: #222222 } path { fill: #333333 }</style>' + P + ' id="a" class="b"/>')).toEqual(['#111111']);
