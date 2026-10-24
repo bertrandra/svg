@@ -6,6 +6,7 @@ import {
   type Forme, type GenrePointilles, type Reglage, type ReglageTrait
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
+import { NoeudsPoint, OutilsTrace } from './OutilsTrace.js';
 import { arrondi, estHex } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import type { Teinte } from './typesEditeur.js';
@@ -49,8 +50,9 @@ export function Inspecteur() {
           </div>
         </Section>
       ) : null}
-      <Section titre="Transformer" note="angle, échelle, inclinaison">
+      <Section titre="Transformer" note="angle, échelle, inclinaison, contour">
         <TransformationsNumeriques />
+        <OutilsTrace />
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
       <p className="aide">{sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : ''}Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.</p>
@@ -103,11 +105,14 @@ function PanneauPoint({ forme }: { forme: Forme }) {
   return (
     <Section titre={'Point' + (c && p !== null ? ' ' + (p + 1) + ' sur ' + forme.d.filter(x => x.c !== 'Z').length : '')} ouverte>
       {c && p !== null ? (
-        <div className="boutons">
-          <button type="button" disabled={!suivante || suivante.c === 'M' || suivante.c === 'Z'} onClick={() => ac.faire(d => diviserSegment(d, forme.id, p + 1))}>Ajouter un point après</button>
-          <button type="button" disabled={c.c === 'M' || c.c === 'Z'} onClick={() => ac.faire(d => basculerSegment(d, forme.id, p))}>{c.c === 'L' ? 'Courber le segment' : 'Redresser le segment'}</button>
-          <button type="button" className="danger" onClick={ac.supprimerSelection}>Supprimer le point</button>
-        </div>
+        <>
+          <div className="boutons">
+            <button type="button" disabled={!suivante || suivante.c === 'M' || suivante.c === 'Z'} onClick={() => ac.faire(d => diviserSegment(d, forme.id, p + 1))}>Ajouter un point après</button>
+            <button type="button" disabled={c.c === 'M' || c.c === 'Z'} onClick={() => ac.faire(d => basculerSegment(d, forme.id, p))}>{c.c === 'L' ? 'Courber le segment' : 'Redresser le segment'}</button>
+            <button type="button" className="danger" onClick={ac.supprimerSelection}>Supprimer le point</button>
+          </div>
+          <NoeudsPoint forme={forme} point={p} />
+        </>
       ) : <p className="aide">Cliquez un point pour le régler ; glissez-le, ou ses poignées. Flèches : au millième du plan.</p>}
     </Section>
   );

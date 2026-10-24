@@ -31,6 +31,7 @@ export {
 } from './edition/trait.js';
 
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
+export { ATTRIBUT_ORIGINE, avecOrigines, marquerOrigine, originesDe, lireOrigines } from './edition/provenance.js';
 
 export {
   transformer, deplacer, retourner, tourner, redimensionner, aligner, modifier, supprimer,
@@ -57,6 +58,16 @@ export { boiteAvecTrait } from './edition/etendue.js';
 export { simplifierChemin, simplifier, compterPoints } from './edition/simplification.js';
 
 export { deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment, basculerSegment } from './edition/points.js';
+
+export { arrondirAngles, arrondirFormes, type ResultatArrondi, type ResultatArrondiFormes } from './edition/arrondi.js';
+export {
+  typeDeNoeud, lireNoeud, aDesPoignees, convertirNoeud, convertirNoeudForme, deplacerPoigneeLiee,
+  type TypeNoeud, type Noeud, type Cote
+} from './edition/noeuds.js';
+export {
+  inverserChemin, inverserSens, casserEnNoeud, casserForme, joindreExtremites, supprimerNoeudEnGardantLaCourbe,
+  type ResultatJonction
+} from './edition/jonctions.js';
 
 export {
   STYLE_DEFAUT, rectangle, ellipse, etoile, polygone, ajouterForme,

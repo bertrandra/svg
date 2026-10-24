@@ -6,6 +6,7 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { DessinSvg, Forme, Style } from '../engine/editionSvg.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
+import { actionsTrace } from './actionsTrace.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
@@ -42,7 +43,9 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   // Tout ce que l'editeur dit dans la barre d'etat, il le dit aussi a voix haute.
   const dire = (t: string) => { s.dire(t); annoncer(t); };
   const poserVersions = (v: readonly Version[]) => { s.poserVersions(v); garderVersions(lire().stockage, v); };
-  const metier = actionsEdition(lire, { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, toile: s.toile });
+  const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, toile: s.toile };
+  const metier = actionsEdition(lire, leviers);
+  const trace = actionsTrace(lire, leviers);
   return {
     appliquer, finir, poserOutil,
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
@@ -72,6 +75,6 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire('Version « ' + nom + ' » gardée dans ce navigateur.');
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
-    ...metier
+    ...metier, ...trace
   };
 }

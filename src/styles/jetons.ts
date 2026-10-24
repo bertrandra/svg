@@ -5,9 +5,9 @@
 // de paire texte-fond sous 4,5:1. Les couleurs du dessin edite n'en font pas partie : elles sont a
 // l'utilisateur (nuancier, palettes).
 
-import { contraste, lireHex } from '../util/couleur.js';
+import { contraste, lireHex, versHex } from '../util/couleur.js';
 
-export type RoleJeton = 'surface' | 'texte' | 'trait' | 'action' | 'etat' | 'toile' | 'relief';
+export type RoleJeton = 'surface' | 'texte' | 'trait' | 'action' | 'etat' | 'toile' | 'relief' | 'repli';
 export type Theme = 'clair' | 'sombre';
 
 export interface Jeton {
@@ -27,12 +27,13 @@ export const ROLES: ReadonlyArray<readonly [RoleJeton, string]> = [
   ['action', 'La couleur d’outil : une seule, pour l’action et l’état actif'],
   ['etat', 'Les messages : avertissement et échec, chacun avec son fond'],
   ['toile', 'Ce qui se voit derrière le dessin : les fonds du plan de travail et le damier'],
-  ['relief', 'Les ombres et voiles, translucides']
+  ['relief', 'Les ombres et voiles, translucides'],
+  ['repli', 'Les teintes de repli : ce que color-mix() calcule, déjà calculé pour un navigateur qui ne l’a pas (docs/navigateurs.md)']
 ];
 
 const jeton = (id: string, role: RoleJeton, clair: string, sombre: string, description: string): Jeton => ({ id, role, clair, sombre, description });
 
-export const JETONS: readonly Jeton[] = [
+const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('table', 'surface', '#e9ecef', '#121518', 'Le fond de la page, et du champ de travail autour du plan'),
   jeton('panneau', 'surface', '#f7f8f9', '#1a1e22', 'Les barres, panneaux, cartes et menus : ce qui se pose sur la table'),
   jeton('encre', 'texte', '#15181d', '#e6e9ec', 'Le texte courant et les icônes'),
@@ -52,6 +53,46 @@ export const JETONS: readonly Jeton[] = [
   jeton('ombre-tiroir', 'relief', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.25)', 'L’ombre des tiroirs mobiles'),
   jeton('voile', 'relief', 'rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)', 'Le voile qui assombrit la toile derrière un tiroir ouvert')
 ];
+
+/**
+ * Une teinte de repli : ce que `color-mix(in srgb, var(--base) part%, dessous)` donne, calculé ici pour chaque thème.
+ * Les feuilles gardent color-mix(), qui suit le jeton de base si l'hôte le change ; un navigateur qui ne le connaît
+ * pas (avant Chrome 111, Firefox 113, Safari 16.2) lit ces valeurs fixes, dans un bloc `@supports not`. `dessous` est
+ * `null` pour « transparent » (la teinte est alors la couleur de base à `part` % d'opacité) ou un jeton opaque.
+ */
+function repli(id: string, base: string, part: number, dessous: string | null, description: string): Jeton {
+  const pour = (theme: Theme): string => {
+    const haut = lireHex(valeurDeBase(base, theme));
+    if (!haut) throw new Error('Repli sur un jeton qui n’est pas un hexadécimal : ' + base);
+    if (dessous === null) return 'rgba(' + haut.r + ', ' + haut.g + ', ' + haut.b + ', ' + String(part / 100) + ')';
+    const bas = lireHex(dessous.startsWith('#') ? dessous : valeurDeBase(dessous, theme));
+    if (!bas) throw new Error('Repli sur un jeton qui n’est pas un hexadécimal : ' + dessous);
+    const k = part / 100;
+    return versHex({ r: haut.r * k + bas.r * (1 - k), g: haut.g * k + bas.g * (1 - k), b: haut.b * k + bas.b * (1 - k) });
+  };
+  return jeton(id, 'repli', pour('clair'), pour('sombre'), description);
+}
+
+function valeurDeBase(id: string, theme: Theme): string {
+  const j = JETONS_DE_BASE.find(b => b.id === id);
+  if (!j) throw new Error('Jeton de base inconnu : « ' + id + ' »');
+  return j[theme];
+}
+
+/** Les mélanges que les feuilles écrivent avec color-mix() : un jeton de repli chacun, et pas un de plus (un test le confronte aux feuilles). */
+const JETONS_DE_REPLI: readonly Jeton[] = [
+  repli('repli-cyan-10', 'cyan', 10, null, 'La couleur d’outil à 10 % : survol d’un bouton discret, cadre de sélection'),
+  repli('repli-cyan-12', 'cyan', 12, null, 'La couleur d’outil à 12 % : survol d’un bouton d’icône, d’un menu, du zoom'),
+  repli('repli-cyan-14', 'cyan', 14, null, 'La couleur d’outil à 14 % : bouton d’icône dont le menu est ouvert, élément de menu survolé'),
+  repli('repli-cyan-18', 'cyan', 18, null, 'La couleur d’outil à 18 % : ligne choisie des calques et des couleurs'),
+  repli('repli-cyan-35', 'cyan', 35, null, 'La couleur d’outil à 35 % : le trait de la grille magnétique'),
+  repli('repli-cyan-6-panneau', 'cyan', 6, 'panneau', 'La couleur d’outil à 6 % sur un panneau : la rangée de la sélection'),
+  repli('repli-cyan-7-panneau', 'cyan', 7, 'panneau', 'La couleur d’outil à 7 % sur un panneau : la voie choisie de l’accueil'),
+  repli('repli-cyan-8-panneau', 'cyan', 8, 'panneau', 'La couleur d’outil à 8 % sur un panneau : la zone de dépôt survolée, le bandeau de reprise'),
+  repli('repli-cyan-fonce', 'cyan', 86, '#000000', 'La couleur d’outil assombrie de 14 % : survol de l’action primaire')
+];
+
+export const JETONS: readonly Jeton[] = [...JETONS_DE_BASE, ...JETONS_DE_REPLI];
 
 /** Un texte sur un fond : le contraste minimal qu'il doit tenir dans les deux thèmes. */
 export interface PaireContraste { readonly texte: string; readonly fond: string; readonly minimum: number; readonly usage: string }

@@ -2,8 +2,17 @@
   "name": "svg",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "description": "svg : un editeur SVG autonome, un convertisseur d'image en SVG et une bibliotheque de 4 000 formes.",
+  "keywords": ["svg", "editor", "vector", "vectorization", "icons", "react"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bertrandra/svg.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bertrandra/svg/issues"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -15,11 +24,12 @@
     "lint": "eslint src tests",
     "cliquet": "node scripts/cliquet.mjs",
     "verifier": "npm run typecheck && npm run lint && npm run cliquet && npm test",
-    "construire": "node scripts/construire.mjs && node scripts/vtracer.mjs && node scripts/bibliotheque.mjs && node scripts/polices.mjs && node scripts/embarquer.mjs",
+    "construire": "node scripts/construire.mjs && node scripts/vtracer.mjs && node scripts/bibliotheque.mjs && node scripts/polices.mjs && node scripts/embarquer.mjs && node scripts/mentions.mjs --dist",
     "bibliotheque": "node scripts/bibliotheque.mjs",
     "polices": "node scripts/polices.mjs",
     "vtracer": "node scripts/vtracer.mjs",
-    "embarquer": "node scripts/embarquer.mjs"
+    "embarquer": "node scripts/embarquer.mjs",
+    "mentions": "node scripts/mentions.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

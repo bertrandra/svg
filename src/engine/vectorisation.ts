@@ -4,6 +4,7 @@
 // donnent toujours le meme SVG.
 
 import { TOLERANCE_DEFAUT, type PorteeDetourage } from './detourage.js';
+import type { ReglagesPretraitement } from './pretraitement.js';
 
 /** Ce que la vectorisation cherche a garder de l'image. */
 export type ModeVectorisation = 'aplats' | 'trait' | 'fidele';
@@ -48,6 +49,11 @@ export interface Traitement {
   portee: PorteeDetourage;
   /** Null : l'image reste une image, enveloppee dans un SVG. */
   vecteurs: null | ReglageVecteurs;
+  /**
+   * Ce qu'on fait de l'image avant le detourage et le traceur : les seuls reglages touches (voir
+   * `engine/pretraitement.ts`). Absent, rien : la sortie est celle d'avant le pretraitement, a l'octet.
+   */
+  pretraitement?: ReglagesPretraitement;
 }
 
 export const TRAITEMENT_DEFAUT: Traitement = { detourer: true, tolerance: TOLERANCE_DEFAUT, portee: 'bord', vecteurs: { mode: 'aplats', finesse: 'normale' } };
@@ -72,8 +78,18 @@ export interface OptionsTraceur {
 /** Le traceur : des pixels RGBA en entree, un SVG en sortie. Injecte : le WebAssembly au navigateur, le paquet Node aux tests. */
 export type Traceur = (rgba: Uint8Array, largeur: number, hauteur: number, options: OptionsTraceur) => string;
 
+/** Le meme traitement sans pretraitement : de quoi retrouver l'essai de reference d'un reglage. */
+export function sansPretraitement(t: Traitement): Traitement {
+  const r: Traitement = { ...t };
+  delete r.pretraitement;
+  return r;
+}
+
 /** Au-dela, une image vectorisee n'est plus un dessin : une photo tracee, lourde et sans interet. */
 export const TRACES_MAX = 4000;
+
+/** Les couleurs de l'image imposees au traceur en aplats, au plus : huit, ou davantage quand le pretraitement les a reduites a N exactes. */
+export const COULEURS_PALETTE_MAX = 8;
 
 const GRAINS: Record<Finesse, { filterSpeckle: number; simplify?: number }> = {
   fine: { filterSpeckle: 2 },
@@ -86,7 +102,7 @@ const GRAINS: Record<Finesse, { filterSpeckle: number; simplify?: number }> = {
  * extraites, huit au plus) est imposee : chaque forme prend exactement une couleur de l'image, sans
  * degrade parasite. Les reglages fins touches l'emportent sur ce que le mode donnerait.
  */
-export function optionsTraceur(mode: ModeVectorisation, finesse: Finesse, couleurs: readonly string[] = [], fins: ReglagesFins = {}): OptionsTraceur {
+export function optionsTraceur(mode: ModeVectorisation, finesse: Finesse, couleurs: readonly string[] = [], fins: ReglagesFins = {}, plafond = COULEURS_PALETTE_MAX): OptionsTraceur {
   const grain = GRAINS[finesse];
   const simplify = fins.simplify ?? grain.simplify;
   const commun: OptionsTraceur = {
@@ -96,7 +112,7 @@ export function optionsTraceur(mode: ModeVectorisation, finesse: Finesse, couleu
   const angle = fins.cornerThreshold !== undefined ? { cornerThreshold: fins.cornerThreshold } : {};
   if (mode === 'trait') return { ...commun, clustering: 'bw', adaptive: true, ...angle };
   if (mode === 'fidele') return { ...commun, preset: 'poster', colorPrecision: fins.colorPrecision ?? 7, layerDifference: fins.layerDifference ?? 8, ...angle };
-  const n = Math.max(1, Math.min(8, Math.round(fins.couleursMax ?? 8)));
+  const n = Math.max(1, Math.min(plafond, Math.round(fins.couleursMax ?? plafond)));
   const palette = couleurs.filter(c => /^#[0-9a-f]{6}$/i.test(c)).slice(0, n);
   return {
     ...commun, clustering: 'color-cluster', ...(palette.length ? { palette } : { maxColors: n }),
@@ -111,12 +127,12 @@ export interface ValeursFins {
 }
 
 /** Les valeurs par defaut d'un mode et d'un grain ; `nCouleurs` est le nombre de couleurs extraites de l'image. */
-export function valeursParDefaut(mode: ModeVectorisation, finesse: Finesse, nCouleurs = 8): ValeursFins {
+export function valeursParDefaut(mode: ModeVectorisation, finesse: Finesse, nCouleurs = 8, plafond = COULEURS_PALETTE_MAX): ValeursFins {
   const grain = GRAINS[finesse];
   return {
     filterSpeckle: grain.filterSpeckle, simplify: grain.simplify ?? 0, cornerThreshold: 60,
     colorPrecision: mode === 'fidele' ? 7 : 6, layerDifference: mode === 'fidele' ? 8 : 16,
-    couleursMax: Math.max(1, Math.min(8, nCouleurs)), courbes: 'spline', empilement: 'stacked'
+    couleursMax: Math.max(1, Math.min(plafond, nCouleurs)), courbes: 'spline', empilement: 'stacked'
   };
 }
 

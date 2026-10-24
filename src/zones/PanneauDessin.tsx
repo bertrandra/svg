@@ -5,6 +5,7 @@ import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
+import { origineDeBibliotheque } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
@@ -58,6 +59,7 @@ export function PanneauDessin() {
         <ul className="raccourcis">
           <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
           <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
+          <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
           <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
           <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
           <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
@@ -108,18 +110,19 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
   const b = bibliotheque !== 'a-charger' ? bibliotheque : chargee.bibliotheque;
   if (chargee.erreur && !b) return <p className="aide" role="alert">{chargee.erreur}</p>;
   if (!b) return <p className="aide" role="status">Chargement…</p>;
-  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg);
+  // Chaque forme de la bibliotheque s'insere avec son origine : c'est ce qui fait ecrire la mention CC BY 3.0 dans le SVG.
+  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg, origineDeBibliotheque(x.id));
   // Le panier en grille : autant de colonnes que la racine du nombre, chaque case a 80 % de sa cellule.
   const insererPanier = () => {
     const n = panier.length, cols = Math.ceil(Math.sqrt(n)), lignes = Math.ceil(n / cols), cellule = 1 / Math.max(cols, lignes);
-    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
+    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, origine: origineDeBibliotheque(x.id), x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
     poserPanier([]);
   };
   const insererScene = () => {
     const sc = SCENES.find(x => x.id === sceneId);
     if (!sc) return;
     const parId = new Map(b.entrees.map(x => [x.id, x.svg]));
-    ac.insererPlusieurs(sc.elements.flatMap(e => { const svg = parId.get(e.id); return svg ? [{ svg, x: e.x, y: e.y, taille: e.taille }] : []; }));
+    ac.insererPlusieurs(sc.elements.flatMap(e => { const svg = parId.get(e.id); return svg ? [{ svg, origine: origineDeBibliotheque(e.id), x: e.x, y: e.y, taille: e.taille }] : []; }));
   };
   return (
     <>

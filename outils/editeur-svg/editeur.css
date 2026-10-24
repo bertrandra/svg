@@ -31,7 +31,9 @@
 /* Les boutons d'outil : carres, neutres, l'etat actif en couleur d'outil. */
 .icone-bouton { width: 30px; height: 30px; padding: 0; display: inline-grid; place-items: center; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: 6px; }
 .icone-bouton[aria-expanded="true"] { background: color-mix(in srgb, var(--cyan) 14%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .icone-bouton[aria-expanded="true"] { background: var(--repli-cyan-14); } }
 .icone-bouton:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .icone-bouton:hover:not(:disabled) { background: var(--repli-cyan-12); } }
 .icone-bouton[aria-pressed="true"] { background: var(--cyan); color: var(--sur-cyan); }
 .icone-bouton:disabled { opacity: 0.35; cursor: not-allowed; }
 .icone-bouton.danger { color: var(--echec); }
@@ -39,6 +41,7 @@
 .icone { display: block; }
 .editeur-barre .zoom { height: 30px; min-width: 52px; padding: 0 4px; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: 6px; }
 .editeur-barre .zoom:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre .zoom:hover { background: var(--repli-cyan-12); } }
 .editeur-barre button.texte { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; font-size: 0.78rem; margin-left: 4px; }
 .editeur-barre button.texte:disabled { opacity: 0.45; cursor: not-allowed; }
 .style-courant { gap: 6px; }
@@ -50,9 +53,11 @@
 .editeur-inspecteur button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* La rangee de la selection, sous la barre : aligner, transformer, empiler, combiner, separer. */
 .editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; padding: 2px 10px; border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background: var(--repli-cyan-6-panneau); } }
 .editeur-barre-selection > .aide { min-width: 96px; padding-right: 6px; }
 .editeur-barre-selection .icone-bouton { width: 28px; height: 28px; }
 .editeur-svg-toile .grille { stroke: color-mix(in srgb, var(--cyan) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .grille { stroke: var(--repli-cyan-35); } }
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.82rem; }
 .editeur-calques { grid-area: calques; overflow: auto; border-right: 1px solid var(--filet); background: var(--panneau); padding: 8px; }
 .editeur-calques h3, .editeur-inspecteur h3 { font-size: 0.8rem; margin: 2px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
@@ -63,6 +68,7 @@
 .par-couleur { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; max-height: 260px; overflow: auto; }
 .editeur-calques .par-couleur li { display: flex; align-items: center; gap: 1px; border-radius: 4px; content-visibility: visible; }
 .par-couleur li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .par-couleur li.choisi { background: var(--repli-cyan-18); } }
 .par-couleur li.attenue .couleur-choix .echantillon { opacity: 0.4; }
 /* Une couleur toute masquee s'attenue par son echantillon et l'italique, pas par l'opacite du texte : a 50 % le code et le compte tombaient a 2,2:1 (axe). */
 .par-couleur li.attenue .couleur-choix code { font-style: italic; }
@@ -76,8 +82,9 @@
 .par-couleur .recolorer::-webkit-color-swatch-wrapper { padding: 0; }
 .par-couleur .recolorer::-webkit-color-swatch { border: 0; border-radius: 3px; }
 .par-couleur .recolorer::-moz-color-swatch { border: 0; border-radius: 3px; }
-/* Le selecteur de la ligne fait office d'echantillon : on ne montre pas la couleur deux fois. */
-.par-couleur li:has(.recolorer) .couleur-choix .echantillon { display: none; }
+/* Le selecteur de la ligne fait office d'echantillon : on ne montre pas la couleur deux fois. Il precede le bouton : un combinateur
+   voisin suffit, sans :has() (Firefox ne l'a qu'a partir de la 121). */
+.par-couleur li > .recolorer + .couleur-choix .echantillon { display: none; }
 /* Une seule colonne qui ne depasse pas du panneau : sans minmax(0, 1fr), la ligne la plus longue l'elargit et fait defiler la liste. */
 .par-couleur { overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
 .par-couleur .couleur-choix { justify-content: flex-start; overflow: hidden; }
@@ -94,12 +101,13 @@
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-calques li.choisi { background: var(--repli-cyan-18); } }
 .editeur-calques .calque-nom { flex: 1; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--encre); border: 0; padding: 3px 4px; font-weight: 400; font-size: 0.75rem; text-align: left; }
 .editeur-calques .calque-bascule { width: 24px; height: 24px; color: var(--encre-douce); }
 .editeur-calques .calque-bascule[aria-pressed="true"] { color: var(--sur-cyan); }
 .editeur-calques .echantillon { width: 14px; height: 14px; border-radius: 3px; }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
-.editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; }
+.editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
 .editeur-svg-toile:focus { outline: none; }
 .editeur-svg-toile:focus-visible { outline: 3px solid var(--cyan); outline-offset: -3px; }
 .voile { display: none; }
@@ -121,6 +129,7 @@
 .trace-en-cours { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 .outil-rectangle .editeur-svg-toile, .outil-ellipse .editeur-svg-toile, .outil-etoile .editeur-svg-toile, .outil-ligne .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
 .cadre-selection { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .cadre-selection { fill: var(--repli-cyan-10); } }
 .editeur-toile.fond-blanc .plan-travail { fill: var(--toile-blanc); }
 .editeur-toile.fond-sombre .plan-travail { fill: var(--toile-sombre); }
 .editeur-toile .damier-a { fill: var(--damier-a); }
@@ -172,14 +181,18 @@
 .menu-deroulant { position: relative; display: inline-flex; }
 .menu-bouton.texte { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 8px; margin: 0; border-color: transparent; background: transparent; color: var(--encre); font-size: 0.8rem; font-weight: 500; }
 .menu-bouton.texte:hover:not(:disabled), .menu-bouton.texte[aria-expanded="true"] { background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--encre); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-bouton.texte:hover:not(:disabled), .menu-bouton.texte[aria-expanded="true"] { background: var(--repli-cyan-12); } }
 .outil-formes { display: inline-flex; align-items: center; }
 .chevron-seul .icone-bouton { width: 14px; padding: 0; border-radius: 4px; margin-left: -3px; }
-.menu-panneau { position: fixed; z-index: 1100; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 72px); overflow: auto; padding: 4px; background: var(--panneau); border: 1px solid var(--filet); border-radius: 8px; box-shadow: 0 8px 24px var(--ombre-menu); transform-origin: top left; animation: menu-entree 0.12s ease-out; outline: 0; }
+/* 100dvh : la hauteur visible quand la barre d'adresse d'un mobile occupe l'ecran ; 100vh, qui la compte, reste la ligne d'avant pour qui n'a pas dvh. */
+.menu-panneau { position: fixed; z-index: 1100; min-width: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 72px); max-height: calc(100dvh - 72px); overflow: auto; padding: 4px; background: var(--panneau); border: 1px solid var(--filet); border-radius: 8px; box-shadow: 0 8px 24px var(--ombre-menu); transform-origin: top left; animation: menu-entree 0.12s ease-out; outline: 0; }
 @keyframes menu-entree { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
 .menu-filet { margin: 4px 6px; border: 0; border-top: 1px solid var(--filet); }
 .menu-element { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--encre); font-weight: 400; font-size: 0.82rem; text-align: left; }
 .menu-element:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 14%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-element:hover:not(:disabled) { background: var(--repli-cyan-14); } }
 .menu-element:focus-visible { outline: none; background: color-mix(in srgb, var(--cyan) 14%, transparent); box-shadow: inset 0 0 0 2px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-element:focus-visible { background: var(--repli-cyan-14); } }
 .editeur-svg .menu-element.danger { border: 0; color: var(--echec); }
 .menu-coche { width: 16px; flex: none; display: inline-grid; place-items: center; color: var(--cyan); }
 .menu-libelle { flex: 1; min-width: 0; }
@@ -188,9 +201,15 @@
 .menu-titre { margin: 4px 0 6px; font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
 .contenu-export { display: grid; gap: 6px; min-width: 260px; }
 .contenu-export button { font-size: 0.78rem; padding: 5px 9px; justify-self: start; }
-.ligne-export { display: flex; align-items: center; gap: 6px; }
+.ligne-export { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ligne-export select { width: auto; font-size: 0.75rem; }
 .ligne-export input[type="color"] { width: 26px; height: 24px; }
+/* Les options partagees des exports : une colonne de champs, chacun sur toute la largeur du menu. */
+.options-export { display: grid; gap: 8px; min-width: 0; }
+.options-export .aide { margin: 0; }
+.options-export .champ-ligne > span:first-child { min-width: 72px; }
+.options-export .champ-ligne select, .options-export .champ-ligne input[type="text"] { flex: 1; width: auto; min-width: 0; }
+.options-export .grille-2 .champ-ligne input[type="text"] { width: 100%; }
 .transformations-numeriques { display: grid; gap: 6px; margin-top: 4px; }
 .transformations-numeriques > button { justify-self: start; }
 .versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
@@ -208,6 +227,7 @@
 .champ-ligne.scene select { flex: 1; }
 .bibliotheque-editeur { display: block; }
 .reprise { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border: 1px solid var(--cyan); border-radius: 10px; background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .reprise { background: var(--repli-cyan-8-panneau); } }
 .reprise p { margin: 0; }
 .editeur-etat .tiroirs { display: none; gap: 2px; }
 .editeur-etat .message-etat { min-width: 0; }
@@ -247,7 +267,12 @@
   .pastille-style button.aucun { position: static; width: 40px; height: 40px; border-radius: 6px; }
   .nuancier .echantillon { width: 32px; height: 32px; }
   input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
+  .reglages-pretraitement input[type="range"] { min-height: 40px; }
+  .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
   .section > summary { padding: 13px 2px; }
+  .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
+  .options-export .case { min-height: 40px; }
+  .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
@@ -290,3 +315,15 @@
   .editeur-svg-toile .reticule line { stroke: Highlight; }
   .editeur-svg-toile .reticule circle { fill: Highlight; stroke: Canvas; }
 }
+/* La boite « A propos et credits » : modale, au-dessus de l'editeur et de ses menus ; elle c'est le voile qui defile, pas la boite (axe ne sait pas lire le fond d'un texte dans une boite a defilement interne). */
+.credits-voile { position: fixed; inset: 0; z-index: 1200; display: flex; overflow: auto; padding: 16px; background: var(--voile); }
+.credits-dialogue { width: min(640px, 100%); margin: auto; padding: 20px; border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); color: var(--encre); box-shadow: 0 8px 24px var(--ombre-menu); font-size: 0.88rem; outline: 0; }
+.credits-dialogue:focus-visible { box-shadow: 0 8px 24px var(--ombre-menu), 0 0 0 2px var(--cyan); }
+.credits-dialogue h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.credits-dialogue h3 { font-size: 0.9rem; margin: 14px 0 6px; }
+.credits-dialogue p { margin: 0 0 8px; }
+.credits-dialogue ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.credits-dialogue a { color: var(--cyan); text-decoration: underline; }
+.credits-dialogue code { font-family: var(--mono); font-size: 0.82rem; }
+.credits-dialogue .actions { margin-top: 16px; justify-content: flex-end; }
+@media (forced-colors: active) { .credits-dialogue { border: 2px solid CanvasText; } }

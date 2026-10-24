@@ -7,10 +7,13 @@
 import { createRoot } from 'react-dom/client';
 import { lireDessin } from '../engine/editionSvg.js';
 import { definirBaseAnnexes } from '../io/annexes.js';
+import { sonderNavigateur } from '../io/capacites.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { estStockage, stockageNavigateur, stockageProtege, type Stockage } from '../io/stockage.js';
+import { manquantes } from '../util/capacites.js';
 import { porterCss, remEnPixels } from '../util/cssPortee.js';
 import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
+import { FenetreIncompatible } from './Incompatible.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
 export const RACINE_EDITEUR = '.editeur-svg';
@@ -149,6 +152,13 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     const nom = options.nom ?? 'dessin';
     const apresEnregistrer = options.fermerApresEnregistrer ?? true;
     const stockage = stockageDe(options.stockage);
+    // Un navigateur qui manque d'une API de base ne casse pas la page de l'hote : une fenetre dit pourquoi, et se ferme.
+    const absentes = manquantes(sonderNavigateur(), 'demarrage');
+    if (absentes.length) {
+      racine.render(<FenetreIncompatible manquantes={absentes} fermer={fermer} />);
+      ouvert = { fermer };
+      return ouvert;
+    }
     racine.render(
       <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
         {...(options.bibliotheque === undefined ? {} : { bibliotheque: options.bibliotheque })}

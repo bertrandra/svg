@@ -8,13 +8,28 @@
 import { nettoyerSvg } from '../util/svg.js';
 import { couleursPixels, type CouleurExtraite } from '../engine/extraction.js';
 import { detourer, type Detourage } from '../engine/detourage.js';
-import { aTracer, compterTraces, optionsTraceur, svgDuTraceur, TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '../engine/vectorisation.js';
+import {
+  compterCouleurs, couleursExactes, COULEURS_MAX, normaliserPretraitement, pretraiter, type ClePretraitement, type ReglagesPretraitement, type ResultatPretraitement
+} from '../engine/pretraitement.js';
+import { aTracer, compterTraces, COULEURS_PALETTE_MAX, optionsTraceur, svgDuTraceur, TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '../engine/vectorisation.js';
 import { chargerTraceur } from './vtracer.js';
 
 export { TRAITEMENT_DEFAUT, type Traitement };
+export type { ReglagesPretraitement };
 
 /** L'image deposee, avant tout detourage, a la taille ou on la traite : de quoi tout refaire. */
 export interface SourceImage { pixels: Uint8ClampedArray; largeur: number; hauteur: number }
+
+/** Ce que le pretraitement a fait d'une image, quand il en a fait quelque chose. */
+export interface InfoPretraitement {
+  etapes: ClePretraitement[];
+  /** Les dimensions de l'image que le traceur a lue (le double de la source si elle a ete agrandie). */
+  largeur: number;
+  hauteur: number;
+  /** Les couleurs distinctes de la source, et de l'image que le traceur a lue (fond detoure compris). */
+  couleursAvant: number;
+  couleurs: number;
+}
 
 export interface ImageConvertie {
   svg: string;
@@ -29,6 +44,8 @@ export interface ImageConvertie {
   traces: number | null;
   /** Le temps du traitement, en millisecondes : la mesure d'un essai, jamais une entree du calcul. */
   duree: number;
+  /** Present seulement quand un pretraitement a ete joue. */
+  pretraite?: InfoPretraitement;
 }
 
 /** Au-dela, une image pese pour rien : un dessin se lit a cette taille sur tout support. */
@@ -36,7 +53,7 @@ export const COTE_MAX = 1024;
 /** La reduction sur laquelle les couleurs se comptent : assez pour les aplats, vite calculee. */
 const COTE_EXTRACTION = 96;
 
-function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
+export function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
   return new Promise((ok, ko) => {
     const url = URL.createObjectURL(fichier), img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); ok(img); };
@@ -45,7 +62,7 @@ function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
   });
 }
 
-function toile(l: number, h: number): { t: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+export function toile(l: number, h: number): { t: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const t = document.createElement('canvas');
   t.width = Math.max(1, l); t.height = Math.max(1, h);
   const ctx = t.getContext('2d', { willReadFrequently: true });
@@ -65,6 +82,32 @@ function couleursDe(t: HTMLCanvasElement): CouleurExtraite[] {
   return couleursPixels(petit.ctx.getImageData(0, 0, petit.t.width, petit.t.height).data);
 }
 
+/**
+ * Le pretraitement d'une source, memorise sur le dernier couple (source, reglages) : l'apercu « Pretraitee » et le
+ * trace qui suit lisent le meme resultat sans le recalculer. Sans reglage, la source elle-meme (aucune copie).
+ * Le tampon rendu est partage : qui veut l'ecrire (detourer) en prend une copie.
+ */
+let memo: { source: SourceImage; cle: string; resultat: ResultatPretraitement } | null = null;
+
+export function pretraiterSource(source: SourceImage, reglages: ReglagesPretraitement | undefined): ResultatPretraitement {
+  const n = normaliserPretraitement(reglages), brut = { data: source.pixels, largeur: source.largeur, hauteur: source.hauteur };
+  if (!n) return pretraiter(brut, undefined);
+  const cle = JSON.stringify(n);
+  if (memo && memo.source === source && memo.cle === cle) return memo.resultat;
+  const resultat = pretraiter(brut, n);
+  memo = { source, cle, resultat };
+  return resultat;
+}
+
+const infoPretraitement = (pre: ResultatPretraitement, source: SourceImage, pixels: Uint8ClampedArray): InfoPretraitement | null => (pre.etapes.length
+  ? { etapes: pre.etapes, largeur: pre.image.largeur, hauteur: pre.image.hauteur, couleursAvant: compterCouleurs({ data: source.pixels, largeur: source.largeur, hauteur: source.hauteur }), couleurs: compterCouleurs({ data: pixels, largeur: pre.image.largeur, hauteur: pre.image.hauteur }) }
+  : null);
+
+/** Rend a un SVG agrandi la taille de la source : le plan (viewBox) garde la precision doublee, la page le taille d'origine. */
+export function ramenerATaille(svg: string, largeur: number, hauteur: number): string {
+  return svg.replace(/<svg\b[^>]*>/i, ouverture => ouverture.replace(/\swidth\s*=\s*("[^"]*"|'[^']*')/i, ' width="' + largeur + '"').replace(/\sheight\s*=\s*("[^"]*"|'[^']*')/i, ' height="' + hauteur + '"'));
+}
+
 // La raison technique d'un echec, montree telle quelle : sans elle, un refus du navigateur (WASM
 // bloque par la page hote) ne se distingue pas d'une image intracable.
 const raison = (e: unknown): string => (e instanceof Error ? e.message : String(e)).slice(0, 160);
@@ -75,23 +118,30 @@ const raison = (e: unknown): string => (e instanceof Error ? e.message : String(
  */
 export async function traiterImage(source: SourceImage, traitement: Traitement, traceur?: Traceur): Promise<ImageConvertie | { erreur: string }> {
   const debut = performance.now();
-  const { largeur: l, hauteur: h } = source;
-  const pixels = new Uint8ClampedArray(source.pixels);
+  // Le pretraitement vient avant le detourage : un fond reduit a une couleur exacte se detoure sans tolerance. Sans
+  // reglage touche, l'image est la source elle-meme et rien ne change d'un octet.
+  const pre = pretraiterSource(source, traitement.pretraitement);
+  const { largeur: l, hauteur: h } = pre.image;
+  const pixels = new Uint8ClampedArray(pre.image.data);
   const detourage = traitement.detourer ? detourer(pixels, l, h, traitement.tolerance, traitement.portee) : null;
   const { t, ctx } = toile(l, h);
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
-  const couleurs = couleursDe(t);
-  const commun = { couleurs, detourage: detourage?.retires ? detourage : null, source, traitement };
+  // Une image reduite a N couleurs a des couleurs exactes : on les compte telles quelles (le canevas reduit les melangerait).
+  const exactes = pre.palette ? couleursExactes({ data: pixels, largeur: l, hauteur: h }, COULEURS_MAX) : null;
+  const couleurs = exactes ?? couleursDe(t);
+  const pretraite = infoPretraitement(pre, source, pixels);
+  const commun = { couleurs, detourage: detourage?.retires ? detourage : null, source, traitement, ...(pretraite ? { pretraite } : {}) };
   const duree = () => Math.max(1, Math.round(performance.now() - debut));
+  const taille = (svg: string) => (pre.agrandie ? ramenerATaille(svg, source.largeur, source.hauteur) : svg);
   if (!traitement.vecteurs) {
     const propre = nettoyerSvg(envelopper(t.toDataURL('image/png'), l, h));
     if (!propre) return { erreur: 'Cette image ne s’enveloppe pas : déposez un autre PNG ou JPG.' };
-    return { ...commun, svg: propre.svg, matriciel: true, traces: null, duree: duree() };
+    return { ...commun, svg: taille(propre.svg), matriciel: true, traces: null, duree: duree() };
   }
   if (!aTracer(pixels)) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
   let tracer: Traceur;
   try { tracer = traceur ?? await chargerTraceur(); } catch (e) { return { erreur: 'Le vectoriseur ne s’est pas chargé dans ce navigateur (' + raison(e) + ').' }; }
-  const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex), traitement.vecteurs.fins);
+  const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex), traitement.vecteurs.fins, exactes ? COULEURS_MAX : COULEURS_PALETTE_MAX);
   let brut: string;
   try { brut = tracer(new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength), l, h, options); } catch (e) { return { erreur: 'La vectorisation a échoué sur cette image : changez de mode ou de grain (' + raison(e) + ').' }; }
   const propre = nettoyerSvg(svgDuTraceur(brut));
@@ -99,7 +149,27 @@ export async function traiterImage(source: SourceImage, traitement: Traitement, 
   const traces = compterTraces(propre.svg);
   if (!traces) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
   if (traces > TRACES_MAX) return { erreur: traces + ' tracés : c’est une photo plus qu’un dessin. Choisissez un grain plus lisse.' };
-  return { ...commun, svg: propre.svg, matriciel: false, traces, duree: duree() };
+  return { ...commun, svg: taille(propre.svg), matriciel: false, traces, duree: duree() };
+}
+
+/** L'image du pretraitement vue avant le trace : le PNG, ses dimensions, ses couleurs, ce qui a ete joue. */
+export interface ApercuPretraite { url: string; largeur: number; hauteur: number; couleurs: number; couleursAvant: number; etapes: ClePretraitement[]; palette: string[] | null }
+
+/**
+ * L'image que le traceur lira : pretraitee, puis detouree si le traitement le veut, en PNG. Sans
+ * pretraitement c'est l'apercu detoure. Calcule sans le traceur ; le tampon pretraite est partage avec le trace qui suivra.
+ */
+export function apercuPretraite(source: SourceImage, traitement: Pick<Traitement, 'detourer' | 'tolerance' | 'portee' | 'pretraitement'>): ApercuPretraite {
+  const pre = pretraiterSource(source, traitement.pretraitement);
+  const { largeur: l, hauteur: h } = pre.image;
+  const pixels = new Uint8ClampedArray(pre.image.data);
+  if (traitement.detourer) detourer(pixels, l, h, traitement.tolerance, traitement.portee);
+  const { t, ctx } = toile(l, h);
+  ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
+  return {
+    url: t.toDataURL('image/png'), largeur: l, hauteur: h, etapes: pre.etapes, palette: pre.palette,
+    couleurs: compterCouleurs({ data: pixels, largeur: l, hauteur: h }), couleursAvant: compterCouleurs({ data: source.pixels, largeur: source.largeur, hauteur: source.hauteur })
+  };
 }
 
 /**

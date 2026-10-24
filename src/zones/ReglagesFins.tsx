@@ -2,13 +2,14 @@
 // mode choisi, la valeur que le mode donne, une marque quand on s'en ecarte, et le retour d'un clic.
 // Le calcul (valeurs par defaut, ce qui est « touche ») est du moteur ; ici, seulement les champs.
 
-import { parametresDuMode, poserFin, retirerFin, valeursParDefaut, type ReglageVecteurs, type ReglagesFins } from '../engine/vectorisation.js';
+import { COULEURS_PALETTE_MAX, parametresDuMode, poserFin, retirerFin, valeursParDefaut, type ReglageVecteurs, type ReglagesFins } from '../engine/vectorisation.js';
 import { Icone } from './icones.js';
 
 const arrondi = (v: number) => Math.round(v * 100) / 100;
 
-export function ReglagesFinsPanneau({ v, nCouleurs, poser }: { v: ReglageVecteurs; nCouleurs: number; poser: (v: ReglageVecteurs) => void }) {
-  const defauts = valeursParDefaut(v.mode, v.finesse, nCouleurs > 0 ? nCouleurs : 8);
+/** `plafond` : le nombre de couleurs que le traceur peut recevoir (huit, davantage quand le prétraitement les a réduites). */
+export function ReglagesFinsPanneau({ v, nCouleurs, poser, plafond = COULEURS_PALETTE_MAX }: { v: ReglageVecteurs; nCouleurs: number; poser: (v: ReglageVecteurs) => void; plafond?: number }) {
+  const defauts = valeursParDefaut(v.mode, v.finesse, nCouleurs > 0 ? nCouleurs : plafond, plafond);
   const fins: ReglagesFins = v.fins ?? {};
   const mettre = (f: ReglagesFins | undefined) => poser(f ? { ...v, fins: f } : { mode: v.mode, finesse: v.finesse });
   const touches = Object.keys(fins).length;
@@ -17,7 +18,7 @@ export function ReglagesFinsPanneau({ v, nCouleurs, poser }: { v: ReglageVecteur
       <legend>Réglages fins{touches ? ' · ' + touches + ' modifié' + (touches > 1 ? 's' : '') : ''}</legend>
       {parametresDuMode(v.mode).map(p => {
         const defaut = defauts[p.id];
-        const max = p.id === 'couleursMax' ? Math.max(1, Math.min(p.max, nCouleurs > 0 ? nCouleurs : p.max)) : p.max;
+        const max = p.id === 'couleursMax' ? Math.max(1, Math.min(plafond, nCouleurs > 0 ? nCouleurs : plafond)) : p.max;
         const touche = fins[p.id] !== undefined;
         const valeur = fins[p.id] ?? defaut;
         if (max <= p.min) return null;

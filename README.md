@@ -66,7 +66,7 @@ Prérequis : Node 20 ou plus.
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
 npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/editeur-svg-embarque.js
-npm run e2e          # les tests de navigateur (Chromium), après construire
+npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
 
 | Commande | Ce qu'elle fait |
@@ -78,7 +78,7 @@ npm run e2e          # les tests de navigateur (Chromium), après construire
 | `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
-| `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
+| `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 
@@ -136,11 +136,20 @@ l'impose.
 
 ## Sources et licences
 
-- Les formes de la bibliothèque viennent de [game-icons.net](https://game-icons.net), licence
-  [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), par le paquet `@iconify-json/game-icons`.
+- Les formes de la bibliothèque viennent de [game-icons.net](https://game-icons.net) et de ses contributeurs, licence
+  [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), par le paquet `@iconify-json/game-icons` : **l'attribution
+  est obligatoire**. L'éditeur la porte lui-même : la boîte « À propos et crédits » (menu Fichier, pied de la page), un
+  `<metadata>` d'attribution et un attribut `data-origine` dans tout SVG écrit qui contient une de ces formes, la mention dans les
+  informations d'un PDF et en commentaire d'un SVG de découpe (un PNG ne la porte pas : citez la source à côté). Voir
+  [docs/integration.md](docs/integration.md#attribution-et-licences) pour ce que doit faire l'hôte qui l'embarque.
 - La vectorisation emploie [vtracer](https://github.com/visioncortex/vtracer) (Vision Cortex),
   compilé en WebAssembly, par le paquet `@visioncortex/vtracer`.
 - Les booléens emploient [polygon-clipping](https://github.com/mfogel/polygon-clipping) (MIT) ; le
-  texte, [opentype.js](https://opentype.js.org) (MIT) et neuf fontes sous licence SIL OFL 1.1
-  (Inter, Oswald, Bebas Neue, Playfair Display, Lobster, Pacifico, Caveat, Fredoka), par les paquets
-  `@expo-google-fonts/*`.
+  texte, [opentype.js](https://opentype.js.org) (MIT) et neuf fontes (huit familles : Inter, Oswald, Bebas Neue,
+  Playfair Display, Lobster, Pacifico, Caveat, Fredoka) sous licence SIL OFL 1.1, par les paquets
+  `@expo-google-fonts/*`. L'interface est en [React](https://react.dev) (MIT).
+- **Le copyright et la licence de chaque composant tiers sont dans [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**, généré par
+  `npm run mentions` à partir de `src/model/credits.ts`, du `package-lock.json` et des fichiers de licence des paquets ; le même texte
+  est construit dans `dist/MENTIONS.txt` et doit accompagner toute redistribution de `dist/`. Un test échoue si ce fichier est périmé
+  (`ACTUALISER_REFERENCES=1 npx vitest run tests/unit/depot/mentions.test.ts` le régénère).
+- Le projet lui-même est propriétaire, tous droits réservés (voir [LICENSE](LICENSE)) ; les composants tiers gardent leurs licences.

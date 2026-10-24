@@ -4,11 +4,13 @@
 // reprendre un reglage d'un clic. Tout se refait depuis l'image d'origine, sans perte cumulee.
 
 import { useMemo, useState } from 'react';
-import { cleTraitement, FINESSES, MODES_VECTORISATION, resumeReglages, svgContours, type Finesse, type ModeVectorisation, type Traitement } from '../engine/vectorisation.js';
+import { COULEURS_MAX, resumePretraitement } from '../engine/pretraitement.js';
+import { cleTraitement, COULEURS_PALETTE_MAX, FINESSES, MODES_VECTORISATION, resumeReglages, sansPretraitement, svgContours, type Finesse, type ModeVectorisation, type Traitement } from '../engine/vectorisation.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
-import { apercuDetoure, resumeConversion, type ImageConvertie, type SourceImage } from '../io/image.js';
+import { apercuDetoure, resumeConversion, type ApercuPretraite, type ImageConvertie, type SourceImage } from '../io/image.js';
 import { Icone, type NomIcone } from './icones.js';
 import { ReglagesFinsPanneau } from './ReglagesFins.js';
+import { ReglagesPretraitementPanneau } from './ReglagesPretraitement.js';
 
 export const NOMS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)' };
 export const NOMS_FINESSES: Record<Finesse, string> = { fine: 'Fin : garde les petits détails', normale: 'Normal', lisse: 'Lisse : des courbes franches' };
@@ -16,31 +18,38 @@ export const NOMS_FINESSES: Record<Finesse, string> = { fine: 'Fin : garde les p
 /** Un essai : les reglages, et ce qu'ils ont donne. Le plus recent d'abord, huit au plus. */
 export interface Essai { id: number; traitement: Traitement; resultat: ImageConvertie }
 
-type VueResultat = 'rendu' | 'contours' | 'origine' | 'detouree' | 'comparer';
+type VueResultat = 'rendu' | 'contours' | 'origine' | 'detouree' | 'pretraitee' | 'comparer';
+/** L'image du cote gauche du rideau, et des vues sans trace. */
+type Cote = 'origine' | 'detouree' | 'pretraitee';
 type Fond = 'damier' | 'blanc' | 'sombre';
 type Zoom = 'ajuste' | 1 | 2 | 4;
 
 const VUES: ReadonlyArray<readonly [VueResultat, string, string]> = [
-  ['comparer', 'Comparer', 'Rideau : l’image détourée à gauche, les vecteurs à droite'],
+  ['comparer', 'Comparer', 'Rideau : une image à gauche (détourée, prétraitée ou originale), les vecteurs à droite'],
   ['rendu', 'Rendu', 'Les vecteurs seuls'],
   ['contours', 'Contours', 'Les tracés en filets'],
+  ['pretraitee', 'Prétraitée', 'L’image après prétraitement et détourage : ce que le traceur lit. Sans prétraitement, la même que Détourée'],
   ['detouree', 'Détourée', 'L’image après détourage, avant le tracé'],
   ['origine', 'Originale', 'L’image déposée, telle quelle']
 ];
+const NOMS_COTES: ReadonlyArray<readonly [Cote, string, string]> = [['detouree', 'Détourée', 'Image détourée'], ['pretraitee', 'Prétraitée', 'Image prétraitée'], ['origine', 'Originale', 'Image déposée']];
 const ZOOMS: ReadonlyArray<readonly [Zoom, string]> = [['ajuste', 'Ajusté'], [1, '100 %'], [2, '200 %'], [4, '400 %']];
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
 const enImage = (svg: string): string => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
 interface ProprietesVisionneuse {
-  source: SourceImage; original: string; detouree: string; resultat: ImageConvertie | null;
-  vue: VueResultat; zoom: Zoom; fond: Fond; rideau: number;
+  source: SourceImage; original: string; detouree: string; pretraitee: string; resultat: ImageConvertie | null;
+  vue: VueResultat; zoom: Zoom; fond: Fond; rideau: number; gauche: Cote;
 }
 
 /** L'image et son trace, a l'echelle voulue. Le calque de base donne sa taille a l'ensemble ; le trace le recouvre. */
-function Visionneuse({ source, original, detouree, resultat, vue, zoom, fond, rideau }: ProprietesVisionneuse) {
-  // Sans resultat, il n'y a que l'image : originale ou detouree.
-  const effective: VueResultat = resultat ? vue : vue === 'origine' ? 'origine' : 'detouree';
+function Visionneuse({ source, original, detouree, pretraitee, resultat, vue, zoom, fond, rideau, gauche }: ProprietesVisionneuse) {
+  // Sans resultat, il n'y a que l'image : originale, detouree ou pretraitee.
+  const effective: VueResultat = resultat ? vue : vue === 'origine' || vue === 'pretraitee' ? vue : 'detouree';
+  // Le calque de base : l'image seule, ou le cote gauche du rideau.
+  const cote: Cote = effective === 'origine' || effective === 'pretraitee' ? effective : effective === 'comparer' ? gauche : 'detouree';
+  const [, , altCote] = NOMS_COTES.find(c => c[0] === cote) ?? NOMS_COTES[0] ?? ['detouree', '', 'Image détourée'];
   const avecTrace = resultat !== null && (effective === 'rendu' || effective === 'contours' || effective === 'comparer');
   const svgVue = useMemo(() => {
     if (!resultat) return '';
@@ -50,7 +59,7 @@ function Visionneuse({ source, original, detouree, resultat, vue, zoom, fond, ri
   return (
     <div className={'visionneuse fond-' + fond}>
       <div className="plan">
-        <img className={'calque base' + (avecTrace && effective !== 'comparer' ? ' cache' : '')} src={effective === 'origine' ? original : detouree} alt={effective === 'origine' ? 'Image déposée' : 'Image détourée'} style={taille} />
+        <img className={'calque base' + (avecTrace && effective !== 'comparer' ? ' cache' : '')} src={cote === 'origine' ? original : cote === 'pretraitee' ? pretraitee : detouree} alt={altCote} style={taille} />
         {avecTrace ? <img className="calque haut" src={svgVue} alt={resultat?.traces !== null ? 'Image vectorisée' : 'Image enveloppée'} style={effective === 'comparer' ? { clipPath: 'inset(0 0 0 ' + rideau + '%)' } : undefined} /> : null}
         {effective === 'comparer' ? <span className="ligne-rideau" style={{ left: rideau + '%' }} aria-hidden="true" /> : null}
       </div>
@@ -62,18 +71,29 @@ interface Proprietes {
   nom: string; source: SourceImage; original: string; t: Traitement; poserT: (t: Traitement) => void;
   resultat: ImageConvertie | null; essais: readonly Essai[]; auto: boolean; poserAuto: (a: boolean) => void;
   enCours: boolean; message: string; rejouer: () => void; reprendre: (e: Essai) => void; ouvrir: (nom: string, svg: string) => void;
+  /** L'image prétraitée que le traceur lira, calculée à part ; null sans prétraitement. */
+  apercu: ApercuPretraite | null;
+  /** Trace l'image sans prétraitement et l'ajoute aux essais, pour mesurer l'effet. */
+  mesurerSans: () => void;
 }
 
-export function AtelierResultat({ nom, source, original, t, poserT, resultat, essais, auto, poserAuto, enCours, message, rejouer, reprendre, ouvrir }: Proprietes) {
+export function AtelierResultat({ nom, source, original, t, poserT, resultat, essais, auto, poserAuto, enCours, message, rejouer, reprendre, ouvrir, apercu, mesurerSans }: Proprietes) {
   const [vue, poserVue] = useState<VueResultat>('comparer');
   const [zoom, poserZoom] = useState<Zoom>('ajuste');
   const [fond, poserFond] = useState<Fond>('damier');
   const [rideau, poserRideau] = useState(50);
+  // Le cote gauche du rideau : celui qu'on a choisi, sinon l'image que le traceur lit (pretraitee si elle l'est).
+  const [gaucheChoisi, poserGauche] = useState<Cote | null>(null);
+  const gauche: Cote = gaucheChoisi ?? (t.pretraitement ? 'pretraitee' : 'detouree');
   const [dit, dire] = useState('');
   const detouree = useMemo(() => apercuDetoure(source, t), [source, t.detourer, t.tolerance, t.portee]);
+  const pretraitee = apercu?.url ?? detouree;
   const v = t.vecteurs;
   const vecteurs = resultat !== null && resultat.traces !== null;
   const cle = cleTraitement(t);
+  // L'essai de reference d'un prétraitement : les mêmes réglages, sans lui.
+  const reference = t.pretraitement ? essais.find(e => cleTraitement(e.traitement) === cleTraitement(sansPretraitement(t)))?.resultat : undefined;
+  const aJour = resultat !== null && cleTraitement(resultat.traitement) === cle;
   return (
     <section className="atelier-vecto" aria-label="Résultat" aria-busy={enCours}>
       <div className="colonne-resultat">
@@ -88,10 +108,12 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             {FONDS.map(([f, icone, aide]) => <button key={f} type="button" className="icone-bouton" aria-pressed={fond === f} title={aide} aria-label={aide} onClick={() => poserFond(f)}><Icone nom={icone} /></button>)}
           </div>
         </div>
-        <Visionneuse source={source} original={original} detouree={detouree} resultat={resultat} vue={vue} zoom={zoom} fond={fond} rideau={rideau} />
+        <Visionneuse source={source} original={original} detouree={detouree} pretraitee={pretraitee} resultat={resultat} vue={vue} zoom={zoom} fond={fond} rideau={rideau} gauche={gauche} />
         {vue === 'comparer' && resultat ? (
           <label className="rideau">
-            <span className="aide">Image détourée</span>
+            <select aria-label="Image du côté gauche du rideau" value={gauche} onChange={e => poserGauche(e.target.value as Cote)}>
+              {NOMS_COTES.map(([c, libelle]) => <option key={c} value={c}>{libelle}</option>)}
+            </select>
             <input type="range" min={0} max={100} value={rideau} aria-label="Position du rideau" onChange={e => poserRideau(Number(e.target.value))} />
             <span className="aide">Vecteurs</span>
           </label>
@@ -99,6 +121,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
         {resultat ? (
           <div className="fiche-resultat">
             <p className="aide">{resumeConversion(resultat)} · {resultat.duree} ms{resultat.traitement.vecteurs ? ' · ' + resumeReglages(resultat.traitement.vecteurs) : ''}</p>
+            {resultat.pretraite ? <p className="aide">Prétraitement : {resumePretraitement(resultat.traitement.pretraitement)}.</p> : null}
             <div className="actions">
               <button type="button" className="primaire" disabled={!vecteurs} title={vecteurs ? undefined : 'Une image enveloppée ne s’édite pas : vectorisez-la.'} onClick={() => ouvrir(nom, resultat.svg)}>Ouvrir dans l’éditeur</button>
               <button type="button" className="discret" onClick={() => { void proposer(nom + '.svg', texteOctets(resultat.svg)).then(dire); }}>Télécharger le SVG</button>
@@ -113,9 +136,10 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             <ul>
               {essais.map(e => (
                 <li key={e.id}>
-                  <button type="button" aria-pressed={cleTraitement(e.traitement) === cle} title={e.traitement.vecteurs ? resumeReglages(e.traitement.vecteurs) : 'Image enveloppée'} onClick={() => reprendre(e)}>
+                  <button type="button" aria-pressed={cleTraitement(e.traitement) === cle} title={(e.traitement.vecteurs ? resumeReglages(e.traitement.vecteurs) : 'Image enveloppée') + (e.traitement.pretraitement ? ' · ' + resumePretraitement(e.traitement.pretraitement) : '')} onClick={() => reprendre(e)}>
                     <img src={enImage(e.resultat.svg)} alt="" width={64} height={64} />
                     <span>{e.traitement.vecteurs ? resumeReglages(e.traitement.vecteurs) : 'Enveloppée'}</span>
+                    {e.traitement.pretraitement ? <span className="aide pre-essai">{resumePretraitement(e.traitement.pretraitement)}</span> : null}
                     <span className="aide">{e.resultat.traces !== null ? e.resultat.traces + ' tracé' + (e.resultat.traces > 1 ? 's' : '') + ' · ' : ''}{Math.max(1, Math.round(e.resultat.svg.length / 1024))} Ko · {e.resultat.duree} ms</span>
                   </button>
                 </li>
@@ -141,9 +165,10 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
               </label>
               <p className="aide">Changer de mode ou de grain remet les réglages fins à leurs valeurs.</p>
             </fieldset>
-            <ReglagesFinsPanneau v={v} nCouleurs={resultat?.couleurs.length ?? 0} poser={nv => poserT({ ...t, vecteurs: nv })} />
+            <ReglagesFinsPanneau v={v} nCouleurs={resultat?.couleurs.length ?? 0} plafond={resultat?.pretraite && t.pretraitement?.couleurs !== undefined ? COULEURS_MAX : COULEURS_PALETTE_MAX} poser={nv => poserT({ ...t, vecteurs: nv })} />
           </>
         ) : <p className="aide">Image enveloppée : un seul réglage, le fond. Passez à « Vecteurs (SVG) » pour régler le tracé.</p>}
+        <ReglagesPretraitementPanneau t={t} poserT={poserT} apercu={apercu} resultat={aJour ? resultat : null} reference={reference} mesurer={mesurerSans} enCours={enCours} />
         <label className="case" title="Chaque changement de réglage relance la vectorisation, après une courte pause">
           <input type="checkbox" checked={auto} onChange={e => poserAuto(e.target.checked)} /> Rejouer à chaque changement
         </label>

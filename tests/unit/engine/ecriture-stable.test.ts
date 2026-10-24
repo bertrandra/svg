@@ -16,9 +16,10 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
+import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
@@ -92,6 +93,19 @@ const glyphesLiees: Glyphes = {
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
+  return r.dessin;
+};
+
+/** Une operation de l'editeur qui peut refuser : son refus fait echouer le cas plutot que de figer un message dans une reference. */
+const sansRefus = <T extends { erreur?: string }>(r: T): T => { if (r.erreur) throw new Error(r.erreur); return r; };
+const noeud = (id: string, i: number, type: Parameters<typeof convertirNoeudForme>[3]) => (d: DessinSvg): DessinSvg => {
+  const r = convertirNoeudForme(d, id, i, type);
+  if ('erreur' in r) throw new Error(r.erreur);
+  return r;
+};
+const casser = (id: string, i: number) => (d: DessinSvg): DessinSvg => {
+  const r = casserForme(d, id, i);
+  if ('erreur' in r) throw new Error(r.erreur);
   return r.dessin;
 };
 
@@ -203,6 +217,15 @@ const CAS: readonly Cas[] = [
       return c.id ? separer(c.dessin, c.id).dessin : c.dessin;
     }
   },
+  // La provenance (CC BY 3.0 des formes de game-icons.net, version majeure pour un dessin qui en porte) : une forme creditee
+  // s'ecrit avec `data-origine`, et le SVG s'ouvre sur un <metadata> d'attribution. Des cas NEUFS : sans origine, aucun octet
+  // ne change (les 26 references d'avant et les empreintes de la bibliotheque le prouvent). L'entree melange formes creditees,
+  // une origine en double et une origine inconnue (ecartee), et une forme sans origine.
+  { nom: 'provenance-ecriture', entree: 'provenance' },
+  { nom: 'provenance-combiner', entree: 'provenance', operation: d => combiner(d, ['f1', 'f3']).dessin },
+  { nom: 'provenance-union', entree: 'provenance', operation: booleen(['f1', 'f2'], 'union') },
+  { nom: 'provenance-masquee', entree: 'provenance', operation: enchainer(d => modifier(d, ['f1', 'f2', 'f4'], { visible: false })) },
+  { nom: 'provenance-decoupe', entree: 'provenance', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   // Les calques par couleur : recolorer sur le fond ou le trait, fusionner les nuances (une forme verrouillee garde sa couleur).
   { nom: 'couleurs-recolorer-fond', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'remplissage') },
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },
@@ -211,6 +234,23 @@ const CAS: readonly Cas[] = [
   // Le plan ajuste compte la pointe d'une jonction aigue et les coins d'un bout carre, pas seulement la demi-epaisseur.
   { nom: 'ajuster-plan-traits', operation: d => ajusterPlan(d) },
   { nom: 'export-decoupe', entree: 'elements', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  // Les outils de trace (contour en forme, decalage, angles arrondis, nœuds, jonctions) : des cas NEUFS, aucune reference
+  // d'avant n'en depend. Un changement ici est un changement de geometrie ecrite : version majeure.
+  { nom: 'contour-etendre', operation: d => sansRefus(etendreTraits(d, ['f1', 'f2', 'f3', 'f5'], { lisser: true })).dessin },
+  { nom: 'contour-etendre-droit', entree: 'contour-etendre', operation: d => sansRefus(etendreTraits(d, ['f2'])).dessin },
+  { nom: 'contour-etendre-tirets', entree: 'contour-etendre', operation: d => sansRefus(etendreTraits(d, ['f4'], { separer: true })).dessin },
+  { nom: 'decaler-exterieur', entree: 'decaler', operation: d => sansRefus(decalerFormes(d, ['f1', 'f2', 'f3'], 5, 'round', { lisser: true })).dessin },
+  { nom: 'decaler-pointe', entree: 'decaler', operation: d => sansRefus(decalerFormes(d, ['f1', 'f3'], 4, 'miter')).dessin },
+  { nom: 'decaler-interieur', entree: 'decaler', operation: d => sansRefus(decalerFormes(d, ['f1', 'f2', 'f3'], -4, 'miter', { lisser: true })).dessin },
+  { nom: 'decaler-ouvert', entree: 'decaler', operation: d => sansRefus(decalerFormes(d, ['f4'], 6, 'round', { lisser: true })).dessin },
+  { nom: 'arrondir-angles', entree: 'arrondi', operation: d => arrondirFormes(d, ['f1', 'f2', 'f3', 'f4'], 6).dessin },
+  { nom: 'arrondir-angles-reduits', entree: 'arrondi', operation: d => arrondirFormes(d, ['f1', 'f4'], 60).dessin },
+  { nom: 'noeuds-convertir', entree: 'noeuds', operation: enchainer(noeud('f1', 1, 'symetrique'), noeud('f2', 1, 'lisse'), noeud('f3', 1, 'lisse')) },
+  { nom: 'noeuds-angle', entree: 'noeuds', operation: noeud('f1', 1, 'angle') },
+  { nom: 'jonctions-casser', entree: 'jonctions', operation: casser('f1', 2) },
+  { nom: 'jonctions-joindre', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f1', 'f2'])).dessin },
+  { nom: 'jonctions-fermer', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f4'])).dessin },
+  { nom: 'jonctions-inverser', entree: 'jonctions', operation: d => inverserSens(d, ['f1', 'f3', 'f4']) },
   { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }
 ];
 

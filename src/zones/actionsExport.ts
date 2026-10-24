@@ -1,0 +1,77 @@
+// Les gestes d'export : chacun fabrique les octets d'un format (par un writer pur de `export/`) puis les
+// remet par `proposer`. Aucun etat ici ; ce que la personne a regle arrive dans `ContexteExport`.
+
+import { ecrireDessin, type DessinSvg } from '../engine/editionSvg.js';
+import { ecrireDxf } from '../export/dxf.js';
+import { ecrireEps } from '../export/eps.js';
+import { largeurRaster, optionsDxf, optionsEps, optionsPdf, optionsSvg, tailleDe, type OptionsExport } from '../export/options.js';
+import { avecDpiPng } from '../export/png.js';
+import { ecrirePdf } from '../export/pdf.js';
+import { svgDecoupe, svgExporte } from '../export/svgs.js';
+import { copier, proposer, texteOctets } from '../io/fichiers.js';
+import { versPng } from '../io/image.js';
+import { EXTENSIONS, versRaster, type FormatRaster } from '../io/rasters.js';
+
+export interface ContexteExport {
+  /** Le dessin lu ; null si le SVG donne ne se lit pas (les formats vectoriels sont alors indisponibles). */
+  readonly lu: DessinSvg | null;
+  /** Le SVG tel que l'ecrit l'editeur, a 3 decimales : c'est ce que les rasters peignent. */
+  readonly svgPropre: string;
+  readonly nom: string;
+  readonly options: OptionsExport;
+  readonly couleurDecoupe: string;
+  readonly largeurPng: number;
+  readonly dire: (t: string) => void;
+}
+
+const remettre = (c: ContexteExport, fichier: string, donnees: Uint8Array | Blob) => { void proposer(fichier, donnees).then(c.dire); };
+
+/** Le SVG avec les options d'export (precision, taille, optimise) ; sans dessin lu, le SVG donne tel quel. */
+export const svgFinal = (c: ContexteExport): string => (c.lu ? svgExporte(c.lu, optionsSvg(c.options)) : c.svgPropre);
+
+export const exporterSvg = (c: ContexteExport) => remettre(c, c.nom + '.svg', texteOctets(svgFinal(c)));
+
+export function copierSvg(c: ContexteExport): void {
+  void copier(svgFinal(c)).then(ok => c.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.'));
+}
+
+export function exporterDecoupe(c: ContexteExport): void {
+  if (c.lu) remettre(c, c.nom + '-decoupe.svg', texteOctets(svgDecoupe(c.lu, c.couleurDecoupe, 0.25, 3, tailleDe(c.options))));
+}
+
+export function exporterPdf(c: ContexteExport): void {
+  if (c.lu) remettre(c, c.nom + '.pdf', new Blob([ecrirePdf(c.lu, optionsPdf(c.options)) as BlobPart], { type: 'application/pdf' }));
+}
+
+export function exporterEps(c: ContexteExport): void {
+  if (!c.lu) return;
+  const { eps, avertissements } = ecrireEps(c.lu, optionsEps(c.options));
+  void proposer(c.nom + '.eps', new Blob([texteOctets(eps) as BlobPart], { type: 'application/postscript' })).then(m => c.dire([m, ...avertissements].join(' ')));
+}
+
+export function exporterDxf(c: ContexteExport): void {
+  if (c.lu) remettre(c, c.nom + '.dxf', new Blob([texteOctets(ecrireDxf(c.lu, optionsDxf(c.options))) as BlobPart], { type: 'application/dxf' }));
+}
+
+/** Le PNG a la largeur choisie (ou deduite de la taille et de la resolution), avec sa resolution quand elle est donnee. */
+export function exporterPng(c: ContexteExport): void {
+  const largeur = largeurRaster(c.options, c.largeurPng), dpi = c.options.dpi;
+  versPng(c.svgPropre, largeur)
+    .then(async b => (dpi ? avecDpiPng(new Uint8Array(await b.arrayBuffer()), dpi) : b))
+    .then(donnees => { remettre(c, c.nom + '-' + largeur + '.png', donnees); })
+    .catch(() => c.dire('Le rendu PNG a échoué.'));
+}
+
+/** Un JPEG (sur le fond choisi, il n'a pas d'alpha) ou un WebP (transparent), a la qualite choisie. */
+export function exporterRaster(c: ContexteExport, format: FormatRaster): void {
+  const largeur = largeurRaster(c.options, c.largeurPng);
+  versRaster(c.svgPropre, { format, largeur, qualite: c.options.qualite / 100, fond: format === 'image/jpeg' ? c.options.fond : null })
+    .then(({ octets, type }) => {
+      if (type !== format) { c.dire('Ce navigateur ne sait pas écrire ce format d’image : essayez le PNG.'); return; }
+      remettre(c, c.nom + '-' + largeur + '.' + EXTENSIONS[format], octets);
+    })
+    .catch(() => c.dire('Le rendu de l’image a échoué.'));
+}
+
+/** Le SVG propre d'un dessin lu, ou le SVG donne. */
+export const svgPropreDe = (lu: DessinSvg | null, svg: string): string => (lu ? ecrireDessin(lu, 3) : svg);

@@ -135,7 +135,7 @@ describe('menus de la barre', () => {
     const page = await editeur();
     const fichier = await ouvrirMenu(page, 'Fichier');
     const boutons = page.locator('.menu-panneau .contenu-export button');
-    expect(await boutons.count()).toBe(5);
+    expect(await boutons.count()).toBe(9);
     const largeur = page.locator('.menu-panneau select[aria-label="Largeur du PNG"]');
     await largeur.selectOption('2048');
     expect(await fichier.getAttribute('aria-expanded')).toBe('true');

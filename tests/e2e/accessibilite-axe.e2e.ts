@@ -124,6 +124,40 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'accueil, image vectorisée'));
     });
 
+    it('avec la boîte « À propos et crédits » ouverte depuis le pied de page', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900 });
+      await page.getByRole('button', { name: 'À propos et crédits' }).click();
+      await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, boîte À propos et crédits'));
+    });
+
+    it('sur un téléphone de 420 px, avec la boîte « À propos et crédits »', async () => {
+      const page = await accueil({ largeur: 420, hauteur: 860, tactile: true });
+      await page.getByRole('button', { name: 'À propos et crédits' }).tap();
+      await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, 420 px tactile, boîte À propos et crédits'));
+    });
+
+    it('voie « convertir une image » avec la section Prétraitement ouverte, un préréglage posé et la vue Prétraitée', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900 });
+      await page.getByRole('tab', { name: /^Convertir une image/ }).click();
+      await page.locator('.vectoriser input[type=file]').setInputFiles(imageDeTest());
+      await page.locator('.fiche-resultat').waitFor({ timeout: 60_000 });
+      await page.locator('details.section summary', { hasText: 'Prétraitement' }).click();
+      await page.getByRole('button', { name: 'Logo net', exact: true }).click();
+      await page.getByRole('button', { name: 'Prétraitée', exact: true }).click();
+      await attend(() => page.locator('.bilan-pretraitement .aide').first().innerText(), 60_000).toContain('couleur');
+      exigerSansViolationGrave(await auditer(page, 'accueil, section Prétraitement ouverte'));
+    });
+
+    it('voie « convertir une image » avec une liste de lot terminée', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900 });
+      await page.getByRole('tab', { name: /^Convertir une image/ }).click();
+      await page.locator('.vectoriser input[type=file]').setInputFiles([imageDeTest(), { ...imageDeTest(), name: 'deuxieme.png' }]);
+      await attend(async () => (await page.locator('.lot li .lot-etat').allInnerTexts()).filter(e => e.startsWith('Terminée')).length, 60_000).toBe(2);
+      exigerSansViolationGrave(await auditer(page, 'accueil, lot terminé'));
+    });
+
     it('avec le nuancier ouvert et un dessin en cours', async () => {
       const page = await accueil({ largeur: 1200, hauteur: 900 });
       await page.getByText('Nuancier proposé dans l’éditeur').click();
@@ -276,6 +310,22 @@ describe('axe-core : accessibilite automatique', () => {
       await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
       await page.getByRole('menu', { name: 'Fichier' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, menu Fichier ouvert'));
+    });
+
+    it('avec la boîte « À propos et crédits » ouverte depuis le menu Fichier', async () => {
+      const page = await editeur();
+      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
+      await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, boîte À propos et crédits'));
+    });
+
+    it('dans le thème sombre, avec la boîte « À propos et crédits »', async () => {
+      const page = await editeur({ schema: 'dark' });
+      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
+      await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, boîte À propos et crédits'));
     });
 
     it('dans le thème sombre, sur l accueil', async () => {

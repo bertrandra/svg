@@ -55,6 +55,20 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--ombre-tiroir` | `rgba(0, 0, 0, 0.25)` | `rgba(0, 0, 0, 0.25)` | L’ombre des tiroirs mobiles |
 | `--voile` | `rgba(0, 0, 0, 0.35)` | `rgba(0, 0, 0, 0.35)` | Le voile qui assombrit la toile derrière un tiroir ouvert |
 
+### Les teintes de repli : ce que color-mix() calcule, déjà calculé pour un navigateur qui ne l’a pas (docs/navigateurs.md)
+
+| Jeton | Clair | Sombre | Rôle |
+|---|---|---|---|
+| `--repli-cyan-10` | `rgba(0, 113, 156, 0.1)` | `rgba(79, 179, 220, 0.1)` | La couleur d’outil à 10 % : survol d’un bouton discret, cadre de sélection |
+| `--repli-cyan-12` | `rgba(0, 113, 156, 0.12)` | `rgba(79, 179, 220, 0.12)` | La couleur d’outil à 12 % : survol d’un bouton d’icône, d’un menu, du zoom |
+| `--repli-cyan-14` | `rgba(0, 113, 156, 0.14)` | `rgba(79, 179, 220, 0.14)` | La couleur d’outil à 14 % : bouton d’icône dont le menu est ouvert, élément de menu survolé |
+| `--repli-cyan-18` | `rgba(0, 113, 156, 0.18)` | `rgba(79, 179, 220, 0.18)` | La couleur d’outil à 18 % : ligne choisie des calques et des couleurs |
+| `--repli-cyan-35` | `rgba(0, 113, 156, 0.35)` | `rgba(79, 179, 220, 0.35)` | La couleur d’outil à 35 % : le trait de la grille magnétique |
+| `--repli-cyan-6-panneau` | `#e8f0f3` | `#1d272d` | La couleur d’outil à 6 % sur un panneau : la rangée de la sélection |
+| `--repli-cyan-7-panneau` | `#e6eff2` | `#1e282f` | La couleur d’outil à 7 % sur un panneau : la voie choisie de l’accueil |
+| `--repli-cyan-8-panneau` | `#e3edf2` | `#1e2a31` | La couleur d’outil à 8 % sur un panneau : la zone de dépôt survolée, le bandeau de reprise |
+| `--repli-cyan-fonce` | `#006186` | `#449abd` | La couleur d’outil assombrie de 14 % : survol de l’action primaire |
+
 ### Contrastes exigés (WCAG 2.x AA, au moins 4.5:1)
 
 | Paire | Clair | Sombre | Usage |
