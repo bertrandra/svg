@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { boiteChemin, lireDessin, type DessinSvg, type Forme, type LectureDessin } from '../../../src/engine/editionSvg.js';
 import { lireAspect, lireVue, matriceCadre } from '../../../src/engine/edition/clones.js';
 import { au } from '../../../src/util/tableaux.js';
+import { nettoyerSvg } from '../../../src/util/svg.js';
 
 const enveloppe = (corps: string, entete = '') => '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"' + entete + '>' + corps + '</svg>';
 const lecture = (corps: string, entete = ''): LectureDessin => lireDessin(enveloppe(corps, entete));
@@ -179,6 +180,16 @@ describe('les cycles, les cibles qui manquent, les cibles d ailleurs', () => {
     expect(erreurDe(R + '<use xlink:href="https://exemple.org/s.svg#a"/>')).toContain('extérieurs');
     expect(erreurDe(R + '<use href="data:image/svg+xml;utf8,%3Csvg/%3E#a"/>')).toContain('extérieurs');
     expect(erreurDe(R + '<use href="#"/>')).toBe('');
+  });
+
+  it('un renvoi que le nettoyage a retire (data-href-externe) reste un renvoi externe, pas une cible introuvable', () => {
+    expect(erreurDe(R + '<use data-href-externe="sprite.svg#etoile"/>')).toContain('(« sprite.svg#etoile »)');
+    // Un href local gagne : l attribut n est qu un reste.
+    expect(erreurDe('<defs>' + R + '</defs><use href="#r" data-href-externe="x.svg#a"/>')).toBe('');
+    // Bout en bout, comme la page : nettoyer d abord, lire ensuite.
+    const propre = nettoyerSvg(enveloppe(R + '<use xlink:href="https://exemple.org/s.svg#a"/>'));
+    const r = lireDessin(propre?.svg ?? '');
+    expect('erreur' in r && r.erreur).toContain('un clone <use> vers un fichier ou une adresse extérieurs (« https://exemple.org/s.svg#a »)');
   });
 
   it('une cible introuvable, un href vide ou absent : rien ne se dessine, comme dans un navigateur, et c est dit', () => {

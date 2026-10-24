@@ -24,8 +24,11 @@ export type Cible = { readonly noeud: Noeud } | { readonly absente: true } | { r
  */
 export function cibleDe(u: Noeud, ids: ReadonlyMap<string, Noeud>): Cible {
   const href = (u.attributs.href ?? u.attributs['xlink:href'] ?? '').trim();
-  if (href === '') return { absente: true };
-  if (!href.startsWith('#')) return { externe: href.length > 60 ? href.slice(0, 57) + '…' : href };
+  // Le nettoyage des SVG ouverts (util/svg.ts) retire un renvoi externe mais le garde dans cet attribut inerte.
+  const retire = (u.attributs['data-href-externe'] ?? '').trim();
+  const dit = (t: string) => ({ externe: t.length > 60 ? t.slice(0, 57) + '…' : t });
+  if (href === '') return retire === '' ? { absente: true } : dit(retire);
+  if (!href.startsWith('#')) return dit(href);
   let id = href.slice(1);
   try { id = decodeURIComponent(id); } catch { /* un % isole : l'identifiant tel quel */ }
   const noeud = ids.get(id);
