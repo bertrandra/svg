@@ -4,6 +4,7 @@
 import type { Boite, DessinSvg, Forme } from './types.js';
 import { boiteForme, seCroisent, unir } from './geometrie.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
+import { memeTrait } from './trait.js';
 
 /** Retirer les formes pleines dont la boite couvre moins de `part` du plan de travail : les poussieres du trace. */
 export function retirerPetites(dessin: DessinSvg, part: number): { dessin: DessinSvg; retirees: number } {
@@ -17,7 +18,7 @@ export function retirerPetites(dessin: DessinSvg, part: number): { dessin: Dessi
   return { dessin: retirees ? { ...dessin, formes } : dessin, retirees };
 }
 
-const memeStyle = (a: Forme, b: Forme) => a.remplissage === b.remplissage && a.contour === b.contour && a.epaisseur === b.epaisseur
+const memeStyle = (a: Forme, b: Forme) => a.remplissage === b.remplissage && a.contour === b.contour && a.epaisseur === b.epaisseur && memeTrait(a, b)
   && a.opacite === b.opacite && opaciteDuRemplissage(a) === opaciteDuRemplissage(b) && opaciteDuContour(a) === opaciteDuContour(b) && a.regle === b.regle && a.visible === b.visible && !a.verrouille && !b.verrouille;
 
 /**

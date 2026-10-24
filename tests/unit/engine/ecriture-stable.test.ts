@@ -105,6 +105,20 @@ const CAS: readonly Cas[] = [
   // Alpha des couleurs, epaisseur nulle, noms CSS : trois defauts de lecture corriges en version majeure (ils
   // deplacaient ou perdaient un octet ecrit). Ce cas montre l'ecriture juste.
   { nom: 'fidelite-lecture' },
+  // Deuxieme lot de fidelite de lecture (version majeure) : la peinture de la balise racine se transmet (icones de
+  // type Feather), currentColor suit la couleur courante, et le trait garde ses pointilles, bouts et jonctions.
+  { nom: 'icone-feather' },
+  { nom: 'racine-heritage' },
+  { nom: 'trait-pointilles' },
+  // L'echelle emporte l'epaisseur ET les longueurs des pointilles ; la limite de pointe, un rapport, ne bouge pas.
+  {
+    nom: 'trait-echelle',
+    entree: 'trait-pointilles',
+    operation: enchainer(d => redimensionner(d, ['f1', 'f2', 'f3'], { x: 5, y: 5, l: 40, h: 20 }), d => mettreALEchelle(d, ['f4', 'f8'], 0.5, 0.5), d => tournerAutour(d, ['f5'], 30))
+  },
+  { nom: 'trait-booleens', operation: booleen(['f1', 'f2'], 'union') },
+  // La decoupe n'est que des contours pleins : elle laisse les pointilles de cote.
+  { nom: 'trait-decoupe', entree: 'trait-pointilles', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.

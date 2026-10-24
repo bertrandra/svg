@@ -4,6 +4,7 @@
 import type { Boite, Chemin, Commande, DessinSvg, Forme } from './types.js';
 import { boiteForme, echelle, multiplier, transformerChemin, translation, unir } from './geometrie.js';
 import { prochainId } from './operations.js';
+import { echellerTrait } from './trait.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -20,7 +21,7 @@ export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { de
   const formes = visibles.map(f => {
     const id = 'f' + n++;
     ids.push(id);
-    return { ...f, id, verrouille: false, d: transformerChemin(f.d, m), epaisseur: f.epaisseur * k };
+    return { ...echellerTrait(f, k), id, verrouille: false, d: transformerChemin(f.d, m) };
   });
   return { dessin: { ...dessin, formes: [...dessin.formes, ...formes] }, ids };
 }

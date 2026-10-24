@@ -1,7 +1,10 @@
 // L'inspecteur : les reglages de la selection, et les champs (couleur, nombre) que d'autres panneaux reprennent.
 
 import { useEffect, useState } from 'react';
-import { basculerSegment, diviserSegment, modifier, opaciteDuContour, opaciteDuRemplissage, redimensionner, type Forme, type Reglage } from '../engine/editionSvg.js';
+import {
+  basculerSegment, diviserSegment, genrePointilles, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
+  type Forme, type GenrePointilles, type Reglage, type ReglageTrait
+} from '../engine/editionSvg.js';
 import { Section } from './Section.js';
 import { arrondi, estHex } from './aidesEditeur.js';
 import type { Edition, Teinte } from './typesEditeur.js';
@@ -22,6 +25,7 @@ export function Inspecteur({ ed }: { ed: Edition }) {
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={ed.nuancier} finir={ed.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={ed.nuancier} finir={ed.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
         {premiere.contour ? <Nombre libelle="Épaisseur" valeur={premiere.epaisseur} min={0} poser={v => regler({ epaisseur: v }, null)} /> : null}
+        {premiere.contour ? <StyleDeTrait forme={premiere} poser={r => ed.appliquer(d => modifierTrait(d, sel, r), ed.nouvelleCle())} /> : null}
         <Opacite libelle="Opacité" titre="La forme entière, fond et contour ensemble" valeur={premiere.opacite} poser={v => regler({ opacite: v }, 'opacite')} finir={ed.finir} />
         {premiere.remplissage && (premiere.contour || opaciteDuRemplissage(premiere) < 1) ? <Opacite libelle="Opacité du fond" titre="Le fond seul : le contour reste plein" valeur={opaciteDuRemplissage(premiere)} poser={v => regler({ opaciteRemplissage: v }, 'opacite-fond')} finir={ed.finir} /> : null}
         {premiere.contour ? <Opacite libelle="Opacité du contour" titre="Le contour seul : le fond reste plein" valeur={opaciteDuContour(premiere)} poser={v => regler({ opaciteContour: v }, 'opacite-contour')} finir={ed.finir} /> : null}
@@ -48,6 +52,62 @@ export function Inspecteur({ ed }: { ed: Edition }) {
       </Section>
       {points ? <PanneauPoint ed={ed} forme={points} /> : null}
       <p className="aide">{sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : ''}Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.</p>
+    </>
+  );
+}
+
+/** Le style du trait : bout, jonction, et pointilles (plein, tirets, points, ou un motif libre). */
+function StyleDeTrait({ forme, poser }: { forme: Forme; poser: (r: ReglageTrait) => void }) {
+  const genre = genrePointilles(forme.pointilles);
+  const motif = (forme.pointilles ?? []).join(' ');
+  const [brut, poserBrut] = useState(motif);
+  useEffect(() => { poserBrut(motif); }, [motif]);
+  const choisirGenre = (g: GenrePointilles) => {
+    if (g === genre) return;
+    // Des points ne se voient qu'avec un bout rond : un trait de longueur nulle n'a pas de bout plat.
+    poser({ pointilles: g === 'plein' ? null : motifDeGenre(g, forme.epaisseur), ...(g === 'pointilles' && !forme.bout ? { bout: 'round' as const } : {}) });
+  };
+  const validerBrut = () => {
+    const liste = normaliserPointilles(brut.split(/[\s,]+/).filter(Boolean).map(Number));
+    if (liste) poser({ pointilles: liste }); else poserBrut(motif);
+  };
+  const longueur = forme.pointilles?.[genre === 'pointilles' ? 1 : 0] ?? 0;
+  return (
+    <>
+      <label className="champ-ligne">
+        <span>Bout</span>
+        <select value={forme.bout ?? 'butt'} onChange={e => poser({ bout: e.target.value === 'round' ? 'round' : e.target.value === 'square' ? 'square' : 'butt' })}>
+          <option value="butt">Plat</option>
+          <option value="round">Rond</option>
+          <option value="square">Carré</option>
+        </select>
+      </label>
+      <label className="champ-ligne">
+        <span>Jonction</span>
+        <select value={forme.jonction ?? 'round'} onChange={e => poser({ jonction: e.target.value === 'miter' ? 'miter' : e.target.value === 'bevel' ? 'bevel' : 'round' })}>
+          <option value="round">Arrondie</option>
+          <option value="miter">En pointe</option>
+          <option value="bevel">Biseautée</option>
+        </select>
+      </label>
+      {forme.jonction === 'miter' ? <Nombre libelle="Limite de pointe" valeur={forme.limiteMitre ?? 4} min={1} poser={v => poser({ limiteMitre: v })} /> : null}
+      <label className="champ-ligne">
+        <span>Style du trait</span>
+        <select value={genre} onChange={e => choisirGenre(e.target.value === 'tirets' ? 'tirets' : e.target.value === 'pointilles' ? 'pointilles' : e.target.value === 'mixte' ? 'mixte' : 'plein')}>
+          <option value="plein">Plein</option>
+          <option value="tirets">Tirets</option>
+          <option value="pointilles">Pointillés</option>
+          <option value="mixte">Mixte</option>
+        </select>
+      </label>
+      {genre === 'tirets' || genre === 'pointilles' ? <Nombre libelle={genre === 'tirets' ? 'Longueur des tirets' : 'Écart des points'} valeur={longueur} min={0.001} poser={v => poser({ pointilles: genre === 'tirets' ? [v, v] : [0, v] })} /> : null}
+      {genre === 'mixte' ? (
+        <label className="champ-ligne nombre" title="Trait, blanc, trait, blanc… séparés par des espaces">
+          <span>Motif</span>
+          <input type="text" aria-label="Motif des pointillés" value={brut} onChange={e => poserBrut(e.target.value)} onBlur={validerBrut} onKeyDown={e => { if (e.key === 'Enter') validerBrut(); }} />
+        </label>
+      ) : null}
+      {genre !== 'plein' ? <Nombre libelle="Décalage du motif" valeur={forme.decalagePointilles ?? 0} poser={v => poser({ decalagePointilles: v })} /> : null}
     </>
   );
 }
