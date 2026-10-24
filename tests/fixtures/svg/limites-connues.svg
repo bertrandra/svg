@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
+  <!-- LIMITE CONNUE : l'alpha d'une couleur rgba() est perdu a la lecture, la forme s'ecrit opaque -->
+  <path fill="rgba(0, 128, 255, 0.5)" d="M5 5h20v20h-20z"/>
+  <!-- LIMITE CONNUE : stroke-width="0" s'ecrit stroke-width="1" (0 est pris pour une valeur absente) -->
+  <path fill="#f4efe6" stroke="#15181d" stroke-width="0" d="M40 5h20v20h-20z"/>
+  <!-- LIMITE CONNUE : un nom de couleur hors liste courte (steelblue) est recopie tel quel -->
+  <path fill="steelblue" d="M75 5h20v20h-20z"/>
+</svg>
