@@ -5,11 +5,12 @@
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { TOLERANCE_DEFAUT } from '../engine/detourage.js';
-import { cleTraitement, type Traceur } from '../engine/vectorisation.js';
+import { cleTraitement, sansPretraitement, type Traceur } from '../engine/vectorisation.js';
 import { pause } from '../io/fichiers.js';
-import { apercuDetoure, lireSource, resumeConversion, traiterImage, TRAITEMENT_DEFAUT, type ImageConvertie, type SourceImage, type Traitement } from '../io/image.js';
+import { apercuDetoure, apercuPretraite, lireSource, resumeConversion, traiterImage, TRAITEMENT_DEFAUT, type ApercuPretraite, type ImageConvertie, type SourceImage, type Traitement } from '../io/image.js';
 import { chargerTraceur, traceurCharge } from '../io/vtracer.js';
 import { AtelierResultat, type Essai } from './AtelierResultat.js';
+import { LotImages } from './LotImages.js';
 
 const TOLERANCES: ReadonlyArray<readonly [number, string]> = [[0.04, 'Serrée : seul le fond exact'], [TOLERANCE_DEFAUT, 'Normale'], [0.16, 'Large : un fond irrégulier, une ombre']];
 const ESSAIS_MAX = 8;
@@ -17,6 +18,8 @@ const ESSAIS_MAX = 8;
 const PAUSE_REJEU = 400;
 
 const sansExtension = (nom: string) => nom.replace(/\.[a-z0-9]+$/i, '').trim() || 'image';
+/** La pause avant de recalculer l'aperçu prétraité : plus courte que celle du traceur, le calcul est moins lourd. */
+const PAUSE_APERCU = 150;
 
 interface Deposee { nom: string; image: SourceImage; original: string }
 
@@ -29,6 +32,8 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
   const [message, dire] = useState('');
   const [enCours, poserEnCours] = useState(false);
   const [survol, poserSurvol] = useState(false);
+  const [apercu, poserApercu] = useState<ApercuPretraite | null>(null);
+  const [fichiersLot, poserFichiersLot] = useState<readonly File[]>([]);
   const entree = useRef<HTMLInputElement>(null);
   // Chaque lancement prend un numero ; un resultat qui revient apres un lancement plus recent est jete.
   const jeton = useRef(0);
@@ -67,7 +72,34 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
     return () => clearTimeout(id);
   }, [auto, source, t, resultat, lancer]);
 
-  const deposer = (f: File | undefined) => {
+  // L'aperçu prétraité (ce que le traceur lira) se recalcule après une courte pause, hors du chemin du traceur ;
+  // le tampon pretraité est mémorisé dans io, le tracé qui suit ne le recalcule pas.
+  const clePre = JSON.stringify([t.pretraitement ?? null, t.detourer, t.tolerance, t.portee]);
+  useEffect(() => {
+    if (!source || !t.pretraitement) { poserApercu(null); return; }
+    let vivant = true;
+    const id = setTimeout(() => { void pause().then(() => { if (vivant) poserApercu(apercuPretraite(source.image, t)); }); }, PAUSE_APERCU);
+    return () => { vivant = false; clearTimeout(id); };
+  }, [source, clePre]);
+
+  // Mesurer l'effet du prétraitement : le même tracé sans lui, ajouté aux essais (il ne remplace pas le résultat affiché).
+  const mesurerSans = useCallback(() => {
+    if (!source) return;
+    const sans = sansPretraitement(t), mien = ++jeton.current;
+    poserEnCours(true);
+    void (async () => {
+      await pause();
+      const r = await traiterImage(source.image, sans);
+      if (mien !== jeton.current) return;
+      poserEnCours(false);
+      if ('erreur' in r) { dire(r.erreur); return; }
+      const cle = cleTraitement(sans);
+      poserEssais(es => [{ id: mien, traitement: sans, resultat: r }, ...es.filter(e => cleTraitement(e.traitement) !== cle)].slice(0, ESSAIS_MAX));
+      dire('Essai sans prétraitement ajouté : ' + resumeConversion(r) + '.');
+    })();
+  }, [source, t]);
+
+  const deposerUne = (f: File | undefined) => {
     if (!f) return;
     void lireSource(f).then(r => {
       if ('erreur' in r) { dire(r.erreur); return; }
@@ -79,7 +111,14 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
       dire(r.largeur + ' × ' + r.hauteur + ' px.' + (auto ? ' Vectorisation automatique dans un instant.' : ' Réglez, puis « Vectoriser ».'));
     });
   };
-  const glisser = (e: DragEvent<HTMLElement>) => { e.preventDefault(); poserSurvol(false); deposer(e.dataTransfer.files[0]); };
+  // Une image : le circuit d'avant, inchangé. Plusieurs : la première s'ouvre dans l'atelier (pour régler), et
+  // le lot les convertit toutes avec les réglages du moment.
+  const deposer = (fichiers: FileList | File[] | null | undefined) => {
+    const liste = Array.from(fichiers ?? []);
+    poserFichiersLot(liste.length > 1 ? liste : []);
+    deposerUne(liste[0]);
+  };
+  const glisser = (e: DragEvent<HTMLElement>) => { e.preventDefault(); poserSurvol(false); deposer(e.dataTransfer.files); };
   const vecteurs = t.vecteurs;
 
   return (
@@ -89,7 +128,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
         {source ? <img className="miniature" src={source.original} alt={'Image déposée : ' + source.nom} /> : null}
         <p>{source ? source.nom + ' · ' + source.image.largeur + ' × ' + source.image.hauteur + ' px' : 'Déposez un PNG, un JPG, un GIF ou un WebP, ou'}</p>
         <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>
-        <input ref={entree} type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onChange={e => { deposer(e.target.files?.[0]); e.target.value = ''; }} />
+        <input ref={entree} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden onChange={e => { deposer(e.target.files); e.target.value = ''; }} />
       </div>
       {source ? (
         <div className="reglages-image">
@@ -120,9 +159,10 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
           </fieldset>
         </div>
       ) : message ? <p className="aide" role="status">{message}</p> : null}
+      {fichiersLot.length > 1 ? <LotImages fichiers={fichiersLot} traitement={t} ouvrir={ouvrir} fermer={() => poserFichiersLot([])} /> : null}
       {source ? (
         <AtelierResultat nom={source.nom} source={source.image} original={source.original} t={t} poserT={poserT} resultat={resultat} essais={essais}
-          auto={auto} poserAuto={poserAuto} enCours={enCours} message={message} ouvrir={ouvrir}
+          auto={auto} poserAuto={poserAuto} enCours={enCours} message={message} ouvrir={ouvrir} apercu={apercu} mesurerSans={mesurerSans}
           rejouer={() => { void lancer(source.image, t); }}
           reprendre={e => { poserT(e.traitement); poserResultat(e.resultat); dire('Réglages de l’essai repris.'); }} />
       ) : null}
