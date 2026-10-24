@@ -90,9 +90,11 @@ function renommerAnimations(css: string): string {
   const noms = [...css.matchAll(/@(?:-webkit-)?keyframes\s+([\w-]+)/g)].map(m => m[1] ?? '');
   let r = css;
   for (const nom of new Set(noms)) {
-    const motif = new RegExp('(?<![\\w.#-])' + nom.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&') + '(?![\\w-])', 'g');
+    // Pas de lookbehind (Safari ne l'a qu'a partir de la 16.4, et une regex qu'il ne sait pas lire tue tout le bundle a l'analyse) :
+    // le caractere qui precede se capture et se rend, ce qui revient au meme.
+    const motif = new RegExp('(^|[^\\w.#-])' + nom.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&') + '(?![\\w-])', 'g');
     r = r.replace(/(@(?:-webkit-)?keyframes\s+)([\w-]+)/g, (tout, tete: string, n: string) => (n === nom ? tete + PREFIXE_ANIMATION + n : tout));
-    r = r.replace(/(animation(?:-name)?\s*:)([^;}]*)/g, (_t, tete: string, valeur: string) => tete + valeur.replace(motif, PREFIXE_ANIMATION + nom));
+    r = r.replace(/(animation(?:-name)?\s*:)([^;}]*)/g, (_t, tete: string, valeur: string) => tete + valeur.replace(motif, (_m, avant: string) => avant + PREFIXE_ANIMATION + nom));
   }
   return r;
 }
@@ -103,7 +105,8 @@ function renommerAnimations(css: string): string {
  * deviendrait minuscule ou geant. En pixels, il garde la taille de la page autonome.
  */
 export function remEnPixels(css: string, base = 16): string {
-  return css.replace(/(?<![\w.-])(-?\d*\.?\d+)rem\b/g, (_t, n: string) => String(Math.round(Number.parseFloat(n) * base * 1000) / 1000) + 'px');
+  // Le caractere qui precede se capture et se rend plutot que de se tester en lookbehind (voir renommerAnimations).
+  return css.replace(/(^|[^\w.-])(-?\d*\.?\d+)rem\b/g, (_t, avant: string, n: string) => avant + String(Math.round(Number.parseFloat(n) * base * 1000) / 1000) + 'px');
 }
 
 /**

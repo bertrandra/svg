@@ -20,6 +20,7 @@
 .depot { border: 2px dashed var(--filet); border-radius: 10px; padding: 28px 16px; display: grid; gap: 10px; justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
 .depot p { margin: 0; color: var(--encre-douce); }
 .depot.survol { border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .depot.survol { background: var(--repli-cyan-8-panneau); } }
 .colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .champ { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .champ > span { font-size: 0.82rem; font-weight: 600; }
@@ -43,6 +44,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .voie-titre { font-weight: 600; font-size: 0.95rem; }
 .voie-aide { font-size: 0.75rem; color: var(--encre-douce); }
 .voie[aria-selected="true"] { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); color: var(--encre); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .voie[aria-selected="true"] { background: var(--repli-cyan-7-panneau); } }
 @media (forced-colors: active) { .voie[aria-selected="true"] { outline: 3px solid Highlight; outline-offset: -3px; } .depot.survol { border-color: Highlight; } .voie:hover { border-color: Highlight; } }
 .voie-panneau { border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 16px; animation: apparition 0.18s ease-out; }
 .voie-panneau .depot { background: var(--table); }
@@ -96,5 +98,8 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 /*STYLE_EDITEUR*/
 </style>
 
-<div id="editeur"></div>
+<!-- Ce que lit un navigateur qui n'execute pas le moteur (JavaScript coupe, syntaxe trop recente pour lui) : React remplace ce
+     paragraphe au demarrage, il ne reste a l'ecran que si rien ne tourne. -->
+<div id="editeur"><main class="accueil"><p class="message">Chargement de l’éditeur… Si ce message reste affiché, JavaScript est désactivé ou ce navigateur est trop ancien :
+  utilisez une version récente de Chrome, Edge, Firefox ou Safari (iOS 16.4 et plus).</p></main></div>
 <script>/*MOTEUR*/</script>
