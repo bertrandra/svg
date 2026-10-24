@@ -31,7 +31,7 @@ export const precisionSur = (sur: SurCouleur): string => (sur === 'remplissage' 
 export function LigneCouleur({ ed, g, actions }: { ed: Edition; g: GroupeCouleur; actions: ActionsLigne }) {
   const { sel } = ed;
   const { sur } = actions;
-  const toutesChoisies = g.libres.length > 0 && g.libres.every(id => sel.includes(id));
+  const toutesChoisies = g.libres.length > 0 && g.libres.every(id => ed.choisies.has(id));
   const toutesMasquees = g.visibles === 0, toutesVerrouillees = g.verrouillees === g.ids.length;
   const nom = g.couleur.toUpperCase();
   const choisir = (ajout: boolean) => {

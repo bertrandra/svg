@@ -13,7 +13,7 @@ import type { Coin, Edition, OutilForme, Vue, Vues } from './typesEditeur.js';
 
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
-  | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string }
+  | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string; cibles?: Boite[] }
   | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string }
   | { type: 'cadre'; x0: number; y0: number; ajout: boolean }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
@@ -132,7 +132,9 @@ export function useGestes(ed: Edition, vues: Vues, svgRef: RefObject<SVGSVGEleme
       if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
       if (g.b) { dx = ed.aimant(g.b.x + dx) - g.b.x; dy = ed.aimant(g.b.y + dy) - g.b.y; }
       if (g.b && ed.aimants && !ed.grille) {
-        const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, ciblesAimants(g.base, g.ids), 6 / vue.zoom);
+        // Le dessin de depart et la selection ne changent pas pendant le geste : les cibles se calculent une fois.
+        g.cibles ??= ciblesAimants(g.base, g.ids);
+        const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, g.cibles, 6 / vue.zoom);
         dx += a.dx; dy += a.dy;
         ed.poserGuides(a.lignes);
       }

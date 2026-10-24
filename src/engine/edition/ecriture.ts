@@ -6,7 +6,22 @@ import type { DessinSvg, Forme } from './types.js';
 import { ecrireChemin, nb } from './chemins.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 
+// L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
+// operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
+// dessin a chaque modification, ou sauver le brouillon, reecrivait les cinq mille formes d'une
+// vectorisation pour une seule qui avait bouge. Le texte rendu est le meme octet pour octet.
+const cacheEcriture = new WeakMap<Forme, string[]>();
+
 export function ecrireForme(f: Forme, precision = 2): string {
+  if (!Number.isInteger(precision) || precision < 0 || precision > 9) return composerForme(f, precision);
+  let textes = cacheEcriture.get(f);
+  if (!textes) { textes = []; cacheEcriture.set(f, textes); }
+  let s = textes[precision];
+  if (s === undefined) { s = composerForme(f, precision); textes[precision] = s; }
+  return s;
+}
+
+function composerForme(f: Forme, precision: number): string {
   let s = '<path d="' + ecrireChemin(f.d, precision) + '" fill="' + echapperAttribut(f.remplissage ?? 'none') + '"';
   if (f.regle === 'evenodd') s += ' fill-rule="evenodd"';
   // Les opacites propres ne s'ecrivent que lorsqu'elles changent quelque chose : une forme sans alpha reste
