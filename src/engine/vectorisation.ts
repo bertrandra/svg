@@ -4,6 +4,7 @@
 // donnent toujours le meme SVG.
 
 import { TOLERANCE_DEFAUT, type PorteeDetourage } from './detourage.js';
+import type { ReglagesPretraitement } from './pretraitement.js';
 
 /** Ce que la vectorisation cherche a garder de l'image. */
 export type ModeVectorisation = 'aplats' | 'trait' | 'fidele';
@@ -48,6 +49,11 @@ export interface Traitement {
   portee: PorteeDetourage;
   /** Null : l'image reste une image, enveloppee dans un SVG. */
   vecteurs: null | ReglageVecteurs;
+  /**
+   * Ce qu'on fait de l'image avant le detourage et le traceur : les seuls reglages touches (voir
+   * `engine/pretraitement.ts`). Absent, rien : la sortie est celle d'avant le pretraitement, a l'octet.
+   */
+  pretraitement?: ReglagesPretraitement;
 }
 
 export const TRAITEMENT_DEFAUT: Traitement = { detourer: true, tolerance: TOLERANCE_DEFAUT, portee: 'bord', vecteurs: { mode: 'aplats', finesse: 'normale' } };
