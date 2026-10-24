@@ -15,7 +15,7 @@ export const COULEURS_MAX = 64;
 const CASES = 1 << 15;
 const ITERATIONS = 8;
 /** En deca de cet ecart OKLab, un pixel est « de la couleur du fond » : il va a la couleur gardee, quoi qu'il en coute aux autres. */
-const ECART_FOND = 0.06;
+const ECART_FOND = 0.08;
 
 export interface ResultatQuantification {
   image: ImageRgba;
