@@ -4,6 +4,7 @@
 // bibliotheque et les fontes. Un echec de chargement se dit, et l'image reste une image.
 
 import type { Traceur } from '../engine/vectorisation.js';
+import { urlAnnexe } from './annexes.js';
 
 export const FICHIER_VTRACER = 'vtracer.js';
 
@@ -57,7 +58,7 @@ const navigateur: Amenees = {
   lire: () => fenetre().__vtracerSvg,
   injecter: fichier => new Promise<boolean>(ok => {
     const s = document.createElement('script');
-    s.src = fichier;
+    s.src = urlAnnexe(fichier);
     s.onload = () => { s.remove(); ok(true); };
     s.onerror = () => { s.remove(); ok(false); };
     document.head.appendChild(s);
