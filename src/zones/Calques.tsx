@@ -8,6 +8,7 @@ import { pluriel } from '../util/texte.js';
 import { useFenetre } from './Fenetre.js';
 import { ParCouleur } from './ParCouleur.js';
 import { useActions, useDessin } from './contexteEditeur.js';
+import { Bouton } from './commun/Bouton.js';
 
 /** La liste des formes, du premier plan au fond : tout choisir ou rien, masquer, verrouiller. */
 export const Calques = memo(function Calques() {
@@ -65,10 +66,10 @@ function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; chois
         <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', borderColor: f.contour ?? undefined }} />
         {'Forme ' + f.id.slice(1)}
       </button>
-      <button type="button" className="calque-bascule" aria-pressed={!f.visible} title={f.visible ? 'Masquer' : 'Afficher'} aria-label={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + f.id.slice(1)}
-        onClick={() => ac.appliquer(d => modifier(d, [f.id], { visible: !f.visible }))}>{f.visible ? '◉' : '○'}</button>
-      <button type="button" className="calque-bascule" aria-pressed={f.verrouille} title={f.verrouille ? 'Déverrouiller' : 'Verrouiller'} aria-label={(f.verrouille ? 'Déverrouiller la forme ' : 'Verrouiller la forme ') + f.id.slice(1)}
-        onClick={() => { ac.appliquer(d => modifier(d, [f.id], { verrouille: !f.verrouille })); if (!f.verrouille) ac.choisir(sel.filter(s => s !== f.id)); }}>{f.verrouille ? '🔒' : '🔓'}</button>
+      <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + f.id.slice(1)}
+        onClick={() => ac.appliquer(d => modifier(d, [f.id], { visible: !f.visible }))} />
+      <Bouton icone={f.verrouille ? 'verrouiller' : 'deverrouiller'} className="calque-bascule" pressed={f.verrouille} aide={(f.verrouille ? 'Déverrouiller la forme ' : 'Verrouiller la forme ') + f.id.slice(1)}
+        onClick={() => { ac.appliquer(d => modifier(d, [f.id], { verrouille: !f.verrouille })); if (!f.verrouille) ac.choisir(sel.filter(s => s !== f.id)); }} />
     </li>
   );
 }

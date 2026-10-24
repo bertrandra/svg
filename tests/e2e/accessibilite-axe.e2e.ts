@@ -1,6 +1,8 @@
 // L'audit automatique d'accessibilite : axe-core est injecte dans la page construite (file://, comme un
 // utilisateur la recoit) et passe sur chaque ecran qui compte. Toute violation « serious » ou « critical »
 // fait echouer le test ; les « moderate » et « minor » sont listees dans la sortie, pour le rapport.
+// Un « incomplete » (ce qu'axe ne sait pas trancher) fait echouer aussi, sauf s'il est sur la liste
+// ecrite et motivee INCERTAINS_ADMIS : on n'ecarte pas ce qu'on n'a pas lu.
 //
 // Un faux positif se desactive pour UNE regle sur UN selecteur, avec la raison (voir REGLES_ECARTEES) :
 // jamais une regle pour toute la page.
@@ -29,7 +31,15 @@ interface FenetreAxe { axe: { run: (contexte: unknown, options: unknown) => Prom
  */
 const REGLES_ECARTEES: ReadonlyArray<{ regle: string; selecteur: string; raison: string }> = [];
 
+/**
+ * Les « incomplete » admis : une regle, un selecteur (prefixe de la cible axe), la raison pour laquelle
+ * aucune machine ne peut trancher. Vide tant que chaque doute a ete leve en corrigeant la cause.
+ */
+const INCERTAINS_ADMIS: ReadonlyArray<{ regle: string; selecteur: string; raison: string }> = [];
+
 const synthese: string[] = [];
+// Les doutes non admis du dernier ecran audite : exigerSansViolationGrave les relit (les tests passent l'un apres l'autre).
+let dernierIncertains: Violation[] = [];
 
 async function auditer(page: Page, ecran: string): Promise<Violation[]> {
   // Une section qui se deplie fond en 150 ms : mesuree en route, un texte a demi transparent n'a pas son contraste.
@@ -48,13 +58,23 @@ async function auditer(page: Page, ecran: string): Promise<Violation[]> {
     });
     return { violations: r.violations.map(hors).filter(v => v.nodes.length), incomplete: r.incomplete } satisfies ResultatAxe;
   }, REGLES_ECARTEES);
+  const incertains = incertainsNonAdmis(resultat.incomplete);
   const graves = resultat.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   const autres = resultat.violations.filter(v => v.impact !== 'serious' && v.impact !== 'critical');
   const ligne = (v: Violation) => `    [${v.impact}] ${v.id} : ${v.help} (${v.nodes.length} élément${v.nodes.length > 1 ? 's' : ''}) ${v.nodes.slice(0, 3).map(n => JSON.stringify(n.target)).join(' ')}`;
   // Les « incomplete » sont ce qu'axe ne sait pas trancher (une couleur sur un degrade, un element cache) : pas des echecs, a relire.
-  const incertains = resultat.incomplete.map(v => `${v.id} ×${v.nodes.length}`).join(', ');
-  synthese.push(`${ecran} : ${graves.length} grave(s), ${autres.length} autre(s)` + (incertains ? ` ; à relire : ${incertains}` : '') + [...graves, ...autres].map(v => '\n' + ligne(v)).join(''));
+  const admis = resultat.incomplete.map(v => `${v.id} ×${v.nodes.length}`).join(', ');
+  const restes = incertains.map(v => `${v.id} ×${v.nodes.length}`).join(', ');
+  synthese.push(`${ecran} : ${graves.length} grave(s), ${autres.length} autre(s)` + (admis ? ` ; incertains admis ou non : ${admis}` : '') + (restes ? ` ; NON ADMIS : ${restes}` : '') + [...graves, ...autres].map(v => '\n' + ligne(v)).join(''));
+  dernierIncertains = incertains;
   return resultat.violations;
+}
+
+/** Les doutes d'axe qui ne figurent pas sur la liste ecrite (voir INCERTAINS_ADMIS). */
+function incertainsNonAdmis(incomplete: readonly Violation[]): Violation[] {
+  return incomplete
+    .map(v => ({ ...v, nodes: v.nodes.filter(n => !INCERTAINS_ADMIS.some(a => a.regle === v.id && n.target.some(t => typeof t === 'string' && t.startsWith(a.selecteur)))) }))
+    .filter(v => v.nodes.length);
 }
 
 /** Echoue en disant tout : la regle, l'aide, les elements et ce qu'il faut changer. */
@@ -62,6 +82,8 @@ function exigerSansViolationGrave(violations: readonly Violation[]): void {
   const graves = violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
   const detail = graves.map(v => `[${v.impact}] ${v.id} : ${v.help}\n` + v.nodes.slice(0, 5).map(n => `   ${JSON.stringify(n.target)}\n   ${n.html.slice(0, 160)}\n   ${(n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 300)}`).join('\n')).join('\n');
   expect(graves.length, detail).toBe(0);
+  const doutes = dernierIncertains.map(v => `[à relire] ${v.id} : ${v.help}\n` + v.nodes.slice(0, 6).map(n => `   ${JSON.stringify(n.target)}\n   ${n.html.slice(0, 160)}\n   ${(n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 300)}`).join('\n')).join('\n');
+  expect(dernierIncertains.length, 'Doutes d’axe ni levés ni admis (INCERTAINS_ADMIS) :\n' + doutes).toBe(0);
 }
 
 describe('axe-core : accessibilite automatique', () => {
@@ -196,6 +218,35 @@ describe('axe-core : accessibilite automatique', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('Enter');
       exigerSansViolationGrave(await auditer(page, 'éditeur, plume et réticule'));
+    });
+
+    it('avec une forme masquée, une forme verrouillée et le curseur de sélection au clavier', async () => {
+      const page = await editeur();
+      await page.getByRole('button', { name: 'Masquer la forme 3', exact: true }).click();
+      await page.getByRole('button', { name: 'Verrouiller la forme 4', exact: true }).click();
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('Shift+PageDown');
+      await attend(() => page.locator('.editeur-svg-toile path.focale').count()).toBe(1);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, calques masqué et verrouillé, curseur de sélection'));
+    });
+
+    it('avec un premier coin posé au clavier et son aperçu', async () => {
+      const page = await editeur();
+      await page.keyboard.press('r');
+      await page.keyboard.press('Space');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowDown');
+      await attend(() => page.locator('.editeur-svg-toile path.trace-en-cours').count()).toBe(1);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, forme à deux coins en cours'));
+    });
+
+    it('avec une version gardée dans le panneau du dessin', async () => {
+      const page = await editeur();
+      await page.locator('.editeur-inspecteur details.section', { hasText: 'Versions nommées' }).locator('> summary').click();
+      await page.getByRole('button', { name: 'Garder', exact: true }).click();
+      await page.getByRole('button', { name: /^Supprimer la version/ }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, une version gardée'));
     });
 
     for (const [nom, bouton] of [['les calques', 'Calques'], ['l’inspecteur', 'Inspecteur']] as const) {
