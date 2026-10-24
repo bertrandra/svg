@@ -267,6 +267,8 @@
   .pastille-style button.aucun { position: static; width: 40px; height: 40px; border-radius: 6px; }
   .nuancier .echantillon { width: 32px; height: 32px; }
   input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
+  .reglages-pretraitement input[type="range"] { min-height: 40px; }
+  .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
   .section > summary { padding: 13px 2px; }
   .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
   .options-export .case { min-height: 40px; }

@@ -75,6 +75,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .visionneuse .ligne-rideau { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--cyan); box-shadow: 0 0 0 1px var(--panneau); pointer-events: none; }
 .rideau { display: flex; align-items: center; gap: 8px; }
 .rideau input[type="range"] { flex: 1; min-width: 0; }
+.rideau select { width: auto; flex: 0 0 auto; font-size: 0.78rem; }
 .fiche-resultat { display: grid; gap: 6px; }
 .fiche-resultat p { margin: 0; }
 .essais h3 { font-size: 0.8rem; margin: 4px 0 6px; display: flex; gap: 8px; align-items: baseline; }
@@ -89,6 +90,23 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .reglages-fins .fin.touche .fin-libelle::before, .reglages-fins .champ-ligne.touche > span:first-child::before { content: "● "; }
 .reglages-fins output { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
 .icone-bouton.petit { width: 22px; height: 22px; }
+.reglages-pretraitement { display: grid; gap: 8px; }
+.reglages-pretraitement .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: 6px; font-size: 0.78rem; }
+.reglages-pretraitement .fin-libelle { color: var(--encre-douce); }
+.reglages-pretraitement .fin.touche .fin-libelle { color: var(--cyan); font-weight: 600; }
+.reglages-pretraitement .fin.touche .fin-libelle::before { content: "● "; }
+.reglages-pretraitement output { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
+.reglages-pretraitement .mini-onglets { flex-wrap: wrap; }
+.bilan-pretraitement { display: grid; gap: 4px; }
+.bilan-pretraitement p { margin: 0; }
+.essais .pre-essai { overflow-wrap: anywhere; }
+.lot { display: grid; gap: 8px; border-top: 1px dashed var(--filet); padding-top: 12px; }
+.lot h3 { font-size: 0.9rem; margin: 0; display: flex; gap: 8px; align-items: baseline; }
+.lot progress { width: 100%; accent-color: var(--cyan); }
+.lot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lot li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 4px 0; border-bottom: 1px solid var(--filet); font-size: 0.8rem; }
+.lot .lot-nom { font-weight: 600; overflow-wrap: anywhere; flex: 1 1 140px; }
+.lot .lot-etat { color: var(--encre-douce); flex: 2 1 160px; }
 .reglages-fins .champ-ligne select { flex: 1; min-width: 0; font-size: 0.75rem; }
 @media (max-width: 900px) { .atelier-vecto { grid-template-columns: minmax(0, 1fr); } }
 .resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
