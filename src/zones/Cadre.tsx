@@ -4,7 +4,8 @@
 
 import { memo, useEffect, useId, useRef, type RefObject } from 'react';
 import { RegionVocale } from './RegionVocale.js';
-import { Barre } from './BarreOutils.js';
+import { Barre, BoutonEnregistrer } from './BarreOutils.js';
+import { useTelephone } from './Vue.js';
 import { BarreSelection } from './BarreSelection.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
@@ -87,6 +88,7 @@ function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
 
 function BarreEtat() {
   const { h, sel } = useDessin(), { tiroir, outil, trace, message } = useInterface(), ac = useActions();
+  const telephone = useTelephone();
   return (
     <footer className="editeur-etat">
       <span className="tiroirs">
@@ -95,7 +97,8 @@ function BarreEtat() {
       </span>
       <span className="message-etat">{message || etatParDefaut(outil, trace.length, sel.length)}</span>
       <span className="espace" />
-      {pluriel(h.passe.length, 'modification')}
+      <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
+      {telephone ? <BoutonEnregistrer /> : null}
     </footer>
   );
 }

@@ -25,6 +25,46 @@ const PAUSE_APERCU = 150;
 
 interface Deposee { nom: string; image: SourceImage; original: string }
 
+// La vignette « avant, apres » : un disque et un triangle, d'abord en gros pixels (une image), puis en formes lisses (des vecteurs).
+// Elle est decorative (aria-hidden, la legende dit la meme chose en mots) et ne dessine que par les jetons de l'interface : aucun
+// fichier, aucun reseau, aucune couleur en dur. Les cases se calculent une fois, au chargement du module.
+const CASE = 4;
+const dansDisque = (x: number, y: number) => (x - 22) ** 2 + (y - 26) ** 2 <= 13 ** 2;
+const dansTriangle = (x: number, y: number) => y >= 16 && y <= 38 && Math.abs(x - 46) <= (y - 16) * 0.5;
+const CASES: ReadonlyArray<{ x: number; y: number; forme: 'disque' | 'triangle' }> = (() => {
+  const r: Array<{ x: number; y: number; forme: 'disque' | 'triangle' }> = [];
+  for (let y = 0; y < 48; y += CASE) for (let x = 0; x < 64; x += CASE) {
+    const cx = x + CASE / 2, cy = y + CASE / 2;
+    if (dansDisque(cx, cy)) r.push({ x, y, forme: 'disque' });
+    else if (dansTriangle(cx, cy)) r.push({ x, y, forme: 'triangle' });
+  }
+  return r;
+})();
+
+function ApercuConversion() {
+  return (
+    <figure className="avant-apres">
+      <div className="avant-apres-vignettes" aria-hidden="true">
+        <div>
+          <svg viewBox="0 0 64 48" focusable="false" shapeRendering="crispEdges">
+            {CASES.map(c => <rect key={c.x + ',' + c.y} className={c.forme === 'disque' ? 'forme-a' : 'forme-b'} x={c.x} y={c.y} width={CASE} height={CASE} />)}
+          </svg>
+          <span className="aide">Image</span>
+        </div>
+        <svg className="fleche" viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h15M13 6l6 6-6 6" /></svg>
+        <div>
+          <svg viewBox="0 0 64 48" focusable="false">
+            <circle className="forme-a" cx="22" cy="26" r="13" />
+            <path className="forme-b" d="M46 16 L57 38 L35 38 Z" />
+          </svg>
+          <span className="aide">SVG</span>
+        </div>
+      </div>
+      <figcaption className="aide">Une image en pixels devient des formes vectorielles, nettes à toute taille.</figcaption>
+    </figure>
+  );
+}
+
 export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => void }) {
   const [source, poserSource] = useState<Deposee | null>(null);
   const [t, poserT] = useState<Traitement>(TRAITEMENT_DEFAUT);
@@ -130,6 +170,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
     <section className="vectoriser" aria-label="Convertir une image en SVG">
       <h2 className="sr-only">Convertir une image en SVG</h2>
       <div className={'depot petit' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={glisser}>
+        {source ? null : <ApercuConversion />}
         {source ? <img className="miniature" src={source.original} alt={'Image déposée : ' + source.nom} /> : null}
         <p>{source ? source.nom + ' · ' + source.image.largeur + ' × ' + source.image.hauteur + ' px' : 'Déposez un PNG, un JPG, un GIF ou un WebP, ou'}</p>
         <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>

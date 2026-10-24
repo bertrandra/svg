@@ -9,6 +9,7 @@ import { useFenetre } from './Fenetre.js';
 import { ParCouleur } from './ParCouleur.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
+import { BoutonRaison } from './commun/BoutonRaison.js';
 
 /** La liste des formes, du premier plan au fond : tout choisir ou rien, masquer, verrouiller. */
 export const Calques = memo(function Calques() {
@@ -37,10 +38,14 @@ export const Calques = memo(function Calques() {
     <aside className="editeur-calques" aria-label="Calques" tabIndex={-1} ref={racine} style={actif ? { overflowAnchor: 'none' } : undefined}>
       <h3>Calques <span className="aide">{total}</span></h3>
       <div className="calques-actions">
-        <button type="button" className="discret" disabled={!choisissables.length || sel.length === choisissables.length} title="Tout sélectionner (Ctrl+A)" onClick={() => { ac.choisir(choisissables); ac.poserPoint(null); }}>Tout</button>
-        <button type="button" className="discret" disabled={!sel.length} title="Ne rien sélectionner (Échap)" onClick={() => { ac.choisir([]); ac.poserPoint(null); }}>Aucun</button>
-        <button type="button" className="discret" disabled={!choisissables.length} title="Inverser la sélection" onClick={() => { ac.choisir(choisissables.filter(id => !choisies.has(id))); ac.poserPoint(null); }}>Inverser</button>
-        <button type="button" className="discret" disabled={!masquees} title="Afficher toutes les formes masquées" onClick={() => ac.faire(d => modifier(d, d.formes.filter(f => !f.visible).map(f => f.id), { visible: true }), pluriel(masquees, 'forme') + ' affichée' + (masquees > 1 ? 's' : '') + '.')}>Tout afficher</button>
+        <BoutonRaison aide="Tout sélectionner (Ctrl+A)" raison={!choisissables.length ? 'Aucune forme à sélectionner' : sel.length === choisissables.length ? 'Toutes les formes sont déjà sélectionnées' : null}
+          onClick={() => { ac.choisir(choisissables); ac.poserPoint(null); }}>Tout</BoutonRaison>
+        <BoutonRaison aide="Ne rien sélectionner (Échap)" raison={sel.length ? null : 'Rien n’est sélectionné'}
+          onClick={() => { ac.choisir([]); ac.poserPoint(null); }}>Aucun</BoutonRaison>
+        <BoutonRaison aide="Inverser la sélection" raison={choisissables.length ? null : 'Aucune forme à inverser'}
+          onClick={() => { ac.choisir(choisissables.filter(id => !choisies.has(id))); ac.poserPoint(null); }}>Inverser</BoutonRaison>
+        <BoutonRaison aide="Afficher toutes les formes masquées" raison={masquees ? null : 'Aucune forme masquée'}
+          onClick={() => ac.faire(d => modifier(d, d.formes.filter(f => !f.visible).map(f => f.id), { visible: true }), pluriel(masquees, 'forme') + ' affichée' + (masquees > 1 ? 's' : '') + '.')}>Tout afficher</BoutonRaison>
       </div>
       <ParCouleur />
       <h4>Formes</h4>

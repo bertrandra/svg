@@ -22,6 +22,12 @@ const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
 // La tolerance se regle en centiemes d'ecart OKLab (util/couleur.ts) : 2 se devine, 10 saute aux yeux.
 const TOLERANCE_MIN = 1, TOLERANCE_MAX = 15, TOLERANCE_DEFAUT = 4;
 
+// Un petit dessin n'a rien a gagner d'un regroupement par couleur : la liste des formes et « Couleurs du dessin » disent deja tout, et
+// l'ouvrir ajoute au premier ecran des onglets, une tolerance et deux boutons qu'on ne touche pas encore. La section ne s'ouvre d'elle-meme
+// qu'a partir de ces seuils, jugee une fois, a l'ouverture du dessin (pas a chaque forme qu'on ajoute : elle ne bougerait plus d'elle-meme) ;
+// ce que la personne ouvre ou ferme ensuite se retient (Section).
+const FORMES_POUR_OUVRIR = 5, COULEURS_POUR_OUVRIR = 3;
+
 export function ParCouleur() {
   const mo = useDessin();
   const { dessin } = mo;
@@ -34,6 +40,7 @@ export function ParCouleur() {
   const courante = lireCouleurs(dessin, sur, lecture.current);
   lecture.current = courante;
   const groupes = courante.groupes;
+  const [ouverteParDefaut] = useState(() => dessin.formes.length >= FORMES_POUR_OUVRIR && groupes.length >= COULEURS_POUR_OUVRIR);
   // L'apercu passe apres le reste : pendant un geste continu il retarde d'un cran plutot que de le ralentir.
   const dessinApercu = useDeferredValue(courante.dessin);
   const proches = useMemo(() => couleursProches(dessinApercu, tolerance / 100, sur), [dessinApercu, tolerance, sur]);
@@ -43,7 +50,7 @@ export function ParCouleur() {
 
   const fondues = proches.reduce((n, p) => n + p.membres.length, 0);
   return (
-    <Section titre="Par couleur" ouverte note={groupes.length}>
+    <Section titre="Par couleur" ouverte={ouverteParDefaut} note={groupes.length}>
       <div className="mini-onglets" role="group" aria-label="Couleurs lues sur">
         {SURS.map(([id, libelle, aide]) => <button key={id} type="button" aria-pressed={sur === id} title={aide} onClick={() => poserSur(id)}>{libelle}</button>)}
       </div>
