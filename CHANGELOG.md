@@ -7,6 +7,10 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Modifié
 
+- **Les styles de l'éditeur sortent de `page.html`** vers `outils/editeur-svg/base.css` et
+  `editeur.css`, assemblés avec le registre de jetons par `scripts/feuilles.mjs` ; la page est
+  inchangée à l'écran, et le script d'embarquement réutilise les mêmes feuilles. `io/vtracer.ts`
+  cherche `vtracer.js` sous `baseAnnexes`, comme les autres annexes.
 - **Le traceur vtracer n'est plus dans la page** (ADR-0002) : il vit dans `dist/vtracer.js`, chargé au
   premier tracé ; la page passe de 1,6 à 0,75 Mo. « Chargement du traceur… » s'affiche au premier
   tracé ; si le fichier manque à côté de la page, le message dit où le placer. Le SVG produit est
@@ -42,6 +46,11 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Ajouté
 
+- **Un script d'embarquement** (`dist/editeur-svg-embarque.js`, `npm run embarquer`) : un script classique
+  qui pose `window.EditeurSvg.ouvrir({ svg, onEnregistrer, … })` (avec `estEditable` et `version`),
+  amène ses propres styles cantonnés à l'éditeur, et marche depuis le disque. Une page d'exemple
+  (`exemples/integration.html`), un guide (`docs/integration.md`) et l'option `baseAnnexes` pour ranger
+  `bibliotheque.js`, `polices.js` et `vtracer.js` ailleurs qu'à côté de la page.
 - **Un registre de jetons de couleur** (ADR-0007, `src/styles/jetons.ts`, documenté dans
   `docs/jetons.md`) : chaque couleur de l'interface a un rôle, une valeur claire, une valeur sombre et
   une description ; le CSS des variables est généré au build, et la page n'écrit plus aucune couleur
