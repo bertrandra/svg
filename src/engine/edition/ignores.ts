@@ -6,7 +6,6 @@
 export type Proprietes = Record<string, string>;
 
 const A = {
-  selecteurs: 'les règles de style qui ne visent pas une classe (balise, identifiant…)',
   marqueurs: 'les marqueurs des traits (pointes de flèche…)',
   pointillesUnite: 'les pointillés dont une longueur est en pourcentage ou en unité autre que le pixel (le trait s’écrit plein)',
   decalageUnite: 'le décalage des pointillés en pourcentage ou en unité autre que le pixel (il s’écrit nul)',
@@ -23,11 +22,37 @@ const PEINTURE = new Set([
   'marker', 'marker-start', 'marker-mid', 'marker-end'
 ]);
 
-/** Vrai si une regle de feuille, ignoree faute de viser une classe, posait une propriete qui se voit. */
-export const reglePeint = (decl: Proprietes): boolean => Object.keys(decl).some(k => PEINTURE.has(k));
+/** Vrai si une regle de feuille, ignoree faute d'etre portee, posait une propriete qui se voit. */
+export const reglePeint = (proprietes: Iterable<string>): boolean => { for (const k of proprietes) if (PEINTURE.has(k)) return true; return false; };
 
-export const MSG_SELECTEURS = A.selecteurs;
+/** Vrai si un texte de feuille (le corps d'un bloc @media, @keyframes…) pose, quelque part, une propriete qui se voit. */
+const MOTIF_PEINTURE = new RegExp('(?:^|[;{}\\s])(?:' + [...PEINTURE].join('|') + ')\\s*:', 'i');
+export const textePeint = (corps: string): boolean => MOTIF_PEINTURE.test(corps);
+
 export const MSG_ANIMATIONS = A.animations;
+
+// La feuille <style> (ADR-0009, troisieme lot) : ce que la lecture des selecteurs et des regles n'a pas porte.
+export const MSG_FRERES = 'les règles de style dont le sélecteur vise un frère (« + » ou « ~ »)';
+export const MSG_ESPACE_DE_NOMS = 'les règles de style dont le sélecteur porte un espace de noms (« | »)';
+export const MSG_SELECTEUR_ILLISIBLE = 'les règles de style dont le sélecteur est illisible (un navigateur les abandonne aussi)';
+export const MSG_IMBRIQUEES = 'les règles de style imbriquées dans une autre (CSS imbriqué)';
+export const MSG_IMPORT = 'les feuilles de style importées par @import';
+export const MSG_FONT_FACE = 'les polices déclarées par @font-face';
+export const MSG_KEYFRAMES = 'les animations CSS (@keyframes)';
+export const MSG_VARIABLES = 'les variables CSS var(…) (la valeur n’est pas reprise : la propriété retrouve son héritage)';
+export const MSG_TRANSFORM_CSS = 'les transformations posées par le style (propriété CSS transform ; seul l’attribut transform est lu)';
+export const MSG_FEUILLE_MEDIA = 'les feuilles de style réservées à un média (attribut media)';
+
+/** Une pseudo-classe ou un pseudo-element non porte : on dit lequel. */
+export const msgPseudo = (nom: string, element: boolean): string =>
+  'les règles de style dont le sélecteur porte ' + (element ? 'le pseudo-élément ::' : 'la pseudo-classe :') + nom;
+
+/** Un bloc @-regle (@media, @supports, @layer…) dont les regles ne sont pas evaluees. */
+export const msgBlocArobase = (nom: string): string => 'les règles d’un bloc @' + nom + ' (leurs conditions ne sont pas évaluées)';
+
+// Les clones <use> (ADR-0009, troisieme lot).
+export const MSG_USE_ABSENT = 'les clones <use> dont la cible n’existe pas (ils ne dessinent rien, comme dans un navigateur)';
+export const MSG_SYMBOLE_ROGNE = 'le rognage au cadre d’un <symbol> (ce qui dépasse du cadre reste dessiné)';
 
 /** Les marqueurs, quand la forme en porte (ils ne se dessinent pas). */
 export function ignoresDeMarqueurs(h: Proprietes): string[] {

@@ -16,6 +16,9 @@ export function PanneauTexte() {
   const [policeId, poserPoliceId] = useState('');
   const [taille, poserTaille] = useState(() => Math.round(Math.min(mo.dessin.vb[2], mo.dessin.vb[3]) / 6));
   const [interlettrage, poserInterlettrage] = useState(0);
+  // Les ligatures (fi, fl…) sont ouvertes par defaut quand la fonte en a : un navigateur ou un logiciel de mise en page les
+  // applique toujours, et « fi » mal lie fait toucher le crochet du f au point du i. On les retire d'une case a cocher.
+  const [ligatures, poserLigatures] = useState(true);
   const entree = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let vivant = true;
@@ -23,6 +26,7 @@ export function PanneauTexte() {
     return () => { vivant = false; };
   }, []);
   const police = polices?.find(p => p.id === policeId) ?? polices?.[0] ?? null;
+  const aDesLigatures = police?.glyphes.ligature !== undefined;
 
   const deposer = (f: File | undefined) => {
     if (!f) return;
@@ -35,19 +39,22 @@ export function PanneauTexte() {
   };
   const ajouter = () => {
     if (!police || !texte.trim()) return;
-    const lettres = composer(texte, police.glyphes, { taille, interlettrage, x: 0, y: 0 });
+    const lettres = composer(texte, police.glyphes, { taille, interlettrage, ligatures, x: 0, y: 0 });
     const b = unir(lettres.map(l => boiteChemin(l.d)));
     if (!b) { ac.dire('Ce texte ne donne aucune forme avec cette fonte.'); return; }
     const [vx, vy, vl, vh] = mo.dessin.vb;
     // Le bloc de texte, centre sur le plan : on compose a l'origine puis on decale.
     const dx = vx + (vl - b.l) / 2 - b.x, dy = vy + (vh - b.h) / 2 - b.y;
-    const posees = composer(texte, police.glyphes, { taille, interlettrage, x: dx, y: dy });
+    const posees = composer(texte, police.glyphes, { taille, interlettrage, ligatures, x: dx, y: dy });
     const r = ajouterTexte(mo.dessin, posees, ui.style);
     if (!r.ids.length) return;
     ac.appliquer(() => r.dessin);
     ac.choisir(r.ids);
     ac.poserOutil('selection');
-    ac.dire(r.ids.length + ' lettre' + (r.ids.length > 1 ? 's' : '') + ' ajoutée' + (r.ids.length > 1 ? 's' : '') + ' en formes, une par lettre : combinez-les si besoin.');
+    const liees = posees.filter(l => [...l.caractere].length > 1).length;
+    const pluriel = r.ids.length > 1 ? 's' : '';
+    ac.dire(r.ids.length + ' ' + (liees ? 'forme' : 'lettre') + pluriel + ' ajoutée' + pluriel + ' en formes, une par lettre'
+      + (liees ? ' (une seule forme pour les lettres d’une ligature)' : '') + ' : combinez-les si besoin.');
   };
 
   return (
@@ -66,6 +73,12 @@ export function PanneauTexte() {
         <label className="champ-ligne"><span>Taille</span><input type="text" inputMode="decimal" value={String(taille)} onChange={e => poserTaille(Math.max(1, Number(e.target.value.replace(',', '.')) || 1))} /></label>
         <label className="champ-ligne"><span>Espace</span><input type="text" inputMode="decimal" value={String(interlettrage)} onChange={e => poserInterlettrage(Number(e.target.value.replace(',', '.')) || 0)} title="Interlettrage, en part de la taille" /></label>
       </div>
+      {aDesLigatures ? (
+        <label className="case">
+          <input type="checkbox" checked={ligatures} disabled={interlettrage !== 0} onChange={e => poserLigatures(e.target.checked)} /> Ligatures (fi, fl…)
+          {interlettrage !== 0 ? <span className="aide"> Sans effet avec un espace entre les lettres.</span> : null}
+        </label>
+      ) : null}
       <div className="boutons">
         <button type="button" className="primaire" disabled={!police || !texte.trim()} onClick={ajouter}>Ajouter le texte</button>
         <button type="button" className="discret" onClick={() => entree.current?.click()}>Déposer une fonte TTF/OTF…</button>

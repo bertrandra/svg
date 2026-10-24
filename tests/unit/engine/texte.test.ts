@@ -86,3 +86,66 @@ describe('une vraie fonte', () => {
     expect(o && o.l > 10 && o.h > 10).toBe(true);
   });
 });
+
+describe('composer, les ligatures', () => {
+  // Une fonte factice qui lie « fi » (avance 700) et « ffi » (avance 900), et note les paires qu'on lui demande de creer.
+  function avecLigatures(paires: string[] = []): Glyphes {
+    return {
+      ...factice,
+      avance: c => (c === 'ffi' ? 900 : c === 'fi' ? 700 : 600),
+      crenage: (a, b) => { paires.push(a + '|' + b); return a === 'fi' && b === 'x' ? -50 : a === 'A' && b === 'fi' ? -30 : factice.crenage(a, b); },
+      ligature: (cars, i) => (cars[i] === 'f' && cars[i + 1] === 'f' && cars[i + 2] === 'i' ? 3 : cars[i] === 'f' && cars[i + 1] === 'i' ? 2 : 0)
+    };
+  }
+  const caracteres = (t: string, o: { ligatures?: boolean; interlettrage?: number } = {}, g: Glyphes = avecLigatures()) =>
+    composer(t, g, { taille: 100, x: 0, y: 100, ...o }).map(l => l.caractere);
+
+  it('par defaut, une forme par caractere : rien ne change pour qui ne demande pas les ligatures', () => {
+    expect(caracteres('fi')).toEqual(['f', 'i']);
+    expect(caracteres('fi', { ligatures: false })).toEqual(['f', 'i']);
+    const sans = composer('fi AV', avecLigatures(), { taille: 100, x: 3, y: 50 }), vieille = composer('fi AV', factice, { taille: 100, x: 3, y: 50 });
+    expect(sans.map(l => l.d)).toEqual(vieille.map(l => l.d));
+  });
+
+  it('avec ligatures, « fi » est UNE forme dont le caractere est la chaine liee', () => {
+    expect(caracteres('fi', { ligatures: true })).toEqual(['fi']);
+    expect(caracteres('ffi', { ligatures: true })).toEqual(['ffi']);
+    expect(caracteres('afix', { ligatures: true })).toEqual(['a', 'fi', 'x']);
+    expect(caracteres('fifi', { ligatures: true })).toEqual(['fi', 'fi']);
+  });
+
+  it('l avance est celle de la glyphe de ligature, et le crenage se calcule avec elle des deux cotes', () => {
+    const paires: string[] = [];
+    const l = composer('Afix', avecLigatures(paires), { taille: 100, x: 0, y: 100, ligatures: true });
+    expect(paires).toEqual(['A|fi', 'fi|x']);
+    const x = (i: number) => boiteChemin(l[i]?.d ?? [])?.x ?? NaN;
+    // A avance de 60 ; crenage A|fi = -3 ; la ligature avance de 70 ; crenage fi|x = -5.
+    expect(x(0)).toBeCloseTo(0, 6);
+    expect(x(1)).toBeCloseTo(60 - 3, 6);
+    expect(x(2)).toBeCloseTo(60 - 3 + 70 - 5, 6);
+  });
+
+  it('sans ligature, les memes lettres se suivent a l avance de chaque caractere', () => {
+    const l = composer('fix', avecLigatures(), { taille: 100, x: 0, y: 100 });
+    expect(boiteChemin(l[2]?.d ?? [])?.x).toBeCloseTo(120, 6);
+  });
+
+  it('une ligature ne traverse ni un blanc ni un retour a la ligne, meme si la fonte l annonce', () => {
+    const naive: Glyphes = { ...factice, ligature: () => 2 };
+    expect(caracteres('f i', { ligatures: true }, naive)).toEqual(['f', 'i']);
+    expect(caracteres('f\ni', { ligatures: true }, naive)).toEqual(['f', 'i']);
+    expect(caracteres('fi', { ligatures: true }, avecLigatures())).toEqual(['fi']);
+  });
+
+  it('un texte espace ne se lie pas (comme en CSS) ; une fonte sans ligature ignore l option', () => {
+    expect(caracteres('fi', { ligatures: true, interlettrage: 0.05 })).toEqual(['f', 'i']);
+    expect(caracteres('fi', { ligatures: true }, factice)).toEqual(['f', 'i']);
+  });
+
+  it('une ligature en fin de ligne, puis la ligne suivante, repart a gauche', () => {
+    const l = composer('fi\nfi', avecLigatures(), { taille: 100, x: 5, y: 100, ligatures: true });
+    expect(l).toHaveLength(2);
+    expect(boiteChemin(l[1]?.d ?? [])?.x).toBeCloseTo(5, 6);
+    expect(boiteChemin(l[1]?.d ?? [])?.y).toBeCloseTo(100 + 120 - 50, 6);
+  });
+});
