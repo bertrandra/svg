@@ -10,6 +10,7 @@ import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
 import type { ActionsEditeur, Fond, Outil, Point, Tiroir } from './typesEditeur.js';
+import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
@@ -24,7 +25,7 @@ export interface Setters {
   poserGuides: Dispatch<SetStateAction<readonly Aimant[]>>;
   poserVersions: Dispatch<SetStateAction<readonly Version[]>>; poserTiroir: Dispatch<SetStateAction<Tiroir>>; poserContours: Dispatch<SetStateAction<boolean>>;
   poserFond: Dispatch<SetStateAction<Fond>>; dire: Dispatch<SetStateAction<string>>; poserQuitter: Dispatch<SetStateAction<boolean>>;
-  poserCurseur: Dispatch<SetStateAction<Point | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
+  poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -60,7 +61,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       annoncer('Rétabli.');
     },
     nouvelleCle: () => 'geste-' + ++compteur,
-    dire, annoncer, poserCurseur: s.poserCurseur, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
+    dire, annoncer, poserCurseur: s.poserCurseur, poserFocale: s.poserFocale, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
     poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
     demanderFermeture: () => { const e = lire(); if (e.modifie) s.poserQuitter(true); else e.fermer(); },
     fermer: () => lire().fermer(),

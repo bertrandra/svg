@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { lireDessin, modifier, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import {
-  boiteRedimensionnee, centreVisible, choisissables, coteMinimal, coteParDefaut, dansLePlan, deplacerReticule, directionDe, formeVoisine,
-  indicesDePoints, pasDeplacement, pasReticule, pointVoisin
+  basculerDansSelection, boiteDeDeuxCoins, boiteRedimensionnee, centreVisible, choisissables, coinsPosables, coteMinimal, coteParDefaut, dansLePlan,
+  deplacerReticule, directionDe, formeAuCurseur, formeVoisine, indicesDePoints, pasDeplacement, pasReticule, pointVoisin
 } from '../../../src/engine/navigation.js';
 import { au } from '../../../src/util/tableaux.js';
 
@@ -139,5 +139,46 @@ describe('le reticule des outils de trace', () => {
 
   it('pose des formes du quart du plus petit cote', () => {
     expect(coteParDefaut(vb)).toBe(25);
+  });
+});
+
+describe('les deux coins d une forme posee au clavier', () => {
+  it('veut de la largeur et de la hauteur pour une surface, de la longueur pour une ligne', () => {
+    expect(coinsPosables(false, [10, 10], [30, 30], 0.2)).toBe(true);
+    expect(coinsPosables(false, [10, 10], [30, 10], 0.2)).toBe(false);
+    expect(coinsPosables(false, [10, 10], [10, 30], 0.2)).toBe(false);
+    expect(coinsPosables(false, [10, 10], [10.1, 30], 0.2)).toBe(false);
+    expect(coinsPosables(true, [10, 10], [30, 10], 0.2)).toBe(true);
+    expect(coinsPosables(true, [10, 10], [10, 10], 0.2)).toBe(false);
+  });
+
+  it('dessine la meme boite dans les deux sens', () => {
+    expect(boiteDeDeuxCoins([10, 20], [40, 30])).toEqual({ x: 10, y: 20, l: 30, h: 10 });
+    expect(boiteDeDeuxCoins([40, 30], [10, 20])).toEqual({ x: 10, y: 20, l: 30, h: 10 });
+  });
+});
+
+describe('le curseur de la selection au clavier', () => {
+  const sel = ['f1', 'f2'];
+
+  it('est la derniere forme choisie quand rien d autre n est pose', () => {
+    expect(formeAuCurseur(TROIS, sel, null)).toBe('f2');
+    expect(formeAuCurseur(TROIS, [], null)).toBeNull();
+  });
+
+  it('suit le curseur pose pour CETTE selection, et l oublie des que la selection est un autre tableau', () => {
+    expect(formeAuCurseur(TROIS, sel, { id: 'f3', sel })).toBe('f3');
+    expect(formeAuCurseur(TROIS, [...sel], { id: 'f3', sel })).toBe('f2');
+  });
+
+  it('oublie un curseur sur une forme masquee ou verrouillee', () => {
+    expect(formeAuCurseur(modifier(TROIS, ['f3'], { visible: false }), sel, { id: 'f3', sel })).toBe('f2');
+    expect(formeAuCurseur(modifier(TROIS, ['f3'], { verrouille: true }), sel, { id: 'f3', sel })).toBe('f2');
+  });
+
+  it('bascule une forme : elle entre si elle n y etait pas, elle sort sinon', () => {
+    expect(basculerDansSelection(['f1'], 'f3')).toEqual({ sel: ['f1', 'f3'], ajoutee: true });
+    expect(basculerDansSelection(['f1', 'f3'], 'f1')).toEqual({ sel: ['f3'], ajoutee: false });
+    expect(basculerDansSelection(['f1'], 'f1')).toEqual({ sel: [], ajoutee: false });
   });
 });
