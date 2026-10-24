@@ -220,7 +220,8 @@ describe('le contexte Cricut', () => {
     await panneau(page).locator('.constat').first().waitFor();
     const hauteurs = await panneau(page).locator('button, summary').evaluateAll(l => l.filter(e => (e as HTMLElement).offsetParent !== null).map(e => [e.textContent?.trim() ?? '', e.getBoundingClientRect().height] as const));
     expect(hauteurs.length).toBeGreaterThan(5);
-    for (const [nom, h] of hauteurs) expect(h, nom).toBeGreaterThanOrEqual(40);
+    // Au centieme de pixel pres : une hauteur de 40 px se mesure parfois 39,99997 apres arrondi du navigateur.
+    for (const [nom, h] of hauteurs) expect(h, nom).toBeGreaterThanOrEqual(40 - 0.01);
     await panneau(page).getByRole('button', { name: 'Contour en forme', exact: true }).tap();
     await attend(() => dit(page)).toContain('1 contour transformé en forme.');
   });
