@@ -213,8 +213,10 @@ Ce que cette isolation ne couvre pas :
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
   ```
 - **Le focus** : à l’ouverture l’éditeur prend le focus (sur sa toile) et rend inertes (`inert`) les autres
-  éléments directs de `<body>`, pour que ni Tab ni un lecteur d’écran n’aillent derrière lui ; à la
-  fermeture il retire ce qu’il a posé (un élément déjà `inert` chez vous le reste) et redonne le focus à
+  éléments directs de `<body>`, pour que ni Tab ni un lecteur d’écran n’aillent derrière lui ; il les met aussi
+  en `visibility: hidden` (en style en ligne, remis tel quel à la fermeture) : l’éditeur les recouvre d’un fond
+  plein, et un élément inerte resterait sinon dans la pile que les outils d’audit lisent derrière chaque texte.
+  À la fermeture il retire ce qu’il a posé (un élément déjà `inert` chez vous le reste) et redonne le focus à
   l’élément de votre page qui l’avait à l’ouverture, en général votre bouton « Éditer » (s’il existe
   encore ; sinon reprenez-le dans `onFermer`). L’éditeur est un `role="dialog" aria-modal="true"`, posé
   lui-même directement dans `<body>` : un conteneur unique de votre page (`<div id="app">`) devient inerte

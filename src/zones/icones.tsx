@@ -13,7 +13,7 @@ export type NomIcone =
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
-  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'supprimer'
+  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
   | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection';
@@ -71,6 +71,7 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   oeil: [t('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'), t('M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0')],
   options: [t('M4.5 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true), t('M10.4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true), t('M16.3 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true)],
   verrouiller: [t('M5 11h14v10H5z'), t('M8 11V7a4 4 0 0 1 8 0v4')],
+  deverrouiller: [t('M5 11h14v10H5z'), t('M8 11V7a4 4 0 0 1 7.5-2')],
   supprimer: [t('M4 7h16'), t('M10 11v6'), t('M14 11v6'), t('M6 7l1 13h10l1-13'), t('M9 7V4h6v3')],
   union: [t('M4 4h11v11H4z M9 9h11v11H9z', true)],
   soustraction: [t('M4 4h11v11H4z', true), t('M9 9h11v11H9z')],

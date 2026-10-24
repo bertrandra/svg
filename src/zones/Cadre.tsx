@@ -25,10 +25,12 @@ function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
 
 /**
  * Le lien d'evitement : la toile vient apres la barre, la rangee de selection et les calques, soit des
- * dizaines de Tab. Invisible tant qu'il n'a pas le focus, c'est le premier arret du clavier.
+ * dizaines de Tab. Invisible tant qu'il n'a pas le focus, c'est le premier arret du clavier. C'est un vrai
+ * lien vers l'ancre de la toile (axe et les lecteurs d'ecran reconnaissent ainsi un lien d'evitement, ce
+ * qu'un bouton n'est pas) ; le clic est retenu pour ne pas changer l'adresse de la page d'hote.
  */
-function LienToile({ svgRef }: { svgRef: RefObject<SVGSVGElement | null> }) {
-  return <button type="button" className="saut" onClick={() => svgRef.current?.focus()}>Aller à la toile</button>;
+function LienToile({ svgRef, idToile }: { svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
+  return <a className="saut" href={'#' + idToile} onClick={e => { e.preventDefault(); svgRef.current?.focus(); }}>Aller à la toile</a>;
 }
 
 /** Le panneau de droite : l'inspecteur d'une selection, le panneau du dessin sinon (ou avec un outil de trace). */
@@ -121,19 +123,19 @@ function useFocusTiroir(cadre: RefObject<HTMLDivElement | null>, tiroir: Tiroir)
 
 export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: ProprietesCadre) {
   const { outil, tiroir } = useInterface();
-  const racine = useRef<HTMLDivElement>(null);
+  const racine = useRef<HTMLDivElement>(null), idToile = useId();
   useFocusTiroir(racine, tiroir);
   return (
     <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '')} ref={racine}>
       <Raccourcis toile={toile} />
-      <LienToile svgRef={svgRef} />
+      <LienToile svgRef={svgRef} idToile={idToile} />
       <RegionVocale />
       <Barre titre={titre} nom={nom} />
       <BarreSelection />
       <ConfirmerAbandon />
       <Calques />
       <Voile />
-      <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} />
+      <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} idToile={idToile} />
       <PanneauLateral />
       <BarreEtat />
     </div>

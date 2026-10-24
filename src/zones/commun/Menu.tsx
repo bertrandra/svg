@@ -3,7 +3,7 @@
 // position fixe sous le bouton : les barres d'outils defilent sur mobile et couperaient un panneau
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
 import { dernier, premier, suivant } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
 
@@ -47,7 +47,6 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
   const focusInitial = useRef<'premier' | 'dernier' | null>(null);
   const origine = useRef<{ top: number; left: number } | null>(null);
-  const id = useId();
 
   const fermer = useCallback((rendreFocus: boolean) => {
     poserOuvert(false);
@@ -104,9 +103,11 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (ouvert) fermer(false); else ouvrir('premier'); }
   };
 
+  // Pas d'aria-controls : avec aria-haspopup, axe le range toujours « a relire » (il ne sait pas dire si le panneau
+  // existe), et aria-haspopup + aria-expanded disent deja ce que les lecteurs d'ecran utilisent d'un menu-bouton.
   return (
     <span className={'menu-deroulant' + (className ? ' ' + className : '')}>
-      <button ref={bouton} type="button" className={libelle ? 'menu-bouton texte' : 'icone-bouton menu-bouton'} aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? id : undefined}
+      <button ref={bouton} type="button" className={libelle ? 'menu-bouton texte' : 'icone-bouton menu-bouton'} aria-haspopup="menu" aria-expanded={ouvert}
         title={etiquette} aria-label={libelle ? undefined : etiquette}
         onClick={() => { if (ouvert) fermer(false); else ouvrir(null); }} onKeyDown={clavierBouton}>
         {icone ? <Icone nom={icone} /> : null}
@@ -114,7 +115,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
-        <div ref={panneau} id={id} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
+        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
           {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
           {elements.length ? <div role="menu" aria-label={etiquette}>{elements.map(el => (
             <div key={el.id} className="menu-ligne">

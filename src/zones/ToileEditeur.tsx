@@ -7,7 +7,7 @@ import { useGestes } from './Gestes.js';
 import { Calque, Grille, surcouche } from './Toile.js';
 import { useTactile } from './Vue.js';
 
-export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null> }) {
+export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface();
   const gestes = useGestes(svgRef);
   const aide = useId();
@@ -18,8 +18,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef }:
   return (
     <div className={'editeur-toile fond-' + fond} ref={toile}>
       {/* Ce que la toile dit en prenant le focus, dont la sortie (WCAG 2.1.2) : Tab quitte la toile apres la derniere forme, ou Echap puis Tab. */}
-      <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Échap puis Tab : quitter la toile.</span>
-      <svg ref={svgRef} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={'Plan de travail de ' + titre + ' : ' + dessin.formes.length + ' forme' + (dessin.formes.length > 1 ? 's' : '')} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic}>
+      <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Échap puis Tab : quitter la toile.</span>
+      <svg ref={svgRef} id={idToile} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={'Plan de travail de ' + titre + ' : ' + dessin.formes.length + ' forme' + (dessin.formes.length > 1 ? 's' : '')} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic}>
         <g transform={`translate(${vues.vue.x} ${vues.vue.y}) scale(${z})`}>
           <defs>
             <pattern id="damier-editeur" patternUnits="userSpaceOnUse" width={16 / z} height={16 / z}>

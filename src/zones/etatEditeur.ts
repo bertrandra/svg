@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { aimanter, boiteDe, ecrireDessin, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
+import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
@@ -44,6 +45,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [message, dire] = useState('');
   const [quitter, poserQuitter] = useState(false);
   const [curseur, poserCurseur] = useState<Point | null>(null);
+  const [focale, poserFocale] = useState<Focale | null>(null);
   const [annonce, poserAnnonce] = useState<Annonce>({ texte: '', rang: 0 });
   const toile = useRef<HTMLDivElement>(null), svgRef = useRef<SVGSVGElement>(null);
   const dessin = h.present;
@@ -65,7 +67,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, modifie, refaisable: h.futur.length > 0, versions, fermer: p.fermer, stockage };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserAnnonce, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, toile }
   ));
 
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
@@ -81,8 +83,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, annonce }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, annonce]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

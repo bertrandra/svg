@@ -63,7 +63,9 @@
 .par-couleur { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; max-height: 260px; overflow: auto; }
 .editeur-calques .par-couleur li { display: flex; align-items: center; gap: 1px; border-radius: 4px; content-visibility: visible; }
 .par-couleur li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
-.par-couleur li.attenue .couleur-choix { opacity: 0.5; }
+.par-couleur li.attenue .couleur-choix .echantillon { opacity: 0.4; }
+/* Une couleur toute masquee s'attenue par son echantillon et l'italique, pas par l'opacite du texte : a 50 % le code et le compte tombaient a 2,2:1 (axe). */
+.par-couleur li.attenue .couleur-choix code { font-style: italic; }
 .par-couleur .couleur-choix { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: transparent; border: 0; padding: 3px 4px; font-weight: 400; font-size: 0.75rem; text-align: left; color: var(--encre); }
 .par-couleur .couleur-choix code { font-family: var(--mono); font-size: 0.72rem; }
 .par-couleur .couleur-choix .aide { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -93,7 +95,8 @@
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
 .editeur-calques .calque-nom { flex: 1; display: flex; align-items: center; gap: 6px; background: transparent; color: var(--encre); border: 0; padding: 3px 4px; font-weight: 400; font-size: 0.75rem; text-align: left; }
-.editeur-calques .calque-bascule { background: transparent; border: 0; color: var(--encre-douce); padding: 2px 4px; font-size: 0.75rem; }
+.editeur-calques .calque-bascule { width: 24px; height: 24px; color: var(--encre-douce); }
+.editeur-calques .calque-bascule[aria-pressed="true"] { color: var(--sur-cyan); }
 .editeur-calques .echantillon { width: 14px; height: 14px; border-radius: 3px; }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
 .editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; }
@@ -113,6 +116,8 @@
 .editeur-svg-toile .ancre-choisie { fill: var(--cyan); }
 .editeur-svg-toile .poignee { fill: var(--cyan); stroke: var(--panneau); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: move; }
 .lien-poignee { stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.focale-fond { fill: none; stroke: var(--panneau); stroke-width: 5; vector-effect: non-scaling-stroke; }
+.focale { fill: none; stroke: var(--encre); stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .trace-en-cours { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 .outil-rectangle .editeur-svg-toile, .outil-ellipse .editeur-svg-toile, .outil-etoile .editeur-svg-toile, .outil-ligne .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
 .cadre-selection { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
@@ -249,7 +254,7 @@
 }
 /* Le clavier : le lien d'evitement vers la toile (invisible hors focus, mais le premier arret de Tab),
    le reticule des outils de trace, et les panneaux qu'on ne fait que focaliser par programme. */
-.saut { position: absolute; z-index: 40; left: 8px; top: 8px; transform: translateY(-300%); background: var(--panneau); transition: none; }
+.saut { position: absolute; z-index: 40; left: 8px; top: 8px; transform: translateY(-300%); background: var(--panneau); transition: none; padding: 7px 12px; border: 1px solid var(--filet); border-radius: 6px; color: var(--encre); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
 .saut:focus { transform: none; }
 .editeur-calques:focus, .editeur-inspecteur:focus { outline: none; }
 .editeur-svg-toile .reticule line { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }
@@ -278,7 +283,7 @@
   .voile { forced-color-adjust: none; }
   .editeur-svg-toile { forced-color-adjust: none; }
   .editeur-svg-toile .plan-travail { stroke: CanvasText; }
-  .editeur-svg-toile .trace-choisi, .editeur-svg-toile .boite-choisie, .editeur-svg-toile .lien-poignee, .editeur-svg-toile .trace-en-cours, .editeur-svg-toile .cadre-selection, .editeur-svg-toile .trace-contour { stroke: Highlight; }
+  .editeur-svg-toile .focale, .editeur-svg-toile .trace-choisi, .editeur-svg-toile .boite-choisie, .editeur-svg-toile .lien-poignee, .editeur-svg-toile .trace-en-cours, .editeur-svg-toile .cadre-selection, .editeur-svg-toile .trace-contour { stroke: Highlight; }
   .editeur-svg-toile .coin, .editeur-svg-toile .ancre, .editeur-svg-toile .poignee-rotation { fill: Canvas; stroke: Highlight; stroke-width: 2; }
   .editeur-svg-toile .ancre-choisie, .editeur-svg-toile .poignee { fill: Highlight; stroke: Canvas; }
   .editeur-svg-toile .guide { stroke: LinkText; }
