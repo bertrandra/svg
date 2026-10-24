@@ -12,3 +12,7 @@ export const styleLigne = (s: Style): Style => ({ remplissage: null, contour: s.
 /** Deux points voisins au millieme du plan sont le meme point : un double-clic n'en pose qu'un. */
 export const sansDoublons = (points: readonly Point[], eps: number): Point[] =>
   points.filter((p, i) => { const q = points[i - 1]; return !q || Math.hypot(p[0] - q[0], p[1] - q[1]) > eps; });
+
+/** La phrase qui dit, a l'ouverture d'un dessin, ce que la lecture n'a pas repris ; vide quand rien ne s'est perdu. */
+export const phraseIgnores = (ignores: readonly string[]): string =>
+  ignores.length ? 'Non repris à l’ouverture : ' + ignores.join(' ; ') + '. Le rendu peut différer de l’original.' : '';

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">
+  <!-- Ligne 1 : l'alpha d'une couleur est garde (sans trait, fond et forme ne font qu'un : opacity) -->
+  <path fill="rgba(0, 128, 255, 0.5)" d="M5 5h20v20h-20z"/>
+  <path fill="hsla(120, 100%, 25%, 0.25)" d="M30 5h20v20h-20z"/>
+  <path fill="#ff000080" d="M55 5h20v20h-20z"/>
+  <path fill="#0f08" d="M80 5h20v20h-20z"/>
+  <path fill="rgb(0 128 255 / 40%)" d="M105 5h20v20h-20z"/>
+  <path fill="hsl(210 50% 40%)" d="M130 5h20v20h-20z"/>
+  <path fill="rgba(10, 20, 30, 0)" d="M155 5h20v20h-20z"/>
+  <!-- Ligne 2 : avec un trait, le fond et le trait gardent chacun leur alpha -->
+  <path fill="rgba(200, 30, 40, 0.5)" stroke="rgba(0, 0, 0, 0.25)" stroke-width="3" d="M5 30h20v20h-20z"/>
+  <path fill="#1428a0" fill-opacity="0.4" stroke="#15181d" stroke-opacity="0.6" stroke-width="2" d="M30 30h20v20h-20z"/>
+  <g opacity="0.5">
+    <path fill="rgba(0, 0, 0, 0.5)" stroke="#000" stroke-opacity="0.5" d="M55 30h20v20h-20z"/>
+  </g>
+  <path fill="none" stroke="#7b2d8e80" stroke-width="4" d="M80 30h20v20h-20z"/>
+  <!-- Ligne 3 : une epaisseur nulle reste nulle (un trait invisible ne devient pas visible) -->
+  <path fill="#f4efe6" stroke="#15181d" stroke-width="0" d="M5 55h20v20h-20z"/>
+  <path fill="#f4efe6" stroke="#15181d" stroke-width="0.0" d="M30 55h20v20h-20z"/>
+  <path fill="#f4efe6" stroke="#15181d" stroke-width="abc" d="M55 55h20v20h-20z"/>
+  <!-- Ligne 3 : les 148 noms CSS se ramenent a #rrggbb, casse libre -->
+  <path fill="steelblue" d="M80 55h20v20h-20z"/>
+  <path fill="Tomato" stroke="RebeccaPurple" stroke-width="2" d="M105 55h20v20h-20z"/>
+  <path fill="lightgoldenrodyellow" stroke="DarkSlateGrey" d="M130 55h20v20h-20z"/>
+  <path fill="currentColor" stroke="transparent" d="M155 55h20v20h-20z"/>
+</svg>

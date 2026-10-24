@@ -27,6 +27,8 @@ export interface Edition {
   outil: Outil;
   point: number | null;
   nuancier: readonly Teinte[];
+  /** Ce que la lecture du SVG ouvert n'a pas repris (voir `lireDessin`) ; vide pour un dessin sans perte. */
+  ignores: readonly string[];
   bibliotheque: Bibliotheque | 'a-charger' | null;
   style: Style;
   trace: readonly Point[];

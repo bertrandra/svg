@@ -91,8 +91,9 @@ const CAS: readonly Cas[] = [
   { nom: 'elements' },
   { nom: 'evenodd-opacite' },
   { nom: 'peintures' },
-  // Des defauts connus, ecrits tels quels : les corriger deplace un octet ecrit, donc se fait en version majeure.
-  { nom: 'limites-connues' },
+  // Alpha des couleurs, epaisseur nulle, noms CSS : trois defauts de lecture corriges en version majeure (ils
+  // deplacaient ou perdaient un octet ecrit). Ce cas montre l'ecriture juste.
+  { nom: 'fidelite-lecture' },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.

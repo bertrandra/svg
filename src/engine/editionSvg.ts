@@ -20,7 +20,9 @@ export {
   boiteChemin, unir, seCroisent, boiteForme, boiteDe
 } from './edition/geometrie.js';
 
-export { lirePeinture, lireDessin } from './edition/lecture.js';
+export { lirePeinture, lirePeintureAlpha, type PeintureLue } from './edition/peinture.js';
+export { lireDessin, type DessinLu, type LectureDessin } from './edition/lecture.js';
+export { opaciteDuRemplissage, opaciteDuContour } from './edition/opacites.js';
 
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
 
