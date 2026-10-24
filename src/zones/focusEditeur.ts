@@ -17,14 +17,14 @@ function premierFocus(racine: HTMLElement): HTMLElement | null {
  * element inerte reste dans la pile que les outils d'audit lisent derriere chaque texte, et le contraste d'un
  * texte de l'editeur y devenait « impossible a determiner ». Le style en ligne de l'hote est remis tel quel.
  */
-function isolerLePeuple(racine: HTMLElement, cacher = true): () => void {
+function isolerLePeuple(racine: HTMLElement): () => void {
   const touches: Array<{ e: HTMLElement; visibilite: string }> = [];
   // Les freres de la racine : ceux du corps pour l'editeur, ceux de l'editeur pour une boite posee dedans.
   for (const frere of Array.from((racine.parentElement ?? document.body).children)) {
     if (!(frere instanceof HTMLElement) || frere === racine || frere.inert) continue;
     touches.push({ e: frere, visibilite: frere.style.visibility });
     frere.inert = true;
-    if (cacher) frere.style.visibility = 'hidden';
+    frere.style.visibility = 'hidden';
   }
   return () => { for (const t of touches) { t.e.inert = false; t.e.style.visibility = t.visibilite; } };
 }
@@ -45,8 +45,8 @@ export function useFocusEditeur(racine: RefObject<HTMLDivElement | null>): void 
 }
 
 /**
- * Une boite de dialogue modale (A propos et credits) : a son ouverture elle prend le focus et rend inerte ce qui l'entoure (ni Tab ni
- * lecteur d'ecran n'y vont) ; Echap la ferme, et le focus retourne a ce qui l'avait. Echap est pris en phase de capture sur la
+ * Une boite de dialogue modale (A propos et credits) : a son ouverture elle prend le focus et rend inerte, et cache, ce qui l'entoure (ni Tab ni
+ * lecteur d'ecran n'y vont, et l'audit de contraste ne lit que la boite) ; Echap la ferme, et le focus retourne a ce qui l'avait. Echap est pris en phase de capture sur la
  * fenetre, quel que soit l'element focalise : sans cela, l'Echap de la boite fermerait aussi l'editeur derriere elle
  * (Clavier.ts lit la meme touche). Tab ne piege rien : la boite se quitte par Echap ou « Fermer », et Tab, inerte autour, sort au navigateur.
  * `racine` est ce qui est pose a cote de ce qu'elle masque (le voile), `cible` la boite qui prend le focus.
@@ -58,7 +58,7 @@ export function useFocusDialogue(racine: RefObject<HTMLElement | null>, cible: R
     const el = racine.current;
     if (!el) return;
     const avant = document.activeElement instanceof HTMLElement || document.activeElement instanceof SVGElement ? document.activeElement : null;
-    const retablir = isolerLePeuple(el, false);
+    const retablir = isolerLePeuple(el);
     (cible.current ?? el).focus({ preventScroll: true });
     const touche = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
