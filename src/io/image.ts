@@ -36,7 +36,7 @@ export const COTE_MAX = 1024;
 /** La reduction sur laquelle les couleurs se comptent : assez pour les aplats, vite calculee. */
 const COTE_EXTRACTION = 96;
 
-function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
+export function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
   return new Promise((ok, ko) => {
     const url = URL.createObjectURL(fichier), img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); ok(img); };
@@ -45,7 +45,7 @@ function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
   });
 }
 
-function toile(l: number, h: number): { t: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+export function toile(l: number, h: number): { t: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const t = document.createElement('canvas');
   t.width = Math.max(1, l); t.height = Math.max(1, h);
   const ctx = t.getContext('2d', { willReadFrequently: true });
