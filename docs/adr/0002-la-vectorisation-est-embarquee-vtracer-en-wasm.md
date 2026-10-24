@@ -10,13 +10,16 @@ l'image en vecteurs, dans le navigateur, sans service distant, et de façon repr
 
 ## Décision
 
-1. **`@visioncortex/vtracer`, épinglé à `1.0.0-alpha.4`, embarqué dans la page.** Son WASM tient
-   dans le fichier unique (environ 880 Ko de plus au moteur). La colle livrée est faite pour Node
+1. **`@visioncortex/vtracer`, épinglé à `1.0.0-alpha.4`.** La colle livrée est faite pour Node
    (lecture synchrone du `.wasm`, que Chrome refuse au-delà de 4 Ko sur le fil principal) : la
-   construction (`scripts/construire.mjs`) remplace ce bloc par une initialisation asynchrone, et
+   construction (`scripts/vtracer.mjs`) remplace ce bloc par une initialisation asynchrone, et
    échoue si le motif n'est plus trouvé. Un test garde ce motif.
-2. **Le module se charge à la demande** (`io/vtracer.ts`, `import()` différé et mémorisé, remis à
-   zéro sur échec) : l'ouverture de la page ne paie rien tant qu'on ne vectorise pas.
+2. **Le traceur est un script annexe, chargé à la demande** : `dist/vtracer.js` (environ 880 Ko, wasm
+   embarqué) se charge par une balise `<script>` au premier tracé (`io/vtracer.ts`, mémorisé, remis à
+   zéro sur échec), comme la bibliothèque et les fontes, donc aussi depuis `file://`. La page elle-même
+   passe de 1,6 à 0,75 Mo. S'il manque à côté de la page, le message dit où le poser. À l'origine
+   (22 octobre) il était embarqué dans la page ; ce changement ne touche pas le SVG produit, comparé
+   à l'octet sur plusieurs combinaisons de réglages.
 3. **Le réglage est pur et déterministe.** `engine/vectorisation.ts` traduit trois modes
    (**aplats** : au plus huit couleurs, celles extraites de l'image ; **trait** : noir et blanc ;
    **fidèle** : plus de nuances) et trois grains (fin, normal, lisse) en options du traceur,

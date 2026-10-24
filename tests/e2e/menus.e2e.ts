@@ -1,0 +1,144 @@
+// Les menus de la barre de l'editeur (ADR-0006) : un vrai menu, au clavier comme a la souris.
+
+import { describe, expect, it } from 'vitest';
+import { aLeFocus, attend, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+
+describe('menus de la barre', () => {
+  const navigateur = pilote();
+
+  /** L'editeur ouvert sur l'exemple, pret a recevoir clics et touches. */
+  async function editeur() {
+    const session = await navigateur.ouvrir();
+    await ouvrirExemple(session.page);
+    return session.page;
+  }
+
+  it('annonce ses quatre menus comme des menus', async () => {
+    const page = await editeur();
+    const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
+      l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
+    );
+    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Fichier']);
+  });
+
+  it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {
+    const page = await editeur();
+    const vue = await ouvrirMenu(page, 'Vue');
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('true');
+    const panneau = page.getByRole('menu', { name: 'Vue' });
+    await attend(() => panneau.isVisible()).toBe(true);
+    expect(await page.locator('.menu-panneau [role^=menuitem]').count()).toBeGreaterThanOrEqual(9);
+
+    await page.keyboard.press('Escape');
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
+    await attend(() => panneau.count()).toBe(0);
+    await attend(() => aLeFocus(vue)).toBe(true);
+    // Echap ferme le menu, pas l'editeur (c'est aussi le raccourci de « Fermer l'editeur »).
+    expect(await page.locator('.editeur-cadre').count()).toBe(1);
+  });
+
+  it('se ferme sur un clic au-dehors', async () => {
+    const page = await editeur();
+    const vue = await ouvrirMenu(page, 'Vue');
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('true');
+    await page.locator('.editeur-etat').click();
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('se parcourt aux fleches, debut, fin, et se ferme sur Tab', async () => {
+    const page = await editeur();
+    const vue = page.locator('.menu-bouton', { hasText: 'Vue' });
+    await vue.focus();
+
+    // Fleche bas sur le bouton : le menu s'ouvre et le focus va au premier element.
+    await page.keyboard.press('ArrowDown');
+    const elements = page.locator('.menu-panneau [role^=menuitem]');
+    await attend(() => elements.count()).toBeGreaterThanOrEqual(9);
+    await attend(() => aLeFocus(elements.nth(0))).toBe(true);
+
+    await page.keyboard.press('ArrowDown');
+    // Le troisieme element (« Zoomer sur la selection ») est inactif : la fleche le saute.
+    await attend(() => aLeFocus(elements.nth(1))).toBe(true);
+    await page.keyboard.press('ArrowDown');
+    await attend(() => aLeFocus(elements.nth(3))).toBe(true);
+
+    await page.keyboard.press('End');
+    await attend(() => aLeFocus(elements.last())).toBe(true);
+    await page.keyboard.press('Home');
+    await attend(() => aLeFocus(elements.first())).toBe(true);
+
+    await page.keyboard.press('Tab');
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('ouvre par Fleche haut sur le dernier element', async () => {
+    const page = await editeur();
+    await page.locator('.menu-bouton', { hasText: 'Vue' }).focus();
+    await page.keyboard.press('ArrowUp');
+    const elements = page.locator('.menu-panneau [role^=menuitem]');
+    await attend(() => aLeFocus(elements.last())).toBe(true);
+  });
+
+  it('dit l\'etat des elements a deux etats, et le suit', async () => {
+    const page = await editeur();
+    const vue = await ouvrirMenu(page, 'Vue');
+    const grille = page.getByRole('menuitemcheckbox', { name: /Grille magnétique/ });
+    const aimants = page.getByRole('menuitemcheckbox', { name: /Aimants/ });
+    expect(await grille.getAttribute('aria-checked')).toBe('false');
+    expect(await aimants.getAttribute('aria-checked')).toBe('true');
+
+    await grille.click();
+    // Un clic sur un element ferme le menu et lui rend le focus.
+    await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
+    await vue.click();
+    await attend(() => grille.getAttribute('aria-checked')).toBe('true');
+    await page.keyboard.press('Escape');
+
+    // Le raccourci G dit la meme chose que le menu.
+    await page.keyboard.press('g');
+    await vue.click();
+    await attend(() => grille.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('range les formes derriere un seul outil dont le bouton retient la derniere', async () => {
+    const page = await editeur();
+    const cadre = page.locator('.editeur-cadre');
+    await page.locator('.chevron-seul button').click();
+    await page.getByRole('menuitemcheckbox', { name: /Étoile/ }).click();
+    await attend(() => cadre.evaluate(e => e.classList.contains('outil-etoile'))).toBe(true);
+
+    // Retour a la selection au clavier, puis le bouton reprend l'etoile sans rouvrir le menu.
+    await page.keyboard.press('v');
+    await attend(() => cadre.evaluate(e => e.classList.contains('outil-selection'))).toBe(true);
+    const bouton = page.locator('.outil-formes .icone-bouton').first();
+    expect(await bouton.getAttribute('aria-label')).toMatch(/^Étoile/);
+    await bouton.click();
+    await attend(() => cadre.evaluate(e => e.classList.contains('outil-etoile'))).toBe(true);
+  });
+
+  it('range l\'edition derriere son menu, avec ses raccourcis et ses elements inactifs', async () => {
+    const page = await editeur();
+    await ouvrirMenu(page, 'Édition');
+    const annuler = page.getByRole('menuitem', { name: /Annuler/ });
+    expect(await annuler.isDisabled()).toBe(true);
+    expect(await texteDe(annuler)).toContain('Ctrl+Z');
+    expect(await page.getByRole('menuitem', { name: /Tout sélectionner/ }).isDisabled()).toBe(false);
+    expect(await page.getByRole('menuitem', { name: /Supprimer/ }).isDisabled()).toBe(true);
+
+    await page.getByRole('menuitem', { name: /Tout sélectionner/ }).click();
+    await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
+    await ouvrirMenu(page, 'Édition');
+    await attend(() => page.getByRole('menuitem', { name: /Supprimer/ }).isDisabled()).toBe(false);
+  });
+
+  it('porte les exports dans Fichier sans que le choix d\'une largeur ne le ferme', async () => {
+    const page = await editeur();
+    const fichier = await ouvrirMenu(page, 'Fichier');
+    const boutons = page.locator('.menu-panneau .contenu-export button');
+    expect(await boutons.count()).toBe(5);
+    const largeur = page.locator('.menu-panneau select[aria-label="Largeur du PNG"]');
+    await largeur.selectOption('2048');
+    expect(await fichier.getAttribute('aria-expanded')).toBe('true');
+    expect(await largeur.inputValue()).toBe('2048');
+  });
+});

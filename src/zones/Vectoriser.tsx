@@ -5,9 +5,10 @@
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { TOLERANCE_DEFAUT } from '../engine/detourage.js';
-import { cleTraitement } from '../engine/vectorisation.js';
+import { cleTraitement, type Traceur } from '../engine/vectorisation.js';
 import { pause } from '../io/fichiers.js';
 import { apercuDetoure, lireSource, resumeConversion, traiterImage, TRAITEMENT_DEFAUT, type ImageConvertie, type SourceImage, type Traitement } from '../io/image.js';
+import { chargerTraceur, traceurCharge } from '../io/vtracer.js';
 import { AtelierResultat, type Essai } from './AtelierResultat.js';
 
 const TOLERANCES: ReadonlyArray<readonly [number, string]> = [[0.04, 'Serrée : seul le fond exact'], [TOLERANCE_DEFAUT, 'Normale'], [0.16, 'Large : un fond irrégulier, une ombre']];
@@ -35,9 +36,20 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
   const lancer = useCallback(async (image: SourceImage, traitement: Traitement) => {
     const mien = ++jeton.current;
     poserEnCours(true);
+    // Le traceur ne se charge qu'ici, au premier trace : deposer une image, la detourer ou l'envelopper
+    // ne le demande pas. Son chargement se dit avant, et ses echecs avec la marche a suivre.
+    let traceur: Traceur | undefined;
+    if (traitement.vecteurs && !traceurCharge()) {
+      dire('Chargement du traceur…');
+      try { traceur = await chargerTraceur(); } catch (e) {
+        if (mien === jeton.current) { poserEnCours(false); dire(e instanceof Error ? e.message : String(e)); }
+        return;
+      }
+      if (mien !== jeton.current) return;
+    }
     dire(traitement.vecteurs ? 'Vectorisation…' : 'Détourage…');
     await pause();
-    const r = await traiterImage(image, traitement);
+    const r = await traiterImage(image, traitement, traceur);
     if (mien !== jeton.current) return;
     poserEnCours(false);
     if ('erreur' in r) { dire(r.erreur); return; }

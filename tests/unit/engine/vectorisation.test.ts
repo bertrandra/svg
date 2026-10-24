@@ -102,7 +102,7 @@ describe('vectoriser un logo detoure (vtracer)', () => {
   });
 
   it('se construit pour le navigateur : la colle du paquet charge toujours son .wasm comme le script de construction l attend', () => {
-    // scripts/construire.mjs remplace ces lignes ; une autre version du paquet doit se revoir.
+    // scripts/vtracer.mjs remplace ces lignes ; une autre version du paquet doit se revoir.
     const colle = readFileSync(resolve(__dirname, '../../../node_modules/@visioncortex/vtracer/pkg/vtracer_wasm.js'), 'utf8');
     expect(colle).toContain("const wasmBytes = require('fs').readFileSync(wasmPath);");
     expect(colle).toContain('let wasmInstance = new WebAssembly.Instance(wasmModule, __wbg_get_imports());');

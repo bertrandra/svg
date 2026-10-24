@@ -1,5 +1,6 @@
 # Integration continue : ce qu'un contributeur lance avant de pousser, lance pour lui.
-# Chaque etape est une commande de package.json ; aucune ne demande le reseau.
+# Chaque etape est une commande de package.json. Seul le job `navigateur` demande le reseau, pour
+# telecharger Chromium.
 name: CI
 
 on:
@@ -32,3 +33,22 @@ jobs:
         run: npm test
       - name: Page autonome (le moteur se compile pour la page)
         run: npm run construire
+
+  # Les tests de navigateur (tests/e2e) : la page construite, ouverte dans un vrai Chromium. A part de
+  # `verifier` pour que `npm test` reste rapide et sans navigateur ; les deux jobs tournent ensemble.
+  navigateur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Construire la page, la bibliothèque et les fontes
+        run: npm run construire
+      - name: Chromium de Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Tests de navigateur
+        run: npm run e2e
