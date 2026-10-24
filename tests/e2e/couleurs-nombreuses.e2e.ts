@@ -36,6 +36,18 @@ describe('calques par couleur, deux mille couleurs', () => {
   const lignes = (page: Page) => page.locator('ul.par-couleur > li:not([data-cale])');
   const defilement = (page: Page) => liste(page).evaluate(u => u.scrollTop);
   const defilerA = (page: Page, haut: number) => liste(page).evaluate((u, h) => { u.scrollTop = h; }, haut);
+  /**
+   * Fait defiler la liste, puis attend que les lignes dessinees recouvrent la zone visible : la fenetre se
+   * refait apres l'evenement de defilement, et sur une machine lente le DOM lu tout de suite est celui d'avant
+   * (on y choisirait une ligne qui disparait avant le clic).
+   */
+  const defilerEtAttendre = async (page: Page, haut: number) => {
+    await defilerA(page, haut);
+    await attend(() => liste(page).evaluate(u => {
+      const z = u.getBoundingClientRect();
+      return Array.from(u.querySelectorAll(':scope > li:not([data-cale])')).some(e => { const r = e.getBoundingClientRect(); return r.bottom > z.top && r.top < z.bottom; });
+    })).toBe(true);
+  };
   const rang = (page: Page, i: number) => page.locator(`ul.par-couleur > li[aria-posinset="${i + 1}"]`);
   /** Les rangs des lignes dessinees (de 1 a N). */
   const rangsDessines = (page: Page) => lignes(page).evaluateAll(l => l.map(e => Number(e.getAttribute('aria-posinset'))));
@@ -171,7 +183,7 @@ describe('calques par couleur, deux mille couleurs', () => {
 
   it('masque, verrouille et choisit une couleur loin dans la liste, sans que la liste bouge', async () => {
     const page = await editeur();
-    await defilerA(page, 25000);
+    await defilerEtAttendre(page, 25000);
     // Une ligne entierement visible vers le milieu de la zone.
     const cible = await liste(page).evaluate(u => {
       const z = u.getBoundingClientRect();
@@ -209,7 +221,7 @@ describe('calques par couleur, deux mille couleurs', () => {
 
   it('ouvre le menu d’une ligne lointaine, et Echap rend le focus a son bouton', async () => {
     const page = await editeur();
-    await defilerA(page, 40000);
+    await defilerEtAttendre(page, 40000);
     const rangs = await rangsDessines(page);
     const i = (rangs[Math.floor(rangs.length / 2)] ?? 1) - 1, nom = NOM(i);
     // Des selecteurs CSS : une requete par role parcourt tout l'arbre d'accessibilite, long avec deux mille formes.
