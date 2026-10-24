@@ -3,7 +3,7 @@
 // l'editeur, pour inserer une forme dans le dessin en cours.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { appliquerCorrections, chercher, type Correction, type Corrections, type EntreeBibliotheque, type Evenement, type FamilleEvenement } from '../model/bibliotheque.js';
+import { appliquerCorrections, chercher, lireCorrections, type Correction, type Corrections, type EntreeBibliotheque, type Evenement, type FamilleEvenement } from '../model/bibliotheque.js';
 import { chargerBibliotheque, type Bibliotheque } from '../io/bibliotheque.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { useStockage } from './contexteStockage.js';
@@ -60,7 +60,7 @@ export function RechercheFormes({ bibliotheque, choisir, ajouter, corriger = fal
   const [evenement, poserEvenement] = useState<string | null>(null);
   const [page, poserPage] = useState(1);
   const stockage = useStockage();
-  const [corrections, poserCorrections] = useState<Corrections>(() => (corriger ? stockage?.lire<Corrections>(CLE_CORRECTIONS) ?? {} : {}));
+  const [corrections, poserCorrections] = useState<Corrections>(() => (corriger ? lireCorrections(stockage?.lire<unknown>(CLE_CORRECTIONS)) : {}));
   const [enEdition, poserEnEdition] = useState<string | null>(null);
   const entrees = useMemo(() => (Object.keys(corrections).length ? appliquerCorrections(bibliotheque.entrees, corrections) : bibliotheque.entrees), [bibliotheque, corrections]);
   const resultats = useMemo(() => chercher(entrees, texte, evenement), [entrees, texte, evenement]);

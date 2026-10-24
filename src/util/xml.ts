@@ -28,7 +28,7 @@ export interface LimitesXml {
 export const LIMITES_XML: LimitesXml = { caracteres: 64 * 1024 * 1024, noeuds: 1_000_000, profondeur: 1024, attributs: 1000, nom: 256 };
 
 /** Un attribut tel qu'il est ecrit : ses blancs d'avant, son nom, sa valeur brute (entites non decodees) et son guillemet. */
-export interface AttributBrut { readonly blancs: string; readonly nom: string; readonly valeur: string; readonly guillemet: '"' | "'" | ''; readonly aValeur: boolean }
+export interface AttributBrut { readonly blancs: string; readonly corps: string; readonly nom: string; readonly valeur: string; readonly guillemet: '"' | "'" | ''; readonly aValeur: boolean }
 
 export type Jeton =
   | { readonly t: 'debut'; readonly nom: string; readonly attributs: readonly AttributBrut[]; readonly queue: string; readonly autoFermant: boolean; readonly profondeur: number }
@@ -81,6 +81,11 @@ function finDoctype(t: string, debut: number): { fin: number; entites: boolean }
   throw new ErreurXml('le DOCTYPE n’est jamais fermé');
 }
 
+/** L'index qui suit un DOCTYPE commencant en `debut` (« <! »), ou -1 s'il n'est pas ferme. Sert a trouver la racine sans etre trompe par son sous-ensemble interne. */
+export function apresDoctype(texte: string, debut: number): number {
+  try { return finDoctype(texte, debut).fin + 1; } catch (e) { if (e instanceof ErreurXml) return -1; throw e; }
+}
+
 /** Une balise ouvrante lue depuis `lt` (le « < ») : son nom, ses attributs, et ou elle finit. */
 function lireBalise(t: string, lt: number, lim: LimitesXml): { nom: string; attributs: AttributBrut[]; queue: string; autoFermant: boolean; fin: number } {
   const n = t.length;
@@ -108,19 +113,19 @@ function lireBalise(t: string, lt: number, lim: LimitesXml): { nom: string; attr
     const blancs = t.slice(debutBlancs, d);
     let k = j;
     while (k < n && estBlanc(t.charCodeAt(k))) k++;
-    if (t.charCodeAt(k) !== 61) { attributs.push({ blancs, nom: nomAttr, valeur: '', guillemet: '', aValeur: false }); continue; }
+    if (t.charCodeAt(k) !== 61) { attributs.push({ blancs, corps: nomAttr, nom: nomAttr, valeur: '', guillemet: '', aValeur: false }); continue; }
     k++;
     while (k < n && estBlanc(t.charCodeAt(k))) k++;
     const q = t.charCodeAt(k);
     if (q === 34 || q === 39) {
       const f = t.indexOf(q === 34 ? '"' : "'", k + 1);
       if (f < 0) throw new ErreurXml('une valeur d’attribut de « ' + court(nom) + ' » n’est jamais fermée');
-      attributs.push({ blancs, nom: nomAttr, valeur: t.slice(k + 1, f), guillemet: q === 34 ? '"' : "'", aValeur: true });
+      attributs.push({ blancs, corps: t.slice(d, f + 1), nom: nomAttr, valeur: t.slice(k + 1, f), guillemet: q === 34 ? '"' : "'", aValeur: true });
       j = f + 1;
     } else {
       let f = k;
       while (f < n && !estBlanc(t.charCodeAt(f)) && t.charCodeAt(f) !== 62) f++;
-      attributs.push({ blancs, nom: nomAttr, valeur: t.slice(k, f), guillemet: '', aValeur: true });
+      attributs.push({ blancs, corps: t.slice(d, f), nom: nomAttr, valeur: t.slice(k, f), guillemet: '', aValeur: true });
       j = f;
     }
   }

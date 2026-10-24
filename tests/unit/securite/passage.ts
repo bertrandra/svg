@@ -28,7 +28,7 @@ export interface Passage {
 /** Un SVG ecrit ne doit pas grossir sans mesure : un clone de <use> coute au plus quelques centaines d'octets. */
 export const tailleMax = (entree: number): number => 12 * entree + 6_000_000;
 
-export function passer(texte: string): Passage {
+export function passer(texte: string, budgetMs = BUDGET_MS, deuxChemins = true): Passage {
   const defauts: string[] = [], refus: string[] = [];
   let plusLong = { ms: 0, appel: '' }, plantage: string | null = null, ouvre = false, nettoye: string | null = null, ecrit: string | null = null;
 
@@ -76,10 +76,10 @@ export function passer(texte: string): Passage {
     }
   }
   // 2. Le chemin de l'embarquement : l'hote donne son texte tel quel, sans nettoyage prealable.
-  const direct = appeler('lireDessin(brut)', () => lireDessin(texte));
+  const direct = deuxChemins ? appeler('lireDessin(brut)', () => lireDessin(texte)) : undefined;
   if (direct !== undefined) {
     if ('erreur' in direct) refus.push(direct.erreur); else verifierEcriture('embarque', direct.dessin);
   }
-  if (plusLong.ms > BUDGET_MS) defauts.push('temps : ' + plusLong.appel + ' a pris ' + Math.round(plusLong.ms) + ' ms (budget ' + BUDGET_MS + ' ms)');
+  if (plusLong.ms > budgetMs) defauts.push('temps : ' + plusLong.appel + ' a pris ' + Math.round(plusLong.ms) + ' ms (budget ' + budgetMs + ' ms)');
   return { plusLong, plantage, defauts, refus, ouvre, nettoye, ecrit };
 }

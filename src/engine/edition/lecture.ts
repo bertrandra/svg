@@ -11,7 +11,7 @@ import { lireOpacite } from './opacites.js';
 import { heriter, refusDe } from './heritage.js';
 import { analyser, proprietesDe } from './cascade.js';
 import { visiter, type Parcours } from './parcours.js';
-import { COORDONNEE_MAX, coordonneeSaine, REGLES_FOIS_ELEMENTS_MAX } from './limites.js';
+import { COORDONNEE_MAX, coordonneeSaine, CONFRONTATIONS_MAX } from './limites.js';
 
 /** Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu. */
 export interface DessinLu { dessin: DessinSvg; ignores: readonly string[] }
@@ -45,10 +45,7 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   if (!plan) return { erreur: 'Ce SVG n’a ni viewBox ni dimensions.' };
   if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ') : corrigez son viewBox.' };
   const analyse = analyser(racine);
-  if (analyse.regles.length * analyse.parents.size > REGLES_FOIS_ELEMENTS_MAX) {
-    return { erreur: 'Ce SVG a trop de règles de style (' + analyse.regles.length.toLocaleString('fr-FR') + ') pour ses ' + analyse.parents.size.toLocaleString('fr-FR') + ' éléments : simplifiez-le dans votre logiciel.' };
-  }
-  const p: Parcours = { analyse, plan, formes: [], refus: new Set(), actifs: new Set([racine]), clones: 0, trop: false };
+  const p: Parcours = { analyse, plan, formes: [], refus: new Set(), actifs: new Set([racine]), clones: 0, trop: false, donnees: 0 };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
@@ -57,6 +54,9 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   if (refusRacine) p.refus.add(refusRacine);
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };
   racine.enfants.forEach(e => visiter(p, e, ctx));
+  if (analyse.effort.depasse) {
+    return { erreur: 'Ce SVG a trop de règles de style (' + analyse.regles.length.toLocaleString('fr-FR') + ') pour ses éléments (plus de ' + (CONFRONTATIONS_MAX / 1e6).toLocaleString('fr-FR') + ' millions de confrontations) : simplifiez-le dans votre logiciel.' };
+  }
   if (p.refus.size) return { erreur: 'Ce SVG contient ' + [...p.refus].join(', ') + ' : il ne s’édite pas ici. Vectorisez l’image, ou simplifiez-le dans votre logiciel.' };
   // Une forme sans aucune commande (chemin vide, nombre illisible) ne se dessine pas : un SVG qui n'en a que de telles formes est vide.
   const formes = p.formes.filter(f => f.d.length > 0);

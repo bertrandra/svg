@@ -16,10 +16,20 @@ export const COORDONNEE_MAX = 1e9;
 export const PROFONDEUR_MARCHE_MAX = 1500;
 
 /**
- * Regles de feuille x elements du dessin : chaque element est confronte a chaque regle. Un Illustrator charge compte 1 000
- * regles pour 5 000 elements (5e6) ; 2e7 se juge en une seconde environ, au-dela l'onglet gele.
+ * Confrontations d'une regle de feuille a un element, au total. Les regles sont rangees par classe, identifiant et type : un
+ * element n'est confronte qu'a celles qui peuvent le viser. Un Illustrator compte 1 000 regles pour 5 000 elements et en fait
+ * 150 000 (quelques regles par classe, par element) ; 2e6 est treize fois plus et se juge en une seconde environ (chaque regle
+ * qui vise tient aussi au tri par specificite). Au-dela (100 000 regles « * » sur 1 000 formes), l'onglet gele.
  */
-export const REGLES_FOIS_ELEMENTS_MAX = 2e7;
+export const CONFRONTATIONS_MAX = 2e6;
+
+/**
+ * Caracteres de trace (attributs `d` et `points`) lus en tout, chaque clone <use> recomptant ceux de sa cible. Le temps de
+ * lecture est proportionnel : un million de points (7 Mo) se lit et s'ecrit en une dizaine de secondes, et sans cette borne un
+ * seul chemin d'un Mo clone 20 000 fois (la borne des clones) en demanderait des heures. Une vectorisation de 5 000 formes en
+ * compte 2 Mo : la borne est six fois plus haute.
+ */
+export const DONNEES_TRACE_MAX = 8_000_000;
 
 /** Vrai quand un nombre est une coordonnee que la lecture accepte. */
 export const coordonneeSaine = (v: number): boolean => v >= -COORDONNEE_MAX && v <= COORDONNEE_MAX;

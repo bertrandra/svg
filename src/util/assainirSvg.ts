@@ -10,7 +10,7 @@
 //
 // Pur : aucun DOM, aucune horloge.
 
-import { decoderEntites, echapperAttribut, ErreurXml, parcourirXml, phraseErreurXml, type AttributBrut, type Jeton } from './xml.js';
+import { decoderEntites, echapperAttribut, ErreurXml, apresDoctype, parcourirXml, phraseErreurXml, type AttributBrut, type Jeton } from './xml.js';
 
 export const ESPACE_SVG = 'http://www.w3.org/2000/svg';
 /** L'attribut inerte qui garde, sur un <use>, le renvoi externe que le nettoyage retire : la lecture le refuse en le nommant. */
@@ -65,13 +65,33 @@ function resoudreCss(css: string): string {
   });
 }
 
+/**
+ * Une reference locale `url(#id)` reste ; toute autre adresse devient « none », et un `url(` jamais ferme devient `none(`. Un seul
+ * balayage : chaque parenthese fermante n'est cherchee qu'une fois (une expression reguliere `url\(…[^)]*\)` relirait tout le reste du
+ * texte a chaque `url(` non ferme, soit un temps quadratique sur une feuille hostile).
+ */
+function neutraliserUrl(s: string): string {
+  const re = /url\s*\(/gi;
+  const morceaux: string[] = [];
+  let dernier = 0, fermante = -2;
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    const interieur = re.lastIndex;
+    if (fermante !== -1 && fermante < interieur) fermante = s.indexOf(')', interieur);
+    if (fermante < 0) { morceaux.push(s.slice(dernier, m.index), 'none('); dernier = interieur; continue; }
+    if (/^\s*['"]?\s*#/.test(s.slice(interieur, Math.min(fermante, interieur + 64)))) continue;
+    morceaux.push(s.slice(dernier, m.index), 'none');
+    dernier = fermante + 1;
+    re.lastIndex = dernier;
+  }
+  if (dernier === 0) return s;
+  morceaux.push(s.slice(dernier));
+  return morceaux.join('');
+}
+
 /** Une passe de nettoyage ; rend le meme texte quand il n'y a plus rien a retirer. */
 function passeCss(s: string): string {
-  return s
+  return neutraliserUrl(s)
     .replace(/@import[^;]*;?/gi, '')
-    // Une reference locale `url(#id)` reste ; toute autre adresse, y compris celle d'un url( jamais ferme, devient « none ».
-    .replace(/url\s*\(\s*(['"]?)([^)]*)\)/gi, (m: string, _q: string, interieur: string) => (/^\s*#/.test(interieur) ? m : 'none'))
-    .replace(/url\s*\((?!\s*['"]?\s*#)/gi, 'none(')
     .replace(/expression\s*\(/gi, 'none(')
     .replace(/(?:-moz-binding|behavior)\s*:[^;}]*/gi, '')
     .replace(/(?:-webkit-)?(?:image-set|cross-fade)\s*\(/gi, 'none(')
@@ -126,6 +146,8 @@ interface ContexteBalise { readonly nom: string; readonly racine: boolean; reado
 
 /** Un attribut reemis : le guillemet d'origine quand la valeur le permet, sinon des guillemets doubles avec ceux de la valeur echappes. */
 function emis(a: AttributBrut, valeur: string): string {
+  // Une valeur que rien n'a touche garde son ecriture d'origine (blancs autour du « = » compris).
+  if (valeur === a.valeur && a.guillemet !== '') return a.blancs + a.corps;
   if (a.guillemet === "'" && !valeur.includes("'")) return a.blancs + a.nom + "='" + valeur + "'";
   return a.blancs + a.nom + '="' + valeur.replace(/"/g, '&quot;') + '"';
 }
@@ -189,16 +211,20 @@ function lireViewBox(v: string | undefined): [number, number, number, number] | 
 
 export interface SvgAssaini { readonly svg: string; readonly ratio: number }
 
-/** Le debut du premier element <svg>, en sautant commentaires, CDATA, instructions et DOCTYPE ; -1 s'il n'y en a pas. */
+/** Le debut du premier element <svg>, en sautant commentaires, CDATA, instructions et DOCTYPE (un balayage, lineaire) ; -1 s'il n'y en a pas. */
 function trouverRacine(t: string): number {
-  const re = /<svg[\s/>]/gi;
-  for (let m = re.exec(t); m; m = re.exec(t)) {
-    // Un « <svg » dans un commentaire ou une section CDATA qui le precede n'est pas la racine.
-    const avant = t.lastIndexOf('<!--', m.index), finAvant = avant < 0 ? -1 : t.indexOf('-->', avant + 4);
-    if (avant >= 0 && (finAvant < 0 || finAvant > m.index)) { re.lastIndex = finAvant < 0 ? t.length : finAvant + 3; continue; }
-    const cd = t.lastIndexOf('<![CDATA[', m.index), finCd = cd < 0 ? -1 : t.indexOf(']]>', cd + 9);
-    if (cd >= 0 && (finCd < 0 || finCd > m.index)) { re.lastIndex = finCd < 0 ? t.length : finCd + 3; continue; }
-    return m.index;
+  let i = 0;
+  while (i < t.length) {
+    const lt = t.indexOf('<', i);
+    if (lt < 0) return -1;
+    let suite = -2;
+    if (t.startsWith('<!--', lt)) { const f = t.indexOf('-->', lt + 4); suite = f < 0 ? -1 : f + 3; }
+    else if (t.startsWith('<![CDATA[', lt)) { const f = t.indexOf(']]>', lt + 9); suite = f < 0 ? -1 : f + 3; }
+    else if (t.startsWith('<?', lt)) { const f = t.indexOf('?>', lt + 2); suite = f < 0 ? -1 : f + 2; }
+    else if (t.startsWith('<!', lt)) suite = apresDoctype(t, lt);
+    else if (/^<svg[\s/>]/i.test(t.slice(lt, lt + 6))) return lt;
+    if (suite === -1) return -1;
+    i = suite === -2 ? lt + 1 : suite;
   }
   return -1;
 }

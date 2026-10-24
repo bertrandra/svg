@@ -16,7 +16,7 @@ import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './herit
 import { proprietesDe, type Analyse } from './cascade.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
-import { COORDONNEE_MAX, coordonneeSaine, PROFONDEUR_MARCHE_MAX } from './limites.js';
+import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_MAX } from './limites.js';
 import {
   cibleDe, depasseDuCadre, CLONES_MAX, inverse, lireAspect, lireVue, longueurUse, matriceCadre, PROFONDEUR_USE_MAX, type Cadre
 } from './clones.js';
@@ -39,6 +39,8 @@ export interface Parcours {
   clones: number;
   /** Vrai une fois la borne des clones franchie : on cesse de marcher, le SVG est refuse. */
   trop: boolean;
+  /** Caracteres de trace lus jusqu'ici, clones compris (bornes par `DONNEES_TRACE_MAX`). */
+  donnees: number;
 }
 
 /** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
@@ -82,6 +84,12 @@ function depasseBorne(p: Parcours): boolean {
 
 /** Pose la forme d'un element de forme, avec la peinture que ses ancetres lui laissent. */
 function poserForme(p: Parcours, n: Noeud, b: Pret): void {
+  p.donnees += (n.attributs.d?.length ?? 0) + (n.attributs.points?.length ?? 0);
+  if (p.donnees > DONNEES_TRACE_MAX) {
+    p.refus.add('trop de données de tracé (plus de ' + (DONNEES_TRACE_MAX / 1e6).toLocaleString('fr-FR') + ' millions de caractères de chemins, clones <use> compris)');
+    p.trop = true;
+    return;
+  }
   const d = cheminDeForme(n);
   if (d === undefined) return;
   const { heritees, m } = b;

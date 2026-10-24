@@ -12,10 +12,20 @@ export interface Stockage {
   retirer: (cle: string) => void;
 }
 
-/** Lit du JSON ; du texte qui n'en est pas se lit comme absent. */
+/** Ce qu'un stockage rend comme texte au plus : localStorage en tient 5 a 10 Mo, au-dela c'est une valeur qui n'est pas de nous. */
+const TEXTE_MAX = 32 * 1024 * 1024;
+
+/** Les cles qui, dans un objet JSON, visent le prototype : elles ne sont jamais lues (pollution), quoi que contienne le stockage. */
+const CLES_DE_PROTOTYPE: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Lit du JSON ; du texte qui n'en est pas, ou demesure, se lit comme absent. Les cles `__proto__`, `constructor` et
+ * `prototype` sont retirees a la lecture : un code qui fusionne l'objet lu dans un autre (`{ ...v }`, `Object.assign`)
+ * ne touche alors jamais un prototype. La forme du resultat reste a valider par celui qui le lit (zones/session.ts).
+ */
 function decoder<T>(texte: string | null | undefined): T | null {
-  if (!texte) return null;
-  try { return JSON.parse(texte) as T; } catch { return null; }
+  if (!texte || texte.length > TEXTE_MAX) return null;
+  try { return JSON.parse(texte, (cle, valeur: unknown) => (CLES_DE_PROTOTYPE.has(cle) ? undefined : valeur)) as T; } catch { return null; }
 }
 
 /**

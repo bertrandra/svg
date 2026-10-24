@@ -7,9 +7,10 @@
 import { createRoot } from 'react-dom/client';
 import { lireDessin } from '../engine/editionSvg.js';
 import { definirBaseAnnexes } from '../io/annexes.js';
-import type { Bibliotheque } from '../io/bibliotheque.js';
+import { normaliserBibliotheque, type Bibliotheque } from '../io/bibliotheque.js';
 import { estStockage, stockageNavigateur, stockageProtege, type Stockage } from '../io/stockage.js';
 import { porterCss, remEnPixels } from '../util/cssPortee.js';
+import { LIMITES_XML } from '../util/xml.js';
 import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
@@ -58,18 +59,27 @@ export interface ApiEditeurSvg {
 }
 
 const estFonction = (v: unknown): boolean => typeof v === 'function';
+/** Un titre ou un nom de fichier propose : au-dela, ce n'est plus un nom. */
+const LONGUEUR_NOM_MAX = 500;
+/** Un dossier d'annexes devient l'adresse d'une balise <script> : ces schemas y executeraient du code ou lui donneraient une origine opaque. */
+const SCHEMA_ACTIF = /^(?:javascript|data|blob|vbscript|about):/i;
+/** L'adresse comme l'analyse un navigateur : espaces et controles retires (`java\tscript:` est `javascript:`). */
+const sansBlancs = (t: string): string => t.replace(/[\s\p{Cc}]/gu, '');
 
 /** Le premier defaut des options, dit en clair, ou null quand elles sont bonnes. L'hote n'est pas type : on verifie. */
 export function verifierOptions(options: unknown): string | null {
   if (typeof options !== 'object' || options === null) return 'ouvrir attend un objet d’options { svg, onEnregistrer, … }.';
   const o = options as Record<string, unknown>;
   if (typeof o.svg !== 'string' || o.svg.trim() === '') return 'L’option « svg » doit être le texte du SVG à retoucher.';
+  if (o.svg.length > LIMITES_XML.caracteres) return 'L’option « svg » dépasse ' + Math.round(LIMITES_XML.caracteres / 1048576) + ' millions de caractères : l’éditeur ne l’ouvrirait pas.';
   if (!estFonction(o.onEnregistrer)) return 'L’option « onEnregistrer » est obligatoire : c’est une fonction qui reçoit le SVG retouché.';
   for (const cle of ['onFermer', 'onBrouillon'] as const) if (o[cle] !== undefined && !estFonction(o[cle])) return 'L’option « ' + cle + ' » doit être une fonction.';
   for (const cle of ['titre', 'nom', 'baseAnnexes'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'string') return 'L’option « ' + cle + ' » doit être un texte.';
+  for (const cle of ['titre', 'nom'] as const) if (typeof o[cle] === 'string' && o[cle].length > LONGUEUR_NOM_MAX) return 'L’option « ' + cle + ' » dépasse ' + LONGUEUR_NOM_MAX + ' caractères.';
+  if (typeof o.baseAnnexes === 'string' && SCHEMA_ACTIF.test(sansBlancs(o.baseAnnexes))) return 'L’option « baseAnnexes » doit être un dossier de votre site (chemin relatif ou adresse http(s)), pas une adresse « ' + o.baseAnnexes.slice(0, 20).trim() + ' ».';
   if (o.nuancier !== undefined && !Array.isArray(o.nuancier)) return 'L’option « nuancier » doit être une liste de { nom, hex }.';
-  if (o.bibliotheque !== undefined && o.bibliotheque !== 'a-charger' && (typeof o.bibliotheque !== 'object' || o.bibliotheque === null)) {
-    return 'L’option « bibliotheque » doit être « a-charger » ou la bibliothèque déjà chargée.';
+  if (o.bibliotheque !== undefined && o.bibliotheque !== 'a-charger' && normaliserBibliotheque(o.bibliotheque) === null) {
+    return 'L’option « bibliotheque » doit être « a-charger » ou la bibliothèque déjà chargée (un objet avec une liste « entrees »).';
   }
   if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
     return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
@@ -149,9 +159,10 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     const nom = options.nom ?? 'dessin';
     const apresEnregistrer = options.fermerApresEnregistrer ?? true;
     const stockage = stockageDe(options.stockage);
+    const bibliotheque = options.bibliotheque === 'a-charger' ? options.bibliotheque : options.bibliotheque === undefined ? undefined : normaliserBibliotheque(options.bibliotheque) ?? undefined;
     racine.render(
       <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
-        {...(options.bibliotheque === undefined ? {} : { bibliotheque: options.bibliotheque })}
+        {...(bibliotheque === undefined ? {} : { bibliotheque })}
         {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
         stockage={stockage} fermer={fermer}
         enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />

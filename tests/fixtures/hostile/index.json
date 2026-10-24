@@ -689,7 +689,7 @@
       "fichier": "xml-doctype-sous-ensemble-avec-chevron.svg",
       "famille": "xml",
       "vecteur": "Sous-ensemble interne dont une valeur d'entite contient \">\" et un faux <svg onload>",
-      "attendu": "refus"
+      "attendu": "ouvre"
     },
     {
       "fichier": "xml-instruction-stylesheet.svg",
@@ -971,6 +971,30 @@
       "fichier": "divers-style-proprietes-proto.svg",
       "famille": "divers",
       "vecteur": "Proprietes CSS nommees __proto__ / constructor / prototype dans style et feuille",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-url-non-fermes.svg",
+      "famille": "css",
+      "vecteur": "Des milliers de url( jamais fermes dans une feuille : une expression reguliere les relit tous a chaque fois (temps quadratique)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-commentaires-non-fermes.svg",
+      "famille": "css",
+      "vecteur": "Des milliers de /* jamais fermes : un retrait par expression reguliere paresseuse est quadratique",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-faux-svg-dans-cdata.svg",
+      "famille": "parsing",
+      "vecteur": "Des milliers de faux <svg dans des CDATA et des commentaires avant le vrai (recherche de la racine)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-entite-avec-svg.svg",
+      "famille": "xml",
+      "vecteur": "Un DOCTYPE dont une valeur d'entite contient un faux <svg onload> : la racine est le vrai <svg> qui suit",
       "attendu": "ouvre"
     }
   ]
