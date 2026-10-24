@@ -79,6 +79,8 @@
 /* Une seule colonne qui ne depasse pas du panneau : sans minmax(0, 1fr), la ligne la plus longue l'elargit et fait defiler la liste. */
 .par-couleur { overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
 .par-couleur .couleur-choix { justify-content: flex-start; overflow: hidden; }
+/* Une longue liste de couleurs se fenetre (ListeCouleurs.tsx) : des cales tiennent la place des lignes absentes. */
+.par-couleur li[data-cale] { display: block; padding: 0; }
 .menu-pastille { display: block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
 .editeur-calques .isolement { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 6px 0 2px; }
 .editeur-calques .nuances-proches { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--filet); }

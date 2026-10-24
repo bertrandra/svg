@@ -38,7 +38,8 @@ export {
 
 export {
   couleursDuDessin, remplacerCouleur, remplacerCouleurSur, idsDeCouleur, idsMemeCouleur, groupesDeCouleur,
-  type CouleurDuDessin, type SurCouleur, type GroupeCouleur
+  lireCouleurs, partagerGroupes, memesCouleurs,
+  type CouleurDuDessin, type SurCouleur, type GroupeCouleur, type LectureCouleurs
 } from './edition/couleurs.js';
 
 export {

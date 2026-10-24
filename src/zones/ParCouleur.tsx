@@ -2,16 +2,18 @@
 // faire d'un geste : les choisir, la changer partout, les afficher ou les masquer, les verrouiller,
 // n'afficher qu'elles (et en sortir), choisir ou fusionner ses nuances proches. Les listes se lisent sur
 // le remplissage, le contour, ou les deux.
+//
+// Un dessin issu d'une photo compte des milliers de couleurs (ADR-0008) : la liste se fenetre
+// (ListeCouleurs.tsx), les lignes se memoisent, et les couleurs ne se relisent que si une couleur, une
+// visibilite ou un verrou change : deplacer une forme ne touche a rien de tout cela.
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  couleursProches, fusionnerCouleursProches, groupesDeCouleur, idsDeNuancesProches, montrerSeulement, remplacerCouleurSur, restaurerVisibilites,
-  visibilitesConformes, visibilitesDe, type DessinSvg, type GroupeCouleur, type SurCouleur, type Visibilites
-} from '../engine/editionSvg.js';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
+import { couleursProches, lireCouleurs, type LectureCouleurs, type SurCouleur } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
-import { LigneCouleur, precisionSur, type ActionsLigne } from './LigneCouleur.js';
 import { Section } from './commun/Section.js';
-import { useActions, useDessin } from './contexteEditeur.js';
+import { useDessin } from './contexteEditeur.js';
+import { ListeCouleurs } from './ListeCouleurs.js';
+import { useActionsCouleur } from './actionsCouleur.js';
 
 const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
   ['tout', 'Les deux', 'Couleurs du remplissage et du contour'], ['remplissage', 'Fond', 'Couleurs de remplissage seulement'], ['contour', 'Trait', 'Couleurs de contour seulement']
@@ -19,116 +21,40 @@ const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
 
 // La tolerance se regle en centiemes d'ecart OKLab (util/couleur.ts) : 2 se devine, 10 saute aux yeux.
 const TOLERANCE_MIN = 1, TOLERANCE_MAX = 15, TOLERANCE_DEFAUT = 4;
-// Au-dela, l'apercu des nuances (quadratique en nombre de couleurs) coute plus qu'il n'apprend : on ne le calcule qu'a l'action.
-const COULEURS_APERCU_MAX = 400;
-
-/**
- * Un isolement en cours : la visibilite d'avant, et celle qu'il a produite (pour savoir s'il tient encore).
- * `quitteSur` est le dessin que « Quitter » a rendu : tant qu'on y est, on garde l'isolement en memoire, pour
- * que Ctrl+Z (qui le rend) lui redonne son bouton.
- */
-interface Isolement { avant: Visibilites; apres: Visibilites; quitteSur: DessinSvg | null }
-/** Un geste de couleur en cours : le dessin d'avant, d'ou chaque valeur du selecteur repart, et la cle qui les fond. */
-interface GesteCouleur { cle: string; base: DessinSvg; de: string; sur: SurCouleur }
 
 export function ParCouleur() {
-  const mo = useDessin(), ac = useActions();
-  const { dessin, sel } = mo;
+  const mo = useDessin();
+  const { dessin } = mo;
   const [sur, poserSur] = useState<SurCouleur>('tout');
   const [tolerance, poserTolerance] = useState(TOLERANCE_DEFAUT);
-  const [rangee, poserRangee] = useState<string | null>(null);
-  const [isolement, poserIsolement] = useState<Isolement | null>(null);
-  // La ligne qu'on recolore change de couleur donc de cle : on lui garde sa cle d'avant le temps du geste,
-  // sans quoi elle serait remontee et le selecteur natif se fermerait sous le doigt.
-  const [suivi, poserSuivi] = useState<{ cle: string; vers: string } | null>(null);
-  const geste = useRef<GesteCouleur | null>(null);
-  const groupes = useMemo(() => groupesDeCouleur(dessin, sur), [dessin, sur]);
+  // Les groupes se relisent quand une couleur, une visibilite ou un verrou change, pas quand une forme bouge ; les
+  // groupes inchanges gardent leur objet, et leur ligne ne se redessine pas. La lecture garde aussi un dessin
+  // stable tant que les couleurs le sont : c'est de lui que dependent les nuances proches.
+  const lecture = useRef<LectureCouleurs | null>(null);
+  const courante = lireCouleurs(dessin, sur, lecture.current);
+  lecture.current = courante;
+  const groupes = courante.groupes;
   // L'apercu passe apres le reste : pendant un geste continu il retarde d'un cran plutot que de le ralentir.
-  const dessinApercu = useDeferredValue(dessin);
-  const proches = useMemo(() => (groupes.length > COULEURS_APERCU_MAX ? null : couleursProches(dessinApercu, tolerance / 100, sur)), [dessinApercu, groupes.length, tolerance, sur]);
-
-  // L'isolement tient tant que les formes qu'il a vues gardent la visibilite qu'il leur a donnee. Annuler
-  // le defait sans l'oublier (on peut retablir) ; toute autre modification de visibilite l'oublie.
-  const isolementTient = isolement !== null && visibilitesConformes(dessin, isolement.apres);
-  const peutRetablir = mo.h.futur.length > 0;
-  useEffect(() => { if (isolement && !isolementTient && !peutRetablir && isolement.quitteSur !== dessin) poserIsolement(null); }, [isolement, isolementTient, peutRetablir, dessin]);
+  const dessinApercu = useDeferredValue(courante.dessin);
+  const proches = useMemo(() => couleursProches(dessinApercu, tolerance / 100, sur), [dessinApercu, tolerance, sur]);
+  const { actions, suivi, reference, isole, quitterIsolement, nuancesProchesDe, fusionner } = useActionsCouleur(sur, tolerance, groupes);
 
   if (!dessin.formes.length) return null;
 
-  const nom = (c: string) => c.toUpperCase();
-  const choisirIds = (ids: string[], message: string) => {
-    if (!ids.length) { ac.dire('Aucune forme à choisir : elles sont masquées ou verrouillées.'); return; }
-    ac.choisir(ids);
-    ac.poserPoint(null);
-    ac.dire(message);
-  };
-
-  const isoler = (g: GroupeCouleur) => {
-    const r = montrerSeulement(dessin, g.ids);
-    // Un second isolement garde la visibilite d'avant le premier : c'est elle qu'on veut retrouver.
-    const avant = isolementTient && isolement ? isolement.avant : visibilitesDe(dessin);
-    ac.faire(() => r, 'Seules les formes ' + nom(g.couleur) + ' restent affichées.');
-    ac.choisir(sel.filter(id => g.ids.includes(id)));
-    if (r !== dessin) poserIsolement({ avant, apres: visibilitesDe(r), quitteSur: null });
-  };
-  const quitterIsolement = () => {
-    if (!isolement) return;
-    const r = restaurerVisibilites(dessin, isolement.avant);
-    const visibles = new Set(r.formes.filter(f => f.visible).map(f => f.id));
-    ac.faire(() => r, 'Affichage d’avant l’isolement rétabli.');
-    ac.choisir(sel.filter(id => visibles.has(id)));
-    poserIsolement({ ...isolement, quitteSur: r });
-  };
-
-  const debuterRecolorer = () => { ac.finir(); geste.current = null; };
-  const recolorer = (g: GroupeCouleur, vers: string) => {
-    const x = geste.current ?? { cle: ac.nouvelleCle(), base: dessin, de: g.couleur, sur };
-    geste.current = x;
-    ac.appliquer(() => remplacerCouleurSur(x.base, x.de, vers, x.sur), x.cle);
-    poserSuivi({ cle: suivi && suivi.vers === g.couleur ? suivi.cle : g.couleur, vers });
-    ac.dire(nom(x.de) + ' remplacée par ' + nom(vers) + precisionSur(x.sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.');
-  };
-  const finirRecolorer = () => { geste.current = null; poserSuivi(null); ac.finir(); };
-
-  const nuancesProchesDe = (couleur: string) => {
-    const ids = idsDeNuancesProches(dessin, couleur, tolerance / 100, sur);
-    choisirIds(ids, pluriel(ids.length, 'forme') + ' de nuance proche de ' + nom(couleur) + ' (tolérance ' + tolerance + ') choisie' + (ids.length > 1 ? 's' : '') + '.');
-    poserRangee(couleur);
-  };
-  const fusionner = () => {
-    const r = fusionnerCouleursProches(dessin, tolerance / 100, sur);
-    if (!r.formes) {
-      ac.dire(r.conservees ? 'Ces nuances sont sur des formes verrouillées : déverrouillez-les pour les fusionner.' : 'Aucune nuance proche à cette tolérance.');
-      return;
-    }
-    const gardees = r.conservees ? ', ' + pluriel(r.conservees, 'couleur') + ' gardée' + (r.conservees > 1 ? 's' : '') + ' par des formes verrouillées' : '';
-    ac.faire(() => r.dessin, pluriel(r.fusionnees, 'couleur') + ' fusionnée' + (r.fusionnees > 1 ? 's' : '') + precisionSur(sur) + ' : ' + pluriel(r.formes, 'forme') + ' recolorée' + (r.formes > 1 ? 's' : '') + gardees + '.');
-  };
-
-  // De quelle couleur partir pour « Sélectionner les nuances proches » : la ligne choisie en dernier si elle l'est
-  // encore, sinon la premiere ligne entierement choisie, sinon la couleur de la premiere forme choisie.
-  const choisis = new Set(sel);
-  const entiere = (g: GroupeCouleur) => g.libres.length > 0 && g.libres.every(id => choisis.has(id));
-  const premiere = sel[0] ? dessin.formes.find(f => f.id === sel[0]) : undefined;
-  const depuisForme = premiere ? (sur === 'contour' ? premiere.contour : sur === 'remplissage' ? premiere.remplissage : premiere.remplissage ?? premiere.contour) : null;
-  const reference = (rangee ? groupes.find(g => g.couleur === rangee && entiere(g)) : undefined)?.couleur ?? groupes.find(entiere)?.couleur ?? (depuisForme && groupes.some(g => g.couleur === depuisForme) ? depuisForme : null);
-
-  const actions: ActionsLigne = { sur, choisie: poserRangee, debuterRecolorer, recolorer, finirRecolorer, isoler, nuancesProches: g => nuancesProchesDe(g.couleur) };
-  const cleDe = (g: GroupeCouleur) => (suivi && g.couleur === suivi.vers && !groupes.some(x => x.couleur === suivi.cle) ? suivi.cle : g.couleur);
-  const fondues = proches ? proches.reduce((n, p) => n + p.membres.length, 0) : 0;
+  const fondues = proches.reduce((n, p) => n + p.membres.length, 0);
   return (
     <Section titre="Par couleur" ouverte note={groupes.length}>
       <div className="mini-onglets" role="group" aria-label="Couleurs lues sur">
         {SURS.map(([id, libelle, aide]) => <button key={id} type="button" aria-pressed={sur === id} title={aide} onClick={() => poserSur(id)}>{libelle}</button>)}
       </div>
-      {isolement && isolementTient ? (
+      {isole ? (
         <div className="isolement" role="status">
           <span className="aide">Une seule couleur est affichée.</span>
           <button type="button" className="discret" title="Rendre à chaque forme sa visibilité d’avant (Ctrl+Z annule aussi)" onClick={quitterIsolement}>Quitter l’isolement</button>
         </div>
       ) : null}
       {groupes.length ? (
-        <ul className="par-couleur">{groupes.map(g => <LigneCouleur key={cleDe(g)} g={g} actions={actions} />)}</ul>
+        <ListeCouleurs groupes={groupes} choisies={mo.choisies} sur={sur} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
       ) : <p className="aide">Aucune forme n’a de {sur === 'contour' ? 'contour' : 'remplissage'}.</p>}
       <div className="nuances-proches">
         <label className="champ-ligne">
@@ -138,12 +64,12 @@ export function ParCouleur() {
           <output>{tolerance}</output>
         </label>
         <p className="aide" role="status">
-          {proches === null ? 'Beaucoup de couleurs : le décompte se fait à l’action.' : fondues ? pluriel(fondues, 'nuance') + ' se fondrai' + (fondues > 1 ? 'ent' : 't') + ' dans ' + pluriel(proches.length, 'couleur') + '.' : 'Aucune nuance proche à cette tolérance.'}
+          {fondues ? pluriel(fondues, 'nuance') + ' se fondrai' + (fondues > 1 ? 'ent' : 't') + ' dans ' + pluriel(proches.length, 'couleur') + '.' : 'Aucune nuance proche à cette tolérance.'}
         </p>
         <div className="boutons">
-          <button type="button" disabled={!reference} title={reference ? 'Choisir les formes proches de ' + nom(reference) : 'Choisissez d’abord une couleur'}
+          <button type="button" disabled={!reference} title={reference ? 'Choisir les formes proches de ' + reference.toUpperCase() : 'Choisissez d’abord une couleur'}
             onClick={() => { if (reference) nuancesProchesDe(reference); }}>Sélectionner les nuances proches</button>
-          <button type="button" disabled={proches !== null && !fondues} title="Ramener chaque groupe de nuances à sa couleur la plus employée (Ctrl+Z annule)" onClick={fusionner}>Fusionner les nuances proches</button>
+          <button type="button" disabled={!fondues} title="Ramener chaque groupe de nuances à sa couleur la plus employée (Ctrl+Z annule)" onClick={fusionner}>Fusionner les nuances proches</button>
         </div>
       </div>
     </Section>
