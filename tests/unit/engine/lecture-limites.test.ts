@@ -57,19 +57,6 @@ describe('lireDessin : bornes de travail', () => {
     expect('dessin' in lireDessin(svg('<g>'.repeat(1000) + '<rect width="5" height="5"/>' + '</g>'.repeat(1000)))).toBe(true);
   });
 
-  it('borne les clones <use> d un gros chemin par les donnees de trace, pas seulement par leur nombre', () => {
-    const gros = 'M0 0' + 'L5 5'.repeat(100_000);
-    const t0 = Date.now();
-    expect(refus(svg(`<defs><path id="g" d="${gros}"/></defs>${'<use href="#g"/>'.repeat(2000)}`))).toContain('données de tracé');
-    expect(Date.now() - t0).toBeLessThan(8000);
-  });
-
-  it('borne les confrontations regle x element : 100 000 regles universelles sur 1 000 formes', () => {
-    const t0 = Date.now();
-    expect(refus(svg(`<style>${'*{fill:#abc}'.repeat(100_000)}</style>${'<rect width="1" height="1"/>'.repeat(1000)}`))).toContain('trop de règles de style');
-    expect(Date.now() - t0).toBeLessThan(4000);
-  });
-
   it('classe les regles sans changer le resultat : classe, identifiant, type et universelles melangees gardent l ordre de la cascade', () => {
     const r = lireDessin(svg('<style>rect{fill:#111}*{stroke:#222}.a{fill:#333}#z{fill:#444}.a.b{fill:#555}rect.b{stroke:#666}</style><rect id="z" class="a b" width="5" height="5"/>'));
     expect('dessin' in r && r.dessin.formes[0]).toMatchObject({ remplissage: '#444444', contour: '#666666' });

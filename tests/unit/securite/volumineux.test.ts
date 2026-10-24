@@ -10,7 +10,7 @@ describe('les entrees volumineuses', () => {
   for (const v of VOLUMINEUX) {
     it(v.nom + ' : ' + v.vecteur, () => {
       const texte = v.genere();
-      const p = passer(texte, v.budgetMs, v.deuxChemins !== false);
+      const p = passer(texte, v.budgetMs, v.leger === true);
       expect(p.plantage, 'exception echappee').toBeNull();
       expect(p.defauts.join('\n')).toBe('');
       if (v.attendu !== null) expect(p.ouvre, p.refus.join(' | ')).toBe(v.attendu === 'ouvre');

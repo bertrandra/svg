@@ -49,7 +49,8 @@ const ATTRIBUTS_A_ADRESSE: ReadonlySet<string> = new Set(['src', 'srcset', 'acti
 
 // ---------------------------------------------------------------- texte et CSS
 
-const IMAGE_EN_LIGNE = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]*$/;
+const NOM_PREFIXE = /^(?:[\p{L}_][\p{L}\p{N}_.-]*:)?[\p{L}_][\p{L}\p{N}_.-]*$/u;
+const IMAGE_EN_LIGNE = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/= \t\r\n]*$/;
 const SCHEMAS = /(?:javascript|vbscript|livescript|data)\s*:/gi;
 const UN_SCHEMA = /(?:javascript|vbscript|livescript|data)\s*:/i;
 /** Ce qui, dans un texte de style ou une valeur, demande un nettoyage : evite de passer les remplacements sur un chemin de 7 Mo. */
@@ -142,7 +143,11 @@ function valeurNettoyee(valeur: string): string | null {
 
 // ---------------------------------------------------------------- attributs
 
-interface ContexteBalise { readonly nom: string; readonly racine: boolean; readonly metadonnees: boolean }
+interface ContexteBalise {
+  readonly nom: string; readonly racine: boolean; readonly metadonnees: boolean;
+  /** Un <use> n'a qu'un renvoi externe garde : deux attributs de meme nom ne feraient pas du XML. */
+  externeGarde: boolean;
+}
 
 /** Un attribut reemis : le guillemet d'origine quand la valeur le permet, sinon des guillemets doubles avec ceux de la valeur echappes. */
 function emis(a: AttributBrut, valeur: string): string {
@@ -157,10 +162,12 @@ function emettreHref(a: AttributBrut, c: ContexteBalise): string {
   const dec = decoderEntites(a.valeur).trim();
   if (dec.startsWith('#')) return emis(a, rendreBienForme(a.valeur));
   if (c.nom === 'use') {
+    if (c.externeGarde) return '';
+    c.externeGarde = true;
     const retire = dec.replace(SCHEMAS, '').slice(0, 300);
     return a.blancs + ATTRIBUT_HREF_EXTERNE + '="' + rendreBienForme(echapperAttribut(retire)) + '"';
   }
-  if ((c.nom === 'image' || c.nom === 'feImage') && !a.valeur.includes('&') && IMAGE_EN_LIGNE.test(dec)) return emis(a, a.valeur);
+  if ((c.nom === 'image' || c.nom === 'feImage') && !a.valeur.includes('&') && IMAGE_EN_LIGNE.test(dec)) return emis(a, rendreBienForme(a.valeur));
   return '';
 }
 
@@ -173,6 +180,8 @@ function emettreXmlns(a: AttributBrut, c: ContexteBalise): string {
 
 /** Ce que devient un attribut : son texte reemis (avec ses blancs d'avant), ou '' quand il part. `retirerBlanc` dit qu'un seul blanc part avec lui. */
 function emettreAttribut(a: AttributBrut, c: ContexteBalise): string {
+  // Un nom doit etre « local » ou « prefixe:local » : « :href », « a:b:c » ou « x: » n'ont de sens dans aucun espace de noms.
+  if (!NOM_PREFIXE.test(a.nom)) return '';
   const nom = a.nom, i = nom.indexOf(':'), prefixe = i > 0 ? nom.slice(0, i) : '', local = (i > 0 ? nom.slice(i + 1) : nom).toLowerCase();
   if (!a.aValeur || local.startsWith('on')) return '';
   if (nom.startsWith('xmlns:')) return emettreXmlns(a, c);
@@ -260,7 +269,7 @@ function debutDeBalise(e: Etat, j: Extract<Jeton, { t: 'debut' }>): void {
   const permis = e.racine === null ? j.nom === 'svg'
     : !TEXTE_SEUL.has(parent?.nom ?? '') && ((parent?.metadonnees && j.nom !== 'metadata') ? PREFIXES_METADONNEES.has(prefixe) && /^[^:]+:[\p{L}][\p{L}\p{N}_.-]*$/u.test(j.nom) : ELEMENTS.has(j.nom) && !(ANIMATIONS.has(j.nom) && animationDangereuse(j.attributs)));
   if (!permis) { if (!j.autoFermant) e.saut = 1; return; }
-  const c: ContexteBalise = { nom: j.nom, racine: e.racine === null, metadonnees: parent?.metadonnees === true && j.nom !== 'metadata' };
+  const c: ContexteBalise = { nom: j.nom, racine: e.racine === null, metadonnees: parent?.metadonnees === true && j.nom !== 'metadata', externeGarde: false };
   const vus = new Set<string>();
   const r = c.racine ? racineDe(j.attributs) : null;
   if (r && r.ratio === null) throw new ErreurXml(SANS_PLAN);
@@ -279,7 +288,8 @@ function debutDeBalise(e: Etat, j: Extract<Jeton, { t: 'debut' }>): void {
     if (!r.viewBoxValide) avant = ' viewBox="0 0 ' + longueur(r.attributs.width) + ' ' + longueur(r.attributs.height) + '"';
     if (!r.xmlns) avant += ' xmlns="' + ESPACE_SVG + '"';
   }
-  e.sortie.push('<' + j.nom + avant + corps + j.queue);
+  // Le saut de page et la tabulation verticale separent des attributs pour un analyseur HTML, mais ne sont pas des caracteres XML.
+  e.sortie.push(('<' + j.nom + avant + corps + j.queue).replace(/[\v\f]/g, ' '));
   if (!j.autoFermant) e.pile.push({ nom: j.nom, metadonnees });
   else if (c.racine) throw new Fin();
 }

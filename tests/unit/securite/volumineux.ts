@@ -16,15 +16,16 @@ export interface Volumineux {
   readonly refus?: string;
   /** Le temps accorde a chaque appel, quand 1,5 s serait deraisonnable pour la taille (dit pourquoi). */
   readonly budgetMs?: number;
-  /** Faux : seul le chemin de la page est passe (le chemin de l'embarquement lit le meme texte, et la lecture d'un million de points prend sept secondes). */
-  readonly deuxChemins?: boolean;
+  /** Vrai : seul le chemin de la page est passe, sans relecture de l'ecriture (la lecture d'un million de points prend sept secondes). */
+  readonly leger?: boolean;
 }
 
-function cheminMillion(): string {
+function chemin(points: number): string {
   const morceaux: string[] = ['M0 0'];
-  for (let i = 0; i < 1_000_000; i++) morceaux.push('L' + ((i * 7) % 100) + ' ' + ((i * 13) % 100));
+  for (let i = 0; i < points; i++) morceaux.push('L' + ((i * 7) % 100) + ' ' + ((i * 13) % 100));
   return svg(`<path d="${morceaux.join('')}Z" fill="#1428a0" stroke="#000"/>`);
 }
+const cheminMillion = (): string => chemin(1_000_000);
 
 function bombeRires(): string {
   const entites = ['<!ENTITY a "aaaaaaaaaa">'];
@@ -46,9 +47,10 @@ export const VOLUMINEUX: readonly Volumineux[] = [
   { nom: 'freres-1100000', vecteur: 'plus d\'un million d\'elements : la limite du nombre d\'elements', genere: () => svg(rep('<g/>', 1_100_000)), attendu: 'refus', refus: 'éléments', budgetMs: 6000 },
   // Un million de points (7 Mo de trace) tient sous la borne des donnees de trace et se lit en quelques secondes : c'est le plus gros
   // chemin que l'editeur accepte, et le temps accorde (20 s) est celui de la borne, pas celui d'un dessin ordinaire.
-  { nom: 'chemin-1000000-points', vecteur: 'un chemin d\'un million de points', genere: cheminMillion, attendu: 'ouvre', budgetMs: 20000, deuxChemins: false },
-  { nom: 'chemin-2000000-points', vecteur: 'un chemin de deux millions de points : au-dela de la borne des donnees de trace', genere: () => cheminMillion().replace('Z"', rep('L50 50', 1_000_000) + 'Z"'), attendu: 'refus', refus: 'données de tracé', budgetMs: 8000 },
-  { nom: 'clones-d-un-gros-chemin', vecteur: 'un chemin de 600 Ko cloné 10 000 fois par <use> (6 Go de trace si on relit a chaque clone)', genere: () => svg(`<defs><path id="g" d="${'M0 0' + rep('L5 5', 150_000)}"/></defs>${rep('<use href="#g"/>', 10_000)}`), attendu: 'refus', refus: 'données de tracé', budgetMs: 8000 },
+  { nom: 'chemin-1000000-points', vecteur: 'un chemin d\'un million de points', genere: cheminMillion, attendu: 'ouvre', budgetMs: 20000, leger: true },
+  { nom: 'chemin-100000-points', vecteur: 'un chemin de 100 000 points, tous les invariants et le budget ordinaire', genere: () => chemin(100_000), attendu: 'ouvre' },
+  { nom: 'chemin-2000000-points', vecteur: 'un chemin de deux millions de points : au-dela de la borne des donnees de trace', genere: () => cheminMillion().replace('Z"', rep('L50 50', 1_000_000) + 'Z"'), attendu: 'refus', refus: 'données de tracé', budgetMs: 8000, leger: true },
+  { nom: 'clones-d-un-gros-chemin', vecteur: 'un chemin de 600 Ko cloné 10 000 fois par <use> (6 Go de trace si on relit a chaque clone)', genere: () => svg(`<defs><path id="g" d="${'M0 0' + rep('L5 5', 150_000)}"/></defs>${rep('<use href="#g"/>', 10_000)}`), attendu: 'refus', refus: 'données de tracé', budgetMs: 8000, leger: true },
   { nom: 'attributs-10000', vecteur: 'un element a 10 000 attributs', genere: () => svg(`<g ${Array.from({ length: 10_000 }, (_, i) => `a${i}="${i}"`).join(' ')}/>`), attendu: 'refus', refus: 'attributs' },
   { nom: 'regles-50000-sur-300-formes', vecteur: '50 000 regles de style sur 300 formes (15 millions de confrontations)', genere: () => svg(`<style>${Array.from({ length: 50_000 }, (_, i) => `.c${i}{fill:#${(i % 4096).toString(16).padStart(3, '0')}}`).join('')}</style>${Array.from({ length: 300 }, (_, i) => `<rect class="c${i}" width="1" height="1" x="${i % 100}" y="${Math.floor(i / 100)}"/>`).join('')}`), attendu: null },
   { nom: 'regles-universelles-100000', vecteur: '100 000 regles « * » sur 1 000 formes : le produit passe la limite', genere: () => svg(`<style>${rep('*{fill:#abc}', 100_000)}</style>${rep('<rect width="1" height="1"/>', 1000)}`), attendu: 'refus', refus: 'règles de style', budgetMs: 4000 },

@@ -28,7 +28,7 @@ export interface Passage {
 /** Un SVG ecrit ne doit pas grossir sans mesure : un clone de <use> coute au plus quelques centaines d'octets. */
 export const tailleMax = (entree: number): number => 12 * entree + 6_000_000;
 
-export function passer(texte: string, budgetMs = BUDGET_MS, deuxChemins = true): Passage {
+export function passer(texte: string, budgetMs = BUDGET_MS, leger = false): Passage {
   const defauts: string[] = [], refus: string[] = [];
   let plusLong = { ms: 0, appel: '' }, plantage: string | null = null, ouvre = false, nettoye: string | null = null, ecrit: string | null = null;
 
@@ -52,7 +52,8 @@ export function passer(texte: string, budgetMs = BUDGET_MS, deuxChemins = true):
     const net = appeler(etape + '/nettoyerSvg(ecrit)', () => nettoyerSvg(e));
     if (net === undefined) return;
     if (net === null || net.svg !== e) defauts.push(etape + '/enregistrement : le nettoyage change une ecriture');
-    // La relecture de son propre resultat redonne les memes octets.
+    // La relecture de son propre resultat redonne les memes octets (sauf en mode leger : un million de points se relit en sept secondes).
+    if (leger) return;
     const relu = appeler(etape + '/relecture', () => lireDessin(e));
     if (relu === undefined) return;
     if ('erreur' in relu) defauts.push(etape + '/relecture : l ecriture ne se relit pas (' + relu.erreur + ')');
@@ -76,7 +77,7 @@ export function passer(texte: string, budgetMs = BUDGET_MS, deuxChemins = true):
     }
   }
   // 2. Le chemin de l'embarquement : l'hote donne son texte tel quel, sans nettoyage prealable.
-  const direct = deuxChemins ? appeler('lireDessin(brut)', () => lireDessin(texte)) : undefined;
+  const direct = leger ? undefined : appeler('lireDessin(brut)', () => lireDessin(texte));
   if (direct !== undefined) {
     if ('erreur' in direct) refus.push(direct.erreur); else verifierEcriture('embarque', direct.dessin);
   }

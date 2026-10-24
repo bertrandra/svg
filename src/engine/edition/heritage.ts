@@ -32,7 +32,8 @@ export function heriter(parent: Proprietes, pr: Proprietes): Proprietes {
   const heritees: Proprietes = { ...parent };
   for (const p of HERITEES) {
     const v = pr[p];
-    if (v === undefined || v.trim().toLowerCase() === 'inherit') continue;
+    // Une valeur vide est invalide en CSS : elle ne recouvre rien, comme `inherit`.
+    if (v === undefined || v.trim() === '' || v.trim().toLowerCase() === 'inherit') continue;
     if (p === 'color' && ['currentcolor', 'none'].includes(v.trim().toLowerCase())) continue;
     heritees[p] = v;
   }

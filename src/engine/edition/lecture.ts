@@ -44,6 +44,8 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   const plan = planDe(racine.attributs);
   if (!plan) return { erreur: 'Ce SVG n’a ni viewBox ni dimensions.' };
   if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ') : corrigez son viewBox.' };
+  // L'ecriture garde le millieme : un plan plus petit s'ecrirait « width="0" », que plus rien ne relit.
+  if (plan[2] < 0.001 || plan[3] < 0.001) return { erreur: 'Ce SVG a un plan de travail trop petit (moins de 0,001 unité) : corrigez son viewBox.' };
   const analyse = analyser(racine);
   const p: Parcours = { analyse, plan, formes: [], refus: new Set(), actifs: new Set([racine]), clones: 0, trop: false, donnees: 0 };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y

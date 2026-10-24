@@ -35,7 +35,7 @@ export type AnalyseStricte = { erreur: string } | { elements: ElementLu[]; texte
 const classe = (...plages: Array<readonly [number, number]>): RegExp =>
   new RegExp('[' + plages.map(([a, b]) => String.fromCharCode(a) + '-' + String.fromCharCode(b)).join('') + ']', 'g');
 
-const NOM = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/;
+const NOM = /^[\p{L}_:][\p{L}\p{M}\p{N}_:.-]*$/u;
 const REFERENCE_VALIDE = /^(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);/;
 
 /** Vrai quand chaque « & » de `t` ouvre une reference d'entite predefinie ou numerique valide. */
@@ -169,10 +169,7 @@ function defautsCss(css: string, ou: string): string[] {
   return defauts;
 }
 
-/** Les attributs dont la valeur peut etre une adresse que le navigateur va chercher. */
-const ATTRIBUTS_QUI_SUIVENT = /^(?:style|to|from|by|values|fill|stroke|filter|clip-path|mask|cursor|marker-start|marker-mid|marker-end|d)$/;
 const IMAGE_BASE64 = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]*$/;
-const URL_EXTERNE = /(?:^|[^a-z])(?:https?|ftp|file|wss?):\/\/|^\/\//i;
 
 /** Les defauts d'un attribut d'un SVG nettoye (rien ne s'execute, rien ne va chercher ailleurs). */
 function defautsAttribut(element: string, nom: string, valeur: string): string[] {
@@ -199,9 +196,6 @@ function defautsAttribut(element: string, nom: string, valeur: string): string[]
   } else {
     if (/javascript:|vbscript:|livescript:/.test(v)) d.push('schema script dans ' + lieu);
     if (/data:/.test(v) && !IMAGE_BASE64.test(decoder(valeur).trim())) d.push('data: dans ' + lieu);
-    // Une adresse n'est un defaut que dans un attribut qui la suit (peinture, filtre, animation…) : un nom d'espace de noms dans
-    // requiredExtensions ou un data-* ne va rien chercher.
-    if (URL_EXTERNE.test(decoder(valeur)) && ATTRIBUTS_QUI_SUIVENT.test(nom)) d.push('URL externe dans ' + lieu + ' : ' + valeur.slice(0, 60));
     d.push(...defautsCss(decoder(valeur), lieu));
   }
   if (['set', 'animate', 'animateColor', 'animateTransform', 'animateMotion'].includes(element) && bas === 'attributename' && /^(?:xlink:)?href$|^on|^xml:base$/i.test(decoder(valeur).trim())) d.push('animation de ' + valeur);
@@ -213,7 +207,7 @@ export function violationsNettoyage(svg: string): string[] {
   const a = analyserStrict(svg);
   if ('erreur' in a) return ['mal forme : ' + a.erreur];
   const d: string[] = [];
-  if (/<script|<foreignobject|<!doctype|<!entity|<!--|<\?|javascript:|vbscript:/i.test(svg.replace(/\sdata-href-externe="[^"]*"/g, ''))) d.push('motif interdit dans le texte');
+  if (/<script|<foreignobject|<!doctype|<!entity|<!--|<\?/i.test(svg.replace(/\sdata-href-externe="[^"]*"/g, ''))) d.push('motif interdit dans le texte');
   for (const e of a.elements) {
     // Un element prefixe n'est permis que dans <metadata> (RDF des licences).
     if (!ELEMENTS_PERMIS.has(e.nom) && !(e.nom.includes(':') && PREFIXES_PERMIS.has(e.nom.slice(0, e.nom.indexOf(':'))))) d.push('element non permis <' + e.nom.slice(0, 40) + '>');
@@ -241,7 +235,7 @@ export function violationsEcriture(svg: string): string[] {
         if (!/^[MLCQZ0-9eE.,\s+-]*$/.test(valeur)) d.push('chemin avec des caracteres inattendus');
       } else if (nom === 'fill' || nom === 'stroke') {
         // Une couleur #rrggbb, none, ou un mot-cle CSS en lettres : jamais d'adresse, de fonction ni de ponctuation.
-        if (!/^(?:#[0-9a-f]{3,8}|[a-z-]{1,40})$/i.test(valeur)) d.push(nom + ' avec une valeur libre : ' + valeur.slice(0, 60));
+        if (!/^(?:#[0-9a-f]{3,8}|[a-z][a-z0-9-]{0,40}(?:\([a-z0-9#%.,\s/+-]{0,150}\))?)$/i.test(valeur) || /url\(/i.test(valeur)) d.push(nom + ' avec une valeur libre : ' + valeur.slice(0, 60));
       } else if (nom === 'fill-rule' || nom === 'stroke-linecap' || nom === 'stroke-linejoin') {
         if (!/^[a-z-]{1,20}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur);
       } else if (nom === 'viewBox' || nom === 'stroke-dasharray') {

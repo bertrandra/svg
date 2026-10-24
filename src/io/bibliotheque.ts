@@ -52,7 +52,7 @@ const annexe: Annexe<Bibliotheque> = {
   globale: '__bibliothequeSvg',
   contenu: 'la bibliothèque',
   consigne: 'lancez « npm run bibliotheque »',
-  valider: v => normaliserBibliotheque(v) ?? undefined
+  valider: v => (typeof v === 'object' && v !== null && 'entrees' in v && Array.isArray(v.entrees) ? v as Bibliotheque : undefined)
 };
 
 /** Vrai quand le script est deja arrive : un panneau qui se rouvre n'a pas a redemander le chargement. */
