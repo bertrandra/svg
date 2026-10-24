@@ -58,6 +58,16 @@ export { simplifierChemin, simplifier, compterPoints } from './edition/simplific
 
 export { deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment, basculerSegment } from './edition/points.js';
 
+export { arrondirAngles, type ResultatArrondi } from './edition/arrondi.js';
+export {
+  typeDeNoeud, lireNoeud, aDesPoignees, convertirNoeud, convertirNoeudForme, deplacerPoigneeLiee,
+  type TypeNoeud, type Noeud, type Cote
+} from './edition/noeuds.js';
+export {
+  inverserChemin, inverserSens, casserEnNoeud, casserForme, joindreExtremites, supprimerNoeudEnGardantLaCourbe,
+  type ResultatJonction
+} from './edition/jonctions.js';
+
 export {
   STYLE_DEFAUT, rectangle, ellipse, etoile, polygone, ajouterForme,
   type Style
