@@ -53,8 +53,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   ramène pas est refusé en le nommant.
 - **Chaque opération est pure** et rend un nouveau dessin ; l'historique (`util/historique.ts`) est
   une pile d'états immuables, deux cents au plus, un geste continu fondu par sa clé.
-- **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier et une bibliothèque
-  facultatifs, rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans `zones/Application.tsx`.
+- **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
+  facultatifs (`io/stockage.ts`), rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans
+  `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
 - **Rien ne s'écrit sans « Enregistrer »** ; le SVG réécrit passe par `nettoyerSvg`.
@@ -63,8 +64,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
   du mode se retire ; les valeurs par défaut se calculent (`valeursParDefaut`), elles ne se recopient
   pas dans l'interface ; le temps d'un essai se mesure dans `io`, jamais dans le moteur.
-- **Les booléens aplatissent** (ADR-0004) : le résultat est en segments droits, au style de la forme
-  la plus basse ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
+- **Les booléens aplatissent, l'éditeur rebâtit** (ADR-0004) : le moteur rend des segments droits, au style
+  de la forme la plus basse ; l'éditeur rebâtit les courbes par défaut (`lisserBooleens`, réglage de session) ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
 - **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
   `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts`. Jamais de `<text>` dans un SVG écrit.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
@@ -77,6 +78,14 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   claire et sombre, description) ; le CSS des variables se génère au build, la page n'écrit aucune couleur,
   un test confronte registre, page et code, et chaque texte sur son fond tient 4,5:1 dans les deux thèmes.
   `docs/jetons.md` se régénère par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/styles`.
+- **La lecture est fidèle, ou dit ce qu'elle perd** (ADR-0009) : l'alpha, les noms de couleur et une épaisseur
+  de trait nulle sont gardés ; `lireDessin` rend `ignores` et la page le dit à l'ouverture. Les octets
+  changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.
+- **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
+  dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
+- **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,
+  Alt+flèches, réticule), une seule région vocale `polite` le dit, Tab ne piège jamais le focus, et
+  `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

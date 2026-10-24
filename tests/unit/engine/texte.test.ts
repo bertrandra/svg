@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'opentype.js';
-import { ajouterTexte, cheminDeGlyphe, composer, type Glyphes } from '../../../src/engine/texte.js';
+import { ajouterTexte, cheminDeGlyphe, composer, type CommandeGlyphe, type Glyphes } from '../../../src/engine/texte.js';
 import { glyphesDe } from '../../../src/io/polices.js';
 import { boiteChemin, ecrireChemin, lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 
@@ -30,6 +30,45 @@ describe('composer', () => {
     const r = ajouterTexte(d, composer('ab', factice, { taille: 20 }), { remplissage: '#123456', contour: null, epaisseur: 1 });
     expect(r.ids).toEqual(['f1', 'f2']);
     expect(r.dessin.formes[1]?.remplissage).toBe('#123456');
+  });
+});
+
+describe('cheminDeGlyphe ferme les contours qui reviennent a leur depart', () => {
+  it('ajoute Z apres une courbe qui retombe sur le depart, et remplace le segment droit de retour', () => {
+    expect(ecrireChemin(cheminDeGlyphe([{ type: 'M', x: 0, y: 0 }, { type: 'C', x1: 1, y1: 2, x2: 3, y2: 4, x: 5, y: 6 }, { type: 'Q', x1: 2, y1: 2, x: 0, y: 0 }]))).toBe('M0 0C1 2 3 4 5 6Q2 2 0 0Z');
+    expect(ecrireChemin(cheminDeGlyphe([{ type: 'M', x: 0, y: 0 }, { type: 'L', x: 10, y: 0 }, { type: 'L', x: 10, y: 10 }, { type: 'L', x: 0, y: 0 }]))).toBe('M0 0L10 0L10 10Z');
+  });
+
+  it('traite chaque contour a part, et laisse intacts ceux deja fermes ou qui ne reviennent pas', () => {
+    const carre = (x: number): CommandeGlyphe[] => [{ type: 'M', x, y: 0 }, { type: 'L', x: x + 4, y: 0 }, { type: 'L', x: x + 4, y: 4 }, { type: 'L', x, y: 0 }];
+    expect(ecrireChemin(cheminDeGlyphe([...carre(0), ...carre(10)]))).toBe('M0 0L4 0L4 4ZM10 0L14 0L14 4Z');
+    // Deja ferme : le Z existant n'est pas double, et le segment avant lui reste.
+    expect(ecrireChemin(cheminDeGlyphe([{ type: 'M', x: 0, y: 0 }, { type: 'L', x: 4, y: 0 }, { type: 'L', x: 0, y: 0 }, { type: 'Z' }]))).toBe('M0 0L4 0L0 0Z');
+    // Ouvert (ne revient pas au depart) : on n'invente pas de fermeture.
+    expect(ecrireChemin(cheminDeGlyphe([{ type: 'M', x: 0, y: 0 }, { type: 'L', x: 4, y: 0 }, { type: 'L', x: 4, y: 4 }]))).toBe('M0 0L4 0L4 4');
+    expect(cheminDeGlyphe([])).toEqual([]);
+  });
+
+  it('compare apres arrondi : un retour a 0.0004 pres du depart est un retour', () => {
+    expect(ecrireChemin(cheminDeGlyphe([{ type: 'M', x: 0, y: 0 }, { type: 'L', x: 4, y: 0 }, { type: 'L', x: 4, y: 4 }, { type: 'L', x: 0.0004, y: -0.0004 }]))).toBe('M0 0L4 0L4 4Z');
+  });
+
+  it('donne a chaque contour d une vraie fonte son Z, sans segment de retour redondant', () => {
+    const octets = readFileSync(resolve(__dirname, '../../../node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'));
+    const g = glyphesDe(parse(octets.buffer.slice(octets.byteOffset, octets.byteOffset + octets.byteLength)));
+    for (const ch of ['A', 'B', 'O', 'g', '8']) {
+      const d = composer(ch, g, { taille: 100, x: 0, y: 100 })[0]?.d ?? [];
+      const M = d.filter(c => c.c === 'M').length, Z = d.filter(c => c.c === 'Z').length;
+      expect(M, ch).toBeGreaterThan(0);
+      expect(Z, ch).toBe(M);
+      d.forEach((c, i) => { if (c.c === 'Z') expect(d[i - 1]?.c === 'M', ch + ' : contour vide').toBe(false); });
+    }
+  });
+});
+
+describe('une ligature n est pas faite : une lettre reste une forme', () => {
+  it('fi donne deux formes, f puis i, comme toute paire de caracteres', () => {
+    expect(composer('fi', factice, { taille: 100 }).map(l => l.caractere)).toEqual(['f', 'i']);
   });
 });
 

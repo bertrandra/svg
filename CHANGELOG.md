@@ -5,8 +5,60 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Version majeure : des octets écrits changent
+
+Ce lot déplace délibérément des octets écrits (ADR-0009, ADR-0004) ; les références de
+`tests/fixtures/svg` ont été relues une à une, et les 4 134 formes de la bibliothèque gardent leurs
+empreintes.
+
+- **Fidélité de lecture** : l'alpha des couleurs (`rgba()`, `hsla()`, `#rrggbbaa`, `#rgba`) est gardé ;
+  `Forme` reçoit `opaciteRemplissage` et `opaciteContour` (facultatifs), `fill-opacity` et
+  `stroke-opacity` ne s'écrivent que s'ils diffèrent de 1, et sans trait l'alpha passe dans `opacity`.
+  Avec un trait, `fill-opacity` n'estompe plus le trait. `hsl()` et `rgb(0 128 255 / 40%)` se lisent ;
+  les 148 noms de couleur CSS se ramènent à `#rrggbb` (`steelblue` s'écrit `#4682b4`) ; une opacité
+  en pourcentage ou illisible n'invisibilise plus la forme.
+- **La peinture de la balise `<svg>` racine se transmet aux formes** (`fill`, `stroke`, `stroke-width`,
+  opacités, `fill-rule`, `color`…) : une icône de type Feather (`fill="none" stroke="currentColor"`) s'ouvre
+  en traits, plus en noir plein ; l'opacité de la racine vaut pour tout le dessin. `currentColor` prend la
+  couleur courante de la forme (`color`, héritée, noire par défaut). Un masque, une découpe ou un filtre
+  posé sur la racine refuse le SVG, comme sur un groupe.
+- **Les pointillés, bouts, jonctions et limites de pointe sont lus, gardés et réécrits**
+  (`stroke-dasharray`, `-dashoffset`, `-linecap`, `-linejoin`, `-miterlimit`) ; une jonction non précisée
+  s'écrit toujours arrondie. Les longueurs de pointillés suivent l'épaisseur à la mise à l'échelle, la
+  limite de pointe non. `ignores` ne les signale plus.
+- **`stroke-width="0"` reste 0** : un trait invisible ne devient plus visible (il s'écrivait `1`). Le PDF
+  ne trace plus un trait d'épaisseur nulle, et il sépare l'opacité du fond (`ca`) de celle du trait (`CA`).
+- **Texte** : le crénage des fontes Inter, Inter gras, Playfair Display gras et Fredoka est lu dans la
+  table GPOS (`io/crenageGpos.ts`, lookups d'extension et classes qu'opentype.js 2.0 ne lisait pas) :
+  « AV » se resserre (-140, -162, -74, -150 unités) ; Oswald, Bebas Neue, Caveat, Lobster et Pacifico ne
+  changent pas. Les contours de lettre qui reviennent à leur point de départ se ferment par `Z` : un
+  texte en contour seul a une jointure au lieu de deux capuchons.
+- **Booléens** : l'aplatissement des courbes suit une tolérance géométrique (écart maximal d'un
+  vingt-millième du plan, 512 segments au plus par courbe) au lieu de 64 segments fixes ; les résultats
+  sont réécrits, environ 25 % plus légers.
+
 ### Modifié
 
+- **Le focus et le clavier de l'éditeur** (ADR-0011) : l'éditeur prend le focus à l'ouverture, le reste de
+  la page est inerte pendant l'édition et le focus revient à l'hôte à la fermeture ; la confirmation
+  d'abandon et les tiroirs prennent et rendent le focus, Échap les ferme. La barre d'état n'est plus une
+  région vivante, et les flèches d'un menu ouvert ne déplacent plus la sélection.
+- **La liste « Par couleur » passe à l'échelle** (ADR-0008) : elle ne dessine que les lignes visibles
+  au-delà de 100 couleurs (jusqu'à six fois moins de temps par mouvement sur un dessin de 2 000 couleurs),
+  ses lignes ne se redessinent que si leur couleur change, et les nuances proches se calculent par une grille
+  de voisinage (même résultat qu'avant) sans plafond de 400 couleurs.
+- **Architecture de l'éditeur** (ADR-0010) : trois contextes (dessin, interface, actions) remplacent l'objet
+  `Edition` de cinquante champs ; les actions sont stables et lisent l'état du dernier rendu. `Bouton`,
+  `Menu` et `Section` vont dans `zones/commun/`, un seul `pluriel` (`util/texte.ts`). Aucun changement
+  visible ni d'octet écrit ; mesure neutre sur 5 000 formes.
+- **Le composant React ne garde plus rien sans `stockage`** : un hôte de `EditeurSvg` ou `BoutonEditerSvg`
+  qui n'y passe pas `stockage` perd les versions nommées dans le navigateur. L'embarquement garde
+  `localStorage` par défaut.
+- **Gros dessins** (une vectorisation de milliers de formes), ADR-0008 : le panneau des calques ne dessine
+  que les lignes visibles (au-delà de 150 formes), l'écriture d'une forme est mémorisée, les sélections se
+  testent par ensemble. Sur 5 000 formes : ouvrir, glisser et annuler vont 2 à 5 fois plus vite, et le DOM
+  passe de 33 000 à 9 000 nœuds ; le SVG écrit ne change pas d'un octet. L'historique garde moins d'états
+  sur un très gros dessin (40 à 5 000 formes, 200 jusqu'à 1 000).
 - **Un seul chargeur pour les annexes** (`io/annexes.ts`) : la bibliothèque, les fontes et le traceur se
   chargent par la même mécanique, qui valide la forme de ce que le script pose ; les messages d'erreur
   sont inchangés. Les scripts de construction partagent `scripts/aide.mjs`, et les fichiers de `dist/`
@@ -37,19 +89,61 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
     agrandies.
 
-### Constaté, non corrigé (changerait des octets écrits : version majeure)
-
-- `stroke-width="0"` est écrit `1` ; l'alpha de `rgba()` est perdu à la lecture ; un nom de couleur hors
-  des douze connus est copié tel quel ; le crénage est nul pour cinq des neuf fontes
-  embarquées. Ces limites sont figées dans `tests/fixtures/svg/limites-connues.svg`.
-
 ### Corrigé
 
+- Le panneau d'export du menu Fichier n'est plus dans un `role="menu"` (violation critique `aria-required-children`
+  d'axe-core).
+- **« Ajuster le plan de travail » compte l'étendue réelle du trait** : les pointes des jonctions en
+  pointe (jusqu'à limite × épaisseur / 2) et les coins des bouts carrés ne sont plus coupés. Un trait
+  ordinaire garde exactement le même plan.
+- Les sections ouvertes ou repliées de l'inspecteur ne se partagent plus entre deux éditeurs d'une même
+  page hôte (mémoire par éditeur).
+- « Enregistrer » d'un dessin sans forme visible rendait un `<svg>` vide à l'hôte (`onEnregistrer`) au
+  lieu de le refuser avec « rien à enregistrer » : la garde ne se déclenchait jamais.
 - La liste « Par couleur » ne défile plus en largeur dans le panneau étroit.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
 
+- **L'éditeur se pilote et se lit sans souris** (ADR-0011) :
+  - Tab et Maj+Tab passent à la forme (ou au point, en mode points) suivante ou précédente, et laissent le
+    focus quitter la toile aux bouts ; Page suivante et Page précédente font de même en boucle ; Entrée sur
+    une forme ouvre ses points ;
+  - Alt+flèches redimensionnent (Maj ×10), Ctrl+flèche gauche ou droite tourne de 15° (Maj : 1°) ;
+  - un réticule piloté aux flèches pour les outils de tracé : Entrée pose la forme ou le point de la plume,
+    Maj+Entrée termine le tracé ;
+  - une région vocale unique dit la sélection, l'outil, le point actif, annuler et rétablir, la création, la
+    suppression et les erreurs, et redit une phrase identique ;
+  - les calques portent un nom accessible avec leur genre et leur couleur, et un lien « Aller à la toile »
+    ouvre la tabulation ;
+  - mode contraste forcé (`forced-colors`) : états enfoncés, lignes choisies, focus, poignées et réticule en
+    couleurs du système ;
+  - audit `axe-core` en test de navigateur sur 25 écrans, tests de clavier et de contraste forcé (71 tests de
+    navigateur de plus, 216 au total).
+- **Tests sur un dessin de 2 000 couleurs** (11 tests de navigateur : défilement, clavier, doigt) et tests
+  d'équivalence des nuances proches contre l'ancienne implémentation.
+- **Menu Édition, « Booléens : rebâtir les courbes »** (actif par défaut, propre à la session, rien n'est
+  écrit) : l'union de deux cercles reste ronde, avec une vingtaine de points au lieu de plus de deux cents.
+  Le moteur garde `lisser` faux par défaut, donc `appliquerBooleen` et les références ne changent pas. La
+  barre d'état dit ce que le booléen a fait : « Union faite : 2 formes, 21 points (courbes rebâties). »
+  ou « … en segments droits. ».
+- **Un stockage injectable** (`io/stockage.ts`) : l'éditeur reçoit `stockage` (le magasin du navigateur,
+  celui de l'hôte, ou rien) et ne touche plus `localStorage` ; l'embarquement l'expose comme option
+  (`false` pour ne rien garder). 7 tests de navigateur de plus.
+- **À l'ouverture d'un SVG**, une phrase dit ce que la lecture n'a pas repris (marqueurs, pointillés,
+  bouts et jonctions de trait, règles de style hors classe, peinture de la balise `<svg>`, animations) ;
+  le panneau du dessin la répète. `lireDessin` rend pour cela `ignores`.
+- **L'inspecteur règle l'opacité du fond et celle du contour, le bout, la jonction et le style du trait**
+  (plein, tirets, pointillés, mixte) ; la toile et le PDF (`J`, `j`, `M`, `d`) les dessinent.
+- **« Simplifier les tracés »** dans « Nettoyer le tracé » : retire les points inutiles des segments
+  droits au seuil choisi ; courbes et formes verrouillées intactes (moteur : `simplifierChemin`,
+  `simplifier`).
+- **Booléens, option `lisser` du moteur** : rebâtit en cubiques vérifiées les arcs du résultat (une union
+  de deux cercles passe de 228 à 23 points) ; non branchée dans l'interface.
+- **Tests de navigateur, seconde série** : calques par couleur (recoloration en une entrée d'historique,
+  même couleur, nuances proches, isolement, tactile 420 px) et embarquement (`window.EditeurSvg`,
+  poignée, rappels, thèmes, 390 px, annexes) : 53 tests de plus, 121 au total. Un échec laisse une
+  capture et les erreurs de page dans `test-results/`, que le job `navigateur` publie en artefact.
 - **Un script d'embarquement** (`dist/editeur-svg-embarque.js`, `npm run embarquer`) : un script classique
   qui pose `window.EditeurSvg.ouvrir({ svg, onEnregistrer, … })` (avec `estEditable` et `version`),
   amène ses propres styles cantonnés à l'éditeur, et marche depuis le disque. Une page d'exemple

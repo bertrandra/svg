@@ -3,7 +3,7 @@
 // sa regle de remplissage. Pur et deterministe : ni date, ni identifiant tire au sort, pour que le
 // meme dessin donne toujours les memes octets.
 
-import { depart, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 
 const nb = (v: number) => { const r = Number(v.toFixed(3)); return Object.is(r, -0) ? '0' : String(r); };
 
@@ -32,14 +32,47 @@ export function operateurs(d: Chemin, vb: DessinSvg['vb']): string {
   return parts.join('\n');
 }
 
+/**
+ * L'opacite du remplissage (ca) et celle du trait (CA) : celle de la forme, multipliee par la leur.
+ * Sans opacite propre, les deux valent celle de la forme, comme avant.
+ */
+function opacitesPdf(f: Forme): { ca: string; CA: string } {
+  return { ca: nb(f.opacite * opaciteDuRemplissage(f)), CA: nb(f.opacite * opaciteDuContour(f)) };
+}
+
+/** Le nom stable de l'etat graphique d'une forme, ou null si elle est pleinement opaque. */
+const cleEtat = (f: Forme): string | null => {
+  const { ca, CA } = opacitesPdf(f);
+  return ca === '1' && CA === '1' ? null : ca === CA ? ca : ca + '/' + CA;
+};
+
+/** Un trait d'epaisseur nulle est invisible en SVG, mais un filet en PDF (« 0 w » = le plus fin que l'appareil sait tracer) : on ne le trace pas. */
+const traite = (f: Forme) => f.contour !== null && f.epaisseur > 0;
+
+/**
+ * Le style du trait en operateurs PDF : bout (J), jonction (j), limite de pointe (M), pointilles (d). Le bout
+ * plat est celui du PDF par defaut et ne s'ecrit pas ; la jonction ronde s'ecrit toujours (« 1 j »), comme avant.
+ * La limite de pointe du PDF vaut 10 faute d'ecrire mieux : elle s'ecrit donc des qu'il y a une pointe, 4 comme SVG.
+ */
+function operateursTrait(f: Forme): string[] {
+  const r: string[] = [];
+  if (f.bout) r.push((f.bout === 'round' ? '1' : '2') + ' J');
+  r.push(f.jonction === 'miter' ? '0 j' : f.jonction === 'bevel' ? '2 j' : '1 j');
+  if (f.jonction === 'miter') r.push(nb(f.limiteMitre ?? LIMITE_MITRE_DEFAUT) + ' M');
+  const p = pointillesEcrits(f);
+  if (p) r.push('[' + p.liste.join(' ') + '] ' + p.decalage + ' d');
+  return r;
+}
+
 function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null): string {
   const lignes: string[] = ['q'];
   if (etat) lignes.push('/' + etat + ' gs');
   if (f.remplissage) lignes.push(composantes(f.remplissage).map(nb).join(' ') + ' rg');
-  if (f.contour) lignes.push(composantes(f.contour).map(nb).join(' ') + ' RG', nb(f.epaisseur) + ' w', '1 j');
+  if (f.contour && traite(f)) lignes.push(composantes(f.contour).map(nb).join(' ') + ' RG', nb(f.epaisseur) + ' w', ...operateursTrait(f));
   lignes.push(operateurs(f.d, vb));
   const pair = f.regle === 'evenodd' ? '*' : '';
-  lignes.push(f.remplissage && f.contour ? 'B' + pair : f.remplissage ? 'f' + pair : f.contour ? 'S' : 'n', 'Q');
+  const trait = traite(f);
+  lignes.push(f.remplissage && trait ? 'B' + pair : f.remplissage ? 'f' + pair : trait ? 'S' : 'n', 'Q');
   return lignes.join('\n');
 }
 
@@ -48,10 +81,11 @@ export function ecrirePdf(dessin: DessinSvg): Uint8Array {
   const [, , l, h] = dessin.vb;
   const visibles = dessin.formes.filter(f => f.visible);
   // Un etat graphique par opacite distincte, nomme de facon stable.
-  const opacites = [...new Set(visibles.filter(f => f.opacite < 1).map(f => nb(f.opacite)))].sort();
+  const opacites = [...new Set(visibles.map(cleEtat).filter((c): c is string => c !== null))].sort();
   const etats = new Map(opacites.map((o, i) => [o, 'GS' + i]));
-  const contenu = visibles.map(f => contenuForme(f, dessin.vb, f.opacite < 1 ? etats.get(nb(f.opacite)) ?? null : null)).join('\n');
-  const extg = opacites.length ? ' /ExtGState << ' + opacites.map(o => '/' + etats.get(o) + ' << /ca ' + o + ' /CA ' + o + ' >>').join(' ') + ' >>' : '';
+  const contenu = visibles.map(f => { const c = cleEtat(f); return contenuForme(f, dessin.vb, c === null ? null : etats.get(c) ?? null); }).join('\n');
+  const valeurs = (cle: string) => { const [ca = '1', CA = ca] = cle.split('/'); return '/ca ' + ca + ' /CA ' + CA; };
+  const extg = opacites.length ? ' /ExtGState << ' + opacites.map(o => '/' + etats.get(o) + ' << ' + valeurs(o) + ' >>').join(' ') + ' >>' : '';
   const objets = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',

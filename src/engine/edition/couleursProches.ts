@@ -7,6 +7,8 @@
 // regroupement est glouton dans cet ordre, et la cible d'un groupe est sa couleur la plus employee.
 
 import { lireHex, versOklab, type Oklab } from '../../util/couleur.js';
+import { au } from '../../util/tableaux.js';
+import { creerIndexVoisins, ecartOklab } from '../../util/voisinsOklab.js';
 import type { SurCouleur } from './couleurs.js';
 import type { DessinSvg, Forme } from './types.js';
 
@@ -36,8 +38,6 @@ function usages(dessin: DessinSvg, sur: SurCouleur): Map<string, number> {
   return n;
 }
 
-const ecartOklab = (a: Oklab, b: Oklab): number => Math.hypot(a.l - b.l, a.a - b.a, a.b - b.b);
-
 /** Le point OKLab d'une couleur, ou null si ce n'est pas un code hexadecimal (jamais une couleur devinee). */
 function pointDe(couleur: string): Oklab | null {
   const rgb = lireHex(couleur);
@@ -57,13 +57,17 @@ function ordonnees(n: ReadonlyMap<string, number>): string[] {
  */
 function affectations(dessin: DessinSvg, tolerance: number, sur: SurCouleur): { cibles: Map<string, string>; n: Map<string, number> } {
   const n = usages(dessin, sur);
-  const centres: Array<{ couleur: string; point: Oklab }> = [];
+  // L'index ne fait qu'elaguer la recherche de la premiere cible a moins de `tolerance` (util/voisinsOklab.ts) :
+  // sur des milliers de couleurs presque toutes distinctes, le parcours de toutes les cibles etait quadratique.
+  const index = creerIndexVoisins(tolerance);
+  const centres: string[] = [];
   const cibles = new Map<string, string>();
   for (const c of ordonnees(n)) {
     const point = pointDe(c);
     if (!point) continue;
-    const centre = centres.find(x => ecartOklab(x.point, point) <= tolerance);
-    if (centre) cibles.set(c, centre.couleur); else centres.push({ couleur: c, point });
+    const rang = index.premier(point);
+    if (rang >= 0) cibles.set(c, au(centres, rang));
+    else { index.ajouter(point, centres.length); centres.push(c); }
   }
   return { cibles, n };
 }
@@ -72,7 +76,8 @@ function affectations(dessin: DessinSvg, tolerance: number, sur: SurCouleur): { 
 export function couleursProches(dessin: DessinSvg, tolerance: number, sur: SurCouleur = 'tout'): GrappeCouleurs[] {
   const { cibles, n } = affectations(dessin, tolerance, sur);
   const parCible = new Map<string, string[]>();
-  for (const [de, vers] of cibles) parCible.set(vers, [...(parCible.get(vers) ?? []), de]);
+  // On ajoute en place : recopier la liste a chaque membre serait quadratique pour une cible tres suivie.
+  for (const [de, vers] of cibles) { const l = parCible.get(vers); if (l) l.push(de); else parCible.set(vers, [de]); }
   return ordonnees(n).flatMap(cible => {
     const membres = parCible.get(cible);
     return membres ? [{ cible, membres, formes: membres.reduce((s, m) => s + (n.get(m) ?? 0), 0) }] : [];

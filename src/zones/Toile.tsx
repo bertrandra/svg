@@ -1,8 +1,9 @@
 // Ce qui se dessine sur la toile : les formes, la grille, et la surcouche (selection, poignees, trace).
 
 import { memo, type ReactNode } from 'react';
-import { ancre, depart, ecrireChemin, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
-import type { Coin, Edition } from './typesEditeur.js';
+import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { FORMES } from './aidesEditeur.js';
+import type { Coin, EtatInterface, ModeleDessin } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
 function cheminDe(f: Forme): string {
@@ -11,13 +12,17 @@ function cheminDe(f: Forme): string {
   return d;
 }
 
+/** Le style du trait en proprietes React (stroke-dasharray devient strokeDasharray) : la meme liste que l'ecriture du SVG. */
+const traitReact = (f: Forme): Record<string, string> =>
+  Object.fromEntries(attributsTrait(f).map(([k, v]) => [k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()), v]));
+
 export const Calque = memo(function Calque({ f, contours }: { f: Forme; contours: boolean }) {
   if (!f.visible) return null;
   const pe = f.verrouille ? 'none' : contours ? 'all' : f.remplissage ? 'visiblePainted' : 'stroke';
   return contours
     ? <path data-id={f.id} className="trace-contour" d={cheminDe(f)} fill="none" fillRule={f.regle} pointerEvents={pe} />
-    : <path data-id={f.id} d={cheminDe(f)} fill={f.remplissage ?? 'none'} fillRule={f.regle} stroke={f.contour ?? undefined}
-      strokeWidth={f.contour ? f.epaisseur : undefined} strokeLinejoin="round" opacity={f.opacite < 1 ? f.opacite : undefined} pointerEvents={pe} />;
+    : <path data-id={f.id} d={cheminDe(f)} fill={f.remplissage ?? 'none'} fillRule={f.regle} fillOpacity={f.remplissage && opaciteDuRemplissage(f) < 1 ? opaciteDuRemplissage(f) : undefined} stroke={f.contour ?? undefined}
+      strokeWidth={f.contour ? f.epaisseur : undefined} strokeOpacity={f.contour && opaciteDuContour(f) < 1 ? opaciteDuContour(f) : undefined} {...traitReact(f)} opacity={f.opacite < 1 ? f.opacite : undefined} pointerEvents={pe} />;
 });
 
 /** La grille, en lignes fines a l'ecran quel que soit le zoom. */
@@ -36,16 +41,19 @@ export function Grille({ vb, pas }: { vb: DessinSvg['vb']; pas: number }) {
 }
 
 /** Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, cadre, trace en cours. */
-export function surcouche(ed: Edition, unite: number, cadre: Boite | null, tactile: boolean): ReactNode[] {
+export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, cadre: Boite | null, tactile: boolean): ReactNode[] {
   const r: ReactNode[] = [];
   // Au doigt, les poignees grossissent : une cible de 8 px ne se touche pas.
   const px = unite * (tactile ? 1.8 : 1);
-  for (const id of ed.sel) {
-    const f = ed.dessin.formes.find(x => x.id === id);
+  // Une forme par identifiant, une fois : `find` pour chaque forme choisie coute n x m (5000 x 5000 = 60 ms).
+  const parId = new Map<string, Forme>();
+  if (mo.sel.length) for (const x of mo.dessin.formes) if (!parId.has(x.id)) parId.set(x.id, x);
+  for (const id of mo.sel) {
+    const f = parId.get(id);
     if (f) r.push(<path key={'s' + id} className="trace-choisi" d={cheminDe(f)} pointerEvents="none" />);
   }
-  const b = ed.boite;
-  if (b && ed.outil === 'selection') {
+  const b = mo.boite;
+  if (b && ui.outil === 'selection') {
     r.push(<rect key="boite" className="boite-choisie" x={b.x} y={b.y} width={b.l} height={b.h} pointerEvents="none" />);
     const coins: [Coin, number, number][] = [['nw', b.x, b.y], ['ne', b.x + b.l, b.y], ['sw', b.x, b.y + b.h], ['se', b.x + b.l, b.y + b.h]];
     for (const [c, cx, cy] of coins) r.push(<rect key={c} data-coin={c} className={'coin coin-' + c} x={cx - 4 * px} y={cy - 4 * px} width={8 * px} height={8 * px} />);
@@ -53,13 +61,13 @@ export function surcouche(ed: Edition, unite: number, cadre: Boite | null, tacti
     r.push(<line key="lien-rot" className="lien-poignee" x1={b.x + b.l / 2} y1={b.y} x2={b.x + b.l / 2} y2={b.y - 22 * px} pointerEvents="none" />);
     r.push(<circle key="rot" data-rotation="1" className="poignee-rotation" cx={b.x + b.l / 2} cy={b.y - 22 * px} r={5 * px} />);
   }
-  for (const [i, g] of ed.guides.entries()) {
+  for (const [i, g] of ui.guides.entries()) {
     r.push(g.axe === 'x'
       ? <line key={'g' + i} className="guide" x1={g.valeur} y1={g.de} x2={g.valeur} y2={g.a} pointerEvents="none" />
       : <line key={'g' + i} className="guide" x1={g.de} y1={g.valeur} x2={g.a} y2={g.valeur} pointerEvents="none" />);
   }
-  const fs = ed.formeSeule, p = ed.point;
-  if (ed.outil === 'points' && fs) {
+  const fs = mo.formeSeule, p = ui.point;
+  if (ui.outil === 'points' && fs) {
     const d = fs.d;
     const c = p !== null ? d[p] : undefined, a = c ? ancre(c) : null;
     if (c && a && p !== null) {
@@ -77,9 +85,20 @@ export function surcouche(ed: Edition, unite: number, cadre: Boite | null, tacti
       if (q) r.push(<rect key={'a' + i} data-ancre={i} className={'ancre' + (i === p ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} />);
     });
   }
-  if (ed.trace.length) {
-    r.push(<polyline key="trace" className="trace-en-cours" points={ed.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);
-    ed.trace.forEach((q, i) => r.push(<rect key={'t' + i} className={'ancre' + (i === 0 ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} pointerEvents="none" />));
+  if (ui.trace.length) {
+    r.push(<polyline key="trace" className="trace-en-cours" points={ui.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);
+    ui.trace.forEach((q, i) => r.push(<rect key={'t' + i} className={'ancre' + (i === 0 ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} pointerEvents="none" />));
+  }
+  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume')) {
+    // Le reticule du clavier : deux traits et un point, de taille fixe a l'ecran quel que soit le zoom.
+    const [cx, cy] = ui.curseur, t = 12 * px;
+    r.push(
+      <g key="reticule" className="reticule" pointerEvents="none">
+        <line x1={cx - t} y1={cy} x2={cx + t} y2={cy} />
+        <line x1={cx} y1={cy - t} x2={cx} y2={cy + t} />
+        <circle cx={cx} cy={cy} r={3 * px} />
+      </g>
+    );
   }
   if (cadre) r.push(<rect key="cadre" className="cadre-selection" x={cadre.x} y={cadre.y} width={cadre.l} height={cadre.h} pointerEvents="none" />);
   return r;

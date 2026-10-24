@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { historique, avancer, annuler, retablir, clore } from '../../../src/util/historique.js';
+import { historique, avancer, annuler, retablir, clore, limitePourTaille } from '../../../src/util/historique.js';
 
 describe('historique', () => {
   it('annule et retablit dans l ordre', () => {
@@ -27,5 +27,24 @@ describe('historique', () => {
     for (let i = 1; i <= 10; i++) h = avancer(h, i, null, 3);
     expect(h.passe).toEqual([7, 8, 9]);
     expect(avancer(h, h.present)).toBe(h);
+  });
+
+  it('garde deux cents etats d\'un dessin ordinaire, et moins d\'un tres gros', () => {
+    expect(limitePourTaille(0)).toBe(200);
+    expect(limitePourTaille(50)).toBe(200);
+    expect(limitePourTaille(1000)).toBe(200);
+    expect(limitePourTaille(2000)).toBe(100);
+    expect(limitePourTaille(5000)).toBe(40);
+    expect(limitePourTaille(1_000_000)).toBe(10);
+    expect(limitePourTaille(5000, 100_000, 3)).toBe(20);
+  });
+
+  it('retire les plus anciens quand le dessin grossit et que la limite baisse', () => {
+    let h = historique(0);
+    for (let i = 1; i <= 30; i++) h = avancer(h, i, null, 30);
+    expect(h.passe.length).toBe(30);
+    h = avancer(h, 31, null, 10);
+    expect(h.passe.length).toBe(10);
+    expect(h.passe[9]).toBe(30);
   });
 });

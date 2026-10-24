@@ -3,6 +3,7 @@
 // rend un nouveau dessin, ou le meme objet quand rien ne change (l'historique s'en sert).
 
 import type { Boite, DessinSvg, Forme, Matrice } from './types.js';
+import { echellerTrait, reglerTrait, type ReglageTrait } from './trait.js';
 import { boiteDe, echelle, facteur, multiplier, rotation, transformerChemin, translation } from './geometrie.js';
 
 export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: Forme) => Forme): DessinSvg {
@@ -19,7 +20,7 @@ export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: 
 
 export function transformer(dessin: DessinSvg, ids: readonly string[], m: Matrice): DessinSvg {
   const k = facteur(m);
-  return surFormes(dessin, ids, f => ({ ...f, d: transformerChemin(f.d, m), epaisseur: f.epaisseur * k }));
+  return surFormes(dessin, ids, f => ({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }));
 }
 
 export const deplacer = (dessin: DessinSvg, ids: readonly string[], dx: number, dy: number): DessinSvg =>
@@ -64,16 +65,20 @@ export function aligner(dessin: DessinSvg, ids: readonly string[], a: Alignement
   return r;
 }
 
-export type Reglage = Partial<Pick<Forme, 'remplissage' | 'contour' | 'epaisseur' | 'opacite' | 'regle' | 'visible' | 'verrouille'>>;
+export type Reglage = Partial<Pick<Forme, 'remplissage' | 'contour' | 'epaisseur' | 'opacite' | 'opaciteRemplissage' | 'opaciteContour' | 'regle' | 'visible' | 'verrouille'>>;
 
 export function modifier(dessin: DessinSvg, ids: readonly string[], r: Reglage): DessinSvg {
   return surFormes(dessin, ids, f => {
     const champs = Object.keys(r) as (keyof Reglage)[];
     if (champs.every(k => f[k] === r[k])) return f;
     const g = { ...f, ...r } as Forme;
-    return g.contour && !(g.epaisseur > 0) ? { ...g, epaisseur: 1 } : g;
+    // Un trait qui apparait prend une epaisseur visible ; un trait deja la garde, zero compris (un trait invisible reste a l'utilisateur).
+    return g.contour && !f.contour && !(g.epaisseur > 0) ? { ...g, epaisseur: 1 } : g;
   });
 }
+
+/** Regler le style du trait (pointilles, bout, jonction, limite de pointe) des formes choisies ; le meme dessin si rien ne change. */
+export const modifierTrait = (dessin: DessinSvg, ids: readonly string[], r: ReglageTrait): DessinSvg => surFormes(dessin, ids, f => reglerTrait(f, r));
 
 export function supprimer(dessin: DessinSvg, ids: readonly string[]): DessinSvg {
   const voulus = new Set(ids);

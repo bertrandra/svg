@@ -4,12 +4,37 @@
 import { echapperAttribut } from '../../util/xml.js';
 import type { DessinSvg, Forme } from './types.js';
 import { ecrireChemin, nb } from './chemins.js';
+import { attributsTrait } from './trait.js';
+import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
+
+// L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
+// operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
+// dessin a chaque modification, ou sauver le brouillon, reecrivait les cinq mille formes d'une
+// vectorisation pour une seule qui avait bouge. Le texte rendu est le meme octet pour octet.
+const cacheEcriture = new WeakMap<Forme, string[]>();
 
 export function ecrireForme(f: Forme, precision = 2): string {
+  if (!Number.isInteger(precision) || precision < 0 || precision > 9) return composerForme(f, precision);
+  let textes = cacheEcriture.get(f);
+  if (!textes) { textes = []; cacheEcriture.set(f, textes); }
+  let s = textes[precision];
+  if (s === undefined) { s = composerForme(f, precision); textes[precision] = s; }
+  return s;
+}
+
+function composerForme(f: Forme, precision: number): string {
   let s = '<path d="' + ecrireChemin(f.d, precision) + '" fill="' + echapperAttribut(f.remplissage ?? 'none') + '"';
   if (f.regle === 'evenodd') s += ' fill-rule="evenodd"';
-  if (f.contour) s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '" stroke-linejoin="round"';
-  if (f.opacite < 1) s += ' opacity="' + nb(f.opacite, 3) + '"';
+  // Les opacites propres ne s'ecrivent que lorsqu'elles changent quelque chose : une forme sans alpha reste
+  // ecrite comme avant. Sans contour, le fond et la forme ne font qu'un : tout va dans `opacity`, qui est
+  // aussi ce que la lecture en fait, donc une relecture reecrit les memes octets.
+  let opacite = f.opacite;
+  if (f.contour) {
+    if (f.remplissage && opaciteDuRemplissage(f) < 1) s += ' fill-opacity="' + nb(opaciteDuRemplissage(f), 3) + '"';
+    s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '"' + attributsTrait(f).map(([k, v]) => ' ' + k + '="' + v + '"').join('');
+    if (opaciteDuContour(f) < 1) s += ' stroke-opacity="' + nb(opaciteDuContour(f), 3) + '"';
+  } else if (f.remplissage) opacite = Math.round(opacite * opaciteDuRemplissage(f) * 1000) / 1000;
+  if (opacite < 1) s += ' opacity="' + nb(opacite, 3) + '"';
   return s + '/>';
 }
 

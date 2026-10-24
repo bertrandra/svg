@@ -103,6 +103,7 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `fermerApresEnregistrer` | `boolean` | `true` | Fermer l’éditeur dès que le dessin est enregistré, comme le fait la page |
 | `onFermer` | `() => void` | | Appelée **une fois**, quand l’éditeur se ferme, quelle qu’en soit la cause |
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification |
+| `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
@@ -211,14 +212,17 @@ Ce que cette isolation ne couvre pas :
   ```html
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
   ```
-- **Le focus** : à l’ouverture il reste sur votre bouton, l’éditeur n’y entre pas et ne le piège pas ;
-  à la fermeture il tombe sur `<body>`. Reprenez-le dans `onFermer` (`bouton.focus()`), et si votre page est
-  longue, rendez-la inerte pendant l’édition (`main.inert = true`, puis `false` dans `onFermer`).
-  L’éditeur est un `role="dialog" aria-modal="true"`.
+- **Le focus** : à l’ouverture l’éditeur prend le focus (sur sa toile) et rend inertes (`inert`) les autres
+  éléments directs de `<body>`, pour que ni Tab ni un lecteur d’écran n’aillent derrière lui ; à la
+  fermeture il retire ce qu’il a posé (un élément déjà `inert` chez vous le reste) et redonne le focus à
+  l’élément de votre page qui l’avait à l’ouverture, en général votre bouton « Éditer » (s’il existe
+  encore ; sinon reprenez-le dans `onFermer`). L’éditeur est un `role="dialog" aria-modal="true"`, posé
+  lui-même directement dans `<body>` : un conteneur unique de votre page (`<div id="app">`) devient inerte
+  tout entier, sans que vous ayez rien à faire.
 - **Le défilement** : `body` reçoit `overflow: hidden` tant que l’éditeur est ouvert, et le retrouve à la
   fermeture.
-- **Les raccourcis** : tant que l’éditeur est ouvert, `Ctrl+S`, `Ctrl+Z`, `Suppr`, etc. sont écoutés sur
-  `window`. Ne laissez pas votre page y réagir aussi.
+- **Les raccourcis** : tant que l’éditeur est ouvert, `Ctrl+S`, `Ctrl+Z`, `Suppr`, les flèches (seules, avec `Alt`
+  ou avec `Ctrl`), etc. sont écoutés sur `window` ; `Tab`, `Entrée`, `Page suivante` et `Page précédente` ne le sont que sur la toile. Ne laissez pas votre page y réagir aussi.
 
 Besoin d’une isolation totale (feuilles de l’hôte qui visent des classes génériques, règles `svg`) :
 prenez l’iframe (1).
@@ -240,10 +244,24 @@ prenez l’iframe (1).
     'unsafe-inline'; sandbox` quand vous le servez.
   - **Ne pas prendre `onBrouillon` pour un enregistrement** : il n’est pas nettoyé.
 - **Stockage** : l’éditeur garde les **versions nommées** (trente au plus, celles du panneau « Versions
-  nommées ») dans le `localStorage` de **votre origine**, sous la clé `svg.versions`. Elles sont partagées
-  par tous les dessins de l’origine et lisibles par tout script de la page. Le stockage est un confort : s’il
-  est refusé, tout marche sans lui. Rien d’autre n’y est écrit (pas de brouillon : c’est à vous de le garder
-  par `onBrouillon`).
+  nommées ») et rien d’autre (pas de brouillon : c’est à vous de le garder par `onBrouillon`). **Par défaut**,
+  elles vont dans le `localStorage` de **votre origine**, sous la clé `svg.versions`, partagées par tous les
+  dessins de l’origine et lisibles par tout script de la page. L’option `stockage` change cela :
+
+  ```js
+  window.EditeurSvg.ouvrir({ svg: svg, onEnregistrer: garder, stockage: false });   // rien n'est gardé nulle part
+
+  window.EditeurSvg.ouvrir({ svg: svg, onEnregistrer: garder, stockage: {          // ou votre propre magasin
+    lire:    function (cle) { return JSON.parse(maBase.getItem('editeur:' + cle) || 'null'); },
+    ecrire:  function (cle, valeur) { maBase.setItem('editeur:' + cle, JSON.stringify(valeur)); return true; },
+    retirer: function (cle) { maBase.removeItem('editeur:' + cle); }
+  } });
+  ```
+
+  Un stockage d’hôte a trois verbes : `lire(cle)` rend la valeur (du JSON déjà décodé) ou `null`, `ecrire(cle,
+  valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. La seule clé écrite est `svg.versions`. Si l’un
+  des verbes lève une exception, l’éditeur la rattrape et lit le stockage comme refusé. Le stockage est un
+  confort : refusé, absent ou plein, tout marche sans lui, les versions vivant alors le temps de l’éditeur.
 - **Aucun réseau** : l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>` des
   deux annexes, et seulement si la personne ouvre la bibliothèque ou l’outil Texte.
 - **Politique de sécurité du contenu** : vérifiée avec
@@ -311,6 +329,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `fermer` | `() => void` | Appelée quand la personne ferme (après confirmation s’il y a des modifications) |
 | `enregistrer` | `(svg: string) => void` | Reçoit le SVG retouché, déjà nettoyé. Le composant ne se ferme pas de lui-même : c’est à vous |
 | `brouillon?` | `(svg: string) => void` | Reçoit le SVG du moment, une seconde après la dernière modification |
+| `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
 
 À savoir, côté React :
 

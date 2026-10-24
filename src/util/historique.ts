@@ -6,6 +6,21 @@ export interface Historique<T> { passe: readonly T[]; present: T; futur: readonl
 
 export const LIMITE_HISTORIQUE = 200;
 
+/**
+ * Ce que l'historique peut garder, en « elements par etat x etats ». Chaque etat est un dessin entier,
+ * mais les formes qu'une operation n'a pas touchees sont partagees d'un etat a l'autre : seules les
+ * formes deplacees coutent. Tout deplacer, deux cents fois, sur un dessin de cinq mille formes tient
+ * pourtant deux gigaoctets (mesure : 2 Ko par forme) ; 200 000 en tient quatre cents mille.
+ */
+export const BUDGET_HISTORIQUE = 200_000;
+
+/**
+ * Combien d'etats garder pour un dessin de `taille` elements : deux cents jusqu'a mille elements (rien
+ * ne change pour un dessin ordinaire), puis de moins en moins, jamais moins de dix.
+ */
+export const limitePourTaille = (taille: number, budget = BUDGET_HISTORIQUE, plancher = 10): number =>
+  Math.max(plancher, Math.min(LIMITE_HISTORIQUE, Math.floor(budget / Math.max(1, taille))));
+
 export const historique = <T>(present: T): Historique<T> => ({ passe: [], present, futur: [], cle: null });
 
 /**

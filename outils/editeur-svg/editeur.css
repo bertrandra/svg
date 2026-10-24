@@ -79,6 +79,8 @@
 /* Une seule colonne qui ne depasse pas du panneau : sans minmax(0, 1fr), la ligne la plus longue l'elargit et fait defiler la liste. */
 .par-couleur { overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
 .par-couleur .couleur-choix { justify-content: flex-start; overflow: hidden; }
+/* Une longue liste de couleurs se fenetre (ListeCouleurs.tsx) : des cales tiennent la place des lignes absentes. */
+.par-couleur li[data-cale] { display: block; padding: 0; }
 .menu-pastille { display: block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
 .editeur-calques .isolement { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 6px 0 2px; }
 .editeur-calques .nuances-proches { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--filet); }
@@ -242,4 +244,42 @@
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+}
+/* Le clavier : le lien d'evitement vers la toile (invisible hors focus, mais le premier arret de Tab),
+   le reticule des outils de trace, et les panneaux qu'on ne fait que focaliser par programme. */
+.saut { position: absolute; z-index: 40; left: 8px; top: 8px; transform: translateY(-300%); background: var(--panneau); transition: none; }
+.saut:focus { transform: none; }
+.editeur-calques:focus, .editeur-inspecteur:focus { outline: none; }
+.editeur-svg-toile .reticule line { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .reticule circle { fill: var(--cyan); stroke: var(--panneau); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Contraste forcé (mode « contraste élevé » de Windows) : le navigateur remplace les couleurs de l'interface
+   par celles du système et supprime ombres et fonds d'etat. Ce qui ne tenait que par une teinte (bouton
+   enfoncé, ligne choisie, poignée, anneau de focus) se redit ici avec les mots-clés du systeme ; le dessin
+   lui-même garde ses couleurs (forced-color-adjust: none sur la toile et sur les échantillons). */
+@media (forced-colors: active) {
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, .saut:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  .editeur-svg-toile:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
+  button:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
+  .icone-bouton[aria-pressed="true"], button.primaire, .pastille-style button.aucun.actif { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: HighlightText; }
+  .icone-bouton[aria-pressed="true"] .icone, button.primaire .icone { color: HighlightText; }
+  .icone-bouton[aria-expanded="true"], .menu-bouton.texte[aria-expanded="true"] { border: 2px solid Highlight; }
+  .icone-bouton:hover:not(:disabled), .menu-bouton.texte:hover:not(:disabled) { border-color: Highlight; }
+  .menu-panneau { border: 2px solid CanvasText; }
+  .menu-element:hover:not(:disabled), .menu-element:focus-visible { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid HighlightText; outline-offset: -3px; box-shadow: none; }
+  .menu-element:hover:not(:disabled) .menu-coche, .menu-element:focus-visible .menu-coche, .menu-element:hover:not(:disabled) .menu-raccourci, .menu-element:focus-visible .menu-raccourci { color: HighlightText; }
+  .editeur-calques li.choisi, .par-couleur li.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .editeur-calques li.choisi button, .par-couleur li.choisi button, .par-couleur li.choisi code { color: HighlightText; }
+  .editeur-calques li.choisi button:focus-visible, .par-couleur li.choisi button:focus-visible { outline-color: HighlightText; }
+  .echantillon, .menu-pastille, input[type="color"] { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .nuancier .echantillon[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: 1px; }
+  .section > summary:focus-visible { outline-offset: -2px; }
+  .voile { forced-color-adjust: none; }
+  .editeur-svg-toile { forced-color-adjust: none; }
+  .editeur-svg-toile .plan-travail { stroke: CanvasText; }
+  .editeur-svg-toile .trace-choisi, .editeur-svg-toile .boite-choisie, .editeur-svg-toile .lien-poignee, .editeur-svg-toile .trace-en-cours, .editeur-svg-toile .cadre-selection, .editeur-svg-toile .trace-contour { stroke: Highlight; }
+  .editeur-svg-toile .coin, .editeur-svg-toile .ancre, .editeur-svg-toile .poignee-rotation { fill: Canvas; stroke: Highlight; stroke-width: 2; }
+  .editeur-svg-toile .ancre-choisie, .editeur-svg-toile .poignee { fill: Highlight; stroke: Canvas; }
+  .editeur-svg-toile .guide { stroke: LinkText; }
+  .editeur-svg-toile .reticule line { stroke: Highlight; }
+  .editeur-svg-toile .reticule circle { fill: Highlight; stroke: Canvas; }
 }

@@ -1,6 +1,7 @@
 // Les couleurs du dessin : lesquelles, combien de formes, remplacement partout. Une couleur dont on
 // a tout masque reste dans la liste, sans quoi on ne pourrait plus la rendre.
 
+import { au } from '../../util/tableaux.js';
 import type { DessinSvg, Forme } from './types.js';
 
 export interface CouleurDuDessin { couleur: string; formes: number }
@@ -21,7 +22,7 @@ export function remplacerCouleur(dessin: DessinSvg, de: string, vers: string | n
     const r = f.remplissage === de ? vers : f.remplissage, c = f.contour === de ? vers : f.contour;
     if (r === f.remplissage && c === f.contour) return f;
     change = true;
-    return { ...f, remplissage: r, contour: c, epaisseur: c ? f.epaisseur || 1 : f.epaisseur };
+    return { ...f, remplissage: r, contour: c };
   });
   return change ? { ...dessin, formes } : dessin;
 }
@@ -43,7 +44,7 @@ export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string 
     }
     if (f.contour !== de || vers === de) return f;
     change = true;
-    return { ...f, contour: vers, epaisseur: vers ? f.epaisseur || 1 : f.epaisseur };
+    return { ...f, contour: vers };
   });
   return change ? { ...dessin, formes } : dessin;
 }
@@ -65,7 +66,8 @@ export function groupesDeCouleur(dessin: DessinSvg, sur: SurCouleur = 'tout'): G
   const groupes = new Map<string, Forme[]>();
   for (const f of dessin.formes) {
     const lues = sur === 'remplissage' ? [f.remplissage] : sur === 'contour' ? [f.contour] : f.remplissage === f.contour ? [f.remplissage] : [f.remplissage, f.contour];
-    for (const c of lues) if (c) groupes.set(c, [...(groupes.get(c) ?? []), f]);
+    // On ajoute au groupe en place : recopier le tableau a chaque forme couterait n au carre pour une couleur dominante.
+    for (const c of lues) if (c) { const g = groupes.get(c); if (g) g.push(f); else groupes.set(c, [f]); }
   }
   return [...groupes]
     .map(([couleur, fs]) => ({
@@ -73,6 +75,69 @@ export function groupesDeCouleur(dessin: DessinSvg, sur: SurCouleur = 'tout'): G
       visibles: fs.filter(f => f.visible).length, verrouillees: fs.filter(f => f.verrouille).length
     }))
     .sort((a, b) => b.ids.length - a.ids.length || (a.couleur < b.couleur ? -1 : 1));
+}
+
+/** Deux groupes disent la meme chose : meme couleur, memes formes dans le meme ordre, memes comptes. */
+function groupesEgaux(a: GroupeCouleur, b: GroupeCouleur): boolean {
+  if (a === b) return true;
+  if (a.couleur !== b.couleur || a.visibles !== b.visibles || a.verrouillees !== b.verrouillees) return false;
+  return memesIds(a.ids, b.ids) && memesIds(a.libres, b.libres);
+}
+
+function memesIds(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
+ * Les groupes `apres` en reprenant les objets de `avant` pour ceux qui n'ont pas change. Une ligne de
+ * l'interface qui recoit le meme objet n'a pas a se redessiner ; si rien n'a change, c'est le tableau
+ * `avant` lui-meme qui revient. Les valeurs sont celles de `apres`, jamais autre chose.
+ */
+export function partagerGroupes(avant: GroupeCouleur[], apres: GroupeCouleur[]): GroupeCouleur[] {
+  const connus = new Map<string, GroupeCouleur>();
+  for (const g of avant) connus.set(g.couleur, g);
+  let identique = avant.length === apres.length;
+  const rendus = apres.map((g, i) => {
+    const ancien = connus.get(g.couleur);
+    const repris = ancien && groupesEgaux(ancien, g) ? ancien : g;
+    if (identique && repris !== au(avant, i)) identique = false;
+    return repris;
+  });
+  return identique ? avant : rendus;
+}
+
+/**
+ * Vrai quand ce qu'une liste de couleurs lit sur les formes (identifiant, remplissage, contour,
+ * visibilite, verrou) est le meme : les coordonnees, l'epaisseur ou le style du trait n'y comptent pas.
+ * Pendant un deplacement, seules les coordonnees changent : les couleurs n'ont pas a se relire.
+ */
+export function memesCouleurs(avant: readonly Forme[], apres: readonly Forme[]): boolean {
+  if (avant === apres) return true;
+  if (avant.length !== apres.length) return false;
+  for (let i = 0; i < avant.length; i++) {
+    const a = au(avant, i), b = au(apres, i);
+    if (a === b) continue;
+    if (a.id !== b.id || a.remplissage !== b.remplissage || a.contour !== b.contour || a.visible !== b.visible || a.verrouille !== b.verrouille) return false;
+  }
+  return true;
+}
+
+/** Les groupes de couleur d'un dessin, avec le dessin qui les a produits : de quoi savoir s'ils tiennent encore. */
+export interface LectureCouleurs { dessin: DessinSvg; sur: SurCouleur; groupes: GroupeCouleur[] }
+
+/**
+ * `groupesDeCouleur`, mais en gardant la lecture d'avant quand les couleurs n'ont pas bouge, et en
+ * partageant les groupes inchanges quand elles ont bougé. Le resultat vaut toujours
+ * `groupesDeCouleur(dessin, sur)` ; seule l'identite des objets change. La lecture rendue garde le
+ * dessin ancien quand les couleurs n'ont pas bouge : ce dessin est donc aussi stable que les couleurs,
+ * et sert de cle a tout ce qui ne depend que d'elles (les nuances proches).
+ */
+export function lireCouleurs(dessin: DessinSvg, sur: SurCouleur, precedente: LectureCouleurs | null): LectureCouleurs {
+  if (precedente && precedente.sur === sur && memesCouleurs(precedente.dessin.formes, dessin.formes)) return precedente;
+  const groupes = groupesDeCouleur(dessin, sur);
+  return { dessin, sur, groupes: precedente && precedente.sur === sur ? partagerGroupes(precedente.groupes, groupes) : groupes };
 }
 
 /**

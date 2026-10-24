@@ -16,9 +16,9 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, tourner, type DessinSvg
+  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
-import { appliquerBooleen, type Booleen } from '../../../src/engine/booleens.js';
+import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
@@ -65,8 +65,19 @@ const glyphesFactices: Glyphes = {
   crenage: (a, b) => (a === 'A' && b === 'V' ? -85 : a === 'E' && b === '1' ? 33 : 0)
 };
 
-const booleen = (ids: string[], op: Booleen) => (d: DessinSvg): DessinSvg => {
-  const r = appliquerBooleen(d, ids, op);
+// La meme fonte factice, a la maniere d'opentype.js 2.0 : aucun Z, chaque contour retombe sur son depart
+// (par un segment droit pour les codes pairs, par une courbe quadratique pour les autres).
+const glyphesSansZ: Glyphes = {
+  ...glyphesFactices,
+  contour: (c, x, y, t) => {
+    const k = t / 1000, l = 600 * k, h = 700 * k;
+    if (c.charCodeAt(0) % 2 === 0) return [{ type: 'M', x, y }, { type: 'L', x: x + l, y }, { type: 'L', x: x + l, y: y - h }, { type: 'L', x, y }];
+    return [{ type: 'M', x, y }, { type: 'L', x: x + l, y }, { type: 'Q', x1: x + l / 2, y1: y - h, x, y }];
+  }
+};
+
+const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
+  const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
   return r.dessin;
 };
@@ -91,8 +102,23 @@ const CAS: readonly Cas[] = [
   { nom: 'elements' },
   { nom: 'evenodd-opacite' },
   { nom: 'peintures' },
-  // Des defauts connus, ecrits tels quels : les corriger deplace un octet ecrit, donc se fait en version majeure.
-  { nom: 'limites-connues' },
+  // Alpha des couleurs, epaisseur nulle, noms CSS : trois defauts de lecture corriges en version majeure (ils
+  // deplacaient ou perdaient un octet ecrit). Ce cas montre l'ecriture juste.
+  { nom: 'fidelite-lecture' },
+  // Deuxieme lot de fidelite de lecture (version majeure) : la peinture de la balise racine se transmet (icones de
+  // type Feather), currentColor suit la couleur courante, et le trait garde ses pointilles, bouts et jonctions.
+  { nom: 'icone-feather' },
+  { nom: 'racine-heritage' },
+  { nom: 'trait-pointilles' },
+  // L'echelle emporte l'epaisseur ET les longueurs des pointilles ; la limite de pointe, un rapport, ne bouge pas.
+  {
+    nom: 'trait-echelle',
+    entree: 'trait-pointilles',
+    operation: enchainer(d => redimensionner(d, ['f1', 'f2', 'f3'], { x: 5, y: 5, l: 40, h: 20 }), d => mettreALEchelle(d, ['f4', 'f8'], 0.5, 0.5), d => tournerAutour(d, ['f5'], 30))
+  },
+  { nom: 'trait-booleens', operation: booleen(['f1', 'f2'], 'union') },
+  // La decoupe n'est que des contours pleins : elle laisse les pointilles de cote.
+  { nom: 'trait-decoupe', entree: 'trait-pointilles', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.
@@ -101,12 +127,23 @@ const CAS: readonly Cas[] = [
   { nom: 'booleens-soustraction', entree: 'booleens', operation: booleen(['f1', 'f2'], 'soustraction') },
   { nom: 'booleens-intersection', entree: 'booleens', operation: booleen(['f1', 'f2'], 'intersection') },
   { nom: 'booleens-exclusion', entree: 'booleens', operation: booleen(['f1', 'f2'], 'exclusion') },
+  // Les arcs du resultat rebatis en cubiques (option `lisser`) : un nouveau cas, les quatre precedents n'en dependent pas.
+  { nom: 'booleens-union-lisse', entree: 'booleens', operation: booleen(['f1', 'f2', 'f3'], 'union', { lisser: true }) },
+  // La simplification des trace : les sommets alignes partent, les courbes et les formes verrouillees restent.
+  { nom: 'simplification', operation: enchainer(d => modifier(d, ['f4'], { verrouille: true }), d => simplifier(d, ['f1', 'f2', 'f3', 'f4'], 0.05).dessin) },
   {
     nom: 'texte-par-lettre',
     operation: enchainer(
       d => ajouterTexte(d, composer('AVE 12\nBa.o', glyphesFactices, { taille: 36, x: 12.5, y: 40, interlettrage: 0.05, interligne: 1.1 }), { remplissage: '#15181d', contour: null, epaisseur: 1 }).dessin,
       d => ajouterTexte(d, composer('Ok', glyphesFactices, { taille: 20, x: 100, y: 90 }), { remplissage: null, contour: '#b3202c', epaisseur: 1.5 }).dessin
     )
+  },
+  // Les contours que opentype.js 2.0 rend sans Z (ils finissent sur leur depart) sont fermes a la conversion :
+  // un trait y fait une jointure. Ajoute avec la fermeture des contours de glyphe (version majeure).
+  {
+    nom: 'texte-contours-ouverts',
+    entree: 'texte-par-lettre',
+    operation: d => ajouterTexte(d, composer('Abc', glyphesSansZ, { taille: 30, x: 10, y: 50 }), { remplissage: null, contour: '#15181d', epaisseur: 2 }).dessin
   },
   { nom: 'palette-evenement', entree: 'palette', operation: d => appliquerPalette(d, palette('noel')) },
   { nom: 'palette-une-couleur', entree: 'palette', operation: d => uneCouleur(d, '#7b2d8e') },
@@ -143,6 +180,8 @@ const CAS: readonly Cas[] = [
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },
   { nom: 'couleurs-fusion-proches', entree: 'couleurs-calques', operation: enchainer(d => modifier(d, ['f4'], { verrouille: true }), d => fusionnerCouleursProches(d, 0.03).dessin) },
   { nom: 'ajuster-plan', entree: 'plan-decale', operation: d => ajusterPlan(d) },
+  // Le plan ajuste compte la pointe d'une jonction aigue et les coins d'un bout carre, pas seulement la demi-epaisseur.
+  { nom: 'ajuster-plan-traits', operation: d => ajusterPlan(d) },
   { nom: 'export-decoupe', entree: 'elements', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }
 ];

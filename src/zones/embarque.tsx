@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { lireDessin } from '../engine/editionSvg.js';
 import { definirBaseAnnexes } from '../io/annexes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
+import { estStockage, stockageNavigateur, stockageProtege, type Stockage } from '../io/stockage.js';
 import { porterCss, remEnPixels } from '../util/cssPortee.js';
 import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
 
@@ -28,6 +29,12 @@ export interface OptionsEmbarquees {
   bibliotheque?: Bibliotheque | 'a-charger';
   /** Le dossier ou chercher bibliotheque.js et polices.js, relatif a la page de l'hote ou absolu. Par defaut : a cote de la page. */
   baseAnnexes?: string;
+  /**
+   * Ou garder les versions nommees (cle `svg.versions`). Absent : le `localStorage` de la page de l'hote.
+   * `false` ou `null` : rien ne se garde. Ou un objet { lire(cle), ecrire(cle, valeur), retirer(cle) }
+   * (du JSON ; il ne doit pas lever, et s'il leve l'editeur le lit comme refuse).
+   */
+  stockage?: Stockage | false | null;
   /** Fermer l'editeur des que le dessin est enregistre. Vrai par defaut, comme la page. */
   fermerApresEnregistrer?: boolean;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
@@ -64,6 +71,9 @@ export function verifierOptions(options: unknown): string | null {
   if (o.bibliotheque !== undefined && o.bibliotheque !== 'a-charger' && (typeof o.bibliotheque !== 'object' || o.bibliotheque === null)) {
     return 'L’option « bibliotheque » doit être « a-charger » ou la bibliothèque déjà chargée.';
   }
+  if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
+    return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
+  }
   if (o.fermerApresEnregistrer !== undefined && typeof o.fermerApresEnregistrer !== 'boolean') return 'L’option « fermerApresEnregistrer » doit être vraie ou fausse.';
   return null;
 }
@@ -71,6 +81,12 @@ export function verifierOptions(options: unknown): string | null {
 /** Vrai quand l'editeur sait ouvrir ce SVG : du texte, sans image enveloppee, et que le moteur sait lire. */
 export function estEditable(svg: unknown): boolean {
   return typeof svg === 'string' && editable(svg) && !('erreur' in lireDessin(svg));
+}
+
+/** Le stockage voulu par l'hote : celui du navigateur par defaut, aucun pour `false` ou `null`, le sien (protege) sinon. */
+export function stockageDe(option: Stockage | false | null | undefined): Stockage | null {
+  if (option === undefined) return stockageNavigateur();
+  return option === false || option === null ? null : stockageProtege(option);
 }
 
 const ID_STYLE = 'editeur-svg-embarque-style';
@@ -132,11 +148,12 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     };
     const nom = options.nom ?? 'dessin';
     const apresEnregistrer = options.fermerApresEnregistrer ?? true;
+    const stockage = stockageDe(options.stockage);
     racine.render(
       <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
         {...(options.bibliotheque === undefined ? {} : { bibliotheque: options.bibliotheque })}
         {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
-        fermer={fermer}
+        stockage={stockage} fermer={fermer}
         enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
     );
     ouvert = { fermer };

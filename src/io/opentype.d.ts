@@ -2,7 +2,7 @@
 // chaque caractere sa glyphe, son contour, son avance et le crenage avec la suivante.
 declare module 'opentype.js' {
   export interface CommandeOpentype { type: 'M' | 'L' | 'C' | 'Q' | 'Z'; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }
-  export interface Glyph { advanceWidth?: number; getPath(x: number, y: number, fontSize: number): { commands: CommandeOpentype[] } }
+  export interface Glyph { index: number; advanceWidth?: number; getPath(x: number, y: number, fontSize: number): { commands: CommandeOpentype[] } }
   export interface Font {
     unitsPerEm: number;
     ascender: number;

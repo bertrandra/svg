@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 110">
+  <!-- Pointilles, bouts et jonctions : portes par le modele, ecrits seulement s'ils different du defaut -->
+  <path d="M10 10h80" fill="none" stroke="#15181d" stroke-width="4" stroke-dasharray="8 4"/>
+  <!-- un motif impair se repete : 5 3 2 devient 5 3 2 5 3 2 -->
+  <path d="M10 22h80" fill="none" stroke="#15181d" stroke-width="3" stroke-dasharray="5,3,2" stroke-dashoffset="3" stroke-linecap="round"/>
+  <!-- un trait nul et un bout rond : des points -->
+  <path d="M10 36h80" fill="none" stroke="#b3202c" stroke-width="6" stroke-dasharray="0 10" stroke-linecap="round"/>
+  <path d="M10 60h40v20" fill="none" stroke="#15181d" stroke-width="6" stroke-linejoin="miter" stroke-miterlimit="2" stroke-linecap="square"/>
+  <path d="M60 60h40v20" fill="none" stroke="#15181d" stroke-width="6" stroke-linejoin="bevel"/>
+  <!-- la limite par defaut (4) et la jonction ronde ne laissent aucune trace dans le modele -->
+  <path d="M110 60h40v20" fill="none" stroke="#15181d" stroke-width="6" stroke-linejoin="miter" stroke-miterlimit="4" stroke-linecap="butt"/>
+  <path d="M160 60h30v20" fill="none" stroke="#15181d" stroke-width="6" stroke-linejoin="round" stroke-miterlimit="9"/>
+  <!-- tout se transmet par un groupe, et le groupe change l'echelle : epaisseur, tirets et decalage la suivent -->
+  <g stroke="#1f7a3a" stroke-width="2" stroke-dasharray="6 2" stroke-dashoffset="1" fill="none" transform="translate(100 5) scale(2)">
+    <path d="M0 0h40"/>
+    <path d="M0 8h40" stroke-dasharray="none"/>
+  </g>
+  <!-- unites px acceptees ; valeurs invalides, nulles ou « none » : trait plein -->
+  <path d="M10 95h40" fill="none" stroke="#15181d" stroke-dasharray="4px 2px" stroke-dashoffset="-1px"/>
+  <path d="M60 95h40" fill="none" stroke="#15181d" stroke-dasharray="0"/>
+  <path d="M110 95h40" fill="none" stroke="#15181d" stroke-dasharray="-2 3"/>
+  <path d="M160 95h30" fill="none" stroke="#15181d" stroke-dasharray="3 2" stroke-width="0"/>
+  <!-- un trait invisible garde son motif, une forme sans trait n'en a pas -->
+  <path d="M170 10h20v20h-20z" fill="#b3202c" stroke-dasharray="4 2"/>
+</svg>
