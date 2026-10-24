@@ -3,7 +3,7 @@
 // interlettrage) et la conversion des commandes de glyphe en chemin, pures et deterministes. Le SVG
 // ecrit ne contient jamais de <text>.
 
-import { boiteChemin, prochainId, type Chemin, type Commande, type DessinSvg, type Forme, type Style } from './editionSvg.js';
+import { ancre, boiteChemin, prochainId, type Chemin, type Commande, type DessinSvg, type Forme, type Style } from './editionSvg.js';
 
 /** Une commande de contour telle qu'un lecteur de fonte la rend (M, L, C, Q, Z, en absolu). */
 export interface CommandeGlyphe { type: 'M' | 'L' | 'C' | 'Q' | 'Z'; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }
@@ -21,6 +21,31 @@ export interface Glyphes {
 
 export interface OptionsTexte { taille: number; interlettrage?: number; interligne?: number; x?: number; y?: number }
 
+/**
+ * Ferme les contours qui reviennent a leur point de depart sans le dire. opentype.js 2.0 n'emet jamais de
+ * Z : un contour finit sur son premier point, et un trait y poserait deux bouts en capuchon au lieu d'une
+ * jointure. Un dernier segment droit qui retombe sur le depart est retire : le Z le trace a sa place. Un
+ * contour deja ferme, ou qui ne revient pas a son depart, reste tel quel.
+ */
+function fermerContours(chemin: readonly Commande[]): Commande[] {
+  const out: Commande[] = [];
+  let debut = 0;
+  const clore = (fin: number) => {
+    const contour = out.slice(debut, fin), premier = contour[0], dernier = contour[contour.length - 1];
+    if (!premier || !dernier || premier.c !== 'M' || contour.length < 3 || dernier.c === 'Z') return;
+    const a = ancre(premier), b = ancre(dernier);
+    if (!a || !b || a[0] !== b[0] || a[1] !== b[1]) return;
+    if (dernier.c !== 'L') out.splice(fin, 0, { c: 'Z', p: [] });
+    else if (contour.length >= 4) out.splice(fin - 1, 1, { c: 'Z', p: [] });
+  };
+  for (const c of chemin) {
+    if (c.c === 'M') { clore(out.length); debut = out.length; }
+    out.push(c);
+  }
+  clore(out.length);
+  return out;
+}
+
 /** Un chemin a partir des commandes d'une glyphe ; les valeurs manquantes valent 0. */
 export function cheminDeGlyphe(commandes: readonly CommandeGlyphe[], precision = 3): Commande[] {
   const n = (v: number | undefined) => Number((v ?? 0).toFixed(precision));
@@ -31,10 +56,10 @@ export function cheminDeGlyphe(commandes: readonly CommandeGlyphe[], precision =
     else if (c.type === 'Q') out.push({ c: 'Q', p: [n(c.x1), n(c.y1), n(c.x), n(c.y)] });
     else out.push({ c: c.type, p: [n(c.x), n(c.y)] });
   }
-  return out;
+  return fermerContours(out);
 }
 
-export interface Lettre { caractere: string; d: Chemin }
+export interface Lettre{ caractere: string; d: Chemin }
 
 /**
  * Met un texte en lettres : une forme par caractere visible, les espaces avancent sans forme, un

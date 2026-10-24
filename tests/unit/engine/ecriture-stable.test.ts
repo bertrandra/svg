@@ -16,9 +16,9 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, tourner, type DessinSvg
+  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
-import { appliquerBooleen, type Booleen } from '../../../src/engine/booleens.js';
+import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
@@ -65,8 +65,19 @@ const glyphesFactices: Glyphes = {
   crenage: (a, b) => (a === 'A' && b === 'V' ? -85 : a === 'E' && b === '1' ? 33 : 0)
 };
 
-const booleen = (ids: string[], op: Booleen) => (d: DessinSvg): DessinSvg => {
-  const r = appliquerBooleen(d, ids, op);
+// La meme fonte factice, a la maniere d'opentype.js 2.0 : aucun Z, chaque contour retombe sur son depart
+// (par un segment droit pour les codes pairs, par une courbe quadratique pour les autres).
+const glyphesSansZ: Glyphes = {
+  ...glyphesFactices,
+  contour: (c, x, y, t) => {
+    const k = t / 1000, l = 600 * k, h = 700 * k;
+    if (c.charCodeAt(0) % 2 === 0) return [{ type: 'M', x, y }, { type: 'L', x: x + l, y }, { type: 'L', x: x + l, y: y - h }, { type: 'L', x, y }];
+    return [{ type: 'M', x, y }, { type: 'L', x: x + l, y }, { type: 'Q', x1: x + l / 2, y1: y - h, x, y }];
+  }
+};
+
+const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
+  const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
   return r.dessin;
 };
@@ -101,12 +112,23 @@ const CAS: readonly Cas[] = [
   { nom: 'booleens-soustraction', entree: 'booleens', operation: booleen(['f1', 'f2'], 'soustraction') },
   { nom: 'booleens-intersection', entree: 'booleens', operation: booleen(['f1', 'f2'], 'intersection') },
   { nom: 'booleens-exclusion', entree: 'booleens', operation: booleen(['f1', 'f2'], 'exclusion') },
+  // Les arcs du resultat rebatis en cubiques (option `lisser`) : un nouveau cas, les quatre precedents n'en dependent pas.
+  { nom: 'booleens-union-lisse', entree: 'booleens', operation: booleen(['f1', 'f2', 'f3'], 'union', { lisser: true }) },
+  // La simplification des trace : les sommets alignes partent, les courbes et les formes verrouillees restent.
+  { nom: 'simplification', operation: enchainer(d => modifier(d, ['f4'], { verrouille: true }), d => simplifier(d, ['f1', 'f2', 'f3', 'f4'], 0.05).dessin) },
   {
     nom: 'texte-par-lettre',
     operation: enchainer(
       d => ajouterTexte(d, composer('AVE 12\nBa.o', glyphesFactices, { taille: 36, x: 12.5, y: 40, interlettrage: 0.05, interligne: 1.1 }), { remplissage: '#15181d', contour: null, epaisseur: 1 }).dessin,
       d => ajouterTexte(d, composer('Ok', glyphesFactices, { taille: 20, x: 100, y: 90 }), { remplissage: null, contour: '#b3202c', epaisseur: 1.5 }).dessin
     )
+  },
+  // Les contours que opentype.js 2.0 rend sans Z (ils finissent sur leur depart) sont fermes a la conversion :
+  // un trait y fait une jointure. Ajoute avec la fermeture des contours de glyphe (version majeure).
+  {
+    nom: 'texte-contours-ouverts',
+    entree: 'texte-par-lettre',
+    operation: d => ajouterTexte(d, composer('Abc', glyphesSansZ, { taille: 30, x: 10, y: 50 }), { remplissage: null, contour: '#15181d', epaisseur: 2 }).dessin
   },
   { nom: 'palette-evenement', entree: 'palette', operation: d => appliquerPalette(d, palette('noel')) },
   { nom: 'palette-une-couleur', entree: 'palette', operation: d => uneCouleur(d, '#7b2d8e') },

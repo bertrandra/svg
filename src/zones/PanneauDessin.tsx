@@ -2,7 +2,7 @@
 // nettoyage, bibliotheque, versions, raccourcis.
 
 import { useMemo, useState } from 'react';
-import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleur, retirerPetites, statistiques } from '../engine/editionSvg.js';
+import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleur, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { SCENES } from '../model/scenes.js';
@@ -65,6 +65,7 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
         <div className="boutons">
           <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ed.appliquer(() => r.dessin); ed.dire(r.retirees ? pl(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
           <button type="button" onClick={() => { const r = regrouper(dessin); ed.appliquer(() => r.dessin); ed.dire(r.reunies ? pl(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
+          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ed.appliquer(() => r.dessin); ed.dire(r.retires ? pl(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pl(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
           <button type="button" onClick={() => ed.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>

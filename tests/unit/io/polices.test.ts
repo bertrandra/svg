@@ -56,6 +56,62 @@ describe('glyphesDe, sur une vraie fonte', () => {
   });
 });
 
+// Les fontes embarquees (scripts/polices.mjs), lues telles quelles. opentype.js 2.0 ne lit pas les
+// lookups d'extension (type 9) de la table GPOS : Inter et Playfair rendaient 0 pour A-V, Fredoka aussi.
+describe('le crenage des fontes embarquees, lu dans la table GPOS', () => {
+  const lire = (chemin: string) => {
+    const o = readFileSync(resolve(__dirname, '../../../node_modules/@expo-google-fonts', chemin));
+    const octets = o.buffer.slice(o.byteOffset, o.byteOffset + o.byteLength) as ArrayBuffer;
+    return { octets, fonte: parse(octets) };
+  };
+  const LETTRES = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'];
+
+  it.each([
+    ['inter/400Regular/Inter_400Regular.ttf', 'Inter'], ['inter/700Bold/Inter_700Bold.ttf', 'Inter gras'],
+    ['playfair-display/700Bold/PlayfairDisplay_700Bold.ttf', 'Playfair Display gras'], ['fredoka/600SemiBold/Fredoka_600SemiBold.ttf', 'Fredoka']
+  ])('%s (%s) : A-V se resserre, ce que la bibliotheque seule ne voyait pas', chemin => {
+    const { octets, fonte } = lire(chemin);
+    expect(glyphesDe(fonte).crenage('A', 'V')).toBe(0);
+    const g = glyphesDe(fonte, octets);
+    expect(g.crenage('A', 'V')).toBeLessThan(0);
+    expect(g.crenage('V', 'A')).toBeLessThan(0);
+    // Une paire sans rapport reste a zero : le crenage n'est pas un decalage general.
+    expect(g.crenage('o', 'o')).toBe(0);
+  });
+
+  it.each([
+    ['oswald/500Medium/Oswald_500Medium.ttf', -36], ['bebas-neue/400Regular/BebasNeue_400Regular.ttf', -28], ['caveat/700Bold/Caveat_700Bold.ttf', -40]
+  ])('%s : A-V ne bouge pas (%d), ni aucune paire de lettres que la bibliotheque lisait', (chemin, av) => {
+    const { octets, fonte } = lire(chemin);
+    const avant = glyphesDe(fonte), apres = glyphesDe(fonte, octets);
+    expect(apres.crenage('A', 'V')).toBe(av);
+    expect(avant.crenage('A', 'V')).toBe(av);
+    const bougees = LETTRES.flatMap(a => LETTRES.filter(b => avant.crenage(a, b) !== 0 && avant.crenage(a, b) !== apres.crenage(a, b)).map(b => a + b));
+    expect(bougees).toEqual([]);
+  });
+
+  it.each([
+    ['lobster/400Regular/Lobster_400Regular.ttf'], ['pacifico/400Regular/Pacifico_400Regular.ttf']
+  ])('%s : la fonte n a pas de paire A-V (0 est juste), et aucune paire de lettres ne change', chemin => {
+    const { octets, fonte } = lire(chemin);
+    const avant = glyphesDe(fonte), apres = glyphesDe(fonte, octets);
+    expect(apres.crenage('A', 'V')).toBe(0);
+    const bougees = LETTRES.flatMap(a => LETTRES.filter(b => avant.crenage(a, b) !== apres.crenage(a, b)).map(b => a + b));
+    expect(bougees).toEqual([]);
+  });
+
+  it('lirePolice donne le crenage GPOS, et composer resserre A-V de ce crenage', () => {
+    const { octets } = lire('inter/400Regular/Inter_400Regular.ttf');
+    const g = lirePolice('inter', 'Inter', octets)?.glyphes;
+    if (!g) throw new Error('Inter ne se lit pas');
+    const pose = (glyphes: typeof g) => composer('AV', glyphes, { taille: 100, x: 0, y: 100 });
+    const ecartDe = (l: ReturnType<typeof pose>) => (boiteChemin(l[1]?.d ?? [])?.x ?? 0) - (boiteChemin(l[0]?.d ?? [])?.x ?? 0);
+    const ecart = ecartDe(pose(g)), ecart0 = ecartDe(pose({ ...g, crenage: () => 0 }));
+    expect(ecart).toBeLessThan(ecart0);
+    expect(ecart0 - ecart).toBeCloseTo(-g.crenage('A', 'V') * 100 / g.unitesParEm, 2);
+  });
+});
+
 describe('glyphesDe, sur une fonte factice', () => {
   /** Une fonte dont tout est connu, y compris ses defaillances. */
   function fonteFausse(options: { avance?: number; crenageLeve?: boolean } = {}) {

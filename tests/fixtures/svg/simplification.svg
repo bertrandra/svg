@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- f1 : une ligne ouverte aux sommets presque alignes, avec un vrai coin en (35, 70) -->
+  <path d="M5 50L10 50.02L15 49.98L20 50L25 50.01L30 50L35 70L40 50.02L45 49.99L50 50" fill="none" stroke="#15181d" stroke-width="1"/>
+  <!-- f2 : un polygone ferme dont les cotes portent des sommets superflus, plus un trou -->
+  <path d="M60 10L70 10.01L80 10L90 10.02L90 20L89.99 30L90 40L80 40.01L70 40L60 40L60.02 30L60 20ZM70 20L75 20.01L80 20L80 30L70 30Z" fill="#c81e28" fill-rule="evenodd"/>
+  <!-- f3 : des droites autour d'une cubique et d'une quadratique, qui restent telles quelles -->
+  <path d="M10 10L20 10.01L30 10L40 10.02C45 10 50 15 50 20Q50 25 45 28L40 28.01L30 28L20 27.99" fill="none" stroke="#1428a0" stroke-width="1"/>
+  <!-- f4 : la meme ligne que f1, verrouillee par le cas : elle ne bouge pas -->
+  <path d="M5 80L10 80.02L15 79.98L20 80L25 80.01L30 80" fill="none" stroke="#228b22" stroke-width="1"/>
+</svg>

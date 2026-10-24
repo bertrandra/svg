@@ -1,11 +1,14 @@
 // Les operations booleennes entre formes (ADR-0004) : union, soustraction, intersection,
-// exclusion. Les courbes sont aplaties en segments fins, les polygones passent par un moteur de
-// decoupe (polygon-clipping, algorithme de Martinez, pur et deterministe), et le resultat est une
-// forme en segments droits, les trous en anneaux interieurs. Le remplissage d'une forme se lit comme
-// un navigateur le peint : pair-impair, ou selon le sens du trace.
+// exclusion. Les courbes sont aplaties en segments, assez fins pour que l'ecart au trace d'origine reste
+// sous une tolerance geometrique, les polygones passent par un moteur de decoupe (polygon-clipping,
+// algorithme de Martinez, pur et deterministe), et le resultat est une forme en segments droits, les
+// trous en anneaux interieurs ; a la demande (`lisser`), les suites de sommets qui tournent doucement
+// redeviennent des courbes. Le remplissage d'une forme se lit comme un navigateur le peint : pair-impair,
+// ou selon le sens du trace.
 
 import clipping, { type MultiPolygon, type Pair, type Polygon, type Ring } from 'polygon-clipping';
 import { ancre, depart, prochainId, type Chemin, type Commande, type DessinSvg, type Forme } from './editionSvg.js';
+import { reconstruireAnneau } from './edition/ajustement.js';
 
 export type Booleen = 'union' | 'soustraction' | 'intersection' | 'exclusion';
 export const BOOLEENS: readonly Booleen[] = ['union', 'soustraction', 'intersection', 'exclusion'];
@@ -13,10 +16,21 @@ export const BOOLEENS: readonly Booleen[] = ['union', 'soustraction', 'intersect
 const cubique = (a: number, b: number, c: number, d: number, t: number) => (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * d;
 const quadratique = (a: number, b: number, c: number, t: number) => (1 - t) ** 2 * a + 2 * (1 - t) * t * b + t * t * c;
 
-/** Le nombre de segments pour une courbe : sa longueur de controle, divisee par la tolerance, 64 au plus. */
-const segments = (longueur: number, tolerance: number) => Math.max(2, Math.min(64, Math.ceil(longueur / Math.max(tolerance, 1e-9) / 4)));
+/** Le plus petit nombre de segments, et le plus grand : au-dela, une courbe n'a plus rien a gagner d'etre aplatie plus fin. */
+const SEGMENTS_MIN = 1, SEGMENTS_MAX = 512;
 
-/** Les anneaux d'un chemin, aplatis a `tolerance` pres : un anneau par sous-chemin, fermes. */
+/**
+ * Le nombre de segments egaux (en t) qui tiennent une courbe de Bezier a `tolerance` pres : l'ecart maximal
+ * entre la courbe et sa corde est borne par d(d-1)/8 * M / n^2, ou M est la plus grande seconde difference
+ * des points de controle (Wang) ; d'ou n >= racine(d(d-1) M / (8 tolerance)). Une droite en demande un seul.
+ */
+const segments = (degre: 2 | 3, secondeDifference: number, tolerance: number) =>
+  Math.max(SEGMENTS_MIN, Math.min(SEGMENTS_MAX, Math.ceil(Math.sqrt((degre * (degre - 1) * secondeDifference) / (8 * Math.max(tolerance, 1e-9))))));
+
+/** La norme de x0 - 2 x1 + x2 : l'ecart d'un point de controle a la corde de ses voisins. */
+const seconde = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number) => Math.hypot(x0 - 2 * x1 + x2, y0 - 2 * y1 + y2);
+
+/** Les anneaux d'un chemin, aplatis a `tolerance` pres (ecart maximal au trace) : un anneau par sous-chemin, fermes. */
 export function aplatir(d: Chemin, tolerance: number): Ring[] {
   const anneaux: Ring[] = [];
   let courant: Ring = [];
@@ -29,11 +43,11 @@ export function aplatir(d: Chemin, tolerance: number): Ring[] {
     const [x0, y0] = depart(d, i), p = c.p;
     if (c.c === 'C') {
       const [x1, y1, x2, y2, x3, y3] = [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0, p[3] ?? 0, p[4] ?? 0, p[5] ?? 0];
-      const n = segments(Math.hypot(x1 - x0, y1 - y0) + Math.hypot(x2 - x1, y2 - y1) + Math.hypot(x3 - x2, y3 - y2), tolerance);
+      const n = segments(3, Math.max(seconde(x0, y0, x1, y1, x2, y2), seconde(x1, y1, x2, y2, x3, y3)), tolerance);
       for (let k = 1; k <= n; k++) pousser(cubique(x0, x1, x2, x3, k / n), cubique(y0, y1, y2, y3, k / n));
     } else {
       const [x1, y1, x2, y2] = [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0, p[3] ?? 0];
-      const n = segments(Math.hypot(x1 - x0, y1 - y0) + Math.hypot(x2 - x1, y2 - y1), tolerance);
+      const n = segments(2, seconde(x0, y0, x1, y1, x2, y2), tolerance);
       for (let k = 1; k <= n; k++) pousser(quadratique(x0, x1, x2, k / n), quadratique(y0, y1, y2, k / n));
     }
   });
@@ -82,15 +96,41 @@ export function cheminDeRegion(region: MultiPolygon, precision = 3): Commande[] 
   return out;
 }
 
+/**
+ * Le chemin d'un multipolygone, avec les suites de sommets qui tournent doucement reconstruites en courbes
+ * cubiques (ajustement.ts) : chaque courbe reste a moins de `tolerance` de l'anneau, les coins restent des
+ * coins. Un anneau que l'ajustement ne tient pas reste en segments droits. Les sommets sont eux-memes a
+ * `tolerance` du trace d'origine, et une courbe ideale s'ecarte de leurs cordes d'autant : l'ajustement
+ * se mesure donc a deux fois la tolerance, ce qui borne l'ecart au trace d'origine a trois tolerances.
+ */
+export function cheminLisseDeRegion(region: MultiPolygon, tolerance: number, precision = 3): Commande[] {
+  const out: Commande[] = [];
+  const arrondi = (v: number) => Number(v.toFixed(precision));
+  for (const poly of region) for (const anneau of poly) {
+    const pts: Pair[] = anneau.length > 1 && anneau[0]?.[0] === anneau[anneau.length - 1]?.[0] && anneau[0]?.[1] === anneau[anneau.length - 1]?.[1] ? anneau.slice(0, -1) : anneau;
+    if (pts.length < 3) continue;
+    for (const c of reconstruireAnneau(pts, 2 * tolerance)) out.push({ c: c.c, p: c.p.map(arrondi) });
+  }
+  return out;
+}
+
 /** Vrai si la forme a une aire : une ligne nue (contour seul) ne se combine pas. */
 const pleine = (f: Forme) => f.remplissage !== null;
+
+export interface OptionsBooleen {
+  /** Rebatir en courbes les contours qui etaient courbes : le resultat pese moins et reste lisse a tout grossissement. */
+  lisser?: boolean;
+}
+
+/** La tolerance d'aplatissement d'un dessin : un vingt-millieme de sa plus grande dimension, en ecart maximal au trace. */
+export const toleranceBooleen = (dessin: DessinSvg): number => Math.max(dessin.vb[2], dessin.vb[3]) / 20000;
 
 /**
  * Applique l'operation aux formes choisies, dans l'ordre de l'empilement : pour la soustraction, la
  * plus basse moins toutes les autres. Le resultat prend le style et la place de la plus basse ; les
  * autres disparaissent. Rend le dessin inchange, avec sa raison, si l'operation ne s'applique pas.
  */
-export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance = Math.max(dessin.vb[2], dessin.vb[3]) / 2000): { dessin: DessinSvg; id: string | null; erreur?: string } {
+export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance = toleranceBooleen(dessin), options: OptionsBooleen = {}): { dessin: DessinSvg; id: string | null; erreur?: string } {
   const voulus = new Set(ids);
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille && f.visible);
   if (choisies.length < 2) return { dessin, id: null, erreur: 'Choisissez au moins deux formes visibles et déverrouillées.' };
@@ -103,7 +143,9 @@ export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: 
   else if (op === 'intersection') resultat = clipping.intersection(premiere, ...autres);
   else if (op === 'soustraction') resultat = clipping.difference(premiere, ...autres);
   else resultat = clipping.xor(premiere, ...autres);
-  const d = cheminDeRegion(resultat);
+  // Rebatir en courbes n'a de sens que si une des formes en avait ; une figure toute droite reste telle quelle.
+  const courbe = options.lisser === true && choisies.some(f => f.d.some(c => c.c === 'C' || c.c === 'Q'));
+  const d = courbe ? cheminLisseDeRegion(resultat, tolerance) : cheminDeRegion(resultat);
   const basse = choisies[0];
   if (!basse) return { dessin, id: null };
   if (!d.length) {

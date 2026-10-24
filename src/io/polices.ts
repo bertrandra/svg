@@ -5,6 +5,7 @@
 
 import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
+import { lireCrenageGpos } from './crenageGpos.js';
 
 export interface PoliceEmbarquee { id: string; nom: string; base64: string }
 export interface Police { id: string; nom: string; glyphes: Glyphes }
@@ -19,21 +20,27 @@ function decoderBase64(b64: string): ArrayBuffer {
   return out.buffer;
 }
 
-/** L'interface pure du moteur, au-dessus d'une fonte lue. */
-export function glyphesDe(fonte: Font): Glyphes {
+/**
+ * L'interface pure du moteur, au-dessus d'une fonte lue. Avec les octets de la fonte, le crenage vient de
+ * sa table GPOS (crenageGpos.ts), qu'opentype.js lit mal ; sans eux, ou si la fonte n'en porte pas, il
+ * vient de la bibliotheque.
+ */
+export function glyphesDe(fonte: Font, octets?: ArrayBuffer): Glyphes {
   const cache = new Map<string, ReturnType<Font['charToGlyph']>>();
   const glyphe = (c: string) => { let g = cache.get(c); if (!g) { g = fonte.charToGlyph(c); cache.set(c, g); } return g; };
+  const gpos = octets ? lireCrenageGpos(octets) : null;
+  const bibliotheque = (a: string, b: string) => { try { return fonte.getKerningValue(glyphe(a), glyphe(b)) || 0; } catch { return 0; } };
   return {
     unitesParEm: fonte.unitsPerEm,
     contour: (c, x, y, taille) => glyphe(c).getPath(x, y, taille).commands,
     avance: c => glyphe(c).advanceWidth ?? fonte.unitsPerEm / 2,
-    crenage: (a, b) => { try { return fonte.getKerningValue(glyphe(a), glyphe(b)) || 0; } catch { return 0; } }
+    crenage: (a, b) => (gpos ? gpos(glyphe(a).index, glyphe(b).index) : bibliotheque(a, b))
   };
 }
 
 /** Lit une fonte depuis ses octets ; rend null si elle ne se lit pas. */
 export function lirePolice(id: string, nom: string, octets: ArrayBuffer): Police | null {
-  try { return { id, nom, glyphes: glyphesDe(parse(octets)) }; } catch { return null; }
+  try { return { id, nom, glyphes: glyphesDe(parse(octets), octets) }; } catch { return null; }
 }
 
 /** Les fontes embarquees, chargees une fois, a la demande. */
