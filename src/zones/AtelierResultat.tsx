@@ -106,7 +106,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             </div>
             <span className="aide" role="status">{dit}</span>
           </div>
-        ) : <p className="aide">{enCours ? 'Vectorisation…' : 'Pas encore de résultat : réglez, puis « Vectoriser ».'}</p>}
+        ) : <p className="aide">{enCours ? message || 'Vectorisation…' : 'Pas encore de résultat : réglez, puis « Vectoriser ».'}</p>}
         {essais.length > 1 ? (
           <div className="essais">
             <h3>Essais <span className="aide">les {essais.length} derniers : un clic reprend les réglages</span></h3>
