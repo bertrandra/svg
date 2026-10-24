@@ -34,7 +34,7 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (mod && t === 's') { e.preventDefault(); ac.enregistrerTout(); return; }
       if (cible && /^(INPUT|SELECT|TEXTAREA)$/.test(cible.tagName)) { if (e.key === 'Escape') cible.blur(); return; }
       // Un menu ouvert garde ses fleches : elles le parcourent, elles ne deplacent pas la selection derriere lui.
-      if (cible?.closest('[role="menu"]') && e.key !== 'Escape') return;
+      if (cible?.closest('.menu-panneau') && e.key !== 'Escape') return;
       if (mod && t === 'a') { e.preventDefault(); ac.choisir(m.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)); return; }
       if (mod && t === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
       if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }

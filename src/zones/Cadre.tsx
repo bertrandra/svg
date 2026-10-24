@@ -77,10 +77,10 @@ function Voile() {
 }
 
 function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
-  if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé.';
-  if (FORMES.has(outil)) return 'Glissez sur la toile pour tracer (Maj : proportions).';
+  if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.';
+  if (FORMES.has(outil)) return 'Glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée.';
   if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : proportions)' : '');
-  return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs.';
+  return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.';
 }
 
 function BarreEtat() {
