@@ -326,3 +326,21 @@ empreintes.
   « Transformer » de l'inspecteur. Quinze cas de référence neufs, les écritures existantes sont intactes. Un
   trait très enchevêtré (environ 1 cas sur 75) est refusé en le nommant.
 - **Licence** : le projet est propriétaire, tous droits réservés (`LICENSE`, `"license": "UNLICENSED"`) ; les composants tiers gardent leurs licences (`THIRD-PARTY-NOTICES.md`). À faire relire par un juriste avant toute diffusion.
+- **Sécurité** : un modèle de menaces (`docs/securite.md`), un corpus de 166 SVG hostiles (`tests/fixtures/hostile`),
+  un fuzzer déterministe (`FUZZ_ITERATIONS`, `FUZZ_GRAINES`) et une preuve en navigateur : aucun script, aucune
+  requête, des exports SVG, PNG et PDF inertes. Des refus nommés en français pour un SVG trop gros, trop profond,
+  trop chargé en éléments, en attributs, en tracé ou en règles de style, pour des coordonnées démesurées et
+  pour une peinture illisible.
+- **`nettoyerSvg` lit le document au lieu de remplacer du texte** (`util/assainirSvg.ts`) : liste blanche d'éléments,
+  d'attributs et d'adresses, CSS résolu des échappements et nettoyé jusqu'à stabilité, sortie en XML bien formé.
+  Un attribut répété est refusé ; commentaires, instructions de traitement, DOCTYPE et attributs à préfixe
+  inconnu sont retirés ; aucune entité n'est développée. Les octets écrits par l'éditeur ne changent pas.
+- Les options d'`ouvrir` sont validées (`baseAnnexes` en `javascript:`, `data:` ou `blob:`, un `svg` ou un titre
+  démesuré, une `bibliotheque` sans `entrees`) ; le brouillon, les versions, les corrections et la bibliothèque
+  d'hôte sont validés champ par champ. Un plan de travail plus petit que 0,001 et un SVG dont toutes les formes
+  sont vides sont refusés ; `fill=""` ne recouvre plus rien.
+- **Corrigé** : un `<script>` recomposé par le nettoyage (`<scr<script></script>ipt>`), les contournements par
+  préfixe d'espace de noms (`html:script`, `x:href`), les `url(` et `@import` obscurcis par échappement CSS, une
+  animation visant `href` ; des temps quadratiques (`url(` ou `/*` non fermés, `scale(` dans un `transform`,
+  50 000 règles de style, chemins clonés par `<use>`) ; un `RangeError` à 10 000 niveaux d'imbrication ; `NaN`,
+  `Infinity` et `width="0"` dans un SVG enregistré ; un stockage empoisonné qui faisait planter l'accueil.

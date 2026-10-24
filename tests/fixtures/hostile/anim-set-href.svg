@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><a href="#x"><set attributeName="href" to="javascript:window.__pwn=1;alert(1)"/><rect width="50" height="50"/></a><path d="M10 10h80v80h-80z" fill="#c81e28"/></svg>

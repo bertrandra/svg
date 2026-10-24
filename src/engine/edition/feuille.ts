@@ -97,9 +97,27 @@ function phraseArobase(nom: string, corps: string | null): string | null {
   return /keyframes$/.test(nom) ? MSG_KEYFRAMES : msgBlocArobase(nom);
 }
 
+/**
+ * Le texte sans ses commentaires `/* … *\/`. Un commentaire jamais ferme court jusqu'a la fin, comme en CSS. Un balayage : une expression
+ * reguliere paresseuse relirait tout le reste a chaque `/*` non ferme (temps quadratique sur une feuille hostile).
+ */
+function retirerCommentaires(t: string): string {
+  let i = t.indexOf('/*');
+  if (i < 0) return t;
+  let r = '', dernier = 0;
+  while (i >= 0) {
+    r += t.slice(dernier, i);
+    const f = t.indexOf('*/', i + 2);
+    if (f < 0) return r;
+    dernier = f + 2;
+    i = t.indexOf('/*', dernier);
+  }
+  return r + t.slice(dernier);
+}
+
 /** Les regles d'un texte de feuille, dans l'ordre ; `depart` est le rang de la premiere. */
 export function lireFeuille(source: string, depart = 0): Feuille {
-  const t = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const t = retirerCommentaires(source);
   const regles: Regle[] = [], ignores = new Set<string>();
   let i = 0, ordre = depart;
   const dire = (m: string | null) => { if (m) ignores.add(m); };

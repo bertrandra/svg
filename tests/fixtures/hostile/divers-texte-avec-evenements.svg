@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><text onclick="window.__pwn=1;alert(1)"><tspan onmouseover="window.__pwn=1;alert(1)">x</tspan><textPath href="https://evil.invalid/x#p">y</textPath><a href="javascript:window.__pwn=1;alert(1)">z</a></text><path d="M10 10h80v80h-80z" fill="#c81e28"/></svg>

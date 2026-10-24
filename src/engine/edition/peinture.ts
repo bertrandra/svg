@@ -84,3 +84,12 @@ export function lirePeintureAlpha(v: string, courante: PeintureLue = COULEUR_COU
 
 /** Une peinture en #rrggbb, null pour « none », ou la valeur telle quelle si elle est inconnue. L'alpha est perdu : voir `lirePeintureAlpha`. */
 export const lirePeinture = (v: string): string | null => lirePeintureAlpha(v).couleur;
+
+/**
+ * Vrai quand une peinture que la lecture n'a pas ramenee a #rrggbb est assez simple pour etre reecrite telle quelle dans un
+ * attribut : un mot-cle (`inherit`, `context-fill`), un nom, ou une fonction de couleur a un seul niveau (`color-mix(…)`).
+ * Le reste (guillemets, `;`, `url(` au milieu, controles…) n'est pas une couleur : il serait ecrit dans `fill="…"`.
+ */
+export function peintureSure(v: string): boolean {
+  return v.length <= 200 && (/^#[0-9a-f]{3,8}$/.test(v) || /^[a-z][a-z0-9-]*(?:\([a-z0-9#%.,\s/+-]*\))?$/.test(v));
+}

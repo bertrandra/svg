@@ -19,9 +19,18 @@ export function rotation(deg: number, ox = 0, oy = 0): Matrice {
 /** L'attribut `transform`, compose de gauche a droite ; null s'il ne se lit pas. */
 export function lireTransformation(t: string): Matrice | null {
   let m: Matrice = IDENTITE;
-  const re = /(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g;
-  let r: RegExpExecArray | null;
-  while ((r = re.exec(t))) {
+  // Un balayage colle (sticky) : chaque fonction se lit a la suite de la precedente, et la premiere qui ne se lit pas rend la liste
+  // illisible. Une recherche globale suivie d'un retrait refaisait, sur une longue suite de « scale( » jamais fermes, un balayage
+  // jusqu'a la fin du texte a chaque ouverture : quadratique, donc un gel de l'onglet sur un attribut de quelques centaines de Ko.
+  const fonction = /(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/y;
+  let i = 0;
+  for (;;) {
+    while (i < t.length && /[\s,]/.test(t.charAt(i))) i++;
+    if (i >= t.length) return m;
+    fonction.lastIndex = i;
+    const r = fonction.exec(t);
+    if (!r) return null;
+    i = fonction.lastIndex;
     const v = (r[2] ?? '').split(/[\s,]+/).filter(Boolean).map(Number);
     if (v.some(n => !Number.isFinite(n))) return null;
     const [a = 0, b, c, d, e, f] = v;
@@ -36,8 +45,6 @@ export function lireTransformation(t: string): Matrice | null {
     }
     m = multiplier(m, n);
   }
-  // Ce qui n'est pas une fonction lue rend la liste illisible : on ne devine pas.
-  return t.replace(/(matrix|translate|scale|rotate|skewX|skewY)\s*\([^)]*\)/g, '').replace(/[\s,]/g, '') ? null : m;
 }
 
 export function transformerChemin(d: Chemin, m: Matrice): Commande[] {
