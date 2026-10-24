@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100">
+  <title>Style a selecteurs</title>
+  <style>
+    svg { stroke-linejoin: round }
+    path { fill: #d4a537 }
+    .carte > rect { fill: #1f5f3f; stroke: #15181d; stroke-width: 2 }
+    .carte rect.rouge { fill: #c81e28 }
+    #special { fill: #7b2d8e !important }
+    circle[data-role="oeil"] { fill: #f4efe6 }
+    .lot path:last-child { opacity: .5 }
+    g.lot > *:first-child { stroke: #15181d }
+    @media (max-width: 100px) { path { fill: #000000 } }
+    path:hover { fill: #ff0000 }
+  </style>
+  <g class="carte">
+    <rect x="5" y="5" width="30" height="20"/>
+    <rect class="rouge" x="40" y="5" width="30" height="20"/>
+    <g><rect x="75" y="5" width="30" height="20"/></g>
+  </g>
+  <path id="special" class="x" fill="#ff8800" d="M5 40h30v20h-30z"/>
+  <circle data-role="oeil" cx="55" cy="50" r="8"/>
+  <g class="lot">
+    <path d="M80 40h20v20h-20z"/>
+    <path d="M105 40h20v20h-20z"/>
+    <path d="M130 40h20v20h-20z" style="fill:#2a5db0"/>
+  </g>
+</svg>

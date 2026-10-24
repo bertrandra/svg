@@ -318,9 +318,10 @@ describe('ce que la lecture laisse tomber, et dit', () => {
     expect(ignoresDe('<g stroke="#000" stroke-linecap="round" stroke-linejoin="miter"><path d="M0 0h10" fill="none"/></g>')).toEqual([]);
   });
 
-  it('les regles de style qui ne visent pas une classe, si elles peignent', () => {
-    expect(ignoresDe('<style>path { fill: red } .a { fill: blue }</style><path class="a" d="M0 0h1v1z"/>')).toEqual(['les règles de style qui ne visent pas une classe (balise, identifiant…)']);
-    expect(ignoresDe('<style>#x { stroke: red }</style><path id="x" d="M0 0h1v1z"/>')).toHaveLength(1);
+  it('les regles de style a balise ou identifiant se lisent (troisieme lot) ; ce qui reste hors de portee est dit (voir lecture-css.test.ts)', () => {
+    expect(ignoresDe('<style>path { fill: red } .a { fill: blue }</style><path class="a" d="M0 0h1v1z"/>')).toEqual([]);
+    expect(ignoresDe('<style>#x { stroke: red }</style><path id="x" d="M0 0h1v1z"/>')).toEqual([]);
+    expect(ignoresDe('<style>path:hover { fill: red }</style><path d="M0 0h1v1z"/>')).toEqual(['les règles de style dont le sélecteur porte la pseudo-classe :hover']);
     expect(ignoresDe('<style>text { font-size: 12px } .a { fill: blue }</style><path class="a" d="M0 0h1v1z"/>')).toEqual([]);
   });
 

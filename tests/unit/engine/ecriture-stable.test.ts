@@ -119,6 +119,14 @@ const CAS: readonly Cas[] = [
   { nom: 'trait-booleens', operation: booleen(['f1', 'f2'], 'union') },
   // La decoupe n'est que des contours pleins : elle laisse les pointilles de cote.
   { nom: 'trait-decoupe', entree: 'trait-pointilles', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  // Troisieme lot de lecture (version majeure, ADR-0009) : les clones <use> se depliant en formes independantes (planche
+  // d'icones, clones emboites et transformes, symboles a viewBox, cible introuvable) et la feuille <style> lue avec ses
+  // vrais selecteurs. Des cas NEUFS : aucune reference d'avant n'en depend.
+  { nom: 'lecture-use-sprite' },
+  { nom: 'lecture-use-imbriques' },
+  { nom: 'lecture-use-symbole' },
+  { nom: 'lecture-use-introuvable' },
+  { nom: 'lecture-css-selecteurs' },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.

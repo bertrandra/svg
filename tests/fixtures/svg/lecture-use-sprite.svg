@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 80">
+  <title>Planche d'icones</title>
+  <defs>
+    <symbol id="etoile" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5 2 7.5L12 17l-6.5 4.5 2-7.5L2 9.5 9 9z"/></symbol>
+    <symbol id="coeur" viewBox="0 0 24 24"><path d="M12 21C5 15 2 11 2 7.5 2 4.5 4.5 3 7 3c2 0 4 1 5 3 1-2 3-3 5-3 2.5 0 5 1.5 5 4.5C22 11 19 15 12 21z" stroke="#7a1020" stroke-width="1.5"/></symbol>
+    <circle id="rond" cx="5" cy="5" r="4"/>
+    <g id="duo"><rect width="8" height="8" fill="#2a5db0"/><rect x="10" width="8" height="8"/></g>
+  </defs>
+  <use href="#etoile" x="5" y="5" width="24" height="24" fill="#d4a537"/>
+  <use xlink:href="#etoile" x="35" y="5" width="48" height="48" fill="#1f5f3f"/>
+  <use href="#coeur" x="90" y="5" width="24" height="24" fill="#c81e28"/>
+  <use href="#rond" x="5" y="50" fill="#7b2d8e"/>
+  <use href="#rond" x="20" y="50"/>
+  <use href="#duo" x="30" y="62" transform="rotate(10)" fill="#15181d"/>
+</svg>
