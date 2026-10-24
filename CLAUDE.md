@@ -83,6 +83,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.
 - **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
   dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
+- **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,
+  Alt+flèches, réticule), une seule région vocale `polite` le dit, Tab ne piège jamais le focus, et
+  `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

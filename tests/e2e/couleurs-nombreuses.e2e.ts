@@ -227,7 +227,8 @@ describe('calques par couleur, deux mille couleurs', () => {
     // Des selecteurs CSS : une requete par role parcourt tout l'arbre d'accessibilite, long avec deux mille formes.
     const bouton = page.locator(`[aria-label="Autres actions sur ${nom}"]`);
     await bouton.click();
-    const menu = page.locator(`.menu-panneau[aria-label="Autres actions sur ${nom}"]`);
+    // Le nom du menu est porte par son role="menu" interne (le panneau peut aussi abriter un contenu libre).
+    const menu = page.locator('.menu-panneau', { has: page.locator(`[role="menu"][aria-label="Autres actions sur ${nom}"]`) });
     await menu.waitFor();
     expect(await menu.locator('[role="menuitem"]', { hasText: 'Supprimer ces formes (1)' }).count()).toBe(1);
     expect(await menu.evaluate(e => getComputedStyle(e).position)).toBe('fixed');

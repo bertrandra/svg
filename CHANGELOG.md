@@ -39,6 +39,10 @@ empreintes.
 
 ### Modifié
 
+- **Le focus et le clavier de l'éditeur** (ADR-0011) : l'éditeur prend le focus à l'ouverture, le reste de
+  la page est inerte pendant l'édition et le focus revient à l'hôte à la fermeture ; la confirmation
+  d'abandon et les tiroirs prennent et rendent le focus, Échap les ferme. La barre d'état n'est plus une
+  région vivante, et les flèches d'un menu ouvert ne déplacent plus la sélection.
 - **La liste « Par couleur » passe à l'échelle** (ADR-0008) : elle ne dessine que les lignes visibles
   au-delà de 100 couleurs (jusqu'à six fois moins de temps par mouvement sur un dessin de 2 000 couleurs),
   ses lignes ne se redessinent que si leur couleur change, et les nuances proches se calculent par une grille
@@ -87,6 +91,8 @@ empreintes.
 
 ### Corrigé
 
+- Le panneau d'export du menu Fichier n'est plus dans un `role="menu"` (violation critique `aria-required-children`
+  d'axe-core).
 - **« Ajuster le plan de travail » compte l'étendue réelle du trait** : les pointes des jonctions en
   pointe (jusqu'à limite × épaisseur / 2) et les coins des bouts carrés ne sont plus coupés. Un trait
   ordinaire garde exactement le même plan.
@@ -99,6 +105,21 @@ empreintes.
 
 ### Ajouté
 
+- **L'éditeur se pilote et se lit sans souris** (ADR-0011) :
+  - Tab et Maj+Tab passent à la forme (ou au point, en mode points) suivante ou précédente, et laissent le
+    focus quitter la toile aux bouts ; Page suivante et Page précédente font de même en boucle ; Entrée sur
+    une forme ouvre ses points ;
+  - Alt+flèches redimensionnent (Maj ×10), Ctrl+flèche gauche ou droite tourne de 15° (Maj : 1°) ;
+  - un réticule piloté aux flèches pour les outils de tracé : Entrée pose la forme ou le point de la plume,
+    Maj+Entrée termine le tracé ;
+  - une région vocale unique dit la sélection, l'outil, le point actif, annuler et rétablir, la création, la
+    suppression et les erreurs, et redit une phrase identique ;
+  - les calques portent un nom accessible avec leur genre et leur couleur, et un lien « Aller à la toile »
+    ouvre la tabulation ;
+  - mode contraste forcé (`forced-colors`) : états enfoncés, lignes choisies, focus, poignées et réticule en
+    couleurs du système ;
+  - audit `axe-core` en test de navigateur sur 25 écrans, tests de clavier et de contraste forcé (71 tests de
+    navigateur de plus, 216 au total).
 - **Tests sur un dessin de 2 000 couleurs** (11 tests de navigateur : défilement, clavier, doigt) et tests
   d'équivalence des nuances proches contre l'ancienne implémentation.
 - **Menu Édition, « Booléens : rebâtir les courbes »** (actif par défaut, propre à la session, rien n'est
