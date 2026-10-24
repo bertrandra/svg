@@ -110,7 +110,7 @@ appel est sans effet.
 
 Une option qui ne convient pas lève un `TypeError` (en français) : `onEnregistrer` manquante, `svg` qui
 n’est pas un texte, etc. Un SVG que l’éditeur refuse (texte, image, dégradé, masque, découpe, filtre,
-`<use>`) ne lève rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer »
+un cycle de `<use>` ou un renvoi externe) ne lève rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer »
 (et `onFermer` est appelée). Pour le savoir avant, demandez `estEditable`.
 
 #### `EditeurSvg.estEditable(svg)` → `boolean`

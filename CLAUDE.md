@@ -50,7 +50,7 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 
 - **Un dessin à plat, pas un DOM** (ADR-0001) : `engine/editionSvg.ts` lit un SVG (`util/xml.ts`,
   sans DOM) en chemins absolus M, L, C, Q, Z dans les coordonnées du plan de travail. Ce qui ne s'y
-  ramène pas est refusé en le nommant.
+  ramène pas est refusé en le nommant ; un `<use>` se déplie en formes plates, cycles et renvois externes refusés.
 - **Chaque opération est pure** et rend un nouveau dessin ; l'historique (`util/historique.ts`) est
   une pile d'états immuables, deux cents au plus, un geste continu fondu par sa clé.
 - **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
@@ -67,7 +67,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Les booléens aplatissent, l'éditeur rebâtit** (ADR-0004) : le moteur rend des segments droits, au style
   de la forme la plus basse ; l'éditeur rebâtit les courbes par défaut (`lisserBooleens`, réglage de session) ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
 - **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
-  `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts`. Jamais de `<text>` dans un SVG écrit.
+  `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures GSUB en option). Jamais
+  de `<text>` dans un SVG écrit.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

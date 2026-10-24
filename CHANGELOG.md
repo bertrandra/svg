@@ -26,6 +26,18 @@ empreintes.
   (`stroke-dasharray`, `-dashoffset`, `-linecap`, `-linejoin`, `-miterlimit`) ; une jonction non précisée
   s'écrit toujours arrondie. Les longueurs de pointillés suivent l'épaisseur à la mise à l'échelle, la
   limite de pointe non. `ignores` ne les signale plus.
+- **Un `<use>` ne refuse plus le SVG** (ADR-0009, amendement) : `href` et `xlink:href` se résolvent, avec
+  `<symbol>`, `viewBox`, `preserveAspectRatio`, clones emboîtés et héritage du `<use>` ; chaque clone donne
+  des formes plates indépendantes aux ids neufs. Refusés en le nommant : un cycle, plus de 16 niveaux, plus
+  de 20 000 clones, un renvoi externe. Une cible introuvable et le rognage d'un `<symbol>` qui déborde sont
+  dits dans `ignores`.
+- **La feuille `<style>` se lit avec ses vrais sélecteurs** (type, `*`, classes, `#id`, attributs, descendant,
+  enfant, groupes, `:root`, `:first-child`, `:last-child`, `:only-child`), sa spécificité, son ordre et
+  `!important` ; l'attribut de présentation passe sous les règles, le `style` en ligne au-dessus. Les règles
+  qui valaient « classe seule » passent à la cascade complète. `var()` et le `transform` CSS ne sont plus
+  écrits tels quels mais dits ; `@media`, `@keyframes`, `@font-face`, `@import`, les frères, les
+  pseudo-classes et le CSS imbriqué sont dits aussi.
+- `nettoyerSvg` garde le renvoi externe d'un `<use>` dans `data-href-externe`, pour que la lecture le refuse.
 - **`stroke-width="0"` reste 0** : un trait invisible ne devient plus visible (il s'écrivait `1`). Le PDF
   ne trace plus un trait d'épaisseur nulle, et il sépare l'opacité du fond (`ca`) de celle du trait (`CA`).
 - **Texte** : le crénage des fontes Inter, Inter gras, Playfair Display gras et Fredoka est lu dans la
@@ -39,6 +51,10 @@ empreintes.
 
 ### Modifié
 
+- **Les boutons masquer et verrouiller des calques sont de vraies icônes** (cadenas ouvert ajouté), comme le
+  bouton supprimer des versions ; noms et états inchangés. « Aller à la toile » est un lien, la page de
+  l'hôte est cachée (`visibility: hidden`) en plus d'être inerte pendant l'édition, et les boutons de menu
+  n'écrivent plus `aria-controls`.
 - **« Couleurs du dessin » se fenêtre** (ADR-0008) : le panneau de l'inspecteur ne dessine plus que les
   lignes visibles au-delà de 100 couleurs ; Échap sur 1 669 couleurs passe de 933 à 156 ms, avec
   14 800 nœuds en moins.
@@ -94,6 +110,8 @@ empreintes.
 
 ### Corrigé
 
+- Une couleur toute masquée du panneau « Par couleur » tombait à 2,2:1 de contraste (`opacity: 0.5`) : elle
+  s'atténue maintenant par son échantillon.
 - Recolorer une couleur avec le sélecteur natif, dans « Par couleur » ou « Couleurs du dessin », ne le
   ferme plus quand la ligne change de rang et sort de la fenêtre.
 - Un second geste du sélecteur sur la même ligne de « Couleurs du dessin », sans perte de focus entre les
@@ -112,6 +130,16 @@ empreintes.
 
 ### Ajouté
 
+- **Ligatures du texte** : `composer(…, { ligatures })` (éteint par défaut dans le moteur, aucun octet existant
+  ne bouge), lecture GSUB pure dans `io/ligaturesGsub.ts`, case « Ligatures (fi, fl…) » du panneau Texte,
+  offerte pour les fontes qui en ont (Oswald, Playfair, Lobster, Pacifico, Caveat, Fredoka ; pas Inter ni
+  Bebas Neue). `Glyphes.ligature` est facultative.
+- **Au clavier, la suite** (ADR-0011, amendement) : tracé à deux coins (Espace ou Maj+Entrée pose le premier
+  coin, les flèches déplacent l'autre sous un aperçu, Espace ou Entrée le pose, Échap annule), sélection
+  additive (Maj+Page suivante ou précédente, Espace), outil texte (Entrée met le focus dans le champ).
+  Chaque bouton de la rangée de sélection, et Ctrl+] / Ctrl+[, dit ce qu'il a fait.
+- **L'audit `axe-core` échoue aussi sur tout doute** (`incomplete`) absent d'une liste écrite et motivée,
+  vide aujourd'hui : 28 écrans, 0 grave, 0 autre, 0 « à relire ». Tests de navigateur : 274 au total.
 - **L'éditeur se pilote et se lit sans souris** (ADR-0011) :
   - Tab et Maj+Tab passent à la forme (ou au point, en mode points) suivante ou précédente, et laissent le
     focus quitter la toile aux bouts ; Page suivante et Page précédente font de même en boucle ; Entrée sur

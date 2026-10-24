@@ -37,6 +37,29 @@ lecture laissait tomber sans refuser (pointillés, bouts de trait, marqueurs…)
   `sqrt(|det|)` ; la limite de pointe, rapport de la pointe à l'épaisseur, ne s'échelonne pas.
 - La peinture de la balise `<svg>` racine est héritée comme celle d'un `<g>`, et `currentColor` se
   résout à la forme.
-- Restent signalés (`ignores`), non portés par le modèle : les marqueurs, les règles de style dont le
-  sélecteur n'est pas une classe, les animations, les pointillés en pourcentage ou hors du pixel, les
-  jonctions `arcs` et `miter-clip`. `ajusterPlan` ne compte pas les pointes de jonction ni les bouts carrés.
+- Restent signalés (`ignores`), non portés par le modèle : les marqueurs, les animations (`animate…`,
+  `@keyframes`), les pointillés en pourcentage ou hors du pixel, les jonctions `arcs` et `miter-clip`, les
+  `@media` et autres @-règles de feuille, les sélecteurs de frère, les pseudo-classes et pseudo-éléments,
+  `var()` et le `transform` CSS. `ajusterPlan` compte les pointes de jonction et les bouts carrés
+  (`edition/etendue.ts`).
+
+## Amendement — le troisième lot étend la lecture
+
+Sans renoncer au principe « fidèle ou dit ce qu'elle perd » :
+
+- **Un `<use>` se déplie en formes plates indépendantes** (`edition/clones.ts`) : `href` et `xlink:href`,
+  `x`/`y` avant le `transform`, héritage du `<use>`, `<symbol>` avec `viewBox` et `preserveAspectRatio`
+  complet, clones emboîtés. Sont refusés en le nommant : un cycle, plus de 16 niveaux, plus de 20 000
+  clones, un renvoi externe. Une cible introuvable, et le rognage au cadre d'un `<symbol>` qui déborde,
+  sont dits. `nettoyerSvg` garde le renvoi externe dans `data-href-externe` pour que la lecture le refuse.
+- **La feuille `<style>` se lit avec un sous-ensemble correct de CSS** (`selecteurs.ts`, `feuille.ts`,
+  `cascade.ts`) : type, `*`, classes, `#id`, attributs, descendant et enfant, groupes, `:root`,
+  `:first-child`, `:last-child`, `:only-child`, spécificité et ordre exacts, `!important` ; attribut de
+  présentation sous les règles, sous `style` en ligne. Tout ce qui n'est pas porté est dit.
+- **Les ligatures** sont une option du moteur (éteinte par défaut, donc sans effet sur les octets existants),
+  portée par un lecteur GSUB pur (`io/ligaturesGsub.ts`, type 4 et 7, feature `liga` seule).
+- Limites : les lookups d'une feature sont fondus sans application séquentielle ; les types 5 et 6 et les
+  features `clig`, `rlig`, `dlig` ne sont pas lus.
+- Les 4 134 empreintes de la bibliothèque et les références existantes restent identiques (13 fixtures
+  ajoutées, aucune modifiée) ; trois assertions de l'ancien comportement sont réécrites parce que leur
+  phrase d'`ignores` a disparu.

@@ -42,6 +42,25 @@ n'avait aucun audit automatique.
   (documenté dans `docs/integration.md`). Alt+flèches et Ctrl+flèches sont pris pour redimensionner et
   tourner.
 - Limites, honnêtement : aucun lecteur d'écran réel ni Windows en contraste élevé n'ont été essayés (DOM,
-  couleurs calculées dans l'émulation de Chromium, mutations de la région vocale seulement) ; pas de tracé
-  à deux coins ni de sélection additive ou par cadre au clavier ; les boutons de la rangée de sélection
-  ne disent rien à voix haute ; les boutons-glyphes ◉ et 🔓 des calques restent des caractères.
+  couleurs calculées dans l'émulation de Chromium, mutations de la région vocale seulement) ; seul Chromium
+  a été exercé (Alt+flèche gauche ou droite signifie « page précédente » dans d'autres navigateurs :
+  non vérifié) ; pas de cadre de sélection au clavier ; l'outil texte ne place pas son texte au réticule
+  (il le pose au centre du plan).
+
+## Amendement — la suite de l'accessibilité
+
+- **Deux gestes pour l'outil de forme** : Entrée pose la forme de taille par défaut au réticule ; Espace ou
+  Maj+Entrée pose le premier coin, les flèches déplacent l'autre sous un aperçu en pointillés, Espace ou
+  Entrée le pose, Échap annule le premier coin sans quitter l'outil. Le premier coin vit dans `trace`.
+- **Sélection additive** : Maj+Page suivante ou précédente ajoute la forme voisine, Espace ajoute ou retire
+  la forme au curseur ; le curseur `focale` n'est cru que tant que le tableau `sel` auquel il appartient
+  n'a pas changé ; un anneau à deux tons le montre. Les choix purs sont dans `engine/navigation.ts`.
+- **La rangée de sélection parle** (`zones/phrasesSelection.ts`), ainsi que Ctrl+] et Ctrl+[. L'outil texte :
+  Entrée met le focus dans le champ du panneau (ouvre le tiroir sur un petit écran).
+- **L'hôte est aussi `visibility: hidden`** pendant l'édition (en plus d'être inerte) ; « Aller à la toile » est
+  un vrai lien ; `aria-controls` est retiré des boutons de menu (axe ne sait pas le trancher avec
+  `aria-haspopup`).
+- **Les boutons-glyphes des calques** (◉ 🔓) sont de vraies icônes (cadenas ouvert ajouté).
+- **L'audit axe échoue aussi sur tout `incomplete`** hors d'une liste écrite et motivée (`INCERTAINS_ADMIS`,
+  vide aujourd'hui) : 28 écrans, 0 grave, 0 autre, 0 « à relire ». Il a révélé une vraie violation : une
+  couleur toute masquée tombait à 2,2:1 par `opacity: 0.5` ; elle s'atténue par son échantillon.
