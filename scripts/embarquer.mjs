@@ -11,14 +11,12 @@
 // traceur vit dans dist/vtracer.js (charge par balise <script>), le bundle n'en porte que le petit
 // chargeur (io/vtracer.ts), que l'editeur n'atteint jamais ; il n'y a rien a remplacer.
 
-import { build, transform } from 'esbuild';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { transform } from 'esbuild';
+import { readFileSync } from 'node:fs';
+import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo } from './aide.mjs';
 import { feuillesEditeur } from './feuilles.mjs';
 
-const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
-const version = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8')).version;
+const version = JSON.parse(readFileSync(depuisRacine('package.json'), 'utf8')).version;
 
 // Les feuilles de style (scripts/feuilles.mjs, les memes que la page) entrent dans le bundle comme un
 // module virtuel `feuille-editeur`, un texte minifie ; c'est le code (util/cssPortee.ts) qui les
@@ -28,22 +26,20 @@ const feuilles = {
   setup(b) {
     b.onResolve({ filter: /^feuille-editeur$/ }, () => ({ path: 'feuille-editeur', namespace: 'feuille-editeur' }));
     b.onLoad({ filter: /.*/, namespace: 'feuille-editeur' }, async () => {
-      const f = await feuillesEditeur(racine);
+      const f = await feuillesEditeur();
       const { code } = await transform([f.jetons, f.base, f.editeur].join('\n'), { loader: 'css', minify: true });
       return { contents: code, loader: 'text' };
     });
   }
 };
 
-const { outputFiles } = await build({
-  entryPoints: [join(racine, 'outils/editeur-svg/embarque.ts')],
-  bundle: true, format: 'iife', target: 'es2020', minify: true, write: false, jsx: 'automatic',
-  plugins: [feuilles], outfile: join(racine, 'dist/editeur-svg-embarque.js'),
+const texte = await empaqueter({
+  entryPoints: [depuisRacine('outils/editeur-svg/embarque.ts')],
+  bundle: true, format: 'iife', target: 'es2020', minify: true, jsx: 'automatic',
+  plugins: [feuilles], outfile: depuisRacine('dist/editeur-svg-embarque.js'),
   banner: { js: '/* Editeur SVG embarquable ' + version + ' : window.EditeurSvg.ouvrir({ svg, onEnregistrer }). Voir docs/integration.md. */' },
   define: { 'process.env.NODE_ENV': '"production"', VERSION_EMBARQUEE: JSON.stringify(version) }
 });
-const texte = outputFiles[0]?.text ?? '';
 if (!texte.includes('EditeurSvg')) throw new Error('le bundle ne pose pas window.EditeurSvg');
-mkdirSync(join(racine, 'dist'), { recursive: true });
-writeFileSync(join(racine, 'dist/editeur-svg-embarque.js'), texte);
-console.log('Embarquement construit : dist/editeur-svg-embarque.js (' + Math.round(texte.length / 1024) + ' Ko).');
+ecrireDansDist('editeur-svg-embarque.js', texte);
+annoncer('Embarquement construit', 'editeur-svg-embarque.js', enKo(texte.length) + ' Ko');

@@ -4,11 +4,7 @@
 //
 //   npm run polices            -> dist/polices.js
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { annoncer, base64DeFichier, depuisRacine, ecrireDansDist, enKo, estLance, refuserFinDeScript } from './aide.mjs';
 
 export const POLICES = [
   ['inter', 'Inter', 'inter/400Regular/Inter_400Regular.ttf'],
@@ -23,14 +19,14 @@ export const POLICES = [
 ];
 
 export function construirePolices() {
-  const liste = POLICES.map(([id, nom, chemin]) => ({ id, nom, base64: readFileSync(join(racine, 'node_modules/@expo-google-fonts', chemin)).toString('base64') }));
+  const liste = POLICES.map(([id, nom, chemin]) => ({ id, nom, base64: base64DeFichier(depuisRacine('node_modules/@expo-google-fonts', chemin)) }));
   const texte = 'window.__policesSvg=' + JSON.stringify(liste) + ';';
-  mkdirSync(join(racine, 'dist'), { recursive: true });
-  writeFileSync(join(racine, 'dist/polices.js'), texte);
+  refuserFinDeScript(texte, 'les polices');
+  ecrireDansDist('polices.js', texte);
   return { polices: liste.length, octets: texte.length };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (estLance(import.meta.url)) {
   const r = construirePolices();
-  console.log('Polices construites : dist/polices.js (' + r.polices + ' fontes, ' + Math.round(r.octets / 1024) + ' Ko).');
+  annoncer('Polices construites', 'polices.js', r.polices + ' fontes, ' + enKo(r.octets) + ' Ko');
 }
