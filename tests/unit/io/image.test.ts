@@ -5,8 +5,8 @@ import { TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '..
 import { lireDessin } from '../../../src/engine/editionSvg.js';
 import { installerCanvas, installerImage, peindre, pixelsDeDataUrl, type ToileFausse } from './navigateur-factice.js';
 
-// Le chargeur du WASM est remplace : le vrai charge un module que seul un bundler sait lire (voir
-// vtracer.test.ts pour sa propre logique). Les tests qui veulent un vrai traceur le passent en parametre.
+// Le chargeur du traceur est remplace : le vrai injecte une balise <script> dans une page (voir
+// chargeurTraceur.test.ts pour sa propre logique). Les tests qui veulent un vrai traceur le passent en parametre.
 const chargerTraceur = vi.hoisted(() => vi.fn());
 vi.mock('../../../src/io/vtracer.js', () => ({ chargerTraceur }));
 
