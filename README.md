@@ -66,7 +66,7 @@ Prérequis : Node 20 ou plus.
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
 npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/editeur-svg-embarque.js
-npm run e2e          # les tests de navigateur (Chromium), après construire
+npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
 
 | Commande | Ce qu'elle fait |
@@ -78,7 +78,7 @@ npm run e2e          # les tests de navigateur (Chromium), après construire
 | `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
-| `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
+| `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 

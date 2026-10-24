@@ -1,0 +1,167 @@
+# Vérification manuelle
+
+Ce qu’aucune automatisation du dépôt ne prouve : lecteurs d’écran réels, contraste élevé de Windows, doigts et
+stylets, claviers non QWERTY, zoom, mouvement réduit, impression. Une personne, un peu moins d’une heure si
+l’on prend un appareil par partie. À rejouer avant chaque version qui touche l’interface, la toile, le clavier
+ou les feuilles de style, et à chaque changement de plancher dans [`navigateurs.md`](navigateurs.md).
+
+**Préparation (5 min).** `npm ci && npm run construire`, puis ouvrir `dist/editeur-svg.html` directement
+(`file://`), et, pour les appareils mobiles, la servir sur le réseau local (`npx http-server dist` ou
+équivalent ; `navigator.clipboard` n’existe qu’en `https` ou `localhost`, ce que le test « Copier » doit
+distinguer). Sur la page d’accueil : « Ouvrir l’exemple ». Le dessin d’exemple a quatre formes : 1 rectangle
+arrondi (fond `#e9ecef`), 2 cercle rouge, 3 triangle bleu, 4 courbe.
+
+Notez pour chaque point : appareil, système, navigateur (versions), résultat (✔ / ✘ / sans objet), remarque.
+Un ✘ ouvre une demande, avec la ligne du point.
+
+---
+
+## 1. Lecteurs d’écran (20 min)
+
+Paires à essayer, au moins une par ligne : **NVDA + Firefox** et **NVDA + Chrome** (Windows) ; **JAWS +
+Chrome** (Windows) ; **VoiceOver + Safari** (macOS) ; **VoiceOver + Safari** (iOS, balayage) ; **TalkBack +
+Chrome** (Android). Voix en français. Toutes les phrases viennent de l’ADR-0011 et des tests de
+`tests/e2e/clavier*.e2e.ts` ; l’éditeur n’a qu’**une** région vocale (`aria-live="polite"`).
+
+Critère commun : chaque phrase est dite **une fois**, **entière**, **sans bruit parasite** (pas de relecture
+de la barre d’état, pas d’épellation du code couleur lettre à lettre au point de la rendre inutile), et la
+phrase identique rejouée (même action deux fois de suite) est redite.
+
+| # | Geste | Phrase attendue (exemple) | Réussi si |
+|---|---|---|---|
+| 1.1 | « Ouvrir l’exemple » (Entrée sur le bouton) | Le dialogue s’annonce « Éditer : exemple.svg », le focus est sur la toile | le lecteur nomme la fenêtre, **rien de la page d’accueil derrière n’est lu** (flèches virtuelles, touche de liste d’éléments : l’accueil n’y figure pas) |
+| 1.2 | Page suivante, sur la toile | « Forme 1 sélectionnée : tracé courbe, fond blanc #e9ecef, 208 × 128 à 16, 16. » | la couleur est dite avant son code |
+| 1.3 | Tab, puis Maj+Tab | « Forme 2 sélectionnée : cercle, fond rouge #c81e28, 80 × 80 à 40, 40. », puis « Forme 3 sélectionnée : triangle, fond bleu #1428a0, … » | une forme par Tab, dans l’ordre du fond au premier plan |
+| 1.4 | Échap, puis Tab | « Sélection vidée. », puis le focus part vers la barre | on **peut toujours quitter** la toile au clavier (aucun piège) |
+| 1.5 | Forme 2 choisie : Alt+flèche droite, Alt+Maj+flèche bas | « 80,2 × 80. » puis « 80,2 × 82,4. » | pas de « page précédente » du navigateur (voir 5) |
+| 1.6 | Ctrl+flèche droite, puis Ctrl+Maj+flèche gauche | « Tournée de 15° vers la droite. » puis « Tournée de 1° vers la gauche. » | idem |
+| 1.7 | Entrée (forme choisie), Tab, flèches | « Point 1 sur 3 : départ, à 130, 120. » puis « Point 2 sur 3 : angle, à 170, 40. » | le point et son rang sont dits |
+| 1.8 | Ctrl+Z deux fois, Ctrl+Y | « Annulé. », « Annulé. », « Rétabli. » ; au fond de l’historique « Rien à annuler. » | |
+| 1.9 | Outil rectangle (R), flèches, Entrée | le réticule se déplace sans bruit ; Entrée dit la forme posée | le réticule n’apparaît pas dans le SVG enregistré |
+| 1.10 | Menu Fichier : Entrée, flèches, Échap | « Fichier, menu, réduit/développé » puis chaque élément avec son raccourci | Échap rend le focus au bouton du menu |
+| 1.11 | Supprimer une forme, Fichier › Fermer l’éditeur | la confirmation d’abandon est une alerte ; « Continuer l’édition » a le focus | Échap la ferme et rend le focus |
+| 1.12 | Fermer l’éditeur | le focus revient au bouton qui l’avait ouvert | pas au début de la page |
+| 1.13 | Téléphone 420 px : bouton Calques, balayage, bouton Calques | le tiroir s’annonce, son contenu est lu, la fermeture rend la barre | le voile est atteignable et ferme le tiroir |
+
+Particularités à noter, pas à corriger ici : sur **VoiceOver macOS**, Tab ne s’arrête sur les boutons et liens
+que si « Appuyer sur Tab pour mettre en évidence chaque élément » est coché dans Safari › Réglages ›
+Avancé (ou avec Option+Tab) ; la toile, elle, a `tabindex`, elle est atteinte dans tous les cas. Sur **iOS et
+TalkBack**, la toile se parcourt par balayage et les touches de forme n’existent pas sans clavier physique :
+vérifier qu’on atteint **tous les boutons** et que les tiroirs s’ouvrent et se ferment (1.13).
+## 2. Contraste élevé de Windows (10 min)
+
+Windows 11 › Accessibilité › Thèmes de contraste : **Aquatique**, **Désert**, **Crépuscule**, **Contraste
+élevé noir** (Alt gauche + Maj gauche + Impr. écran bascule). Navigateurs : **Edge**, **Chrome**, **Firefox**
+(Firefox gère le mode lui-même, par « Couleurs » dans les réglages ; vérifier aussi Firefox en mode
+« Toujours » si le système n’est pas en contraste élevé).
+
+Pour chaque thème, éditeur ouvert sur l’exemple :
+
+| # | À regarder | Réussi si |
+|---|---|---|
+| 2.1 | l’outil enfoncé de la barre, à côté de ceux au repos | on distingue l’état sans voir une teinte : fond « surbrillance », icône dans la couleur de texte de la surbrillance |
+| 2.2 | une forme choisie : contour, coins, poignée de rotation | tout est visible sur le dessin, y compris sur un fond sombre ; les couleurs du **dessin** restent les siennes |
+| 2.3 | la ligne choisie des calques | fond et texte du système, lisibles |
+| 2.4 | menu Vue : survol et focus d’un élément | fond et texte du système ; un anneau de 2 px |
+| 2.5 | Tab sur la barre, sur la toile | anneau de focus de 2 px (3 px sur la toile) |
+| 2.6 | boutons désactivés | gris du système, lisibles, encore reconnaissables comme désactivés |
+| 2.7 | accueil : voie choisie, zone de dépôt survolée | contour net |
+
+## 3. Tactile : iOS Safari (16.4 et plus) et Chrome Android (25 min)
+
+Un iPhone et, si possible, un iPad ; un téléphone Android. Page servie sur le réseau local. Mode portrait puis
+paysage.
+
+| # | Geste | Réussi si |
+|---|---|---|
+| 3.1 | Pincer à deux doigts sur la toile | le dessin zoome autour des doigts, **la page ne zoome pas**, rien n’est modifié (« 0 modification ») |
+| 3.2 | Glisser à un doigt avec l’outil Main | la vue se déplace, la page ne défile pas |
+| 3.3 | Boutons Calques et Inspecteur | un tiroir glisse sous un voile ; toucher le voile le ferme ; la barre d’état suit |
+| 3.4 | Toucher deux fois vite le bouton Annuler | deux annulations, **aucun zoom de page** (`touch-action: manipulation`) |
+| 3.5 | Appui long sur la toile et sur un nom de calque | pas de loupe ni de sélection de texte sur la toile ; pas de menu contextuel du navigateur sur les poignées |
+| 3.6 | Menu Fichier et menu Vue, barre d’adresse affichée puis repliée | le panneau du menu tient **entièrement** à l’écran (`dvh`) ; défiler jusqu’au dernier élément |
+| 3.7 | Cibles | tous les boutons de la barre se touchent du premier coup (40 px) ; aucun ne se touche en double |
+| 3.8 | Après avoir touché un bouton | pas de survol « collé » (bordure de couleur qui reste) — noter sinon, c’est cosmétique |
+| 3.9 | Champs (Rotation, Échelle, Texte) | le clavier virtuel s’ouvre, **la page ne saute pas**, la valeur s’applique avec le bouton « Appliquer » |
+| 3.10 | Ouvrir un SVG depuis Fichiers, une image depuis la photothèque | l’éditeur s’ouvre ; l’image se dépose |
+| 3.11 | Convertir une image de 12 mégapixels (photo d’appareil), mode par défaut | un résultat, ou un message en français ; **jamais** page blanche ni rechargement de l’onglet (limite mémoire de WebAssembly et du canvas sur iOS) |
+| 3.12 | Télécharger le SVG, le PNG, le PDF | le fichier s’ouvre dans l’aperçu / la feuille de partage / les téléchargements, avec le bon nom |
+| 3.13 | Copier le code (en `https`) puis en `file://` ou `http` | « copié » en `https` ; en contexte non sécurisé la page dit qu’elle n’a pas pu copier |
+| 3.14 | Rotation de l’appareil pendant l’édition | la toile se réajuste, le dessin et la sélection restent |
+| 3.15 | Mode sombre du système, bascule en direct | l’interface suit sans recharger ; contraste du texte sur les boutons |
+| 3.16 | Navigation privée | l’éditeur marche ; brouillon et versions nommées ne persistent pas, sans erreur visible |
+
+## 4. Stylet : Apple Pencil, Surface Pen, S Pen (5 min)
+
+| # | Geste | Réussi si |
+|---|---|---|
+| 4.1 | Outil rectangle, ellipse, étoile, ligne au stylet | le trait suit la pointe, **la page ne défile pas** pendant le geste |
+| 4.2 | Outil plume : poser trois points, terminer | « Tracé ajouté : 3 points. » ou son équivalent visuel |
+| 4.3 | Déplacer, redimensionner par les coins, tourner par la poignée ronde | la précision suit la pointe (les poignées grossissent sous pointeur grossier ; sous stylet elles restent fines : noter si c’est trop petit) |
+| 4.4 | Paume posée sur l’écran pendant un trait | pas de seconde forme ni de zoom parasite |
+| 4.5 | Stylet puis doigt sur la même toile | le doigt déplace/zoome, le stylet dessine, sans geste coincé |
+| 4.6 | Survol de l’Apple Pencil (iPad M2) ou S Pen au-dessus d’une forme | sans erreur ; pas d’effet attendu |
+
+## 5. Claviers AZERTY, QWERTZ, QWERTY (10 min)
+
+Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la toile, avec l’exemple.
+
+| # | Raccourci | Réussi si |
+|---|---|---|
+| 5.1 | Ctrl (Cmd sur Mac) + Z, Y, Maj+Z | annuler / rétablir ; la touche est celle de la lettre, pas sa position |
+| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare), enregistrer ; **Ctrl+S n’ouvre pas** « Enregistrer sous » du navigateur |
+| 5.3 | Ctrl+] et Ctrl+[ : sur AZERTY et QWERTZ ces crochets demandent AltGr (Ctrl+Alt sous Windows) | le plan avance / recule, ou le menu Édition dit un raccourci qui marche sur cette disposition ; noter la combinaison réelle |
+| 5.4 | Lettres d’outils et de vue (R rectangle, G grille, Z zoom sur la sélection, M aimants) sur AZERTY et QWERTZ : « Z », « W », « Y » ne sont pas aux mêmes places | la lettre d’outil est celle **imprimée sur la touche** (`e.key`), pas la position QWERTY |
+| 5.5 | Alt+flèches (Windows, Linux) | l’objet se redimensionne, **le navigateur ne revient pas à la page précédente** (Chrome, Edge, Firefox) |
+| 5.6 | Cmd+flèches et Ctrl+flèches sur macOS | Ctrl+flèche gauche/droite est pris par Mission Control (changer d’espace) si le réglage système est actif : la rotation au clavier ne part pas. Noter si l’on peut la désactiver, et si Alt+Cmd+flèche est une alternative raisonnable |
+| 5.7 | Cmd+[ et Cmd+] dans Safari | le plan change **et** Safari ne navigue pas en arrière/avant |
+| 5.8 | Tab, Maj+Tab, Échap, Entrée, Espace, Suppr, Retour arrière | comme dans les tests : Tab ne piège jamais |
+| 5.9 | Saisir « é », « ç » et le texte de la forme avec les dispositions ci-dessus | le texte en formes écrit les bons caractères |
+
+## 6. Zoom et taille du texte (5 min)
+
+| # | Réglage | Réussi si |
+|---|---|---|
+| 6.1 | Zoom du navigateur 200 % (Ctrl +) sur l’accueil et dans l’éditeur, 1280 px de large | rien n’est coupé ; les barres défilent ; les tiroirs prennent le relais |
+| 6.2 | 400 % (fenêtre équivalente à 320 px CSS) | pas de défilement horizontal de la page ; chaque fonction reste atteignable (WCAG 1.4.10) |
+| 6.3 | Texte seul à 200 % : Firefox › Affichage › Zoom › Zoom du texte seulement | les libellés ne se chevauchent pas ; les boutons gardent leur nom |
+| 6.4 | Taille de police du système : iOS Réglages › Accessibilité › Taille du texte au maximum ; Android › Taille de police maximale | l’accueil est lisible ; la barre de l’éditeur reste utilisable (le texte de l’éditeur est en pixels, il ne suit pas : noter) |
+| 6.5 | Focus visible à 200 % | l’anneau ne passe pas sous un bord et se voit |
+
+## 7. Mouvement réduit (3 min)
+
+Windows › Accessibilité › Effets visuels › Effets d’animation **désactivé** ; macOS › Accessibilité › Affichage ›
+Réduire les animations ; iOS › Accessibilité › Mouvement › Réduire les animations ; Android › Supprimer les
+animations.
+
+| # | À regarder | Réussi si |
+|---|---|---|
+| 7.1 | Ouvrir un menu, déplier une section, ouvrir un tiroir | **rien ne glisse ni ne fond** : tout apparaît d’un coup |
+| 7.2 | Survoler un bouton | le changement de couleur est immédiat |
+| 7.3 | Réglage rétabli | les animations de 120 à 220 ms reviennent |
+
+## 8. Impression (3 min)
+
+Aucune feuille de style d’impression n’est écrite : on vérifie qu’elle ne casse rien, pas qu’elle est belle.
+
+| # | Page | Réussi si |
+|---|---|---|
+| 8.1 | Accueil, après « Enregistrer » : aperçu du résultat (Ctrl+P, aperçu avant impression) | l’aperçu du SVG et sa fiche sont lisibles, rien n’est coupé au milieu d’un mot ; pas de page blanche |
+| 8.2 | Éditeur ouvert | note : ce qui sort (en pratique la première page de la fenêtre fixe). Aucune erreur ; si l’éditeur imprime des pages vides, ouvrir une demande « imprimer le dessin » plutôt que de la corriger ici |
+| 8.3 | Le SVG exporté, ouvert seul dans le navigateur | s’imprime à la taille du plan ; le PDF vectoriel du menu Fichier est l’export à imprimer |
+
+## 9. Hôte d’embarquement (5 min)
+
+Ouvrir `exemples/integration.html` dans chaque navigateur du plancher que vous avez sous la main (voir
+[`navigateurs.md`](navigateurs.md)).
+
+| # | Geste | Réussi si |
+|---|---|---|
+| 9.1 | « Éditer » | la fenêtre couvre l’écran, la page de l’hôte ne défile plus, ses styles (casse, lettres, couleurs) n’entrent pas |
+| 9.2 | Fermer | la page de l’hôte retrouve son défilement, son focus, ses styles |
+| 9.3 | Navigateur sous le plancher (une VM ou un vieil iPad si vous en avez) | l’éditeur dit « Ce navigateur est trop ancien » ou, si le bundle ne s’analyse pas, `window.EditeurSvg` est absent (documenté) : jamais une page de l’hôte cassée sans message |
+
+---
+
+**Compte rendu type** (à coller dans la demande de version) : date, version (`package.json`), appareils, puis le
+tableau des parties 1 à 9 avec ✔ / ✘ / sans objet. Une partie non jouée se dit « non jouée », jamais ✔.
