@@ -48,6 +48,11 @@ empreintes.
 - **Booléens** : l'aplatissement des courbes suit une tolérance géométrique (écart maximal d'un
   vingt-millième du plan, 512 segments au plus par courbe) au lieu de 64 segments fixes ; les résultats
   sont réécrits, environ 25 % plus légers.
+- **Provenance des formes de la bibliothèque** : une forme posée depuis game-icons.net (CC BY 3.0) garde son
+  origine (`Forme.origine`) ; le SVG écrit porte alors un `<metadata>` d'attribution et un `data-origine`
+  sur la forme. Une entrée sans forme créditée s'écrit à l'identique (empreintes des 4 134 formes et des
+  références inchangées) ; les cas neufs sont `tests/fixtures/svg/provenance*.svg`. Le PDF porte la mention
+  dans `/Subject`, le SVG de découpe dans un commentaire, et seulement s'il y a une forme créditée.
 
 ### Modifié
 
@@ -293,3 +298,23 @@ empreintes.
 - **L'outillage** : TypeScript strict, ESLint (aucun `any` dans le moteur, aucune assertion `!`,
   150 lignes par fonction au plus), cliquet de rigueur, test d'architecture (couches, cycles,
   pureté), CI `verifier` et construction de la page.
+
+- **Conformité** : boîte « À propos et crédits » (pied de page et menu Fichier), `THIRD-PARTY-NOTICES.md`
+  et `dist/MENTIONS.txt` générés par `scripts/mentions.mjs` (les textes de licence sont lus dans les
+  paquets, jamais recopiés ; un test confronte la liste au `package-lock.json`), `SECURITY.md`,
+  `CONTRIBUTING.md`.
+- **Prétraitement des images avant le traceur** (`engine/pretraitement.ts`, `engine/pixels/*`) : aplatir
+  l'alpha, débruiter (médiane, bilatéral), agrandir ×2, netteté, gamma, réduire à N couleurs, lisser les
+  bords, avec des préréglages. Comme les réglages fins du traceur (ADR-0005), un réglage n'existe que
+  s'il a été touché : sans réglage, le traceur voit les mêmes octets qu'avant (15 empreintes SHA-256 dans
+  `tests/unit/io/identite-sans-pretraitement.test.ts`). Vue « Prétraitée » et bilan dans l'atelier.
+- **Conversion par lot** : plusieurs images à la fois, une liste d'état par image, résultat en archive ZIP
+  (`export/zip.ts`, pur).
+- **Exports** : options partagées (unité, taille, résolution, précision), PDF avec page, fond perdu,
+  repères de coupe et CMJN naïf, EPS niveau 2, DXF R12, JPEG et WebP, PNG avec résolution (`pHYs`).
+- **Navigateurs** : garde de démarrage qui dit en français ce qui manque, replis sans `color-mix`, `:has`
+  ni lookbehind (jetons `repli-*`), tests de navigateur indépendants du moteur et matrice CI
+  chromium / firefox / webkit (firefox et webkit n'échouent pas encore le job). Voir `docs/navigateurs.md`
+  et `docs/verification-manuelle.md`.
+- **ADR-0012** (proposée) : le modèle v2 (groupes, masques, dégradés, texte vivant, effets) et ses neuf
+  annexes ; rien n'est encore implémenté.
