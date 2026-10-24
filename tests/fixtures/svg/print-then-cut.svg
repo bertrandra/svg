@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 192">
+  <!-- Pour Print Then Cut : des couleurs qui se touchent au bord, un trait, une transparence et un trou (qui ne doit pas se remplir). -->
+  <path d="M24 96A72 72 0 1 0 168 96A72 72 0 1 0 24 96Z M76 96A20 20 0 1 1 116 96A20 20 0 1 1 76 96Z" fill="#f2c14e"/>
+  <path d="M96 24A72 72 0 0 1 168 96L136 96A40 40 0 0 0 96 56Z" fill="#c81e28"/>
+  <rect x="180" y="60" width="84" height="72" fill="#1428a0" stroke="#15181d" stroke-width="6" opacity="0.8"/>
+  <path d="M60 140L132 140" stroke="#15181d" stroke-width="4" fill="none"/>
+</svg>

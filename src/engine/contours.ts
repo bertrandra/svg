@@ -5,3 +5,4 @@
 export { etendreTrait, etendreTraits, aireDuTrait, type OptionsEtendre, type ResultatEtendre, MSG_SANS_TRAIT } from './contour/etendre.js';
 export { decaler, decalerFormes, type OptionsDecalage, type ResultatDecalage, type ResultatDecalageFormes } from './contour/decaler.js';
 export type { Jonction, Bout } from './contour/epaissir.js';
+export { cheminDeRegionChoisie } from './contour/region.js';
