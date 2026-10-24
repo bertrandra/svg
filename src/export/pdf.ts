@@ -4,6 +4,10 @@
 // meme dessin donne toujours les memes octets.
 
 import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { versCmjnNaif } from '../util/couleur.js';
+import { fluxMisEnPage, infoPdf, miseEnPage, tableau, type OptionsPdf } from './pdfPage.js';
+
+export type { OptionsPdf, FormatPage } from './pdfPage.js';
 
 const nb = (v: number) => { const r = Number(v.toFixed(3)); return Object.is(r, -0) ? '0' : String(r); };
 
@@ -11,6 +15,17 @@ const nb = (v: number) => { const r = Number(v.toFixed(3)); return Object.is(r, 
 export function composantes(hex: string): [number, number, number] {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   return m ? [parseInt(m[1] ?? '0', 16) / 255, parseInt(m[2] ?? '0', 16) / 255, parseInt(m[3] ?? '0', 16) / 255] : [0, 0, 0];
+}
+
+/**
+ * La couleur d'une peinture en operateur PDF : `rg`/`RG` (DeviceRGB, par defaut) ou `k`/`K` (DeviceCMYK
+ * naif, sans profil ICC). Le noir pur reste « 0 0 0 1 k » : un texte ou un filet noir ne se separe jamais en quatre encres.
+ */
+export function couleurPdf(hex: string, trait: boolean, cmjn: boolean): string {
+  const [r, g, b] = composantes(hex);
+  if (!cmjn) return [r, g, b].map(nb).join(' ') + (trait ? ' RG' : ' rg');
+  const m = versCmjnNaif({ r: r * 255, g: g * 255, b: b * 255 });
+  return [m.c, m.m, m.j, m.n].map(v => nb(v / 100)).join(' ') + (trait ? ' K' : ' k');
 }
 
 /** Les operateurs de trace d'un chemin, dans le repere du PDF (origine en bas a gauche). */
@@ -64,11 +79,11 @@ function operateursTrait(f: Forme): string[] {
   return r;
 }
 
-function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null): string {
+function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null, cmjn = false): string {
   const lignes: string[] = ['q'];
   if (etat) lignes.push('/' + etat + ' gs');
-  if (f.remplissage) lignes.push(composantes(f.remplissage).map(nb).join(' ') + ' rg');
-  if (f.contour && traite(f)) lignes.push(composantes(f.contour).map(nb).join(' ') + ' RG', nb(f.epaisseur) + ' w', ...operateursTrait(f));
+  if (f.remplissage) lignes.push(couleurPdf(f.remplissage, false, cmjn));
+  if (f.contour && traite(f)) lignes.push(couleurPdf(f.contour, true, cmjn), nb(f.epaisseur) + ' w', ...operateursTrait(f));
   lignes.push(operateurs(f.d, vb));
   const pair = f.regle === 'evenodd' ? '*' : '';
   const trait = traite(f);
@@ -76,22 +91,29 @@ function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null): strin
   return lignes.join('\n');
 }
 
-/** Le PDF complet, en octets. Les formes masquees ne s'ecrivent pas, comme dans le SVG. */
-export function ecrirePdf(dessin: DessinSvg): Uint8Array {
+/**
+ * Le PDF complet, en octets. Les formes masquees ne s'ecrivent pas, comme dans le SVG. Sans options, ou avec
+ * des options qui ne changent ni la page ni les couleurs, ce sont les octets d'avant ; la page, le fond perdu,
+ * les reperes, le CMJN et les metadonnees sont des options (voir `OptionsPdf`), jamais un effet de bord.
+ */
+export function ecrirePdf(dessin: DessinSvg, options: OptionsPdf = {}): Uint8Array {
   const [, , l, h] = dessin.vb;
+  const cmjn = options.cmjn === true, mise = miseEnPage(dessin.vb, options);
   const visibles = dessin.formes.filter(f => f.visible);
   // Un etat graphique par opacite distincte, nomme de facon stable.
   const opacites = [...new Set(visibles.map(cleEtat).filter((c): c is string => c !== null))].sort();
   const etats = new Map(opacites.map((o, i) => [o, 'GS' + i]));
-  const contenu = visibles.map(f => { const c = cleEtat(f); return contenuForme(f, dessin.vb, c === null ? null : etats.get(c) ?? null); }).join('\n');
+  const trace = visibles.map(f => { const c = cleEtat(f); return contenuForme(f, dessin.vb, c === null ? null : etats.get(c) ?? null, cmjn); }).join('\n');
+  const contenu = mise ? fluxMisEnPage(trace, mise, cmjn) : trace;
+  const boites = mise ? ' /MediaBox ' + tableau(mise.media) + (mise.boites ? ' /CropBox ' + tableau(mise.media) + ' /BleedBox ' + tableau(mise.bleed) + ' /TrimBox ' + tableau(mise.trim) : '') : ' /MediaBox [0 0 ' + nb(l) + ' ' + nb(h) + ']';
   const valeurs = (cle: string) => { const [ca = '1', CA = ca] = cle.split('/'); return '/ca ' + ca + ' /CA ' + CA; };
   const extg = opacites.length ? ' /ExtGState << ' + opacites.map(o => '/' + etats.get(o) + ' << ' + valeurs(o) + ' >>').join(' ') + ' >>' : '';
   const objets = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + nb(l) + ' ' + nb(h) + '] /Contents 4 0 R /Resources <<' + extg + ' >> >>',
+    '<< /Type /Page /Parent 2 0 R' + boites + ' /Contents 4 0 R /Resources <<' + extg + ' >> >>',
     '<< /Length ' + octetsDe(contenu) + ' >>\nstream\n' + contenu + '\nendstream',
-    '<< /Producer (svg) >>'
+    infoPdf(options)
   ];
   let corps = '%PDF-1.4\n%âãÏÓ\n';
   const positions: number[] = [];
