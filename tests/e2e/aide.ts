@@ -2,7 +2,7 @@
 // `npm run construire` (dist/editeur-svg.html), ouverte en file:// : c'est exactement ce qu'un
 // utilisateur recoit, sans serveur. Rien ici ne construit : si dist/ manque, on le dit tout de suite.
 
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
@@ -14,6 +14,12 @@ const PAGE = resolve(RACINE, 'dist/editeur-svg.html');
 
 /** L'adresse file:// de la page construite. */
 export const URL_PAGE = pathToFileURL(PAGE).href;
+
+/** Le bundle d'embarquement que `npm run construire` ecrit, et la page d'hote qui l'appelle (file://, sans serveur). */
+export const BUNDLE_EMBARQUE = resolve(RACINE, 'dist/editeur-svg-embarque.js');
+export const URL_INTEGRATION = pathToFileURL(resolve(RACINE, 'exemples/integration.html')).href;
+/** La racine du depot : de quoi lire package.json depuis un test. */
+export const RACINE_DEPOT = RACINE;
 
 /** Une session de test : un contexte, une page, et ce que la page a mal dit. */
 export interface Session {
@@ -59,8 +65,12 @@ export function pilote() {
     await navigateur?.close();
   });
 
-  afterEach(async () => {
+  afterEach(async ({ task }) => {
     const erreurs = ouvertes.flatMap(s => s.erreurs);
+    // Un test en echec laisse de quoi le comprendre sans le rejouer : une capture de chaque page encore ouverte et
+    // ce que les pages ont ecrit. La CI les rend en artefact (`test-results/`) ; ailleurs, c'est sans cout.
+    // (Pas pour un `it.fails` : son echec est attendu, une capture n'apprendrait rien et brouillerait l'artefact.)
+    if (!task.fails && (task.result?.state === 'fail' || erreurs.length)) await laisserTraces(task.name, ouvertes);
     await Promise.all(ouvertes.map(s => s.contexte.close()));
     ouvertes.length = 0;
     // Le message dit ce que la page a ecrit : c'est tout le diagnostic dont on dispose apres coup.
@@ -91,6 +101,23 @@ export function pilote() {
   };
 }
 
+/** Le dossier des traces d'un test en echec (ignore par git). */
+const DOSSIER_TRACES = resolve(RACINE, 'test-results/e2e');
+
+/** Ecrit une capture par page et un fichier texte des erreurs, sous un nom tire du test. Ne fait jamais echouer un test de plus. */
+async function laisserTraces(nomTest: string, sessions: readonly Session[]): Promise<void> {
+  try {
+    mkdirSync(DOSSIER_TRACES, { recursive: true });
+    const base = nomTest.normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'test';
+    await Promise.all(sessions.map(async (s, i) => {
+      await s.page.screenshot({ path: resolve(DOSSIER_TRACES, `${base}-${i}.png`) }).catch(() => undefined);
+      writeFileSync(resolve(DOSSIER_TRACES, `${base}-${i}.txt`), `${s.page.url()}\n\n${s.erreurs.join('\n') || '(aucune erreur de page)'}\n`);
+    }));
+  } catch {
+    // Les traces sont un confort : leur echec ne doit pas masquer l'echec du test.
+  }
+}
+
 /** Delai d'attente d'une condition de l'interface : large pour un runner lent, sans effet quand tout va bien. */
 const DELAI = 10_000;
 
@@ -118,6 +145,22 @@ export async function ouvrirExemple(page: Page, tactile = false): Promise<void> 
   const bouton = page.getByRole('button', { name: 'Ouvrir l’exemple' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
+}
+
+/**
+ * Ouvre un dessin fabrique en memoire par la voie « coller le code » de la page d'accueil : pas de
+ * fichier a ranger, et le dessin d'un test se lit dans le test. Attend l'editeur.
+ */
+export async function ouvrirCode(page: Page, svg: string, tactile = false): Promise<void> {
+  await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(svg);
+  const bouton = page.getByRole('button', { name: 'Ouvrir ce code' });
+  if (tactile) await bouton.tap(); else await bouton.click();
+  await page.locator('.editeur-cadre').waitFor();
+}
+
+/** Le nombre de modifications que la barre d'etat annonce (la taille de la pile d'annulation). */
+export async function modifications(page: Page): Promise<number> {
+  return Number(/(\d+) modification/.exec(await texteDe(page.locator('.editeur-etat')))?.[1] ?? NaN);
 }
 
 /** Le nombre de formes dessinees sur la toile (les chemins portent leur id). */
