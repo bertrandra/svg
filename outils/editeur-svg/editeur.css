@@ -245,7 +245,7 @@
 }
 /* Le clavier : le lien d'evitement vers la toile (invisible hors focus, mais le premier arret de Tab),
    le reticule des outils de trace, et les panneaux qu'on ne fait que focaliser par programme. */
-.saut { position: absolute; z-index: 40; left: 8px; top: 8px; transform: translateY(-300%); background: var(--panneau); }
+.saut { position: absolute; z-index: 40; left: 8px; top: 8px; transform: translateY(-300%); background: var(--panneau); transition: none; }
 .saut:focus { transform: none; }
 .editeur-calques:focus, .editeur-inspecteur:focus { outline: none; }
 .editeur-svg-toile .reticule line { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }

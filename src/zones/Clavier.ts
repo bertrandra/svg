@@ -25,6 +25,8 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const touche = (e: KeyboardEvent) => {
       const { mo: m, ui: u } = courant.current;
+      // Une touche qu'un controle a deja prise (une fleche qui ouvre un menu) n'est plus celle de la toile.
+      if (e.defaultPrevented) return;
       const cible = e.target as HTMLElement | null;
       const mod = e.ctrlKey || e.metaKey, t = e.key.toLowerCase();
       if (mod && t === 'z') { e.preventDefault(); if (e.shiftKey) ac.refaire(); else ac.defaire(); return; }

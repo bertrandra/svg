@@ -50,7 +50,8 @@ function ConfirmerAbandon() {
   const racine = useRef<HTMLDivElement>(null), idMessage = useId();
   useEffect(() => {
     if (!quitter) return;
-    const avant = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // La toile est un <svg> : un SVGElement se focalise comme un HTMLElement.
+    const avant = document.activeElement instanceof HTMLElement || document.activeElement instanceof SVGElement ? document.activeElement : null;
     racine.current?.querySelector<HTMLButtonElement>('button.primaire')?.focus();
     return () => {
       // Si l'editeur se ferme, `avant` n'est plus dans la page et l'hote reprend son focus lui-meme (EditeurSvg).

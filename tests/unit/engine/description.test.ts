@@ -14,12 +14,18 @@ const premiere = (corps: string): Forme => au(lire(corps).formes, 0);
 const tracee = (d: ReturnType<typeof rectangle>): Forme => au(ajouterForme(VIDE, d, STYLE_DEFAUT).dessin.formes, 0);
 
 describe('nombreFr', () => {
-  it('arrondit a l entier au-dela de cent et a une decimale en dessous, avec une virgule', () => {
-    expect(nombreFr(120.4)).toBe('120');
+  it('garde assez de decimales pour qu un pas du clavier s entende, avec une virgule et sans zero de fin', () => {
+    expect(nombreFr(120.44)).toBe('120,4');
+    expect(nombreFr(170.24)).toBe('170,2');
     expect(nombreFr(12.46)).toBe('12,5');
+    expect(nombreFr(3.456)).toBe('3,46');
     expect(nombreFr(40)).toBe('40');
-    expect(nombreFr(0.04)).toBe('0');
-    expect(nombreFr(-0.01)).toBe('0');
+    expect(nombreFr(2400.4)).toBe('2400');
+    expect(nombreFr(0.024)).toBe('0,02');
+  });
+
+  it('ne dit jamais « -0 »', () => {
+    expect(nombreFr(-0.001)).toBe('0');
     expect(nombreFr(-12.34)).toBe('-12,3');
   });
 });

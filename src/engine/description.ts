@@ -5,9 +5,13 @@
 import { lireHex, type Rgb } from '../util/couleur.js';
 import { ancre, boiteForme, type Chemin, type Forme } from './editionSvg.js';
 
-/** Un nombre en francais, lisible a l'oreille : entier au-dela de cent, une decimale en dessous. */
+/**
+ * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
+ * sous dix, une sous mille, entier au-dela ; la virgule, et pas de zero de fin.
+ */
 export function nombreFr(v: number): string {
-  const r = Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
+  const a = Math.abs(v), d = a < 10 ? 100 : a < 1000 ? 10 : 1;
+  const r = Math.round(v * d) / d;
   return String(Object.is(r, -0) ? 0 : r).replace('.', ',');
 }
 

@@ -26,7 +26,7 @@ export function useFocusEditeur(racine: RefObject<HTMLDivElement | null>): void 
   useEffect(() => {
     const el = racine.current;
     if (!el) return;
-    const avant = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const avant = document.activeElement instanceof HTMLElement || document.activeElement instanceof SVGElement ? document.activeElement : null;
     const retablir = isolerLePeuple(el);
     premierFocus(el)?.focus({ preventScroll: true });
     return () => {

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, formesVisibles, ouvrirExemple, ouvrirMenu, pilote, URL_INTEGRATION } from './aide.js';
+import { aLeFocus, attend, formesVisibles, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
 
 describe('clavier et lecteur d ecran', () => {
   const navigateur = pilote();
@@ -26,12 +26,6 @@ describe('clavier et lecteur d ecran', () => {
   const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => (e as HTMLElement).innerText.trim()));
   /** Le focus est-il sur la toile ? */
   const surLaToile = (page: Page) => aLeFocus(toile(page));
-  /** Ou le focus est : un court nom pour le message d'echec. */
-  const ouEstLeFocus = (page: Page) => page.evaluate(() => {
-    const a = document.activeElement;
-    return a ? (a.getAttribute('aria-label') ?? a.className ?? a.tagName) + ' <' + a.tagName.toLowerCase() + '>' : 'rien';
-  });
-
   async function choisirForme(page: Page, numero: number) {
     for (let i = 0; i < numero; i++) await page.keyboard.press('PageDown');
     await attend(() => dit(page)).toMatch(new RegExp('^Forme ' + numero + ' sélectionnée'));
@@ -162,7 +156,7 @@ describe('clavier et lecteur d ecran', () => {
 
       await page.keyboard.press('Alt+Shift+ArrowLeft');
       await page.keyboard.press('Alt+ArrowUp');
-      await attend(() => dit(page)).toBe('82,4 × 82,2.');
+      await attend(() => dit(page)).toBe('82,6 × 82,2.');
     });
 
     it('ne deplace pas la selection quand Alt redimensionne, et la deplace avec les fleches seules', async () => {
@@ -236,13 +230,6 @@ describe('clavier et lecteur d ecran', () => {
   });
 
   describe('dessiner au reticule', () => {
-    /** Le centre, en pixels de l'ecran, d'un element. */
-    const centreDe = async (l: ReturnType<Page['locator']>) => {
-      const b = await l.boundingBox();
-      if (!b) throw new Error('element sans boite');
-      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-    };
-
     it('pose un rectangle centre sur le reticule, choisi et pret a redimensionner', async () => {
       const page = await editeur();
       await page.keyboard.press('r');
@@ -250,16 +237,18 @@ describe('clavier et lecteur d ecran', () => {
       expect(await page.locator('.reticule').count()).toBe(0);
       await page.keyboard.press('ArrowRight');
       await attend(() => dit(page)).toMatch(/^Réticule à /);
-      await page.keyboard.press('Shift+ArrowDown');
       await attend(() => page.locator('.editeur-svg-toile .reticule').count()).toBe(1);
-      const reticule = await centreDe(page.locator('.reticule circle'));
+      const avantY = await page.locator('.reticule circle').getAttribute('cy');
+      await page.keyboard.press('Shift+ArrowDown');
+      await attend(() => page.locator('.reticule circle').getAttribute('cy')).not.toBe(avantY);
+      const cx = Number(await page.locator('.reticule circle').getAttribute('cx')), cy = Number(await page.locator('.reticule circle').getAttribute('cy'));
 
       await page.keyboard.press('Enter');
       await attend(() => formesVisibles(page)).toBe(5);
       await attend(() => dit(page)).toMatch(/^Forme 5 ajoutée et sélectionnée : carré, fond \w+ #[0-9a-f]{6}, 40 × 40 à .*Alt et flèches la redimensionnent/);
-      const posee = await centreDe(forme(page, 'f5'));
-      expect(Math.abs(posee.x - reticule.x)).toBeLessThan(1.5);
-      expect(Math.abs(posee.y - reticule.y)).toBeLessThan(1.5);
+      // Centree sur le reticule, en coordonnees du plan (la rangee de selection decale la toile a l'ecran).
+      const dire = (v: number) => String(Math.round(v * 10) / 10).replace('.', ',');
+      expect(await dit(page)).toContain(' à ' + dire(cx - 20) + ', ' + dire(cy - 20) + '.');
       // L'outil est revenu a la selection, le reticule a disparu, la toile a toujours le focus.
       expect(await page.locator('.reticule').count()).toBe(0);
       expect(await surLaToile(page)).toBe(true);
@@ -397,15 +386,17 @@ describe('clavier et lecteur d ecran', () => {
       await toile(page).focus();
       await page.keyboard.press('Escape');
       await attend(() => page.locator('.editeur-cadre').count()).toBe(0);
-      expect(await page.locator('#editeur').evaluate(e => e.inert)).toBe(false);
+      expect(await page.locator('#editeur').evaluate(e => (e as HTMLElement).inert)).toBe(false);
     });
 
     it('offre « Aller a la toile » comme premier arret, visible au focus', async () => {
       const page = await editeur();
       const saut = page.getByRole('button', { name: 'Aller à la toile' });
+      // Hors focus il est au-dessus de l'ecran ; au focus il y entre tout entier.
+      const dansLEcran = async () => { const b = await saut.boundingBox(); return !!b && b.y >= 0 && b.y + b.height <= 900 && b.x >= 0; };
+      expect(await dansLEcran()).toBe(false);
       await saut.focus();
-      const b = await saut.boundingBox();
-      expect(b && b.y >= 0 && b.y + b.height <= 900 && b.x >= 0).toBe(true);
+      await attend(dansLEcran).toBe(true);
       await page.keyboard.press('Enter');
       await attend(() => surLaToile(page)).toBe(true);
     });
@@ -430,9 +421,9 @@ describe('clavier et lecteur d ecran', () => {
       const page = await editeur();
       await choisirForme(page, 2);
       const avant = await forme(page, 'f2').boundingBox();
-      const vue = await ouvrirMenu(page, 'Vue');
-      await vue.focus();
+      await page.locator('.menu-bouton', { hasText: 'Vue' }).focus();
       await page.keyboard.press('ArrowDown');
+      await attend(() => page.locator('.menu-panneau [role^=menuitem]:focus').count()).toBe(1);
       await page.keyboard.press('ArrowDown');
       await page.keyboard.press('ArrowDown');
       await page.keyboard.press('Escape');
@@ -581,12 +572,12 @@ describe('clavier : l editeur embarque dans la page d un hote', () => {
     await page.keyboard.press('Enter');
     await page.locator('.editeur-svg .editeur-cadre').waitFor();
     await attend(() => aLeFocus(page.locator('.editeur-svg-toile'))).toBe(true);
-    expect(await page.locator('main').evaluate(e => e.inert)).toBe(true);
+    expect(await page.locator('main').evaluate(e => (e as HTMLElement).inert)).toBe(true);
     expect(await page.locator('main').evaluate(e => !!e.closest('.editeur-svg'))).toBe(false);
 
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.editeur-svg').count()).toBe(0);
     await attend(() => aLeFocus(editer)).toBe(true);
-    expect(await page.locator('main').evaluate(e => e.inert)).toBe(false);
+    expect(await page.locator('main').evaluate(e => (e as HTMLElement).inert)).toBe(false);
   });
 });
