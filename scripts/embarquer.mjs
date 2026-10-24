@@ -7,7 +7,9 @@
 //
 //   npm run embarquer        -> dist/editeur-svg-embarque.js
 //
-// vtracer n'y est pas : l'editeur ne vectorise pas, il retouche un SVG qu'on lui donne.
+// vtracer n'y est pas : l'editeur ne vectorise pas, il retouche un SVG qu'on lui donne. Depuis que le
+// traceur vit dans dist/vtracer.js (charge par balise <script>), le bundle n'en porte que le petit
+// chargeur (io/vtracer.ts), que l'editeur n'atteint jamais ; il n'y a rien a remplacer.
 
 import { build, transform } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -26,26 +28,17 @@ const feuilles = {
   setup(b) {
     b.onResolve({ filter: /^feuille-editeur$/ }, () => ({ path: 'feuille-editeur', namespace: 'feuille-editeur' }));
     b.onLoad({ filter: /.*/, namespace: 'feuille-editeur' }, async () => {
-      const f = feuillesEditeur(racine);
+      const f = await feuillesEditeur(racine);
       const { code } = await transform([f.jetons, f.base, f.editeur].join('\n'), { loader: 'css', minify: true });
       return { contents: code, loader: 'text' };
     });
   }
 };
 
-// L'editeur atteint io/image.ts (export PNG), qui sait appeler vtracer ; l'embarquement ne vectorise pas,
-// et le WebAssembly de vtracer pese a lui seul pres de la moitie de la page : on le remplace par un refus.
-const sansTraceur = {
-  name: 'sans-traceur',
-  setup(b) {
-    b.onResolve({ filter: /vtracerWasm\.js$/ }, () => ({ path: join(racine, 'outils/editeur-svg/sans-traceur.ts') }));
-  }
-};
-
 const { outputFiles } = await build({
   entryPoints: [join(racine, 'outils/editeur-svg/embarque.ts')],
   bundle: true, format: 'iife', target: 'es2020', minify: true, write: false, jsx: 'automatic',
-  plugins: [feuilles, sansTraceur], outfile: join(racine, 'dist/editeur-svg-embarque.js'),
+  plugins: [feuilles], outfile: join(racine, 'dist/editeur-svg-embarque.js'),
   banner: { js: '/* Editeur SVG embarquable ' + version + ' : window.EditeurSvg.ouvrir({ svg, onEnregistrer }). Voir docs/integration.md. */' },
   define: { 'process.env.NODE_ENV': '"production"', VERSION_EMBARQUEE: JSON.stringify(version) }
 });

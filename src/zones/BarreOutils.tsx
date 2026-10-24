@@ -83,6 +83,7 @@ function elementsEdition({ ed, defaire, refaire }: ProprietesBarre): ElementMenu
     { id: 'coller', libelle: 'Coller', icone: 'coller', raccourci: 'Ctrl+V', desactive: !ed.presse.length, onClick: ed.collerPresse },
     { id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', desactive: rien, onClick: ed.dupliquerSelection },
     { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !ed.dessin.formes.length, onClick: () => ed.choisir(ed.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
+    { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ed.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ed.choisir([]); ed.poserPoint(null); } },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ed.supprimerSelection }
   ];

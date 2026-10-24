@@ -37,6 +37,17 @@ export function gamma(v: number): number {
   return c * 255;
 }
 
+/** Luminance relative WCAG 2.x d'une couleur sRGB : 0 pour le noir, 1 pour le blanc. */
+export function luminance(c: Rgb): number {
+  return 0.2126 * lineaire(c.r) + 0.7152 * lineaire(c.g) + 0.0722 * lineaire(c.b);
+}
+
+/** Le rapport de contraste WCAG 2.x entre deux couleurs : de 1 (identiques) a 21 (noir sur blanc). */
+export function contraste(x: Rgb, y: Rgb): number {
+  const a = luminance(x), b = luminance(y);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 export function versOklab(c: Rgb): Oklab {
   const r = lineaire(c.r), g = lineaire(c.g), b = lineaire(c.b);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { cssJetons } from '../../../src/styles/jetons.js';
 import { porterCss, porterSelecteur, remEnPixels, separerSelecteurs } from '../../../src/util/cssPortee.js';
 
 const R = '.editeur-svg';
@@ -87,7 +88,7 @@ describe('remEnPixels', () => {
 
 describe('porterCss sur les feuilles reelles de l editeur', () => {
   const dossier = resolve(__dirname, '../../../outils/editeur-svg');
-  const sortie = porterCss(['jetons.css', 'base.css', 'editeur.css'].map(f => readFileSync(join(dossier, f), 'utf8')).join('\n'), R);
+  const sortie = porterCss([cssJetons(), ...['base.css', 'editeur.css'].map(f => readFileSync(join(dossier, f), 'utf8'))].join('\n'), R);
 
   /** Tous les selecteurs de la sortie, at-rules imbriquees comprises. */
   const selecteurs = [...sortie.matchAll(/(?:^|[{}])([^{}@]+)\{/g)].flatMap(m => separerSelecteurs(m[1] ?? ''));

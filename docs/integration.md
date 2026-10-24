@@ -33,8 +33,8 @@ On sert `dist/editeur-svg.html` avec ses deux fichiers annexes dans le même dos
 - `allow-downloads` et `clipboard-write` : pour les boutons « Télécharger » et « Copier ».
 - La page n’a **pas d’API de message** (`postMessage`) : le résultat sort par ses boutons (SVG, PNG, PDF,
   copie du code). Si votre page doit recevoir le SVG, prenez le bundle.
-- `bibliotheque.js` et `polices.js` doivent être servis **à côté de `editeur-svg.html`** : la page les
-  cherche par leur nom nu.
+- `vtracer.js` (traceur, 877 Ko), `bibliotheque.js` et `polices.js` doivent être servis **à côté de `editeur-svg.html`** : la page les
+  cherche par leur nom nu, chacun au premier besoin (une vectorisation, la bibliothèque, l’outil Texte).
 
 ---
 
@@ -148,13 +148,14 @@ rattrapée par l’éditeur.
 
 | Fichier | Taille | Quand | Rôle |
 |---|---|---|---|
-| `editeur-svg-embarque.js` | 705 Ko (228 Ko compressé) | toujours | L’éditeur, ses styles, React |
+| `editeur-svg-embarque.js` | 717 Ko (227 Ko compressé) | toujours | L’éditeur, ses styles, React |
 | `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
 | `polices.js` | 2,6 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte | Neuf fontes libres (OFL), chargées quand la personne ouvre l’outil Texte |
 
-- **vtracer n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas. Le bundle ne le
-  contient pas (le WebAssembly pèserait à lui seul 668 Ko) ; la conversion d’image reste dans la page
-  entière.
+- **`vtracer.js` n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas, et rien dans
+  son interface n’appelle le traceur. Le bundle n’en contient que le petit chargeur (qui poserait une
+  balise `<script>` vers `vtracer.js`, sous `baseAnnexes` comme les autres) ; la conversion d’image reste
+  dans la page entière, qui, elle, charge `vtracer.js` (877 Ko, 369 Ko compressé) à côté d’elle.
 - Les deux annexes sont des scripts classiques (`window.__bibliothequeSvg`, `window.__policesSvg`) que
   l’éditeur ajoute par une balise `<script>` quand il en a besoin, pas par `fetch` : cela marche depuis
   `file://`. Leurs noms sont fixes.
@@ -262,9 +263,14 @@ copié) :
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BoutonEditerSvg } from './svg/src/zones/EditeurSvg.js';
-import './svg/outils/editeur-svg/jetons.css';
+import { cssJetons } from './svg/src/styles/jetons.js';
 import './svg/outils/editeur-svg/base.css';
 import './svg/outils/editeur-svg/editeur.css';
+
+// Les variables de couleur viennent du registre de jetons : on pose le CSS qu'il génère.
+const jetons = document.createElement('style');
+jetons.textContent = cssJetons();
+document.head.append(jetons);
 
 const DEPART = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#c81e28"/></svg>';
 
@@ -308,16 +314,16 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 
 À savoir, côté React :
 
-- **Les styles** : `jetons.css` (les variables de couleur), `base.css` (les règles d’élément) et
-  `editeur.css` (l’éditeur) sont ceux de la page, non cantonnés : `base.css` règle `body`, `button`, `*`.
+- **Les styles** : le CSS des jetons (`cssJetons()`, `src/styles/jetons.ts`, ADR-0007 : les variables de
+  couleur), `base.css` (les règles d’élément) et `editeur.css` (l’éditeur) sont ceux de la page, non
+  cantonnés : `base.css` règle `body`, `button`, `*`.
   Pour les cantonner comme le fait le bundle, passez-les par `porterCss` et `remEnPixels`
   (`src/util/cssPortee.ts`) avant de les poser, ou choisissez le bundle (2).
 - **Les fichiers annexes** : `bibliotheque.js` et `polices.js` à côté de la page, ou
   `definirBaseAnnexes('/static/svg/')` (`src/io/annexes.ts`) avant le premier chargement.
-- **vtracer** : `EditeurSvg` importe `io/image.ts` (l’export PNG), qui sait appeler vtracer par un import
-  dynamique de `src/io/vtracerWasm.ts`, un module qui n’est construit que pour esbuild avec le chargeur
-  `.wasm` de `scripts/construire.mjs`. Votre outil de construction doit le remplacer, comme
-  `scripts/embarquer.mjs` le fait par `outils/editeur-svg/sans-traceur.ts` (une fonction qui refuse).
+- **vtracer** : rien à configurer. `EditeurSvg` importe `io/image.ts` (l’export PNG), qui connaît le
+  chargeur du traceur ; celui-ci ne pose une balise `<script>` vers `vtracer.js` que si une vectorisation
+  est demandée, ce que l’éditeur ne fait jamais. Le WebAssembly n’entre pas dans votre bundle.
 - **Les dépendances** : `react`, `react-dom`, `opentype.js` et `polygon-clipping` (versions de
   `package.json`).
 - **Le moteur seul** : `src/engine/editionSvg.ts` (lire, modifier, écrire un dessin) s’utilise sans React

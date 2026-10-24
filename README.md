@@ -51,7 +51,8 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page, vtracer compris), dist/bibliotheque.js, dist/polices.js
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js
+npm run e2e          # les tests de navigateur (Chromium), après construire
 ```
 
 | Commande | Ce qu'elle fait |
@@ -60,13 +61,15 @@ npm run construire   # dist/editeur-svg.html (la page, vtracer compris), dist/bi
 | `npm run lint` | Aucun `any` dans le moteur, aucune assertion `!`, aucune fonction de plus de 150 lignes |
 | `npm run cliquet` | Aucun dossier ne régresse en typage |
 | `npm test` | Couches, cycles, pureté du cœur, lecture et écriture du dessin, opérations, points, historique, vectorisation réelle, bibliothèque entière |
-| `npm run construire` | La page autonome et la bibliothèque, dans `dist/` |
+| `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
+| `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
+| `npm run e2e` | 68 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
-statique ; `bibliotheque.js` (7 Mo) et `polices.js` (2,7 Mo) doivent rester à côté d'elle, ils se
-chargent à la demande.
+statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
+d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la bibliothèque, au premier texte).
 
 ## Embarquer l'éditeur
 
@@ -102,7 +105,8 @@ image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page et son point d'entrée ; `scripts/construire.mjs` y embarque le moteur, `scripts/bibliotheque.mjs` construit la bibliothèque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
-| `docs/adr/` | Les décisions, une par fichier |
+| `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
+| `docs/adr/` | Les décisions, une par fichier ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur

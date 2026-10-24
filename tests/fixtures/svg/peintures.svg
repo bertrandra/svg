@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100">
+  <title>Peintures</title>
+  <defs><linearGradient id="inutilise"><stop offset="0" stop-color="#000"/></linearGradient></defs>
+  <style>
+    .a { fill: #1f5f3f; stroke: #d4a537; stroke-width: 3 }
+    .b, .c { fill: rgb(200, 30, 40) }
+    .c { stroke: rgb(10%, 20%, 30%); stroke-width: 1.5 }
+  </style>
+  <path class="a" d="M5 5h20v20h-20z"/>
+  <path class="b" d="M30 5h20v20h-20z"/>
+  <path class="c" d="M55 5h20v20h-20z"/>
+  <path style="fill:#abc;stroke:red;stroke-width:2" d="M80 5h20v20h-20z"/>
+  <path fill="#ABCDEF" d="M5 30h20v20h-20z"/>
+  <path fill="blue" stroke="Navy" d="M55 30h20v20h-20z"/>
+  <path fill="none" stroke="#000" stroke-width="0.25" d="M5 60l20 0 0 20z"/>
+  <path fill="currentColor" d="M30 60h20v20h-20z"/>
+  <path fill="transparent" stroke="#222" d="M55 60h20v20h-20z"/>
+  <g fill="#8c6a4f" stroke="#4a3728">
+    <path d="M80 60h20v20h-20z"/>
+    <path fill="inherit" stroke="none" d="M105 60h10v20h-10z"/>
+  </g>
+</svg>
