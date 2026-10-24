@@ -1,4 +1,4 @@
-// « Rien ne quitte votre navigateur », a la lettre (docs/securite.md, constat M6) : la page autonome ne contacte AUCUN hote.
+// « Rien ne quitte votre navigateur », a la lettre (docs/securite.md, constat 14) : la page autonome ne contacte AUCUN hote.
 // Avant, ses polices venaient de fonts.googleapis.com et fonts.gstatic.com ; elles sont maintenant dans le fichier (data: URI,
 // scripts/fontes-interface.mjs). Ici tout le reseau est coupe (tout ce qui n'est pas file:, data: ou blob: est avorte), la page est
 // parcourue (accueil, voie image avec une vectorisation, editeur avec l'exemple) et le test echoue pour toute requete, meme

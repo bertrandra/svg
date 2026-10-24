@@ -57,8 +57,8 @@ les `url()` externes, et les `javascript:`. Un renvoi externe de `<use>` est gar
 - Le texte d'un SVG très grand ou très imbriqué peut ralentir le navigateur (des bornes existent : clones `<use>`, profondeur, historique), sans
   garantie de temps de réponse.
 
-**Aucun réseau** : l'éditeur n'appelle aucun serveur ; les seules requêtes sont les balises `<script>` des annexes (bibliothèque, fontes, traceur), et
-seulement quand la personne s'en sert. Les dessins ne quittent pas le navigateur. Le stockage du navigateur ne porte que des conforts (brouillon, versions
+**Aucun réseau** : l'éditeur n'appelle aucun serveur, et la page autonome n'en contacte aucun à l'ouverture (ses polices d'interface sont dans le fichier) ; les seules
+requêtes sont les balises `<script>` des annexes (bibliothèque, fontes, traceur), et seulement quand la personne s'en sert. Les dessins ne quittent pas le navigateur. Le stockage du navigateur ne porte que des conforts (brouillon, versions
 nommées, corrections), jamais requis.
 
 ## Dépendances

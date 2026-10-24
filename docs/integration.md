@@ -20,7 +20,7 @@ les fontes et le bundle. `npm run embarquer` ne refait que le bundle.
 
 ## 1. L’iframe de la page entière
 
-On sert `dist/editeur-svg.html` avec ses trois fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`) dans le même dossier, et on l’encadre :
+On sert `dist/editeur-svg.html` avec ses trois fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les trois annexes, au premier besoin.
 
 ```html
 <iframe src="/svg/editeur-svg.html" title="Éditeur SVG" style="width: 100%; height: 720px; border: 0"
@@ -214,13 +214,21 @@ Ce que cette isolation ne couvre pas :
   icônes de la barre aussi). Ses attributs (`fill="…"`) en seraient effacés.
 - **La pile d’empilement** : l’éditeur est en `position: fixed; z-index: 1000`, ses menus à 1100. Un
   élément de l’hôte au-dessus de 1000 (bandeau de cookies, en-tête collant) passe devant.
-- **Les fontes** : la page entière charge *Instrument Sans* et *IBM Plex Mono* chez Google Fonts ; le bundle
-  ne charge rien (pas de requête cachée). Sans elles, l’éditeur retombe sur *Helvetica Neue*, *Arial* et
-  `ui-monospace`. Pour retrouver la même typographie, chargez-les vous-même :
+- **Les fontes** : la page entière embarque *Instrument Sans* et *IBM Plex Mono* (sous-ensemble latin, SIL OFL 1.1) dans son
+  propre fichier, sans rien demander à un serveur ; le bundle, lui, n’en embarque aucune (pas de requête cachée, pas de
+  poids ajouté). Sans elles, l’éditeur retombe sur *Helvetica Neue*, *Arial* et `ui-monospace`. Pour retrouver la même
+  typographie, servez-les vous-même, depuis votre origine (le paquet npm `@fontsource/instrument-sans` et
+  `@fontsource/ibm-plex-mono` fournit les fichiers WOFF2) plutôt que depuis un service tiers, qui verrait l’adresse de vos
+  visiteurs :
 
   ```html
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    /* Une déclaration par graisse : 400, 500, 600 et 700 pour Instrument Sans, 400 et 500 pour IBM Plex Mono. */
+    @font-face { font-family: "Instrument Sans"; font-weight: 400; font-display: swap; src: url(/static/polices/instrument-sans-latin-400-normal.woff2) format("woff2"); }
+    @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url(/static/polices/ibm-plex-mono-latin-400-normal.woff2) format("woff2"); }
+  </style>
   ```
+
 - **Le focus** : à l’ouverture l’éditeur prend le focus (sur sa toile) et rend inertes (`inert`) les autres
   éléments directs de `<body>`, pour que ni Tab ni un lecteur d’écran n’aillent derrière lui ; il les met aussi
   en `visibility: hidden` (en style en ligne, remis tel quel à la fermeture) : l’éditeur les recouvre d’un fond
