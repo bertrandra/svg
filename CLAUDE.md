@@ -33,7 +33,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 1. Branche `claude/<sujet>` depuis `origin/main`. **Jamais de push direct sur `main`.**
 2. `npm run verifier`.
 3. Entrée dans `CHANGELOG.md`, sous `## [Non publié]` (Ajouté / Modifié / Corrigé), en français.
-4. PR vers `main`, CI `verifier` verte, merge (commit de merge, pas de squash).
+4. PR vers `main`, CI `verifier` et `navigateur` vertes, merge (commit de merge, pas de squash).
+5. Un agent travaille dans un worktree sous `.claude/worktrees/` (ignoré par git) ; on le supprime, avec
+   sa branche, dès que son travail est fusionné (`git worktree remove`, `git branch -d`). Un lien
+   `node_modules` n'est jamais commité : `.gitignore` l'ignore, lien compris.
 
 ## Conventions
 

@@ -7,33 +7,27 @@
 //
 //   npm run bibliotheque       -> dist/bibliotheque.js
 
-import { build } from 'esbuild';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { existsSync, readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo, estLance, refuserFinDeScript } from './aide.mjs';
 
 export async function construireBibliotheque() {
-  const sortieModele = join(racine, 'dist/.bibliotheque-modele.mjs');
-  mkdirSync(join(racine, 'dist'), { recursive: true });
-  await build({ entryPoints: [join(racine, 'src/model/bibliotheque.ts')], bundle: true, format: 'esm', platform: 'node', outfile: sortieModele });
-  const modele = await import(pathToFileURL(sortieModele).href);
-  const jeu = JSON.parse(readFileSync(join(racine, 'node_modules/@iconify-json/game-icons/icons.json'), 'utf8'));
-  const info = JSON.parse(readFileSync(join(racine, 'node_modules/@iconify-json/game-icons/info.json'), 'utf8'));
+  const code = await empaqueter({ entryPoints: [depuisRacine('src/model/bibliotheque.ts')], bundle: true, format: 'esm', platform: 'node' });
+  const modele = await import(pathToFileURL(ecrireDansDist('.bibliotheque-modele.mjs', code)).href);
+  const jeu = JSON.parse(readFileSync(depuisRacine('node_modules/@iconify-json/game-icons/icons.json'), 'utf8'));
+  const info = JSON.parse(readFileSync(depuisRacine('node_modules/@iconify-json/game-icons/info.json'), 'utf8'));
   // Les corrections posees a la main depuis la page (bibliotheque/corrections.json) l'emportent sur les regles.
-  const cheminCorrections = join(racine, 'bibliotheque/corrections.json');
+  const cheminCorrections = depuisRacine('bibliotheque/corrections.json');
   const corrections = existsSync(cheminCorrections) ? JSON.parse(readFileSync(cheminCorrections, 'utf8')) : {};
   const entrees = modele.appliquerCorrections(modele.construireBibliotheque(jeu.icons, jeu.width), corrections);
   const evenements = modele.EVENEMENTS;
   const texte = 'window.__bibliothequeSvg=' + JSON.stringify({ source: info.name, licence: info.license.title, url: 'https://game-icons.net', evenements, entrees }) + ';';
-  if (texte.includes('</script')) throw new Error('la bibliotheque contient « </script » : la page serait coupee');
-  const sortie = join(racine, 'dist/bibliotheque.js');
-  writeFileSync(sortie, texte);
+  refuserFinDeScript(texte, 'la bibliotheque');
+  ecrireDansDist('bibliotheque.js', texte);
   return { formes: entrees.length, octets: texte.length };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (estLance(import.meta.url)) {
   const r = await construireBibliotheque();
-  console.log('Bibliothèque construite : dist/bibliotheque.js (' + r.formes + ' formes, ' + Math.round(r.octets / 1024) + ' Ko).');
+  annoncer('Bibliothèque construite', 'bibliotheque.js', r.formes + ' formes, ' + enKo(r.octets) + ' Ko');
 }

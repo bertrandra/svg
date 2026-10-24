@@ -51,7 +51,7 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/editeur-svg-embarque.js
 npm run e2e          # les tests de navigateur (Chromium), après construire
 ```
 
@@ -63,6 +63,7 @@ npm run e2e          # les tests de navigateur (Chromium), après construire
 | `npm test` | Couches, cycles, pureté du cœur, lecture et écriture du dessin, opérations, points, historique, vectorisation réelle, bibliothèque entière |
 | `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
+| `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
 | `npm run e2e` | 68 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
@@ -73,24 +74,29 @@ d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la b
 
 ## Embarquer l'éditeur
 
-```tsx
-import { EditeurSvg } from './src/zones/EditeurSvg.js';
+Le guide complet est dans [`docs/integration.md`](docs/integration.md) ; une démonstration tourne
+depuis le disque dans [`exemples/integration.html`](exemples/integration.html). Trois voies : l'iframe
+de la page entière, un script classique, ou le composant React.
 
-<EditeurSvg
-  svg={texteSvg}                                  // le SVG a retoucher
-  titre="logo.svg" nom="logo"                     // le titre de la fenetre, le nom du fichier propose
-  nuancier={[{ nom: 'Rouge', hex: '#c81e28' }]}   // facultatif : les couleurs proposees
-  bibliotheque="a-charger"                        // facultatif : la bibliotheque, chargee au premier besoin
-  fermer={() => …}
-  enregistrer={svg => …}                          // le SVG retouche, deja passe par nettoyerSvg
-/>
+```html
+<script src="editeur-svg-embarque.js"></script>
+<script>
+  const editeur = EditeurSvg.ouvrir({
+    svg: texteSvg,                       // le SVG à retoucher
+    nom: 'logo',                         // le nom du fichier proposé
+    nuancier: [{ nom: 'Rouge', hex: '#c81e28' }],   // facultatif
+    bibliotheque: 'a-charger',           // facultatif : chargée au premier besoin
+    onEnregistrer: svg => { … },         // le SVG retouché, déjà passé par nettoyerSvg
+    onFermer: () => { … }                // facultatif
+  });
+</script>
 ```
 
-Le composant se pose en portail par-dessus la page et attend les styles de
-`outils/editeur-svg/page.html` (les classes `editeur-*` et les jetons `--table`, `--panneau`,
-`--encre`, `--encre-douce`, `--filet`, `--cyan`, `--sur-cyan`, `--alerte`, `--alerte-fond`,
-`--echec`, `--mono`). `BoutonEditerSvg` l'ouvre depuis un bouton, grisé quand le SVG enveloppe une
-image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
+`dist/editeur-svg-embarque.js` (`npm run embarquer`, 0,7 Mo) amène ses propres styles, cantonnés à
+l'éditeur, et lit les jetons de couleur de `src/styles/jetons.ts`. `bibliotheque.js` et `polices.js`
+se posent à côté de la page de l'hôte, ou sous une adresse donnée par `baseAnnexes`. Le composant
+React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteur seul
+(`src/engine/editionSvg.ts`, sans React ni DOM) restent utilisables tels quels.
 
 ## Organisation du dépôt
 
@@ -103,7 +109,8 @@ image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
 | `src/zones/` | `EditeurSvg.tsx` (le composant), `BarreOutils.tsx` (ses barres), `Menu.tsx` et `Section.tsx`, ses panneaux (`Texte`, `Palettes`, `Versions`, `Exporter`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page), `session.ts` |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
-| `outils/editeur-svg/` | La page et son point d'entrée ; `scripts/construire.mjs` y embarque le moteur, `scripts/bibliotheque.mjs` construit la bibliothèque |
+| `outils/editeur-svg/` | La page, ses feuilles de style (`base.css`, `editeur.css`) et ses points d'entrée (page, embarquement, traceur) ; `scripts/construire.mjs` assemble la page, `scripts/embarquer.mjs` le script d'embarquement |
+| `exemples/` | Une page d'intégration qui tourne depuis le disque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
 | `docs/adr/` | Les décisions, une par fichier ; `docs/jetons.md` : les jetons, générés |

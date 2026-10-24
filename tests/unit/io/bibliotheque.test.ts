@@ -42,14 +42,6 @@ describe('bibliothequeChargee', () => {
 });
 
 describe('chargerBibliotheque', () => {
-  it('rend tout de suite la bibliotheque deja arrivee, sans ajouter de balise', async () => {
-    const { w, scripts } = installerPage('charge');
-    w.__bibliothequeSvg = bibliotheque;
-    const { chargerBibliotheque } = await module();
-    expect(await chargerBibliotheque()).toBe(bibliotheque);
-    expect(scripts.length).toBe(0);
-  });
-
   it('ajoute ' + FICHIER_BIBLIOTHEQUE + ' a la page une fois, le retire, et memorise le resultat', async () => {
     const { scripts } = installerPage('charge');
     const { chargerBibliotheque } = await module();

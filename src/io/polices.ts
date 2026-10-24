@@ -5,13 +5,21 @@
 
 import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
+import { fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
 
 export interface PoliceEmbarquee { id: string; nom: string; base64: string }
 export interface Police { id: string; nom: string; glyphes: Glyphes }
 
 export const FICHIER_POLICES = 'polices.js';
 
-let promesse: Promise<Police[]> | null = null;
+const annexe: Annexe<PoliceEmbarquee[]> = {
+  fichier: FICHIER_POLICES,
+  globale: '__policesSvg',
+  contenu: 'les polices',
+  consigne: 'lancez « npm run construire »',
+  valider: v => (Array.isArray(v) ? v as PoliceEmbarquee[] : undefined)
+};
+const embarquees = fabriquerChargeurAnnexe(annexe, navigateur);
 
 function decoderBase64(b64: string): ArrayBuffer {
   const bin = atob(b64), out = new Uint8Array(bin.length);
@@ -37,19 +45,8 @@ export function lirePolice(id: string, nom: string, octets: ArrayBuffer): Police
 }
 
 /** Les fontes embarquees, chargees une fois, a la demande. */
-export function chargerPolices(): Promise<Police[]> {
-  promesse ??= new Promise<PoliceEmbarquee[]>((ok, ko) => {
-    const w = window as unknown as { __policesSvg?: PoliceEmbarquee[] };
-    if (w.__policesSvg) { ok(w.__policesSvg); return; }
-    const s = document.createElement('script');
-    s.src = FICHIER_POLICES;
-    s.onload = () => { s.remove(); if (w.__policesSvg) ok(w.__policesSvg); else ko(new Error('Le fichier ' + FICHIER_POLICES + ' ne contient pas les polices.')); };
-    s.onerror = () => { s.remove(); ko(new Error('Le fichier ' + FICHIER_POLICES + ' est introuvable à côté de la page : lancez « npm run construire ».')); };
-    document.head.appendChild(s);
-  }).then(liste => liste.map(p => lirePolice(p.id, p.nom, decoderBase64(p.base64))).filter((p): p is Police => p !== null))
-    .catch((e: unknown) => { promesse = null; throw e instanceof Error ? e : new Error(String(e)); });
-  return promesse;
-}
+export const chargerPolices: () => Promise<Police[]> = memoiserSucces(async () =>
+  (await embarquees.charger()).map(p => lirePolice(p.id, p.nom, decoderBase64(p.base64))).filter((p): p is Police => p !== null)).charger;
 
 /** Une fonte deposee par la personne (TTF ou OTF). */
 export async function policeDeposee(fichier: File): Promise<Police | { erreur: string }> {

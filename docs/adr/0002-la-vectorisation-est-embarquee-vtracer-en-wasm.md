@@ -38,3 +38,5 @@ l'image en vecteurs, dans le navigateur, sans service distant, et de façon repr
   vit dans `io`.
 - Une mise à jour de vtracer peut déplacer des tracés : elle se traite comme un changement de
   rendu, d'où l'épinglage exact.
+- Le traceur se charge comme toute annexe (`io/annexes.ts`) ; seul le démarrage du WASM lui est propre,
+  mémoïsé et remis à zéro à part.

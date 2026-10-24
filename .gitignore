@@ -1,4 +1,9 @@
-node_modules/
+# Les dependances : sans barre finale, pour que le lien symbolique que prend un worktree d'agent
+# (ln -s ../../node_modules) soit ignore comme le dossier.
+node_modules
 dist/
 coverage/
 *.log
+# Les worktrees des agents (isolation: worktree) : jamais du code du depot.
+.claude/worktrees/
+.claude/settings.local.json

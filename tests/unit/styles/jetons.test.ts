@@ -8,7 +8,8 @@ import { AA, JETONS, PAIRES, ROLES, contrasteDe, cssJetons, lire, tableauJetons,
 // puis le lire par var(--nom) ; ACTUALISER_REFERENCES=1 regenere docs/jetons.md.
 
 const racine = join(__dirname, '../../..');
-const page = readFileSync(join(racine, 'outils/editeur-svg/page.html'), 'utf8');
+// La page, et les feuilles qu'elle en a sorties (base.css, editeur.css : partagees avec l'embarquement) : les controles portent sur tout ce qui s'ecrit a la main.
+const page = ['page.html', 'base.css', 'editeur.css'].map(f => readFileSync(join(racine, 'outils/editeur-svg', f), 'utf8')).join('\n');
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap(nom => {

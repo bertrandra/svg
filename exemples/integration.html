@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exemple d’intégration de l’éditeur SVG</title>
+<!--
+  Une page d’hôte ordinaire : aucun framework, aucun outil de build. Elle montre un dessin, un bouton
+  « Éditer » qui ouvre l’éditeur plein écran par window.EditeurSvg.ouvrir(), et le SVG enregistré
+  qu’elle reçoit en retour.
+
+  À ouvrir telle quelle depuis le disque (file://) après « npm run construire » : elle charge
+  ../dist/editeur-svg-embarque.js, et l’éditeur y cherche bibliotheque.js et polices.js (baseAnnexes).
+  Le guide : docs/integration.md.
+-->
+<style>
+  /* Les styles de l’hôte. Ils sont volontairement envahissants (body, button, *) : l’éditeur doit rester
+     lui-même au milieu, sans les recevoir ni leur nuire. */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; font-family: Georgia, "Times New Roman", serif; line-height: 1.6; color: #2b2438; background: #f4f0fa; text-align: center; letter-spacing: 0.01em; }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  p { margin: 0; }
+  button { font: inherit; padding: 10px 20px; border: 0; border-radius: 999px; background: #6a3fb5; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.lien { background: transparent; color: #6a3fb5; text-decoration: underline; text-transform: none; letter-spacing: 0; }
+  .carte { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(40, 20, 80, 0.15); display: grid; gap: 12px; justify-items: center; }
+  .carte img { width: 240px; height: 240px; object-fit: contain; border: 1px dashed #c9bde3; border-radius: 8px; background: #fff; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  #etat { color: #5a4a7a; font-size: 0.9rem; min-height: 1.4em; }
+  details { width: 100%; text-align: left; }
+  pre { margin: 8px 0 0; padding: 10px; max-height: 200px; overflow: auto; background: #1f1a2b; color: #e8e1f5; border-radius: 8px; font-size: 0.75rem; line-height: 1.4; white-space: pre-wrap; word-break: break-all; }
+  #journal { max-height: 140px; }
+</style>
+
+<main>
+  <h1>Mon produit, avec un éditeur SVG dedans</h1>
+  <p>Cette page n’est pas celle de l’éditeur : elle l’appelle. Le dessin ci-dessous est retouché en plein écran, puis revient ici une fois enregistré.</p>
+
+  <section class="carte" aria-label="Le dessin">
+    <img id="apercu" alt="Aperçu du dessin">
+    <div class="actions">
+      <button id="editer" type="button">Éditer</button>
+      <button id="original" class="lien" type="button">Revenir à l’original</button>
+    </div>
+    <p id="etat" role="status"></p>
+    <details>
+      <summary>Le SVG reçu (<span id="taille">original</span>)</summary>
+      <pre id="code"></pre>
+    </details>
+    <details>
+      <summary>Ce que l’éditeur a signalé</summary>
+      <pre id="journal">(rien pour l’instant)</pre>
+    </details>
+  </section>
+</main>
+
+<script src="../dist/editeur-svg-embarque.js"></script>
+<script>
+  // Le dessin de départ : un SVG de formes (cercle, rectangle, chemins), sans texte ni image.
+  var ORIGINAL = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">'
+    + '<rect x="0" y="0" width="240" height="240" fill="#f7efe3"/>'
+    + '<circle cx="120" cy="104" r="64" fill="#c81e28"/>'
+    + '<path d="M72 168 L168 168 L120 224 Z" fill="#1428a0"/>'
+    + '<path d="M120 36 L131 64 L160 64 L137 82 L146 110 L120 93 L94 110 L103 82 L80 64 L109 64 Z" fill="#ffd23f"/>'
+    + '</svg>';
+
+  var courant = ORIGINAL;
+  var nuancier = [
+    { nom: 'Rouge', hex: '#c81e28' }, { nom: 'Bleu', hex: '#1428a0' },
+    { nom: 'Or', hex: '#ffd23f' }, { nom: 'Crème', hex: '#f7efe3' }, { nom: 'Encre', hex: '#15181d' }
+  ];
+
+  var apercu = document.getElementById('apercu');
+  var bouton = document.getElementById('editer');
+  var etat = document.getElementById('etat');
+  var journal = document.getElementById('journal');
+  var lignes = [];
+
+  function noter(texte) {
+    lignes.push(texte);
+    journal.textContent = lignes.join('\n');
+  }
+
+  // Montrer un SVG dans un <img> : le navigateur n’y exécute aucun script, quoi que le SVG contienne.
+  function montrer(svg, libelle) {
+    apercu.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    document.getElementById('code').textContent = svg;
+    document.getElementById('taille').textContent = libelle;
+  }
+
+  if (!window.EditeurSvg) {
+    bouton.disabled = true;
+    etat.textContent = 'Le fichier ../dist/editeur-svg-embarque.js est introuvable : lancez « npm run construire », puis rechargez cette page.';
+  } else {
+    noter('Éditeur SVG ' + window.EditeurSvg.version + ' chargé.');
+  }
+  montrer(courant, 'original');
+
+  bouton.addEventListener('click', function () {
+    if (!window.EditeurSvg.estEditable(courant)) {
+      etat.textContent = 'Ce SVG ne s’édite pas (une image enveloppée, un texte ou un dégradé) : l’éditeur refuse ce qu’il ne saurait pas réécrire.';
+      return;
+    }
+    bouton.disabled = true;
+    etat.textContent = '';
+    window.EditeurSvg.ouvrir({
+      svg: courant,
+      titre: 'drapeau.svg',
+      nom: 'drapeau',
+      nuancier: nuancier,
+      bibliotheque: 'a-charger',        // les formes de bibliotheque.js, chargées au premier besoin
+      baseAnnexes: '../dist',           // où l’éditeur cherche bibliotheque.js et polices.js
+      onEnregistrer: function (svg) {   // le SVG retouché, déjà nettoyé : à vous de le garder
+        courant = svg;
+        montrer(svg, svg.length + ' octets');
+        etat.textContent = 'Dessin enregistré : ' + svg.length + ' octets.';
+        noter('onEnregistrer : ' + svg.length + ' octets');
+      },
+      onBrouillon: function (svg) {     // une seconde après la dernière modification
+        noter('onBrouillon : ' + svg.length + ' octets');
+      },
+      onFermer: function () {
+        bouton.disabled = false;
+        bouton.focus();                 // l’éditeur ne rend pas le focus : à l’hôte de le reprendre
+        noter('onFermer');
+      }
+    });
+  });
+
+  document.getElementById('original').addEventListener('click', function () {
+    courant = ORIGINAL;
+    montrer(courant, 'original');
+    etat.textContent = 'Dessin d’origine rétabli.';
+  });
+</script>

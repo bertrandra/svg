@@ -44,8 +44,8 @@ produits, sans y apporter de magasin ni de plateforme.
 - Les coordonnées sont réécrites au millième ; un SVG importé ressort aplati (plus de groupes, ni
   de classes), au rendu identique. Un SVG réécrit aujourd'hui doit l'être à l'identique demain : un
   changement qui déplace une coordonnée est un événement de version majeure.
-- Un hôte qui embarque l'éditeur fournit les classes `editeur-*` et les jetons de couleur de
-  `outils/editeur-svg/page.html`.
+- Un hôte qui embarque l'éditeur n'a rien à fournir côté styles : le script d'embarquement apporte ses
+  feuilles, cantonnées à l'éditeur, et les jetons de couleur (ADR-0007) ; voir `docs/integration.md`.
 - `engine/editionSvg.ts` est la seule porte d'entrée du moteur d'édition : l'implémentation vit dans
   `engine/edition/` (chemins, géométrie, lecture, écriture, opérations, couleurs, nettoyage, points,
   formes, assemblage, grille), sans cycle ; les autres couches n'importent jamais ces modules
