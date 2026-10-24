@@ -317,3 +317,11 @@ empreintes.
   et `docs/verification-manuelle.md`.
 - **ADR-0012** (proposée) : le modèle v2 (groupes, masques, dégradés, texte vivant, effets) et ses neuf
   annexes ; rien n'est encore implémenté.
+- **Outils de tracé** : *Contour en forme* (le trait, avec bouts, jonctions, pointillés et alpha, devient une forme
+  pleine de même silhouette), *Décaler le contour* (vers l'extérieur ou l'intérieur, jonction en pointe,
+  arrondie ou biseautée ; trous et tracés ouverts traités, effacement total dit), *Arrondir les angles* (un arc
+  de cercle au rayon voulu à chaque coin, ramené au plus grand rayon possible et dit), types de nœuds (angle,
+  lisse, symétrique, lus sur la géométrie ; glisser une poignée entraîne l'autre, Alt la rompt), casser,
+  joindre, fermer et inverser un tracé, retirer un point en gardant la courbe. Menu Édition et section
+  « Transformer » de l'inspecteur. Quinze cas de référence neufs, les écritures existantes sont intactes. Un
+  trait très enchevêtré (environ 1 cas sur 75) est refusé en le nommant.
