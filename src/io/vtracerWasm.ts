@@ -1,9 +1,11 @@
-// Le traceur vtracer en WebAssembly, pour le navigateur. Charge a la demande (io/vtracer.ts) : son
-// module, 668 Ko, n'est decode qu'au premier geste qui vectorise.
+// Le traceur vtracer en WebAssembly, pour le navigateur. Il n'entre pas dans la page : il est compile
+// a part dans dist/vtracer.js (scripts/vtracer.mjs, point d'entree outils/editeur-svg/vtracer-entree.ts)
+// et io/vtracer.ts n'ajoute ce script qu'au premier geste qui vectorise. Ne pas l'importer d'ailleurs :
+// la page se mettrait de nouveau a embarquer le .wasm.
 //
 // Le paquet est construit pour Node (`wasm-pack --target nodejs`) : il lit son .wasm sur le disque
 // et le compile de facon synchrone, ce que Chrome refuse au-dela de 4 Ko sur le fil principal.
-// scripts/construire.mjs remplace ces lignes par `__initialiser(octets)`, asynchrone, et
+// scripts/vtracer.mjs remplace ces lignes par `__initialiser(octets)`, asynchrone, et
 // embarque les octets ; ce fichier n'est donc jamais importe par les tests, qui prennent le paquet tel quel.
 
 import * as colle from '@visioncortex/vtracer/pkg/vtracer_wasm.js';
