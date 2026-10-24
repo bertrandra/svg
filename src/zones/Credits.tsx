@@ -45,7 +45,7 @@ export function ContenuCredits() {
           </p>
         </section>
       ) : null}
-      <Liste titre="Fontes du texte en formes" composants={composantsDe('fonte')} />
+      <Liste titre="Fontes" composants={composantsDe('fonte')} />
       <Liste titre="Logiciels" composants={composantsDe('logiciel')} />
       <p className="aide">Le texte complet de chaque licence est dans le fichier MENTIONS.txt, livré avec l’éditeur.</p>
     </>

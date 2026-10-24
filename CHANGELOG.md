@@ -344,3 +344,9 @@ empreintes.
   animation visant `href` ; des temps quadratiques (`url(` ou `/*` non fermés, `scale(` dans un `transform`,
   50 000 règles de style, chemins clonés par `<use>`) ; un `RangeError` à 10 000 niveaux d'imbrication ; `NaN`,
   `Infinity` et `width="0"` dans un SVG enregistré ; un stockage empoisonné qui faisait planter l'accueil.
+- **La page autonome ne contacte plus aucun serveur à l'ouverture** : ses polices d'interface (Instrument Sans et
+  IBM Plex Mono, sous-ensemble latin, SIL OFL 1.1) sont embarquées au lieu d'être demandées à Google Fonts
+  (+130 Ko pour `editeur-svg.html`). L'adresse IP ne part plus chez Google : « Rien ne quitte votre navigateur »
+  est vrai à la lettre (constat 14 de `docs/securite.md`). Un test en navigateur, réseau coupé, le prouve ; un
+  test sur le texte de la page interdit tout `<link>`, `@import` ou adresse externe. Les deux fontes sont citées
+  dans `THIRD-PARTY-NOTICES.md`, `MENTIONS.txt` et la boîte « À propos et crédits ».
