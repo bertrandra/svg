@@ -9,13 +9,13 @@ const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
   + '<path d="M0 0L10 0L10 10Z" fill="#c81e28"/><path d="M20 20L40 20L40 40Z" fill="#1428a0"/></svg>';
 
 /** Un editeur sans React : un etat qu'on tient a la main, et des setters qui le mettent a jour. */
-function monter(stockage: Stockage | null = null) {
-  const lu = lireDessin(SVG);
+function monter(stockage: Stockage | null = null, svg = SVG) {
+  const lu = lireDessin(svg);
   if ('erreur' in lu) throw new Error(lu.erreur);
   let h: Historique<DessinSvg> = historique(lu.dessin);
   const messages: string[] = [];
   const etat: EtatDuMoment = {
-    dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [],
+    dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
     enregistrer: vi.fn(), modifie: false, versions: [], fermer: vi.fn(), stockage
   };
@@ -24,14 +24,14 @@ function monter(stockage: Stockage | null = null) {
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; miseAJour(); },
     choisir: u => { etat.sel = typeof u === 'function' ? u(etat.sel) : u; },
-    poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(),
+    poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter,
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
-  return { actions, etat, messages, poserQuitter, historique: () => h };
+  return { actions, etat, messages, poserQuitter, setters, historique: () => h };
 }
 
 describe('creerActions : des verbes qui lisent l etat du moment', () => {
@@ -126,5 +126,72 @@ describe('creerActions : les versions nommees vont dans le stockage donne', () =
     actions.garderVersion('premiere', '<svg/>');
     actions.garderVersion('seconde', '<svg/>');
     expect(stockage.lire<Version[]>(CLE_VERSIONS)?.map(v => v.nom)).toEqual(['seconde', 'premiere']);
+  });
+});
+
+const DEUX_CERCLES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+  + '<circle cx="40" cy="50" r="25" fill="#c81e28"/><circle cx="65" cy="50" r="25" fill="#1428a0"/></svg>';
+
+describe('creerActions : les booleens suivent le reglage « rebatir les courbes »', () => {
+  const unir = (m: ReturnType<typeof monter>) => {
+    m.etat.sel = m.etat.dessin.formes.map(f => f.id);
+    m.actions.booleen('union');
+    const f = m.etat.dessin.formes[0];
+    if (!f) throw new Error('une forme');
+    return f;
+  };
+  const points = (d: DessinSvg['formes'][number]['d']) => d.filter(c => c.c !== 'Z').length;
+
+  it('rebatit des courbes quand le reglage est actif, et le dit', () => {
+    const m = monter(null, DEUX_CERCLES);
+    const f = unir(m);
+    expect(m.etat.dessin.formes).toHaveLength(1);
+    expect(f.d.some(c => c.c === 'C')).toBe(true);
+    expect(f.d.some(c => c.c === 'L')).toBe(false);
+    expect(m.messages.at(-1)).toBe('Union faite : 2 formes, ' + points(f.d) + ' points (courbes rebâties).');
+  });
+
+  it('rend des segments droits quand le reglage est coupe, avec bien plus de points, et le dit', () => {
+    const lisse = monter(null, DEUX_CERCLES), droit = monter(null, DEUX_CERCLES);
+    droit.etat.lisserBooleens = false;
+    const a = unir(lisse), b = unir(droit);
+    expect(b.d.some(c => c.c === 'C' || c.c === 'Q')).toBe(false);
+    expect(points(b.d)).toBeGreaterThan(points(a.d) * 4);
+    expect(droit.messages.at(-1)).toBe('Union faite : 2 formes, ' + points(b.d) + ' points en segments droits.');
+  });
+
+  it('lit le reglage au moment de l appel, pas a la creation', () => {
+    const m = monter(null, DEUX_CERCLES);
+    m.etat.lisserBooleens = false;
+    m.etat.sel = m.etat.dessin.formes.map(f => f.id);
+    m.actions.booleen('union');
+    expect(m.messages.at(-1)).toMatch(/en segments droits\.$/);
+    m.actions.defaire();
+    expect(m.etat.dessin.formes).toHaveLength(2);
+    m.etat.lisserBooleens = true;
+    m.etat.sel = m.etat.dessin.formes.map(f => f.id);
+    m.actions.booleen('union');
+    expect(m.messages.at(-1)).toMatch(/\(courbes rebâties\)\.$/);
+  });
+
+  it('ne pretend pas rebatir des courbes quand les formes sont toutes droites', () => {
+    const m = monter();
+    m.etat.sel = m.etat.dessin.formes.map(f => f.id);
+    m.actions.booleen('exclusion');
+    expect(m.messages.at(-1)).toMatch(/^Exclusion faite : 2 formes, \d+ points en segments droits\.$/);
+  });
+
+  it('garde le message d une soustraction qui ne laisse rien', () => {
+    const m = monter(null, DEUX_CERCLES.replace('cx="65" cy="50" r="25"', 'cx="40" cy="50" r="30"'));
+    // La plus basse est un cercle de 25 contenu dans celui de 30 : plus rien ne reste de la difference.
+    m.etat.sel = m.etat.dessin.formes.map(f => f.id);
+    m.actions.booleen('soustraction');
+    expect(m.messages.at(-1)).toBe('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.');
+  });
+
+  it('laisse le reglage au setter de l editeur', () => {
+    const m = monter();
+    m.actions.poserLisserBooleens(false);
+    expect(m.setters.poserLisserBooleens).toHaveBeenCalledWith(false);
   });
 });

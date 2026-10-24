@@ -19,7 +19,8 @@ export interface Setters {
   poserH: Dispatch<SetStateAction<Historique<DessinSvg>>>; choisir: Dispatch<SetStateAction<string[]>>;
   poserOutilBrut: Dispatch<SetStateAction<Outil>>; poserPoint: Dispatch<SetStateAction<number | null>>; poserStyle: Dispatch<SetStateAction<Style>>;
   poserTrace: Dispatch<SetStateAction<readonly Point[]>>; poserPresse: Dispatch<SetStateAction<readonly Forme[]>>;
-  poserGrille: Dispatch<SetStateAction<boolean>>; poserAimants: Dispatch<SetStateAction<boolean>>; poserGuides: Dispatch<SetStateAction<readonly Aimant[]>>;
+  poserGrille: Dispatch<SetStateAction<boolean>>; poserAimants: Dispatch<SetStateAction<boolean>>; poserLisserBooleens: Dispatch<SetStateAction<boolean>>;
+  poserGuides: Dispatch<SetStateAction<readonly Aimant[]>>;
   poserVersions: Dispatch<SetStateAction<readonly Version[]>>; poserTiroir: Dispatch<SetStateAction<Tiroir>>; poserContours: Dispatch<SetStateAction<boolean>>;
   poserFond: Dispatch<SetStateAction<Fond>>; dire: Dispatch<SetStateAction<string>>; poserQuitter: Dispatch<SetStateAction<boolean>>;
   toile: RefObject<HTMLDivElement | null>;
@@ -42,7 +43,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     refaire: () => { s.poserH(x => retablir(x)); remettreAZero(); },
     nouvelleCle: () => 'geste-' + ++compteur,
     dire: s.dire, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
-    poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
+    poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
     demanderFermeture: () => { const e = lire(); if (e.modifie) s.poserQuitter(true); else e.fermer(); },
     fermer: () => lire().fermer(),
     continuerEdition: () => s.poserQuitter(false),

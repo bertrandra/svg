@@ -7,7 +7,7 @@ import { appliquerBooleen } from '../engine/booleens.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../engine/transformations.js';
 import { nettoyerSvg } from '../util/svg.js';
 import { pluriel } from '../util/texte.js';
-import { sansDoublons, styleLigne } from './aidesEditeur.js';
+import { phraseBooleen, sansDoublons, styleLigne } from './aidesEditeur.js';
 import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 
@@ -75,12 +75,16 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       dire(pluriel(ids.length, 'forme') + ' insérée' + (ids.length > 1 ? 's' : '') + '.');
     },
     booleen: op => {
-      const { dessin, sel } = lire();
-      const r = appliquerBooleen(dessin, sel, op);
+      const { dessin, sel, lisserBooleens } = lire();
+      // Le moteur garde `lisser` faux par defaut (ses appelants et ses references ne bougent pas) ; l'editeur le propose actif.
+      const r = appliquerBooleen(dessin, sel, op, undefined, { lisser: lisserBooleens });
       if (r.erreur) { dire(r.erreur); return; }
       appliquer(() => r.dessin);
       choisir(r.id ? [r.id] : []);
-      dire(r.id ? 'Opération appliquée : le résultat est en segments droits, au style de la forme la plus basse.' : 'Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.');
+      const resultat = r.id ? r.dessin.formes.find(f => f.id === r.id) : undefined;
+      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return; }
+      const reunies = dessin.formes.filter(f => sel.includes(f.id) && f.visible && !f.verrouille).length;
+      dire(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')));
     },
     transformerNumerique: t => {
       const { dessin, sel } = lire();

@@ -1,6 +1,8 @@
 // Les petites aides que plusieurs fichiers de l'editeur partagent.
 
+import type { Booleen } from '../engine/booleens.js';
 import type { Style } from '../engine/editionSvg.js';
+import { pluriel } from '../util/texte.js';
 import type { Outil, Point } from './typesEditeur.js';
 
 /** Les quatre outils qui tracent une forme d'un glisser. */
@@ -19,3 +21,14 @@ export const sansDoublons = (points: readonly Point[], eps: number): Point[] =>
 /** La phrase qui dit, a l'ouverture d'un dessin, ce que la lecture n'a pas repris ; vide quand rien ne s'est perdu. */
 export const phraseIgnores = (ignores: readonly string[]): string =>
   ignores.length ? 'Non repris à l’ouverture : ' + ignores.join(' ; ') + '. Le rendu peut différer de l’original.' : '';
+
+/** Le nom d'une operation booleenne pour la phrase d'etat ; tous feminins, d'ou « faite ». */
+const NOMS_BOOLEENS: Readonly<Record<Booleen, string>> = { union: 'Union', soustraction: 'Soustraction', intersection: 'Intersection', exclusion: 'Exclusion' };
+
+/**
+ * Ce que le booleen a vraiment fait, pour la barre d'etat : le nombre de formes reunies, les points du
+ * resultat, et si le contour est en courbes ou en segments droits. `courbes` se lit sur le resultat et non
+ * sur le reglage : avec le reglage actif, des formes toutes droites restent droites, et la phrase le dit.
+ */
+export const phraseBooleen = (op: Booleen, formes: number, points: number, courbes: boolean): string =>
+  NOMS_BOOLEENS[op] + ' faite : ' + pluriel(formes, 'forme') + ', ' + pluriel(points, 'point') + (courbes ? ' (courbes rebâties).' : ' en segments droits.');

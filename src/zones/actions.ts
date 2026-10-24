@@ -11,7 +11,7 @@ import type { ActionsEditeur, Outil, Point, Vues } from './typesEditeur.js';
 /** L'etat du moment : ce que les actions lisent, jamais ce qu'elles posent. */
 export interface EtatLu {
   dessin: DessinSvg; sel: string[]; formeSeule: Forme | null; outil: Outil; point: number | null; style: Style; trace: readonly Point[];
-  presse: readonly Forme[]; vues: Vues; enregistrer: (svg: string) => void;
+  presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string) => void;
 }
 
 /** Ce que les actions posent : des fonctions stables (setters de React, ou fabriquees une fois). */

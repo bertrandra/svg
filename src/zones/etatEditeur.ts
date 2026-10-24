@@ -33,6 +33,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [presse, poserPresse] = useState<readonly Forme[]>([]);
   const [grille, poserGrille] = useState(false);
   const [aimants, poserAimants] = useState(true);
+  // Un reglage de la session, rien de plus : il ne s'ecrit nulle part et revient a « oui » a chaque ouverture.
+  const [lisserBooleens, poserLisserBooleens] = useState(true);
   const [guides, poserGuides] = useState<readonly Aimant[]>([]);
   const [versions, poserVersions] = useState<readonly Version[]>(() => lireVersions(stockage));
   const [tiroir, poserTiroir] = useState<Tiroir>(null);
@@ -57,10 +59,10 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
 
   // L'etat du dernier rendu, que les verbes lisent au moment de l'appel : c'est ce qui les rend stables.
   const moment = useRef<EtatDuMoment | null>(null);
-  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, enregistrer: p.enregistrer, modifie, versions, fermer: p.fermer, stockage };
+  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, modifie, versions, fermer: p.fermer, stockage };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens,poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, toile }
   ));
 
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
@@ -76,8 +78,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter }),
-    [outil, point, style, trace, grille, aimants, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

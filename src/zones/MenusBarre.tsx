@@ -27,7 +27,7 @@ export function MenuVue() {
 }
 
 export function MenuEdition() {
-  const mo = useDessin(), ac = useActions();
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
   const rien = !mo.sel.length;
   const elements: ElementMenu[] = [
     { id: 'annuler', libelle: 'Annuler', icone: 'annuler', raccourci: 'Ctrl+Z', desactive: !mo.h.passe.length, onClick: ac.defaire },
@@ -39,6 +39,7 @@ export function MenuEdition() {
     { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
+    { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ac.supprimerSelection }
   ];
   return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={elements} />;

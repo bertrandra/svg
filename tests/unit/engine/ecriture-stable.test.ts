@@ -180,6 +180,8 @@ const CAS: readonly Cas[] = [
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },
   { nom: 'couleurs-fusion-proches', entree: 'couleurs-calques', operation: enchainer(d => modifier(d, ['f4'], { verrouille: true }), d => fusionnerCouleursProches(d, 0.03).dessin) },
   { nom: 'ajuster-plan', entree: 'plan-decale', operation: d => ajusterPlan(d) },
+  // Le plan ajuste compte la pointe d'une jonction aigue et les coins d'un bout carre, pas seulement la demi-epaisseur.
+  { nom: 'ajuster-plan-traits', operation: d => ajusterPlan(d) },
   { nom: 'export-decoupe', entree: 'elements', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }
 ];
