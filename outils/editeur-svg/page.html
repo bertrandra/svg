@@ -211,6 +211,22 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .par-couleur .couleur-choix .echantillon { flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
 .par-couleur .icone-bouton { width: 26px; height: 26px; }
 .par-couleur .menu-deroulant { flex: none; }
+.par-couleur input[type="color"].recolorer { flex: none; width: 22px; height: 22px; margin: 0 2px; padding: 0; border: 1px solid var(--filet); border-radius: 4px; background: transparent; cursor: pointer; }
+.par-couleur .recolorer::-webkit-color-swatch-wrapper { padding: 0; }
+.par-couleur .recolorer::-webkit-color-swatch { border: 0; border-radius: 3px; }
+.par-couleur .recolorer::-moz-color-swatch { border: 0; border-radius: 3px; }
+/* Le selecteur de la ligne fait office d'echantillon : on ne montre pas la couleur deux fois. */
+.par-couleur li:has(.recolorer) .couleur-choix .echantillon { display: none; }
+/* Une seule colonne qui ne depasse pas du panneau : sans minmax(0, 1fr), la ligne la plus longue l'elargit et fait defiler la liste. */
+.par-couleur { overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
+.par-couleur .couleur-choix { justify-content: flex-start; overflow: hidden; }
+.menu-pastille { display: block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
+.editeur-calques .isolement { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 6px 0 2px; }
+.editeur-calques .nuances-proches { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--filet); }
+.nuances-proches .boutons { display: grid; gap: 4px; }
+.nuances-proches .boutons button { padding: 5px 8px; font-size: 0.75rem; }
+.nuances-proches output { min-width: 1.6em; text-align: right; font-family: var(--mono); font-size: 0.72rem; }
+.nuances-proches .aide { margin: 0; }
 .calques-actions button { padding: 2px 8px; font-size: 0.72rem; }
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
@@ -353,6 +369,8 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
   .par-couleur .couleur-choix { min-height: 40px; }
+  .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
+  .nuances-proches input[type="range"] { min-height: 40px; }
   .calques-actions button { min-width: 56px; }
   input[type="text"], input[type="search"], select { min-height: 40px; }
   input[type="color"], .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 44px; height: 40px; }
