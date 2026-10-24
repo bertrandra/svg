@@ -152,4 +152,4 @@ l'impose.
   `npm run mentions` à partir de `src/model/credits.ts`, du `package-lock.json` et des fichiers de licence des paquets ; le même texte
   est construit dans `dist/MENTIONS.txt` et doit accompagner toute redistribution de `dist/`. Un test échoue si ce fichier est périmé
   (`ACTUALISER_REFERENCES=1 npx vitest run tests/unit/depot/mentions.test.ts` le régénère).
-- La licence du projet lui-même est une décision de son propriétaire.
+- Le projet lui-même est propriétaire, tous droits réservés (voir [LICENSE](LICENSE)) ; les composants tiers gardent leurs licences.

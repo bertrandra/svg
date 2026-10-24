@@ -2,6 +2,7 @@
   "name": "svg",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "description": "svg : un editeur SVG autonome, un convertisseur d'image en SVG et une bibliotheque de 4 000 formes.",
   "keywords": ["svg", "editor", "vector", "vectorization", "icons", "react"],

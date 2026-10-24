@@ -325,3 +325,4 @@ empreintes.
   joindre, fermer et inverser un tracé, retirer un point en gardant la courbe. Menu Édition et section
   « Transformer » de l'inspecteur. Quinze cas de référence neufs, les écritures existantes sont intactes. Un
   trait très enchevêtré (environ 1 cas sur 75) est refusé en le nommant.
+- **Licence** : le projet est propriétaire, tous droits réservés (`LICENSE`, `"license": "UNLICENSED"`) ; les composants tiers gardent leurs licences (`THIRD-PARTY-NOTICES.md`). À faire relire par un juriste avant toute diffusion.
