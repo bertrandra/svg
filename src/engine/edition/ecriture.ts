@@ -4,12 +4,21 @@
 import { echapperAttribut } from '../../util/xml.js';
 import type { DessinSvg, Forme } from './types.js';
 import { ecrireChemin, nb } from './chemins.js';
+import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 
 export function ecrireForme(f: Forme, precision = 2): string {
   let s = '<path d="' + ecrireChemin(f.d, precision) + '" fill="' + echapperAttribut(f.remplissage ?? 'none') + '"';
   if (f.regle === 'evenodd') s += ' fill-rule="evenodd"';
-  if (f.contour) s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '" stroke-linejoin="round"';
-  if (f.opacite < 1) s += ' opacity="' + nb(f.opacite, 3) + '"';
+  // Les opacites propres ne s'ecrivent que lorsqu'elles changent quelque chose : une forme sans alpha reste
+  // ecrite comme avant. Sans contour, le fond et la forme ne font qu'un : tout va dans `opacity`, qui est
+  // aussi ce que la lecture en fait, donc une relecture reecrit les memes octets.
+  let opacite = f.opacite;
+  if (f.contour) {
+    if (f.remplissage && opaciteDuRemplissage(f) < 1) s += ' fill-opacity="' + nb(opaciteDuRemplissage(f), 3) + '"';
+    s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '" stroke-linejoin="round"';
+    if (opaciteDuContour(f) < 1) s += ' stroke-opacity="' + nb(opaciteDuContour(f), 3) + '"';
+  } else if (f.remplissage) opacite = Math.round(opacite * opaciteDuRemplissage(f) * 1000) / 1000;
+  if (opacite < 1) s += ' opacity="' + nb(opacite, 3) + '"';
   return s + '/>';
 }
 

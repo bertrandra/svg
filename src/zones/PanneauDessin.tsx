@@ -14,7 +14,7 @@ import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
-import { estHex } from './aidesEditeur.js';
+import { estHex, phraseIgnores } from './aidesEditeur.js';
 import type { Edition } from './typesEditeur.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
@@ -34,6 +34,7 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
       {ed.outil === 'texte' ? <PanneauTexte ed={ed} /> : null}
       {trace ? <StyleNouvelleForme ed={ed} /> : null}
       <p className="aide">{pl(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pl(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
+      {ed.ignores.length ? <p className="aide" role="note">{phraseIgnores(ed.ignores)}</p> : null}
       <Section titre="Couleurs du dessin" ouverte note={couleurs.length}>
         <ul className="couleurs-dessin">
           {couleurs.map((c, i) => (

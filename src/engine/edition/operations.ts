@@ -64,14 +64,15 @@ export function aligner(dessin: DessinSvg, ids: readonly string[], a: Alignement
   return r;
 }
 
-export type Reglage = Partial<Pick<Forme, 'remplissage' | 'contour' | 'epaisseur' | 'opacite' | 'regle' | 'visible' | 'verrouille'>>;
+export type Reglage = Partial<Pick<Forme, 'remplissage' | 'contour' | 'epaisseur' | 'opacite' | 'opaciteRemplissage' | 'opaciteContour' | 'regle' | 'visible' | 'verrouille'>>;
 
 export function modifier(dessin: DessinSvg, ids: readonly string[], r: Reglage): DessinSvg {
   return surFormes(dessin, ids, f => {
     const champs = Object.keys(r) as (keyof Reglage)[];
     if (champs.every(k => f[k] === r[k])) return f;
     const g = { ...f, ...r } as Forme;
-    return g.contour && !(g.epaisseur > 0) ? { ...g, epaisseur: 1 } : g;
+    // Un trait qui apparait prend une epaisseur visible ; un trait deja la garde, zero compris (un trait invisible reste a l'utilisateur).
+    return g.contour && !f.contour && !(g.epaisseur > 0) ? { ...g, epaisseur: 1 } : g;
   });
 }
 

@@ -10,6 +10,7 @@ import { MenuExport } from './Exporter.js';
 import { Icone, type NomIcone } from './icones.js';
 import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
+import { phraseIgnores } from './aidesEditeur.js';
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
 import { lireDessin, statistiques } from '../engine/editionSvg.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -53,7 +54,8 @@ export function Application() {
     if ('erreur' in lu) { dire(lu.erreur); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg });
     poserEdition(true);
-    dire('');
+    // Une seule fois, ici : ce que la lecture a laisse tomber, pour qu'un rendu qui change ne passe pas inapercu.
+    dire(phraseIgnores(lu.ignores));
     window.scrollTo(0, 0);
   };
   const stats = useMemo(() => {

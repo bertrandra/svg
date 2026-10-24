@@ -12,7 +12,16 @@ export interface Forme {
   readonly remplissage: string | null;
   readonly contour: string | null;
   readonly epaisseur: number;
+  /** L'opacite de la forme entiere (attribut `opacity`, celui des groupes qui la portent). */
   readonly opacite: number;
+  /**
+   * L'opacite propre au remplissage (alpha de la couleur lue, `fill-opacity`), 1 si absente. Un champ
+   * a part de `opacite` : un fond a demi transparent n'estompe pas son contour. Facultatif pour que
+   * toute forme sans alpha s'ecrive exactement comme avant.
+   */
+  readonly opaciteRemplissage?: number;
+  /** Idem pour le contour (alpha de la couleur du trait, `stroke-opacity`). */
+  readonly opaciteContour?: number;
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;

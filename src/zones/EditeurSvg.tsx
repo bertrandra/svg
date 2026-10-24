@@ -93,13 +93,13 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
           <p>{lu.erreur}</p>
           <button type="button" onClick={fermer}>Fermer</button>
         </div>
-      ) : <Atelier initial={lu.dessin} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} />}
+      ) : <Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} />}
     </div>,
     document.body
   );
 }
 
-function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregistrer, brouillon }: { initial: DessinSvg; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null; fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined }) {
+function Atelier({ initial, ignores, titre, nom, nuancier, bibliotheque, fermer, enregistrer, brouillon }: { initial: DessinSvg; ignores: readonly string[]; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null; fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined }) {
   const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(initial));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
@@ -147,7 +147,7 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
 
   const base = { dessin, sel, formeSeule, outil, point, style, trace, presse, poserPresse, appliquer, choisir, poserPoint, poserOutil, poserOutilBrut, poserTrace, dire, vues, enregistrer, toile };
   const ed: Edition = {
-    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, aimants, guides, versions, tiroir, pas,
+    h, dessin, sel, boite, formeSeule, outil, point, nuancier, ignores, bibliotheque, style, trace, presse, grille, aimants, guides, versions, tiroir, pas,
     poserGrille, poserAimants, poserGuides, poserTiroir, choisir, poserPoint, poserOutil, poserStyle, poserTrace,
     garderVersion: (nomVersion, svgVersion) => { const quand = Date.now(); poserVersions([{ id: idVersion(quand, versions.length), nom: nomVersion, svg: svgVersion, quand }, ...versions]); dire('Version « ' + nomVersion + ' » gardée dans ce navigateur.'); },
     supprimerVersion: id => poserVersions(versions.filter(v => v.id !== id)),

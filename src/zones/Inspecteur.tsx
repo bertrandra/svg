@@ -1,7 +1,7 @@
 // L'inspecteur : les reglages de la selection, et les champs (couleur, nombre) que d'autres panneaux reprennent.
 
 import { useEffect, useState } from 'react';
-import { basculerSegment, diviserSegment, modifier, redimensionner, type Forme, type Reglage } from '../engine/editionSvg.js';
+import { basculerSegment, diviserSegment, modifier, opaciteDuContour, opaciteDuRemplissage, redimensionner, type Forme, type Reglage } from '../engine/editionSvg.js';
 import { Section } from './Section.js';
 import { arrondi, estHex } from './aidesEditeur.js';
 import type { Edition, Teinte } from './typesEditeur.js';
@@ -22,11 +22,9 @@ export function Inspecteur({ ed }: { ed: Edition }) {
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={ed.nuancier} finir={ed.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={ed.nuancier} finir={ed.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
         {premiere.contour ? <Nombre libelle="Épaisseur" valeur={premiere.epaisseur} min={0} poser={v => regler({ epaisseur: v }, null)} /> : null}
-        <label className="champ-ligne">
-          <span>Opacité</span>
-          <input type="range" min={0} max={100} value={Math.round(premiere.opacite * 100)} onChange={e => regler({ opacite: Number(e.target.value) / 100 }, 'opacite')} onPointerUp={ed.finir} onBlur={ed.finir} />
-          <span className="aide">{Math.round(premiere.opacite * 100)} %</span>
-        </label>
+        <Opacite libelle="Opacité" titre="La forme entière, fond et contour ensemble" valeur={premiere.opacite} poser={v => regler({ opacite: v }, 'opacite')} finir={ed.finir} />
+        {premiere.remplissage && (premiere.contour || opaciteDuRemplissage(premiere) < 1) ? <Opacite libelle="Opacité du fond" titre="Le fond seul : le contour reste plein" valeur={opaciteDuRemplissage(premiere)} poser={v => regler({ opaciteRemplissage: v }, 'opacite-fond')} finir={ed.finir} /> : null}
+        {premiere.contour ? <Opacite libelle="Opacité du contour" titre="Le contour seul : le fond reste plein" valeur={opaciteDuContour(premiere)} poser={v => regler({ opaciteContour: v }, 'opacite-contour')} finir={ed.finir} /> : null}
         <label className="champ-ligne">
           <span>Trous</span>
           <select value={premiere.regle} onChange={e => regler({ regle: e.target.value === 'evenodd' ? 'evenodd' : 'nonzero' }, null)}>
@@ -51,6 +49,17 @@ export function Inspecteur({ ed }: { ed: Edition }) {
       {points ? <PanneauPoint ed={ed} forme={points} /> : null}
       <p className="aide">{sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : ''}Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.</p>
     </>
+  );
+}
+
+/** Un curseur d'opacite, de 0 a 100 %. */
+function Opacite({ libelle, titre, valeur, poser, finir }: { libelle: string; titre: string; valeur: number; poser: (v: number) => void; finir: () => void }) {
+  return (
+    <label className="champ-ligne" title={titre}>
+      <span>{libelle}</span>
+      <input type="range" min={0} max={100} value={Math.round(valeur * 100)} onChange={e => poser(Number(e.target.value) / 100)} onPointerUp={finir} onBlur={finir} />
+      <span className="aide">{Math.round(valeur * 100)} %</span>
+    </label>
   );
 }
 

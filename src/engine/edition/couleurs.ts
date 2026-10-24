@@ -21,7 +21,7 @@ export function remplacerCouleur(dessin: DessinSvg, de: string, vers: string | n
     const r = f.remplissage === de ? vers : f.remplissage, c = f.contour === de ? vers : f.contour;
     if (r === f.remplissage && c === f.contour) return f;
     change = true;
-    return { ...f, remplissage: r, contour: c, epaisseur: c ? f.epaisseur || 1 : f.epaisseur };
+    return { ...f, remplissage: r, contour: c };
   });
   return change ? { ...dessin, formes } : dessin;
 }
@@ -43,7 +43,7 @@ export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string 
     }
     if (f.contour !== de || vers === de) return f;
     change = true;
-    return { ...f, contour: vers, epaisseur: vers ? f.epaisseur || 1 : f.epaisseur };
+    return { ...f, contour: vers };
   });
   return change ? { ...dessin, formes } : dessin;
 }
