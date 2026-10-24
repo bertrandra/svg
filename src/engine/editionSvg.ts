@@ -31,9 +31,16 @@ export {
 } from './edition/operations.js';
 
 export {
-  couleursDuDessin, remplacerCouleur, idsDeCouleur, groupesDeCouleur,
+  couleursDuDessin, remplacerCouleur, remplacerCouleurSur, idsDeCouleur, idsMemeCouleur, groupesDeCouleur,
   type CouleurDuDessin, type SurCouleur, type GroupeCouleur
 } from './edition/couleurs.js';
+
+export {
+  couleursProches, fusionnerCouleursProches, idsDeNuancesProches,
+  type GrappeCouleurs, type FusionCouleurs
+} from './edition/couleursProches.js';
+
+export { visibilitesDe, restaurerVisibilites, visibilitesConformes, type Visibilites } from './edition/isolement.js';
 
 export { retirerPetites, regrouper, ajusterPlan } from './edition/nettoyage.js';
 

@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, lireDessin, modifier, redimensionner, retourner, separer, tourner, type DessinSvg
+  aligner, ajusterPlan, combiner, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { appliquerBooleen, type Booleen } from '../../../src/engine/booleens.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
@@ -138,6 +138,10 @@ const CAS: readonly Cas[] = [
       return c.id ? separer(c.dessin, c.id).dessin : c.dessin;
     }
   },
+  // Les calques par couleur : recolorer sur le fond ou le trait, fusionner les nuances (une forme verrouillee garde sa couleur).
+  { nom: 'couleurs-recolorer-fond', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'remplissage') },
+  { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },
+  { nom: 'couleurs-fusion-proches', entree: 'couleurs-calques', operation: enchainer(d => modifier(d, ['f4'], { verrouille: true }), d => fusionnerCouleursProches(d, 0.03).dessin) },
   { nom: 'ajuster-plan', entree: 'plan-decale', operation: d => ajusterPlan(d) },
   { nom: 'export-decoupe', entree: 'elements', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }

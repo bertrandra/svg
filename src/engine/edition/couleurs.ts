@@ -26,6 +26,28 @@ export function remplacerCouleur(dessin: DessinSvg, de: string, vers: string | n
   return change ? { ...dessin, formes } : dessin;
 }
 
+/**
+ * Comme `remplacerCouleur`, mais sur le remplissage seul, le contour seul, ou les deux. C'est ce que
+ * fait la ligne d'une couleur quand on la lit « Fond » ou « Trait » : changer le fond d'un rouge ne
+ * doit pas toucher le contour rouge d'une autre forme. Toutes les formes sont concernees, masquees et
+ * verrouillees comprises : c'est un remplacement nomme, comme celui de « Couleurs du dessin ».
+ */
+export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string | null, sur: SurCouleur): DessinSvg {
+  if (sur === 'tout') return remplacerCouleur(dessin, de, vers);
+  let change = false;
+  const formes = dessin.formes.map(f => {
+    if (sur === 'remplissage') {
+      if (f.remplissage !== de || vers === de) return f;
+      change = true;
+      return { ...f, remplissage: vers };
+    }
+    if (f.contour !== de || vers === de) return f;
+    change = true;
+    return { ...f, contour: vers, epaisseur: vers ? f.epaisseur || 1 : f.epaisseur };
+  });
+  return change ? { ...dessin, formes } : dessin;
+}
+
 export const idsDeCouleur = (dessin: DessinSvg, couleur: string): string[] =>
   dessin.formes.filter(f => f.visible && !f.verrouille && (f.remplissage === couleur || f.contour === couleur)).map(f => f.id);
 
@@ -51,4 +73,17 @@ export function groupesDeCouleur(dessin: DessinSvg, sur: SurCouleur = 'tout'): G
       visibles: fs.filter(f => f.visible).length, verrouillees: fs.filter(f => f.verrouille).length
     }))
     .sort((a, b) => b.ids.length - a.ids.length || (a.couleur < b.couleur ? -1 : 1));
+}
+
+/**
+ * Les formes qu'on peut choisir et qui ont la couleur de la forme `idModele` : son remplissage, ou son
+ * contour quand elle n'a pas de remplissage. Vide si la forme est inconnue ou sans aucune couleur.
+ */
+export function idsMemeCouleur(dessin: DessinSvg, idModele: string): string[] {
+  const modele = dessin.formes.find(f => f.id === idModele);
+  if (!modele) return [];
+  const sur: SurCouleur = modele.remplissage ? 'remplissage' : 'contour';
+  const couleur = modele.remplissage ?? modele.contour;
+  if (!couleur) return [];
+  return dessin.formes.filter(f => f.visible && !f.verrouille && (sur === 'remplissage' ? f.remplissage : f.contour) === couleur).map(f => f.id);
 }

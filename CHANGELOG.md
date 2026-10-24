@@ -37,10 +37,16 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Corrigé
 
+- La liste « Par couleur » ne défile plus en largeur dans le panneau étroit.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
 
+- **Calques par couleur, suite** : recolorer une couleur depuis sa ligne (sélecteur ou nuancier, selon
+  Fond / Trait / Les deux, un seul Ctrl+Z par geste) ; « Sélectionner la même couleur » (menu Édition,
+  touche C) ; nuances proches (distance perçue OKLab, curseur de tolérance) à sélectionner ou à
+  fusionner dans la couleur la plus employée, formes verrouillées intactes ; « Quitter l'isolement »
+  rend la visibilité d'avant. Trois cas de référence ajoutés, les SVG écrits ne changent pas.
 - **Tests de non-régression de l'écriture SVG** : 25 cas de référence (`tests/fixtures/svg`) et la
   bibliothèque entière relue puis réécrite à l'identique, avec une empreinte par forme ; tout écart
   signale un événement de version majeure.

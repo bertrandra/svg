@@ -50,6 +50,7 @@ export function useClavier(ed: Edition, c: Commandes) {
       else if (t === 'g') x.poserGrille(!x.grille);
       else if (t === 'm') x.poserAimants(!x.aimants);
       else if (t === 'z') x.zoomerSelection();
+      else if (t === 'c') x.choisirMemeCouleur();
       else if (t === '+' || t === '=') k.vues.zoomer(1.25);
       else if (t === '-') k.vues.zoomer(0.8);
       else if (t === '0') k.vues.ajuster();

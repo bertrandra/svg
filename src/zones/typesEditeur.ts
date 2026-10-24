@@ -66,6 +66,8 @@ export interface Edition {
   separerSelection: () => void;
   masquerSelection: () => void;
   verrouillerSelection: () => void;
+  /** Choisit toutes les formes de la couleur de la premiere forme choisie (son remplissage, ou son contour sans remplissage). */
+  choisirMemeCouleur: () => void;
   zoomerSelection: () => void;
   enregistrerTout: () => void;
   insererForme: (svgForme: string) => void;
