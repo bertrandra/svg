@@ -53,8 +53,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   ramène pas est refusé en le nommant.
 - **Chaque opération est pure** et rend un nouveau dessin ; l'historique (`util/historique.ts`) est
   une pile d'états immuables, deux cents au plus, un geste continu fondu par sa clé.
-- **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier et une bibliothèque
-  facultatifs, rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans `zones/Application.tsx`.
+- **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
+  facultatifs (`io/stockage.ts`), rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans
+  `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
 - **Rien ne s'écrit sans « Enregistrer »** ; le SVG réécrit passe par `nettoyerSvg`.

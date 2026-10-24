@@ -39,6 +39,13 @@ empreintes.
 
 ### Modifié
 
+- **Architecture de l'éditeur** (ADR-0010) : trois contextes (dessin, interface, actions) remplacent l'objet
+  `Edition` de cinquante champs ; les actions sont stables et lisent l'état du dernier rendu. `Bouton`,
+  `Menu` et `Section` vont dans `zones/commun/`, un seul `pluriel` (`util/texte.ts`). Aucun changement
+  visible ni d'octet écrit ; mesure neutre sur 5 000 formes.
+- **Le composant React ne garde plus rien sans `stockage`** : un hôte de `EditeurSvg` ou `BoutonEditerSvg`
+  qui n'y passe pas `stockage` perd les versions nommées dans le navigateur. L'embarquement garde
+  `localStorage` par défaut.
 - **Gros dessins** (une vectorisation de milliers de formes), ADR-0008 : le panneau des calques ne dessine
   que les lignes visibles (au-delà de 150 formes), l'écriture d'une forme est mémorisée, les sélections se
   testent par ensemble. Sur 5 000 formes : ouvrir, glisser et annuler vont 2 à 5 fois plus vite, et le DOM
@@ -76,6 +83,8 @@ empreintes.
 
 ### Corrigé
 
+- Les sections ouvertes ou repliées de l'inspecteur ne se partagent plus entre deux éditeurs d'une même
+  page hôte (mémoire par éditeur).
 - « Enregistrer » d'un dessin sans forme visible rendait un `<svg>` vide à l'hôte (`onEnregistrer`) au
   lieu de le refuser avec « rien à enregistrer » : la garde ne se déclenchait jamais.
 - La liste « Par couleur » ne défile plus en largeur dans le panneau étroit.
@@ -83,6 +92,9 @@ empreintes.
 
 ### Ajouté
 
+- **Un stockage injectable** (`io/stockage.ts`) : l'éditeur reçoit `stockage` (le magasin du navigateur,
+  celui de l'hôte, ou rien) et ne touche plus `localStorage` ; l'embarquement l'expose comme option
+  (`false` pour ne rien garder). 7 tests de navigateur de plus.
 - **À l'ouverture d'un SVG**, une phrase dit ce que la lecture n'a pas repris (marqueurs, pointillés,
   bouts et jonctions de trait, règles de style hors classe, peinture de la balise `<svg>`, animations) ;
   le panneau du dessin la répète. `lireDessin` rend pour cela `ignores`.
