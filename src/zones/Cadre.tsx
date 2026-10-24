@@ -12,6 +12,7 @@ import { useClavier } from './Clavier.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Inspecteur } from './Inspecteur.js';
 import { PanneauDessin } from './PanneauDessin.js';
+import { PanneauCricut } from './Production.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { FORMES } from './aidesEditeur.js';
@@ -35,10 +36,12 @@ function LienToile({ svgRef, idToile }: { svgRef: RefObject<SVGSVGElement | null
 }
 
 /** Le panneau de droite : l'inspecteur d'une selection, le panneau du dessin sinon (ou avec un outil de trace). */
-function PanneauLateral() {
+function PanneauLateral({ nom }: { nom: string }) {
   const { sel } = useDessin(), { outil } = useInterface();
   return (
     <aside className="editeur-inspecteur" aria-label="Inspecteur" tabIndex={-1}>
+      {/* Le panneau de production (ADR-0013) vient d'abord, avec ou sans selection : il juge le dessin entier. */}
+      <PanneauCricut nom={nom} />
       {sel.length && !FORMES.has(outil) && outil !== 'plume' && outil !== 'texte' ? <Inspecteur /> : <PanneauDessin />}
     </aside>
   );
@@ -139,7 +142,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
       <Calques />
       <Voile />
       <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} idToile={idToile} />
-      <PanneauLateral />
+      <PanneauLateral nom={nom} />
       <BarreEtat />
     </div>
   );

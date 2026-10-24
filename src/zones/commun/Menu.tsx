@@ -17,6 +17,8 @@ export interface ElementMenu {
   desactive?: boolean;
   /** Un element a deux etats (grille, aimants) : la coche dit celui d'aujourd'hui. */
   coche?: boolean;
+  /** Un choix parmi les elements de sa rubrique (un contexte, une machine) : `menuitemradio`, la coche dit le choix. */
+  radio?: boolean;
   danger?: boolean;
   /** Une pastille de couleur a la place de l'icone (un nuancier). */
   pastille?: string;
@@ -172,7 +174,7 @@ function ListeElements({ titre, elements, fermer }: { titre: string; elements: r
     <div role="menu" aria-label={titre}>{elements.map(el => (
       <div key={el.id} className="menu-ligne">
         {el.separateur ? <hr className="menu-filet" /> : null}
-        <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
+        <button type="button" role={el.radio ? 'menuitemradio' : el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
           onClick={() => { fermer(true); el.onClick?.(); }}>
           <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
           <span className="menu-libelle">{el.libelle}</span>

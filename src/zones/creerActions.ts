@@ -7,6 +7,8 @@ import type { DessinSvg, Forme, Style } from '../engine/editionSvg.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
+import { actionsProduction } from './actionsProduction.js';
+import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
@@ -27,6 +29,7 @@ export interface Setters {
   poserVersions: Dispatch<SetStateAction<readonly Version[]>>; poserTiroir: Dispatch<SetStateAction<Tiroir>>; poserContours: Dispatch<SetStateAction<boolean>>;
   poserFond: Dispatch<SetStateAction<Fond>>; dire: Dispatch<SetStateAction<string>>; poserQuitter: Dispatch<SetStateAction<boolean>>;
   poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
+  poserProduction: Dispatch<SetStateAction<ChoixProduction>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -46,6 +49,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, toile: s.toile };
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
+  const production = actionsProduction(lire, leviers, s.poserProduction);
   return {
     appliquer, finir, poserOutil,
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
@@ -75,6 +79,6 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire('Version « ' + nom + ' » gardée dans ce navigateur.');
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
-    ...metier, ...trace
+    ...metier, ...trace, ...production
   };
 }

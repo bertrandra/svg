@@ -2,17 +2,18 @@
 // dans ce navigateur ; on y revient d'un clic (l'historique garde le retour), et la liste s'exporte.
 
 import { useState } from 'react';
-import { ecrireDessin, lireDessin } from '../engine/editionSvg.js';
+import { lireDessin } from '../engine/editionSvg.js';
+import { svgDocument } from './actionsProduction.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
-import { useActions, useDessin } from './contexteEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { Section } from './commun/Section.js';
 import { dateCourte } from './session.js';
 
 export function PanneauVersions() {
-  const mo = useDessin(), ac = useActions();
+  const mo = useDessin(), ac = useActions(), { production } = useInterface();
   const [nom, poserNom] = useState('');
-  const garder = () => { ac.garderVersion(nom.trim() || 'Version ' + (mo.versions.length + 1), ecrireDessin(mo.dessin, 3)); poserNom(''); };
+  const garder = () => { ac.garderVersion(nom.trim() || 'Version ' + (mo.versions.length + 1), svgDocument(mo.dessin, production)); poserNom(''); };
   const revenir = (svg: string, nomVersion: string) => {
     const lu = lireDessin(svg);
     if ('erreur' in lu) { ac.dire(lu.erreur); return; }

@@ -4,7 +4,8 @@
 import { memo, useId, type RefObject } from 'react';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { useGestes } from './Gestes.js';
-import { Calque, Grille, surcouche } from './Toile.js';
+import { Calque, cheminDe, Grille, surcouche } from './Toile.js';
+import { AlertesToile, GabaritTapis } from './Production.js';
 import { useTactile } from './Vue.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
@@ -29,8 +30,10 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
             </pattern>
           </defs>
           <rect className="plan-travail" x={vx} y={vy} width={vl} height={vh} fill={fond === 'damier' ? 'url(#damier-editeur)' : undefined} pointerEvents="none" />
+          <GabaritTapis />
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
           {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} />)}
+          <AlertesToile chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, gestes.cadre, tactile)}</g>
         </g>
       </svg>

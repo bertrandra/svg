@@ -7,7 +7,7 @@ import { useState } from 'react';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { aDesPoignees, lireNoeud, type Forme, type TypeNoeud } from '../engine/editionSvg.js';
 import type { Jonction } from '../engine/contours.js';
-import { useActions, useDessin } from './contexteEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { arrondi } from './aidesEditeur.js';
 import { nomDeType } from './phrasesTrace.js';
 
@@ -47,11 +47,13 @@ function ChampAction({ champ, libelle, titre, valeur, poser, bouton, appliquer, 
 
 /** Contour en forme, decalage, angles arrondis, jonction et sens : ce qui s'applique aux formes choisies. */
 export function OutilsTrace() {
-  const mo = useDessin(), ac = useActions();
+  const mo = useDessin(), ac = useActions(), { profil } = useInterface();
   const { dessin, sel } = mo;
-  const [distance, poserDistance] = useState(() => String(arrondi(Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
+  // En contexte de production (ADR-0013), les valeurs par defaut sont celles du materiau : decaler de la moitie du detail
+  // minimal (ce qu'il faut a une partie trop fine), arrondir au rayon de la lame ; sinon, un quarantieme du plan.
+  const [distance, poserDistance] = useState(() => String(arrondi(profil ? profil.detailMin / 2 : Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
   const [jonction, poserJonction] = useState<Jonction>('round');
-  const [rayon, poserRayon] = useState(() => String(arrondi(Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
+  const [rayon, poserRayon] = useState(() => String(arrondi(profil ? profil.rayonLame : Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
   const choisies = dessin.formes.filter(f => mo.choisies.has(f.id));
   const sansContour = !choisies.some(f => f.contour !== null && f.epaisseur > 0);
   return (
