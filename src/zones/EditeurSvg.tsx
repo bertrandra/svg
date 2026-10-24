@@ -14,9 +14,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DessinSvg } from '../engine/editionSvg.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
+import type { Stockage } from '../io/stockage.js';
 import { Cadre } from './Cadre.js';
 import { FournisseurSections } from './commun/Section.js';
 import { FournisseurEditeur } from './contexteEditeur.js';
+import { FournisseurStockage } from './contexteStockage.js';
 import { useEtatEditeur } from './etatEditeur.js';
 import { lireDessinMemo } from './lecture.js';
 import { estHex } from './aidesEditeur.js';
@@ -41,6 +43,11 @@ export interface ProprietesEditeur {
   enregistrer: (svg: string) => void;
   /** Recoit le SVG du moment apres chaque modification (une seconde de repos) : de quoi reprendre apres un rechargement. */
   brouillon?: (svg: string) => void;
+  /**
+   * Ou garder les versions nommees. Absent ou null : l'editeur ne garde rien (il ne connait aucun
+   * magasin). La page lui donne celui du navigateur (`stockageNavigateur`), un hote ce qu'il veut.
+   */
+  stockage?: Stockage | null;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -62,19 +69,19 @@ export function nuancierPropre(teintes: readonly Teinte[]): Teinte[] {
  * Le bouton qui ouvre l'editeur sur un SVG, et l'editeur quand il est ouvert. `enregistrer` recoit
  * le SVG retouche, deja nettoye. Une image enveloppee ne s'edite pas : il faut la vectoriser.
  */
-export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enregistrer }: Omit<ProprietesEditeur, 'fermer'>) {
+export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enregistrer, stockage }: Omit<ProprietesEditeur, 'fermer'>) {
   const [ouvert, ouvrir] = useState(false);
   const ok = editable(svg);
   return (
     <>
       <button type="button" className="discret" disabled={!ok} title={ok ? 'Ouvrir l’éditeur SVG plein écran' : 'Une image enveloppée ne s’édite pas : vectorisez-la d’abord.'}
         onClick={() => ouvrir(true)}>Éditer le SVG en plein écran</button>
-      {ouvert ? <EditeurSvg svg={svg} titre={titre} nom={nom} nuancier={nuancier ?? SANS_NUANCIER} {...(bibliotheque === undefined ? {} : { bibliotheque })} fermer={() => ouvrir(false)} enregistrer={s => { enregistrer(s); ouvrir(false); }} /> : null}
+      {ouvert ? <EditeurSvg svg={svg} titre={titre} nom={nom} nuancier={nuancier ?? SANS_NUANCIER} {...(bibliotheque === undefined ? {} : { bibliotheque })} {...(stockage === undefined ? {} : { stockage })} fermer={() => ouvrir(false)} enregistrer={s => { enregistrer(s); ouvrir(false); }} /> : null}
     </>
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage }: ProprietesEditeur) {
   const lu = useMemo(() => lireDessinMemo(svg), [svg]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   useEffect(() => {
@@ -89,7 +96,11 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
           <p>{lu.erreur}</p>
           <button type="button" onClick={fermer}>Fermer</button>
         </div>
-      ) : <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>}
+      ) : (
+        <FournisseurStockage stockage={stockage ?? null}>
+          <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>
+        </FournisseurStockage>
+      )}
     </div>,
     document.body
   );

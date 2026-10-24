@@ -11,7 +11,9 @@ import { Icone, type NomIcone } from './icones.js';
 import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
 import { phraseIgnores } from './aidesEditeur.js';
+import { FournisseurStockage } from './contexteStockage.js';
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
+import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -34,18 +36,26 @@ const VOIES: ReadonlyArray<readonly [Voie, NomIcone, string, string]> = [
   ['formes', 'scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
 ];
 
+// La page est ce qui connait le magasin : le brouillon et les versions de l'editeur vont dans le navigateur.
+const STOCKAGE = stockageNavigateur();
+
 const sansExtension = (nom: string) => nom.replace(/\.svg$/i, '').trim() || 'dessin';
 
+/** La page : l'accueil, avec le stockage du navigateur pour ce qu'elle garde (brouillon, corrections) et pour l'editeur. */
 export function Application() {
+  return <FournisseurStockage stockage={STOCKAGE}><Accueil /></FournisseurStockage>;
+}
+
+function Accueil() {
   const [fichier, poserFichier] = useState<Fichier | null>(null);
   const [edition, poserEdition] = useState(false);
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
   const [voie, poserVoie] = useState<Voie>('svg');
   const [message, dire] = useState('');
-  const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon());
+  const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon(STOCKAGE));
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
   // Chaque modification dans l'editeur laisse un brouillon : un rechargement ne perd rien.
-  const garder = useCallback((svg: string) => { if (fichier) garderBrouillon(fichier.nom, svg, Date.now()); }, [fichier]);
+  const garder = useCallback((svg: string) => { if (fichier) garderBrouillon(STOCKAGE, fichier.nom, svg, Date.now()); }, [fichier]);
 
   /** Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. */
   const ouvrir = (nom: string, texte: string) => {
@@ -79,7 +89,7 @@ export function Application() {
           <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
           <div className="actions">
             <button type="button" className="primaire" onClick={() => { ouvrir(brouillon.nom, brouillon.svg); }}>Reprendre</button>
-            <button type="button" className="discret" onClick={() => { oublierBrouillon(); poserBrouillon(null); }}>Oublier</button>
+            <button type="button" className="discret" onClick={() => { oublierBrouillon(STOCKAGE); poserBrouillon(null); }}>Oublier</button>
           </div>
         </section>
       ) : null}
@@ -93,7 +103,7 @@ export function Application() {
             <div className="actions">
               <button type="button" className="primaire" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
               <MenuExport svg={fichier.svg} nom={fichier.nom} dire={dire} />
-              <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(); poserBrouillon(null); dire(''); }}>Fermer</button>
+              <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }}>Fermer</button>
             </div>
           </div>
         </section>
@@ -137,9 +147,9 @@ export function Application() {
       </footer>
 
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder}
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE}
           fermer={() => poserEdition(false)}
-          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
+          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
       ) : null}
     </main>
   );

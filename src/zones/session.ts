@@ -1,27 +1,22 @@
 // Ce que la page garde dans ce navigateur (ADR-0004) : le dessin en cours, pour survivre a un
-// rechargement, et les versions nommees. Chaque lecture et chaque ecriture est protegee : un
-// stockage absent ou plein ne casse rien, la page marche sans lui.
+// rechargement, et les versions nommees. Le stockage se passe en parametre (io/stockage.ts) : sans lui
+// (null), rien ne se garde et rien ne se lit, et la page marche quand meme.
+
+import type { Stockage } from '../io/stockage.js';
 
 export interface Brouillon { nom: string; svg: string; quand: number }
 export interface Version { id: string; nom: string; svg: string; quand: number }
 
-const CLE_BROUILLON = 'svg.brouillon', CLE_VERSIONS = 'svg.versions';
-const VERSIONS_MAX = 30;
+export const CLE_BROUILLON = 'svg.brouillon', CLE_VERSIONS = 'svg.versions';
+export const VERSIONS_MAX = 30;
 
-function lire<T>(cle: string): T | null {
-  try { const t = localStorage.getItem(cle); return t ? (JSON.parse(t) as T) : null; } catch { return null; }
-}
-function ecrire(cle: string, valeur: unknown): boolean {
-  try { localStorage.setItem(cle, JSON.stringify(valeur)); return true; } catch { return false; }
-}
+export const lireBrouillon = (s: Stockage | null): Brouillon | null => s?.lire<Brouillon>(CLE_BROUILLON) ?? null;
+export const garderBrouillon = (s: Stockage | null, nom: string, svg: string, quand: number): boolean => s?.ecrire(CLE_BROUILLON, { nom, svg, quand }) ?? false;
+export const oublierBrouillon = (s: Stockage | null): void => { s?.retirer(CLE_BROUILLON); };
 
-export const lireBrouillon = (): Brouillon | null => lire<Brouillon>(CLE_BROUILLON);
-export const garderBrouillon = (nom: string, svg: string, quand: number): boolean => ecrire(CLE_BROUILLON, { nom, svg, quand });
-export const oublierBrouillon = (): void => { try { localStorage.removeItem(CLE_BROUILLON); } catch { /* sans stockage, rien a oublier */ } };
-
-export const lireVersions = (): Version[] => lire<Version[]>(CLE_VERSIONS) ?? [];
+export const lireVersions = (s: Stockage | null): Version[] => s?.lire<Version[]>(CLE_VERSIONS) ?? [];
 /** Garde les versions, les plus recentes d'abord, trente au plus. */
-export const garderVersions = (versions: readonly Version[]): boolean => ecrire(CLE_VERSIONS, versions.slice(0, VERSIONS_MAX));
+export const garderVersions = (s: Stockage | null, versions: readonly Version[]): boolean => s?.ecrire(CLE_VERSIONS, versions.slice(0, VERSIONS_MAX)) ?? false;
 
 /** Un identifiant stable pour une version : son instant et un compteur, jamais un tirage. */
 export const idVersion = (quand: number, rang: number): string => 'v' + quand.toString(36) + '-' + rang;

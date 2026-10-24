@@ -7,6 +7,7 @@ import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
+import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
 import type { ActionsEditeur, EtatInterface, Fond, ModeleDessin, Outil, Point, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
@@ -22,6 +23,7 @@ export interface EtatEditeur {
 }
 
 export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
+  const stockage = useStockage();
   const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(p.initial));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
@@ -32,7 +34,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [grille, poserGrille] = useState(false);
   const [aimants, poserAimants] = useState(true);
   const [guides, poserGuides] = useState<readonly Aimant[]>([]);
-  const [versions, poserVersions] = useState<readonly Version[]>(() => lireVersions());
+  const [versions, poserVersions] = useState<readonly Version[]>(() => lireVersions(stockage));
   const [tiroir, poserTiroir] = useState<Tiroir>(null);
   const [contours, poserContours] = useState(false);
   const [fond, poserFond] = useState<Fond>('damier');
@@ -55,7 +57,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
 
   // L'etat du dernier rendu, que les verbes lisent au moment de l'appel : c'est ce qui les rend stables.
   const moment = useRef<EtatDuMoment | null>(null);
-  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, enregistrer: p.enregistrer, modifie, versions, fermer: p.fermer };
+  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, enregistrer: p.enregistrer, modifie, versions, fermer: p.fermer, stockage };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
     { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, toile }

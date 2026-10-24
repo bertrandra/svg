@@ -6,12 +6,13 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { DessinSvg, Forme, Style } from '../engine/editionSvg.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
+import type { Stockage } from '../io/stockage.js';
 import { garderVersions, idVersion, type Version } from './session.js';
 import type { ActionsEditeur, Fond, Outil, Point, Tiroir } from './typesEditeur.js';
 import type { Aimant } from '../engine/transformations.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
-export interface EtatDuMoment extends EtatLu { modifie: boolean; versions: readonly Version[]; fermer: () => void }
+export interface EtatDuMoment extends EtatLu { modifie: boolean; versions: readonly Version[]; fermer: () => void; stockage: Stockage | null }
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
 export interface Setters {
@@ -30,7 +31,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const finir = () => s.poserH(x => clore(x));
   const poserOutil = (o: Outil) => { s.poserOutilBrut(o); s.poserTrace([]); s.poserPoint(null); };
   const remettreAZero = () => { s.poserPoint(null); s.poserTrace([]); s.dire(''); };
-  const poserVersions = (v: readonly Version[]) => { s.poserVersions(v); garderVersions(v); };
+  const poserVersions = (v: readonly Version[]) => { s.poserVersions(v); garderVersions(lire().stockage, v); };
   const metier = actionsEdition(lire, { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut: s.poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire: s.dire, toile: s.toile });
   return {
     appliquer, finir, poserOutil,
