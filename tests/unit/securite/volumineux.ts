@@ -65,7 +65,7 @@ export const VOLUMINEUX: readonly Volumineux[] = [
   { nom: 'commentaires-300000', vecteur: '300 000 commentaires et instructions', genere: () => svg(rep('<!-- c --><?p x?>', 300_000)), attendu: 'ouvre' },
   { nom: 'balise-jamais-fermee-1-mo', vecteur: 'une balise ouverte jamais fermee sur 1 Mo d\'attributs', genere: () => `<svg ${NS} viewBox="0 0 100 100"><g ${rep('a="1"', 200_000)}`, attendu: 'refus' },
   { nom: 'cdata-jamais-ferme-5-mo', vecteur: 'une section CDATA jamais fermee sur 5 Mo', genere: () => `<svg ${NS} viewBox="0 0 100 100"><style><![CDATA[${rep('a{}', 1_300_000)}`, attendu: 'refus' },
-  { nom: 'ampersands-800000', vecteur: '5 millions d\'esperluettes dans un attribut et un texte', genere: () => svg(`<title>${rep('&', 400_000)}</title><g data-x="${rep('&', 400_000)}"/>`), attendu: null },
+  { nom: 'ampersands-800000', vecteur: '800 000 esperluettes dans un attribut et un texte (chacune devient « &amp; » : cinq fois plus)', genere: () => svg(`<title>${rep('&', 400_000)}</title><g data-x="${rep('&', 400_000)}"/>`), attendu: null },
   { nom: 'parentheses-css', vecteur: 'une feuille de 2 Mo de parentheses et accolades ouvertes', genere: () => svg(`<style>${rep('{(', 1_000_000)}</style>`), attendu: null },
   { nom: 'url-non-fermes', vecteur: '200 000 « url( » non fermes dans une feuille', genere: () => svg(`<style>${rep('a{fill:url(http://x.invalid/', 100_000)}</style>`), attendu: null }
 ];
