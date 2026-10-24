@@ -60,8 +60,10 @@ const SANS_NUANCIER: readonly Teinte[] = [];
 export function nuancierPropre(teintes: readonly Teinte[]): Teinte[] {
   const vus = new Set<string>(), r: Teinte[] = [];
   for (const t of teintes) {
+    // Un hote n'est pas type : une entree qui n'est pas { nom, hex } en textes est ecartee, jamais une exception.
+    if (typeof t !== 'object' || t === null || typeof t.hex !== 'string') continue;
     const hex = t.hex.trim().toLowerCase();
-    if (estHex(hex) && !vus.has(hex)) { vus.add(hex); r.push({ nom: t.nom.trim() || hex, hex }); }
+    if (estHex(hex) && !vus.has(hex)) { vus.add(hex); r.push({ nom: (typeof t.nom === 'string' ? t.nom.trim() : '') || hex, hex }); }
   }
   return r;
 }

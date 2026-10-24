@@ -1,0 +1,1001 @@
+{
+  "commentaire": "Corpus hostile : chaque fichier porte un vecteur d'attaque ou un cas limite (voir docs/securite.md). attendu = ouvre (le dessin s'ouvre sans le danger), refus (nettoyage ou lecture refuse, nomme). Les cas volumineux (un million de points, cent mille freres…) sont engendres par tests/unit/securite/volumineux.ts.",
+  "fichiers": [
+    {
+      "fichier": "script-balise.svg",
+      "famille": "script",
+      "vecteur": "Element <script> classique dans un SVG",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-reassemble-par-retrait.svg",
+      "famille": "script",
+      "vecteur": "Nettoyage en une passe : retirer la balise interieure reassemble <script>",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "script-casse-mixte.svg",
+      "famille": "script",
+      "vecteur": "Nom d'element en casse mixte (<ScRiPt>)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-href-externe.svg",
+      "famille": "script",
+      "vecteur": "<script xlink:href> qui charge un script distant",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-auto-fermant.svg",
+      "famille": "script",
+      "vecteur": "<script/> auto-fermant et variantes d'espaces dans la balise",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-cdata.svg",
+      "famille": "script",
+      "vecteur": "Corps du script dans une section CDATA",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-prefixe-svg.svg",
+      "famille": "script",
+      "vecteur": "<svg:script> : l'espace de noms contourne une recherche de \"<script\"",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "script-xhtml-prefixe.svg",
+      "famille": "script",
+      "vecteur": "<html:script> dans l'espace de noms XHTML declare sur un enfant",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-attribut-avec-chevron.svg",
+      "famille": "script",
+      "vecteur": "Un \">\" dans une valeur d'attribut de <script> trompe un decoupage naif",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-balise-fermante-bizarre.svg",
+      "famille": "script",
+      "vecteur": "Fermeture </script > avec espaces et sauts de ligne",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "script-sans-fermeture.svg",
+      "famille": "script",
+      "vecteur": "<script> jamais ferme : le reste du document en est le corps",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "script-handler-xml-events.svg",
+      "famille": "script",
+      "vecteur": "Elements d'ecouteur <handler> et <ev:listener> (SVG Tiny, XML Events)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-onload-racine.svg",
+      "famille": "evenement",
+      "vecteur": "onload sur la racine <svg>",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-sur-chaque-element.svg",
+      "famille": "evenement",
+      "vecteur": "Gestionnaires on* (onclick, onmouseover, onfocus, onbegin…) sur tous les types d'elements",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "evenement-sans-guillemets.svg",
+      "famille": "evenement",
+      "vecteur": "Valeur d'attribut non quotee : onload=alert(1)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-apostrophes.svg",
+      "famille": "evenement",
+      "vecteur": "Valeur entre apostrophes avec guillemets dedans",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-casse-et-separateurs.svg",
+      "famille": "evenement",
+      "vecteur": "ONLOAD en majuscules, separateurs de ligne et tabulation avant le nom",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-slash-separateur.svg",
+      "famille": "evenement",
+      "vecteur": "<svg/onload=...> : la barre oblique sert de separateur, sans espace",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "evenement-colle-a-la-valeur.svg",
+      "famille": "evenement",
+      "vecteur": "Attribut colle a la valeur precedente, sans espace (mal forme en XML, tolere par un analyseur HTML)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "evenement-nom-avec-entite.svg",
+      "famille": "evenement",
+      "vecteur": "Nom d'attribut contenant une entite : o&#110;load",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "evenement-animation-attributs.svg",
+      "famille": "evenement",
+      "vecteur": "onbegin / onend / onrepeat sur les elements d'animation",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-valeur-multiligne.svg",
+      "famille": "evenement",
+      "vecteur": "Gestionnaire dont la valeur s'etend sur plusieurs lignes et contient \">\"",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "evenement-dans-commentaire.svg",
+      "famille": "evenement",
+      "vecteur": "Gestionnaire cache apres un commentaire contenant un faux \"-->\"",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "url-javascript-lien.svg",
+      "famille": "url",
+      "vecteur": "<a href=\"javascript:...\"> : script au clic",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-javascript-obscurci.svg",
+      "famille": "url",
+      "vecteur": "javascript: obscurci par entites, tabulations, sauts de ligne et casse",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-javascript-sans-guillemets.svg",
+      "famille": "url",
+      "vecteur": "href non quote : href=javascript:alert(1)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-vbscript.svg",
+      "famille": "url",
+      "vecteur": "Schemas vbscript: et livescript: dans les liens",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-data-html.svg",
+      "famille": "url",
+      "vecteur": "data:text/html dans un lien, une image et un use",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "url-src-attribut.svg",
+      "famille": "url",
+      "vecteur": "Attributs src / data / action / formaction sur des elements SVG",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "url-xlink-casse-mixte.svg",
+      "famille": "url",
+      "vecteur": "XLINK:HREF et HREF en majuscules",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-prefixe-xlink-autre-nom.svg",
+      "famille": "url",
+      "vecteur": "Le prefixe de l'espace xlink est renomme (x:href) : une recherche de \"xlink:href\" le manque",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "url-lien-externe.svg",
+      "famille": "url",
+      "vecteur": "<a href=\"https://...\"> et target : un clic sort de la page",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "url-xml-base.svg",
+      "famille": "url",
+      "vecteur": "xml:base change la base de resolution des liens relatifs",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "url-href-vide-et-fragment.svg",
+      "famille": "url",
+      "vecteur": "Fragments et liens vides legitimes a ne pas confondre avec des attaques",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-html.svg",
+      "famille": "foreignobject",
+      "vecteur": "<foreignObject> portant du HTML avec un script",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-iframe.svg",
+      "famille": "foreignobject",
+      "vecteur": "<iframe> et <embed> dans un foreignObject",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-formulaire.svg",
+      "famille": "foreignobject",
+      "vecteur": "Formulaire dans un foreignObject (hameconnage, envoi a un tiers)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-imbrique.svg",
+      "famille": "foreignobject",
+      "vecteur": "foreignObject imbriques : retirer le premier couple laisse le reste",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-casse-et-prefixe.svg",
+      "famille": "foreignobject",
+      "vecteur": "<FOREIGNOBJECT>, <svg:foreignObject> : la casse et le prefixe",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-balises-html-directes.svg",
+      "famille": "foreignobject",
+      "vecteur": "Elements HTML directement sous <svg> (sortent de l'espace SVG dans un analyseur HTML)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "foreign-xmlns-html-sur-groupe.svg",
+      "famille": "foreignobject",
+      "vecteur": "xmlns rebinde vers XHTML sur un <g> : ses enfants changent de sens",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "use-externe-http.svg",
+      "famille": "use",
+      "vecteur": "<use> vers une adresse http(s)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-externe-fichier.svg",
+      "famille": "use",
+      "vecteur": "<use> vers file:/// et un chemin relatif",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-data-svg.svg",
+      "famille": "use",
+      "vecteur": "<use> vers un SVG data: qui porte un script",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-cycle.svg",
+      "famille": "use",
+      "vecteur": "Cycle de <use> (a se contient lui-meme, a vers b vers a)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-auto-reference.svg",
+      "famille": "use",
+      "vecteur": "<use> qui reference son propre ancetre",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-bombe-exponentielle.svg",
+      "famille": "use",
+      "vecteur": "12 niveaux de 10 <use> : 10^12 clones si on deplie (la bombe a rire des <use>)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-chaine-longue.svg",
+      "famille": "use",
+      "vecteur": "Chaine de 60 <use> emboites (limite de profondeur)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-bombe-symboles.svg",
+      "famille": "use",
+      "vecteur": "8 niveaux de <symbol> de 12 <use> chacun",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-cible-hors-document.svg",
+      "famille": "use",
+      "vecteur": "<use> dont la cible est introuvable, id vide, id avec caracteres speciaux",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "use-donnees-externes-pseudo.svg",
+      "famille": "use",
+      "vecteur": "data-href-externe force a la main (l'attribut inerte du nettoyage) avec un schema dangereux",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-http.svg",
+      "famille": "image",
+      "vecteur": "<image> vers http(s) : requete reseau a l'ouverture (pixel espion)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-file.svg",
+      "famille": "image",
+      "vecteur": "<image> vers file:///",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-data-svg-script.svg",
+      "famille": "image",
+      "vecteur": "<image> vers data:image/svg+xml portant un script",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-data-png-faux-type.svg",
+      "famille": "image",
+      "vecteur": "data:image/png dont le contenu est un SVG ou du HTML (type annonce mensonger)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-data-png-legitime.svg",
+      "famille": "image",
+      "vecteur": "Image PNG en base64 legitime : doit rester intacte au nettoyage (mais l'editeur refuse les images)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "image-dans-filtre-feimage.svg",
+      "famille": "image",
+      "vecteur": "<feImage> vers une adresse externe",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "image-pattern-externe.svg",
+      "famille": "image",
+      "vecteur": "<pattern> remplie d'une <image> distante",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "anim-set-href.svg",
+      "famille": "animation",
+      "vecteur": "<set attributeName=\"href\" to=\"javascript:...\"> sous un <a> : le lien devient dangereux au rendu",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-animate-values.svg",
+      "famille": "animation",
+      "vecteur": "<animate attributeName=\"href\" values=\"...\"> (liste de valeurs)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-href-obscurci.svg",
+      "famille": "animation",
+      "vecteur": "javascript: obscurci par entite dans to= (l'entite est decodee par le navigateur)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-animatetransform.svg",
+      "famille": "animation",
+      "vecteur": "<animateTransform> avec href externe et gestionnaires",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-from-to-by.svg",
+      "famille": "animation",
+      "vecteur": "from / to / by qui portent une URL externe dans un attribut de style",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-animatemotion-mpath.svg",
+      "famille": "animation",
+      "vecteur": "<animateMotion> et <mpath> pointant hors du document",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "anim-attributename-style-exfiltration.svg",
+      "famille": "animation",
+      "vecteur": "Animation de la propriete cursor / filter vers une URL externe",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-url-exfiltration.svg",
+      "famille": "css",
+      "vecteur": "url() externe dans une feuille <style> (fill, cursor, background)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-url-echappe.svg",
+      "famille": "css",
+      "vecteur": "url obscurci par echappements CSS (u\\72l) et casse (URL)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-import.svg",
+      "famille": "css",
+      "vecteur": "@import vers une feuille distante (avec et sans url())",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-import-echappe.svg",
+      "famille": "css",
+      "vecteur": "@import ecrit @\\69mport ou @IMPORT",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-expression.svg",
+      "famille": "css",
+      "vecteur": "expression(), -moz-binding, behavior, -ms-filter : vieux vecteurs CSS actifs",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-style-attribut-url.svg",
+      "famille": "css",
+      "vecteur": "Attribut style= avec url() externe et @import",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-font-face.svg",
+      "famille": "css",
+      "vecteur": "@font-face dont src charge une police distante",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-image-set.svg",
+      "famille": "css",
+      "vecteur": "image-set(\"...\") et src(\"...\") : des chaines qui declenchent un chargement sans url()",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-style-ferme-puis-script.svg",
+      "famille": "css",
+      "vecteur": "</style><script> cache dans un commentaire CSS ou une chaine",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "css-style-cdata-script.svg",
+      "famille": "css",
+      "vecteur": "<style><![CDATA[ ... ]]> qui contient </style><script>",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-selecteur-attribut-exfiltration.svg",
+      "famille": "css",
+      "vecteur": "Selecteurs d'attribut [href^=...] avec url() par valeur (exfiltration lettre par lettre)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-media-supports.svg",
+      "famille": "css",
+      "vecteur": "url() cache dans @media, @supports, @keyframes",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-variable-url.svg",
+      "famille": "css",
+      "vecteur": "var() qui compose une URL et propriete personnalisee portant url()",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-selecteur-bombe.svg",
+      "famille": "css",
+      "vecteur": "Selecteurs a descendants multiples sur un arbre profond (explosion combinatoire)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-commentaire-ferme-tot.svg",
+      "famille": "parsing",
+      "vecteur": "Commentaires --!> et <!--> qui se ferment differemment selon l'analyseur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-balise-dans-attribut.svg",
+      "famille": "parsing",
+      "vecteur": "Une balise <script> dans une valeur d'attribut (\"><script>...\")",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-balise-dans-attribut-brute.svg",
+      "famille": "parsing",
+      "vecteur": "Chevrons non echappes dans une valeur d'attribut (legal en XML pour >, pas pour <)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-titre-style.svg",
+      "famille": "parsing",
+      "vecteur": "<title><style> puis </title> : mutation du contenu entre analyse et serialisation",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-noscript-textarea.svg",
+      "famille": "parsing",
+      "vecteur": "<noscript>, <textarea>, <xmp>, <plaintext>, <noembed> : elements de texte brut en HTML",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-balise-non-fermee.svg",
+      "famille": "parsing",
+      "vecteur": "Balise ouverte jamais fermee : le reste du fichier est avale dans l'attribut",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-balise-non-fermee-longue.svg",
+      "famille": "parsing",
+      "vecteur": "Balise <g a=\"1\"a=\"1\"... jamais fermee sur 300 Ko : le motif de lecture ne doit pas devenir quadratique",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-caracteres-nuls.svg",
+      "famille": "parsing",
+      "vecteur": "Octets nuls et caracteres de controle au milieu de noms de balise (<scr\\0ipt>)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-nom-attribut-etrange.svg",
+      "famille": "parsing",
+      "vecteur": "Noms d'attribut etranges : guillemets, chevrons, barres obliques",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-attribut-duplique.svg",
+      "famille": "parsing",
+      "vecteur": "Attribut repete : le premier gagne en HTML, le dernier selon la lecture",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-entites-limites.svg",
+      "famille": "parsing",
+      "vecteur": "Entites numeriques limites : &#0;, &#x110000;, &#xD800;, &#x;, &#99999999999;, &amp;amp;",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-nom-balise-etrange.svg",
+      "famille": "parsing",
+      "vecteur": "Noms d'element etranges : <a<b>, <1>, <g:>, <:g>, <g..>",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-chevron-nu-dans-texte.svg",
+      "famille": "parsing",
+      "vecteur": "Un \"<\" isole dans un texte et \"]]>\" hors CDATA",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-cdata-non-ferme.svg",
+      "famille": "parsing",
+      "vecteur": "CDATA, commentaire ou instruction jamais fermes",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-commentaire-non-ferme.svg",
+      "famille": "parsing",
+      "vecteur": "Commentaire jamais ferme avant la fin",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-fermeture-orpheline.svg",
+      "famille": "parsing",
+      "vecteur": "Fermetures sans ouverture et ouvertures sans fermeture",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-plusieurs-racines.svg",
+      "famille": "parsing",
+      "vecteur": "Deux elements <svg> a la suite, le second portant le script",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-contenu-apres-racine.svg",
+      "famille": "parsing",
+      "vecteur": "Texte, script et commentaire apres la fermeture de la racine",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-svg-dans-commentaire.svg",
+      "famille": "parsing",
+      "vecteur": "Un faux <svg> dans un commentaire avant le vrai",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-svg-dans-attribut-avant.svg",
+      "famille": "parsing",
+      "vecteur": "Un faux <svg> dans une valeur d'attribut precedant le vrai",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "parsing-html-complet.svg",
+      "famille": "parsing",
+      "vecteur": "Page HTML complete avec <svg> en ligne, script et gestionnaires autour",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "ns-racine-prefixee.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "Racine <s:svg> et enfants prefixes avec un prefixe de son choix",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "ns-xmlns-xhtml-sur-racine.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "Racine declaree dans l'espace de noms XHTML : ses enfants ne sont plus du SVG",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "ns-xmlns-vers-xlink.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "xmlns:p vers l'espace xlink ou xml-events sur un enfant, usage en attribut",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "ns-prefixe-non-declare.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "Prefixes jamais declares (inkscape:, foo:) sur elements et attributs",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "ns-svg-imbrique-xhtml.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "Un <svg> imbrique redeclare xmlns vers XHTML puis rouvre un SVG",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "ns-inkscape-legitime.svg",
+      "famille": "espace-de-noms",
+      "vecteur": "Un fichier Inkscape ordinaire (sodipodi, inkscape, rdf, cc) : ne doit pas etre refuse",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-milliard-de-rires.svg",
+      "famille": "xml",
+      "vecteur": "Billion laughs : 9 niveaux d'entites de 10 references (10^9 si on developpe)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-explosion-quadratique.svg",
+      "famille": "xml",
+      "vecteur": "Quadratic blowup : une entite de 5 Ko referencee 5 000 fois",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-entite-externe-fichier.svg",
+      "famille": "xml",
+      "vecteur": "XXE : entite SYSTEM vers file:///etc/passwd",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-entite-externe-http.svg",
+      "famille": "xml",
+      "vecteur": "XXE : entite SYSTEM vers une adresse http (requete sortante)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-entite-parametre.svg",
+      "famille": "xml",
+      "vecteur": "Entite parametre (%) et DTD externe : XXE hors bande",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-systeme-externe.svg",
+      "famille": "xml",
+      "vecteur": "DOCTYPE avec identifiant SYSTEM vers une DTD distante",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-svg-legitime.svg",
+      "famille": "xml",
+      "vecteur": "DOCTYPE SVG 1.1 public : ce que beaucoup de logiciels ecrivent, a ne pas refuser",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-illustrator-entites.svg",
+      "famille": "xml",
+      "vecteur": "DOCTYPE d'Illustrator qui declare des entites d'espaces de noms (&ns_svg;) : doit rester lisible",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-sous-ensemble-avec-chevron.svg",
+      "famille": "xml",
+      "vecteur": "Sous-ensemble interne dont une valeur d'entite contient \">\" et un faux <svg onload>",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-instruction-stylesheet.svg",
+      "famille": "xml",
+      "vecteur": "<?xml-stylesheet href=\"http://...\"?> : feuille de style distante (avant et dans la racine)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-instruction-generique.svg",
+      "famille": "xml",
+      "vecteur": "Instructions de traitement quelconques (<?php ... ?>, <?xml-stylesheet alternate=\"yes\"?>) dans le corps",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-declaration-encodage-menteuse.svg",
+      "famille": "xml",
+      "vecteur": "Declaration d'encodage qui ne correspond pas aux octets (ISO-8859-1, UTF-16 annonce)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-instruction-non-fermee.svg",
+      "famille": "xml",
+      "vecteur": "Instruction de traitement jamais fermee",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "nombre-1e308.svg",
+      "famille": "nombre",
+      "vecteur": "Coordonnees et dimensions a 1e308 (le doublon deborde en Infinity au premier calcul)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "nombre-nan-infinity.svg",
+      "famille": "nombre",
+      "vecteur": "NaN, Infinity, -Infinity, 0x10, 1e, .e5 ecrits comme nombres",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "nombre-milliers-de-chiffres.svg",
+      "famille": "nombre",
+      "vecteur": "Nombres de 5 000 chiffres dans un chemin, un viewBox et un transform",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "nombre-exposant-enorme.svg",
+      "famille": "nombre",
+      "vecteur": "Exposants extremes : 1e999999999, 1e-999999999, 1E+0000000000000001",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "dim-negatives.svg",
+      "famille": "dimension",
+      "vecteur": "width, height et viewBox negatifs ou nuls",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "dim-viewbox-nul.svg",
+      "famille": "dimension",
+      "vecteur": "viewBox de largeur nulle, de 3 ou 5 nombres, de separateurs bizarres",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "dim-immenses.svg",
+      "famille": "dimension",
+      "vecteur": "Dimensions de 1e30 et un viewBox qui deborde (le canvas d'export serait colossal)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "dim-unites-bizarres.svg",
+      "famille": "dimension",
+      "vecteur": "Unites inconnues : width=\"100foo\", \"1e3em\", \"50%\", \"calc(1+1)\"",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "dim-viewbox-injection.svg",
+      "famille": "dimension",
+      "vecteur": "viewBox qui contient un guillemet fermant et un attribut (echappement a l'ecriture)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "dim-pas-de-dimension.svg",
+      "famille": "dimension",
+      "vecteur": "Ni viewBox ni dimensions",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "transform-liste-immense.svg",
+      "famille": "transform",
+      "vecteur": "Liste de 1 000 transformations composees",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "transform-valeurs-extremes.svg",
+      "famille": "transform",
+      "vecteur": "scale(1e308), matrix(1e300 ...), rotate(1e308), skewX(90)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "transform-syntaxe-etrange.svg",
+      "famille": "transform",
+      "vecteur": "transform illisible, parentheses imbriquees, millions de parentheses",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "chemin-arcs-extremes.svg",
+      "famille": "chemin",
+      "vecteur": "Arcs de rayons 1e300, nuls, negatifs, drapeaux hors 0/1",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "chemin-commandes-inconnues.svg",
+      "famille": "chemin",
+      "vecteur": "Commandes inconnues, repetees 100 000 fois, melange de lettres",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "chemin-8000-points.svg",
+      "famille": "chemin",
+      "vecteur": "Un chemin de 8 000 points (un million a la generation des tests)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "chemin-polyline-points-vides.svg",
+      "famille": "chemin",
+      "vecteur": "polygon / polyline avec points vides, impairs, non numeriques",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "chemin-rect-rayons-extremes.svg",
+      "famille": "chemin",
+      "vecteur": "rect aux rayons rx/ry enormes, negatifs, NaN",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "structure-imbrication-10000.svg",
+      "famille": "structure",
+      "vecteur": "10 000 niveaux de <g> imbriques (debordement de pile des fonctions recursives)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "structure-imbrication-modeste.svg",
+      "famille": "structure",
+      "vecteur": "120 niveaux de <g> : un SVG genere par un outil peut aller aussi loin et doit s'ouvrir",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-freres-10000.svg",
+      "famille": "structure",
+      "vecteur": "10 000 elements freres (100 000 a la generation des tests)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-attributs-5000.svg",
+      "famille": "structure",
+      "vecteur": "Un element portant 5 000 attributs distincts",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "structure-regles-css-nombreuses.svg",
+      "famille": "structure",
+      "vecteur": "2 000 regles CSS sur un dessin de 200 formes (cout regles x formes)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-nom-attribut-tres-long.svg",
+      "famille": "structure",
+      "vecteur": "Nom d'attribut de 50 000 caracteres",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "structure-id-tres-long.svg",
+      "famille": "structure",
+      "vecteur": "Identifiant de 40 000 caracteres reference par un <use>",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-valeur-attribut-longue.svg",
+      "famille": "structure",
+      "vecteur": "Attribut style / class / data de 30 000 caracteres",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-nom-balise-tres-long.svg",
+      "famille": "structure",
+      "vecteur": "Nom d'element de 30 000 caracteres",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "structure-texte-enorme.svg",
+      "famille": "structure",
+      "vecteur": "Un <title> de 150 Ko de texte avec entites",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "structure-commentaires-nombreux.svg",
+      "famille": "structure",
+      "vecteur": "3 000 commentaires et instructions entre les formes",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "encodage-bom-utf8.svg",
+      "famille": "encodage",
+      "vecteur": "Marque d'ordre des octets UTF-8 avant la declaration XML",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "encodage-utf16.svg",
+      "famille": "encodage",
+      "vecteur": "Fichier UTF-16 LE avec BOM (lu comme UTF-8 il devient du texte entrecoupe de zeros)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "encodage-utf8-invalide.svg",
+      "famille": "encodage",
+      "vecteur": "Octets UTF-8 invalides et surrogates isolees dans les valeurs",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "encodage-caracteres-de-controle.svg",
+      "famille": "encodage",
+      "vecteur": "Caracteres de controle (U+0001..U+001F), U+2028/2029, U+FFFE, bidi (U+202E) dans noms et valeurs",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "encodage-hors-plan-bmp.svg",
+      "famille": "encodage",
+      "vecteur": "Caracteres hors du plan multilingue (emoji, astral) dans identifiants et classes",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "encodage-nom-de-fichier-double-extension.svg",
+      "famille": "encodage",
+      "vecteur": "Contenu HTML dans un fichier .svg (type de contenu en conflit)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-texte-avec-evenements.svg",
+      "famille": "divers",
+      "vecteur": "<text>, <tspan>, <textPath> avec gestionnaires et href externe",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "divers-switch-et-conditions.svg",
+      "famille": "divers",
+      "vecteur": "<switch> et attributs requiredExtensions / systemLanguage",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "divers-gradient-lien-externe.svg",
+      "famille": "divers",
+      "vecteur": "Degrades dont href pointe vers l'exterieur (heritage de stops)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-metadata-active.svg",
+      "famille": "divers",
+      "vecteur": "<metadata> contenant du RDF, un script et un lien externe",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-font-svg.svg",
+      "famille": "divers",
+      "vecteur": "Polices SVG (<font-face-uri>, <glyph>) et <altGlyph> qui referencent des ressources",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-cursor-et-view.svg",
+      "famille": "divers",
+      "vecteur": "<cursor> avec href externe et <view>",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-id-prototype.svg",
+      "famille": "divers",
+      "vecteur": "Identifiants et classes __proto__, constructor, hasOwnProperty (pollution des tables de lecture)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "divers-style-proprietes-proto.svg",
+      "famille": "divers",
+      "vecteur": "Proprietes CSS nommees __proto__ / constructor / prototype dans style et feuille",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-url-non-fermes.svg",
+      "famille": "css",
+      "vecteur": "Des milliers de url( jamais fermes dans une feuille : une expression reguliere les relit tous a chaque fois (temps quadratique)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-commentaires-non-fermes.svg",
+      "famille": "css",
+      "vecteur": "Des milliers de /* jamais fermes : un retrait par expression reguliere paresseuse est quadratique",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "parsing-faux-svg-dans-cdata.svg",
+      "famille": "parsing",
+      "vecteur": "Des milliers de faux <svg dans des CDATA et des commentaires avant le vrai (recherche de la racine)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xml-doctype-entite-avec-svg.svg",
+      "famille": "xml",
+      "vecteur": "Un DOCTYPE dont une valeur d'entite contient un faux <svg onload> : la racine est le vrai <svg> qui suit",
+      "attendu": "ouvre"
+    }
+  ]
+}

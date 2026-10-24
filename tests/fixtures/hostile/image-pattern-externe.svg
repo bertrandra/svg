@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><pattern id="p" width="10" height="10" patternUnits="userSpaceOnUse"><image href="https://evil.invalid/x/t.png" width="10" height="10"/></pattern><path d="M10 10h80v80h-80z" fill="url(#p)"/></svg>

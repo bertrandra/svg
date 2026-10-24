@@ -279,6 +279,17 @@ propriétaire et ne sont pas couvertes ici.
 
 ### Sécurité
 
+Le modèle de menaces complet (portes d’entrée, garanties, bornes, preuves) est dans [`securite.md`](securite.md).
+Pour un hôte, l’essentiel :
+
+- **Ce qu’on donne à `ouvrir` est borné et vérifié** : un `svg` de plus de 64 millions de caractères, un titre de plus
+  de 500 caractères, une `baseAnnexes` en `javascript:`, `data:`, `blob:`, `vbscript:` ou `about:`, une `bibliotheque`
+  sans liste `entrees` lèvent un `TypeError` en français ; un `nuancier` mal formé est écarté entrée par entrée.
+  Un SVG trop profond (plus de 1 024 niveaux), trop gros ou trop chargé de tracé ne lève rien : l’éditeur s’ouvre sur
+  un refus nommé (voir `securite.md`, § 4).
+- **Ce que l’éditeur lit dans votre stockage est validé** (types, longueurs, clés de prototype retirées) : une valeur
+  que vous n’avez pas écrite est ignorée, jamais une exception.
+
 - **Le SVG qu’on vous rend est nettoyé** (`nettoyerSvg`, voir plus haut) et, surtout, **réécrit** : l’éditeur
   ne garde que des chemins et des peintures, tout le reste de l’entrée est abandonné ou refusé. Il n’y
   reste ni script, ni `foreignObject`, ni gestionnaire d’évènement, ni ressource externe.

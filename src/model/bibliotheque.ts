@@ -161,6 +161,24 @@ export function construireBibliotheque(icones: Readonly<Record<string, IconeSour
 export interface Correction { nom?: string; evenements?: readonly string[] }
 export type Corrections = Readonly<Record<string, Correction>>;
 
+/**
+ * Les corrections lues d'un stockage ou d'un fichier qu'on n'a pas ecrit : seules gardees celles qui ont un nom (texte) et/ou des
+ * evenements (liste de textes), copiees champ par champ ; un identifiant qui vise un prototype est ecarte.
+ */
+export function lireCorrections(brut: unknown): Corrections {
+  const r: Record<string, Correction> = {};
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return r;
+  for (const [id, c] of Object.entries(brut)) {
+    if (id === '__proto__' || id === 'constructor' || id === 'prototype' || typeof c !== 'object' || c === null) continue;
+    const { nom, evenements } = c as { nom?: unknown; evenements?: unknown };
+    const lue: { nom?: string; evenements?: readonly string[] } = {};
+    if (typeof nom === 'string') lue.nom = nom.slice(0, 200);
+    if (Array.isArray(evenements) && evenements.every(e => typeof e === 'string')) lue.evenements = (evenements as string[]).slice(0, 100);
+    if (lue.nom !== undefined || lue.evenements !== undefined) r[id] = lue;
+  }
+  return r;
+}
+
 /** Les entrees corrigees : le nom et le classement du fichier l'emportent sur ceux du code. */
 export function appliquerCorrections(entrees: readonly EntreeBibliotheque[], corrections: Corrections): EntreeBibliotheque[] {
   return entrees.map(e => {
