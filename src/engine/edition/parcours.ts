@@ -11,6 +11,7 @@ import { facteur, lireTransformation, multiplier, transformerChemin, translation
 import { COULEUR_COURANTE, lirePeintureAlpha } from './peinture.js';
 import { lireTrait } from './trait.js';
 import { lireOpacite } from './opacites.js';
+import { ATTRIBUT_ORIGINE, lireOrigines } from './provenance.js';
 import { cheminDeForme } from './elements.js';
 import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
@@ -97,6 +98,8 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   // Un trait invisible (epaisseur nulle) ne perd rien de ce qu'on ne porte pas.
   for (const msg of [...(epaisseur > 0 ? pertesTrait : []), ...ignoresDeMarqueurs(heritees)]) p.analyse.ignores.add(msg);
   if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
+  // La provenance qu'un SVG ecrit ici porte sur son <path> : on la reprend (rien si absente ou inconnue).
+  const origine = lireOrigines(n.attributs[ATTRIBUT_ORIGINE]);
   p.formes.push({
     id: 'f' + (p.formes.length + 1),
     d: transformerChemin(d, m),
@@ -105,6 +108,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     epaisseur,
     ...styleTrait,
     ...lireOpacites(b.opacite, heritees, fond, trait),
+    ...(origine ? { origine } : {}),
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
     verrouille: false

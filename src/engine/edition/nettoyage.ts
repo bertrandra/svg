@@ -6,6 +6,7 @@ import { boiteForme, seCroisent, unir } from './geometrie.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 import { boiteAvecTrait } from './etendue.js';
 import { memeTrait } from './trait.js';
+import { avecOrigines } from './provenance.js';
 
 /** Retirer les formes pleines dont la boite couvre moins de `part` du plan de travail : les poussieres du trace. */
 export function retirerPetites(dessin: DessinSvg, part: number): { dessin: DessinSvg; retirees: number } {
@@ -33,7 +34,7 @@ export function regrouper(dessin: DessinSvg): { dessin: DessinSvg; reunies: numb
   for (const f of dessin.formes) {
     const precedente = formes[formes.length - 1], b = boiteForme(f);
     if (precedente && b && memeStyle(precedente, f) && boites.every(x => !seCroisent(x, b))) {
-      formes[formes.length - 1] = { ...precedente, d: [...precedente.d, ...f.d] };
+      formes[formes.length - 1] = avecOrigines({ ...precedente, d: [...precedente.d, ...f.d] }, f.origine ?? []);
       boites.push(b);
       reunies++;
       continue;

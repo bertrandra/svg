@@ -37,8 +37,8 @@ const texte = await empaqueter({
   entryPoints: [depuisRacine('outils/editeur-svg/embarque.ts')],
   bundle: true, format: 'iife', target: 'es2020', minify: true, jsx: 'automatic',
   plugins: [feuilles], outfile: depuisRacine('dist/editeur-svg-embarque.js'),
-  banner: { js: '/* Editeur SVG embarquable ' + version + ' : window.EditeurSvg.ouvrir({ svg, onEnregistrer }). Voir docs/integration.md. */' },
-  define: { 'process.env.NODE_ENV': '"production"', VERSION_EMBARQUEE: JSON.stringify(version) }
+  banner: { js: '/* Editeur SVG embarquable ' + version + ' : window.EditeurSvg.ouvrir({ svg, onEnregistrer }). Voir docs/integration.md. Mentions des composants tiers : MENTIONS.txt. */' },
+  define: { 'process.env.NODE_ENV': '"production"', VERSION_EMBARQUEE: JSON.stringify(version), VERSION_PRODUIT: JSON.stringify(version) }
 });
 if (!texte.includes('EditeurSvg')) throw new Error('le bundle ne pose pas window.EditeurSvg');
 ecrireDansDist('editeur-svg-embarque.js', texte);

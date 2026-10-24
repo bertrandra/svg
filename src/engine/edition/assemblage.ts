@@ -5,6 +5,7 @@ import type { Boite, Chemin, Commande, DessinSvg, Forme } from './types.js';
 import { boiteForme, echelle, multiplier, transformerChemin, translation, unir } from './geometrie.js';
 import { prochainId } from './operations.js';
 import { echellerTrait } from './trait.js';
+import { avecOrigines, originesDe } from './provenance.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -35,7 +36,8 @@ export function combiner(dessin: DessinSvg, ids: readonly string[]): { dessin: D
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille);
   const haute = choisies[choisies.length - 1];
   if (!haute || choisies.length < 2) return { dessin, id: null };
-  const unie: Forme = { ...haute, d: choisies.flatMap(f => f.d) };
+  // La forme unie descend de toutes les autres : elle garde leurs origines, pas seulement celles de la plus haute.
+  const unie: Forme = avecOrigines({ ...haute, d: choisies.flatMap(f => f.d) }, originesDe(choisies));
   const formes = dessin.formes.filter(f => !voulus.has(f.id) || f.verrouille || f === haute).map(f => (f === haute ? unie : f));
   return { dessin: { ...dessin, formes }, id: unie.id };
 }

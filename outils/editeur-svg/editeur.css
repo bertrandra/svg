@@ -290,3 +290,15 @@
   .editeur-svg-toile .reticule line { stroke: Highlight; }
   .editeur-svg-toile .reticule circle { fill: Highlight; stroke: Canvas; }
 }
+/* La boite « A propos et credits » : modale, au-dessus de l'editeur et de ses menus ; elle ne defile que dans sa boite. */
+.credits-voile { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 16px; background: var(--voile); }
+.credits-dialogue { width: min(640px, 100%); max-height: 100%; overflow: auto; padding: 20px; border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); color: var(--encre); box-shadow: 0 8px 24px var(--ombre-menu); font-size: 0.88rem; outline: 0; }
+.credits-dialogue:focus-visible { box-shadow: 0 8px 24px var(--ombre-menu), 0 0 0 2px var(--cyan); }
+.credits-dialogue h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.credits-dialogue h3 { font-size: 0.9rem; margin: 14px 0 6px; }
+.credits-dialogue p { margin: 0 0 8px; }
+.credits-dialogue ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.credits-dialogue a { color: var(--cyan); text-decoration: underline; }
+.credits-dialogue code { font-family: var(--mono); font-size: 0.82rem; }
+.credits-dialogue .actions { margin-top: 16px; justify-content: flex-end; }
+@media (forced-colors: active) { .credits-dialogue { border: 2px solid CanvasText; } }

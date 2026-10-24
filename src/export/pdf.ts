@@ -3,7 +3,8 @@
 // sa regle de remplissage. Pur et deterministe : ni date, ni identifiant tire au sort, pour que le
 // meme dessin donne toujours les memes octets.
 
-import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, originesDe, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { mentionOrigines } from '../model/credits.js';
 
 const nb = (v: number) => { const r = Number(v.toFixed(3)); return Object.is(r, -0) ? '0' : String(r); };
 
@@ -91,7 +92,7 @@ export function ecrirePdf(dessin: DessinSvg): Uint8Array {
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + nb(l) + ' ' + nb(h) + '] /Contents 4 0 R /Resources <<' + extg + ' >> >>',
     '<< /Length ' + octetsDe(contenu) + ' >>\nstream\n' + contenu + '\nendstream',
-    '<< /Producer (svg) >>'
+    '<< /Producer (svg)' + sujetDeCredit(visibles) + ' >>'
   ];
   let corps = '%PDF-1.4\n%âãÏÓ\n';
   const positions: number[] = [];
@@ -100,6 +101,13 @@ export function ecrirePdf(dessin: DessinSvg): Uint8Array {
   corps += 'xref\n0 ' + (objets.length + 1) + '\n0000000000 65535 f \n' + positions.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('');
   corps += 'trailer\n<< /Size ' + (objets.length + 1) + ' /Root 1 0 R /Info 5 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
   return latin1(corps);
+}
+
+/** La mention des formes creditees (CC BY 3.0) dans le dictionnaire d'informations : ` /Subject (…)`, ou rien sans forme creditee. */
+function sujetDeCredit(visibles: readonly Forme[]): string {
+  const mention = mentionOrigines(originesDe(visibles));
+  // La mention est en ASCII (model/credits.ts) ; seuls \, ( et ) s'echappent dans une chaine PDF.
+  return mention ? ' /Subject (' + mention.replace(/[\\()]/g, c => '\\' + c) + ')' : '';
 }
 
 /** La longueur en octets d'un texte ecrit en latin-1 : un octet par caractere. */

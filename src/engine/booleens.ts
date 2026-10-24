@@ -7,7 +7,7 @@
 // ou selon le sens du trace.
 
 import clipping, { type MultiPolygon, type Pair, type Polygon, type Ring } from 'polygon-clipping';
-import { ancre, depart, prochainId, type Chemin, type Commande, type DessinSvg, type Forme } from './editionSvg.js';
+import { ancre, avecOrigines, depart, originesDe, prochainId, type Chemin, type Commande, type DessinSvg, type Forme } from './editionSvg.js';
 import { reconstruireAnneau } from './edition/ajustement.js';
 
 export type Booleen = 'union' | 'soustraction' | 'intersection' | 'exclusion';
@@ -152,7 +152,8 @@ export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: 
     // Rien ne reste : la forme la plus basse disparait avec les autres, comme dans un logiciel de dessin.
     return { dessin: { ...dessin, formes: dessin.formes.filter(f => !voulus.has(f.id) || f.verrouille || !f.visible) }, id: null };
   }
-  const forme: Forme = { ...basse, id: 'f' + prochainId(dessin), d, regle: 'nonzero' };
+  // Le resultat descend de toutes les formes de l'operation (meme la soustraite : son contour a taille le resultat).
+  const forme: Forme = avecOrigines({ ...basse, id: 'f' + prochainId(dessin), d, regle: 'nonzero' }, originesDe(choisies));
   const formes = dessin.formes.flatMap(f => (f === basse ? [forme] : voulus.has(f.id) && !f.verrouille && f.visible ? [] : [f]));
   return { dessin: { ...dessin, formes }, id: forme.id };
 }

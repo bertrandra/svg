@@ -41,6 +41,13 @@ export interface Forme {
   readonly jonction?: JonctionNonRonde;
   /** Le rapport de pointe a epaisseur au-dela duquel une jonction `miter` est biseautee ; absent pour 4, et sans effet hors `miter`. */
   readonly limiteMitre?: number;
+  /**
+   * La provenance de la forme : les origines creditees dont elle vient (`game-icons:3d-glasses`), triees et sans
+   * doublon, jamais vide. ABSENTE pour toute forme dessinee ici ou lue sans marque : elle ne change alors aucun
+   * octet ecrit. Une forme qui en porte fait ecrire `data-origine` et l'element <metadata> d'attribution
+   * (provenance.ts) ; un assemblage (combiner, booleens, regrouper) garde l'union des origines de ses parties.
+   */
+  readonly origine?: readonly string[];
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;
