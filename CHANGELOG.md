@@ -42,6 +42,14 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Ajouté
 
+- **Un registre de jetons de couleur** (ADR-0007, `src/styles/jetons.ts`, documenté dans
+  `docs/jetons.md`) : chaque couleur de l'interface a un rôle, une valeur claire, une valeur sombre et
+  une description ; le CSS des variables est généré au build, et la page n'écrit plus aucune couleur
+  (damier, fonds de la toile et ombres sont devenus des jetons). Les contrastes texte-fond sont des
+  données tenues à 4,5:1 (WCAG AA) dans les deux thèmes (`contraste` dans `util/couleur.ts`), et un
+  test confronte le registre à la page et au code (aucune couleur en dur, aucun jeton orphelin). Deux
+  jetons morts (`ok`, `ok-fond`) sont retirés ; l'interface ne change pas.
+
 - **Calques par couleur, suite** : recolorer une couleur depuis sa ligne (sélecteur ou nuancier, selon
   Fond / Trait / Les deux, un seul Ctrl+Z par geste) ; « Sélectionner la même couleur » (menu Édition,
   touche C) ; nuances proches (distance perçue OKLab, curseur de tolérance) à sélectionner ou à
