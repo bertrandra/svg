@@ -70,6 +70,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   par défaut, seul `.primaire` est plein ; la barre garde l'outil fréquent, les menus (`Menu.tsx`) le
   reste avec son raccourci ; un panneau se range en `Section` ; au doigt, 40 px et `prefers-reduced-motion`
   respecté.
+- **Une couleur d'interface est un jeton** (ADR-0007) : `src/styles/jetons.ts` est la seule source (rôle, valeur
+  claire et sombre, description) ; le CSS des variables se génère au build, la page n'écrit aucune couleur,
+  un test confronte registre, page et code, et chaque texte sur son fond tient 4,5:1 dans les deux thèmes.
+  `docs/jetons.md` se régénère par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/styles`.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

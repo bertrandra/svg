@@ -105,7 +105,8 @@ image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page et son point d'entrée ; `scripts/construire.mjs` y embarque le moteur, `scripts/bibliotheque.mjs` construit la bibliothèque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
-| `docs/adr/` | Les décisions, une par fichier |
+| `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
+| `docs/adr/` | Les décisions, une par fichier ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur
