@@ -5,6 +5,7 @@
 
 import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
+import { urlAnnexe } from './annexes.js';
 
 export interface PoliceEmbarquee { id: string; nom: string; base64: string }
 export interface Police { id: string; nom: string; glyphes: Glyphes }
@@ -42,7 +43,7 @@ export function chargerPolices(): Promise<Police[]> {
     const w = window as unknown as { __policesSvg?: PoliceEmbarquee[] };
     if (w.__policesSvg) { ok(w.__policesSvg); return; }
     const s = document.createElement('script');
-    s.src = FICHIER_POLICES;
+    s.src = urlAnnexe(FICHIER_POLICES);
     s.onload = () => { s.remove(); if (w.__policesSvg) ok(w.__policesSvg); else ko(new Error('Le fichier ' + FICHIER_POLICES + ' ne contient pas les polices.')); };
     s.onerror = () => { s.remove(); ko(new Error('Le fichier ' + FICHIER_POLICES + ' est introuvable à côté de la page : lancez « npm run construire ».')); };
     document.head.appendChild(s);

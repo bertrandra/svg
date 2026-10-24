@@ -1,0 +1,24 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--table); color: var(--encre); font-family: var(--sans); font-size: 14px; line-height: 1.45; }
+/* Un bouton est secondaire par defaut : un filet, de l'encre. Une seule action par panneau porte la
+   couleur d'outil (.primaire) ; .discret est un lien en forme de bouton. */
+button { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--filet); background: transparent; color: var(--encre); cursor: pointer; transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.12s; }
+button:where(:not(.icone-bouton, .discret, .primaire, .menu-element, .danger)):hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button.primaire { border-color: var(--cyan); background: var(--cyan); color: var(--sur-cyan); }
+button.primaire:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 86%, black); }
+button.discret { border-color: transparent; background: transparent; color: var(--cyan); }
+button.discret:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 10%, transparent); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+input[type="text"], select, textarea { font: inherit; font-size: 0.85rem; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--filet); border-radius: 5px; background: var(--table); color: var(--encre); }
+textarea { font-family: var(--mono); font-size: 0.78rem; resize: vertical; }
+input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid var(--filet); border-radius: 5px; background: none; flex: none; }
+.aide { font-size: 0.7rem; color: var(--encre-douce); }
+.mini-onglets { display: flex; gap: 2px; background: var(--table); border-radius: 6px; padding: 2px; }
+.mini-onglets button { flex: 1; background: transparent; color: var(--encre-douce); border: 0; padding: 5px 6px; font-size: 0.78rem; white-space: nowrap; }
+.mini-onglets button[aria-pressed="true"] { background: var(--cyan); color: var(--sur-cyan); }
+.mini-onglets button:hover:not(:disabled):not([aria-pressed="true"]) { color: var(--encre); background: var(--panneau); }

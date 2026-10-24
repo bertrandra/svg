@@ -3,6 +3,7 @@
 // que quand on l'ouvre. Une balise <script> plutot qu'un fetch : cela marche aussi depuis le disque.
 
 import type { EntreeBibliotheque, Evenement } from '../model/bibliotheque.js';
+import { urlAnnexe } from './annexes.js';
 
 export interface Bibliotheque {
   source: string;
@@ -24,7 +25,7 @@ export function chargerBibliotheque(): Promise<Bibliotheque> {
     const w = window as unknown as { __bibliothequeSvg?: Bibliotheque };
     if (w.__bibliothequeSvg) { ok(w.__bibliothequeSvg); return; }
     const s = document.createElement('script');
-    s.src = FICHIER_BIBLIOTHEQUE;
+    s.src = urlAnnexe(FICHIER_BIBLIOTHEQUE);
     s.onload = () => { s.remove(); if (w.__bibliothequeSvg) ok(w.__bibliothequeSvg); else ko(new Error('Le fichier ' + FICHIER_BIBLIOTHEQUE + ' ne contient pas la bibliothèque.')); };
     s.onerror = () => { s.remove(); ko(new Error('Le fichier ' + FICHIER_BIBLIOTHEQUE + ' est introuvable à côté de la page : lancez « npm run bibliotheque ».')); };
     document.head.appendChild(s);

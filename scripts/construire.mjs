@@ -10,6 +10,7 @@ import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { feuillesEditeur } from './feuilles.mjs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dossier = join(racine, 'outils/editeur-svg');
@@ -42,8 +43,14 @@ const moteur = outputFiles[0]?.text ?? '';
 if (moteur.includes('</script')) throw new Error('le moteur contient « </script » : la page serait coupee');
 
 const page = readFileSync(join(dossier, 'page.html'), 'utf8');
-if (!page.includes('/*MOTEUR*/')) throw new Error('page.html ne porte plus le repere /*MOTEUR*/');
+// Les styles de l'editeur vivent hors de la page (scripts/feuilles.mjs), partages avec l'embarquement
+// (scripts/embarquer.mjs) : la page les remet a leur place, entre ses propres regles, pour que la
+// cascade reste celle d'avant.
+const REPERES = ['/*MOTEUR*/', '/*JETONS*/', '/*STYLE_BASE*/', '/*STYLE_EDITEUR*/'];
+for (const repere of REPERES) if (!page.includes(repere)) throw new Error('page.html ne porte plus le repere ' + repere);
 mkdirSync(join(racine, 'dist'), { recursive: true });
 const sortie = join(racine, 'dist/editeur-svg.html');
-writeFileSync(sortie, page.replace('/*MOTEUR*/', () => moteur));
+const feuilles = feuillesEditeur(racine);
+writeFileSync(sortie, page.replace('/*JETONS*/', () => feuilles.jetons).replace('/*STYLE_BASE*/', () => feuilles.base)
+  .replace('/*STYLE_EDITEUR*/', () => feuilles.editeur).replace('/*MOTEUR*/', () => moteur));
 console.log('Page construite : dist/editeur-svg.html (' + Math.round(moteur.length / 1024) + ' Ko de moteur).');
