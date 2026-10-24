@@ -5,8 +5,34 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Modifié
+
+- **Passe d'interface : menus, sections, trois voies** (ADR-0006) :
+  - la barre de l'éditeur ne garde que les outils, les couleurs, l'historique et le zoom ; les formes
+    se rangent derrière un outil à chevron, et les menus **Vue**, **Édition** et **Fichier** portent le
+    reste, avec leurs raccourcis, au clavier comme à la souris ;
+  - l'accueil devient une entrée et trois voies côte à côte (ouvrir un SVG, convertir une image,
+    bibliothèque) ; le nuancier est replié ;
+  - l'inspecteur est à plat, en sections repliables, et ne répète plus la rangée de sélection ;
+  - un bouton est secondaire par défaut, une seule action par panneau est pleine ; « Supprimer » est
+    un contour rouge ;
+  - les tiroirs mobiles glissent et se ferment sur un voile, la toile prend le focus clavier avec un
+    anneau visible, `prefers-reduced-motion` coupe les animations ;
+  - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
+    agrandies.
+
+### Corrigé
+
+- Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
+
 ### Ajouté
 
+- **Calques par couleur** (ADR-0006) : dans le panneau Calques, une section « Par couleur » liste
+  chaque couleur du dessin, lue sur le remplissage, le contour ou les deux. Un clic choisit ses formes
+  (Maj : les ajoute à la sélection) ; des boutons les masquent ou les affichent, les verrouillent ou
+  les déverrouillent ; un menu les combine en une forme, n'affiche qu'elles, ou les supprime. Une
+  couleur dont tout est masqué reste dans la liste, pour pouvoir la rendre. S'y ajoutent « Inverser »
+  la sélection et « Tout afficher » en tête du panneau.
 - **Neuf chantiers pour créer, pas seulement retoucher** (ADR-0004) :
   - **booléens** : union, soustraction, intersection, exclusion, dans la rangée de sélection et
     l'inspecteur ; le résultat est en segments droits, au style de la forme la plus basse ;
@@ -51,6 +77,20 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   tracé, au style de la plus haute), **Séparer** (Ctrl+Maj+G : une forme en un tracé par
   sous-chemin, pour recolorer les parties d'une silhouette de la bibliothèque), dupliquer, masquer,
   verrouiller, supprimer.
+- **Un atelier de résultat sous « Convertir une image en SVG »** (ADR-0005) :
+  - **l'image déposée s'affiche aussitôt**, en miniature dans la zone de dépôt, puis dans la
+    visionneuse en « Originale » et « Détourée » ;
+  - **une visionneuse** : comparer (un rideau entre l'image détourée et les vecteurs), rendu,
+    contours, détourée, originale ; zoom ajusté, 100, 200 et 400 % ; fond damier, blanc ou sombre ;
+    le poids, le nombre de tracés, le temps et les réglages du résultat ;
+  - **des réglages fins du traceur** : couleurs retenues, poussières, simplification, angles vifs,
+    précision des couleurs, écart entre couches, courbes lissées ou segments droits, formes empilées
+    ou découpées. Chaque curseur montre la valeur du mode, se marque quand on s'en écarte et revient
+    d'un clic ; chaque mode ne propose que ceux qui y changent quelque chose ;
+  - **rejouer** à chaque changement (après une courte pause, désactivable) ou à la demande ; un
+    résultat qui arrive après un lancement plus récent est jeté ;
+  - **les huit derniers essais**, avec miniature, résumé des réglages, tracés, poids et temps : un
+    clic reprend les réglages et le résultat, sans relancer le traceur.
 - **Détourage sur toute l'image** : une case « Sur toute l'image : transparence complète de cette
   couleur » efface la couleur du fond partout, y compris à l'intérieur des formes, au lieu des
   seuls pixels reliés au bord. Le résumé dit la portée choisie.

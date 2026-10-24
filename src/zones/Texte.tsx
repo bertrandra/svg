@@ -66,7 +66,7 @@ export function PanneauTexte({ ed }: { ed: Edition }) {
         <label className="champ-ligne"><span>Espace</span><input type="text" inputMode="decimal" value={String(interlettrage)} onChange={e => poserInterlettrage(Number(e.target.value.replace(',', '.')) || 0)} title="Interlettrage, en part de la taille" /></label>
       </div>
       <div className="boutons">
-        <button type="button" disabled={!police || !texte.trim()} onClick={ajouter}>Ajouter le texte</button>
+        <button type="button" className="primaire" disabled={!police || !texte.trim()} onClick={ajouter}>Ajouter le texte</button>
         <button type="button" className="discret" onClick={() => entree.current?.click()}>Déposer une fonte TTF/OTF…</button>
         <input ref={entree} type="file" accept=".ttf,.otf,font/ttf,font/otf" hidden onChange={e => { deposer(e.target.files?.[0]); e.target.value = ''; }} />
       </div>

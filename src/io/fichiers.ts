@@ -12,6 +12,9 @@ function hote(): Hote | null {
 
 export const texteOctets = (t: string): Uint8Array => new TextEncoder().encode(t);
 
+/** Laisse le navigateur peindre avant un calcul long : le message « en cours » se voit avant que la page ne se fige. */
+export const pause = (): Promise<void> => new Promise(ok => requestAnimationFrame(() => setTimeout(ok, 0)));
+
 /** Propose un fichier au telechargement ; rend la phrase a montrer. */
 export async function proposer(nom: string, donnees: Uint8Array | Blob): Promise<string> {
   const blob = donnees instanceof Blob ? donnees : new Blob([donnees as BlobPart]);

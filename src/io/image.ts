@@ -7,25 +7,14 @@
 
 import { nettoyerSvg } from '../util/svg.js';
 import { couleursPixels, type CouleurExtraite } from '../engine/extraction.js';
-import { detourer, TOLERANCE_DEFAUT, type Detourage, type PorteeDetourage } from '../engine/detourage.js';
-import { aTracer, compterTraces, optionsTraceur, svgDuTraceur, TRACES_MAX, type Finesse, type ModeVectorisation, type Traceur } from '../engine/vectorisation.js';
+import { detourer, type Detourage } from '../engine/detourage.js';
+import { aTracer, compterTraces, optionsTraceur, svgDuTraceur, TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '../engine/vectorisation.js';
 import { chargerTraceur } from './vtracer.js';
+
+export { TRAITEMENT_DEFAUT, type Traitement };
 
 /** L'image deposee, avant tout detourage, a la taille ou on la traite : de quoi tout refaire. */
 export interface SourceImage { pixels: Uint8ClampedArray; largeur: number; hauteur: number }
-
-/** Ce qu'on fait d'une image deposee : son fond, et sa forme (image enveloppee, ou vecteurs). */
-export interface Traitement {
-  detourer: boolean;
-  /** L'ecart percu jusqu'auquel un pixel est encore du fond. */
-  tolerance: number;
-  /** Depuis le bord seulement, ou partout dans l'image (transparence complete de cette couleur). */
-  portee: PorteeDetourage;
-  /** Null : l'image reste une image, enveloppee dans un SVG. */
-  vecteurs: null | { mode: ModeVectorisation; finesse: Finesse };
-}
-
-export const TRAITEMENT_DEFAUT: Traitement = { detourer: true, tolerance: TOLERANCE_DEFAUT, portee: 'bord', vecteurs: { mode: 'aplats', finesse: 'normale' } };
 
 export interface ImageConvertie {
   svg: string;
@@ -38,6 +27,8 @@ export interface ImageConvertie {
   traitement: Traitement;
   /** Le nombre de traces d'une image vectorisee ; null pour une image enveloppee. */
   traces: number | null;
+  /** Le temps du traitement, en millisecondes : la mesure d'un essai, jamais une entree du calcul. */
+  duree: number;
 }
 
 /** Au-dela, une image pese pour rien : un dessin se lit a cette taille sur tout support. */
@@ -83,6 +74,7 @@ const raison = (e: unknown): string => (e instanceof Error ? e.message : String(
  * charge au premier besoin ; une image tracee en milliers de formes n'est plus un dessin, et c'est dit.
  */
 export async function traiterImage(source: SourceImage, traitement: Traitement, traceur?: Traceur): Promise<ImageConvertie | { erreur: string }> {
+  const debut = performance.now();
   const { largeur: l, hauteur: h } = source;
   const pixels = new Uint8ClampedArray(source.pixels);
   const detourage = traitement.detourer ? detourer(pixels, l, h, traitement.tolerance, traitement.portee) : null;
@@ -90,15 +82,16 @@ export async function traiterImage(source: SourceImage, traitement: Traitement, 
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
   const couleurs = couleursDe(t);
   const commun = { couleurs, detourage: detourage?.retires ? detourage : null, source, traitement };
+  const duree = () => Math.max(1, Math.round(performance.now() - debut));
   if (!traitement.vecteurs) {
     const propre = nettoyerSvg(envelopper(t.toDataURL('image/png'), l, h));
     if (!propre) return { erreur: 'Cette image ne s’enveloppe pas : déposez un autre PNG ou JPG.' };
-    return { ...commun, svg: propre.svg, matriciel: true, traces: null };
+    return { ...commun, svg: propre.svg, matriciel: true, traces: null, duree: duree() };
   }
   if (!aTracer(pixels)) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
   let tracer: Traceur;
   try { tracer = traceur ?? await chargerTraceur(); } catch (e) { return { erreur: 'Le vectoriseur ne s’est pas chargé dans ce navigateur (' + raison(e) + ').' }; }
-  const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex));
+  const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex), traitement.vecteurs.fins);
   let brut: string;
   try { brut = tracer(new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength), l, h, options); } catch (e) { return { erreur: 'La vectorisation a échoué sur cette image : changez de mode ou de grain (' + raison(e) + ').' }; }
   const propre = nettoyerSvg(svgDuTraceur(brut));
@@ -106,7 +99,20 @@ export async function traiterImage(source: SourceImage, traitement: Traitement, 
   const traces = compterTraces(propre.svg);
   if (!traces) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
   if (traces > TRACES_MAX) return { erreur: traces + ' tracés : c’est une photo plus qu’un dessin. Choisissez un grain plus lisse.' };
-  return { ...commun, svg: propre.svg, matriciel: false, traces };
+  return { ...commun, svg: propre.svg, matriciel: false, traces, duree: duree() };
+}
+
+/**
+ * L'image telle que le traitement la laisserait avant de la tracer : detouree si le traitement le
+ * veut, en PNG. C'est la moitie gauche de la comparaison, calculee sans le traceur, donc instantanee.
+ */
+export function apercuDetoure(source: SourceImage, traitement: Pick<Traitement, 'detourer' | 'tolerance' | 'portee'>): string {
+  const { largeur: l, hauteur: h } = source;
+  const pixels = new Uint8ClampedArray(source.pixels);
+  if (traitement.detourer) detourer(pixels, l, h, traitement.tolerance, traitement.portee);
+  const { t, ctx } = toile(l, h);
+  ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
+  return t.toDataURL('image/png');
 }
 
 /** Decode une image PNG, JPG, GIF ou WebP, reduite a COTE_MAX : la source sur laquelle tout se rejoue. */

@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { convertPixels } from '@visioncortex/vtracer';
-import { aTracer, compterTraces, svgContours, optionsTraceur, svgDuTraceur, TRACES_MAX, type Traceur } from '../../../src/engine/vectorisation.js';
+import {
+  aTracer, cleTraitement, compterTraces, optionsTraceur, parametresDuMode, PARAMETRES_FINS, poserFin, resumeReglages, retirerFin, svgContours, svgDuTraceur,
+  TRACES_MAX, TRAITEMENT_DEFAUT, valeursParDefaut, type Traceur
+} from '../../../src/engine/vectorisation.js';
 import { detourer } from '../../../src/engine/detourage.js';
 import { couleursPixels } from '../../../src/engine/extraction.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
@@ -118,5 +121,92 @@ describe('svgContours', () => {
 
   it('rend tel quel un texte sans svg', () => {
     expect(svgContours('rien')).toBe('rien');
+  });
+});
+
+
+describe('les reglages fins', () => {
+  it('ne changent rien tant qu on n y touche pas, et l emportent sur le mode quand on y touche', () => {
+    const couleurs = ['#c81e28', '#1428a0', '#000000', '#ffffff'];
+    expect(optionsTraceur('aplats', 'normale', couleurs, {})).toEqual(optionsTraceur('aplats', 'normale', couleurs));
+    const o = optionsTraceur('aplats', 'normale', couleurs, { filterSpeckle: 9, simplify: 2.5, cornerThreshold: 120, colorPrecision: 3, layerDifference: 30, couleursMax: 2, courbes: 'polygon', empilement: 'cutout' });
+    expect(o).toMatchObject({ filterSpeckle: 9, simplify: 2.5, cornerThreshold: 120, colorPrecision: 3, layerDifference: 30, mode: 'polygon', hierarchical: 'cutout' });
+    expect(o.palette).toEqual(['#c81e28', '#1428a0']);
+    // Sans palette, c'est le nombre maximal de couleurs qui borne le traceur.
+    expect(optionsTraceur('aplats', 'normale', [], { couleursMax: 3 }).maxColors).toBe(3);
+    // Un simplify a 0 se retire : le traceur garde tous ses points.
+    expect(optionsTraceur('aplats', 'normale', couleurs, { simplify: 0 }).simplify).toBeUndefined();
+    // Les modes sans palette ignorent couleursMax, et le trait ne pose l'angle que s'il est touche.
+    expect(optionsTraceur('trait', 'fine', couleurs, { couleursMax: 2 })).toEqual(optionsTraceur('trait', 'fine', couleurs));
+    expect(optionsTraceur('trait', 'fine', couleurs, { cornerThreshold: 90 }).cornerThreshold).toBe(90);
+    expect(optionsTraceur('fidele', 'lisse', couleurs, { colorPrecision: 4 })).toMatchObject({ preset: 'poster', colorPrecision: 4, layerDifference: 8 });
+  });
+
+  it('donnent les valeurs du mode, et ne gardent que ce qui s en ecarte', () => {
+    expect(valeursParDefaut('aplats', 'normale', 3)).toMatchObject({ filterSpeckle: 4, simplify: 0.8, cornerThreshold: 60, colorPrecision: 6, layerDifference: 16, couleursMax: 3, courbes: 'spline', empilement: 'stacked' });
+    expect(valeursParDefaut('fidele', 'fine')).toMatchObject({ filterSpeckle: 2, simplify: 0, colorPrecision: 7, layerDifference: 8, couleursMax: 8 });
+    expect(valeursParDefaut('aplats', 'fine', 20).couleursMax).toBe(8);
+    const d = valeursParDefaut('aplats', 'normale');
+    const a = poserFin(undefined, 'filterSpeckle', 9, d.filterSpeckle);
+    expect(a).toEqual({ filterSpeckle: 9 });
+    expect(poserFin(a, 'courbes', 'polygon', d.courbes)).toEqual({ filterSpeckle: 9, courbes: 'polygon' });
+    // Remettre la valeur du mode retire le reglage ; plus rien de touche, plus d'objet.
+    expect(poserFin(a, 'filterSpeckle', d.filterSpeckle, d.filterSpeckle)).toBeUndefined();
+    expect(retirerFin({ filterSpeckle: 9, courbes: 'polygon' }, 'courbes')).toEqual({ filterSpeckle: 9 });
+    expect(retirerFin({ filterSpeckle: 9 }, 'filterSpeckle')).toBeUndefined();
+  });
+
+  it('proposent a chaque mode les seuls curseurs qui y changent quelque chose', () => {
+    expect(parametresDuMode('aplats').map(p => p.id)).toEqual(['couleursMax', 'filterSpeckle', 'simplify', 'cornerThreshold', 'colorPrecision', 'layerDifference']);
+    expect(parametresDuMode('trait').map(p => p.id)).toEqual(['filterSpeckle', 'simplify', 'cornerThreshold']);
+    expect(parametresDuMode('fidele').map(p => p.id)).toEqual(['filterSpeckle', 'simplify', 'cornerThreshold', 'colorPrecision', 'layerDifference']);
+    for (const p of PARAMETRES_FINS) { expect(p.min).toBeLessThan(p.max); expect(p.pas).toBeGreaterThan(0); expect(p.aide.length).toBeGreaterThan(20); }
+  });
+
+  it('se resument en une ligne, et se comparent par une cle independante de l ordre des champs', () => {
+    expect(resumeReglages({ mode: 'aplats', finesse: 'normale' })).toBe('Aplats · normal');
+    expect(resumeReglages({ mode: 'trait', finesse: 'fine', fins: { filterSpeckle: 8, courbes: 'polygon', couleursMax: 3 } })).toBe('Trait · fin · poussières 8 · couleurs 3 · segments droits');
+    const a = { ...TRAITEMENT_DEFAUT, vecteurs: { mode: 'aplats' as const, finesse: 'fine' as const, fins: { courbes: 'polygon' as const, filterSpeckle: 3 } } };
+    const b = { vecteurs: { fins: { filterSpeckle: 3, courbes: 'polygon' as const }, finesse: 'fine' as const, mode: 'aplats' as const }, portee: 'bord' as const, tolerance: TRAITEMENT_DEFAUT.tolerance, detourer: true };
+    expect(cleTraitement(a)).toBe(cleTraitement(b));
+    expect(cleTraitement(a)).not.toBe(cleTraitement(TRAITEMENT_DEFAUT));
+    expect(cleTraitement({ ...TRAITEMENT_DEFAUT, portee: 'partout' })).not.toBe(cleTraitement(TRAITEMENT_DEFAUT));
+    expect(cleTraitement({ ...TRAITEMENT_DEFAUT, vecteurs: null })).not.toBe(cleTraitement(TRAITEMENT_DEFAUT));
+  });
+});
+
+describe('les reglages fins sur le vrai traceur', () => {
+  /** Le logo, avec quatre poussieres de 3 x 3 pixels : de quoi voir le curseur « Poussieres » agir. */
+  function logoPoussieres(): Uint8ClampedArray {
+    const l = 120, p = logo(l, 80);
+    for (const [x0, y0] of [[5, 5], [100, 70], [60, 12], [8, 70]]) {
+      for (let y = y0 ?? 0; y < (y0 ?? 0) + 3; y++) for (let x = x0 ?? 0; x < (x0 ?? 0) + 3; x++) p.set([60, 60, 60, 255], (y * l + x) * 4);
+    }
+    return p;
+  }
+  const lancer = (mode: 'aplats' | 'trait' | 'fidele', finesse: 'fine' | 'normale' | 'lisse', fins = {}) => {
+    const p = logoPoussieres();
+    detourer(p, 120, 80);
+    const couleurs = couleursPixels(p).map(c => c.hex);
+    return svgDuTraceur(traceur(new Uint8Array(p.buffer), 120, 80, optionsTraceur(mode, finesse, couleurs, fins)));
+  };
+  const commandes = (svg: string) => [...new Set((svg.match(/ d="([^"]*)"/g) ?? []).join(' ').replace(/ d=/g, '').match(/[A-Za-z]/g) ?? [])].sort().join('');
+
+  it('ignorent les poussieres a la demande, et rejouent le meme SVG pour les memes reglages', () => {
+    const avec = lancer('aplats', 'fine', { filterSpeckle: 0 }), sans = lancer('aplats', 'fine', { filterSpeckle: 16 });
+    expect(compterTraces(sans)).toBeLessThan(compterTraces(avec));
+    expect(lancer('aplats', 'fine', { filterSpeckle: 16 })).toBe(sans);
+  });
+
+  it('tracent en segments droits, ou en formes decoupees, ou avec moins de couleurs, ou plus simples', () => {
+    const base = lancer('aplats', 'fine');
+    expect(commandes(base)).toMatch(/[Cc]/);
+    const droit = lancer('aplats', 'fine', { courbes: 'polygon' });
+    expect(commandes(droit)).not.toMatch(/[Cc]/);
+    expect(droit.length).toBeLessThan(base.length);
+    expect(compterTraces(lancer('aplats', 'fine', { empilement: 'cutout' }))).toBeGreaterThan(compterTraces(base));
+    const couleurs = (svg: string) => new Set(svg.match(/fill="#[0-9A-Fa-f]{6}"/g)).size;
+    expect(couleurs(lancer('aplats', 'fine', { couleursMax: 2 }))).toBe(2);
+    expect(lancer('aplats', 'fine', { simplify: 4 }).length).toBeLessThan(base.length);
   });
 });

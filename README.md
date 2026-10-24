@@ -7,9 +7,12 @@ s'embarque aussi comme composant React dans un autre produit.
 ## Ce que fait la page
 
 - **Ouvrir un SVG** : un fichier déposé, un code collé, ou l'exemple.
-- **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, fond détouré (tolérance réglable), puis
-  vectorisé par vtracer (modes aplats, trait, fidèle ; trois grains) ou enveloppé tel quel. Le
-  résultat se voit en rendu et en contours, se télécharge, se copie, s'ouvre dans l'éditeur.
+- **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, affiché dès le dépôt, fond détouré
+  (tolérance et portée réglables), puis vectorisé par vtracer (modes aplats, trait, fidèle ; trois
+  grains) ou enveloppé tel quel. Un atelier sous le dépôt montre l'image et son tracé (rideau de
+  comparaison, rendu, contours, zoom, fond), expose huit réglages fins du traceur qui se rejouent à
+  chaque changement, et garde les huit derniers essais pour comparer et revenir. Le résultat se
+  télécharge, se copie, s'ouvre dans l'éditeur.
 - **Choisir une forme** dans la bibliothèque : 4 134 silhouettes nommées en français, cherchées par
   nom et par événement du calendrier (Noël, Pâques, Halloween, 14 Juillet…), de la vie
   (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…).
@@ -95,7 +98,7 @@ image. Le moteur seul (`src/engine/editionSvg.ts`) s'utilise sans React ni DOM.
 | `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
 | `src/export/` | Le PDF vectoriel et le SVG de découpe. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
-| `src/zones/` | `EditeurSvg.tsx` (le composant), ses panneaux (`Texte`, `Palettes`, `Versions`, `Exporter`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page), `session.ts` |
+| `src/zones/` | `EditeurSvg.tsx` (le composant), `BarreOutils.tsx` (ses barres), `Menu.tsx` et `Section.tsx`, ses panneaux (`Texte`, `Palettes`, `Versions`, `Exporter`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page), `session.ts` |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page et son point d'entrée ; `scripts/construire.mjs` y embarque le moteur, `scripts/bibliotheque.mjs` construit la bibliothèque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
