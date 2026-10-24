@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  deplacer, groupesDeCouleur, lireCouleurs, lireDessin, memesCouleurs, modifier, partagerGroupes, remplacerCouleur,
+  couleursDuDessin, deplacer, groupesDeCouleur, lireCouleurs, lireCouleursDuDessin, lireDessin, memesCouleurs, modifier, partagerCouleursDuDessin,
+  partagerGroupes, remplacerCouleur,
   type DessinSvg, type GroupeCouleur, type SurCouleur
 } from '../../../src/engine/editionSvg.js';
 import { au } from '../../../src/util/tableaux.js';
@@ -131,5 +132,68 @@ describe('lireCouleurs', () => {
     const suivante = lireCouleurs(cache, 'tout', premiere);
     expect(suivante).not.toBe(premiere);
     expect(suivante.groupes.filter(g => premiere.groupes.includes(g)).length).toBeGreaterThan(premiere.groupes.length / 2);
+  });
+});
+
+// Le panneau « Couleurs du dessin » lit autrement que « Par couleur » : formes visibles seulement, une forme dont le
+// remplissage et le contour ont la meme couleur compte deux fois. Sa lecture memoisee doit rendre exactement ce que
+// `couleursDuDessin` rend, seule l'identite des objets changeant.
+describe('lireCouleursDuDessin', () => {
+  const d = dessin(600, 80, 11);
+
+  it('vaut couleursDuDessin, valeur pour valeur, au premier appel', () => {
+    expect(lireCouleursDuDessin(d, null).couleurs).toEqual(couleursDuDessin(d));
+  });
+
+  it('rend la lecture d’avant quand seules les coordonnees ont change', () => {
+    const avant = lireCouleursDuDessin(d, null);
+    const deplace = deplacer(d, d.formes.slice(0, 100).map(f => f.id), 5, 5);
+    expect(lireCouleursDuDessin(deplace, avant)).toBe(avant);
+  });
+
+  it('suit une recoloration : les valeurs sont celles de couleursDuDessin, les couleurs inchangees gardent leur objet', () => {
+    const avant = lireCouleursDuDessin(d, null);
+    const source = au(avant.couleurs, 5).couleur;
+    const apres = remplacerCouleur(d, source, '#010203');
+    const lue = lireCouleursDuDessin(apres, avant);
+    expect(lue.couleurs).toEqual(couleursDuDessin(apres));
+    const connues = new Map(avant.couleurs.map(c => [c.couleur, c]));
+    const gardees = lue.couleurs.filter(c => connues.get(c.couleur) === c);
+    expect(gardees.length).toBe(avant.couleurs.length - 1);
+  });
+
+  it('masquer ou verrouiller une forme est une relecture, avec les memes valeurs que couleursDuDessin', () => {
+    let lecture = lireCouleursDuDessin(d, null);
+    for (const ids of [d.formes.slice(0, 200).map(f => f.id), d.formes.slice(100, 400).map(f => f.id)]) {
+      const masque = modifier(d, ids, { visible: false });
+      lecture = lireCouleursDuDessin(masque, lecture);
+      expect(lecture.couleurs).toEqual(couleursDuDessin(masque));
+    }
+    const verrou = modifier(d, d.formes.slice(0, 30).map(f => f.id), { verrouille: true });
+    expect(lireCouleursDuDessin(verrou, lecture).couleurs).toEqual(couleursDuDessin(verrou));
+  });
+
+  it('rend le tableau d’avant quand une relecture trouve les memes couleurs', () => {
+    const avant = lireCouleursDuDessin(d, null);
+    const verrou = modifier(d, d.formes.slice(0, 30).map(f => f.id), { verrouille: true });
+    // Le verrou est une relecture (memesCouleurs le compte), mais les couleurs visibles sont les memes : meme tableau.
+    expect(lireCouleursDuDessin(verrou, avant).couleurs).toBe(avant.couleurs);
+  });
+
+  it('compte deux fois une forme dont le fond et le trait ont la meme couleur, et ignore les masquees', () => {
+    const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M0 0h5v5z" fill="#ff0000" stroke="#ff0000"/><path d="M0 0h5v5z" fill="#00ff00" display="none"/></svg>');
+    if ('erreur' in r) throw new Error(r.erreur);
+    expect(lireCouleursDuDessin(r.dessin, null).couleurs).toEqual(couleursDuDessin(r.dessin));
+  });
+});
+
+describe('partagerCouleursDuDessin', () => {
+  it('rend l’ancien tableau si rien n’a change, et le nouveau sinon', () => {
+    const a = [{ couleur: '#aa0000', formes: 3 }, { couleur: '#00bb00', formes: 1 }];
+    expect(partagerCouleursDuDessin(a, a.map(c => ({ ...c })))).toBe(a);
+    const b = partagerCouleursDuDessin(a, [{ couleur: '#aa0000', formes: 3 }, { couleur: '#00bb00', formes: 2 }]);
+    expect(b).not.toBe(a);
+    expect(b[0]).toBe(a[0]);
+    expect(b[1]).toEqual({ couleur: '#00bb00', formes: 2 });
   });
 });

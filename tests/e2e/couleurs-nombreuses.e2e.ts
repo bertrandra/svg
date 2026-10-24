@@ -237,6 +237,32 @@ describe('calques par couleur, deux mille couleurs', () => {
     expect(await bouton.evaluate(e => e === document.activeElement)).toBe(true);
   });
 
+  it('garde montree la ligne qu’on recolore quand son nouveau rang la ferait sortir de la fenetre', async () => {
+    const page = await editeur();
+    // La premiere couleur devient la plus claire : elle passe de la premiere place a la derniere, loin de la fenetre.
+    const entree = await lignes(page).first().locator('input[type=color]').elementHandle();
+    if (!entree) throw new Error('pas de selecteur');
+    await entree.evaluate(e => { e.dataset['marque'] = 'oui'; });
+    // `fill` focalise le champ puis y met la valeur ; le focus y reste, comme sous un selecteur natif ouvert.
+    await entree.fill('#aaaaaa');
+    await entree.fill('#fffffe');
+    await attend(() => page.locator('.editeur-svg-toile path[data-id="f1"]').getAttribute('fill')).toBe('#fffffe');
+    await attend(() => rang(page, N - 1).count()).toBe(1);
+    // C'est le meme selecteur, toujours dans la page, toujours focalise : un selecteur natif ouvert ne se ferme pas.
+    expect(await entree.evaluate(e => e.isConnected && e === document.activeElement)).toBe(true);
+    expect(await rang(page, N - 1).locator('input[data-marque]').count()).toBe(1);
+    expect(await lignes(page).count()).toBeLessThan(LIGNES_MAX + 1);
+    expect(await liste(page).evaluate(u => u.scrollHeight)).toBeGreaterThan(N * 20);
+
+    // Le geste fini (le selecteur perd le focus), la ligne rejoint son rang : plus rien ne la retient.
+    await entree.evaluate(e => (e as HTMLInputElement).blur());
+    await attend(() => rang(page, N - 1).count()).toBe(0);
+    expect(await page.locator('ul.par-couleur input[data-marque]').count()).toBe(0);
+    await liste(page).evaluate(u => { u.scrollTop = u.scrollHeight; });
+    await attend(() => rang(page, N - 1).count()).toBe(1);
+    expect(await texteDe(rang(page, N - 1))).toContain('#FFFFFE');
+  });
+
   it('suit « Fond » et « Trait » : sans contour la liste est vide, au retour elle est fenetree de nouveau', async () => {
     const page = await editeur();
     const mode = (nom: string) => page.locator('.mini-onglets button', { hasText: new RegExp('^' + nom + '$') });

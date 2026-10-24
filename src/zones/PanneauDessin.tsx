@@ -2,7 +2,7 @@
 // nettoyage, bibliotheque, versions, raccourcis.
 
 import { memo, useMemo, useState } from 'react';
-import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleur, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
+import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { SCENES } from '../model/scenes.js';
@@ -10,12 +10,13 @@ import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
 import { FORMES } from './aidesEditeur.js';
 import { Section } from './commun/Section.js';
+import { CouleursDuDessin } from './CouleursDuDessin.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
-import { estHex, phraseIgnores } from './aidesEditeur.js';
+import { phraseIgnores } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
@@ -26,7 +27,6 @@ export function PanneauDessin() {
   const { dessin } = mo;
   const [seuil, poserSeuil] = useState(0.0005);
   const stats = useMemo(() => statistiques(dessin), [dessin]);
-  const couleurs = useMemo(() => couleursDuDessin(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
   const trace = FORMES.has(ui.outil) || ui.outil === 'plume' || ui.outil === 'texte';
   return (
@@ -36,25 +36,7 @@ export function PanneauDessin() {
       {trace ? <StyleNouvelleForme /> : null}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
-      <Section titre="Couleurs du dessin" ouverte note={couleurs.length}>
-        <ul className="couleurs-dessin">
-          {couleurs.map((c, i) => (
-            <li key={i}>
-              <input type="color" aria-label={'Remplacer ' + c.couleur} value={estHex(c.couleur) ? c.couleur : '#000000'}
-                onChange={e => ac.appliquer(d => remplacerCouleur(d, c.couleur, e.target.value), 'recolorer-' + i)} onBlur={ac.finir} />
-              <button type="button" className="discret" title="Sélectionner les formes de cette couleur" onClick={() => ac.choisir(idsDeCouleur(dessin, c.couleur))}>
-                {c.couleur.toUpperCase()} · {c.formes}
-              </button>
-              {mo.nuancier.length ? (
-                <select aria-label={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} value="" onChange={e => { const v = e.target.value; if (v) ac.faire(d => remplacerCouleur(d, c.couleur, v)); }}>
-                  <option value="">→ nuancier…</option>
-                  {mo.nuancier.map(t => <option key={t.hex} value={t.hex}>{t.nom} ({t.hex.toUpperCase()})</option>)}
-                </select>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </Section>
+      <CouleursDuDessin />
       <PanneauPalettes />
       {mo.bibliotheque ? <PanneauBibliotheque bibliotheque={mo.bibliotheque} /> : null}
       <Section titre="Nettoyer le tracé">
