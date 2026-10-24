@@ -17,6 +17,15 @@
 .vignette img { width: 64px; height: 64px; background: var(--toile-blanc); border-radius: 4px; padding: 4px; }
 .recherche-formes.compact .vignette img { width: 44px; height: 44px; }
 .recherche-formes.compact .vignette span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* La vignette avant/apres de la voie « Convertir une image » : decorative, aux couleurs des jetons. */
+.avant-apres { margin: 0; display: grid; gap: 6px; justify-items: center; }
+.avant-apres-vignettes { display: flex; align-items: center; gap: 12px; }
+.avant-apres-vignettes > div { display: grid; justify-items: center; gap: 2px; }
+.avant-apres-vignettes > div svg { width: 96px; height: 72px; border: 1px solid var(--filet); border-radius: 6px; background: var(--toile-blanc); }
+.avant-apres .forme-a { fill: var(--cyan); }
+.avant-apres .forme-b { fill: var(--encre); }
+.avant-apres .fleche { width: 20px; height: 20px; color: var(--encre-douce); }
+.avant-apres figcaption { margin: 0; }
 .bibliotheque-editeur summary { font-size: 0.78rem; font-weight: 600; cursor: pointer; color: var(--encre-douce); }
 .bibliotheque-editeur[open] summary { margin-bottom: 6px; }
 
