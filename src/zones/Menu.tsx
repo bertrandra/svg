@@ -44,6 +44,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
   const focusInitial = useRef<'premier' | 'dernier' | null>(null);
+  const origine = useRef<{ top: number; left: number } | null>(null);
   const id = useId();
 
   const fermer = useCallback((rendreFocus: boolean) => {
@@ -54,6 +55,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     const r = bouton.current?.getBoundingClientRect();
     if (!r) return;
     focusInitial.current = focus;
+    origine.current = { top: r.top, left: r.left };
     poserPosition(alignement === 'droite' ? { top: r.bottom + 4, right: Math.max(8, window.innerWidth - r.right) } : { top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 220)) });
     poserOuvert(true);
   };
@@ -71,10 +73,16 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     if (!ouvert) return;
     const dehors = (e: PointerEvent) => { const t = e.target as Node; if (!panneau.current?.contains(t) && !bouton.current?.contains(t)) fermer(false); };
     const ferme = () => fermer(false);
+    // Un defilement ne ferme le menu que s'il a deplace le bouton : celui du panneau lui-meme, ou celui
+    // qu'une activation a fait avant l'ouverture, laissent le menu en place.
+    const defile = () => {
+      const r = bouton.current?.getBoundingClientRect(), o = origine.current;
+      if (!r || !o || Math.abs(r.top - o.top) > 1 || Math.abs(r.left - o.left) > 1) fermer(false);
+    };
     window.addEventListener('pointerdown', dehors);
     window.addEventListener('resize', ferme);
-    window.addEventListener('scroll', ferme, true);
-    return () => { window.removeEventListener('pointerdown', dehors); window.removeEventListener('resize', ferme); window.removeEventListener('scroll', ferme, true); };
+    window.addEventListener('scroll', defile, true);
+    return () => { window.removeEventListener('pointerdown', dehors); window.removeEventListener('resize', ferme); window.removeEventListener('scroll', defile, true); };
   }, [ouvert, fermer]);
 
   const clavierPanneau = (e: KE<HTMLDivElement>) => {

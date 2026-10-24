@@ -3,7 +3,7 @@ import {
   lireChemin, ecrireChemin, lireDessin, ecrireDessin, boiteChemin, lireTransformation, lirePeinture,
   deplacer, retourner, aligner, modifier, supprimer, dupliquer, ordonner, couleursDuDessin, remplacerCouleur,
   retirerPetites, regrouper, ajusterPlan, deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment,
-  basculerSegment, redimensionner, boiteDe, tourner, statistiques, rectangle, ellipse, etoile, polygone, ajouterForme, inserer, STYLE_DEFAUT, combiner, separer, sousChemins, coller, pasGrille, aimanter, type DessinSvg
+  basculerSegment, redimensionner, boiteDe, tourner, statistiques, rectangle, ellipse, etoile, polygone, ajouterForme, inserer, STYLE_DEFAUT, combiner, groupesDeCouleur, montrerSeulement, separer, sousChemins, coller, pasGrille, aimanter, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 
 const dessin = (svg: string): DessinSvg => {
@@ -217,5 +217,32 @@ describe('combiner, separer, coller, grille', () => {
     expect(aimanter(23, 10)).toBe(20);
     expect(aimanter(27, 10, 3)).toBe(23);
     expect(aimanter(7, 0)).toBe(7);
+  });
+});
+
+describe('groupesDeCouleur', () => {
+  const trois = () => dessin(svg(carre(0, 0, 10) + carre(20, 0, 10) + '<path d="M50 50h10v10h-10z" fill="#1428a0" stroke="#c81e28" stroke-width="2"/>'));
+
+  it('range les formes par couleur, remplissage et contour confondus ou separes', () => {
+    const d = trois();
+    expect(groupesDeCouleur(d).map(g => [g.couleur, g.ids])).toEqual([['#c81e28', ['f1', 'f2', 'f3']], ['#1428a0', ['f3']]]);
+    expect(groupesDeCouleur(d, 'remplissage').map(g => [g.couleur, g.ids])).toEqual([['#c81e28', ['f1', 'f2']], ['#1428a0', ['f3']]]);
+    expect(groupesDeCouleur(d, 'contour').map(g => [g.couleur, g.ids])).toEqual([['#c81e28', ['f3']]]);
+  });
+
+  it('garde une couleur toute masquee dans la liste, avec ce qu\'on peut encore choisir', () => {
+    const d = modifier(modifier(trois(), ['f1'], { visible: false }), ['f2'], { verrouille: true });
+    const rouge = groupesDeCouleur(d).find(g => g.couleur === '#c81e28');
+    expect(rouge).toMatchObject({ ids: ['f1', 'f2', 'f3'], libres: ['f3'], visibles: 2, verrouillees: 1 });
+    const tout = modifier(d, ['f1', 'f2', 'f3'], { visible: false });
+    expect(groupesDeCouleur(tout).map(g => g.visibles)).toEqual([0, 0]);
+  });
+
+  it('isole une couleur, et ne change rien quand c\'est deja le cas', () => {
+    const d = trois();
+    const seul = montrerSeulement(d, ['f3']);
+    expect(seul.formes.map(f => f.visible)).toEqual([false, false, true]);
+    expect(montrerSeulement(seul, ['f3'])).toBe(seul);
+    expect(montrerSeulement(seul, ['f1', 'f2', 'f3']).formes.every(f => f.visible)).toBe(true);
   });
 });

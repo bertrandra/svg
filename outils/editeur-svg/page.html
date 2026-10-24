@@ -197,7 +197,20 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.82rem; }
 .editeur-calques { grid-area: calques; overflow: auto; border-right: 1px solid var(--filet); background: var(--panneau); padding: 8px; }
 .editeur-calques h3, .editeur-inspecteur h3 { font-size: 0.8rem; margin: 2px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
-.calques-actions { display: flex; gap: 4px; margin-bottom: 6px; }
+.calques-actions { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-bottom: 6px; }
+.editeur-calques .mini-onglets button { padding: 5px 3px; font-size: 0.72rem; min-width: 0; }
+.editeur-calques h4 { margin: 10px 0 4px; font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
+.editeur-calques .section > summary { padding: 6px 2px; }
+.par-couleur { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; max-height: 260px; overflow: auto; }
+.editeur-calques .par-couleur li { display: flex; align-items: center; gap: 1px; border-radius: 4px; content-visibility: visible; }
+.par-couleur li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
+.par-couleur li.attenue .couleur-choix { opacity: 0.5; }
+.par-couleur .couleur-choix { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: transparent; border: 0; padding: 3px 4px; font-weight: 400; font-size: 0.75rem; text-align: left; color: var(--encre); }
+.par-couleur .couleur-choix code { font-family: var(--mono); font-size: 0.72rem; }
+.par-couleur .couleur-choix .aide { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.par-couleur .couleur-choix .echantillon { flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--filet); }
+.par-couleur .icone-bouton { width: 26px; height: 26px; }
+.par-couleur .menu-deroulant { flex: none; }
 .calques-actions button { padding: 2px 8px; font-size: 0.72rem; }
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
@@ -240,7 +253,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .section > summary::before { content: ""; width: 6px; height: 6px; flex: none; margin: 0 3px 0 2px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
 .section[open] > summary::before { transform: rotate(45deg); }
 .section > summary .aide { margin-left: auto; font-weight: 400; }
-.section-corps { display: grid; gap: 8px; padding: 2px 2px 12px; min-width: 0; animation: apparition 0.15s ease-out; }
+.section-corps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 2px 2px 12px; min-width: 0; animation: apparition 0.15s ease-out; }
 .peinture { display: grid; gap: 6px; min-width: 0; }
 .peinture-titre { font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
 .editeur-groupe { border: 1px solid var(--filet); border-radius: 6px; padding: 6px 8px; margin: 0; display: grid; gap: 6px; min-width: 0; }
@@ -338,6 +351,8 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
   .editeur-barre .zoom, .editeur-barre button.texte, .menu-bouton.texte { height: 40px; }
   .menu-element { min-height: 44px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
+  .par-couleur .icone-bouton { width: 40px; height: 40px; }
+  .par-couleur .couleur-choix { min-height: 40px; }
   .calques-actions button { min-width: 56px; }
   input[type="text"], input[type="search"], select { min-height: 40px; }
   input[type="color"], .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 44px; height: 40px; }

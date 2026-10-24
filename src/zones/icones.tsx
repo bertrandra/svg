@@ -13,7 +13,7 @@ export type NomIcone =
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
-  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'verrouiller' | 'supprimer'
+  | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
   | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection';
@@ -68,6 +68,8 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   separer: [t('M3 5h7v14H3z'), t('M14 5h7v14h-7z'), t('M12 3v18')],
   dupliquer: [t('M9 9h11v11H9z'), t('M15 9V5H4v11h5'), t('M14.5 12.5v5'), t('M12 15h5')],
   masquer: [t('M3 3l18 18'), t('M10.6 10.6a2 2 0 0 0 2.8 2.8'), t('M9.9 5.2A10 10 0 0 1 12 5c5 0 9 4 10 7a13 13 0 0 1-2.8 3.8'), t('M6.6 6.6A13 13 0 0 0 2 12c1 3 5 7 10 7a10 10 0 0 0 3.5-.6')],
+  oeil: [t('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'), t('M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0')],
+  options: [t('M4.5 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true), t('M10.4 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true), t('M16.3 12a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0', true)],
   verrouiller: [t('M5 11h14v10H5z'), t('M8 11V7a4 4 0 0 1 8 0v4')],
   supprimer: [t('M4 7h16'), t('M10 11v6'), t('M14 11v6'), t('M6 7l1 13h10l1-13'), t('M9 7V4h6v3')],
   union: [t('M4 4h11v11H4z M9 9h11v11H9z', true)],

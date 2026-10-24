@@ -21,8 +21,18 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
     agrandies.
 
+### Corrigé
+
+- Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
+
 ### Ajouté
 
+- **Calques par couleur** (ADR-0006) : dans le panneau Calques, une section « Par couleur » liste
+  chaque couleur du dessin, lue sur le remplissage, le contour ou les deux. Un clic choisit ses formes
+  (Maj : les ajoute à la sélection) ; des boutons les masquent ou les affichent, les verrouillent ou
+  les déverrouillent ; un menu les combine en une forme, n'affiche qu'elles, ou les supprime. Une
+  couleur dont tout est masqué reste dans la liste, pour pouvoir la rendre. S'y ajoutent « Inverser »
+  la sélection et « Tout afficher » en tête du panneau.
 - **Neuf chantiers pour créer, pas seulement retoucher** (ADR-0004) :
   - **booléens** : union, soustraction, intersection, exclusion, dans la rangée de sélection et
     l'inspecteur ; le résultat est en segments droits, au style de la forme la plus basse ;
