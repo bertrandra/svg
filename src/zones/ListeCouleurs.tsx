@@ -6,9 +6,11 @@
 // hauteur maximale, il gonflerait la liste). Au-dessous du seuil, le DOM est exactement celui d'avant : une
 // liste, ses lignes, rien d'autre. Retirer la ligne qui a le focus ne ramene pas le defilement en arriere
 // (deux tests de navigateur le gardent), contrairement aux calques, dont la liste ne defile pas elle-meme.
+// La ligne dont le selecteur de couleur est ouvert reste dessinee meme si son nouveau rang la sort de la fenetre.
 
 import { memo, type ReactElement } from 'react';
 import type { GroupeCouleur, SurCouleur } from '../engine/editionSvg.js';
+import { segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
 import { useFenetreDefilante } from './Fenetre.js';
 import { LigneCouleur, type ActionsLigne } from './LigneCouleur.js';
@@ -29,18 +31,19 @@ interface Proprietes {
 
 export const ListeCouleurs = memo(function ListeCouleurs({ groupes, choisies, sur, nuancier, actions, suivi }: Proprietes) {
   const total = groupes.length;
-  const { liste, fenetre, actif } = useFenetreDefilante<HTMLUListElement>(total, SEUIL_COULEURS);
+  const { liste, fenetre, pas, actif } = useFenetreDefilante<HTMLUListElement>(total, SEUIL_COULEURS);
   // La ligne qu'on recolore garde sa cle d'avant le geste, sans quoi elle serait remontee et le selecteur natif se fermerait.
   const cleDe = (g: GroupeCouleur) => (suivi && g.couleur === suivi.vers && !groupes.some(x => x.couleur === suivi.cle) ? suivi.cle : g.couleur);
-  const lignes: ReactElement[] = [];
+  // Recolorer change le rang de la ligne (le tri suit le nombre de formes, puis le code) : si elle sort de la fenetre,
+  // elle resterait sans etre dessinee et le selecteur se fermerait sous le doigt. On la garde tant que le geste dure.
+  const epingle = actif && suivi ? groupes.findIndex(g => g.couleur === suivi.vers) : -1;
   // Les cales gardent la place des lignes absentes ; la gouttiere de 1 px entre deux elements fait partie du pas.
-  if (actif && fenetre.haut > 1) lignes.push(<li key="cale-haut" data-cale="" aria-hidden="true" style={{ height: fenetre.haut - 1 }} />);
-  for (let i = fenetre.debut; i < fenetre.fin; i++) {
-    const g = au(groupes, i);
+  const lignes: ReactElement[] = segmentsFenetre(fenetre, total, pas, epingle >= 0 ? epingle : null).map(sg => {
+    if (sg.type === 'cale') return <li key={'cale-' + sg.lieu} data-cale="" aria-hidden="true" style={{ height: sg.hauteur }} />;
+    const g = au(groupes, sg.index);
     const choisie = g.libres.length > 0 && g.libres.every(id => choisies.has(id));
-    lignes.push(<LigneCouleur key={cleDe(g)} g={g} choisie={choisie} sur={sur} nuancier={nuancier} actions={actions} rang={i + 1} taille={actif ? total : 0} />);
-  }
-  if (actif && fenetre.bas > 0) lignes.push(<li key="cale-bas" data-cale="" aria-hidden="true" style={{ height: fenetre.bas }} />);
+    return <LigneCouleur key={cleDe(g)} g={g} choisie={choisie} sur={sur} nuancier={nuancier} actions={actions} rang={sg.index + 1} taille={actif ? total : 0} />;
+  });
   return (
     <ul className="par-couleur" ref={liste}>
       {lignes}

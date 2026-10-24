@@ -153,6 +153,8 @@
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .couleurs-dessin li { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.couleurs-dessin.fenetree { max-height: 260px; overflow: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
+.couleurs-dessin li[data-cale] { display: block; padding: 0; }
 .couleurs-dessin button { font-family: var(--mono); font-size: 0.72rem; padding: 3px 6px; }
 .couleurs-dessin select { font-size: 0.72rem; max-width: 120px; min-width: 0; }
 .editeur-etat { grid-area: etat; display: flex; gap: 8px; padding: 6px 12px; font-size: 0.75rem; color: var(--encre-douce); border-top: 1px solid var(--filet); background: var(--panneau); }
