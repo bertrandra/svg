@@ -1,7 +1,8 @@
 // Les tests de navigateur, a part de `npm test` : ils demandent Chromium et une page construite.
 //
 //   npm run construire   (une fois : le test ouvre dist/editeur-svg.html, il ne construit rien)
-//   npm run e2e          (CHROMIUM_PATH=/chemin/vers/chromium si Playwright n'a pas le sien)
+//   npm run e2e          (CHROMIUM_PATH=/chemin/vers/chromium si Playwright n'a pas le sien ;
+//                         NAVIGATEUR=firefox ou NAVIGATEUR=webkit pour un autre moteur, voir docs/navigateurs.md)
 //
 // Les specs s'appellent `*.e2e.ts` pour que la configuration de `npm test` (tests/**/*.test.ts) ne
 // les voie jamais.

@@ -7,9 +7,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
+import { attend, ouvrirExemple, pilote, sauteSauf, URL_INTEGRATION } from './aide.js';
 
-describe('contraste forcé', () => {
+// Saut : l'emulation `forcedColors` de Playwright n'est verifiee que sur Chromium (Firefox et WebKit : a essayer, voir docs/navigateurs.md).
+const SANS_EMULATION = sauteSauf(['chromium'], 'emulateMedia({ forcedColors }) : emulation verifiee sur Chromium seulement');
+
+describe.skipIf(SANS_EMULATION)('contraste forcé', () => {
   const navigateur = pilote();
 
   async function editeur(actif = true) {
