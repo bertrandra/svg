@@ -42,7 +42,7 @@ entrelacés), ne corriger que ce qui coûte, et laisser tel quel ce qui ne coût
   438 → 119 ms, choisir une couleur 348 → 74 ms, ouvrir 2 792 → 1 732 ms, DOM 53 968 → 21 029 nœuds.
 - Laissé tel quel, avec ses chiffres : `Calque` mémoïsé tient déjà, `ecrireChemin` (formatage des nombres)
   ne gagne rien à une boucle manuelle, glisser 5 000 formes demanderait un `transform` CSS pendant le
-  geste. le panneau « Couleurs du dessin » de l'inspecteur liste encore toutes les couleurs sans fenêtre (Échap sur
-  1 669 couleurs coûte ~750 ms) : c'est le prochain point chaud.
+  geste. Le panneau « Couleurs du dessin » de l'inspecteur liste encore toutes les couleurs sans fenêtre
+  (Échap sur 1 669 couleurs coûte ~750 ms) : c'est le prochain point chaud.
 - Deux cents états de 5 000 formes pesaient près de 2 Go : la limite d'historique est une décision de
   mémoire, pas de confort.
