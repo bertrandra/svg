@@ -2,6 +2,7 @@
 
 import { memo, useEffect } from 'react';
 import { modifier, type Forme } from '../engine/editionSvg.js';
+import { nomDeForme } from '../engine/description.js';
 import { au } from '../util/tableaux.js';
 import { pluriel } from '../util/texte.js';
 import { useFenetre } from './Fenetre.js';
@@ -32,7 +33,7 @@ export const Calques = memo(function Calques() {
   }
   // Le navigateur ne doit pas ancrer le defilement sur une ligne : elle disparait quand la fenetre bouge, et il ramene la liste en arriere.
   return (
-    <aside className="editeur-calques" aria-label="Calques" ref={racine} style={actif ? { overflowAnchor: 'none' } : undefined}>
+    <aside className="editeur-calques" aria-label="Calques" tabIndex={-1} ref={racine} style={actif ? { overflowAnchor: 'none' } : undefined}>
       <h3>Calques <span className="aide">{total}</span></h3>
       <div className="calques-actions">
         <button type="button" className="discret" disabled={!choisissables.length || sel.length === choisissables.length} title="Tout sélectionner (Ctrl+A)" onClick={() => { ac.choisir(choisissables); ac.poserPoint(null); }}>Tout</button>
@@ -57,7 +58,7 @@ function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; chois
   const fenetree = rang ? { contentVisibility: 'visible' as const } : undefined;
   return (
     <li className={choisie ? 'choisi' : undefined} style={fenetree} aria-posinset={rang?.[0]} aria-setsize={rang?.[1]}>
-      <button type="button" className="calque-nom" disabled={f.verrouille} onClick={e => {
+      <button type="button" className="calque-nom" aria-label={nomDeForme(f)} aria-pressed={choisie} disabled={f.verrouille} onClick={e => {
         ac.choisir(e.shiftKey ? (choisie ? sel.filter(s => s !== f.id) : [...sel, f.id]) : [f.id]);
         ac.poserPoint(null);
       }}>

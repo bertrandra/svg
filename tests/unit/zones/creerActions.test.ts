@@ -13,25 +13,25 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
   const lu = lireDessin(svg);
   if ('erreur' in lu) throw new Error(lu.erreur);
   let h: Historique<DessinSvg> = historique(lu.dessin);
-  const messages: string[] = [];
+  const messages: string[] = [], annonces: string[] = [];
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer: vi.fn(), modifie: false, versions: [], fermer: vi.fn(), stockage
+    enregistrer: vi.fn(), modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage
   };
   const poserQuitter = vi.fn();
-  const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; };
+  const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; etat.refaisable = h.futur.length > 0; };
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; miseAJour(); },
     choisir: u => { etat.sel = typeof u === 'function' ? u(etat.sel) : u; },
     poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
-    poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter,
+    poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter, poserCurseur: vi.fn(), poserAnnonce: u => { annonces.push((typeof u === 'function' ? u({ texte: '', rang: 0 }) : u).texte); },
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
-  return { actions, etat, messages, poserQuitter, setters, historique: () => h };
+  return { actions, etat, messages, annonces, poserQuitter, setters, historique: () => h };
 }
 
 describe('creerActions : des verbes qui lisent l etat du moment', () => {
@@ -79,6 +79,26 @@ describe('creerActions : des verbes qui lisent l etat du moment', () => {
     expect(h().futur).toHaveLength(1);
     actions.refaire();
     expect(h().passe).toHaveLength(1);
+  });
+
+  it('annonce annuler et retablir, et dit quand il n y a rien a faire', () => {
+    const { actions, annonces } = monter();
+    actions.defaire();
+    expect(annonces).toEqual(['Rien à annuler.']);
+    actions.faire(d => modifier(d, d.formes.map(f => f.id), { visible: false }));
+    actions.defaire();
+    actions.refaire();
+    actions.refaire();
+    expect(annonces).toEqual(['Rien à annuler.', 'Annulé.', 'Rétabli.', 'Rien à rétablir.']);
+  });
+
+  it('annonce aussi ce qu il dit dans la barre d etat, mais pas le silence', () => {
+    const { actions, annonces, messages } = monter();
+    actions.dire('Une phrase.');
+    actions.dire('');
+    actions.faire(d => d, 'Faite.');
+    expect(messages).toEqual(['Une phrase.', '', 'Faite.']);
+    expect(annonces).toEqual(['Une phrase.', 'Faite.']);
   });
 
   it('numerote ses gestes sans jamais repeter une cle', () => {

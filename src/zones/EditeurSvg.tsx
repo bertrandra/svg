@@ -10,7 +10,7 @@
 // L'etat de l'editeur (etatEditeur.ts) se donne aux panneaux par trois contextes : le dessin, les
 // actions, l'interface (contexteEditeur.tsx). Un panneau lit ce qui le concerne.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DessinSvg } from '../engine/editionSvg.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
@@ -20,6 +20,7 @@ import { FournisseurSections } from './commun/Section.js';
 import { FournisseurEditeur } from './contexteEditeur.js';
 import { FournisseurStockage } from './contexteStockage.js';
 import { useEtatEditeur } from './etatEditeur.js';
+import { useFocusEditeur } from './focusEditeur.js';
 import { lireDessinMemo } from './lecture.js';
 import { estHex } from './aidesEditeur.js';
 import type { Teinte } from './typesEditeur.js';
@@ -84,13 +85,15 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
 export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage }: ProprietesEditeur) {
   const lu = useMemo(() => lireDessinMemo(svg), [svg]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
+  const racine = useRef<HTMLDivElement>(null);
+  useFocusEditeur(racine);
   useEffect(() => {
     const avant = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = avant; };
   }, []);
   return createPortal(
-    <div className="editeur-svg" role="dialog" aria-modal="true" aria-label={'Éditer : ' + titre}>
+    <div className="editeur-svg" ref={racine} role="dialog" aria-modal="true" aria-label={'Éditer : ' + titre}>
       {'erreur' in lu ? (
         <div className="editeur-erreur">
           <p>{lu.erreur}</p>

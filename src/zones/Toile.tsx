@@ -2,6 +2,7 @@
 
 import { memo, type ReactNode } from 'react';
 import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { FORMES } from './aidesEditeur.js';
 import type { Coin, EtatInterface, ModeleDessin } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
@@ -87,6 +88,17 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
   if (ui.trace.length) {
     r.push(<polyline key="trace" className="trace-en-cours" points={ui.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);
     ui.trace.forEach((q, i) => r.push(<rect key={'t' + i} className={'ancre' + (i === 0 ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} pointerEvents="none" />));
+  }
+  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume')) {
+    // Le reticule du clavier : deux traits et un point, de taille fixe a l'ecran quel que soit le zoom.
+    const [cx, cy] = ui.curseur, t = 12 * px;
+    r.push(
+      <g key="reticule" className="reticule" pointerEvents="none">
+        <line x1={cx - t} y1={cy} x2={cx + t} y2={cy} />
+        <line x1={cx} y1={cy - t} x2={cx} y2={cy + t} />
+        <circle cx={cx} cy={cy} r={3 * px} />
+      </g>
+    );
   }
   if (cadre) r.push(<rect key="cadre" className="cadre-selection" x={cadre.x} y={cadre.y} width={cadre.l} height={cadre.h} pointerEvents="none" />);
   return r;

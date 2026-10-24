@@ -93,7 +93,7 @@ const GroupeZoom = memo(function GroupeZoom() {
   return (
     <div className="groupe" role="group" aria-label="Zoom">
       <Bouton icone="zoom-moins" aide="Dézoomer (−)" onClick={() => vues.zoomer(0.8)} />
-      <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster} aria-live="polite">{Math.round(vues.vue.zoom * 100)} %</button>
+      <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster}>{Math.round(vues.vue.zoom * 100)} %</button>
       <Bouton icone="zoom-plus" aide="Zoomer (+)" onClick={() => vues.zoomer(1.25)} />
     </div>
   );

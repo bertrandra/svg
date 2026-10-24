@@ -6,6 +6,7 @@ import { aimanter, boiteDe, ecrireDessin, pasGrille, STYLE_DEFAUT, type DessinSv
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
+import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
@@ -42,6 +43,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [fond, poserFond] = useState<Fond>('damier');
   const [message, dire] = useState('');
   const [quitter, poserQuitter] = useState(false);
+  const [curseur, poserCurseur] = useState<Point | null>(null);
+  const [annonce, poserAnnonce] = useState<Annonce>({ texte: '', rang: 0 });
   const toile = useRef<HTMLDivElement>(null), svgRef = useRef<SVGSVGElement>(null);
   const dessin = h.present;
   const modifie = h.passe.length > 0;
@@ -59,10 +62,10 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
 
   // L'etat du dernier rendu, que les verbes lisent au moment de l'appel : c'est ce qui les rend stables.
   const moment = useRef<EtatDuMoment | null>(null);
-  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, modifie, versions, fermer: p.fermer, stockage };
+  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, modifie, refaisable: h.futur.length > 0, versions, fermer: p.fermer, stockage };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens,poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserAnnonce, toile }
   ));
 
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
@@ -78,8 +81,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, annonce }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, annonce]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

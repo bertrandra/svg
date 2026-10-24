@@ -114,8 +114,9 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
-        <div ref={panneau} id={id} className="menu-panneau" role="menu" aria-label={etiquette} tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
-          {elements.map(el => (
+        <div ref={panneau} id={id} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
+          {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
+          {elements.length ? <div role="menu" aria-label={etiquette}>{elements.map(el => (
             <div key={el.id} className="menu-ligne">
               {el.separateur ? <hr className="menu-filet" /> : null}
               <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
@@ -125,7 +126,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
                 {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}
               </button>
             </div>
-          ))}
+          ))}</div> : null}
           {enfants ? <div className="menu-libre">{enfants}</div> : null}
         </div>
       ) : null}
