@@ -5,7 +5,8 @@
 // dit : chaque segment ne livre a ses deux coins que sa moitie (la totalite quand son autre bout n'est pas
 // un coin), donc deux filets voisins ne se recouvrent jamais.
 
-import type { Chemin, Commande } from './types.js';
+import type { Chemin, Commande, DessinSvg } from './types.js';
+import { surFormes } from './operations.js';
 import { filetEntre, tangente, tranche, virage, type Budget, type Filet, type Seg } from './filet.js';
 import { fois, plus, quart, scalaire, unitaire, vectoriel, type Pt } from './vecteurs.js';
 
@@ -149,4 +150,26 @@ export function arrondirAngles(chemin: Chemin, rayon: number): ResultatArrondi {
     sortie.push(...r.commandes);
   }
   return change ? { chemin: sortie, angles, reduits, rayonMin } : rien;
+}
+
+export interface ResultatArrondiFormes {
+  readonly dessin: DessinSvg;
+  /** Le nombre de formes dont au moins un coin a ete arrondi. */
+  readonly formes: number;
+  readonly angles: number;
+  readonly reduits: number;
+  readonly rayonMin: number;
+}
+
+/** Arrondit les coins des formes choisies (deverrouillees) ; le meme dessin quand aucun coin ne bouge. */
+export function arrondirFormes(dessin: DessinSvg, ids: readonly string[], rayon: number): ResultatArrondiFormes {
+  let formes = 0, angles = 0, reduits = 0, rayonMin = Infinity;
+  const r = surFormes(dessin, ids, f => {
+    if (f.verrouille) return f;
+    const a = arrondirAngles(f.d, rayon);
+    if (a.chemin === f.d) return f;
+    formes++; angles += a.angles; reduits += a.reduits; rayonMin = Math.min(rayonMin, a.rayonMin);
+    return { ...f, d: a.chemin };
+  });
+  return { dessin: r, formes, angles, reduits, rayonMin: formes ? rayonMin : 0 };
 }

@@ -39,7 +39,15 @@ export function aireDeRegion(region: MultiPolygon): number {
   return region.reduce((s, poly) => s + poly.reduce((t, r, k) => t + (k === 0 ? aire(r) : -aire(r)), 0), 0);
 }
 
-/** Le chemin d'une region : en segments droits, ou avec les courbes rebaties (`lisser`) a `tolerance` pres. */
+/**
+ * Le facteur dont la tolerance d'aplatissement s'elargit pour rebatir les courbes. Les sommets d'un contour
+ * etendu ou decale sont a la tolerance du trace, et l'ajustement en demande deux fois autant : a cette
+ * mesure il coupe un cercle en une courbe par degre. Avec ce facteur, le resultat reste a neuf tolerances
+ * de la courbe ideale : moins d'un demi-millieme de la taille du dessin.
+ */
+const FACTEUR_LISSAGE = 4;
+
+/** Le chemin d'une region : en segments droits, ou avec les courbes rebaties (`lisser`). */
 export function cheminDeRegionChoisie(region: MultiPolygon, lisser: boolean, tolerance: number): Chemin {
-  return lisser ? cheminLisseDeRegion(region, tolerance) : cheminDeRegion(region);
+  return lisser ? cheminLisseDeRegion(region, tolerance * FACTEUR_LISSAGE) : cheminDeRegion(region);
 }
