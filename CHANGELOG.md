@@ -39,6 +39,10 @@ empreintes.
 
 ### Modifié
 
+- **La liste « Par couleur » passe à l'échelle** (ADR-0008) : elle ne dessine que les lignes visibles
+  au-delà de 100 couleurs (jusqu'à six fois moins de temps par mouvement sur un dessin de 2 000 couleurs),
+  ses lignes ne se redessinent que si leur couleur change, et les nuances proches se calculent par une grille
+  de voisinage (même résultat qu'avant) sans plafond de 400 couleurs.
 - **Architecture de l'éditeur** (ADR-0010) : trois contextes (dessin, interface, actions) remplacent l'objet
   `Edition` de cinquante champs ; les actions sont stables et lisent l'état du dernier rendu. `Bouton`,
   `Menu` et `Section` vont dans `zones/commun/`, un seul `pluriel` (`util/texte.ts`). Aucun changement
@@ -95,6 +99,8 @@ empreintes.
 
 ### Ajouté
 
+- **Tests sur un dessin de 2 000 couleurs** (11 tests de navigateur : défilement, clavier, doigt) et tests
+  d'équivalence des nuances proches contre l'ancienne implémentation.
 - **Menu Édition, « Booléens : rebâtir les courbes »** (actif par défaut, propre à la session, rien n'est
   écrit) : l'union de deux cercles reste ronde, avec une vingtaine de points au lieu de plus de deux cents.
   Le moteur garde `lisser` faux par défaut, donc `appliquerBooleen` et les références ne changent pas. La

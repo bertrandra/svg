@@ -29,9 +29,20 @@ entrelacés), ne corriger que ce qui coûte, et laisser tel quel ce qui ne coût
 
 - Sur 5 000 formes : ouvrir 1 568 → 859 ms, Ctrl+A 996 → 443 ms, glisser une forme 96 → 33 ms par mouvement,
   glisser tout 669 → 288 ms, DOM 33 700 → 8 900 nœuds ; le SVG écrit ne change pas.
+- **La liste « Par couleur » se fenêtre au-delà de 100 couleurs** (marge de douze lignes, `aria-posinset` et
+  `aria-setsize`). Elle est son propre conteneur qui défile (260 px) : des cales `data-cale` portent la
+  hauteur des lignes absentes, pas de `padding` ni de `min-height`. Ses lignes sont mémoïsées (elles ne
+  lisent que leurs propriétés et des verbes stables), et les couleurs ne se relisent que si
+  `(id, remplissage, contour, visible, verrouille)` change : déplacer une forme ne touche plus la liste.
+- **Les nuances proches** cherchent leur cible par une grille OKLab (cellules au moins égales à la tolérance,
+  27 cellules voisines, rang minimal, même comparaison finale) : le résultat est identique à l'ancien
+  parcours, prouvé sur des milliers de couleurs. Il n'y a plus de plafond de 400 couleurs : 2 000 couleurs
+  coûtent 6,5 ms, 10 000 coûtent 37 ms (88 ms et 1 387 ms avant).
+- Sur le dessin à 1 669 couleurs : glisser une forme 142 → 25 ms par mouvement, masquer un groupe
+  438 → 119 ms, choisir une couleur 348 → 74 ms, ouvrir 2 792 → 1 732 ms, DOM 53 968 → 21 029 nœuds.
 - Laissé tel quel, avec ses chiffres : `Calque` mémoïsé tient déjà, `ecrireChemin` (formatage des nombres)
   ne gagne rien à une boucle manuelle, glisser 5 000 formes demanderait un `transform` CSS pendant le
-  geste. `ParCouleur` n'est pas fenêtré : avec 2 000 couleurs, ses lignes se re-rendent à chaque
-  mouvement (+65 à 80 ms).
+  geste. le panneau « Couleurs du dessin » de l'inspecteur liste encore toutes les couleurs sans fenêtre (Échap sur
+  1 669 couleurs coûte ~750 ms) : c'est le prochain point chaud.
 - Deux cents états de 5 000 formes pesaient près de 2 Go : la limite d'historique est une décision de
   mémoire, pas de confort.
