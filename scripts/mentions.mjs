@@ -8,13 +8,14 @@
 // « License » du README du paquet), et dit ceux qui n'en portent pas. Il refuse de produire quoi que ce soit si
 //   - un composant de la liste n'est pas dans package-lock.json, ou y a une autre licence que celle declaree ;
 //   - un paquet que les bundles embarquent n'est pas dans la liste (ou l'inverse) ;
-//   - une fonte embarquee (scripts/polices.mjs) n'est pas dans la liste.
+//   - une fonte embarquee (scripts/polices.mjs pour le texte, scripts/fontes-interface.mjs pour la page) n'est pas dans la liste.
 // Un test (tests/unit/depot/mentions.test.ts) refait le calcul en memoire et echoue si THIRD-PARTY-NOTICES.md est perime.
 
 import { build } from 'esbuild';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ecrireDansDist, depuisRacine, empaqueter, estLance } from './aide.mjs';
+import { FONTES_INTERFACE } from './fontes-interface.mjs';
 import { POLICES } from './polices.mjs';
 
 /** Un fichier en texte, en LF (le depot peut etre extrait en CRLF sous Windows) et sans blancs en fin de ligne. */
@@ -124,27 +125,33 @@ function verifierLockEtListe(credits, verrou, embarques) {
     try { constaterIntegre(c, embarques); } catch (e) { erreurs.push(e.message); }
   }
   const fontes = new Set(credits.COMPOSANTS.filter(c => c.genre === 'fonte').map(c => c.paquet));
-  const embarqueesFontes = new Set(POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]));
-  for (const p of embarqueesFontes) if (!fontes.has(p)) erreurs.push(p + ' : fonte embarquee (scripts/polices.mjs) absente de src/model/credits.ts');
+  const embarqueesFontes = new Set([...POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]), ...FONTES_INTERFACE.map(f => f.paquet)]);
+  for (const p of embarqueesFontes) if (!fontes.has(p)) erreurs.push(p + ' : fonte embarquee (scripts/polices.mjs ou scripts/fontes-interface.mjs) absente de src/model/credits.ts');
   for (const p of fontes) if (!embarqueesFontes.has(p)) erreurs.push(p + ' : dans src/model/credits.ts mais embarquee nulle part');
   if (erreurs.length) throw new Error('mentions : la liste des composants ne tient pas\n  - ' + erreurs.join('\n  - '));
 }
+
+/** Le fichier de licence d'une fonte : LICENSE_FONT chez @expo-google-fonts (LICENSE y est celui du paquet MIT), LICENSE chez @fontsource. */
+const fichierLicenceFonte = paquet => ['LICENSE_FONT', 'LICENSE'].find(f => existsSync(join(paquetDe(paquet), f))) ?? 'LICENSE_FONT';
 
 /** Les fontes : une ligne de copyright par fonte, puis chaque texte de licence distinct une seule fois. */
 function sectionFontes(credits, verrou) {
   const fontes = credits.composantsDe('fonte');
   const lignes = ['## Fontes', '',
-    POLICES.length + ' fontes (' + fontes.length + ' familles) sont embarquées dans `polices.js`, sous la licence SIL Open Font License 1.1. Le copyright de chacune ci-dessous',
-    'accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.', ''];
+    POLICES.length + ' fontes (' + (fontes.length - FONTES_INTERFACE.length) + ' familles) sont embarquées dans `polices.js`, pour le texte en formes ; ' + FONTES_INTERFACE.length + ' familles de plus (Instrument Sans et IBM Plex Mono,',
+    'sous-ensemble latin) sont incorporées à `editeur-svg.html`, pour l’interface de la page : la page ne les demande à aucun serveur. Toutes sont sous la licence SIL Open Font License 1.1.',
+    'Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.', ''];
   const corps = new Map();
   for (const c of fontes) {
     const e = verrou.packages['node_modules/' + c.paquet];
-    const { texte } = licenceDe(c.paquet, 'LICENSE_FONT');
-    if (!texte) throw new Error('mentions : ' + c.paquet + ' n’a pas de LICENSE_FONT');
-    const copyright = texte.split('\n').find(l => l.trim() !== '') ?? '';
-    if (!/^Copyright/i.test(copyright)) throw new Error('mentions : ' + c.paquet + ' : la première ligne de LICENSE_FONT n’est pas un copyright');
+    const nomFichier = fichierLicenceFonte(c.paquet);
+    const { texte } = licenceDe(c.paquet, nomFichier);
+    if (!texte) throw new Error('mentions : ' + c.paquet + ' n’a pas de ' + nomFichier);
+    // Certains paquets (IBM Plex) listent, sur la meme ligne, le copyright de chaque fichier de fonte : on garde le premier.
+    const copyright = (texte.split('\n').find(l => l.trim() !== '') ?? '').replace(/ \S+\.ttf:.*$/, '');
+    if (!/^Copyright/i.test(copyright)) throw new Error('mentions : ' + c.paquet + ' : la première ligne de ' + nomFichier + ' n’est pas un copyright');
     const i = texte.indexOf('SIL OPEN FONT LICENSE Version 1.1');
-    if (i < 0) throw new Error('mentions : ' + c.paquet + ' : LICENSE_FONT ne porte pas la SIL OFL 1.1');
+    if (i < 0) throw new Error('mentions : ' + c.paquet + ' : ' + nomFichier + ' ne porte pas la SIL OFL 1.1');
     const licence = texte.slice(i).trim();
     if (!corps.has(licence)) corps.set(licence, []);
     corps.get(licence).push(c.nom);

@@ -64,7 +64,7 @@ describe('la liste des composants', () => {
 
   it('porte la source des formes, les fontes et les logiciels', () => {
     expect(composantsDe('forme').map(c => c.paquet)).toEqual(['@iconify-json/game-icons']);
-    expect(composantsDe('fonte').length).toBe(8);
+    expect(composantsDe('fonte').length).toBe(10);
     expect(composantsDe('logiciel').map(c => c.paquet)).toEqual(expect.arrayContaining(['react', 'react-dom', 'opentype.js', 'polygon-clipping', '@visioncortex/vtracer']));
   });
 
