@@ -43,6 +43,7 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .voie-titre { font-weight: 600; font-size: 0.95rem; }
 .voie-aide { font-size: 0.75rem; color: var(--encre-douce); }
 .voie[aria-selected="true"] { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); color: var(--encre); }
+@media (forced-colors: active) { .voie[aria-selected="true"] { outline: 3px solid Highlight; outline-offset: -3px; } .depot.survol { border-color: Highlight; } .voie:hover { border-color: Highlight; } }
 .voie-panneau { border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 16px; animation: apparition 0.18s ease-out; }
 .voie-panneau .depot { background: var(--table); }
 @media (max-width: 640px) {

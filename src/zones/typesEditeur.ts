@@ -6,6 +6,7 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
+import type { Annonce } from './annonces.js';
 import type { Version } from './session.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
@@ -59,6 +60,10 @@ export interface EtatInterface {
   message: string;
   /** La confirmation « Abandonner les modifications » est affichee. */
   quitter: boolean;
+  /** Le reticule du clavier d'un outil de trace (null : pas encore deplace aux fleches). */
+  curseur: Point | null;
+  /** La derniere phrase a dire aux lecteurs d'ecran (region unique, voir RegionVocale.tsx). */
+  annonce: Annonce;
 }
 
 /**
@@ -83,6 +88,9 @@ export interface ActionsEditeur {
   poserAimants: (a: boolean) => void;
   poserGuides: (g: readonly Aimant[]) => void;
   poserTiroir: (t: Tiroir) => void;
+  poserCurseur: (p: Point | null) => void;
+  /** Dit une phrase aux lecteurs d'ecran sans l'afficher dans la barre d'etat. */
+  annoncer: (t: string) => void;
   poserContours: (f: boolean | ((c: boolean) => boolean)) => void;
   poserFond: (f: Fond) => void;
   /** Ferme l'editeur, apres confirmation s'il y a des modifications. */

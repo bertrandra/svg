@@ -24,7 +24,7 @@ type Geste =
   | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue };
 
 /** La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions. */
-function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean): Commande[] {
+export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean): Commande[] {
   if (outil === 'ligne') {
     if (proportions) {
       const dx = x - x0, dy = y - y0, a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), r = Math.hypot(dx, dy);
