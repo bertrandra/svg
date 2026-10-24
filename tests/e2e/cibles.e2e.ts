@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, imageDeTest, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { attend, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 
 const MIN = 24;
 
@@ -19,7 +19,7 @@ interface Petite { cible: string; largeur: number; hauteur: number }
 /** Les cibles visibles de la page qui font moins de 24 × 24, nommees pour qu'on les retrouve. */
 async function petitesCibles(page: Page, minimum = MIN): Promise<Petite[]> {
   return page.evaluate(min => {
-    const SELECTEUR = 'button, a[href], input, select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"]';
+    const SELECTEUR = 'button, a[href], input, select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"]';
     const nom = (e: Element): string => {
       const h = e as HTMLElement;
       const texte = (h.getAttribute('aria-label') ?? h.innerText ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
@@ -164,6 +164,29 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
         await page.keyboard.press('Escape');
         await attend(() => bouton.getAttribute('aria-expanded')).toBe('false');
       }
+    });
+
+    it('en contexte Cricut : le selecteur ouvert, le panneau « Pret pour Cricut » et ses corrections, le gabarit', async () => {
+      const page = await ouvrirPage();
+      // Un trait, deux nuances proches, une bande trop fine et une barre plus large que le tapis : tous les boutons du panneau.
+      await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 700"><path d="M96 96H288V288H96Z" fill="#c81e28" stroke="#15181d" stroke-width="8"/>'
+        + '<path d="M384 96H576V288H384Z" fill="#c91f27"/><path d="M960 96H963V288H960Z" fill="#1428a0"/><path d="M96 480H1250V560H96Z" fill="#2a9d8f"/></svg>', tactile);
+      const bouton = tactile ? page.getByRole('button', { name: /^Plus d’actions/ }) : page.locator('.selecteur-contexte .menu-bouton');
+      await cliquer(bouton);
+      await page.getByRole('menu', { name: 'Contexte de production' }).waitFor();
+      await exiger(page);
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      await cricut.scrollIntoViewIfNeeded();
+      await cliquer(cricut);
+      await cliquer(bouton);
+      await page.getByRole('menu', { name: 'Machine' }).waitFor();
+      await exiger(page);
+      await page.keyboard.press('Escape');
+      await attend(() => bouton.getAttribute('aria-expanded')).toBe('false');
+      await tiroir(page, 'Inspecteur');
+      await page.locator('.panneau-cricut .constat').first().waitFor();
+      await cliquer(page.locator('.panneau-cricut .aide-cricut > summary'));
+      await exiger(page);
     });
 
     it('avec le menu des formes, la boite des credits et le menu d export de l accueil', async () => {
