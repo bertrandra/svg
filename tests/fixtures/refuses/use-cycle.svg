@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <defs>
+    <g id="a"><rect width="5" height="5"/><use href="#b" x="6"/></g>
+    <g id="b"><rect width="5" height="5"/><use href="#a" x="6"/></g>
+  </defs>
+  <use href="#a" x="2" y="2"/>
+</svg>

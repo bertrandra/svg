@@ -34,6 +34,6 @@ de module, partagé entre deux éditeurs d'une même page hôte.
   forme 38 → 37 ms par mouvement, masquer un groupe 181 → 163 ms), dans le bruit de mesure de ±10 %.
   Pendant un geste presque tous les panneaux lisent le dessin : ils se redessinent comme avant. Le gain est
   de structure, pas de vitesse.
-- Les 2 000 lignes de `ParCouleur` restent le point chaud signalé par l'ADR-0008.
+- Les listes de couleurs, point chaud mesuré ici, sont fenêtrées ensuite (ADR-0008).
 - Un hôte qui utilise le composant React sans passer `stockage` ne garde plus les versions : c'est le
   prix de « l'éditeur ne connaît aucun magasin », dit dans `docs/integration.md`.

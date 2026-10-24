@@ -2,11 +2,14 @@
 // que quand quelque chose est choisi.
 
 import { memo } from 'react';
-import { aligner, ordonner, retourner, sousChemins, tourner, type Alignement, type Ordre } from '../engine/editionSvg.js';
+import { aligner, retourner, sousChemins, tourner, type Alignement, type Ordre } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
+import { empiler } from './empilement.js';
 import type { NomIcone } from './icones.js';
+import { phraseAlignement, phraseMiroir } from './phrasesSelection.js';
+import { phraseRotation } from './annonces.js';
 
 const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
   ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
@@ -20,7 +23,7 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 
 /** La rangee de la selection : aligner, retourner, tourner, empiler, booleens, combiner, separer, et le reste d'un geste. */
 export const BarreSelection = memo(function BarreSelection() {
-  const { sel, formeSeule } = useDessin(), ac = useActions();
+  const { sel, formeSeule, dessin } = useDessin(), ac = useActions();
   if (!sel.length) return null;
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
   const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
@@ -28,16 +31,16 @@ export const BarreSelection = memo(function BarreSelection() {
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{sel.length} sélectionnée{sel.length > 1 ? 's' : ''}</span>
       <div className="groupe" role="group" aria-label="Aligner">
-        {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => ac.faire(d => aligner(d, sel, a))} />)}
+        {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => ac.faire(d => aligner(d, sel, a), phraseAlignement(a, sel.length))} />)}
       </div>
       <div className="groupe" role="group" aria-label="Transformer">
-        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => ac.faire(d => retourner(d, sel, 'h'))} />
-        <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => ac.faire(d => retourner(d, sel, 'v'))} />
-        <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => ac.faire(d => tourner(d, sel, -90))} />
-        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => ac.faire(d => tourner(d, sel, 90))} />
+        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => ac.faire(d => retourner(d, sel, 'h'), phraseMiroir('h'))} />
+        <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => ac.faire(d => retourner(d, sel, 'v'), phraseMiroir('v'))} />
+        <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => ac.faire(d => tourner(d, sel, -90), phraseRotation(-90))} />
+        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => ac.faire(d => tourner(d, sel, 90), phraseRotation(90))} />
       </div>
       <div className="groupe" role="group" aria-label="Empiler">
-        {ORDRES_ICONES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} onClick={() => ac.faire(d => ordonner(d, sel, o))} />)}
+        {ORDRES_ICONES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} onClick={() => empiler(ac, dessin, sel, o)} />)}
       </div>
       <div className="groupe" role="group" aria-label="Booléens">
         {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => ac.booleen(op)} />)}

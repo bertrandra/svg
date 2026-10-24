@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ecrireDessin, lireDessin } from '../engine/editionSvg.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin } from './contexteEditeur.js';
+import { Bouton } from './commun/Bouton.js';
 import { Section } from './commun/Section.js';
 import { dateCourte } from './session.js';
 
@@ -32,7 +33,7 @@ export function PanneauVersions() {
               <span className="nom-version" title={dateCourte(v.quand)}>{v.nom} <span className="aide">{dateCourte(v.quand)}</span></span>
               <button type="button" className="discret" onClick={() => revenir(v.svg, v.nom)}>Revenir</button>
               <button type="button" className="discret" onClick={() => { void proposer(v.nom.replace(/[^\w-]+/g, '-') + '.svg', texteOctets(v.svg)).then(ac.dire); }}>SVG</button>
-              <button type="button" className="discret" aria-label={'Supprimer la version ' + v.nom} onClick={() => ac.supprimerVersion(v.id)}>×</button>
+              <Bouton icone="supprimer" aide={'Supprimer la version ' + v.nom} onClick={() => ac.supprimerVersion(v.id)} />
             </li>
           ))}
         </ul>

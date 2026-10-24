@@ -40,9 +40,18 @@ entrelacés), ne corriger que ce qui coûte, et laisser tel quel ce qui ne coût
   coûtent 6,5 ms, 10 000 coûtent 37 ms (88 ms et 1 387 ms avant).
 - Sur le dessin à 1 669 couleurs : glisser une forme 142 → 25 ms par mouvement, masquer un groupe
   438 → 119 ms, choisir une couleur 348 → 74 ms, ouvrir 2 792 → 1 732 ms, DOM 53 968 → 21 029 nœuds.
+- **Le panneau « Couleurs du dessin »** de l'inspecteur se fenêtre comme « Par couleur » (seuil 100, marge 12,
+  `aria-posinset`/`aria-setsize`, cales, lignes mémoïsées à verbes stables ; les couleurs ne se relisent
+  que si une couleur, une visibilité ou un verrou change). Sur le dessin à 1 669 couleurs : Échap
+  933 → 156 ms, ouvrir 1 792 → 851 ms, recolorer cinq valeurs 722 → 310 ms, DOM 21 034 → 6 194 nœuds
+  (20 lignes dessinées au lieu de 1 669). Photo et logo : dans le bruit de mesure.
+- **La ligne dont le sélecteur de couleur est ouvert reste dessinée hors de la fenêtre** tant que le geste
+  dure (`segmentsFenetre`, ligne épinglée), dans les deux listes : une ligne recolorée change de rang
+  (tri par nombre de formes puis code), et sortie de la fenêtre elle fermait le sélecteur natif.
 - Laissé tel quel, avec ses chiffres : `Calque` mémoïsé tient déjà, `ecrireChemin` (formatage des nombres)
   ne gagne rien à une boucle manuelle, glisser 5 000 formes demanderait un `transform` CSS pendant le
-  geste. Le panneau « Couleurs du dessin » de l'inspecteur liste encore toutes les couleurs sans fenêtre
-  (Échap sur 1 669 couleurs coûte ~750 ms) : c'est le prochain point chaud.
+  geste. Le panneau « Couleurs du dessin » de l'inspecteur se fenêtre
+  lui aussi (voir plus haut) : plus aucune liste de l'éditeur ne dessine toutes ses lignes au-delà de
+  100 couleurs ou 150 formes.
 - Deux cents états de 5 000 formes pesaient près de 2 Go : la limite d'historique est une décision de
   mémoire, pas de confort.

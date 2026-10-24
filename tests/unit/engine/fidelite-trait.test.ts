@@ -130,8 +130,9 @@ describe('currentColor suit la propriete color', () => {
     expect(forme(lire('<path d="M0 0h10v10z"/>', ' color="#ff0000"')).remplissage).toBe('#000000');
   });
 
-  it('une regle de style hors classe qui pose color est dite', () => {
-    expect(ignoresDe('<style>svg { color: red }</style><path d="M0 0h1v1z"/>')).toEqual(['les règles de style qui ne visent pas une classe (balise, identifiant…)']);
+  it('une regle de style sur la balise svg qui pose color se lit (elle etait dite avant le troisieme lot)', () => {
+    expect(forme(lire('<style>svg { color: #ff0000 }</style><path d="M0 0h10v10z" fill="currentColor"/>')).remplissage).toBe('#ff0000');
+    expect(ignoresDe('<style>svg { color: red }</style><path d="M0 0h1v1z"/>')).toEqual([]);
   });
 });
 
@@ -238,11 +239,12 @@ describe('le style du trait, a la lecture', () => {
     expect(forme(d, 1)).toMatchObject({ jonction: 'bevel' });
   });
 
-  it('une regle hors classe qui pose un pointille est dite', () => {
-    expect(ignoresDe('<style>path { stroke-dasharray: 4 2 }</style><path d="M0 0h1v1z"/>')).toHaveLength(1);
+  it('une regle de balise qui pose un pointille se lit (elle etait dite avant le troisieme lot)', () => {
+    expect(forme(lire('<style>path { stroke-dasharray: 4 2 }</style><path d="M0 0h10" stroke="#000"/>'), 0)).toMatchObject({ pointilles: [4, 2] });
+    expect(ignoresDe('<style>path { stroke-dasharray: 4 2 }</style><path d="M0 0h1v1z"/>')).toEqual([]);
   });
 
-  it('les marqueurs, les animations et les regles hors classe restent dits', () => {
+  it('les marqueurs et les animations restent dits', () => {
     expect(ignoresDe('<path d="M0 0h10" stroke="#000" marker-end="url(#m)"/>')).toEqual(['les marqueurs des traits (pointes de flèche…)']);
     expect(ignoresDe('<path d="M0 0h1v1z"><animate attributeName="fill" values="a;b" dur="1s"/></path>')).toEqual(['les animations']);
   });

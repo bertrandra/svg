@@ -88,7 +88,7 @@ export const LigneCouleur = memo(function LigneCouleur({ g, choisie, sur, nuanci
         <span className="aide">{g.ids.length}{g.visibles < g.ids.length ? ' · ' + (g.ids.length - g.visibles) + ' masquée' + accord(g.ids.length - g.visibles) : ''}</span>
       </button>
       <Bouton icone={toutesMasquees ? 'masquer' : 'oeil'} aide={(toutesMasquees ? 'Afficher' : 'Masquer') + ' les formes ' + nom} pressed={toutesMasquees} onClick={basculerVisible} />
-      <Bouton icone="verrouiller" aide={(toutesVerrouillees ? 'Déverrouiller' : 'Verrouiller') + ' les formes ' + nom} pressed={toutesVerrouillees} onClick={basculerVerrou} />
+      <Bouton icone={toutesVerrouillees ? 'verrouiller' : 'deverrouiller'} aide={(toutesVerrouillees ? 'Déverrouiller' : 'Verrouiller') + ' les formes ' + nom} pressed={toutesVerrouillees} onClick={basculerVerrou} />
       <MenuDeroulant etiquette={'Autres actions sur ' + nom} icone="options" chevron={false} alignement="gauche" elements={elements} />
     </li>
   );

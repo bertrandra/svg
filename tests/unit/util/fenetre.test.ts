@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { defilementPour, fenetre, MARGE_FENETRE, SEUIL_FENETRE } from '../../../src/util/fenetre.js';
+import { defilementPour, fenetre, MARGE_FENETRE, segmentsFenetre, SEUIL_FENETRE, type Segment } from '../../../src/util/fenetre.js';
 
 describe('fenetre', () => {
   it('dessine toute une liste courte, sans marge ni espace', () => {
@@ -77,5 +77,71 @@ describe('defilementPour', () => {
 
   it('une liste qui commence plus bas que la zone ne fait pas defiler la premiere ligne', () => {
     expect(defilementPour(0, 27, -80, 400)).toBe(0);
+  });
+});
+
+/** Pose les segments comme le fait une grille a `espace` pixels de gouttiere : l'ordonnee de chaque ligne, et la fin. */
+function poser(segments: readonly Segment[], pas: number, espace: number) {
+  let y = 0;
+  const lignes = new Map<number, number>();
+  for (const sg of segments) {
+    if (sg.type === 'ligne') { lignes.set(sg.index, y); y += pas - espace; } else y += sg.hauteur;
+    y += espace;
+  }
+  return { lignes, fin: y - espace };
+}
+
+describe('segmentsFenetre', () => {
+  const total = 2000, pas = 31, visible = 260;
+
+  it('sans ligne epinglee : une cale en haut, les lignes de la fenetre, une cale en bas', () => {
+    const f = fenetre(total, pas, 1000 * pas, visible, MARGE_FENETRE, 100);
+    const sg = segmentsFenetre(f, total, pas);
+    expect(sg[0]).toEqual({ type: 'cale', lieu: 'haut', hauteur: f.haut - 1 });
+    expect(sg[sg.length - 1]).toEqual({ type: 'cale', lieu: 'bas', hauteur: f.bas });
+    const index = sg.flatMap(x => (x.type === 'ligne' ? [x.index] : []));
+    expect(index).toEqual(Array.from({ length: f.fin - f.debut }, (_, k) => f.debut + k));
+  });
+
+  it('en haut de la liste il n y a pas de cale du haut, et une liste entiere n a aucune cale', () => {
+    const f = fenetre(total, pas, 0, visible, MARGE_FENETRE, 100);
+    expect(segmentsFenetre(f, total, pas)[0]).toEqual({ type: 'ligne', index: 0 });
+    const toute = segmentsFenetre(fenetre(40, pas, 0, visible, MARGE_FENETRE, 100), 40, pas);
+    expect(toute.every(x => x.type === 'ligne')).toBe(true);
+    expect(toute).toHaveLength(40);
+  });
+
+  it.each([1, 4])('chaque ligne tombe a index * pas, epinglee ou non (espace de %i px)', espace => {
+    for (const defile of [0, 5 * pas, 700 * pas, 1990 * pas]) {
+      const f = fenetre(total, pas, defile, visible, MARGE_FENETRE, 100);
+      for (const epingle of [null, 0, 3, 700, 1500, total - 1]) {
+        const { lignes, fin } = poser(segmentsFenetre(f, total, pas, epingle, espace), pas, espace);
+        for (const [i, y] of lignes) expect(y, `ligne ${i}, epingle ${String(epingle)}, defile ${defile}`).toBe(i * pas);
+        // La hauteur de la liste est celle de la liste entiere, a la gouttiere finale pres.
+        expect([total * pas, total * pas - espace]).toContain(fin);
+        if (epingle !== null) expect(lignes.has(epingle)).toBe(true);
+      }
+    }
+  });
+
+  it('epingler une ligne hors de la fenetre ajoute une ligne et une cale du milieu, pas plus', () => {
+    const f = fenetre(total, pas, 1000 * pas, visible, MARGE_FENETRE, 100);
+    const sans = segmentsFenetre(f, total, pas);
+    const loin = segmentsFenetre(f, total, pas, total - 1);
+    expect(loin.filter(x => x.type === 'ligne')).toHaveLength(sans.filter(x => x.type === 'ligne').length + 1);
+    expect(loin.filter(x => x.type === 'cale' && x.lieu === 'milieu')).toHaveLength(1);
+    // Juste apres la fenetre, il n y a rien a combler : pas de cale vide.
+    const collee = segmentsFenetre(f, total, pas, f.fin);
+    expect(collee.filter(x => x.type === 'cale').every(x => x.type === 'cale' && x.hauteur > 0)).toBe(true);
+    expect(collee.filter(x => x.type === 'cale' && x.lieu === 'milieu')).toHaveLength(0);
+  });
+
+  it('une ligne deja dans la fenetre, ou hors de la liste, n ajoute rien', () => {
+    const f = fenetre(total, pas, 1000 * pas, visible, MARGE_FENETRE, 100);
+    const sans = segmentsFenetre(f, total, pas);
+    expect(segmentsFenetre(f, total, pas, f.debut + 3)).toEqual(sans);
+    expect(segmentsFenetre(f, total, pas, -1)).toEqual(sans);
+    expect(segmentsFenetre(f, total, pas, total)).toEqual(sans);
+    expect(segmentsFenetre(f, total, pas, 2.5)).toEqual(sans);
   });
 });

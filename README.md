@@ -52,7 +52,10 @@ s'embarque aussi comme composant React dans un autre produit.
 - **Gros dessins** : des milliers de formes et de couleurs restent fluides (listes fenêtrées,
   historique borné selon la taille).
 
-Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, `<use>`.
+Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, un `<use>` en cycle
+ou renvoyant à un fichier extérieur. Un `<use>` ordinaire (planche d'icônes, `<symbol>`) se déplie en formes
+indépendantes, et la feuille `<style>` se lit avec ses vrais sélecteurs ; ce qui n'est pas repris
+(marqueurs, animations, `@media`…) est dit à l'ouverture.
 On n'édite pas ce qu'on ne saurait pas réécrire ; une image se vectorise d'abord.
 
 ## Démarrer
@@ -75,7 +78,7 @@ npm run e2e          # les tests de navigateur (Chromium), après construire
 | `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
-| `npm run e2e` | 68 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
+| `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `CHROMIUM_PATH` facultatif ; hors `npm test` |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 

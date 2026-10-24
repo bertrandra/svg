@@ -3,7 +3,8 @@
 import { memo, type ReactNode } from 'react';
 import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { FORMES } from './aidesEditeur.js';
-import type { Coin, EtatInterface, ModeleDessin } from './typesEditeur.js';
+import { formeTracee } from './Gestes.js';
+import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
 function cheminDe(f: Forme): string {
@@ -52,6 +53,12 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
     const f = parId.get(id);
     if (f) r.push(<path key={'s' + id} className="trace-choisi" d={cheminDe(f)} pointerEvents="none" />);
   }
+  // Le curseur de la selection au clavier (Maj+Page suivante, Espace) : un anneau a deux tons, lisible sur tout dessin.
+  const focale = ui.focale && ui.focale.sel === mo.sel ? mo.dessin.formes.find(x => x.id === ui.focale?.id) : undefined;
+  if (focale && focale.visible) {
+    r.push(<path key="focale-fond" className="focale-fond" d={cheminDe(focale)} pointerEvents="none" />);
+    r.push(<path key="focale" className="focale" d={cheminDe(focale)} pointerEvents="none" />);
+  }
   const b = mo.boite;
   if (b && ui.outil === 'selection') {
     r.push(<rect key="boite" className="boite-choisie" x={b.x} y={b.y} width={b.l} height={b.h} pointerEvents="none" />);
@@ -84,6 +91,12 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
       const q = ancre(x);
       if (q) r.push(<rect key={'a' + i} data-ancre={i} className={'ancre' + (i === p ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} />);
     });
+  }
+  // Une forme a deux coins au clavier : le premier coin est pose (la trace n'a que lui), l'apercu va jusqu'au reticule.
+  const [coin1] = ui.trace;
+  if (FORMES.has(ui.outil) && ui.trace.length === 1 && coin1 && ui.curseur) {
+    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false);
+    r.push(<path key="apercu" className="trace-en-cours" d={ecrireChemin(d, 3)} pointerEvents="none" />);
   }
   if (ui.trace.length) {
     r.push(<polyline key="trace" className="trace-en-cours" points={ui.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);

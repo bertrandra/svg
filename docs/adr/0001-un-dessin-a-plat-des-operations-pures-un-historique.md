@@ -18,7 +18,7 @@ produits, sans y apporter de magasin ni de plateforme.
    plan de travail. Les transformations des groupes sont appliquées, cercles, rectangles et arcs
    deviennent des courbes, et les peintures sont résolues (attributs, classes d'une feuille
    `<style>`, `style`, héritage). Ce qui ne s'y ramène pas (texte, image, dégradé, masque, découpe,
-   filtre, `<use>`) est **refusé en le nommant** : on n'édite pas ce qu'on ne saurait pas réécrire.
+   filtre, un `<use>` en cycle ou vers l'extérieur) est **refusé en le nommant** : on n'édite pas ce qu'on ne saurait pas réécrire.
 2. **Chaque opération est pure** et rend un nouveau dessin : déplacer, redimensionner, retourner,
    tourner, aligner, empiler, dupliquer, supprimer, colorer ; remplacer une couleur partout ; retirer
    les poussières sous un seuil ; regrouper les voisines de même couleur **seulement si elles ne se

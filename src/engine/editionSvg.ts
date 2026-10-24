@@ -4,8 +4,10 @@
 // son remplissage, son contour et son opacite resolus (attributs, classes, style, heritage). Toute
 // operation rend un nouveau dessin et ne touche pas l'ancien : l'historique les garde tels quels.
 //
-// Ce qui ne se ramene pas a des chemins pleins (texte, image, degrade, masque, decoupe, <use>) est
-// refuse a la lecture avec son nom : on n'edite pas un dessin qu'on ne saurait pas reecrire.
+// Ce qui ne se ramene pas a des chemins pleins (texte, image, degrade, masque, decoupe, filtre, SVG imbrique) est
+// refuse a la lecture avec son nom : on n'edite pas un dessin qu'on ne saurait pas reecrire. Un <use> se deplie
+// en formes independantes (cycle, fichier externe : refuses) et la feuille <style> se lit avec ses selecteurs ;
+// ce que la lecture laisse tomber sans refuser est dit par `ignores`.
 //
 // Ce fichier n'est plus que la facade : le travail vit dans `edition/`, un module par sujet. Les
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
@@ -38,8 +40,8 @@ export {
 
 export {
   couleursDuDessin, remplacerCouleur, remplacerCouleurSur, idsDeCouleur, idsMemeCouleur, groupesDeCouleur,
-  lireCouleurs, partagerGroupes, memesCouleurs,
-  type CouleurDuDessin, type SurCouleur, type GroupeCouleur, type LectureCouleurs
+  lireCouleurs, partagerGroupes, memesCouleurs, lireCouleursDuDessin, partagerCouleursDuDessin,
+  type CouleurDuDessin, type SurCouleur, type GroupeCouleur, type LectureCouleurs, type LectureCouleursDuDessin
 } from './edition/couleurs.js';
 
 export {

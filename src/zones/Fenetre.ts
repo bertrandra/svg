@@ -33,6 +33,8 @@ export interface FenetreListe {
 export interface FenetreDefilante<L extends HTMLElement> {
   liste: RefObject<L | null>;
   fenetre: Fenetre;
+  /** Le pas mesure entre deux lignes, que `segmentsFenetre` emploie pour la hauteur des cales. */
+  pas: number;
   actif: boolean;
   montrer: (index: number) => void;
 }
@@ -105,7 +107,7 @@ function useMesureFenetre<L extends HTMLElement>(total: number, seuil: number, i
     if (delta) r.scrollTop += delta;
   }, [conteneur, interne]);
 
-  return { racine, liste, fenetre: fenetre(total, mesure.pas, mesure.defile, mesure.visible, undefined, seuil), actif, montrer };
+  return { racine, liste, fenetre: fenetre(total, mesure.pas, mesure.defile, mesure.visible, undefined, seuil), pas: mesure.pas, actif, montrer };
 }
 
 /** Les lignes a dessiner d'une liste de `total` lignes de meme hauteur, dans un panneau qui defile. */
@@ -118,6 +120,6 @@ export function useFenetre(total: number): FenetreListe {
  * `seuil` lignes, le composant remplace les lignes absentes par deux cales (`data-cale`) de leur hauteur.
  */
 export function useFenetreDefilante<L extends HTMLElement>(total: number, seuil: number): FenetreDefilante<L> {
-  const { liste, fenetre: f, actif, montrer } = useMesureFenetre<L>(total, seuil, true);
-  return { liste, fenetre: f, actif, montrer };
+  const { liste, fenetre: f, pas, actif, montrer } = useMesureFenetre<L>(total, seuil, true);
+  return { liste, fenetre: f, pas, actif, montrer };
 }

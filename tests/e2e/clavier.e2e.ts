@@ -391,7 +391,7 @@ describe('clavier et lecteur d ecran', () => {
 
     it('offre « Aller a la toile » comme premier arret, visible au focus', async () => {
       const page = await editeur();
-      const saut = page.getByRole('button', { name: 'Aller à la toile' });
+      const saut = page.getByRole('link', { name: 'Aller à la toile' });
       // Hors focus il est au-dessus de l'ecran ; au focus il y entre tout entier.
       const dansLEcran = async () => { const b = await saut.boundingBox(); return !!b && b.y >= 0 && b.y + b.height <= 900 && b.x >= 0; };
       expect(await dansLEcran()).toBe(false);

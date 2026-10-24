@@ -54,5 +54,8 @@ les panneaux sur tablette.
 - Le stockage du navigateur ne porte que des conforts (brouillon, versions, corrections) : la page
   marche sans lui.
 - Le crénage du texte se lit dans la table GPOS (`io/crenageGpos.ts`, paires de format 1 et 2, directes ou
-  par extension) : opentype.js 2.0 ne lit ni les lookups d'extension ni les suivants. Les ligatures ne
-  sont pas appliquées : une lettre reste une forme.
+  par extension) : opentype.js 2.0 ne lit ni les lookups d'extension ni les suivants. Les ligatures sont une
+  option du panneau Texte (`composer(…, { ligatures })`, éteinte par défaut dans le moteur, cochée dans le
+  panneau pour les fontes qui en ont) : un lecteur GSUB pur (`io/ligaturesGsub.ts`, lookups de type 4,
+  directs ou par extension, feature `liga`) en fait UNE forme pour les lettres liées ; Inter et Bebas Neue
+  n'en ont pas (celles d'Inter passent par `calt`, non lu).

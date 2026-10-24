@@ -55,3 +55,33 @@ export function defilementPour(index: number, pas: number, defile: number, visib
   if (bas > defile + visible) return Math.ceil(bas - (defile + visible));
   return 0;
 }
+
+/** Ce qu'une liste fenetree dessine, dans l'ordre : une ligne, ou une cale qui tient la place des lignes qu'on ne dessine pas. */
+export type Segment =
+  | { type: 'ligne'; index: number }
+  | { type: 'cale'; lieu: 'haut' | 'milieu' | 'bas'; hauteur: number };
+
+/**
+ * Les lignes et les cales d'une liste fenetree dont les lignes sont separees de `espace` pixels (le `gap`
+ * de la liste). `epingle` est une ligne qu'on doit garder dessinee meme hors de la fenetre : celle dont un
+ * geste est en cours. Retirer du DOM le selecteur de couleur qu'on tient fermerait le selecteur natif sous
+ * le doigt ; la ligne reste donc a sa place, entre deux cales, tant que le geste dure.
+ *
+ * Une cale entre deux elements porte `n * pas - espace` : l'espace qui la precede et celui qui la suit font
+ * partie du pas des lignes qu'elle remplace. Seule la derniere, collee au bord, n'a qu'un espace avant elle.
+ */
+export function segmentsFenetre(f: Fenetre, total: number, pas: number, epingle: number | null = null, espace = 1): Segment[] {
+  const blocs: Array<readonly [number, number]> = [[f.debut, f.fin]];
+  if (epingle !== null && Number.isInteger(epingle) && epingle >= 0 && epingle < total && (epingle < f.debut || epingle >= f.fin)) blocs.push([epingle, epingle + 1]);
+  blocs.sort((a, b) => a[0] - b[0]);
+  const rendus: Segment[] = [];
+  let curseur = 0;
+  for (const [debut, fin] of blocs) {
+    const hauteur = (debut - curseur) * pas - espace;
+    if (debut > curseur && hauteur > 0) rendus.push({ type: 'cale', lieu: curseur === 0 ? 'haut' : 'milieu', hauteur });
+    for (let i = debut; i < fin; i++) rendus.push({ type: 'ligne', index: i });
+    curseur = Math.max(curseur, fin);
+  }
+  if (curseur < total) rendus.push({ type: 'cale', lieu: 'bas', hauteur: (total - curseur) * pas });
+  return rendus;
+}

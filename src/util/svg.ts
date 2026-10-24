@@ -5,12 +5,25 @@
 
 export interface SvgPropre { svg: string; ratio: number }
 
+/** L'attribut inerte qui garde, sur un <use>, le renvoi externe que le nettoyage retire : la lecture le refuse en le nommant. */
+export const ATTRIBUT_HREF_EXTERNE = 'data-href-externe';
+
+/**
+ * Un renvoi externe de <use> (fichier, adresse) n'est pas laisse tel quel, mais pas non plus perdu : un <use> sans
+ * href se lirait comme « cible introuvable » et ne dessinerait rien, alors qu'un navigateur dessinerait l'autre fichier.
+ * Le renvoi passe dans un attribut `data-*`, sans effet dans un navigateur, que la lecture (engine/edition/clones.ts) refuse.
+ */
+function garderRenvoisExternes(s: string): string {
+  return s.replace(/<use\b[^>]*>/gi, balise => balise.replace(/\s(?:xlink:)?href\s*=\s*(?:"(?!#)([^"]*)"|'(?!#)([^']*)')/gi,
+    (_, a: string | undefined, b: string | undefined) => ' ' + ATTRIBUT_HREF_EXTERNE + '="' + (a ?? b ?? '').replace(/"/g, '&quot;') + '"'));
+}
+
 export function nettoyerSvg(texte: string): SvgPropre | null {
   const debut = texte.search(/<svg[\s>]/i);
   const fin = texte.toLowerCase().lastIndexOf('</svg>');
   if (debut < 0 || fin < debut) return null;
   let s = texte.slice(debut, fin + 6);
-  s = s.replace(/<script[\s\S]*?<\/script\s*>/gi, '').replace(/<script[^>]*\/>/gi, '')
+  s = garderRenvoisExternes(s).replace(/<script[\s\S]*?<\/script\s*>/gi, '').replace(/<script[^>]*\/>/gi, '')
     .replace(/<foreignObject[\s\S]*?<\/foreignObject\s*>/gi, '')
     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
     .replace(/\s(xlink:)?href\s*=\s*("(?!#|data:image\/(png|jpe?g|gif|webp);)[^"]*"|'(?!#|data:image\/(png|jpe?g|gif|webp);)[^']*')/gi, '')

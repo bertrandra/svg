@@ -3,6 +3,7 @@
 
 import type { Boite, DessinSvg, Forme, Style } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
+import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
@@ -64,6 +65,8 @@ export interface EtatInterface {
   quitter: boolean;
   /** Le reticule du clavier d'un outil de trace (null : pas encore deplace aux fleches). */
   curseur: Point | null;
+  /** Le curseur de la selection au clavier (Maj+Page suivante, Espace), valable tant que la selection n'a pas change. */
+  focale: Focale | null;
   /** La derniere phrase a dire aux lecteurs d'ecran (region unique, voir RegionVocale.tsx). */
   annonce: Annonce;
 }
@@ -92,6 +95,7 @@ export interface ActionsEditeur {
   poserGuides: (g: readonly Aimant[]) => void;
   poserTiroir: (t: Tiroir) => void;
   poserCurseur: (p: Point | null) => void;
+  poserFocale: (f: Focale | null) => void;
   /** Dit une phrase aux lecteurs d'ecran sans l'afficher dans la barre d'etat. */
   annoncer: (t: string) => void;
   poserContours: (f: boolean | ((c: boolean) => boolean)) => void;

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { au } from '../../../src/util/tableaux.js';
-import { phraseOutil, phrasePoint, phrasePosition, phraseReticule, phraseRotation, phraseSelection, phraseTaille, phraseZoom } from '../../../src/zones/annonces.js';
+import {
+  phraseBascule, phraseCoinOppose, phraseOutil, phrasePoint, phrasePosition, phrasePremierCoin, phraseReticule, phraseRotation, phraseSelection, phraseTaille, phraseZoom
+} from '../../../src/zones/annonces.js';
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
   + '<rect x="40" y="60" width="120" height="80" fill="#c81e28"/>'
@@ -31,6 +33,25 @@ describe('les autres phrases', () => {
     expect(phraseOutil('rectangle')).toMatch(/réticule/);
     expect(phraseOutil('points')).toMatch(/Tab/);
     expect(phraseOutil('selection')).toMatch(/Alt/);
+  });
+
+  it('dit les deux manieres de poser une forme, et ce que fait Entree avec l outil texte', () => {
+    expect(phraseOutil('ellipse')).toMatch(/Entrée pose la forme, Espace pose un coin puis l’autre/);
+    expect(phraseOutil('texte')).toMatch(/Entrée ouvre le champ/);
+  });
+
+  it('dit les coins d une forme a deux coins : place du premier, place et mesures de l autre', () => {
+    expect(phrasePremierCoin([40, 12.5])).toMatch(/^Premier coin posé à 40, 12,5\. .*Échap : annuler\.$/);
+    expect(phraseCoinOppose([40, 40], [80, 90])).toBe('Coin opposé à 80, 90 : 40 × 50.');
+    // L'autre coin peut etre en haut a gauche du premier : les mesures restent positives.
+    expect(phraseCoinOppose([80, 90], [40, 40])).toBe('Coin opposé à 40, 40 : 40 × 50.');
+  });
+
+  it('dit la selection additive : ajoutee, retiree, deja, et ce qui reste', () => {
+    expect(phraseBascule('f4', 'ajoutee', 3)).toBe('Forme 4 ajoutée : 3 formes sélectionnées.');
+    expect(phraseBascule('f4', 'retiree', 1)).toBe('Forme 4 retirée : 1 forme sélectionnée.');
+    expect(phraseBascule('f4', 'retiree', 0)).toBe('Forme 4 retirée : plus aucune forme sélectionnée.');
+    expect(phraseBascule('f2', 'deja', 2)).toBe('Forme 2 déjà sélectionnée : 2 formes sélectionnées.');
   });
 
   it('dit le point actif : son rang, sa nature, sa place', () => {

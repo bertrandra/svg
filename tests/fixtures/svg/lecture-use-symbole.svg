@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <title>Symboles : viewBox et preserveAspectRatio</title>
+  <defs>
+    <symbol id="haut" viewBox="0 0 10 20"><rect width="10" height="20" fill="#1f5f3f"/><circle cx="5" cy="5" r="3" fill="#f4efe6"/></symbol>
+    <symbol id="rogne" viewBox="0 0 10 10" preserveAspectRatio="xMinYMax slice"><path d="M0 0h10l-5 10z" fill="#c81e28"/></symbol>
+    <symbol id="etire" viewBox="0 0 10 10" preserveAspectRatio="none"><circle cx="5" cy="5" r="5" fill="#2a5db0"/></symbol>
+    <symbol id="libre"><path d="M0 0h8v8z" fill="#7b2d8e"/></symbol>
+  </defs>
+  <use href="#haut" x="5" y="5" width="40" height="40"/>
+  <use href="#rogne" x="60" y="5" width="40" height="20"/>
+  <use href="#etire" x="110" y="5" width="40" height="20"/>
+  <use href="#libre" x="160" y="10"/>
+</svg>

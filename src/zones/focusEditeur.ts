@@ -11,15 +11,21 @@ function premierFocus(racine: HTMLElement): HTMLElement | null {
   return racine.querySelector<HTMLElement>('.editeur-svg-toile') ?? racine.querySelector<HTMLElement>('button');
 }
 
-/** Rend inertes les freres de la racine qui ne le sont pas deja, et rend la fonction qui les retablit. */
+/**
+ * Rend inertes les freres de la racine qui ne le sont pas deja, et rend la fonction qui les retablit. Ils sont
+ * aussi caches (`visibility`) : l'editeur les recouvre d'un fond plein, rien ne se perd a l'ecran, mais un
+ * element inerte reste dans la pile que les outils d'audit lisent derriere chaque texte, et le contraste d'un
+ * texte de l'editeur y devenait « impossible a determiner ». Le style en ligne de l'hote est remis tel quel.
+ */
 function isolerLePeuple(racine: HTMLElement): () => void {
-  const touches: HTMLElement[] = [];
+  const touches: Array<{ e: HTMLElement; visibilite: string }> = [];
   for (const frere of Array.from(document.body.children)) {
     if (!(frere instanceof HTMLElement) || frere === racine || frere.inert) continue;
+    touches.push({ e: frere, visibilite: frere.style.visibility });
     frere.inert = true;
-    touches.push(frere);
+    frere.style.visibility = 'hidden';
   }
-  return () => { for (const e of touches) e.inert = false; };
+  return () => { for (const t of touches) { t.e.inert = false; t.e.style.visibility = t.visibilite; } };
 }
 
 export function useFocusEditeur(racine: RefObject<HTMLDivElement | null>): void {

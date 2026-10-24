@@ -95,3 +95,36 @@ export function centreVisible(vue: { zoom: number; x: number; y: number }, large
 
 /** Le cote des formes posees au reticule : le quart du plus petit cote du plan. */
 export const coteParDefaut = (vb: DessinSvg['vb']): number => Math.min(vb[2], vb[3]) / 4;
+
+/**
+ * Les deux coins d'une forme posee au clavier sont-ils assez ecartes pour donner une forme ? Une ligne n'a
+ * besoin que de longueur (une horizontale est une ligne) ; une surface veut de la largeur ET de la hauteur,
+ * sans quoi on poserait un rectangle plat que l'historique garderait pour rien.
+ */
+export function coinsPosables(ligne: boolean, a: PointPlan, b: PointPlan, min: number): boolean {
+  const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]);
+  return ligne ? Math.hypot(dx, dy) >= min : dx >= min && dy >= min;
+}
+
+/** La boite que deux coins opposes dessinent, quel que soit celui qu'on a pose en premier. */
+export function boiteDeDeuxCoins(a: PointPlan, b: PointPlan): Boite {
+  return { x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), l: Math.abs(b[0] - a[0]), h: Math.abs(b[1] - a[1]) };
+}
+
+/**
+ * Le curseur de la selection au clavier : la forme sur laquelle Espace agit. Elle est retenue avec la selection
+ * qui existait quand on l'a posee (`sel`), et n'est plus crue des que la selection est un autre tableau (un clic,
+ * Tab, Echap l'ont change) : un curseur qui survivrait a un clic ferait agir Espace sur une forme oubliee.
+ * Sans curseur valide, c'est la derniere forme choisie.
+ */
+export interface Focale { id: string; sel: readonly string[] }
+
+export function formeAuCurseur(d: DessinSvg, sel: readonly string[], focale: Focale | null): string | null {
+  if (focale && focale.sel === sel && choisissables(d).some(f => f.id === focale.id)) return focale.id;
+  return sel[sel.length - 1] ?? null;
+}
+
+/** La selection apres un Espace sur la forme `id` : elle y entre si elle n'y etait pas, elle en sort sinon. */
+export function basculerDansSelection(sel: readonly string[], id: string): { sel: string[]; ajoutee: boolean } {
+  return sel.includes(id) ? { sel: sel.filter(x => x !== id), ajoutee: false } : { sel: [...sel, id], ajoutee: true };
+}

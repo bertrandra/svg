@@ -140,6 +140,43 @@ export function lireCouleurs(dessin: DessinSvg, sur: SurCouleur, precedente: Lec
   return { dessin, sur, groupes: precedente && precedente.sur === sur ? partagerGroupes(precedente.groupes, groupes) : groupes };
 }
 
+/** Deux couleurs du dessin disent la meme chose : meme code, meme nombre de formes. */
+const memeCouleurDuDessin = (a: CouleurDuDessin, b: CouleurDuDessin) => a.couleur === b.couleur && a.formes === b.formes;
+
+/**
+ * Les couleurs `apres` en reprenant les objets de `avant` pour celles qui n'ont pas change, et le tableau
+ * `avant` lui-meme si rien n'a bouge : une ligne de l'interface qui recoit le meme objet ne se redessine pas.
+ * Les valeurs sont celles de `apres`, jamais autre chose.
+ */
+export function partagerCouleursDuDessin(avant: CouleurDuDessin[], apres: CouleurDuDessin[]): CouleurDuDessin[] {
+  const connues = new Map<string, CouleurDuDessin>();
+  for (const c of avant) connues.set(c.couleur, c);
+  let identique = avant.length === apres.length;
+  const rendues = apres.map((c, i) => {
+    const ancienne = connues.get(c.couleur);
+    const reprise = ancienne && memeCouleurDuDessin(ancienne, c) ? ancienne : c;
+    if (identique && reprise !== au(avant, i)) identique = false;
+    return reprise;
+  });
+  return identique ? avant : rendues;
+}
+
+/** Les couleurs du panneau « Couleurs du dessin », avec le dessin qui les a produites. */
+export interface LectureCouleursDuDessin { dessin: DessinSvg; couleurs: CouleurDuDessin[] }
+
+/**
+ * `couleursDuDessin`, mais en gardant la lecture d'avant quand les couleurs n'ont pas bouge (un deplacement
+ * ne change que des coordonnees) et en partageant les couleurs inchangees quand elles ont bouge. Le resultat
+ * vaut toujours `couleursDuDessin(dessin)` : meme comptes (une forme au remplissage et au contour de meme
+ * couleur compte deux fois), formes masquees ignorees. C'est le pendant de `lireCouleurs` pour ce panneau,
+ * qui ne lit pas comme `groupesDeCouleur`.
+ */
+export function lireCouleursDuDessin(dessin: DessinSvg, precedente: LectureCouleursDuDessin | null): LectureCouleursDuDessin {
+  if (precedente && memesCouleurs(precedente.dessin.formes, dessin.formes)) return precedente;
+  const couleurs = couleursDuDessin(dessin);
+  return { dessin, couleurs: precedente ? partagerCouleursDuDessin(precedente.couleurs, couleurs) : couleurs };
+}
+
 /**
  * Les formes qu'on peut choisir et qui ont la couleur de la forme `idModele` : son remplissage, ou son
  * contour quand elle n'a pas de remplissage. Vide si la forme est inconnue ou sans aucune couleur.

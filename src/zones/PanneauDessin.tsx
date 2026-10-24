@@ -2,7 +2,7 @@
 // nettoyage, bibliotheque, versions, raccourcis.
 
 import { memo, useMemo, useState } from 'react';
-import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleur, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
+import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { SCENES } from '../model/scenes.js';
@@ -10,12 +10,13 @@ import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
 import { FORMES } from './aidesEditeur.js';
 import { Section } from './commun/Section.js';
+import { CouleursDuDessin } from './CouleursDuDessin.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
-import { estHex, phraseIgnores } from './aidesEditeur.js';
+import { phraseIgnores } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
@@ -26,7 +27,6 @@ export function PanneauDessin() {
   const { dessin } = mo;
   const [seuil, poserSeuil] = useState(0.0005);
   const stats = useMemo(() => statistiques(dessin), [dessin]);
-  const couleurs = useMemo(() => couleursDuDessin(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
   const trace = FORMES.has(ui.outil) || ui.outil === 'plume' || ui.outil === 'texte';
   return (
@@ -36,25 +36,7 @@ export function PanneauDessin() {
       {trace ? <StyleNouvelleForme /> : null}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
-      <Section titre="Couleurs du dessin" ouverte note={couleurs.length}>
-        <ul className="couleurs-dessin">
-          {couleurs.map((c, i) => (
-            <li key={i}>
-              <input type="color" aria-label={'Remplacer ' + c.couleur} value={estHex(c.couleur) ? c.couleur : '#000000'}
-                onChange={e => ac.appliquer(d => remplacerCouleur(d, c.couleur, e.target.value), 'recolorer-' + i)} onBlur={ac.finir} />
-              <button type="button" className="discret" title="Sélectionner les formes de cette couleur" onClick={() => ac.choisir(idsDeCouleur(dessin, c.couleur))}>
-                {c.couleur.toUpperCase()} · {c.formes}
-              </button>
-              {mo.nuancier.length ? (
-                <select aria-label={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} value="" onChange={e => { const v = e.target.value; if (v) ac.faire(d => remplacerCouleur(d, c.couleur, v)); }}>
-                  <option value="">→ nuancier…</option>
-                  {mo.nuancier.map(t => <option key={t.hex} value={t.hex}>{t.nom} ({t.hex.toUpperCase()})</option>)}
-                </select>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      </Section>
+      <CouleursDuDessin />
       <PanneauPalettes />
       {mo.bibliotheque ? <PanneauBibliotheque bibliotheque={mo.bibliotheque} /> : null}
       <Section titre="Nettoyer le tracé">
@@ -74,7 +56,7 @@ export function PanneauDessin() {
       <PanneauVersions />
       <Section titre="Raccourcis">
         <ul className="raccourcis">
-          <li>V sélection · A points · H ou espace : main · O contours</li>
+          <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
           <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
           <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
           <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
@@ -83,7 +65,10 @@ export function PanneauDessin() {
           <li>G grille magnétique · Z zoom sur la sélection · C choisir les formes de même couleur · Ctrl+S enregistrer</li>
           <li>Flèches : déplacer (Maj : ×10) · Alt+flèches : redimensionner, coin haut gauche fixe (Maj : ×10) · Ctrl+flèche gauche ou droite : tourner de 15° (Maj : 1°) · Maj en glissant : contraindre</li>
           <li>Au clavier, sur la toile : Tab et Maj+Tab passent à la forme suivante ou précédente (en mode points, au point suivant ou précédent) ; après la dernière, Tab quitte la toile · Page suivante et Page précédente : forme suivante ou précédente, en boucle · Entrée sur une forme : ses points</li>
-          <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
+          <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme à sa taille par défaut au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
+          <li>Une forme à deux coins au clavier : Espace (ou Maj+Entrée) pose le premier coin au réticule, les flèches déplacent l’autre coin (un aperçu en pointillés suit), Espace ou Entrée le pose ; Échap annule le premier coin</li>
+          <li>Sélection additive au clavier (outil sélection) : Maj+Page suivante ou Maj+Page précédente ajoute la forme voisine à la sélection et y place le curseur ; Espace ajoute ou retire la forme au curseur. Il n’y a pas de cadre de sélection au clavier : Ctrl+A, « Tout », « Inverser » et C (même couleur) en tiennent lieu</li>
+          <li>Outil texte : Entrée met le focus dans le champ Texte du panneau ; « Ajouter le texte » pose les lettres au centre du plan</li>
           <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
         </ul>
       </Section>

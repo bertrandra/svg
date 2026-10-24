@@ -25,7 +25,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; miseAJour(); },
     choisir: u => { etat.sel = typeof u === 'function' ? u(etat.sel) : u; },
     poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
-    poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter, poserCurseur: vi.fn(), poserAnnonce: u => { annonces.push((typeof u === 'function' ? u({ texte: '', rang: 0 }) : u).texte); },
+    poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter, poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: u => { annonces.push((typeof u === 'function' ? u({ texte: '', rang: 0 }) : u).texte); },
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     toile: { current: null }
@@ -45,6 +45,25 @@ describe('creerActions : des verbes qui lisent l etat du moment', () => {
     expect(etat.dessin.formes).toHaveLength(1);
     expect(etat.dessin.formes.some(f => f.id === premiere.id)).toBe(false);
     expect(messages.at(-1)).toBe('1 forme supprimée.');
+  });
+
+  it('dit ce qu elle a fait quand on duplique, masque, verrouille ou combine la selection', () => {
+    const { actions, etat, messages } = monter();
+    etat.sel = ['f1', 'f2'];
+    actions.combinerSelection();
+    expect(messages.at(-1)).toMatch(/^2 formes combinées en une\./);
+    // La combinaison choisit la forme qu'elle a faite ; la dupliquer en fait une de plus, choisie a son tour.
+    const [combinee] = etat.sel;
+    actions.dupliquerSelection();
+    const [copie] = etat.sel;
+    expect(copie).not.toBe(combinee);
+    expect(messages.at(-1)).toBe('Forme ' + String(copie).slice(1) + ' dupliquée.');
+    etat.sel = [String(combinee), String(copie)];
+    actions.masquerSelection();
+    expect(messages.at(-1)).toBe('2 formes masquées : affichez-les dans les calques.');
+    etat.sel = [String(copie)];
+    actions.verrouillerSelection();
+    expect(messages.at(-1)).toBe('Verrouillée : déverrouillez-la dans les calques.');
   });
 
   it('ne fait rien sans selection', () => {

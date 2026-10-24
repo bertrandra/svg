@@ -19,4 +19,14 @@ describe('nettoyerSvg', () => {
     expect(nettoyerSvg('<svg><rect width="1" height="1"/></svg>')).toBeNull();
     expect(nettoyerSvg('pas un svg')).toBeNull();
   });
+
+  it('garde sur un <use> le renvoi externe qu il retire, dans un attribut inerte, pour que la lecture le refuse en le nommant', () => {
+    const r = nettoyerSvg('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 10">'
+      + '<use xlink:href="sprite.svg#a"/><use href=\'https://exemple.org/s.svg#b\'/><use href="#local"/><a href="http://x.org"/></svg>');
+    expect(r?.svg).toContain('<use data-href-externe="sprite.svg#a"/>');
+    expect(r?.svg).toContain('<use data-href-externe="https://exemple.org/s.svg#b"/>');
+    expect(r?.svg).toContain('<use href="#local"/>');
+    expect(r?.svg).not.toMatch(/\shref="(?!#)|xlink:href="(?!#)/);
+    expect(r?.svg).not.toContain('http://x.org');
+  });
 });
