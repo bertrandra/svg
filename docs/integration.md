@@ -49,6 +49,11 @@ de l’hôte qu’au premier `ouvrir` (une feuille de style, un conteneur).
 C’est le même code que la page autonome (`src/zones/EditeurSvg.tsx`), compilé en un script classique : pas
 de module, pas de framework requis, React est dedans. Il marche depuis `file://`.
 
+**Navigateurs.** Les versions prises en charge sont dites dans [`navigateurs.md`](navigateurs.md). Sur un navigateur
+qui manque d’une API de base, `ouvrir` ouvre une fenêtre d’alerte en français (et `onFermer` est appelé quand on la
+ferme) au lieu de casser votre page. Un script que le navigateur ne sait pas analyser ne peut rien dire : si vous
+visez des navigateurs très anciens, testez `window.EditeurSvg` avant d’appeler `ouvrir`.
+
 ### Exemple minimal
 
 À copier tel quel à côté de `editeur-svg-embarque.js` :

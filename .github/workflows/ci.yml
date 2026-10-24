@@ -34,11 +34,26 @@ jobs:
       - name: Page autonome (le moteur se compile pour la page)
         run: npm run construire
 
-  # Les tests de navigateur (tests/e2e) : la page construite, ouverte dans un vrai Chromium. A part de
-  # `verifier` pour que `npm test` reste rapide et sans navigateur ; les deux jobs tournent ensemble.
+  # Les tests de navigateur (tests/e2e) : la page construite, ouverte dans un vrai navigateur, dans les trois
+  # moteurs que promet docs/navigateurs.md. A part de `verifier` pour que `npm test` reste rapide et sans
+  # navigateur ; les jobs tournent ensemble. Chaque moteur passe la suite entiere (tests/e2e/aide.ts choisit le
+  # sien par NAVIGATEUR) ; les rares sauts propres a un moteur sont ecrits et motives dans la suite.
   navigateur:
+    name: navigateur (${{ matrix.navigateur }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+    # Chromium est exige. Firefox et WebKit n'ont jamais tourne en CI : leurs premiers essais peuvent echouer
+    # sans que la PR le soit.
+    # TODO : retirer `continue-on-error` pour firefox et webkit (et en faire des controles requis de la
+    # branche) des que leurs premiers passages sont verts ; docs/navigateurs.md dit alors « verifie » pour eux.
+    continue-on-error: ${{ matrix.navigateur != 'chromium' }}
+    strategy:
+      # Un moteur rouge ne doit pas masquer les deux autres : on veut les trois resultats a chaque passage.
+      fail-fast: false
+      matrix:
+        navigateur: [chromium, firefox, webkit]
+    env:
+      NAVIGATEUR: ${{ matrix.navigateur }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,9 +63,9 @@ jobs:
       - run: npm ci
       - name: Construire la page, la bibliothèque, les fontes et le bundle d’embarquement
         run: npm run construire
-      - name: Chromium de Playwright
-        run: npx playwright install --with-deps chromium
-      - name: Tests de navigateur
+      - name: ${{ matrix.navigateur }} de Playwright
+        run: npx playwright install --with-deps ${{ matrix.navigateur }}
+      - name: Tests de navigateur (${{ matrix.navigateur }})
         run: npm run e2e
       # Un test en echec laisse une capture de ses pages et leurs erreurs (tests/e2e/aide.ts) : sans elles, un
       # echec de la CI qu'on ne rejoue pas en local se devine.
@@ -58,7 +73,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: traces-navigateur
+          name: traces-navigateur-${{ matrix.navigateur }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7

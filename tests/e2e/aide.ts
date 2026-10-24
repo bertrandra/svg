@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
-import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Locator, type Page } from 'playwright';
+import { chromium, firefox, webkit, type Browser, type BrowserContext, type BrowserContextOptions, type BrowserType, type LaunchOptions, type Locator, type Page } from 'playwright';
 import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 
 const RACINE = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -20,6 +20,42 @@ export const BUNDLE_EMBARQUE = resolve(RACINE, 'dist/editeur-svg-embarque.js');
 export const URL_INTEGRATION = pathToFileURL(resolve(RACINE, 'exemples/integration.html')).href;
 /** La racine du depot : de quoi lire package.json depuis un test. */
 export const RACINE_DEPOT = RACINE;
+
+/** Les trois moteurs que la CI exerce (docs/navigateurs.md). */
+export type NomNavigateur = 'chromium' | 'firefox' | 'webkit';
+
+const MOTEURS: Readonly<Record<NomNavigateur, BrowserType>> = { chromium, firefox, webkit };
+
+/**
+ * Le moteur demande par `NAVIGATEUR` (defaut : chromium). Un nom inconnu echoue tout de suite : une faute de
+ * frappe qui retomberait sur Chromium ferait croire que Firefox est vert sans l'avoir lance.
+ */
+export function nomNavigateur(brut: string | undefined = process.env['NAVIGATEUR']): NomNavigateur {
+  const nom = (brut ?? '').trim().toLowerCase();
+  if (nom === '') return 'chromium';
+  if (nom === 'chromium' || nom === 'firefox' || nom === 'webkit') return nom;
+  throw new Error('NAVIGATEUR=' + brut + ' : attendu chromium, firefox ou webkit.');
+}
+
+/** Le moteur de cette passe de tests. */
+export const NAVIGATEUR: NomNavigateur = nomNavigateur();
+
+/**
+ * Pour `it.skipIf(sauteSauf([...], raison))` : vrai quand le moteur courant n'est pas de ceux qui savent faire
+ * ce que le test demande. La raison est obligatoire et se lit dans docs/navigateurs.md (un test de depot confronte
+ * les deux) : un saut ne se fait jamais en silence.
+ */
+export function sauteSauf(moteurs: readonly NomNavigateur[], raison: string): boolean {
+  if (raison.trim() === '') throw new Error('un saut de test sans raison n’est pas admis');
+  return !moteurs.includes(NAVIGATEUR);
+}
+
+/** Les options de lancement : `--no-sandbox` et `CHROMIUM_PATH` sont a Chromium seul, Firefox et WebKit refuseraient l'argument. */
+function optionsLancement(nom: NomNavigateur): LaunchOptions {
+  if (nom !== 'chromium') return {};
+  const chemin = process.env['CHROMIUM_PATH'];
+  return { ...(chemin ? { executablePath: chemin } : {}), args: ['--no-sandbox'] };
+}
 
 /** Une session de test : un contexte, une page, et ce que la page a mal dit. */
 export interface Session {
@@ -38,15 +74,17 @@ export interface OptionsSession {
   schema?: 'light' | 'dark';
   /** Ouvrir la page elle-meme (defaut : oui). */
   naviguer?: boolean;
+  /** JavaScript coupe : ce que voit un navigateur qui n'execute rien. */
+  sansJavaScript?: boolean;
 }
 
 /**
- * Lance Chromium une fois par fichier de test et rend `ouvrir`. Les crochets sont poses ici pour que
+ * Lance le navigateur (`NAVIGATEUR` : chromium, firefox ou webkit) une fois par fichier de test et rend `ouvrir`. Les crochets sont poses ici pour que
  * chaque spec n'ait rien a se rappeler : fermeture des contextes, et echec si la page a ecrit une
  * erreur (pageerror ou console.error) pendant le test.
  *
- * Le navigateur : `CHROMIUM_PATH` s'il est donne (le bac a sable n'a pas celui de Playwright), sinon
- * celui que `npx playwright install chromium` a pose.
+ * Le navigateur : pour Chromium, `CHROMIUM_PATH` s'il est donne (le bac a sable n'a pas celui de Playwright),
+ * sinon celui que `npx playwright install chromium` a pose ; Firefox et WebKit, ceux de `npx playwright install`.
  */
 export function pilote() {
   let navigateur: Browser | undefined;
@@ -54,11 +92,7 @@ export function pilote() {
 
   beforeAll(async () => {
     if (!existsSync(PAGE)) throw new Error('dist/editeur-svg.html manque : lancer `npm run construire` avant `npm run e2e`.');
-    const chemin = process.env['CHROMIUM_PATH'];
-    navigateur = await chromium.launch({
-      ...(chemin ? { executablePath: chemin } : {}),
-      args: ['--no-sandbox']
-    });
+    navigateur = await MOTEURS[NAVIGATEUR].launch(optionsLancement(NAVIGATEUR));
   });
 
   afterAll(async () => {
@@ -84,9 +118,11 @@ export function pilote() {
         viewport: { width: options.largeur ?? 1400, height: options.hauteur ?? 900 },
         acceptDownloads: true
       };
-      if (options.tactile) { contexteOptions.hasTouch = true; contexteOptions.isMobile = true; contexteOptions.deviceScaleFactor = 2; }
+      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport ni pointeur grossier.
+      if (options.tactile) { contexteOptions.hasTouch = true; if (NAVIGATEUR !== 'firefox') contexteOptions.isMobile = true; contexteOptions.deviceScaleFactor = 2; }
       if (options.mouvementReduit) contexteOptions.reducedMotion = 'reduce';
       if (options.schema) contexteOptions.colorScheme = options.schema;
+      if (options.sansJavaScript) contexteOptions.javaScriptEnabled = false;
       const contexte = await navigateur.newContext(contexteOptions);
       contexte.setDefaultTimeout(DELAI);
       const page = await contexte.newPage();

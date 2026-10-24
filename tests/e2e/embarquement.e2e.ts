@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, BUNDLE_EMBARQUE, formesVisibles, modifications, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
+import { attend, BUNDLE_EMBARQUE, formesVisibles, modifications, NAVIGATEUR, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
 
 /** Ce que la page d'hote voit de l'API : le contrat de docs/integration.md. */
 interface PoigneeEditeur { fermer(): void }
@@ -509,7 +509,8 @@ describe('embarquement : sur un telephone de 390 px', () => {
       const r = (document.querySelector('.editeur-svg') as HTMLElement).getBoundingClientRect();
       return { largeur: r.width, hauteur: r.height, defile: document.documentElement.scrollWidth - innerWidth, grossier: matchMedia('(pointer: coarse)').matches };
     });
-    expect(mesure).toEqual({ largeur: 390, hauteur: 800, defile: 0, grossier: true });
+    // Firefox n'a pas `isMobile` : son contexte tactile reste a pointeur fin (aide.ts), le reste de la mesure tient.
+    expect(mesure).toEqual({ largeur: 390, hauteur: 800, defile: 0, grossier: NAVIGATEUR !== 'firefox' });
   });
 
   it('donne 40 px au moins aux boutons de la barre', async () => {
