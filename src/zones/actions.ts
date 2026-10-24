@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import {
-  ajouterForme, boiteDe, coller, combiner, dupliquer, ecrireDessin, inserer, inserer as insererDessin, lireDessin, modifier, polygone, separer, supprimer, supprimerAncre,
+  ajouterForme, boiteDe, coller, combiner, dupliquer, ecrireDessin, idsMemeCouleur, inserer, inserer as insererDessin, lireDessin, modifier, polygone, separer, supprimer, supprimerAncre,
   type DessinSvg, type Forme, type Style
 } from '../engine/editionSvg.js';
 import { appliquerBooleen } from '../engine/booleens.js';
@@ -19,7 +19,7 @@ export interface BaseActions {
   vues: Vues; enregistrer: (svg: string) => void; toile: RefObject<HTMLDivElement | null>;
 }
 
-export type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
+export type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'choisirMemeCouleur' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
 /** Les actions de la barre et des raccourcis, sur l'etat du moment. */
 export function actionsEdition(b: BaseActions): Actions {
@@ -88,6 +88,16 @@ export function actionsEdition(b: BaseActions): Actions {
     },
     masquerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); } },
     verrouillerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire('Formes verrouillées : déverrouillez-les dans les calques.'); } },
+    choisirMemeCouleur: () => {
+      const modele = sel[0] ? dessin.formes.find(f => f.id === sel[0]) : undefined;
+      if (!modele) return;
+      const couleur = modele.remplissage ?? modele.contour;
+      if (!couleur) { dire('Cette forme n’a ni remplissage ni contour : pas de couleur à retrouver.'); return; }
+      const ids = idsMemeCouleur(dessin, modele.id);
+      choisir(ids);
+      b.poserPoint(null);
+      dire(ids.length > 1 ? pl(ids.length, 'forme') + ' de même couleur ' + couleur.toUpperCase() + ' choisie' + (ids.length > 1 ? 's' : '') + '.' : 'Aucune autre forme n’a la couleur ' + couleur.toUpperCase() + '.');
+    },
     zoomerSelection: () => {
       const bo = boiteDe(dessin, sel), el = b.toile.current;
       if (!bo || !el || !(bo.l > 0) || !(bo.h > 0)) { b.vues.ajuster(); return; }

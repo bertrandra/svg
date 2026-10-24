@@ -18,6 +18,8 @@ export interface ElementMenu {
   /** Un element a deux etats (grille, aimants) : la coche dit celui d'aujourd'hui. */
   coche?: boolean;
   danger?: boolean;
+  /** Une pastille de couleur a la place de l'icone (un nuancier). */
+  pastille?: string;
   /** Un filet avant cet element. */
   separateur?: boolean;
 }
@@ -118,7 +120,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
               {el.separateur ? <hr className="menu-filet" /> : null}
               <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
                 onClick={() => { fermer(true); el.onClick?.(); }}>
-                <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
+                <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
                 <span className="menu-libelle">{el.libelle}</span>
                 {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}
               </button>

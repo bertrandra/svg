@@ -77,7 +77,7 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
           <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
           <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
           <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
-          <li>G grille magnétique · Z zoom sur la sélection · Ctrl+S enregistrer</li>
+          <li>G grille magnétique · Z zoom sur la sélection · C choisir les formes de même couleur · Ctrl+S enregistrer</li>
           <li>Flèches : déplacer (Maj : ×10) · Maj en glissant : contraindre</li>
           <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
         </ul>
