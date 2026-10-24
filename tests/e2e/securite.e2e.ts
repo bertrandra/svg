@@ -30,12 +30,6 @@ const DECODAGE_DU_NAVIGATEUR = new Set(['encodage-utf16.svg']);
 /** Les adresses que la page a le droit de demander : ses propres fichiers (la page, ses annexes, le bundle) et rien d'autre. */
 const AUTORISEES = [pathToFileURL(resolve(RACINE_DEPOT, 'dist')).href + '/', pathToFileURL(resolve(RACINE_DEPOT, 'exemples')).href + '/'];
 
-/**
- * Les polices que la page demande elle-meme a Google Fonts (<link> de dist/editeur-svg.html) : une requete de la page, pas de l'entree.
- * Le test les sert vides (sans reseau) et les laisse passer ; toute autre adresse, y compris un autre chemin chez ces hotes, echoue.
- */
-const POLICES_DE_LA_PAGE = [/^https:\/\/fonts\.googleapis\.com\/css2\?family=Instrument\+Sans[^ ]*$/, /^https:\/\/fonts\.gstatic\.com\/s\/(?:instrumentsans|ibmplexmono)\/[^ ]+\.woff2$/];
-
 /** Pose les crochets avant tout script de la page : un appel dangereux est consigne dans `window.__appels`, il ne part pas. */
 const CROCHETS = `(() => {
   const appels = [];
@@ -68,10 +62,9 @@ interface Surveillance {
 /** Surveille toutes les pages d'une session (y compris celles que le test ouvre ensuite). */
 async function surveiller(s: Session): Promise<Surveillance> {
   await s.contexte.addInitScript(CROCHETS);
-  await s.contexte.route(/^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//, route => {
-    const bonne = POLICES_DE_LA_PAGE.some(re => re.test(route.request().url()));
-    return bonne ? route.fulfill({ status: 200, contentType: 'text/css', body: '' }) : route.abort();
-  });
+  // Aucun reseau : la page embarque ses polices (data:), elle n'a rien a demander a un hote. Tout http(s) est coupe, et la requete
+  // est consignee ci-dessous : la preuve est « aucune requete du tout », sans l'exception que les polices de Google exigeaient.
+  await s.contexte.route(url => !/^(?:file|data|blob|about):$/.test(url.protocol), route => route.abort());
   const autorisees = [...AUTORISEES];
   const pages = new Set<Page>();
   const r: Surveillance = {
@@ -84,7 +77,6 @@ async function surveiller(s: Session): Promise<Surveillance> {
       page.on('request', req => {
         const u = req.url();
         if (/^(data|blob|about):/i.test(u) || u === page.url()) return;
-        if (POLICES_DE_LA_PAGE.some(re => re.test(u))) return;
         if (!autorisees.some(a => u === a.replace(/\/$/, '') || u.startsWith(a))) r.requetes.push(u);
       });
       page.on('dialog', d => { r.dialogues.push(d.type() + ' ' + d.message().slice(0, 80)); void d.dismiss(); });
