@@ -21,7 +21,7 @@ function useElementsVue(avecZoom: boolean): ElementMenu[] {
   return [
     ...(avecZoom ? [
       { id: 'zoomer', libelle: 'Zoomer', icone: 'zoom-plus', raccourci: '+', onClick: () => vues.zoomer(1.25) },
-      { id: 'dezoomer', libelle: 'Dézoomer', icone: 'zoom-moins', raccourci: '−', onClick: () => vues.zoomer(0.8) }
+      { id: 'dezoomer', libelle: 'Dézoomer', icone: 'zoom-moins', raccourci: '-', onClick: () => vues.zoomer(0.8) }
     ] satisfies ElementMenu[] : []),
     { id: 'ajuster', libelle: 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0', onClick: vues.ajuster },
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
