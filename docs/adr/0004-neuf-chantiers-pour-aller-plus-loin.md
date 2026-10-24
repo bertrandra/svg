@@ -13,7 +13,7 @@ les panneaux sur tablette.
 ## Décisions
 
 1. **Les booléens passent par un moteur de découpe** (`polygon-clipping`, Martinez, épinglé) sur des
-   courbes aplaties au demi-millième du plan. Le résultat est une forme en segments droits, au style
+   courbes aplaties à une tolérance géométrique (écart maximal d'un vingt-millième du plan, borne de Wang, 512 segments au plus par courbe ; l'option `lisser` du moteur rebâtit des cubiques vérifiées). Le résultat est une forme en segments droits, au style
    de la plus basse ; le remplissage se lit comme le navigateur le peint (pair-impair, ou selon le
    sens du tracé, approché par l'union d'un sens moins l'autre). Une forme sans remplissage n'a pas
    d'aire et se refuse en le disant. Déterministe, testé sur des aires.
@@ -53,3 +53,6 @@ les panneaux sur tablette.
   documentation. Une version du moteur de découpe peut déplacer un sommet : épinglage exact.
 - Le stockage du navigateur ne porte que des conforts (brouillon, versions, corrections) : la page
   marche sans lui.
+- Le crénage du texte se lit dans la table GPOS (`io/crenageGpos.ts`, paires de format 1 et 2, directes ou
+  par extension) : opentype.js 2.0 ne lit ni les lookups d'extension ni les suivants. Les ligatures ne
+  sont pas appliquées : une lettre reste une forme.

@@ -5,8 +5,36 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Version majeure : des octets écrits changent
+
+Ce lot déplace délibérément des octets écrits (ADR-0009, ADR-0004) ; les références de
+`tests/fixtures/svg` ont été relues une à une, et les 4 134 formes de la bibliothèque gardent leurs
+empreintes.
+
+- **Fidélité de lecture** : l'alpha des couleurs (`rgba()`, `hsla()`, `#rrggbbaa`, `#rgba`) est gardé ;
+  `Forme` reçoit `opaciteRemplissage` et `opaciteContour` (facultatifs), `fill-opacity` et
+  `stroke-opacity` ne s'écrivent que s'ils diffèrent de 1, et sans trait l'alpha passe dans `opacity`.
+  Avec un trait, `fill-opacity` n'estompe plus le trait. `hsl()` et `rgb(0 128 255 / 40%)` se lisent ;
+  les 148 noms de couleur CSS se ramènent à `#rrggbb` (`steelblue` s'écrit `#4682b4`) ; une opacité
+  en pourcentage ou illisible n'invisibilise plus la forme.
+- **`stroke-width="0"` reste 0** : un trait invisible ne devient plus visible (il s'écrivait `1`). Le PDF
+  ne trace plus un trait d'épaisseur nulle, et il sépare l'opacité du fond (`ca`) de celle du trait (`CA`).
+- **Texte** : le crénage des fontes Inter, Inter gras, Playfair Display gras et Fredoka est lu dans la
+  table GPOS (`io/crenageGpos.ts`, lookups d'extension et classes qu'opentype.js 2.0 ne lisait pas) :
+  « AV » se resserre (-140, -162, -74, -150 unités) ; Oswald, Bebas Neue, Caveat, Lobster et Pacifico ne
+  changent pas. Les contours de lettre qui reviennent à leur point de départ se ferment par `Z` : un
+  texte en contour seul a une jointure au lieu de deux capuchons.
+- **Booléens** : l'aplatissement des courbes suit une tolérance géométrique (écart maximal d'un
+  vingt-millième du plan, 512 segments au plus par courbe) au lieu de 64 segments fixes ; les résultats
+  sont réécrits, environ 25 % plus légers.
+
 ### Modifié
 
+- **Gros dessins** (une vectorisation de milliers de formes), ADR-0008 : le panneau des calques ne dessine
+  que les lignes visibles (au-delà de 150 formes), l'écriture d'une forme est mémorisée, les sélections se
+  testent par ensemble. Sur 5 000 formes : ouvrir, glisser et annuler vont 2 à 5 fois plus vite, et le DOM
+  passe de 33 000 à 9 000 nœuds ; le SVG écrit ne change pas d'un octet. L'historique garde moins d'états
+  sur un très gros dessin (40 à 5 000 formes, 200 jusqu'à 1 000).
 - **Un seul chargeur pour les annexes** (`io/annexes.ts`) : la bibliothèque, les fontes et le traceur se
   chargent par la même mécanique, qui valide la forme de ce que le script pose ; les messages d'erreur
   sont inchangés. Les scripts de construction partagent `scripts/aide.mjs`, et les fichiers de `dist/`
@@ -37,19 +65,28 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
     agrandies.
 
-### Constaté, non corrigé (changerait des octets écrits : version majeure)
-
-- `stroke-width="0"` est écrit `1` ; l'alpha de `rgba()` est perdu à la lecture ; un nom de couleur hors
-  des douze connus est copié tel quel ; le crénage est nul pour cinq des neuf fontes
-  embarquées. Ces limites sont figées dans `tests/fixtures/svg/limites-connues.svg`.
-
 ### Corrigé
 
+- « Enregistrer » d'un dessin sans forme visible rendait un `<svg>` vide à l'hôte (`onEnregistrer`) au
+  lieu de le refuser avec « rien à enregistrer » : la garde ne se déclenchait jamais.
 - La liste « Par couleur » ne défile plus en largeur dans le panneau étroit.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
 
+- **À l'ouverture d'un SVG**, une phrase dit ce que la lecture n'a pas repris (marqueurs, pointillés,
+  bouts et jonctions de trait, règles de style hors classe, peinture de la balise `<svg>`, animations) ;
+  le panneau du dessin la répète. `lireDessin` rend pour cela `ignores`.
+- **L'inspecteur règle l'opacité du fond et celle du contour.**
+- **« Simplifier les tracés »** dans « Nettoyer le tracé » : retire les points inutiles des segments
+  droits au seuil choisi ; courbes et formes verrouillées intactes (moteur : `simplifierChemin`,
+  `simplifier`).
+- **Booléens, option `lisser` du moteur** : rebâtit en cubiques vérifiées les arcs du résultat (une union
+  de deux cercles passe de 228 à 23 points) ; non branchée dans l'interface.
+- **Tests de navigateur, seconde série** : calques par couleur (recoloration en une entrée d'historique,
+  même couleur, nuances proches, isolement, tactile 420 px) et embarquement (`window.EditeurSvg`,
+  poignée, rappels, thèmes, 390 px, annexes) : 53 tests de plus, 121 au total. Un échec laisse une
+  capture et les erreurs de page dans `test-results/`, que le job `navigateur` publie en artefact.
 - **Un script d'embarquement** (`dist/editeur-svg-embarque.js`, `npm run embarquer`) : un script classique
   qui pose `window.EditeurSvg.ouvrir({ svg, onEnregistrer, … })` (avec `estEditable` et `version`),
   amène ses propres styles cantonnés à l'éditeur, et marche depuis le disque. Une page d'exemple

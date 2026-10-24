@@ -77,6 +77,11 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   claire et sombre, description) ; le CSS des variables se génère au build, la page n'écrit aucune couleur,
   un test confronte registre, page et code, et chaque texte sur son fond tient 4,5:1 dans les deux thèmes.
   `docs/jetons.md` se régénère par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/styles`.
+- **La lecture est fidèle, ou dit ce qu'elle perd** (ADR-0009) : l'alpha, les noms de couleur et une épaisseur
+  de trait nulle sont gardés ; `lireDessin` rend `ignores` et la page le dit à l'ouverture. Les octets
+  changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.
+- **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
+  dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

@@ -105,7 +105,8 @@ export function actionsEdition(b: BaseActions): Actions {
       b.vues.poserVue({ zoom, x: (el.clientWidth - bo.l * zoom) / 2 - bo.x * zoom, y: (el.clientHeight - bo.h * zoom) / 2 - bo.y * zoom });
     },
     enregistrerTout: () => {
-      const propre = nettoyerSvg(ecrireDessin(dessin, 3));
+      // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
+      const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(ecrireDessin(dessin, 3)) : null;
       if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return; }
       b.enregistrer(propre.svg);
     },

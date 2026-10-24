@@ -400,11 +400,9 @@ describe('embarquement : exemples/integration.html', () => {
     expect(await trace(page)).toEqual(['enregistre', 'enregistre', 'ferme']);
   });
 
-  // BUG connu (a corriger dans src/zones/actions.ts, enregistrerTout) : `nettoyerSvg` rend un SVG vide plutot que
-  // null, donc la garde `if (!propre)` ne se declenche jamais et onEnregistrer recoit `<svg ...></svg>`. Le test dit
-  // le bon comportement (docs/integration.md) ; `it.fails` le garde vert tant que le bug est la, et rouge des qu'il
-  // est corrige : il faudra alors remplacer `it.fails` par `it`.
-  it.fails('refuse d\'enregistrer un dessin sans forme visible, et le dit', async () => {
+  // Un dessin sans forme visible ne s'enregistre pas (docs/integration.md) : nettoyerSvg rendrait un <svg> vide,
+  // que l'ancienne garde de enregistrerTout (src/zones/actions.ts) ne reconnaissait pas ; l'hote le recevait.
+  it('refuse d\'enregistrer un dessin sans forme visible, et le dit', async () => {
     const { page } = await hote();
     await ouvrirParApi(page, { fermerApresEnregistrer: false });
     await page.keyboard.press('Control+a');
