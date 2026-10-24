@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { modifier, type Forme } from '../engine/editionSvg.js';
 import { au } from '../util/tableaux.js';
+import { pluriel } from '../util/texte.js';
 import { useFenetre } from './Fenetre.js';
 import { ParCouleur } from './ParCouleur.js';
 import type { Edition } from './typesEditeur.js';
@@ -13,7 +14,6 @@ export function Calques({ ed }: { ed: Edition }) {
   const formes = dessin.formes, total = formes.length;
   const choisissables = formes.filter(f => f.visible && !f.verrouille).map(f => f.id);
   const masquees = formes.filter(f => !f.visible).length;
-  const pluriel = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
   const { racine, liste, fenetre, actif, montrer } = useFenetre(total);
   // Une forme choisie ailleurs (sur la toile) reste atteignable : la liste defile jusqu'a elle.
   const unique = sel.length === 1 ? sel[0] : null;

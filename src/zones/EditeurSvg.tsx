@@ -13,7 +13,9 @@ import { aimanter, boiteDe, ecrireDessin, pasGrille, STYLE_DEFAUT, type DessinSv
 import type { Aimant } from '../engine/transformations.js';
 import { annuler, avancer, clore, historique, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
-import { Barre, BarreSelection, Bouton, FORMES } from './BarreOutils.js';
+import { Barre, BarreSelection } from './BarreOutils.js';
+import { Bouton } from './commun/Bouton.js';
+import { FournisseurSections } from './commun/Section.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
 import { lireDessinMemo } from './lecture.js';
@@ -23,7 +25,7 @@ import { PanneauDessin } from './PanneauDessin.js';
 import { Calque, Grille, surcouche } from './Toile.js';
 import { useTactile, useVue } from './Vue.js';
 import { actionsEdition } from './actions.js';
-import { estHex } from './aidesEditeur.js';
+import { estHex, FORMES } from './aidesEditeur.js';
 import { garderVersions, idVersion, lireVersions, type Version } from './session.js';
 import type { Edition, Outil, Point, Teinte } from './typesEditeur.js';
 
@@ -94,7 +96,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
           <p>{lu.erreur}</p>
           <button type="button" onClick={fermer}>Fermer</button>
         </div>
-      ) : <Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} />}
+      ) : <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>}
     </div>,
     document.body
   );

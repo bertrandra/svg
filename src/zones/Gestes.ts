@@ -7,7 +7,7 @@ import {
   type Boite, type Commande, type DessinSvg
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
-import { FORMES } from './BarreOutils.js';
+import { FORMES } from './aidesEditeur.js';
 import { styleLigne } from './aidesEditeur.js';
 import type { Coin, Edition, OutilForme, Vue, Vues } from './typesEditeur.js';
 

@@ -6,9 +6,10 @@ import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleu
 import { bibliothequeChargee } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { SCENES } from '../model/scenes.js';
+import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
-import { FORMES } from './BarreOutils.js';
-import { Section } from './Section.js';
+import { FORMES } from './aidesEditeur.js';
+import { Section } from './commun/Section.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
@@ -26,14 +27,13 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
   const stats = useMemo(() => statistiques(dessin), [dessin]);
   const couleurs = useMemo(() => couleursDuDessin(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
-  const pl = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
   const trace = FORMES.has(ed.outil) || ed.outil === 'plume' || ed.outil === 'texte';
   return (
     <>
       <h3>{ed.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
       {ed.outil === 'texte' ? <PanneauTexte ed={ed} /> : null}
       {trace ? <StyleNouvelleForme ed={ed} /> : null}
-      <p className="aide">{pl(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pl(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
+      <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {ed.ignores.length ? <p className="aide" role="note">{phraseIgnores(ed.ignores)}</p> : null}
       <Section titre="Couleurs du dessin" ouverte note={couleurs.length}>
         <ul className="couleurs-dessin">
@@ -64,9 +64,9 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
           </select>
         </label>
         <div className="boutons">
-          <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ed.appliquer(() => r.dessin); ed.dire(r.retirees ? pl(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
-          <button type="button" onClick={() => { const r = regrouper(dessin); ed.appliquer(() => r.dessin); ed.dire(r.reunies ? pl(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
-          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ed.appliquer(() => r.dessin); ed.dire(r.retires ? pl(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pl(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
+          <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ed.appliquer(() => r.dessin); ed.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
+          <button type="button" onClick={() => { const r = regrouper(dessin); ed.appliquer(() => r.dessin); ed.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
+          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ed.appliquer(() => r.dessin); ed.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
           <button type="button" onClick={() => ed.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>

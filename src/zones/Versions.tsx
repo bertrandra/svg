@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ecrireDessin, lireDessin } from '../engine/editionSvg.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import type { Edition } from './EditeurSvg.js';
-import { Section } from './Section.js';
+import { Section } from './commun/Section.js';
 import { dateCourte } from './session.js';
 
 export function PanneauVersions({ ed }: { ed: Edition }) {

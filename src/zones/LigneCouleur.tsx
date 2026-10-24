@@ -3,8 +3,9 @@
 // choisir ses nuances proches, les combiner, les supprimer.
 
 import { combiner, modifier, remplacerCouleurSur, supprimer, type GroupeCouleur, type SurCouleur } from '../engine/editionSvg.js';
-import { Bouton } from './BarreOutils.js';
-import { MenuDeroulant, type ElementMenu } from './Menu.js';
+import { pluriel } from '../util/texte.js';
+import { Bouton } from './commun/Bouton.js';
+import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { estHex } from './aidesEditeur.js';
 import type { Edition } from './typesEditeur.js';
 
@@ -22,7 +23,6 @@ export interface ActionsLigne {
   nuancesProches: (g: GroupeCouleur) => void;
 }
 
-export const pluriel = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
 const accord = (n: number) => (n > 1 ? 's' : '');
 
 /** Ce que « Fond » ou « Trait » change, pour les messages : rien de plus quand on lit les deux. */

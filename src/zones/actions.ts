@@ -8,6 +8,7 @@ import {
 import { appliquerBooleen } from '../engine/booleens.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../engine/transformations.js';
 import { nettoyerSvg } from '../util/svg.js';
+import { pluriel } from '../util/texte.js';
 import { sansDoublons, styleLigne } from './aidesEditeur.js';
 import type { Edition, Outil, Point, Vues } from './typesEditeur.js';
 
@@ -24,7 +25,6 @@ export type Actions = Pick<Edition, 'finirTrace' | 'supprimerSelection' | 'dupli
 /** Les actions de la barre et des raccourcis, sur l'etat du moment. */
 export function actionsEdition(b: BaseActions): Actions {
   const { dessin, sel, appliquer, choisir, dire } = b;
-  const pl = (n: number, mot: string) => n + ' ' + mot + (n > 1 ? 's' : '');
   const choisies = () => dessin.formes.filter(f => sel.includes(f.id));
   const pas = () => Math.max(dessin.vb[2], dessin.vb[3]) * 0.02;
   const supprimerSelection = () => {
@@ -37,7 +37,7 @@ export function actionsEdition(b: BaseActions): Actions {
     }
     if (!sel.length) return;
     appliquer(d => supprimer(d, sel));
-    dire(pl(sel.length, 'forme') + ' supprimée' + (sel.length > 1 ? 's' : '') + '.');
+    dire(pluriel(sel.length, 'forme') + ' supprimée' + (sel.length > 1 ? 's' : '') + '.');
     choisir([]);
   };
   return {
@@ -52,7 +52,7 @@ export function actionsEdition(b: BaseActions): Actions {
       const c = choisies();
       if (!c.length) return;
       b.poserPresse(c);
-      dire(pl(c.length, 'forme') + ' copiée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+      dire(pluriel(c.length, 'forme') + ' copiée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
     },
     couperSelection: () => {
       const c = choisies();
@@ -60,7 +60,7 @@ export function actionsEdition(b: BaseActions): Actions {
       b.poserPresse(c);
       appliquer(d => supprimer(d, sel));
       choisir([]);
-      dire(pl(c.length, 'forme') + ' coupée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+      dire(pluriel(c.length, 'forme') + ' coupée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
     },
     collerPresse: () => {
       if (!b.presse.length) return;
@@ -68,7 +68,7 @@ export function actionsEdition(b: BaseActions): Actions {
       appliquer(() => r.dessin);
       choisir(r.ids);
       b.poserOutil('selection');
-      dire(pl(r.ids.length, 'forme') + ' collée' + (r.ids.length > 1 ? 's' : '') + '.');
+      dire(pluriel(r.ids.length, 'forme') + ' collée' + (r.ids.length > 1 ? 's' : '') + '.');
     },
     combinerSelection: () => {
       const r = combiner(dessin, sel);
@@ -84,7 +84,7 @@ export function actionsEdition(b: BaseActions): Actions {
       if (r.ids.length < 2) { dire('Cette forme n’a qu’un seul tracé : rien à séparer.'); return; }
       appliquer(() => r.dessin);
       choisir(r.ids);
-      dire('Forme séparée en ' + pl(r.ids.length, 'tracé') + '.');
+      dire('Forme séparée en ' + pluriel(r.ids.length, 'tracé') + '.');
     },
     masquerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); } },
     verrouillerSelection: () => { if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire('Formes verrouillées : déverrouillez-les dans les calques.'); } },
@@ -96,7 +96,7 @@ export function actionsEdition(b: BaseActions): Actions {
       const ids = idsMemeCouleur(dessin, modele.id);
       choisir(ids);
       b.poserPoint(null);
-      dire(ids.length > 1 ? pl(ids.length, 'forme') + ' de même couleur ' + couleur.toUpperCase() + ' choisie' + (ids.length > 1 ? 's' : '') + '.' : 'Aucune autre forme n’a la couleur ' + couleur.toUpperCase() + '.');
+      dire(ids.length > 1 ? pluriel(ids.length, 'forme') + ' de même couleur ' + couleur.toUpperCase() + ' choisie' + (ids.length > 1 ? 's' : '') + '.' : 'Aucune autre forme n’a la couleur ' + couleur.toUpperCase() + '.');
     },
     zoomerSelection: () => {
       const bo = boiteDe(dessin, sel), el = b.toile.current;
@@ -149,7 +149,7 @@ export function actionsEdition(b: BaseActions): Actions {
       appliquer(() => d);
       choisir(ids);
       b.poserOutil('selection');
-      dire(pl(ids.length, 'forme') + ' insérée' + (ids.length > 1 ? 's' : '') + '.');
+      dire(pluriel(ids.length, 'forme') + ' insérée' + (ids.length > 1 ? 's' : '') + '.');
     },
     booleen: op => {
       const r = appliquerBooleen(dessin, sel, op);

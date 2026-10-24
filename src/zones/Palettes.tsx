@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { appliquerPalette, PALETTES, uneCouleur } from '../engine/palettes.js';
 import type { Edition } from './EditeurSvg.js';
-import { Section } from './Section.js';
+import { Section } from './commun/Section.js';
 
 const estHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
 

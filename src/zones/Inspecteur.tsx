@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { basculerSegment, diviserSegment, modifier, opaciteDuContour, opaciteDuRemplissage, redimensionner, type Forme, type Reglage } from '../engine/editionSvg.js';
-import { Section } from './Section.js';
+import { Section } from './commun/Section.js';
 import { arrondi, estHex } from './aidesEditeur.js';
 import type { Edition, Teinte } from './typesEditeur.js';
 

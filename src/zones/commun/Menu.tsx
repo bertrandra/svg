@@ -4,8 +4,8 @@
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
-import { dernier, premier, suivant } from '../util/menu.js';
-import { Icone, type NomIcone } from './icones.js';
+import { dernier, premier, suivant } from '../../util/menu.js';
+import { Icone, type NomIcone } from '../icones.js';
 
 export interface ElementMenu {
   id: string;

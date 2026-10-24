@@ -9,9 +9,10 @@ import { proposer, copier, texteOctets } from '../io/fichiers.js';
 import type { Edition, Outil, OutilForme, Vues } from './EditeurSvg.js';
 import { ContenuExport } from './Exporter.js';
 import { Icone, type NomIcone } from './icones.js';
-import { MenuDeroulant, type ElementMenu } from './Menu.js';
+import { Bouton } from './commun/Bouton.js';
+import { FORMES } from './aidesEditeur.js';
+import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 
-export const FORMES = new Set<Outil>(['rectangle', 'ellipse', 'etoile', 'ligne']);
 type Fond = 'damier' | 'blanc' | 'sombre';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
@@ -35,11 +36,6 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 ];
 
 const estHex = (v: string | null): v is string => !!v && /^#[0-9a-f]{6}$/.test(v);
-
-/** Un bouton d'outil : une icone, une infobulle qui dit le geste et son raccourci. */
-export function Bouton({ icone, aide, onClick, pressed, disabled, className }: { icone: NomIcone; aide: string; onClick: () => void; pressed?: boolean; disabled?: boolean; className?: string }) {
-  return <button type="button" className={'icone-bouton' + (className ? ' ' + className : '')} title={aide} aria-label={aide} aria-pressed={pressed} disabled={disabled} onClick={onClick}><Icone nom={icone} /></button>;
-}
 
 /** Les quatre formes derriere un seul outil : le bouton reprend la derniere employee, le chevron liste les autres. */
 function OutilFormes({ ed }: { ed: Edition }) {

@@ -8,8 +8,9 @@ import {
   couleursProches, fusionnerCouleursProches, groupesDeCouleur, idsDeNuancesProches, montrerSeulement, remplacerCouleurSur, restaurerVisibilites,
   visibilitesConformes, visibilitesDe, type DessinSvg, type GroupeCouleur, type SurCouleur, type Visibilites
 } from '../engine/editionSvg.js';
-import { LigneCouleur, pluriel, precisionSur, type ActionsLigne } from './LigneCouleur.js';
-import { Section } from './Section.js';
+import { pluriel } from '../util/texte.js';
+import { LigneCouleur, precisionSur, type ActionsLigne } from './LigneCouleur.js';
+import { Section } from './commun/Section.js';
 import type { Edition } from './typesEditeur.js';
 
 const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
