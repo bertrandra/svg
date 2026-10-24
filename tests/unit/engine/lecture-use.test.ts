@@ -324,3 +324,15 @@ describe('une planche d icones lue comme un navigateur la dessine', () => {
     expect(r.ignores).toEqual(['le rognage au cadre d’un <symbol> (ce qui dépasse du cadre reste dessiné)']);
   });
 });
+
+describe('la bibliotheque ne depend d aucune de ces lectures', () => {
+  it('chacune de ses 4 134 formes est un <path fill d> : ni <use>, ni feuille de style, ni classe, ni style en ligne', () => {
+    const jeu = JSON.parse(readFileSync(resolve(__dirname, '../../../node_modules/@iconify-json/game-icons/icons.json'), 'utf8')) as { icons: Record<string, { body: string }> };
+    const corps = Object.values(jeu.icons).map(i => i.body);
+    expect(corps).toHaveLength(4134);
+    const balises = new Set(corps.flatMap(b => [...b.matchAll(/<([a-zA-Z]+)/g)].map(m => m[1])));
+    expect([...balises]).toEqual(['path']);
+    const attributs = new Set(corps.flatMap(b => [...b.matchAll(/\s([a-zA-Z:-]+)=/g)].map(m => m[1])));
+    expect([...attributs].sort()).toEqual(['d', 'fill']);
+  });
+});

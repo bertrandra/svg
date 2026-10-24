@@ -76,6 +76,19 @@ const glyphesSansZ: Glyphes = {
   }
 };
 
+// La meme fonte factice, avec une ligature « fi » : une glyphe plus large, a l'avance propre, crenee avec la lettre qui suit.
+const glyphesLiees: Glyphes = {
+  ...glyphesFactices,
+  contour: (c, x, y, t) => {
+    if (c !== 'fi') return glyphesFactices.contour(c, x, y, t);
+    const k = t / 1000, l = 900 * k, h = 700 * k;
+    return [{ type: 'M', x, y }, { type: 'L', x: x + l, y }, { type: 'L', x: x + l, y: y - h }, { type: 'L', x: x + l * 0.6, y: y - h * 1.3 }, { type: 'L', x, y: y - h }, { type: 'Z' }];
+  },
+  avance: c => (c === 'fi' ? 950 : glyphesFactices.avance(c)),
+  crenage: (a, b) => (a === 'fi' && b === 'A' ? -40 : glyphesFactices.crenage(a, b)),
+  ligature: (cars, i) => (cars[i] === 'f' && cars[i + 1] === 'i' ? 2 : 0)
+};
+
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
@@ -152,6 +165,13 @@ const CAS: readonly Cas[] = [
     nom: 'texte-contours-ouverts',
     entree: 'texte-par-lettre',
     operation: d => ajouterTexte(d, composer('Abc', glyphesSansZ, { taille: 30, x: 10, y: 50 }), { remplissage: null, contour: '#15181d', epaisseur: 2 }).dessin
+  },
+  // Les ligatures (troisieme lot de lecture, version majeure) : « fi » ne fait qu'une forme, a l'avance de la glyphe de
+  // ligature. Cas neuf : le moteur ne lie rien par defaut, donc « texte-par-lettre » n'a pas bouge.
+  {
+    nom: 'texte-ligatures',
+    entree: 'texte-par-lettre',
+    operation: d => ajouterTexte(d, composer('fi AfiA fifi.', glyphesLiees, { taille: 30, x: 10, y: 60, ligatures: true }), { remplissage: '#15181d', contour: null, epaisseur: 1 }).dessin
   },
   { nom: 'palette-evenement', entree: 'palette', operation: d => appliquerPalette(d, palette('noel')) },
   { nom: 'palette-une-couleur', entree: 'palette', operation: d => uneCouleur(d, '#7b2d8e') },

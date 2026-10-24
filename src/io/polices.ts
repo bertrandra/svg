@@ -7,6 +7,7 @@ import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
 import { fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
 import { lireCrenageGpos } from './crenageGpos.js';
+import { lireLigaturesGsub } from './ligaturesGsub.js';
 
 export interface PoliceEmbarquee { id: string; nom: string; base64: string }
 export interface Police { id: string; nom: string; glyphes: Glyphes }
@@ -31,18 +32,36 @@ function decoderBase64(b64: string): ArrayBuffer {
 /**
  * L'interface pure du moteur, au-dessus d'une fonte lue. Avec les octets de la fonte, le crenage vient de
  * sa table GPOS (crenageGpos.ts), qu'opentype.js lit mal ; sans eux, ou si la fonte n'en porte pas, il
- * vient de la bibliotheque.
+ * vient de la bibliotheque. Les ligatures viennent de sa table GSUB (ligaturesGsub.ts) : `ligature` n'existe
+ * que si la fonte en porte au moins une, et une ligature est alors une glyphe comme une autre pour `contour`,
+ * `avance` et `crenage`, appelees avec la chaine de ses caracteres (« fi »).
  */
 export function glyphesDe(fonte: Font, octets?: ArrayBuffer): Glyphes {
   const cache = new Map<string, ReturnType<Font['charToGlyph']>>();
-  const glyphe = (c: string) => { let g = cache.get(c); if (!g) { g = fonte.charToGlyph(c); cache.set(c, g); } return g; };
   const gpos = octets ? lireCrenageGpos(octets) : null;
+  const liga = octets ? lireLigaturesGsub(octets) : null;
+  const indices = (cars: readonly string[]) => cars.map(c => fonte.charToGlyph(c).index);
+  const glyphe = (c: string) => {
+    let g = cache.get(c);
+    if (g) return g;
+    const cars = [...c], lue = liga && cars.length > 1 ? liga.appliquer(indices(cars), 0) : null;
+    // Une chaine de plusieurs caracteres n'est demandee que pour une ligature que `ligature` a annoncee.
+    g = lue ? fonte.glyphs.get(lue.glyphe) : fonte.charToGlyph(c);
+    cache.set(c, g);
+    return g;
+  };
   const bibliotheque = (a: string, b: string) => { try { return fonte.getKerningValue(glyphe(a), glyphe(b)) || 0; } catch { return 0; } };
+  const ligature = (cars: readonly string[], debut: number): number => {
+    if (!liga) return 0;
+    const fenetre = cars.slice(debut, debut + liga.maxGlyphes);
+    return liga.appliquer(indices(fenetre), 0)?.n ?? 0;
+  };
   return {
     unitesParEm: fonte.unitsPerEm,
     contour: (c, x, y, taille) => glyphe(c).getPath(x, y, taille).commands,
     avance: c => glyphe(c).advanceWidth ?? fonte.unitsPerEm / 2,
-    crenage: (a, b) => (gpos ? gpos(glyphe(a).index, glyphe(b).index) : bibliotheque(a, b))
+    crenage: (a, b) => (gpos ? gpos(glyphe(a).index, glyphe(b).index) : bibliotheque(a, b)),
+    ...(liga ? { ligature } : {})
   };
 }
 
