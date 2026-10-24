@@ -6,14 +6,15 @@ import { useEffect, useRef, useState } from 'react';
 import { boiteChemin, unir } from '../engine/editionSvg.js';
 import { ajouterTexte, composer } from '../engine/texte.js';
 import { chargerPolices, policeDeposee, type Police } from '../io/polices.js';
-import type { Edition } from './EditeurSvg.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 
-export function PanneauTexte({ ed }: { ed: Edition }) {
+export function PanneauTexte() {
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
   const [polices, poserPolices] = useState<Police[] | null>(null);
   const [erreur, poserErreur] = useState('');
   const [texte, poserTexte] = useState('Joyeux anniversaire');
   const [policeId, poserPoliceId] = useState('');
-  const [taille, poserTaille] = useState(() => Math.round(Math.min(ed.dessin.vb[2], ed.dessin.vb[3]) / 6));
+  const [taille, poserTaille] = useState(() => Math.round(Math.min(mo.dessin.vb[2], mo.dessin.vb[3]) / 6));
   const [interlettrage, poserInterlettrage] = useState(0);
   const entree = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -36,17 +37,17 @@ export function PanneauTexte({ ed }: { ed: Edition }) {
     if (!police || !texte.trim()) return;
     const lettres = composer(texte, police.glyphes, { taille, interlettrage, x: 0, y: 0 });
     const b = unir(lettres.map(l => boiteChemin(l.d)));
-    if (!b) { ed.dire('Ce texte ne donne aucune forme avec cette fonte.'); return; }
-    const [vx, vy, vl, vh] = ed.dessin.vb;
+    if (!b) { ac.dire('Ce texte ne donne aucune forme avec cette fonte.'); return; }
+    const [vx, vy, vl, vh] = mo.dessin.vb;
     // Le bloc de texte, centre sur le plan : on compose a l'origine puis on decale.
     const dx = vx + (vl - b.l) / 2 - b.x, dy = vy + (vh - b.h) / 2 - b.y;
     const posees = composer(texte, police.glyphes, { taille, interlettrage, x: dx, y: dy });
-    const r = ajouterTexte(ed.dessin, posees, ed.style);
+    const r = ajouterTexte(mo.dessin, posees, ui.style);
     if (!r.ids.length) return;
-    ed.appliquer(() => r.dessin);
-    ed.choisir(r.ids);
-    ed.poserOutil('selection');
-    ed.dire(r.ids.length + ' lettre' + (r.ids.length > 1 ? 's' : '') + ' ajoutée' + (r.ids.length > 1 ? 's' : '') + ' en formes, une par lettre : combinez-les si besoin.');
+    ac.appliquer(() => r.dessin);
+    ac.choisir(r.ids);
+    ac.poserOutil('selection');
+    ac.dire(r.ids.length + ' lettre' + (r.ids.length > 1 ? 's' : '') + ' ajoutée' + (r.ids.length > 1 ? 's' : '') + ' en formes, une par lettre : combinez-les si besoin.');
   };
 
   return (

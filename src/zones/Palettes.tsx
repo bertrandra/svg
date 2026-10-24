@@ -3,17 +3,18 @@
 
 import { useState } from 'react';
 import { appliquerPalette, PALETTES, uneCouleur } from '../engine/palettes.js';
-import type { Edition } from './EditeurSvg.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Section } from './commun/Section.js';
 
 const estHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
 
-export function PanneauPalettes({ ed }: { ed: Edition }) {
+export function PanneauPalettes() {
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
   const [choix, poserChoix] = useState(PALETTES[0]?.id ?? '');
   const [propre, poserPropre] = useState('#c81e28 #1428a0 #15181d');
   const couleurs = propre.split(/[\s,;]+/).filter(estHex).map(c => c.toLowerCase());
-  const nuancier = ed.nuancier.map(t => t.hex);
-  const appliquer = (palette: readonly string[], texte: string) => { if (palette.length) ed.faire(d => appliquerPalette(d, palette), texte); };
+  const nuancier = mo.nuancier.map(t => t.hex);
+  const appliquer = (palette: readonly string[], texte: string) => { if (palette.length) ac.faire(d => appliquerPalette(d, palette), texte); };
   return (
     <Section titre="Recolorer">
       <label className="champ-ligne">
@@ -27,7 +28,7 @@ export function PanneauPalettes({ ed }: { ed: Edition }) {
       <div className="boutons">
         <button type="button" className="primaire" onClick={() => { const p = PALETTES.find(x => x.id === choix); if (p) appliquer(p.couleurs, 'Palette « ' + p.nom + ' » appliquée : la couleur la plus présente a pris la première.'); }}>Appliquer la palette</button>
         {nuancier.length ? <button type="button" onClick={() => appliquer(nuancier, 'Nuancier appliqué au dessin.')}>Appliquer le nuancier</button> : null}
-        <button type="button" onClick={() => ed.faire(d => uneCouleur(d, ed.style.remplissage ?? '#000000'), 'Tout le dessin d’une seule couleur.')}>Une couleur ({(ed.style.remplissage ?? '#000000').toUpperCase()})</button>
+        <button type="button" onClick={() => ac.faire(d => uneCouleur(d, ui.style.remplissage ?? '#000000'), 'Tout le dessin d’une seule couleur.')}>Une couleur ({(ui.style.remplissage ?? '#000000').toUpperCase()})</button>
       </div>
       <label className="champ-ligne">
         <span>La mienne</span>

@@ -1,9 +1,9 @@
 // Le panneau du dessin : sans selection, ou avec un outil de trace. Style des formes nouvelles, couleurs,
 // nettoyage, bibliotheque, versions, raccourcis.
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, couleursDuDessin, idsDeCouleur, regrouper, remplacerCouleur, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
-import { bibliothequeChargee } from '../io/bibliotheque.js';
+import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
@@ -16,46 +16,47 @@ import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
 import { estHex, phraseIgnores } from './aidesEditeur.js';
-import type { Edition } from './typesEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 
 /** Sans selection, ou avec un outil de trace : le style des formes nouvelles, le dessin entier, ses couleurs, son nettoyage, la bibliotheque. */
-export function PanneauDessin({ ed }: { ed: Edition }) {
-  const { dessin } = ed;
+export function PanneauDessin() {
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const { dessin } = mo;
   const [seuil, poserSeuil] = useState(0.0005);
   const stats = useMemo(() => statistiques(dessin), [dessin]);
   const couleurs = useMemo(() => couleursDuDessin(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
-  const trace = FORMES.has(ed.outil) || ed.outil === 'plume' || ed.outil === 'texte';
+  const trace = FORMES.has(ui.outil) || ui.outil === 'plume' || ui.outil === 'texte';
   return (
     <>
-      <h3>{ed.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
-      {ed.outil === 'texte' ? <PanneauTexte ed={ed} /> : null}
-      {trace ? <StyleNouvelleForme ed={ed} /> : null}
+      <h3>{ui.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
+      {ui.outil === 'texte' ? <PanneauTexte /> : null}
+      {trace ? <StyleNouvelleForme /> : null}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
-      {ed.ignores.length ? <p className="aide" role="note">{phraseIgnores(ed.ignores)}</p> : null}
+      {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
       <Section titre="Couleurs du dessin" ouverte note={couleurs.length}>
         <ul className="couleurs-dessin">
           {couleurs.map((c, i) => (
             <li key={i}>
               <input type="color" aria-label={'Remplacer ' + c.couleur} value={estHex(c.couleur) ? c.couleur : '#000000'}
-                onChange={e => ed.appliquer(d => remplacerCouleur(d, c.couleur, e.target.value), 'recolorer-' + i)} onBlur={ed.finir} />
-              <button type="button" className="discret" title="Sélectionner les formes de cette couleur" onClick={() => ed.choisir(idsDeCouleur(dessin, c.couleur))}>
+                onChange={e => ac.appliquer(d => remplacerCouleur(d, c.couleur, e.target.value), 'recolorer-' + i)} onBlur={ac.finir} />
+              <button type="button" className="discret" title="Sélectionner les formes de cette couleur" onClick={() => ac.choisir(idsDeCouleur(dessin, c.couleur))}>
                 {c.couleur.toUpperCase()} · {c.formes}
               </button>
-              {ed.nuancier.length ? (
-                <select aria-label={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} value="" onChange={e => { const v = e.target.value; if (v) ed.faire(d => remplacerCouleur(d, c.couleur, v)); }}>
+              {mo.nuancier.length ? (
+                <select aria-label={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} value="" onChange={e => { const v = e.target.value; if (v) ac.faire(d => remplacerCouleur(d, c.couleur, v)); }}>
                   <option value="">→ nuancier…</option>
-                  {ed.nuancier.map(t => <option key={t.hex} value={t.hex}>{t.nom} ({t.hex.toUpperCase()})</option>)}
+                  {mo.nuancier.map(t => <option key={t.hex} value={t.hex}>{t.nom} ({t.hex.toUpperCase()})</option>)}
                 </select>
               ) : null}
             </li>
           ))}
         </ul>
       </Section>
-      <PanneauPalettes ed={ed} />
-      {ed.bibliotheque ? <PanneauBibliotheque ed={ed} /> : null}
+      <PanneauPalettes />
+      {mo.bibliotheque ? <PanneauBibliotheque bibliotheque={mo.bibliotheque} /> : null}
       <Section titre="Nettoyer le tracé">
         <label className="champ-ligne">
           <span>Seuil</span>
@@ -64,13 +65,13 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
           </select>
         </label>
         <div className="boutons">
-          <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ed.appliquer(() => r.dessin); ed.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
-          <button type="button" onClick={() => { const r = regrouper(dessin); ed.appliquer(() => r.dessin); ed.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
-          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ed.appliquer(() => r.dessin); ed.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
-          <button type="button" onClick={() => ed.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
+          <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ac.appliquer(() => r.dessin); ac.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
+          <button type="button" onClick={() => { const r = regrouper(dessin); ac.appliquer(() => r.dessin); ac.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
+          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ac.appliquer(() => r.dessin); ac.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
+          <button type="button" onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>
-      <PanneauVersions ed={ed} />
+      <PanneauVersions />
       <Section titre="Raccourcis">
         <ul className="raccourcis">
           <li>V sélection · A points · H ou espace : main · O contours</li>
@@ -89,47 +90,49 @@ export function PanneauDessin({ ed }: { ed: Edition }) {
 }
 
 /** Le style des formes a venir : remplissage, contour, epaisseur. */
-function StyleNouvelleForme({ ed }: { ed: Edition }) {
-  const s = ed.style;
+function StyleNouvelleForme() {
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const s = ui.style;
   return (
     <>
-      <Peinture libelle="Remplissage" valeur={s.remplissage} mixte={false} nuancier={ed.nuancier} finir={() => undefined} poser={v => ed.poserStyle({ ...s, remplissage: v })} />
-      <Peinture libelle="Contour" valeur={s.contour} mixte={false} nuancier={ed.nuancier} finir={() => undefined} poser={v => ed.poserStyle({ ...s, contour: v })} />
-      {s.contour || ed.outil === 'ligne' ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ed.poserStyle({ ...s, epaisseur: v })} /> : null}
-      <p className="aide">{ed.outil === 'ligne' ? 'Une ligne prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
+      <Peinture libelle="Remplissage" valeur={s.remplissage} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, remplissage: v })} />
+      <Peinture libelle="Contour" valeur={s.contour} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, contour: v })} />
+      {s.contour || ui.outil === 'ligne' ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ac.poserStyle({ ...s, epaisseur: v })} /> : null}
+      <p className="aide">{ui.outil === 'ligne' ? 'Une ligne prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
     </>
   );
 }
 
 /** La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. */
-function PanneauBibliotheque({ ed }: { ed: Edition }) {
-  const [voulue, vouloir] = useState(ed.bibliotheque !== 'a-charger' || bibliothequeChargee());
+function PanneauBibliotheque({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
+  const [voulue, vouloir] = useState(bibliotheque !== 'a-charger' || bibliothequeChargee());
   return (
     <Section titre="Bibliothèque de formes">
-      {voulue ? <BibliothequeChargee ed={ed} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
+      {voulue ? <BibliothequeChargee bibliotheque={bibliotheque} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
     </Section>
   );
 }
 
-function BibliothequeChargee({ ed }: { ed: Edition }) {
+const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
+  const ac = useActions();
   const chargee = useBibliotheque();
   const [panier, poserPanier] = useState<EntreeBibliotheque[]>([]);
   const [sceneId, poserSceneId] = useState(SCENES[0]?.id ?? '');
-  const b = ed.bibliotheque !== 'a-charger' && ed.bibliotheque ? ed.bibliotheque : chargee.bibliotheque;
+  const b = bibliotheque !== 'a-charger' ? bibliotheque : chargee.bibliotheque;
   if (chargee.erreur && !b) return <p className="aide" role="alert">{chargee.erreur}</p>;
   if (!b) return <p className="aide" role="status">Chargement…</p>;
-  const choisir = (x: EntreeBibliotheque) => ed.insererForme(x.svg);
+  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg);
   // Le panier en grille : autant de colonnes que la racine du nombre, chaque case a 80 % de sa cellule.
   const insererPanier = () => {
     const n = panier.length, cols = Math.ceil(Math.sqrt(n)), lignes = Math.ceil(n / cols), cellule = 1 / Math.max(cols, lignes);
-    ed.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
+    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
     poserPanier([]);
   };
   const insererScene = () => {
     const sc = SCENES.find(x => x.id === sceneId);
     if (!sc) return;
     const parId = new Map(b.entrees.map(x => [x.id, x.svg]));
-    ed.insererPlusieurs(sc.elements.flatMap(e => { const svg = parId.get(e.id); return svg ? [{ svg, x: e.x, y: e.y, taille: e.taille }] : []; }));
+    ac.insererPlusieurs(sc.elements.flatMap(e => { const svg = parId.get(e.id); return svg ? [{ svg, x: e.x, y: e.y, taille: e.taille }] : []; }));
   };
   return (
     <>
@@ -150,4 +153,4 @@ function BibliothequeChargee({ ed }: { ed: Edition }) {
       ) : <p className="aide">Un clic insère au centre ; « + » met dans le panier pour insérer plusieurs formes en grille.</p>}
     </>
   );
-}
+});

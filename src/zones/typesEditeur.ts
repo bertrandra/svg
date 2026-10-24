@@ -16,9 +16,14 @@ export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilF
 export type Coin = 'nw' | 'ne' | 'sw' | 'se';
 export type Point = readonly [number, number];
 export interface Vue { zoom: number; x: number; y: number }
+export type Fond = 'damier' | 'blanc' | 'sombre';
+export type Tiroir = 'calques' | 'inspecteur' | null;
 
-/** Ce que les panneaux partagent : le dessin, la selection, et les gestes d'edition. */
-export interface Edition {
+// L'editeur se partage en trois contextes (contexteEditeur.tsx), pour qu'un panneau ne se redessine que
+// pour ce qu'il lit : le dessin (ce qu'on voit), l'interface (l'outil et la vue), les actions (les verbes).
+
+/** Le dessin et ce qu'on en tire : l'historique, la selection, le nuancier, les versions, le presse-papiers. */
+export interface ModeleDessin {
   h: Historique<DessinSvg>;
   dessin: DessinSvg;
   sel: string[];
@@ -26,41 +31,69 @@ export interface Edition {
   choisies: ReadonlySet<string>;
   boite: Boite | null;
   formeSeule: Forme | null;
-  outil: Outil;
-  point: number | null;
   nuancier: readonly Teinte[];
   /** Ce que la lecture du SVG ouvert n'a pas repris (voir `lireDessin`) ; vide pour un dessin sans perte. */
   ignores: readonly string[];
   bibliotheque: Bibliotheque | 'a-charger' | null;
+  versions: readonly Version[];
+  presse: readonly Forme[];
+}
+
+/** L'outil, la vue et ce qui n'est que d'affichage : rien de ce qui s'ecrit dans le SVG. */
+export interface EtatInterface {
+  outil: Outil;
+  point: number | null;
   style: Style;
   trace: readonly Point[];
-  presse: readonly Forme[];
   grille: boolean;
   aimants: boolean;
   guides: readonly Aimant[];
-  versions: readonly Version[];
-  tiroir: 'calques' | 'inspecteur' | null;
+  tiroir: Tiroir;
+  contours: boolean;
+  fond: Fond;
   pas: number;
   /** La valeur aimantee a la grille quand elle est active, telle quelle sinon. */
   aimant: (v: number) => number;
-  poserGrille: (g: boolean) => void;
-  poserAimants: (a: boolean) => void;
-  poserGuides: (g: readonly Aimant[]) => void;
-  poserTiroir: (t: 'calques' | 'inspecteur' | null) => void;
-  garderVersion: (nom: string, svg: string) => void;
-  supprimerVersion: (id: string) => void;
+  vues: Vues;
+  /** Le dernier message de la barre d'etat (vide : l'etat par defaut de l'outil). */
+  message: string;
+  /** La confirmation « Abandonner les modifications » est affichee. */
+  quitter: boolean;
+}
+
+/**
+ * Les verbes de l'editeur. Ce contexte ne change jamais d'identite : chaque verbe lit l'etat du moment
+ * au moment de l'appel (une reference mise a jour a chaque rendu), jamais celui du rendu qui l'a cree.
+ */
+export interface ActionsEditeur {
+  appliquer: (f: (d: DessinSvg) => DessinSvg, cle?: string | null) => void;
+  faire: (f: (d: DessinSvg) => DessinSvg, texte?: string) => void;
+  finir: () => void;
+  annulerGeste: (cle: string) => void;
+  defaire: () => void;
+  refaire: () => void;
+  nouvelleCle: () => string;
+  dire: (t: string) => void;
   choisir: (ids: string[]) => void;
   poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void;
   poserStyle: (s: Style) => void;
   poserTrace: (t: readonly Point[]) => void;
+  poserGrille: (g: boolean) => void;
+  poserAimants: (a: boolean) => void;
+  poserGuides: (g: readonly Aimant[]) => void;
+  poserTiroir: (t: Tiroir) => void;
+  poserContours: (f: boolean | ((c: boolean) => boolean)) => void;
+  poserFond: (f: Fond) => void;
+  /** Ferme l'editeur, apres confirmation s'il y a des modifications. */
+  demanderFermeture: () => void;
+  /** Ferme l'editeur sans rien demander (la confirmation « Abandonner »). */
+  fermer: () => void;
+  /** Referme la confirmation et reprend l'edition. */
+  continuerEdition: () => void;
+  garderVersion: (nom: string, svg: string) => void;
+  supprimerVersion: (id: string) => void;
   finirTrace: (fermer: boolean) => void;
-  appliquer: (f: (d: DessinSvg) => DessinSvg, cle?: string | null) => void;
-  faire: (f: (d: DessinSvg) => DessinSvg, texte?: string) => void;
-  finir: () => void;
-  annulerGeste: (cle: string) => void;
-  dire: (t: string) => void;
-  nouvelleCle: () => string;
   supprimerSelection: () => void;
   dupliquerSelection: () => void;
   copierSelection: () => void;

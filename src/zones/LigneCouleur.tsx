@@ -7,7 +7,7 @@ import { pluriel } from '../util/texte.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { estHex } from './aidesEditeur.js';
-import type { Edition } from './typesEditeur.js';
+import { useActions, useDessin } from './contexteEditeur.js';
 
 /** Ce que la section prete a chaque ligne : ce qui est partage entre les lignes ou qui survit a leur remontage. */
 export interface ActionsLigne {
@@ -28,43 +28,44 @@ const accord = (n: number) => (n > 1 ? 's' : '');
 /** Ce que « Fond » ou « Trait » change, pour les messages : rien de plus quand on lit les deux. */
 export const precisionSur = (sur: SurCouleur): string => (sur === 'remplissage' ? ' (fond)' : sur === 'contour' ? ' (trait)' : '');
 
-export function LigneCouleur({ ed, g, actions }: { ed: Edition; g: GroupeCouleur; actions: ActionsLigne }) {
-  const { sel } = ed;
+export function LigneCouleur({ g, actions }: { g: GroupeCouleur; actions: ActionsLigne }) {
+  const mo = useDessin(), ac = useActions();
+  const { sel } = mo;
   const { sur } = actions;
-  const toutesChoisies = g.libres.length > 0 && g.libres.every(id => ed.choisies.has(id));
+  const toutesChoisies = g.libres.length > 0 && g.libres.every(id => mo.choisies.has(id));
   const toutesMasquees = g.visibles === 0, toutesVerrouillees = g.verrouillees === g.ids.length;
   const nom = g.couleur.toUpperCase();
   const choisir = (ajout: boolean) => {
-    if (!g.libres.length) { ed.dire('Les formes ' + nom + ' sont masquées ou verrouillées.'); return; }
-    ed.choisir(ajout ? [...new Set([...sel, ...g.libres])] : g.libres);
-    ed.poserPoint(null);
+    if (!g.libres.length) { ac.dire('Les formes ' + nom + ' sont masquées ou verrouillées.'); return; }
+    ac.choisir(ajout ? [...new Set([...sel, ...g.libres])] : g.libres);
+    ac.poserPoint(null);
     actions.choisie(g.couleur);
   };
   // Ce qu'on masque ou verrouille quitte la selection : on ne retouche pas ce qu'on ne voit plus.
-  const horsSelection = () => ed.choisir(sel.filter(id => !g.ids.includes(id)));
+  const horsSelection = () => ac.choisir(sel.filter(id => !g.ids.includes(id)));
   const basculerVisible = () => {
-    ed.faire(d => modifier(d, g.ids, { visible: toutesMasquees }), pluriel(g.ids.length, 'forme') + (toutesMasquees ? ' affichée' : ' masquée') + accord(g.ids.length) + ' (' + nom + ').');
+    ac.faire(d => modifier(d, g.ids, { visible: toutesMasquees }), pluriel(g.ids.length, 'forme') + (toutesMasquees ? ' affichée' : ' masquée') + accord(g.ids.length) + ' (' + nom + ').');
     if (!toutesMasquees) horsSelection();
   };
   const basculerVerrou = () => {
-    ed.faire(d => modifier(d, g.ids, { verrouille: !toutesVerrouillees }), pluriel(g.ids.length, 'forme') + (toutesVerrouillees ? ' déverrouillée' : ' verrouillée') + accord(g.ids.length) + ' (' + nom + ').');
+    ac.faire(d => modifier(d, g.ids, { verrouille: !toutesVerrouillees }), pluriel(g.ids.length, 'forme') + (toutesVerrouillees ? ' déverrouillée' : ' verrouillée') + accord(g.ids.length) + ' (' + nom + ').');
     if (!toutesVerrouillees) horsSelection();
   };
   const combinerCouleur = () => {
-    const r = combiner(ed.dessin, g.libres);
+    const r = combiner(mo.dessin, g.libres);
     if (!r.id) return;
-    ed.appliquer(() => r.dessin);
-    ed.choisir([r.id]);
-    ed.dire(pluriel(g.libres.length, 'forme') + ' combinée' + accord(g.libres.length) + ' en une (' + nom + ').');
+    ac.appliquer(() => r.dessin);
+    ac.choisir([r.id]);
+    ac.dire(pluriel(g.libres.length, 'forme') + ' combinée' + accord(g.libres.length) + ' en une (' + nom + ').');
   };
   const supprimerCouleur = () => {
-    ed.faire(d => supprimer(d, g.libres), pluriel(g.libres.length, 'forme') + ' ' + nom + ' supprimée' + accord(g.libres.length) + '.');
-    ed.choisir(sel.filter(id => !g.libres.includes(id)));
+    ac.faire(d => supprimer(d, g.libres), pluriel(g.libres.length, 'forme') + ' ' + nom + ' supprimée' + accord(g.libres.length) + '.');
+    ac.choisir(sel.filter(id => !g.libres.includes(id)));
   };
   // Le nuancier de la page : un clic remplace la couleur partout, en une entree d'historique.
-  const duNuancier: ElementMenu[] = ed.nuancier.map((t, i) => ({
+  const duNuancier: ElementMenu[] = mo.nuancier.map((t, i) => ({
     id: 'nuancier-' + t.hex, libelle: 'Remplacer par ' + t.nom + (t.nom === t.hex ? '' : ' (' + t.hex.toUpperCase() + ')'), pastille: t.hex, separateur: i === 0, desactive: t.hex === g.couleur,
-    onClick: () => ed.faire(d => remplacerCouleurSur(d, g.couleur, t.hex, sur), nom + ' remplacée par ' + t.hex.toUpperCase() + precisionSur(sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.')
+    onClick: () => ac.faire(d => remplacerCouleurSur(d, g.couleur, t.hex, sur), nom + ' remplacée par ' + t.hex.toUpperCase() + precisionSur(sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.')
   }));
   const elements: ElementMenu[] = [
     { id: 'ajouter', libelle: 'Ajouter à la sélection', icone: 'ajouter', desactive: !g.libres.length, onClick: () => choisir(true) },
