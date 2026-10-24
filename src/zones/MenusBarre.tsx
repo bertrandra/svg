@@ -1,10 +1,11 @@
 // Les trois menus de la barre principale (ADR-0006) : Vue, Edition, Fichier. Chacun lit ce qu'il
 // montre dans les contextes de l'editeur, pour que la barre n'ait ni a les connaitre ni a les passer.
 
-import { ecrireDessin } from '../engine/editionSvg.js';
+import { ecrireDessin, sousChemins } from '../engine/editionSvg.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { ContenuExport } from './Exporter.js';
+import { allerAuChamp } from './OutilsTrace.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
@@ -40,6 +41,13 @@ export function MenuEdition() {
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
     { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
+    { id: 'contour-en-forme', libelle: 'Contour en forme', separateur: true, desactive: rien, onClick: ac.contourEnForme },
+    { id: 'decaler-contour', libelle: 'Décaler le contour…', desactive: rien, onClick: () => allerAuChamp(ac, 'decalage') },
+    { id: 'arrondir-angles', libelle: 'Arrondir les angles…', desactive: rien, onClick: () => allerAuChamp(ac, 'rayon') },
+    { id: 'joindre-traces', libelle: 'Joindre ou fermer les tracés', desactive: mo.sel.length < 1 || mo.sel.length > 2, onClick: ac.joindreSelection },
+    { id: 'inverser-sens', libelle: 'Inverser le sens du tracé', desactive: rien, onClick: ac.inverserSens },
+    { id: 'combiner', libelle: 'Combiner en un tracé composé', icone: 'combiner', raccourci: 'Ctrl+G', desactive: mo.sel.length < 2, onClick: ac.combinerSelection },
+    { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !mo.formeSeule || sousChemins(mo.formeSeule.d).length < 2, onClick: ac.separerSelection },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ac.supprimerSelection }
   ];
   return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={elements} />;

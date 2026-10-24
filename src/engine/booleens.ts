@@ -106,13 +106,13 @@ export function cheminDeRegion(region: MultiPolygon, precision = 3): Commande[] 
  * `tolerance` du trace d'origine, et une courbe ideale s'ecarte de leurs cordes d'autant : l'ajustement
  * se mesure donc a deux fois la tolerance, ce qui borne l'ecart au trace d'origine a trois tolerances.
  */
-export function cheminLisseDeRegion(region: MultiPolygon, tolerance: number, precision = 3): Commande[] {
+export function cheminLisseDeRegion(region: MultiPolygon, tolerance: number, precision = 3, rectilignes = false): Commande[] {
   const out: Commande[] = [];
   const arrondi = (v: number) => Number(v.toFixed(precision));
   for (const poly of region) for (const anneau of poly) {
     const pts: Pair[] = anneau.length > 1 && anneau[0]?.[0] === anneau[anneau.length - 1]?.[0] && anneau[0]?.[1] === anneau[anneau.length - 1]?.[1] ? anneau.slice(0, -1) : anneau;
     if (pts.length < 3) continue;
-    for (const c of reconstruireAnneau(pts, 2 * tolerance)) out.push({ c: c.c, p: c.p.map(arrondi) });
+    for (const c of reconstruireAnneau(pts, 2 * tolerance, rectilignes)) out.push({ c: c.c, p: c.p.map(arrondi) });
   }
   return out;
 }

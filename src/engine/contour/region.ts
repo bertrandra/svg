@@ -47,7 +47,18 @@ export function aireDeRegion(region: MultiPolygon): number {
  */
 const FACTEUR_LISSAGE = 4;
 
-/** Le chemin d'une region : en segments droits, ou avec les courbes rebaties (`lisser`). */
+/** Les anneaux dont l'aire est sous `aireMin` n'ont plus de corps (des eclats que l'union laisse aux bords tangents) : ils s'effacent. */
+function sansEclats(region: MultiPolygon, aireMin: number): MultiPolygon {
+  const aire = (r: Ring) => aireDeRegion([[r]]);
+  return region.flatMap(poly => {
+    const [exterieur, ...trous] = poly;
+    if (!exterieur || aire(exterieur) < aireMin) return [];
+    return [[exterieur, ...trous.filter(t => aire(t) >= aireMin)]];
+  });
+}
+
+/** Le chemin d'une region : en segments droits, ou avec les courbes rebaties (`lisser`). Les eclats sous la tolerance disparaissent. */
 export function cheminDeRegionChoisie(region: MultiPolygon, lisser: boolean, tolerance: number): Chemin {
-  return lisser ? cheminLisseDeRegion(region, tolerance * FACTEUR_LISSAGE) : cheminDeRegion(region);
+  const nette = sansEclats(region, tolerance * tolerance);
+  return lisser ? cheminLisseDeRegion(nette, tolerance * FACTEUR_LISSAGE, 3, true) : cheminDeRegion(nette);
 }

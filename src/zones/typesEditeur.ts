@@ -1,8 +1,9 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, Style } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, Style, TypeNoeud } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
+import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
@@ -126,6 +127,22 @@ export interface ActionsEditeur {
   insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number }[]) => void;
   booleen: (op: Booleen) => void;
   transformerNumerique: (t: { rotation?: number; inclinaisonX?: number; inclinaisonY?: number; echelle?: number }) => void;
+  /** Le contour des formes choisies devient une forme pleine (couleur du trait en fond). */
+  contourEnForme: () => void;
+  /** Decale le contour des formes choisies : positif vers l'exterieur, negatif vers l'interieur. */
+  decalerContour: (distance: number, jonction: Jonction) => void;
+  /** Arrondit les angles des formes choisies au rayon donne, ramene la ou les segments sont trop courts. */
+  arrondirAngles: (rayon: number) => void;
+  /** Change le type du point actif (outil points) : angle, lisse ou symetrique. */
+  convertirNoeud: (type: TypeNoeud) => void;
+  /** Casse le tracé au point actif. */
+  casserNoeud: () => void;
+  /** Joint deux tracés ouverts par leurs bouts, ou ferme un tracé ouvert. */
+  joindreSelection: () => void;
+  /** Retire le point actif sans changer la courbe, ou dit pourquoi c'est impossible. */
+  supprimerNoeudFidele: () => void;
+  /** Inverse le sens du tracé des formes choisies. */
+  inverserSens: () => void;
 }
 
 export interface Vues { vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void }

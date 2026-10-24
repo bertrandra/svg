@@ -69,6 +69,14 @@ describe('decaler : un chemin ferme', () => {
     expect(aire(chemin(deux, 0.5, 'miter', { regle: 'evenodd' }))).toBeCloseTo(6481 - 29 * 29, 1);
   });
 
+  it('rebatit les arcs en courbes : un carre decale devient quatre droites et quatre courbes', () => {
+    const d = chemin(CARRE, 5, 'round', { lisser: true });
+    expect(d.filter(c => c.c === 'C').length).toBe(4);
+    expect(d.filter(c => c.c === 'L').length).toBeGreaterThanOrEqual(3);
+    expect(aire(d)).toBeGreaterThan(1600 + 800 + Math.PI * 25 - 0.3);
+    expect(aire(d)).toBeLessThan(1600 + 800 + Math.PI * 25 + 0.3);
+  });
+
   it('la limite de pointe biseaute les angles aigus', () => {
     const pointe = 'M0 0L100 10L0 20z';
     const sans = aire(chemin(pointe, 3, 'miter', { limite: 100 })), avec = aire(chemin(pointe, 3, 'miter', { limite: 2 }));
