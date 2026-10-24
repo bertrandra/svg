@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "vitest run --config vitest.e2e.config.ts",
     "lint": "eslint src tests",
     "cliquet": "node scripts/cliquet.mjs",
     "verifier": "npm run typecheck && npm run lint && npm run cliquet && npm test",
@@ -36,6 +37,7 @@
     "@typescript-eslint/parser": "^8.18.1",
     "esbuild": "0.24.2",
     "eslint": "^9.17.0",
+    "playwright": "1.56.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
