@@ -46,9 +46,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Construire la page, la bibliothèque et les fontes
+      - name: Construire la page, la bibliothèque, les fontes et le bundle d’embarquement
         run: npm run construire
       - name: Chromium de Playwright
         run: npx playwright install --with-deps chromium
       - name: Tests de navigateur
         run: npm run e2e
+      # Un test en echec laisse une capture de ses pages et leurs erreurs (tests/e2e/aide.ts) : sans elles, un
+      # echec de la CI qu'on ne rejoue pas en local se devine.
+      - name: Captures des tests en échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traces-navigateur
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
