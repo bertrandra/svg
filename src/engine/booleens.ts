@@ -13,8 +13,8 @@ import { reconstruireAnneau } from './edition/ajustement.js';
 export type Booleen = 'union' | 'soustraction' | 'intersection' | 'exclusion';
 export const BOOLEENS: readonly Booleen[] = ['union', 'soustraction', 'intersection', 'exclusion'];
 
-const cubique = (a: number, b: number, c: number, d: number, t: number) => (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * d;
-const quadratique = (a: number, b: number, c: number, t: number) => (1 - t) ** 2 * a + 2 * (1 - t) * t * b + t * t * c;
+export const cubique = (a: number, b: number, c: number, d: number, t: number) => (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * c + t ** 3 * d;
+export const quadratique = (a: number, b: number, c: number, t: number) => (1 - t) ** 2 * a + 2 * (1 - t) * t * b + t * t * c;
 
 /** Le plus petit nombre de segments, et le plus grand : au-dela, une courbe n'a plus rien a gagner d'etre aplatie plus fin. */
 const SEGMENTS_MIN = 1, SEGMENTS_MAX = 512;
@@ -24,11 +24,11 @@ const SEGMENTS_MIN = 1, SEGMENTS_MAX = 512;
  * entre la courbe et sa corde est borne par d(d-1)/8 * M / n^2, ou M est la plus grande seconde difference
  * des points de controle (Wang) ; d'ou n >= racine(d(d-1) M / (8 tolerance)). Une droite en demande un seul.
  */
-const segments = (degre: 2 | 3, secondeDifference: number, tolerance: number) =>
+export const segments = (degre: 2 | 3, secondeDifference: number, tolerance: number) =>
   Math.max(SEGMENTS_MIN, Math.min(SEGMENTS_MAX, Math.ceil(Math.sqrt((degre * (degre - 1) * secondeDifference) / (8 * Math.max(tolerance, 1e-9))))));
 
 /** La norme de x0 - 2 x1 + x2 : l'ecart d'un point de controle a la corde de ses voisins. */
-const seconde = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number) => Math.hypot(x0 - 2 * x1 + x2, y0 - 2 * y1 + y2);
+export const seconde = (x0: number, y0: number, x1: number, y1: number, x2: number, y2: number) => Math.hypot(x0 - 2 * x1 + x2, y0 - 2 * y1 + y2);
 
 /** Les anneaux d'un chemin, aplatis a `tolerance` pres (ecart maximal au trace) : un anneau par sous-chemin, fermes. */
 export function aplatir(d: Chemin, tolerance: number): Ring[] {
@@ -73,10 +73,13 @@ const unirTous = (polys: Polygon[]): MultiPolygon => (polys.length ? clipping.un
  * sens du trace : l'union des anneaux d'un sens, moins celle des anneaux de l'autre sens, ce qui
  * creuse un trou dessine a contresens et garde pleins deux anneaux emboites de meme sens.
  */
-export function regionDeForme(f: Forme, tolerance: number): MultiPolygon {
-  const anneaux = aplatir(f.d, tolerance).filter(r => Math.abs(aireSignee(r)) > 1e-12);
+export const regionDeForme = (f: Forme, tolerance: number): MultiPolygon => regionDeChemin(f.d, f.regle, tolerance);
+
+/** La region peinte d'un chemin sous une regle de remplissage : ce que `regionDeForme` fait d'une forme, pour un chemin nu (decalage, contour). */
+export function regionDeChemin(d: Chemin, regle: Forme['regle'], tolerance: number): MultiPolygon {
+  const anneaux = aplatir(d, tolerance).filter(r => Math.abs(aireSignee(r)) > 1e-12);
   if (!anneaux.length) return vide;
-  if (f.regle === 'evenodd') return anneaux.length === 1 ? [[anneaux[0] ?? []]] : clipping.xor([anneaux[0] ?? []], ...anneaux.slice(1).map(r => [r]));
+  if (regle === 'evenodd') return anneaux.length === 1 ? [[anneaux[0] ?? []]] : clipping.xor([anneaux[0] ?? []], ...anneaux.slice(1).map(r => [r]));
   const horaires = anneaux.filter(r => aireSignee(r) > 0).map(r => [r]), autres = anneaux.filter(r => aireSignee(r) < 0).map(r => [r]);
   if (!horaires.length || !autres.length) return unirTous(horaires.length ? horaires : autres);
   const a = unirTous(horaires), b = unirTous(autres);
@@ -103,13 +106,13 @@ export function cheminDeRegion(region: MultiPolygon, precision = 3): Commande[] 
  * `tolerance` du trace d'origine, et une courbe ideale s'ecarte de leurs cordes d'autant : l'ajustement
  * se mesure donc a deux fois la tolerance, ce qui borne l'ecart au trace d'origine a trois tolerances.
  */
-export function cheminLisseDeRegion(region: MultiPolygon, tolerance: number, precision = 3): Commande[] {
+export function cheminLisseDeRegion(region: MultiPolygon, tolerance: number, precision = 3, rectilignes = false): Commande[] {
   const out: Commande[] = [];
   const arrondi = (v: number) => Number(v.toFixed(precision));
   for (const poly of region) for (const anneau of poly) {
     const pts: Pair[] = anneau.length > 1 && anneau[0]?.[0] === anneau[anneau.length - 1]?.[0] && anneau[0]?.[1] === anneau[anneau.length - 1]?.[1] ? anneau.slice(0, -1) : anneau;
     if (pts.length < 3) continue;
-    for (const c of reconstruireAnneau(pts, 2 * tolerance)) out.push({ c: c.c, p: c.p.map(arrondi) });
+    for (const c of reconstruireAnneau(pts, 2 * tolerance, rectilignes)) out.push({ c: c.c, p: c.p.map(arrondi) });
   }
   return out;
 }

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
-  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoignee, ellipse, etoile, polygone, rectangle, redimensionner, retourner, seCroisent,
+  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, ellipse, etoile, polygone, rectangle, redimensionner, retourner, seCroisent,
   type Boite, type Commande, type DessinSvg
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
@@ -147,7 +147,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, e.shiftKey, mo.dessin.vb), g.cle);
     else if (g.type === 'cadre') poserCadre({ x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) });
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
-    else if (g.type === 'poignee') ac.appliquer(() => deplacerPoignee(g.base, g.id, g.i, g.k, gx, gy), g.cle);
+    // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
+    else if (g.type === 'poignee') ac.appliquer(() => deplacerPoigneeLiee(g.base, g.id, g.i, g.k, gx, gy, e.altKey), g.cle);
     else ac.appliquer(() => ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style).dessin, g.cle);
   };
 

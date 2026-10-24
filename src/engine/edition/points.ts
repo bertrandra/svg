@@ -8,7 +8,7 @@ import { surFormes } from './operations.js';
 const memePoint = (a: readonly number[] | null, b: readonly number[] | null) => !!a && !!b && Math.abs((a[0] ?? 0) - (b[0] ?? 0)) < 1e-6 && Math.abs((a[1] ?? 0) - (b[1] ?? 0)) < 1e-6;
 
 /** Les bornes [debut, fin[ du sous-chemin qui contient la commande `i`. */
-function sousChemin(d: Chemin, i: number): [number, number] {
+export function sousChemin(d: Chemin, i: number): [number, number] {
   let a = i;
   while (a > 0 && d[a]?.c !== 'M') a--;
   let b = i + 1;
@@ -36,7 +36,7 @@ function avecPoints(d: Chemin, i: number, f: (p: number[]) => void): Commande[] 
   });
 }
 
-function surChemin(dessin: DessinSvg, id: string, f: (d: Chemin) => Chemin | null): DessinSvg {
+export function surChemin(dessin: DessinSvg, id: string, f: (d: Chemin) => Chemin | null): DessinSvg {
   return surFormes(dessin, [id], forme => {
     const d = f(forme.d);
     return d && d !== forme.d ? { ...forme, d } : forme;

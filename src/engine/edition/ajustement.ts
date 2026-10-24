@@ -212,14 +212,26 @@ export interface CommandeAnneau { readonly c: 'M' | 'L' | 'C' | 'Z'; readonly p:
 // Au-dela de 30 degres de deviation d'un segment au suivant, un sommet est un coin et non un point de courbe.
 const COS_COIN = 0.8660254037844386;
 
-/** Les indices des coins d'un anneau (sans point de fermeture repete). */
-function coins(pts: readonly Pt[]): number[] {
+/** Sous ce sinus, un virage est nul : le trace continue droit. */
+const SINUS_DROIT = 1e-4;
+/** Un segment huit fois plus long que son voisin est un cote droit contre une courbe aplatie finement. */
+const RAPPORT_DROIT = 8;
+
+/**
+ * Les indices des coins d'un anneau (sans point de fermeture repete). Avec `rectilignes`, la ou un long cote
+ * droit rejoint une courbe aplatie en petits segments (un cote qui prolonge un arc de cercle) devient aussi un
+ * point de coupure : une seule cubique ne tient ni le cote ni l'arc, et sans cette coupure l'anneau entier
+ * reste en segments.
+ */
+function coins(pts: readonly Pt[], rectilignes: boolean): number[] {
   const n = pts.length, out: number[] = [];
   for (let i = 0; i < n; i++) {
     const p = pts[(i + n - 1) % n], q = pts[i], r = pts[(i + 1) % n];
     if (!p || !q || !r) continue;
     const a = moins(q, p), b = moins(r, q), la = longueur(a), lb = longueur(b);
-    if (la === 0 || lb === 0 || scalaire(a, b) < COS_COIN * la * lb) out.push(i);
+    if (la === 0 || lb === 0 || scalaire(a, b) < COS_COIN * la * lb) { out.push(i); continue; }
+    const sinus = Math.abs(a[0] * b[1] - a[1] * b[0]) / (la * lb);
+    if (rectilignes && sinus > SINUS_DROIT && Math.max(la, lb) > RAPPORT_DROIT * Math.min(la, lb)) out.push(i);
   }
   return out;
 }
@@ -251,11 +263,11 @@ function tranche(pts: readonly Pt[], tolerance: number, tanDebut?: Pt, tanFin?: 
  * de sommets qui tournent doucement redeviennent des courbes cubiques, a `tolerance` pres ; les coins et
  * tout ce que l'ajustement ne tient pas a cette tolerance restent des segments droits.
  */
-export function reconstruireAnneau(anneau: readonly Pt[], tolerance: number): CommandeAnneau[] {
+export function reconstruireAnneau(anneau: readonly Pt[], tolerance: number, rectilignes = false): CommandeAnneau[] {
   const pts = anneau.filter((p, i) => { const q = anneau[(i + anneau.length - 1) % anneau.length]; return !q || p[0] !== q[0] || p[1] !== q[1]; });
   const n = pts.length, premier = pts[0];
   if (n < 4 || !premier) return n ? [{ c: 'M', p: [premier?.[0] ?? 0, premier?.[1] ?? 0] }, ...pts.slice(1).map((q): CommandeAnneau => ({ c: 'L', p: [q[0], q[1]] })), { c: 'Z', p: [] }] : [];
-  const sommets = coins(pts), depart = sommets[0] ?? 0;
+  const sommets = coins(pts, rectilignes), depart = sommets[0] ?? 0;
   const tournee = [...pts.slice(depart), ...pts.slice(0, depart)];
   const out: CommandeAnneau[] = [{ c: 'M', p: [tournee[0]?.[0] ?? 0, tournee[0]?.[1] ?? 0] }];
   if (!sommets.length) {
