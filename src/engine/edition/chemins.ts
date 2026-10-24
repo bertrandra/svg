@@ -20,7 +20,9 @@ export function lireChemin(d: string): Commande[] {
     const m = NOMBRE.exec(d);
     if (!m) return null;
     i = NOMBRE.lastIndex;
-    return Number(m[0]);
+    // Un exposant demesure (1e999) deborde en Infinity : comme une erreur de syntaxe, la lecture s'arrete avant lui.
+    const v = Number(m[0]);
+    return Number.isFinite(v) ? v : null;
   };
   const drapeau = (): number | null => {
     blanc();

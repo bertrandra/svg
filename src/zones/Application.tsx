@@ -16,7 +16,7 @@ import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brou
 import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { lireDessinMemo } from './lecture.js';
-import { nettoyerSvg } from '../util/svg.js';
+import { nettoyerSvgNomme } from '../util/svg.js';
 
 interface Fichier { nom: string; svg: string }
 
@@ -59,7 +59,8 @@ function Accueil() {
 
   /** Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. */
   const ouvrir = (nom: string, texte: string) => {
-    const propre = nettoyerSvg(texte);
+    const propre = nettoyerSvgNomme(texte);
+    if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
     const lu = lireDessinMemo(propre.svg);
     if ('erreur' in lu) { dire(lu.erreur); return; }

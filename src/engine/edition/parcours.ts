@@ -15,6 +15,8 @@ import { cheminDeForme } from './elements.js';
 import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
+import { peintureSure } from './peinture.js';
+import { COORDONNEE_MAX, coordonneeSaine, PROFONDEUR_MARCHE_MAX } from './limites.js';
 import {
   cibleDe, depasseDuCadre, CLONES_MAX, inverse, lireAspect, lireVue, longueurUse, matriceCadre, PROFONDEUR_USE_MAX, type Cadre
 } from './clones.js';
@@ -91,7 +93,14 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   const trait = peinture(heritees.stroke, null, courante);
   const { couleur: remplissage } = fond, { couleur: contour } = trait;
   if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) { p.refus.add('un dégradé ou un motif'); return; }
+  if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { p.refus.add('une peinture qui n’est pas une couleur lisible'); return; }
   if (b.profondeur > 0 && depasseBorne(p)) return;
+  const chemin = transformerChemin(d, m);
+  // NaN n'est pas dans l'intervalle : un exposant demesure (1e308) qui deborde est refuse comme une coordonnee hors bornes.
+  if (!chemin.every(c => c.p.every(coordonneeSaine)) || !Number.isFinite(facteur(m))) {
+    p.refus.add('des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')');
+    return;
+  }
   const epaisseur = contour ? lireEpaisseur(heritees['stroke-width']) * facteur(m) : 0;
   const { champs: styleTrait, ignores: pertesTrait } = contour ? lireTrait(heritees, facteur(m)) : { champs: {}, ignores: [] };
   // Un trait invisible (epaisseur nulle) ne perd rien de ce qu'on ne porte pas.
@@ -99,7 +108,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
   p.formes.push({
     id: 'f' + (p.formes.length + 1),
-    d: transformerChemin(d, m),
+    d: chemin,
     remplissage,
     contour,
     epaisseur,
@@ -164,6 +173,11 @@ function visiterUse(p: Parcours, u: Noeud, b: Pret): void {
 /** Lit un element et, pour un groupe ou un clone, tout ce qu'il porte. */
 export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (p.trop || IGNORES.has(n.nom)) return;
+  if (p.actifs.size > PROFONDEUR_MARCHE_MAX) {
+    p.refus.add('des éléments imbriqués sur plus de ' + PROFONDEUR_MARCHE_MAX + ' niveaux (clones <use> compris)');
+    p.trop = true;
+    return;
+  }
   if (ANIMATIONS.has(n.nom)) { p.analyse.ignores.add(MSG_ANIMATIONS); return; }
   const b = preparer(p, n, ctx);
   if (!b) return;
