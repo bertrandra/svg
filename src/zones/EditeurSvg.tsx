@@ -9,13 +9,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { aimanter, boiteDe, ecrireDessin, lireDessin, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, ecrireDessin, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
 import type { Aimant } from '../engine/transformations.js';
-import { annuler, avancer, clore, historique, retablir, type Historique } from '../util/historique.js';
+import { annuler, avancer, clore, historique, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { Barre, BarreSelection, Bouton, FORMES } from './BarreOutils.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
+import { lireDessinMemo } from './lecture.js';
 import { useGestes } from './Gestes.js';
 import { Inspecteur } from './Inspecteur.js';
 import { PanneauDessin } from './PanneauDessin.js';
@@ -79,7 +80,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
 }
 
 export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon }: ProprietesEditeur) {
-  const lu = useMemo(() => lireDessin(svg), [svg]);
+  const lu = useMemo(() => lireDessinMemo(svg), [svg]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   useEffect(() => {
     const avant = document.body.style.overflow;
@@ -124,11 +125,13 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
 
   const pas = useMemo(() => pasGrille(dessin.vb), [dessin.vb]);
   const presentes = useMemo(() => new Set(dessin.formes.map(f => f.id)), [dessin]);
-  const sel = useMemo(() => selection.filter(id => presentes.has(id)), [selection, presentes]);
+  // Tant que toutes les formes choisies existent, la selection reste le meme tableau : rien en aval ne se recalcule pendant un geste.
+  const sel = useMemo(() => (selection.every(id => presentes.has(id)) ? selection : selection.filter(id => presentes.has(id))), [selection, presentes]);
+  const choisies = useMemo(() => new Set(sel), [sel]);
   const formeSeule = sel.length === 1 ? dessin.formes.find(f => f.id === sel[0]) ?? null : null;
   const boite = useMemo(() => boiteDe(dessin, sel), [dessin, sel]);
 
-  const appliquer = useCallback((f: (d: DessinSvg) => DessinSvg, cle: string | null = null) => { poserH(x => avancer(x, f(x.present), cle)); }, []);
+  const appliquer = useCallback((f: (d: DessinSvg) => DessinSvg, cle: string | null = null) => { poserH(x => { const d = f(x.present); return avancer(x, d, cle, limitePourTaille(d.formes.length)); }); }, []);
   const finir = useCallback(() => poserH(x => clore(x)), []);
   // Un geste qui n'a rien produit (un rectangle sans surface) retire l'entree qu'il avait ouverte.
   const annulerGeste = useCallback((cle: string) => poserH(x => (x.cle === cle ? clore(annuler(x)) : x)), []);
@@ -147,7 +150,7 @@ function Atelier({ initial, titre, nom, nuancier, bibliotheque, fermer, enregist
 
   const base = { dessin, sel, formeSeule, outil, point, style, trace, presse, poserPresse, appliquer, choisir, poserPoint, poserOutil, poserOutilBrut, poserTrace, dire, vues, enregistrer, toile };
   const ed: Edition = {
-    h, dessin, sel, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, aimants, guides, versions, tiroir, pas,
+    h, dessin, sel, choisies, boite, formeSeule, outil, point, nuancier, bibliotheque, style, trace, presse, grille, aimants, guides, versions, tiroir, pas,
     poserGrille, poserAimants, poserGuides, poserTiroir, choisir, poserPoint, poserOutil, poserStyle, poserTrace,
     garderVersion: (nomVersion, svgVersion) => { const quand = Date.now(); poserVersions([{ id: idVersion(quand, versions.length), nom: nomVersion, svg: svgVersion, quand }, ...versions]); dire('Version « ' + nomVersion + ' » gardée dans ce navigateur.'); },
     supprimerVersion: id => poserVersions(versions.filter(v => v.id !== id)),

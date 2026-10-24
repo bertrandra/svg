@@ -11,7 +11,8 @@ import { Icone, type NomIcone } from './icones.js';
 import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
-import { lireDessin, statistiques } from '../engine/editionSvg.js';
+import { statistiques } from '../engine/editionSvg.js';
+import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvg } from '../util/svg.js';
 
 interface Fichier { nom: string; svg: string }
@@ -49,7 +50,7 @@ export function Application() {
   const ouvrir = (nom: string, texte: string) => {
     const propre = nettoyerSvg(texte);
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
-    const lu = lireDessin(propre.svg);
+    const lu = lireDessinMemo(propre.svg);
     if ('erreur' in lu) { dire(lu.erreur); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg });
     poserEdition(true);
@@ -58,7 +59,7 @@ export function Application() {
   };
   const stats = useMemo(() => {
     if (!fichier) return null;
-    const lu = lireDessin(fichier.svg);
+    const lu = lireDessinMemo(fichier.svg);
     return 'erreur' in lu ? null : statistiques(lu.dessin);
   }, [fichier]);
 

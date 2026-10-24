@@ -22,6 +22,8 @@ export interface Edition {
   h: Historique<DessinSvg>;
   dessin: DessinSvg;
   sel: string[];
+  /** Les memes identifiants en ensemble : savoir si une forme est choisie sans parcourir toute la selection. */
+  choisies: ReadonlySet<string>;
   boite: Boite | null;
   formeSeule: Forme | null;
   outil: Outil;

@@ -43,7 +43,8 @@ export function groupesDeCouleur(dessin: DessinSvg, sur: SurCouleur = 'tout'): G
   const groupes = new Map<string, Forme[]>();
   for (const f of dessin.formes) {
     const lues = sur === 'remplissage' ? [f.remplissage] : sur === 'contour' ? [f.contour] : f.remplissage === f.contour ? [f.remplissage] : [f.remplissage, f.contour];
-    for (const c of lues) if (c) groupes.set(c, [...(groupes.get(c) ?? []), f]);
+    // On ajoute au groupe en place : recopier le tableau a chaque forme couterait n au carre pour une couleur dominante.
+    for (const c of lues) if (c) { const g = groupes.get(c); if (g) g.push(f); else groupes.set(c, [f]); }
   }
   return [...groupes]
     .map(([couleur, fs]) => ({

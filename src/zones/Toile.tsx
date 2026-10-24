@@ -40,8 +40,11 @@ export function surcouche(ed: Edition, unite: number, cadre: Boite | null, tacti
   const r: ReactNode[] = [];
   // Au doigt, les poignees grossissent : une cible de 8 px ne se touche pas.
   const px = unite * (tactile ? 1.8 : 1);
+  // Une forme par identifiant, une fois : `find` pour chaque forme choisie coute n x m (5000 x 5000 = 60 ms).
+  const parId = new Map<string, Forme>();
+  if (ed.sel.length) for (const x of ed.dessin.formes) if (!parId.has(x.id)) parId.set(x.id, x);
   for (const id of ed.sel) {
-    const f = ed.dessin.formes.find(x => x.id === id);
+    const f = parId.get(id);
     if (f) r.push(<path key={'s' + id} className="trace-choisi" d={cheminDe(f)} pointerEvents="none" />);
   }
   const b = ed.boite;

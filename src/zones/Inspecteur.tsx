@@ -11,7 +11,7 @@ export function Inspecteur({ ed }: { ed: Edition }) {
   const { dessin, sel, boite } = ed;
   const premiere = dessin.formes.find(f => f.id === sel[0]);
   if (!premiere) return null;
-  const choisies = dessin.formes.filter(f => sel.includes(f.id));
+  const choisies = dessin.formes.filter(f => ed.choisies.has(f.id));
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ed.appliquer(d => modifier(d, sel, r), cle === null ? ed.nouvelleCle() : cle + ':' + sel.join(','));
   const points = ed.outil === 'points' && ed.formeSeule;
