@@ -126,9 +126,9 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
 - **Ne pas passer à `baseAnnexes`** une valeur que l’utilisateur contrôle : c’est le dossier d’où l’on charge des scripts.
   Les schémas `javascript:`, `data:`, `blob:`, `vbscript:`, `about:` sont refusés ; une adresse `http(s)` d’un tiers ne l’est
   pas (c’est un choix de l’hôte).
-- **Savoir que la page autonome demande ses polices à Google Fonts** (`<link>` dans `outils/editeur-svg/page.html`) :
-  c’est une requête de la page, pas de l’entrée, mais elle contredit « rien ne quitte votre navigateur » à la lettre
-  (l’adresse IP part chez Google au chargement). Le bundle d’embarquement n’en fait pas.
+- **Rien à savoir sur les polices** : la page autonome ne contacte plus aucun hôte au chargement (ses polices sont dans le
+  fichier, voir le constat 14). Le bundle d’embarquement n’en charge pas non plus ; si vous voulez la typographie de la page
+  entière chez vous, c’est à vous de servir *Instrument Sans* et *IBM Plex Mono* (voir `docs/integration.md`).
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
   valide ce qu’il y lit (types, longueurs, clés de prototype retirées), il ne le chiffre pas.
 
@@ -152,6 +152,7 @@ n’exécutait de script **dans l’éditeur** ; tous passaient par le fichier o
 | 11 | Stockage empoisonné : `svg.brouillon` ou `svg.versions` de mauvais type | faible | l’accueil ou l’éditeur plante à chaque ouverture jusqu’à vider le stockage (il faut déjà écrire dans l’origine) | validation champ par champ ; clés `__proto__`/`constructor`/`prototype` retirées |
 | 12 | `nuancier` d’hôte mal formé : `TypeError` dans l’éditeur | faible | l’éditeur ne s’ouvre pas | entrée écartée |
 | 13 | `baseAnnexes: "data:text/javascript,…"` : exécution de code | faible (l’hôte doit déjà être compromis ou naïf) | exécution dans la page de l’hôte | schémas actifs refusés |
+| 14 | La page autonome chargeait *Instrument Sans* et *IBM Plex Mono* chez Google (`fonts.googleapis.com`, `fonts.gstatic.com`) | faible (vie privée, RGPD) | l’adresse IP et l’en-tête de la personne partaient chez un tiers à chaque ouverture, ce qui contredisait « Rien ne quitte votre navigateur » (aucune donnée du dessin n’était concernée) | **corrigé** : le sous-ensemble latin des deux fontes (paquets `@fontsource`, SIL OFL 1.1, épinglés) est incorporé à `dist/editeur-svg.html` en `data:` URI (`scripts/fontes-interface.mjs`) ; la page n’a plus aucun `<link>` ni hôte à contacter |
 
 **Rien d’exploitable** n’a été trouvé dans : l’interface React (aucune insertion de HTML), les aperçus (`<img>` en `data:`),
 la lecture d’entités (jamais développées), l’écriture (`svg` + `path`), les exports PNG et PDF (le PDF ne porte ni
@@ -168,6 +169,7 @@ d’hôte (vignettes inertes, insertion par le moteur à plat).
 | Fuzzing déterministe | `tests/unit/securite/fuzz.test.ts`, `mutateur.ts` | 12 000 entrées par défaut (octets, jetons, imbrication, nombres, grammaire), graine fixe, aucune exception, aucun appel au-delà de 1,5 s, invariants, relecture de sa propre écriture idempotente |
 | Régressions du fuzzer | `tests/fixtures/regressions/` | chaque entrée réduite qui a échoué une fois, rejouée à chaque test |
 | Navigateur | `tests/e2e/securite.e2e.ts` | chaque fichier du corpus par code collé, fichier déposé et option `svg` ; fil de détente, aucune requête, aucune boîte de dialogue ; exports SVG, PNG, PDF rouverts en `<img>`, en ligne et en document de premier niveau |
+| Aucune requête à un hôte | `tests/unit/depot/page-hors-ligne.test.ts` et `tests/e2e/hors-ligne.e2e.ts` | le texte de la page composée n’a ni `<link>`, ni `@import`, ni adresse, et chaque `url()` est une `data:` ; en navigateur, **tout le réseau coupé**, l’accueil, la voie image (avec une vectorisation) et l’éditeur s’ouvrent sans la moindre requête, et les polices se chargent et rendent le texte. `securite.e2e.ts` n’admet plus aucune exception de police |
 | Stockage empoisonné | `tests/unit/securite/stockage-empoisonne.test.ts` et l’e2e | types faux, clés de prototype, valeurs énormes : rien ne plante, rien ne pollue |
 
 Exploration longue du fuzzer, sans rien changer au dépôt :

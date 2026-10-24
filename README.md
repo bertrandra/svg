@@ -42,7 +42,8 @@ s'embarque aussi comme composant React dans un autre produit.
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
 - **Récupérer le résultat** : SVG, SVG de découpe (contours seuls), PNG à la largeur voulue, PDF
-  vectoriel, copie du code. Rien ne quitte le navigateur.
+  vectoriel, copie du code. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
+  et ne contacte aucun serveur (un test en navigateur, réseau coupé, le vérifie).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.
 - **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,
@@ -147,7 +148,8 @@ l'impose.
 - Les booléens emploient [polygon-clipping](https://github.com/mfogel/polygon-clipping) (MIT) ; le
   texte, [opentype.js](https://opentype.js.org) (MIT) et neuf fontes (huit familles : Inter, Oswald, Bebas Neue,
   Playfair Display, Lobster, Pacifico, Caveat, Fredoka) sous licence SIL OFL 1.1, par les paquets
-  `@expo-google-fonts/*`. L'interface est en [React](https://react.dev) (MIT).
+  `@expo-google-fonts/*`. L'interface est en [React](https://react.dev) (MIT), en *Instrument Sans* et *IBM Plex Mono* (SIL OFL 1.1,
+  sous-ensemble latin, paquets `@fontsource/*`), incorporées à `dist/editeur-svg.html` : la page ne les demande à aucun serveur.
 - **Le copyright et la licence de chaque composant tiers sont dans [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**, généré par
   `npm run mentions` à partir de `src/model/credits.ts`, du `package-lock.json` et des fichiers de licence des paquets ; le même texte
   est construit dans `dist/MENTIONS.txt` et doit accompagner toute redistribution de `dist/`. Un test échoue si ce fichier est périmé

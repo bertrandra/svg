@@ -298,6 +298,15 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, 420 px tactile, tiroirs fermés'));
     });
 
+    for (const schema of ['light', 'dark'] as const) {
+      it(`sur un téléphone de 390 px, menu « Plus » ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 390, hauteur: 800, tactile: true, schema });
+        await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
+        await page.getByRole('menu', { name: 'Fichier' }).waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, 390 px tactile, menu Plus ouvert, ${schema}`));
+      });
+    }
+
     it('dans le thème sombre, avec une forme choisie', async () => {
       const page = await editeur({ schema: 'dark' });
       await page.locator('.editeur-svg-toile path[data-id="f2"]').click();

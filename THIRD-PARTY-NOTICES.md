@@ -24,8 +24,9 @@ la porte en commentaire. Un PNG ne peut pas la porter : citez la source là où 
 
 ## Fontes
 
-9 fontes (8 familles) sont embarquées dans `polices.js`, sous la licence SIL Open Font License 1.1. Le copyright de chacune ci-dessous
-accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.
+9 fontes (8 familles) sont embarquées dans `polices.js`, pour le texte en formes ; 2 familles de plus (Instrument Sans et IBM Plex Mono,
+sous-ensemble latin) sont incorporées à `editeur-svg.html`, pour l’interface de la page : la page ne les demande à aucun serveur. Toutes sont sous la licence SIL Open Font License 1.1.
+Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.
 
 - **Inter** (`@expo-google-fonts/inter` 0.4.2) : Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
   https://github.com/rsms/inter
@@ -43,6 +44,10 @@ accompagne la fonte partout où elle est redistribuée ; le texte de la licence 
   https://github.com/googlefonts/caveat
 - **Fredoka** (`@expo-google-fonts/fredoka` 0.4.1) : Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)
   https://github.com/hafontia/Fredoka-One
+- **Instrument Sans** (`@fontsource/instrument-sans` 5.3.0) : Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+  https://github.com/Instrument/instrument-sans
+- **IBM Plex Mono** (`@fontsource/ibm-plex-mono` 5.3.0) : Copyright 2017 IBM Corp. All rights reserved.
+  https://github.com/IBM/plex
 
 ### Texte de la SIL Open Font License 1.1
 

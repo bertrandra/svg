@@ -9,7 +9,7 @@
 
 import { readFileSync } from 'node:fs';
 import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo, refuserFinDeScript } from './aide.mjs';
-import { feuillesEditeur } from './feuilles.mjs';
+import { composerPage } from './page.mjs';
 
 // La version du produit (package.json) entre dans la page pour la boite « A propos et credits » (src/zones/produit.ts).
 const version = JSON.parse(readFileSync(depuisRacine('package.json'), 'utf8')).version;
@@ -24,14 +24,8 @@ refuserFinDeScript(moteur, 'le moteur');
 
 // Les styles de l'editeur vivent hors de la page (scripts/feuilles.mjs : les jetons viennent du registre
 // src/styles/jetons.ts, ADR-0007, le reste de outils/editeur-svg/*.css), partages avec l'embarquement
-// (scripts/embarquer.mjs) : la page les remet a leur place, entre ses propres regles, pour que la
-// cascade reste celle d'avant.
-const feuilles = await feuillesEditeur();
-
-const page = readFileSync(depuisRacine('outils/editeur-svg/page.html'), 'utf8');
-for (const repere of ['/*MOTEUR*/', '/*JETONS*/', '/*STYLE_BASE*/', '/*STYLE_EDITEUR*/']) {
-  if (!page.includes(repere)) throw new Error('page.html ne porte plus le repere ' + repere);
-}
-ecrireDansDist('editeur-svg.html', page.replace('/*JETONS*/', () => feuilles.jetons).replace('/*STYLE_BASE*/', () => feuilles.base)
-  .replace('/*STYLE_EDITEUR*/', () => feuilles.editeur).replace('/*MOTEUR*/', () => moteur));
-annoncer('Page construite', 'editeur-svg.html', enKo(moteur.length) + ' Ko de moteur');
+// (scripts/embarquer.mjs) ; les fontes de l'interface sont des data: URI (scripts/fontes-interface.mjs). Tout est remis a sa
+// place par scripts/page.mjs, entre les propres regles de la page, pour que la cascade reste celle d'avant.
+const page = await composerPage(moteur);
+ecrireDansDist('editeur-svg.html', page);
+annoncer('Page construite', 'editeur-svg.html', enKo(moteur.length) + ' Ko de moteur, ' + enKo(page.length) + ' Ko en tout');
