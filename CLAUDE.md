@@ -87,6 +87,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,
   Alt+flèches, réticule), une seule région vocale `polite` le dit, Tab ne piège jamais le focus, et
   `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
+- **Un contexte de production configure et juge, il n'invente pas d'outil** (ADR-0013) : un profil en données
+  (`model/contextes.ts`, valeurs incertaines marquées `aVerifier`) règle les outils existants et rend des constats
+  purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
+  le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

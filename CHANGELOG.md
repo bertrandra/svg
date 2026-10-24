@@ -361,3 +361,20 @@ empreintes.
 - **WCAG 2.5.8** : toutes les cibles font au moins 24 × 24 px (20 cibles trop petites dans l'éditeur avant, 0
   après), prouvé par `tests/e2e/cibles.e2e.ts` sur 18 écrans ; les pastilles de la barre disent leur couleur aux
   lecteurs d'écran ; le bouton « aucun » garde un nom fixe et `aria-pressed` porte seul l'état.
+- **Un contexte de production Cricut** (ADR-0013), choisi dans la barre (dans le menu « Plus » sur un téléphone) :
+  Joy, Explore (Air 2 / 3), Maker (Maker / Maker 3) ; tapis 12 × 12, 12 × 24, Smart Material, tapis Joy ; papier
+  cartonné (vinyle, thermocollant et feutre annoncés) ; découpe ou Print Then Cut ; pouces ou millimètres.
+  « Générique » reste le défaut et ne change rien : aucun octet écrit ne bouge.
+- **Le panneau « Prêt pour Cricut »** juge le dessin en continu (traits, transparences, pièces plus grandes que la
+  zone utile, dépassement du tapis, tracés ouverts, nuances proches, parties plus fines que la lame par ouverture
+  morphologique, trop de points, forme blanche posée comme un trou, pair-impair). Chaque constat a sa correction
+  par un outil existant, annulable par Ctrl+Z et dite à voix haute ; taille finale et couches toujours affichées.
+  Le tapis, sa zone utile et un quadrillage au pouce s'affichent sur la toile ; les outils prennent les valeurs
+  du papier cartonné.
+- **« Exporter pour Cricut »** écrit un SVG à taille physique (in ou mm), fonds pleins, une couleur par couche, sans
+  trait ni opacité, et refuse en le nommant ce qu'il ne saurait écrire. En Print Then Cut : une archive ZIP avec
+  l'image à imprimer et son fond perdu (PNG 300 ppp et SVG), la ligne de coupe (silhouette unie) et un mode d'emploi.
+- Le contexte se garde dans le SVG écrit (`data-ed-*` sur la racine, absents en Générique) et revient à la
+  réouverture. Les menus acceptent des éléments `menuitemradio`.
+- `docs/cricut/protocole.md` et six SVG témoins pour figer sur une vraie machine les 19 valeurs encore
+  « à vérifier » (zones utiles, détail minimal du papier cartonné, taille Print Then Cut, lecture des px nus).
