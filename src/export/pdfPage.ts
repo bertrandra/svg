@@ -2,7 +2,7 @@
 // metadonnees. Pur. Tout est calcule en points (1/72 pouce) ; les options se donnent en millimetres.
 //
 // Les boites d'une page imprimee : `TrimBox` est la page finie (apres coupe), `BleedBox` la depasse du fond
-// perdu (ce qui doit deborder pour qu'une coupe approximative ne laisse pas de liseré blanc), `MediaBox` et
+// perdu (ce qui doit deborder pour qu'une coupe approximative ne laisse pas de litere blanc), `MediaBox` et
 // `CropBox` englobent en plus la marge des reperes. Le dessin est coupe au `BleedBox` : un trace qui deborde
 // du plan ne pollue pas la zone des reperes.
 

@@ -70,6 +70,23 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     (liste[i] ?? panneau.current)?.focus({ preventScroll: true });
   }, [ouvert]);
 
+  // Le panneau tient dans l'ecran : un contenu large (le panneau d'export) ne doit pas sortir d'un cote ou de l'autre.
+  // On mesure la largeur de mise en page (`offsetWidth`), que l'animation d'entree (une echelle) ne fausse pas.
+  useLayoutEffect(() => {
+    const el = panneau.current;
+    if (!ouvert || !el) return;
+    const marge = 8, largeur = el.offsetWidth, ecran = window.innerWidth;
+    poserPosition(p => {
+      if (!p) return p;
+      if (p.right !== undefined) {
+        const gauche = ecran - p.right - largeur;
+        return gauche < marge ? { ...p, right: Math.max(marge, p.right - (marge - gauche)) } : p;
+      }
+      const gauche = p.left ?? marge, droite = gauche + largeur;
+      return droite > ecran - marge ? { ...p, left: Math.max(marge, ecran - marge - largeur) } : p;
+    });
+  }, [ouvert]);
+
   useEffect(() => {
     if (!ouvert) return;
     const dehors = (e: PointerEvent) => { const t = e.target as Node; if (!panneau.current?.contains(t) && !bouton.current?.contains(t)) fermer(false); };

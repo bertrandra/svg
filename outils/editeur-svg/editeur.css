@@ -188,9 +188,15 @@
 .menu-titre { margin: 4px 0 6px; font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
 .contenu-export { display: grid; gap: 6px; min-width: 260px; }
 .contenu-export button { font-size: 0.78rem; padding: 5px 9px; justify-self: start; }
-.ligne-export { display: flex; align-items: center; gap: 6px; }
+.ligne-export { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ligne-export select { width: auto; font-size: 0.75rem; }
 .ligne-export input[type="color"] { width: 26px; height: 24px; }
+/* Les options partagees des exports : une colonne de champs, chacun sur toute la largeur du menu. */
+.options-export { display: grid; gap: 8px; min-width: 0; }
+.options-export .aide { margin: 0; }
+.options-export .champ-ligne > span:first-child { min-width: 72px; }
+.options-export .champ-ligne select, .options-export .champ-ligne input[type="text"] { flex: 1; width: auto; min-width: 0; }
+.options-export .grille-2 .champ-ligne input[type="text"] { width: 100%; }
 .transformations-numeriques { display: grid; gap: 6px; margin-top: 4px; }
 .transformations-numeriques > button { justify-self: start; }
 .versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
@@ -248,6 +254,9 @@
   .nuancier .echantillon { width: 32px; height: 32px; }
   input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
   .section > summary { padding: 13px 2px; }
+  .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
+  .options-export .case { min-height: 40px; }
+  .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
