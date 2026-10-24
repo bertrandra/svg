@@ -39,6 +39,9 @@ empreintes.
 
 ### Modifié
 
+- **« Couleurs du dessin » se fenêtre** (ADR-0008) : le panneau de l'inspecteur ne dessine plus que les
+  lignes visibles au-delà de 100 couleurs ; Échap sur 1 669 couleurs passe de 933 à 156 ms, avec
+  14 800 nœuds en moins.
 - **Le focus et le clavier de l'éditeur** (ADR-0011) : l'éditeur prend le focus à l'ouverture, le reste de
   la page est inerte pendant l'édition et le focus revient à l'hôte à la fermeture ; la confirmation
   d'abandon et les tiroirs prennent et rendent le focus, Échap les ferme. La barre d'état n'est plus une
@@ -91,6 +94,10 @@ empreintes.
 
 ### Corrigé
 
+- Recolorer une couleur avec le sélecteur natif, dans « Par couleur » ou « Couleurs du dessin », ne le
+  ferme plus quand la ligne change de rang et sort de la fenêtre.
+- Un second geste du sélecteur sur la même ligne de « Couleurs du dessin », sans perte de focus entre les
+  deux, compte maintenant une entrée d'historique de plus au lieu de se fondre dans la première.
 - Le panneau d'export du menu Fichier n'est plus dans un `role="menu"` (violation critique `aria-required-children`
   d'axe-core).
 - **« Ajuster le plan de travail » compte l'étendue réelle du trait** : les pointes des jonctions en
