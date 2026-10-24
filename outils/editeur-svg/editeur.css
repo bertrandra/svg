@@ -248,6 +248,7 @@
   .nuancier .echantillon { width: 32px; height: 32px; }
   input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
   .reglages-pretraitement input[type="range"] { min-height: 40px; }
+  .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
   .section > summary { padding: 13px 2px; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -124,6 +124,26 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'accueil, image vectorisée'));
     });
 
+    it('voie « convertir une image » avec la section Prétraitement ouverte, un préréglage posé et la vue Prétraitée', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900 });
+      await page.getByRole('tab', { name: /^Convertir une image/ }).click();
+      await page.locator('.vectoriser input[type=file]').setInputFiles(imageDeTest());
+      await page.locator('.fiche-resultat').waitFor({ timeout: 60_000 });
+      await page.locator('details.section summary', { hasText: 'Prétraitement' }).click();
+      await page.getByRole('button', { name: 'Logo net', exact: true }).click();
+      await page.getByRole('button', { name: 'Prétraitée', exact: true }).click();
+      await attend(() => page.locator('.bilan-pretraitement .aide').first().innerText(), 60_000).toContain('couleur');
+      exigerSansViolationGrave(await auditer(page, 'accueil, section Prétraitement ouverte'));
+    });
+
+    it('voie « convertir une image » avec une liste de lot terminée', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900 });
+      await page.getByRole('tab', { name: /^Convertir une image/ }).click();
+      await page.locator('.vectoriser input[type=file]').setInputFiles([imageDeTest(), { ...imageDeTest(), name: 'deuxieme.png' }]);
+      await attend(async () => (await page.locator('.lot li .lot-etat').allInnerTexts()).filter(e => e.startsWith('Terminée')).length, 60_000).toBe(2);
+      exigerSansViolationGrave(await auditer(page, 'accueil, lot terminé'));
+    });
+
     it('avec le nuancier ouvert et un dessin en cours', async () => {
       const page = await accueil({ largeur: 1200, hauteur: 900 });
       await page.getByText('Nuancier proposé dans l’éditeur').click();
