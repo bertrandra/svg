@@ -8,7 +8,7 @@ import { ecrirePdf } from '../export/pdf.js';
 import { svgDecoupe } from '../export/svgs.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { versPng } from '../io/image.js';
-import { MenuDeroulant } from './Menu.js';
+import { MenuDeroulant } from './commun/Menu.js';
 
 const LARGEURS = [512, 1024, 2048, 4096];
 

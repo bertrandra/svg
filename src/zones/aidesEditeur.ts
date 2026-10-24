@@ -1,7 +1,10 @@
 // Les petites aides que plusieurs fichiers de l'editeur partagent.
 
 import type { Style } from '../engine/editionSvg.js';
-import type { Point } from './typesEditeur.js';
+import type { Outil, Point } from './typesEditeur.js';
+
+/** Les quatre outils qui tracent une forme d'un glisser. */
+export const FORMES = new Set<Outil>(['rectangle', 'ellipse', 'etoile', 'ligne']);
 
 export const arrondi = (v: number) => Math.round(v * 100) / 100;
 export const estHex = (v: string | null): v is string => !!v && /^#[0-9a-f]{6}$/.test(v);

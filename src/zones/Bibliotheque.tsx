@@ -6,11 +6,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { appliquerCorrections, chercher, type Correction, type Corrections, type EntreeBibliotheque, type Evenement, type FamilleEvenement } from '../model/bibliotheque.js';
 import { chargerBibliotheque, type Bibliotheque } from '../io/bibliotheque.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
+import { useStockage } from './contexteStockage.js';
 import { Icone } from './icones.js';
 
+// Les corrections ne se gardent que si la page donne un stockage ; sans lui, elles vivent le temps de la page.
 const CLE_CORRECTIONS = 'svg.corrections';
-const lireCorrections = (): Corrections => { try { return JSON.parse(localStorage.getItem(CLE_CORRECTIONS) ?? '{}') as Corrections; } catch { return {}; } };
-const garderCorrections = (c: Corrections) => { try { localStorage.setItem(CLE_CORRECTIONS, JSON.stringify(c)); } catch { /* sans stockage, la correction vit le temps de la page */ } };
 
 export const enImage = (svg: string): string => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
@@ -59,12 +59,13 @@ export function RechercheFormes({ bibliotheque, choisir, ajouter, corriger = fal
   const [texte, poserTexte] = useState('');
   const [evenement, poserEvenement] = useState<string | null>(null);
   const [page, poserPage] = useState(1);
-  const [corrections, poserCorrections] = useState<Corrections>(() => (corriger ? lireCorrections() : {}));
+  const stockage = useStockage();
+  const [corrections, poserCorrections] = useState<Corrections>(() => (corriger ? stockage?.lire<Corrections>(CLE_CORRECTIONS) ?? {} : {}));
   const [enEdition, poserEnEdition] = useState<string | null>(null);
   const entrees = useMemo(() => (Object.keys(corrections).length ? appliquerCorrections(bibliotheque.entrees, corrections) : bibliotheque.entrees), [bibliotheque, corrections]);
   const resultats = useMemo(() => chercher(entrees, texte, evenement), [entrees, texte, evenement]);
   const montres = resultats.slice(0, page * parPage);
-  const poserCorrection = (id: string, c: Correction) => { const n = { ...corrections, [id]: c }; poserCorrections(n); garderCorrections(n); };
+  const poserCorrection = (id: string, c: Correction) => { const n = { ...corrections, [id]: c }; poserCorrections(n); stockage?.ecrire(CLE_CORRECTIONS, n); };
   const nCorrections = Object.keys(corrections).length;
   return (
     <div className={'recherche-formes' + (compact ? ' compact' : '')}>

@@ -1,6 +1,6 @@
 // La vue sur le plan de travail (zoom, defilement, molette) et le pointeur tactile.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { DessinSvg } from '../engine/editionSvg.js';
 import type { Vue, Vues } from './typesEditeur.js';
 
@@ -54,5 +54,6 @@ export function useVue(toile: RefObject<HTMLDivElement | null>, svgRef: RefObjec
     el.addEventListener('wheel', roue, { passive: false });
     return () => el.removeEventListener('wheel', roue);
   }, [svgRef, zoomer]);
-  return { vue, poserVue, ajuster, zoomer, centrer100 };
+  // Un objet stable tant que rien ne change : il entre dans le contexte de l'interface.
+  return useMemo(() => ({ vue, poserVue, ajuster, zoomer, centrer100 }), [vue, ajuster, zoomer, centrer100]);
 }

@@ -8,9 +8,10 @@ import {
   couleursProches, fusionnerCouleursProches, groupesDeCouleur, idsDeNuancesProches, montrerSeulement, remplacerCouleurSur, restaurerVisibilites,
   visibilitesConformes, visibilitesDe, type DessinSvg, type GroupeCouleur, type SurCouleur, type Visibilites
 } from '../engine/editionSvg.js';
-import { LigneCouleur, pluriel, precisionSur, type ActionsLigne } from './LigneCouleur.js';
-import { Section } from './Section.js';
-import type { Edition } from './typesEditeur.js';
+import { pluriel } from '../util/texte.js';
+import { LigneCouleur, precisionSur, type ActionsLigne } from './LigneCouleur.js';
+import { Section } from './commun/Section.js';
+import { useActions, useDessin } from './contexteEditeur.js';
 
 const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
   ['tout', 'Les deux', 'Couleurs du remplissage et du contour'], ['remplissage', 'Fond', 'Couleurs de remplissage seulement'], ['contour', 'Trait', 'Couleurs de contour seulement']
@@ -30,8 +31,9 @@ interface Isolement { avant: Visibilites; apres: Visibilites; quitteSur: DessinS
 /** Un geste de couleur en cours : le dessin d'avant, d'ou chaque valeur du selecteur repart, et la cle qui les fond. */
 interface GesteCouleur { cle: string; base: DessinSvg; de: string; sur: SurCouleur }
 
-export function ParCouleur({ ed }: { ed: Edition }) {
-  const { dessin, sel } = ed;
+export function ParCouleur() {
+  const mo = useDessin(), ac = useActions();
+  const { dessin, sel } = mo;
   const [sur, poserSur] = useState<SurCouleur>('tout');
   const [tolerance, poserTolerance] = useState(TOLERANCE_DEFAUT);
   const [rangee, poserRangee] = useState<string | null>(null);
@@ -48,45 +50,45 @@ export function ParCouleur({ ed }: { ed: Edition }) {
   // L'isolement tient tant que les formes qu'il a vues gardent la visibilite qu'il leur a donnee. Annuler
   // le defait sans l'oublier (on peut retablir) ; toute autre modification de visibilite l'oublie.
   const isolementTient = isolement !== null && visibilitesConformes(dessin, isolement.apres);
-  const peutRetablir = ed.h.futur.length > 0;
+  const peutRetablir = mo.h.futur.length > 0;
   useEffect(() => { if (isolement && !isolementTient && !peutRetablir && isolement.quitteSur !== dessin) poserIsolement(null); }, [isolement, isolementTient, peutRetablir, dessin]);
 
   if (!dessin.formes.length) return null;
 
   const nom = (c: string) => c.toUpperCase();
   const choisirIds = (ids: string[], message: string) => {
-    if (!ids.length) { ed.dire('Aucune forme à choisir : elles sont masquées ou verrouillées.'); return; }
-    ed.choisir(ids);
-    ed.poserPoint(null);
-    ed.dire(message);
+    if (!ids.length) { ac.dire('Aucune forme à choisir : elles sont masquées ou verrouillées.'); return; }
+    ac.choisir(ids);
+    ac.poserPoint(null);
+    ac.dire(message);
   };
 
   const isoler = (g: GroupeCouleur) => {
     const r = montrerSeulement(dessin, g.ids);
     // Un second isolement garde la visibilite d'avant le premier : c'est elle qu'on veut retrouver.
     const avant = isolementTient && isolement ? isolement.avant : visibilitesDe(dessin);
-    ed.faire(() => r, 'Seules les formes ' + nom(g.couleur) + ' restent affichées.');
-    ed.choisir(sel.filter(id => g.ids.includes(id)));
+    ac.faire(() => r, 'Seules les formes ' + nom(g.couleur) + ' restent affichées.');
+    ac.choisir(sel.filter(id => g.ids.includes(id)));
     if (r !== dessin) poserIsolement({ avant, apres: visibilitesDe(r), quitteSur: null });
   };
   const quitterIsolement = () => {
     if (!isolement) return;
     const r = restaurerVisibilites(dessin, isolement.avant);
     const visibles = new Set(r.formes.filter(f => f.visible).map(f => f.id));
-    ed.faire(() => r, 'Affichage d’avant l’isolement rétabli.');
-    ed.choisir(sel.filter(id => visibles.has(id)));
+    ac.faire(() => r, 'Affichage d’avant l’isolement rétabli.');
+    ac.choisir(sel.filter(id => visibles.has(id)));
     poserIsolement({ ...isolement, quitteSur: r });
   };
 
-  const debuterRecolorer = () => { ed.finir(); geste.current = null; };
+  const debuterRecolorer = () => { ac.finir(); geste.current = null; };
   const recolorer = (g: GroupeCouleur, vers: string) => {
-    const x = geste.current ?? { cle: ed.nouvelleCle(), base: dessin, de: g.couleur, sur };
+    const x = geste.current ?? { cle: ac.nouvelleCle(), base: dessin, de: g.couleur, sur };
     geste.current = x;
-    ed.appliquer(() => remplacerCouleurSur(x.base, x.de, vers, x.sur), x.cle);
+    ac.appliquer(() => remplacerCouleurSur(x.base, x.de, vers, x.sur), x.cle);
     poserSuivi({ cle: suivi && suivi.vers === g.couleur ? suivi.cle : g.couleur, vers });
-    ed.dire(nom(x.de) + ' remplacée par ' + nom(vers) + precisionSur(x.sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.');
+    ac.dire(nom(x.de) + ' remplacée par ' + nom(vers) + precisionSur(x.sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.');
   };
-  const finirRecolorer = () => { geste.current = null; poserSuivi(null); ed.finir(); };
+  const finirRecolorer = () => { geste.current = null; poserSuivi(null); ac.finir(); };
 
   const nuancesProchesDe = (couleur: string) => {
     const ids = idsDeNuancesProches(dessin, couleur, tolerance / 100, sur);
@@ -96,11 +98,11 @@ export function ParCouleur({ ed }: { ed: Edition }) {
   const fusionner = () => {
     const r = fusionnerCouleursProches(dessin, tolerance / 100, sur);
     if (!r.formes) {
-      ed.dire(r.conservees ? 'Ces nuances sont sur des formes verrouillées : déverrouillez-les pour les fusionner.' : 'Aucune nuance proche à cette tolérance.');
+      ac.dire(r.conservees ? 'Ces nuances sont sur des formes verrouillées : déverrouillez-les pour les fusionner.' : 'Aucune nuance proche à cette tolérance.');
       return;
     }
     const gardees = r.conservees ? ', ' + pluriel(r.conservees, 'couleur') + ' gardée' + (r.conservees > 1 ? 's' : '') + ' par des formes verrouillées' : '';
-    ed.faire(() => r.dessin, pluriel(r.fusionnees, 'couleur') + ' fusionnée' + (r.fusionnees > 1 ? 's' : '') + precisionSur(sur) + ' : ' + pluriel(r.formes, 'forme') + ' recolorée' + (r.formes > 1 ? 's' : '') + gardees + '.');
+    ac.faire(() => r.dessin, pluriel(r.fusionnees, 'couleur') + ' fusionnée' + (r.fusionnees > 1 ? 's' : '') + precisionSur(sur) + ' : ' + pluriel(r.formes, 'forme') + ' recolorée' + (r.formes > 1 ? 's' : '') + gardees + '.');
   };
 
   // De quelle couleur partir pour « Sélectionner les nuances proches » : la ligne choisie en dernier si elle l'est
@@ -126,7 +128,7 @@ export function ParCouleur({ ed }: { ed: Edition }) {
         </div>
       ) : null}
       {groupes.length ? (
-        <ul className="par-couleur">{groupes.map(g => <LigneCouleur key={cleDe(g)} ed={ed} g={g} actions={actions} />)}</ul>
+        <ul className="par-couleur">{groupes.map(g => <LigneCouleur key={cleDe(g)} g={g} actions={actions} />)}</ul>
       ) : <p className="aide">Aucune forme n’a de {sur === 'contour' ? 'contour' : 'remplissage'}.</p>}
       <div className="nuances-proches">
         <label className="champ-ligne">
