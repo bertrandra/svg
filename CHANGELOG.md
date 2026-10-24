@@ -7,6 +7,10 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Modifié
 
+- **Un seul chargeur pour les annexes** (`io/annexes.ts`) : la bibliothèque, les fontes et le traceur se
+  chargent par la même mécanique, qui valide la forme de ce que le script pose ; les messages d'erreur
+  sont inchangés. Les scripts de construction partagent `scripts/aide.mjs`, et les fichiers de `dist/`
+  qui ne contiennent pas le code d'`io/` sont identiques à ceux d'avant, à l'octet.
 - **Les styles de l'éditeur sortent de `page.html`** vers `outils/editeur-svg/base.css` et
   `editeur.css`, assemblés avec le registre de jetons par `scripts/feuilles.mjs` ; la page est
   inchangée à l'écran, et le script d'embarquement réutilise les mêmes feuilles. `io/vtracer.ts`

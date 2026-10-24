@@ -20,7 +20,7 @@ les fontes et le bundle. `npm run embarquer` ne refait que le bundle.
 
 ## 1. L’iframe de la page entière
 
-On sert `dist/editeur-svg.html` avec ses deux fichiers annexes dans le même dossier, et on l’encadre :
+On sert `dist/editeur-svg.html` avec ses trois fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`) dans le même dossier, et on l’encadre :
 
 ```html
 <iframe src="/svg/editeur-svg.html" title="Éditeur SVG" style="width: 100%; height: 720px; border: 0"
