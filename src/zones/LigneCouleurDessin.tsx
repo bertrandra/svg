@@ -1,5 +1,5 @@
 // Une ligne de « Couleurs du dessin » : une couleur, la changer partout, choisir ses formes, la remplacer par une
-// teinte du nuancier.
+// teinte du nuancier (un menu a pastilles : un select natif, repete par couleur, est lent a parcourir et ne montre pas les teintes).
 //
 // Comme `LigneCouleur`, la ligne ne lit que ses proprietes et des verbes stables : memoisee, elle ne se redessine que
 // si SA couleur change. Les options du nuancier sont le gros de son poids (une dizaine de noeuds par teinte) : c'est
@@ -8,6 +8,7 @@
 import { memo } from 'react';
 import type { CouleurDuDessin } from '../engine/editionSvg.js';
 import { estHex } from './aidesEditeur.js';
+import { MenuDeroulant } from './commun/Menu.js';
 import type { ActionsCouleurDessin } from './actionsCouleursDessin.js';
 import type { Teinte } from './typesEditeur.js';
 
@@ -29,10 +30,8 @@ export const LigneCouleurDessin = memo(function LigneCouleurDessin({ c, nuancier
         {c.couleur.toUpperCase()} · {c.formes}
       </button>
       {nuancier.length ? (
-        <select aria-label={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} value="" onChange={e => { const v = e.target.value; if (v) actions.remplacer(c.couleur, v); }}>
-          <option value="">→ nuancier…</option>
-          {nuancier.map(t => <option key={t.hex} value={t.hex}>{t.nom} ({t.hex.toUpperCase()})</option>)}
-        </select>
+        <MenuDeroulant etiquette={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} icone="palette" chevron={false} alignement="droite"
+          elements={nuancier.map(t => ({ id: t.hex, libelle: t.nom + ' (' + t.hex.toUpperCase() + ')', pastille: t.hex, onClick: () => actions.remplacer(c.couleur, t.hex) }))} />
       ) : null}
     </li>
   );

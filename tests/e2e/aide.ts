@@ -199,6 +199,16 @@ export async function modifications(page: Page): Promise<number> {
   return Number(/(\d+) modification/.exec(await texteDe(page.locator('.editeur-etat')))?.[1] ?? NaN);
 }
 
+/**
+ * Deplie la section « Par couleur » des calques : elle est repliee d'office sur un petit dessin (moins de 5 formes ou de 3
+ * couleurs, comme l'exemple), ouverte sur un grand. Sans effet si elle est deja ouverte.
+ */
+export async function ouvrirParCouleur(page: Page): Promise<void> {
+  const section = page.locator('.editeur-calques details.section', { hasText: 'Par couleur' });
+  if (!(await section.evaluate(e => (e as HTMLDetailsElement).open))) await section.locator('> summary').click();
+  await attend(() => section.evaluate(e => (e as HTMLDetailsElement).open)).toBe(true);
+}
+
 /** Le nombre de formes dessinees sur la toile (les chemins portent leur id). */
 export function formesVisibles(page: Page): Promise<number> {
   return page.locator('.editeur-svg-toile path[data-id]').count();

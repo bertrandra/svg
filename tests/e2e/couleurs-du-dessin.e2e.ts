@@ -80,8 +80,8 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     expect(await rangsDessines(page)).toEqual(Array.from({ length: n }, (_, k) => k + 1));
     // Les noms accessibles sont ceux d'avant.
     await page.locator(`ul.couleurs-dessin input[aria-label="Remplacer ${couleur(0)}"]`).waitFor();
-    await page.locator(`ul.couleurs-dessin select[aria-label="Remplacer ${couleur(0)} par une couleur du nuancier"]`).waitFor();
-    expect(await texteDe(lignes(page).first().locator('button'))).toBe(`${couleur(0).toUpperCase()} · 1`);
+    await page.locator(`ul.couleurs-dessin button[aria-haspopup=menu][aria-label="Remplacer ${couleur(0)} par une couleur du nuancier"]`).waitFor();
+    expect(await texteDe(lignes(page).first().locator('button.discret'))).toBe(`${couleur(0).toUpperCase()} · 1`);
     // La liste garde sa hauteur de 260 px au plus et defile : elle ne s'etire pas pour deux mille lignes.
     expect(await liste(page).evaluate(u => u.clientHeight)).toBeLessThanOrEqual(260);
     expect(await liste(page).evaluate(u => u.scrollHeight)).toBeGreaterThan(N * 26);
@@ -93,7 +93,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     const page = await editeur();
     await liste(page).evaluate(u => { u.scrollTop = u.scrollHeight; });
     await attend(() => rang(page, N - 1).count()).toBe(1);
-    expect(await texteDe(rang(page, N - 1).locator('button'))).toBe(`${couleur(N - 1).toUpperCase()} · 1`);
+    expect(await texteDe(rang(page, N - 1).locator('button.discret'))).toBe(`${couleur(N - 1).toUpperCase()} · 1`);
     expect(await lignes(page).count()).toBeLessThan(LIGNES_MAX);
     // La derniere ligne est entierement visible, collee au bas de la liste : pas de vide sous elle.
     const [bas, fond] = await Promise.all([rang(page, N - 1).evaluate(e => e.getBoundingClientRect().bottom), liste(page).evaluate(u => u.getBoundingClientRect().bottom)]);
@@ -101,7 +101,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
 
     await defilerA(page, 0);
     await attend(() => rang(page, 0).count()).toBe(1);
-    expect(await texteDe(rang(page, 0).locator('button'))).toContain(couleur(0).toUpperCase());
+    expect(await texteDe(rang(page, 0).locator('button.discret'))).toContain(couleur(0).toUpperCase());
   });
 
   it('defile sans trou : chaque position montre des lignes contigues qui couvrent la zone', async () => {
@@ -174,7 +174,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     // Et on la retrouve au bout de la liste.
     await liste(page).evaluate(u => { u.scrollTop = u.scrollHeight; });
     await attend(() => rang(page, N - 1).count()).toBe(1);
-    expect(await texteDe(rang(page, N - 1).locator('button'))).toBe(`${TRES_CLAIR.toUpperCase()} · 1`);
+    expect(await texteDe(rang(page, N - 1).locator('button.discret'))).toBe(`${TRES_CLAIR.toUpperCase()} · 1`);
   });
 
   it('choisit les formes d’une couleur loin dans la liste', async () => {
@@ -182,7 +182,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     await defilerEtAttendre(page, 45000);
     const i = await ligneVisible(page);
     expect(i).toBeGreaterThan(800);
-    await rang(page, i).locator('button').click();
+    await rang(page, i).locator('button.discret').click();
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
     expect(await page.locator('.editeur-calques ol > li.choisi').count()).toBe(1);
     expect(await page.locator(`.editeur-svg-toile path[data-id="f${i + 1}"]`).count()).toBe(1);
@@ -197,15 +197,19 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     await defilerEtAttendre(page, 52000);
     const i = await ligneVisible(page);
     expect(i).toBeGreaterThan(900);
-    const choix = rang(page, i).locator('select');
-    const teinte = await choix.locator('option:not([value=""])').first().getAttribute('value');
+    const choix = rang(page, i).locator('button[aria-haspopup=menu]');
+    await choix.click();
+    // Le menu montre chaque teinte par une pastille et son nom ; on prend la premiere.
+    const premiere = page.getByRole('menu').getByRole('menuitem').first();
+    const teinte = /#[0-9a-f]{6}/i.exec(await premiere.innerText())?.[0].toLowerCase();
     if (!teinte) throw new Error('le nuancier de la page est vide');
-    await choix.selectOption(teinte);
-    await attend(() => peinture(page, 'f' + (i + 1))).toBe(teinte);
+    expect(await premiere.locator('.menu-pastille').count()).toBe(1);
+    await premiere.click();
+    await attend(async () => (await peinture(page, 'f' + (i + 1)))?.toLowerCase()).toBe(teinte);
     expect(await modifications(page)).toBe(1);
     expect(await peinture(page, 'f' + i)).toBe(couleur(i - 1));
-    // Le choix revient sur « → nuancier… » : le select reste un menu d'actions, pas un etat.
-    expect(await choix.inputValue()).toBe('');
+    // Un menu d'actions, pas un etat : il se referme une fois la teinte posee.
+    await attend(() => page.getByRole('menu').count()).toBe(0);
   });
 
   it('se parcourt au clavier : Tab traverse la marge de la fenetre sans perdre le focus ni faire reculer la liste', async () => {
@@ -214,7 +218,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     expect(await foyer(page)).toMatchObject({ rang: 1, dedans: true });
     const depart = await rangsDessines(page);
     let precedent = 0, atteint = 0;
-    // Trois arrets par ligne (selecteur, bouton, nuancier) : cent trente Tab franchissent la marge de douze lignes.
+    // Trois arrets par ligne (selecteur, bouton, menu du nuancier) : cent trente Tab franchissent la marge de douze lignes.
     for (let k = 0; k < 400 && atteint < 45; k++) {
       await page.keyboard.press('Tab');
       const f = await foyer(page);
@@ -244,7 +248,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
     await attend(() => lignes(page).count()).toBeGreaterThan(5);
     expect(await lignes(page).count()).toBeLessThan(LIGNES_MAX);
 
-    const petites = () => page.locator('ul.couleurs-dessin > li:not([data-cale]) button:visible, ul.couleurs-dessin > li:not([data-cale]) input:visible, ul.couleurs-dessin > li:not([data-cale]) select:visible').evaluateAll(
+    const petites = () => page.locator('ul.couleurs-dessin > li:not([data-cale]) button:visible, ul.couleurs-dessin > li:not([data-cale]) input:visible').evaluateAll(
       l => l.map(e => { const r = e.getBoundingClientRect(); return { nom: (e.getAttribute('aria-label') ?? (e as HTMLElement).innerText).slice(0, 30), l: Math.round(r.width), h: Math.round(r.height) }; }).filter(c => c.l < 40 || c.h < 40)
     );
     expect(await petites()).toEqual([]);
@@ -261,7 +265,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
 
     await liste(page).evaluate(u => { u.scrollTop = u.scrollHeight; });
     await attend(() => rang(page, N - 1).count()).toBe(1);
-    await rang(page, N - 1).locator('button').tap();
+    await rang(page, N - 1).locator('button.discret').tap();
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
     expect(await page.locator(`.editeur-svg-toile path[data-id="f${N}"]`).count()).toBe(1);
   });
@@ -276,7 +280,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
         expect(await liste(page).getAttribute('class')).toBe('couleurs-dessin');
         expect(await liste(page).evaluate(u => getComputedStyle(u).overflowY)).toBe('visible');
         await page.locator(`ul.couleurs-dessin input[aria-label="Remplacer ${couleur(n - 1)}"]`).waitFor();
-        expect(await texteDe(lignes(page).last().locator('button'))).toBe(`${couleur(n - 1).toUpperCase()} · 1`);
+        expect(await texteDe(lignes(page).last().locator('button.discret'))).toBe(`${couleur(n - 1).toUpperCase()} · 1`);
       });
     }
 

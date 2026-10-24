@@ -65,7 +65,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--alerte-fond); color: var(--alerte); font-size: 0.82rem; }
 .editeur-calques { grid-area: calques; overflow: auto; border-right: 1px solid var(--filet); background: var(--panneau); padding: 8px; }
 .editeur-calques h3, .editeur-inspecteur h3 { font-size: 0.8rem; margin: 2px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
-.calques-actions { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-bottom: 6px; }
+.calques-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 6px; }
 .editeur-calques .mini-onglets button { padding: 5px 3px; font-size: 0.72rem; min-width: 0; }
 .editeur-calques h4 { margin: 10px 0 4px; font-size: 0.72rem; font-weight: 600; color: var(--encre-douce); }
 .editeur-calques .section > summary { padding: 6px 2px; }
@@ -101,7 +101,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .nuances-proches .boutons button { padding: 5px 8px; font-size: 0.75rem; }
 .nuances-proches output { min-width: 1.6em; text-align: right; font-family: var(--mono); font-size: 0.72rem; }
 .nuances-proches .aide { margin: 0; }
-.calques-actions button { padding: 2px 8px; font-size: 0.72rem; }
+.calques-actions button { min-height: 28px; padding: 4px 8px; font-size: 0.72rem; }
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: 2px; border-radius: 4px; content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
@@ -174,7 +174,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .couleurs-dessin.fenetree { max-height: 260px; overflow: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
 .couleurs-dessin li[data-cale] { display: block; padding: 0; }
 .couleurs-dessin button { font-family: var(--mono); font-size: 0.72rem; padding: 3px 6px; }
-.couleurs-dessin select { font-size: 0.72rem; max-width: 120px; min-width: 0; }
+.couleurs-dessin .menu-deroulant { margin-left: auto; flex: none; }
 .editeur-etat { grid-area: etat; display: flex; gap: 8px; padding: 6px 12px; font-size: 0.75rem; color: var(--encre-douce); border-top: 1px solid var(--filet); background: var(--panneau); }
 .editeur-erreur { max-width: 520px; margin: 15vh auto; display: grid; gap: 12px; padding: 16px; justify-items: start; }
 .raccourcis { margin: 6px 0 0; padding-left: 16px; font-size: 0.72rem; color: var(--encre-douce); display: grid; gap: 2px; }
@@ -264,19 +264,6 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-cadre { position: relative; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr) auto; grid-template-areas: "barre" "selection" "confirmer" "toile" "etat"; }
 }
 @keyframes voile-entree { from { opacity: 0; } }
-/* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
-@media (pointer: coarse), (max-width: 900px) {
-  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
-  .chevron-seul .icone-bouton { width: 40px; margin-left: -2px; }
-  button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
-  .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
-  .menu-element { min-height: 44px; }
-  .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
-  .par-couleur .icone-bouton { width: 40px; height: 40px; }
-  .par-couleur .couleur-choix { min-height: 40px; }
-  .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
-  .nuances-proches input[type="range"] { min-height: 40px; }
-  .calques-actions button { min-width: 56px; }
 /* Un telephone (LARGEUR_TELEPHONE dans Vue.ts : meme valeur) : la barre garde deux lignes, les outils et « Plus » (vue, edition,
    fichier, zoom) puis les couleurs et l'historique ; Enregistrer passe dans la barre d'etat, sous le pouce. Rien ne defile. */
 @media (max-width: 640px) {
@@ -305,6 +292,19 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
   .options-export .case { min-height: 40px; }
   .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
+/* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
+@media (pointer: coarse), (max-width: 900px) {
+  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
+  .chevron-seul .icone-bouton { width: 40px; margin-left: -2px; }
+  button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
+  .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
+  .menu-element { min-height: 44px; }
+  .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
+  .par-couleur .icone-bouton { width: 40px; height: 40px; }
+  .par-couleur .couleur-choix { min-height: 40px; }
+  .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
+  .nuances-proches input[type="range"] { min-height: 40px; }
+  .calques-actions button { min-width: 56px; min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
