@@ -24,6 +24,18 @@ export interface ElementMenu {
   separateur?: boolean;
 }
 
+/**
+ * Une partie d'un menu a plusieurs rubriques (le menu « Plus » des petits ecrans : Vue, Edition, Fichier). Chaque
+ * rubrique est un `role="menu"` nomme par son titre, que le clavier parcourt d'un seul tenant avec les autres ;
+ * `libre` est du contenu hors menu (le panneau d'export) qui suit ses elements.
+ */
+export interface SectionMenu {
+  id: string;
+  titre: string;
+  elements?: readonly ElementMenu[];
+  libre?: ReactNode;
+}
+
 interface Proprietes {
   /** Ce que lisent les lecteurs d'ecran et l'infobulle. */
   etiquette: string;
@@ -34,6 +46,8 @@ interface Proprietes {
   elements?: readonly ElementMenu[];
   /** Du contenu libre sous les elements (le panneau d'export). Un clic dedans ne ferme pas le menu. */
   enfants?: ReactNode;
+  /** Plusieurs rubriques titrees a la place de `elements` et `enfants` (un menu « Plus »). */
+  sections?: readonly SectionMenu[];
   /** Le bord du bouton auquel le panneau s'aligne. */
   alignement?: 'gauche' | 'droite';
   className?: string;
@@ -41,7 +55,7 @@ interface Proprietes {
 
 interface Position { top: number; left?: number; right?: number }
 
-export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, alignement = 'gauche', className }: Proprietes) {
+export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className }: Proprietes) {
   const [ouvert, poserOuvert] = useState(false);
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
@@ -134,20 +148,37 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
       {ouvert && position ? (
         <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
           {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
-          {elements.length ? <div role="menu" aria-label={etiquette}>{elements.map(el => (
-            <div key={el.id} className="menu-ligne">
-              {el.separateur ? <hr className="menu-filet" /> : null}
-              <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
-                onClick={() => { fermer(true); el.onClick?.(); }}>
-                <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
-                <span className="menu-libelle">{el.libelle}</span>
-                {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}
-              </button>
+          {sections ? sections.map(sc => (
+            <div key={sc.id} className="menu-rubrique">
+              <p className="menu-titre" aria-hidden="true">{sc.titre}</p>
+              {sc.elements?.length ? <ListeElements titre={sc.titre} elements={sc.elements} fermer={fermer} /> : null}
+              {sc.libre ? <div className="menu-libre">{sc.libre}</div> : null}
             </div>
-          ))}</div> : null}
-          {enfants ? <div className="menu-libre">{enfants}</div> : null}
+          )) : (
+            <>
+              {elements.length ? <ListeElements titre={etiquette} elements={elements} fermer={fermer} /> : null}
+              {enfants ? <div className="menu-libre">{enfants}</div> : null}
+            </>
+          )}
         </div>
       ) : null}
     </span>
+  );
+}
+
+/** Les elements d'un menu : un `role="menu"` nomme, une ligne par element, un filet avant ceux qui le demandent. */
+function ListeElements({ titre, elements, fermer }: { titre: string; elements: readonly ElementMenu[]; fermer: (rendreFocus: boolean) => void }) {
+  return (
+    <div role="menu" aria-label={titre}>{elements.map(el => (
+      <div key={el.id} className="menu-ligne">
+        {el.separateur ? <hr className="menu-filet" /> : null}
+        <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
+          onClick={() => { fermer(true); el.onClick?.(); }}>
+          <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
+          <span className="menu-libelle">{el.libelle}</span>
+          {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}
+        </button>
+      </div>
+    ))}</div>
   );
 }

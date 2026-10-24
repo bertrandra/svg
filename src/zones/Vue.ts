@@ -4,17 +4,34 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { DessinSvg } from '../engine/editionSvg.js';
 import type { Vue, Vues } from './typesEditeur.js';
 
-/** Vrai quand le pointeur principal est un doigt : les poignees de la toile grossissent. */
-export function useTactile(): boolean {
-  const [t, poserT] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches);
+/** Vrai tant que la requete de media est vraie ; elle se relit quand elle change (rotation, redimensionnement, pointeur branche). */
+function useMedia(requete: string): boolean {
+  const [v, poserV] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia(requete).matches);
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
-    const m = window.matchMedia('(pointer: coarse)');
-    const suivre = () => poserT(m.matches);
+    const m = window.matchMedia(requete);
+    const suivre = () => poserV(m.matches);
+    suivre();
     m.addEventListener('change', suivre);
     return () => m.removeEventListener('change', suivre);
-  }, []);
-  return t;
+  }, [requete]);
+  return v;
+}
+
+/** Vrai quand le pointeur principal est un doigt : les poignees de la toile grossissent. */
+export function useTactile(): boolean {
+  return useMedia('(pointer: coarse)');
+}
+
+/**
+ * La largeur sous laquelle la barre se resserre (outils, couleurs et historique seuls, le reste dans « Plus », Enregistrer en bas).
+ * Elle doit rester egale a la requete `max-width` du meme nom dans editeur.css.
+ */
+export const LARGEUR_TELEPHONE = 640;
+
+/** Vrai sur un ecran de telephone (`LARGEUR_TELEPHONE`). */
+export function useTelephone(): boolean {
+  return useMedia('(max-width: ' + LARGEUR_TELEPHONE + 'px)');
 }
 
 /** La vue sur le plan de travail : zoom, defilement, ajustement a l'ecran, molette. */

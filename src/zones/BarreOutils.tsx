@@ -3,14 +3,16 @@
 // (MenusBarre.tsx) et dans la rangee de la selection (BarreSelection.tsx). Chaque groupe lit seul ce
 // qu'il montre : les outils ne se redessinent pas quand le dessin change.
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useId, useState } from 'react';
 import { modifier, type Style } from '../engine/editionSvg.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Icone, type NomIcone } from './icones.js';
 import { Bouton } from './commun/Bouton.js';
+import { BoutonRaison } from './commun/BoutonRaison.js';
 import { FORMES, estHex } from './aidesEditeur.js';
 import { MenuDeroulant } from './commun/Menu.js';
-import { MenuEdition, MenuFichier, MenuVue } from './MenusBarre.js';
+import { MenuEdition, MenuFichier, MenuPlus, MenuVue } from './MenusBarre.js';
+import { useTelephone } from './Vue.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
@@ -63,17 +65,29 @@ function StyleCourant() {
     if (premiere) ac.appliquer(d => modifier(d, sel, r), cle + ':' + sel.join(','));
     else ac.poserStyle({ ...style, ...r });
   };
-  const pastille = (libelle: string, valeur: string | null, cle: 'remplissage' | 'contour') => (
-    <span className="pastille-style" title={libelle + (premiere ? ' de la sélection' : ' des formes à venir') + ' : ' + (valeur ?? 'aucun')}>
-      <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser({ [cle]: e.target.value }, cle)} onBlur={ac.finir} />
-      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + (valeur === null ? ' : aucun (cliquez pour en mettre un)' : ' : retirer')} aria-label={libelle + ' : aucun'} onClick={() => { poser({ [cle]: valeur === null ? '#000000' : null }, cle); ac.finir(); }}><Icone nom="fermer" taille={12} /></button>
-    </span>
-  );
+  const cible = premiere ? ' de la sélection' : ' des formes à venir';
   return (
     <div className="groupe style-courant" role="group" aria-label="Couleurs">
-      {pastille('Remplissage', remplissage, 'remplissage')}
-      {pastille('Contour', contour, 'contour')}
+      <PastilleStyle libelle="Remplissage" cible={cible} valeur={remplissage} onChange={v => poser({ remplissage: v }, 'remplissage')} />
+      <PastilleStyle libelle="Contour" cible={cible} valeur={contour} onChange={v => poser({ contour: v }, 'contour')} />
     </div>
+  );
+}
+
+/**
+ * Une couleur de la barre : le selecteur, et le bouton « aucun ». Le selecteur n'a que l'infobulle pour dire la couleur courante, que
+ * ni le clavier ni un lecteur d'ecran ne lisent : elle devient sa description (un texte masque a l'ecran). Le bouton « aucun » a un nom
+ * fixe, c'est `aria-pressed` qui porte l'etat (un nom qui changerait avec l'etat serait lu deux fois).
+ */
+function PastilleStyle({ libelle, cible, valeur, onChange }: { libelle: string; cible: string; valeur: string | null; onChange: (v: string | null) => void }) {
+  const ac = useActions(), idDescription = useId();
+  const decrit = libelle + cible + ' : ' + (valeur ?? 'aucun');
+  return (
+    <span className="pastille-style" title={decrit}>
+      <input type="color" aria-label={libelle} aria-describedby={idDescription} value={estHex(valeur) ? valeur : '#000000'} onChange={e => onChange(e.target.value)} onBlur={ac.finir} />
+      <span id={idDescription} className="sr-only">{decrit}</span>
+      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { onChange(valeur === null ? '#000000' : null); ac.finir(); }}><Icone nom="fermer" taille={12} /></button>
+    </span>
   );
 }
 
@@ -87,25 +101,52 @@ function GroupeHistorique() {
   );
 }
 
+/** Le niveau de zoom, qui ajuste le dessin a l'ecran d'un appui : seul reste visible de tout le zoom sur un telephone. */
+const BoutonNiveauZoom = memo(function BoutonNiveauZoom() {
+  const { vues } = useInterface();
+  return <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster}>{Math.round(vues.vue.zoom * 100)} %</button>;
+});
+
 /** Le zoom : ne lit que la vue. */
 const GroupeZoom = memo(function GroupeZoom() {
   const { vues } = useInterface();
   return (
     <div className="groupe" role="group" aria-label="Zoom">
       <Bouton icone="zoom-moins" aide="Dézoomer (−)" onClick={() => vues.zoomer(0.8)} />
-      <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster}>{Math.round(vues.vue.zoom * 100)} %</button>
+      <BoutonNiveauZoom />
       <Bouton icone="zoom-plus" aide="Zoomer (+)" onClick={() => vues.zoomer(1.25)} />
     </div>
   );
 });
 
-function BoutonEnregistrer() {
+/** Enregistrer, grise tant que rien n'a change : il en dit la raison (BoutonRaison) et reste dans l'ordre de Tab. */
+export function BoutonEnregistrer() {
   const { h } = useDessin(), ac = useActions();
-  return <button type="button" className="primaire texte" title="Enregistrer (Ctrl+S)" onClick={ac.enregistrerTout} disabled={!h.passe.length}><Icone nom="enregistrer" /> Enregistrer</button>;
+  return (
+    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length ? null : 'Aucune modification à enregistrer'} onClick={ac.enregistrerTout}>
+      <Icone nom="enregistrer" /> Enregistrer
+    </BoutonRaison>
+  );
 }
 
-/** La barre principale : outils, couleurs, historique, zoom, puis les menus Vue, Edition et Fichier. */
+/**
+ * La barre principale : outils, couleurs, historique, zoom, puis les menus Vue, Edition et Fichier. Sur un telephone, elle ne
+ * garde que les outils, les couleurs et l'historique, plus « Plus » qui porte tout le reste, zoom compris (Enregistrer passe
+ * dans la barre d'etat) : rien ne depend d'un defilement horizontal qu'on ne devine pas.
+ */
 export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: string }) {
+  const telephone = useTelephone();
+  if (telephone) {
+    return (
+      <header className="editeur-barre telephone">
+        <GroupeOutils />
+        <div className="groupe plus" role="group" aria-label="Plus"><MenuPlus nom={nom} /></div>
+        <StyleCourant />
+        <GroupeHistorique />
+        <div className="groupe" role="group" aria-label="Zoom"><BoutonNiveauZoom /></div>
+      </header>
+    );
+  }
   return (
     <header className="editeur-barre">
       <strong className="editeur-titre">{titre}</strong>

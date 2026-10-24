@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, formesVisibles, nombreDeCalques, ouvrirExemple, pilote, texteDe } from './aide.js';
+import { attend, formesVisibles, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirParCouleur, pilote, texteDe } from './aide.js';
 
 describe('calques par couleur', () => {
   const navigateur = pilote();
@@ -11,6 +11,8 @@ describe('calques par couleur', () => {
   async function editeur() {
     const session = await navigateur.ouvrir();
     await ouvrirExemple(session.page);
+    // L'exemple est un petit dessin : « Par couleur » y est replie d'office (voir les tests de repli plus bas).
+    await ouvrirParCouleur(session.page);
     return session.page;
   }
 
@@ -133,5 +135,55 @@ describe('calques par couleur', () => {
     await page.keyboard.press('Control+z');
     await attend(() => formesVisibles(page)).toBe(4);
     await attend(() => lignes(page)).toHaveLength(4);
+  });
+
+  describe('le repli de « Par couleur » a l\'ouverture', () => {
+    const section = (page: Page) => page.locator('.editeur-calques details.section', { hasText: 'Par couleur' });
+    const ouverte = (page: Page) => section(page).evaluate(e => (e as HTMLDetailsElement).open);
+    const forme = (x: number, couleur: string) => `<rect x="${x}" y="2" width="8" height="8" fill="${couleur}"/>`;
+    const dessin = (couleurs: readonly string[], formes: number) =>
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20">' + Array.from({ length: formes }, (_, i) => forme(i * 10, couleurs[i % couleurs.length] ?? '#000000')).join('') + '</svg>';
+
+    it('replie la section sur l\'exemple (4 formes) et dit le nombre de couleurs sur sa ligne', async () => {
+      const session = await navigateur.ouvrir();
+      await ouvrirExemple(session.page);
+      expect(await ouverte(session.page)).toBe(false);
+      expect(await texteDe(section(session.page).locator('> summary'))).toContain('4');
+      // Ce qui sert au premier geste reste a sa place : la liste des formes, et les couleurs du dessin a droite.
+      expect(await nombreDeCalques(session.page)).toBe(4);
+      expect(await session.page.locator('.editeur-inspecteur details.section', { hasText: 'Couleurs du dessin' }).evaluate(e => (e as HTMLDetailsElement).open)).toBe(true);
+    });
+
+    it('replie aussi un dessin de moins de 3 couleurs, meme avec beaucoup de formes', async () => {
+      const session = await navigateur.ouvrir();
+      await ouvrirCode(session.page, dessin(['#c81e28', '#1428a0'], 8));
+      expect(await ouverte(session.page)).toBe(false);
+    });
+
+    it('ouvre la section sur un dessin de 5 formes et 3 couleurs, ou plus', async () => {
+      const session = await navigateur.ouvrir();
+      await ouvrirCode(session.page, dessin(['#c81e28', '#1428a0', '#15181d'], 6));
+      expect(await ouverte(session.page)).toBe(true);
+    });
+
+    it('retient ce qu\'on en fait : ouverte a la main, elle le reste quand le dessin change', async () => {
+      const session = await navigateur.ouvrir();
+      await ouvrirExemple(session.page);
+      await ouvrirParCouleur(session.page);
+      await session.page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+      await session.page.keyboard.press('Delete');
+      await attend(() => formesVisibles(session.page)).toBe(3);
+      expect(await ouverte(session.page)).toBe(true);
+    });
+
+    it('ne s\'ouvre pas d\'elle-meme quand un petit dessin grandit', async () => {
+      const session = await navigateur.ouvrir();
+      await ouvrirCode(session.page, dessin(['#c81e28'], 1));
+      expect(await ouverte(session.page)).toBe(false);
+      await session.page.locator('.editeur-svg-toile path[data-id="f1"]').click();
+      for (let i = 0; i < 5; i++) await session.page.keyboard.press('Control+d');
+      await attend(() => formesVisibles(session.page)).toBeGreaterThan(5);
+      expect(await ouverte(session.page)).toBe(false);
+    });
   });
 });

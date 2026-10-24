@@ -350,3 +350,14 @@ empreintes.
   est vrai à la lettre (constat 14 de `docs/securite.md`). Un test en navigateur, réseau coupé, le prouve ; un
   test sur le texte de la page interdit tout `<link>`, `@import` ou adresse externe. Les deux fontes sont citées
   dans `THIRD-PARTY-NOTICES.md`, `MENTIONS.txt` et la boîte « À propos et crédits ».
+- **Sur un téléphone (640 px et moins), la barre de l'éditeur tient sans défiler** : outils, couleurs, historique et
+  niveau de zoom, plus un menu « Plus » qui range Vue, Fichier (et ses exports) et Édition ; « Enregistrer » passe
+  dans la barre d'état. Entre 640 et 900 px, la barre passe à la ligne au lieu de défiler.
+- **« Enregistrer » grisé dit pourquoi** (« Aucune modification à enregistrer ») : il reste focalisable, la raison
+  est lue et annoncée. Calques : « Tout », « Aucun », « Inverser » et « Tout afficher » sont de vrais boutons de
+  28 px qui disent pourquoi ils sont inactifs. « Couleurs du dessin » choisit une teinte du nuancier par un menu à
+  pastilles au lieu d'une liste déroulante. « Par couleur » est replié à l'ouverture d'un petit dessin.
+- Aperçu avant/après (pixels vers formes) sur la voie « Convertir une image » de l'accueil.
+- **WCAG 2.5.8** : toutes les cibles font au moins 24 × 24 px (20 cibles trop petites dans l'éditeur avant, 0
+  après), prouvé par `tests/e2e/cibles.e2e.ts` sur 18 écrans ; les pastilles de la barre disent leur couleur aux
+  lecteurs d'écran ; le bouton « aucun » garde un nom fixe et `aria-pressed` porte seul l'état.
