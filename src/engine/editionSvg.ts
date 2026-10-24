@@ -46,6 +46,8 @@ export { visibilitesDe, restaurerVisibilites, visibilitesConformes, type Visibil
 
 export { retirerPetites, regrouper, ajusterPlan } from './edition/nettoyage.js';
 
+export { simplifierChemin, simplifier, compterPoints } from './edition/simplification.js';
+
 export { deplacerAncre, deplacerPoignee, supprimerAncre, diviserSegment, basculerSegment } from './edition/points.js';
 
 export {
