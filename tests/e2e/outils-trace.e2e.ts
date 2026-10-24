@@ -2,9 +2,15 @@
 // (poignees liees en glissant, Alt pour rompre), casser, joindre, inverser, et leur accessibilite (phrases dites,
 // menu Edition au clavier, cibles de 40 px au doigt).
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, formesVisibles, modifications, ouvrirCode, ouvrirMenu, pilote } from './aide.js';
+import { aLeFocus, attend, formesVisibles, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT } from './aide.js';
+
+const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
+interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
+
 
 const svg = (corps: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">${corps}</svg>`;
 const LIGNE = svg('<path d="M30 100H170" stroke="#1428a0" stroke-width="20" stroke-linecap="round" fill="none"/>');
@@ -253,6 +259,20 @@ describe('outils de trace', () => {
       await page.locator('.editeur-svg-toile rect[data-ancre="2"]').click();
       await bouton(page, 'Supprimer en gardant la courbe').click();
       await attend(() => dit(page)).toMatch(/porte la courbe/);
+    });
+  });
+
+  describe('accessibilité', () => {
+    it('axe ne trouve rien (ni violation, ni doute) sur l\'inspecteur ouvert aux outils de trace et au panneau d\'un point', async () => {
+      const page = await editeur(ARC);
+      await pointActif(page, 1);
+      const resume = inspecteur(page).locator('details.section > summary', { hasText: 'Transformer' });
+      if (!(await resume.evaluate(e => (e.parentElement as HTMLDetailsElement).open))) await resume.click();
+      await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined))).then(() => undefined));
+      await page.addScriptTag({ content: AXE });
+      const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { resultTypes: ['violations', 'incomplete'] })));
+      expect(r.violations.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);
+      expect(r.incomplete.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);
     });
   });
 

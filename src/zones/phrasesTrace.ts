@@ -16,11 +16,12 @@ export function phraseContourEnForme(etendus: number, ignorees: number): string 
 }
 
 /** « Contour décalé de 5 vers l’extérieur. » ; ce qui a disparu faute de place est dit avec la facon de le rendre. */
-export function phraseDecalage(decalees: number, distance: number, retirees: number): string {
+export function phraseDecalage(decalees: number, distance: number, retirees: number, refusees = 0): string {
   const sens = distance >= 0 ? 'l’extérieur' : 'l’intérieur';
   const fait = decalees === 0 ? '' : (decalees < 2 ? 'Contour décalé' : pluriel(decalees, 'contour') + ' ' + 'décalés') + ' de ' + nombreFr(Math.abs(distance)) + ' vers ' + sens + '.';
   const perdu = retirees ? (fait ? ' ' : '') + pluriel(retirees, 'forme') + ' ' + (retirees > 1 ? 'n’avaient' : 'n’avait') + ' plus de place et ' + (retirees > 1 ? 'ont disparu' : 'a disparu') + ' : Ctrl+Z ' + (retirees > 1 ? 'les rend' : 'la rend') + '.' : '';
-  return (fait + perdu).trim();
+  const reste = refusees ? (fait || perdu ? ' ' : '') + pluriel(refusees, 'forme') + ' ' + (refusees > 1 ? 'laissées telles quelles' : 'laissée telle quelle') + ' : un tracé ouvert n’a pas d’intérieur.' : '';
+  return (fait + perdu + reste).trim();
 }
 
 /** « 4 angles arrondis au rayon 10. », ou ce qui a du baisser faute de place. */

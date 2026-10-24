@@ -16,6 +16,7 @@ describe('les phrases des outils de trace', () => {
     expect(phraseDecalage(2, -2.5, 0)).toBe('2 contours décalés de 2,5 vers l’intérieur.');
     expect(phraseDecalage(1, -30, 1)).toBe('Contour décalé de 30 vers l’intérieur. 1 forme n’avait plus de place et a disparu : Ctrl+Z la rend.');
     expect(phraseDecalage(0, -30, 2)).toBe('2 formes n’avaient plus de place et ont disparu : Ctrl+Z les rend.');
+    expect(phraseDecalage(3, -4, 0, 1)).toBe('3 contours décalés de 4 vers l’intérieur. 1 forme laissée telle quelle : un tracé ouvert n’a pas d’intérieur.');
   });
 
   it('dit les angles arrondis, ceux dont le rayon a baissé, et l’absence d’angle', () => {

@@ -34,7 +34,7 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
       appliquer(() => r.dessin);
       choisir(sel.filter(id => !r.retirees.includes(id)));
       l.poserPoint(null);
-      dire(phraseDecalage(r.decalees, distance, r.retirees.length));
+      dire(phraseDecalage(r.decalees, distance, r.retirees.length, r.refusees));
     },
     arrondirAngles: rayon => {
       const { dessin, sel } = lire();

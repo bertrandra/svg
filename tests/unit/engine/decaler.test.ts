@@ -130,6 +130,7 @@ describe('decalerFormes', () => {
     const r = decalerFormes(d, ['f3'], -2, 'round');
     expect(r.dessin).toBe(d);
     expect(r.erreur).toContain('ouvert');
+    expect(r.refusees).toBe(1);
   });
 
   it('est deterministe', () => {

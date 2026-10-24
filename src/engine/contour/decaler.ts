@@ -105,6 +105,8 @@ export interface ResultatDecalageFormes {
   decalees: number;
   /** Les identifiants des formes qui n'ont plus rien et ont ete retirees. */
   retirees: string[];
+  /** Le nombre de formes laissees telles quelles : un trace ouvert qu'on decale vers l'interieur n'a pas d'interieur. */
+  refusees: number;
   /** Le premier refus dit, quand rien n'a pu etre fait. */
   erreur?: string;
 }
@@ -115,7 +117,7 @@ export interface ResultatDecalageFormes {
  */
 export function decalerFormes(dessin: DessinSvg, ids: readonly string[], distance: number, jonction: Jonction, options: OptionsDecalage = {}): ResultatDecalageFormes {
   const voulus = new Set(ids), retirees: string[] = [];
-  let decalees = 0, erreur: string | undefined, change = false;
+  let decalees = 0, refusees = 0, erreur: string | undefined, change = false;
   const formes = dessin.formes.flatMap((f): Forme[] => {
     if (!voulus.has(f.id) || f.verrouille || !f.visible) return [f];
     const r = decaler(f.d, distance, jonction, {
@@ -123,6 +125,7 @@ export function decalerFormes(dessin: DessinSvg, ids: readonly string[], distanc
     });
     if ('erreur' in r) {
       if (r.vide) { retirees.push(f.id); change = true; return []; }
+      refusees++;
       erreur ??= r.erreur;
       return [f];
     }
@@ -130,6 +133,6 @@ export function decalerFormes(dessin: DessinSvg, ids: readonly string[], distanc
     decalees++; change = true;
     return [{ ...f, d: r.chemin, regle: 'nonzero' }];
   });
-  if (!change) return { dessin, decalees: 0, retirees, ...(erreur ? { erreur } : {}) };
-  return { dessin: { ...dessin, formes }, decalees, retirees };
+  if (!change) return { dessin, decalees: 0, retirees, refusees, ...(erreur ? { erreur } : {}) };
+  return { dessin: { ...dessin, formes }, decalees, retirees, refusees };
 }
