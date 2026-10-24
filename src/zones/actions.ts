@@ -6,6 +6,7 @@ import type { RefObject } from 'react';
 import { coller, combiner, dupliquer, idsMemeCouleur, modifier, separer, supprimer, supprimerAncre, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
 import { actionsDessin } from './actionsDessin.js';
+import { phraseCombinaison, phraseDuplication, phraseMasquage, phraseVerrouillage } from './phrasesSelection.js';
 import type { ActionsEditeur, Outil, Point, Vues } from './typesEditeur.js';
 
 /** L'etat du moment : ce que les actions lisent, jamais ce qu'elles posent. */
@@ -59,6 +60,7 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       const r = dupliquer(dessin, sel, decalage(dessin), decalage(dessin));
       appliquer(() => r.dessin);
       choisir(r.ids);
+      dire(phraseDuplication(r.ids));
     },
     copierSelection: () => {
       const c = choisiesDe(lire());
@@ -89,7 +91,8 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       if (!r.id) { dire('Choisissez au moins deux formes déverrouillées à combiner.'); return; }
       appliquer(() => r.dessin);
       choisir([r.id]);
-      dire('Formes combinées en une seule ; « Trous : pair-impair » creuse les recouvrements.');
+      // Le moteur laisse de cote les formes verrouillees : la phrase compte ce qui a vraiment ete reuni.
+      dire(phraseCombinaison(dessin.formes.filter(f => sel.includes(f.id) && !f.verrouille).length));
     },
     separerSelection: () => {
       const { dessin, formeSeule } = lire();
@@ -100,8 +103,8 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       choisir(r.ids);
       dire('Forme séparée en ' + pluriel(r.ids.length, 'tracé') + '.');
     },
-    masquerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); } },
-    verrouillerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire('Formes verrouillées : déverrouillez-les dans les calques.'); } },
+    masquerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); dire(phraseMasquage(sel.length)); } },
+    verrouillerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire(phraseVerrouillage(sel.length)); } },
     choisirMemeCouleur: () => {
       const { dessin, sel } = lire();
       const modele = sel[0] ? dessin.formes.find(f => f.id === sel[0]) : undefined;

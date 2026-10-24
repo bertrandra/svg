@@ -3,12 +3,13 @@
 // historique, fleches (deplacer, Alt : redimensionner, Ctrl : tourner), Echap.
 
 import { useEffect, useRef, type RefObject } from 'react';
-import { ancre, boiteDe, deplacer, deplacerAncre, ordonner, redimensionner } from '../engine/editionSvg.js';
+import { ancre, boiteDe, deplacer, deplacerAncre, redimensionner } from '../engine/editionSvg.js';
 import { boiteRedimensionnee, coteMinimal, directionDe, pasDeplacement, type Direction } from '../engine/navigation.js';
 import { tournerAutour } from '../engine/transformations.js';
 import { phrasePoint, phrasePosition, phraseRotation, phraseTaille } from './annonces.js';
 import { toucheToile } from './ClavierToile.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { empiler } from './empilement.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
 
 const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte' };
@@ -41,7 +42,7 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }
       if (mod && t === 'v') { e.preventDefault(); ac.collerPresse(); return; }
       if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) ac.separerSelection(); else ac.combinerSelection(); return; }
-      if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); ac.faire(d => ordonner(d, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere')); return; }
+      if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }
       if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile })) { e.preventDefault(); return; }
       if (u.outil === 'plume' && u.trace.length) {
         if (e.key === 'Enter') { e.preventDefault(); ac.finirTrace(true); return; }
