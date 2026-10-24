@@ -4,6 +4,7 @@
 import { echapperAttribut } from '../../util/xml.js';
 import type { DessinSvg, Forme } from './types.js';
 import { ecrireChemin, nb } from './chemins.js';
+import { attributsTrait } from './trait.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
@@ -30,7 +31,7 @@ function composerForme(f: Forme, precision: number): string {
   let opacite = f.opacite;
   if (f.contour) {
     if (f.remplissage && opaciteDuRemplissage(f) < 1) s += ' fill-opacity="' + nb(opaciteDuRemplissage(f), 3) + '"';
-    s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '" stroke-linejoin="round"';
+    s += ' stroke="' + echapperAttribut(f.contour) + '" stroke-width="' + nb(f.epaisseur, 3) + '"' + attributsTrait(f).map(([k, v]) => ' ' + k + '="' + v + '"').join('');
     if (opaciteDuContour(f) < 1) s += ' stroke-opacity="' + nb(opaciteDuContour(f), 3) + '"';
   } else if (f.remplissage) opacite = Math.round(opacite * opaciteDuRemplissage(f) * 1000) / 1000;
   if (opacite < 1) s += ' opacity="' + nb(opacite, 3) + '"';

@@ -1,7 +1,7 @@
 // Ce qui se dessine sur la toile : les formes, la grille, et la surcouche (selection, poignees, trace).
 
 import { memo, type ReactNode } from 'react';
-import { ancre, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import type { Coin, Edition } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
@@ -11,13 +11,17 @@ function cheminDe(f: Forme): string {
   return d;
 }
 
+/** Le style du trait en proprietes React (stroke-dasharray devient strokeDasharray) : la meme liste que l'ecriture du SVG. */
+const traitReact = (f: Forme): Record<string, string> =>
+  Object.fromEntries(attributsTrait(f).map(([k, v]) => [k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()), v]));
+
 export const Calque = memo(function Calque({ f, contours }: { f: Forme; contours: boolean }) {
   if (!f.visible) return null;
   const pe = f.verrouille ? 'none' : contours ? 'all' : f.remplissage ? 'visiblePainted' : 'stroke';
   return contours
     ? <path data-id={f.id} className="trace-contour" d={cheminDe(f)} fill="none" fillRule={f.regle} pointerEvents={pe} />
     : <path data-id={f.id} d={cheminDe(f)} fill={f.remplissage ?? 'none'} fillRule={f.regle} fillOpacity={f.remplissage && opaciteDuRemplissage(f) < 1 ? opaciteDuRemplissage(f) : undefined} stroke={f.contour ?? undefined}
-      strokeWidth={f.contour ? f.epaisseur : undefined} strokeOpacity={f.contour && opaciteDuContour(f) < 1 ? opaciteDuContour(f) : undefined} strokeLinejoin="round" opacity={f.opacite < 1 ? f.opacite : undefined} pointerEvents={pe} />;
+      strokeWidth={f.contour ? f.epaisseur : undefined} strokeOpacity={f.contour && opaciteDuContour(f) < 1 ? opaciteDuContour(f) : undefined} {...traitReact(f)} opacity={f.opacite < 1 ? f.opacite : undefined} pointerEvents={pe} />;
 });
 
 /** La grille, en lignes fines a l'ecran quel que soit le zoom. */

@@ -10,7 +10,7 @@
 // Ce fichier n'est plus que la facade : le travail vit dans `edition/`, un module par sujet. Les
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
 
-export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice } from './edition/types.js';
+export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde } from './edition/types.js';
 export { IDENTITE } from './edition/types.js';
 
 export { lireChemin, ecrireChemin, ancre, depart } from './edition/chemins.js';
@@ -23,12 +23,16 @@ export {
 export { lirePeinture, lirePeintureAlpha, type PeintureLue } from './edition/peinture.js';
 export { lireDessin, type DessinLu, type LectureDessin } from './edition/lecture.js';
 export { opaciteDuRemplissage, opaciteDuContour } from './edition/opacites.js';
+export {
+  LIMITE_MITRE_DEFAUT, attributsTrait, pointillesEcrits, normaliserPointilles, genrePointilles, motifDeGenre,
+  type ReglageTrait, type GenrePointilles
+} from './edition/trait.js';
 
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
 
 export {
   transformer, deplacer, retourner, tourner, redimensionner, aligner, modifier, supprimer,
-  prochainId, dupliquer, ordonner, montrerSeulement,
+  modifierTrait, prochainId, dupliquer, ordonner, montrerSeulement,
   type Alignement, type Reglage, type Ordre
 } from './edition/operations.js';
 

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60">
+  <!-- Deux carres au trait pointille : une union garde le style de la plus basse, pointilles compris -->
+  <path d="M10 10h40v40h-40z" fill="#f4efe6" stroke="#15181d" stroke-width="2" stroke-dasharray="6 3" stroke-linecap="round" stroke-linejoin="miter"/>
+  <path d="M30 20h40v30h-40z" fill="#c81e28" stroke="#b3202c" stroke-width="2" stroke-dasharray="2 2"/>
+</svg>

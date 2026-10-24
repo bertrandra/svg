@@ -58,11 +58,17 @@ function lireHsl(t: string): PeintureLue | null {
   return { couleur: '#' + hex2(rgb.r) + hex2(rgb.g) + hex2(rgb.b), alpha: alphaDe(j.alpha) };
 }
 
-/** Une peinture en #rrggbb et son alpha. `currentColor` se lit en noir, faute d'un contexte ou le chercher. */
-export function lirePeintureAlpha(v: string): PeintureLue {
+/** La valeur de `color` quand rien ne la pose : le noir d'un SVG ouvert seul. */
+export const COULEUR_COURANTE: PeintureLue = { couleur: '#000000', alpha: 1 };
+
+/**
+ * Une peinture en #rrggbb et son alpha. `currentColor` prend la couleur courante (`color`, heritee) que
+ * l'appelant donne, le noir faute d'elle : seule la lecture d'un SVG sait la chercher dans ses ancetres.
+ */
+export function lirePeintureAlpha(v: string, courante: PeintureLue = COULEUR_COURANTE): PeintureLue {
   const t = v.trim().toLowerCase();
   if (t === 'none' || t === 'transparent') return { couleur: null, alpha: 1 };
-  if (t === 'currentcolor') return { couleur: '#000000', alpha: 1 };
+  if (t === 'currentcolor') return courante;
   let m = /^#([0-9a-f]{3,4})$/.exec(t);
   if (m) {
     const c = (m[1] ?? '').split('').map(x => x + x);

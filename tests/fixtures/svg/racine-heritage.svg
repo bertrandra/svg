@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" color="#336699" fill="currentColor" stroke="#15181d" stroke-width="3" opacity="0.5" stroke-opacity="0.8">
+  <!-- La racine pose couleur, remplissage, trait et opacite : tout se transmet, et l'opacite de la racine vaut pour le dessin entier -->
+  <path d="M5 5h20v20h-20z"/>
+  <!-- currentColor se resout a la couleur courante de la forme, pas a celle de l'element qui l'a pose -->
+  <g color="#c81e28">
+    <path d="M35 5h20v20h-20z"/>
+    <path d="M65 5h20v20h-20z" color="#1f7a3a" stroke="currentColor"/>
+  </g>
+  <path d="M95 5h20v20h-20z" fill="none" stroke="currentColor" stroke-width="1"/>
+  <path d="M5 35h20v20h-20z" style="fill: none; stroke: currentColor; stroke-width: 2"/>
+  <path d="M35 35h20v20h-20z" fill="inherit" stroke="none" opacity="0.5"/>
+  <path d="M65 35h20v20h-20z" color="rgba(200, 30, 40, 0.5)" stroke="none"/>
+  <!-- la regle pair-impair de la forme se garde, la peinture venant de la racine -->
+  <path d="M95 35h20v20h-20zM100 40v10h10v-10z" stroke="none" fill-rule="evenodd"/>
+</svg>

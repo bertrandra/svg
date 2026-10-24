@@ -6,6 +6,11 @@ export type Lettre = 'M' | 'L' | 'C' | 'Q' | 'Z';
 export interface Commande { readonly c: Lettre; readonly p: readonly number[] }
 export type Chemin = readonly Commande[];
 
+/** Le bout d'un trait ouvert ou d'un tiret. Le bout plat (`butt`) est celui qui s'ecrivait deja : il n'est pas un champ. */
+export type BoutNonPlat = 'round' | 'square';
+/** La jonction de deux segments. La ronde est celle que l'ecriture posait toujours : elle n'est pas un champ. */
+export type JonctionNonRonde = 'miter' | 'bevel';
+
 export interface Forme {
   readonly id: string;
   readonly d: Chemin;
@@ -22,6 +27,20 @@ export interface Forme {
   readonly opaciteRemplissage?: number;
   /** Idem pour le contour (alpha de la couleur du trait, `stroke-opacity`). */
   readonly opaciteContour?: number;
+  /**
+   * Le style du trait, au-dela de sa couleur et de son epaisseur (suite de l'ADR-0009). Tous facultatifs et ABSENTS quand
+   * ils valent ce que l'ecriture posait deja (trait plein, bout plat, jonction ronde, limite 4) : toute forme
+   * sans eux garde les memes champs et les memes octets.
+   * `pointilles` est le motif trait/blanc/trait/blanc… en unites du plan, toujours de longueur paire (un motif
+   * impair se repete une fois, comme le dit la specification), sans valeur negative et sans etre tout nul.
+   */
+  readonly pointilles?: readonly number[];
+  /** Ou le motif commence ; absent pour 0, et sans effet sans `pointilles`. */
+  readonly decalagePointilles?: number;
+  readonly bout?: BoutNonPlat;
+  readonly jonction?: JonctionNonRonde;
+  /** Le rapport de pointe a epaisseur au-dela duquel une jonction `miter` est biseautee ; absent pour 4, et sans effet hors `miter`. */
+  readonly limiteMitre?: number;
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;

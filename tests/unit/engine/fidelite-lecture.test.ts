@@ -313,16 +313,9 @@ describe('ce que la lecture laisse tomber, et dit', () => {
     expect(ignoresDe('<path d="M0 0h10v10" marker-end="none"/>')).toEqual([]);
   });
 
-  it('les pointilles, les bouts et les jonctions, seulement quand le trait est visible', () => {
-    expect(ignoresDe('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="4 2"/>')).toEqual(['les pointillés (le trait s’écrit plein)']);
-    expect(ignoresDe('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="none" stroke-linecap="butt" stroke-linejoin="round"/>')).toEqual([]);
-    expect(ignoresDe('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="0"/>')).toEqual([]);
-    expect(ignoresDe('<g stroke="#000" stroke-linecap="round" stroke-linejoin="miter"><path d="M0 0h10" fill="none"/></g>')).toEqual([
-      'les bouts de trait arrondis ou carrés (ils s’écrivent plats)',
-      'les jonctions de trait en pointe ou biseautées (elles s’écrivent arrondies)'
-    ]);
-    expect(ignoresDe('<path d="M0 0h10" stroke-dasharray="4 2" stroke-width="0" stroke="#000"/>')).toEqual([]);
-    expect(ignoresDe('<path d="M0 0h10" stroke-dasharray="4 2"/>')).toEqual([]);
+  it('les pointilles, les bouts et les jonctions sont portes par le modele : plus rien a dire (voir fidelite-trait.test.ts)', () => {
+    expect(ignoresDe('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="4 2"/>')).toEqual([]);
+    expect(ignoresDe('<g stroke="#000" stroke-linecap="round" stroke-linejoin="miter"><path d="M0 0h10" fill="none"/></g>')).toEqual([]);
   });
 
   it('les regles de style qui ne visent pas une classe, si elles peignent', () => {
@@ -331,16 +324,16 @@ describe('ce que la lecture laisse tomber, et dit', () => {
     expect(ignoresDe('<style>text { font-size: 12px } .a { fill: blue }</style><path class="a" d="M0 0h1v1z"/>')).toEqual([]);
   });
 
-  it('la peinture posee sur la balise svg elle-meme, et les animations', () => {
-    expect(ignoresDe('<path d="M0 0h1v1z"/>', ' fill="none" stroke="currentColor"')).toEqual(['les couleurs et l’opacité posées sur la balise <svg> elle-même (elles ne se transmettent pas aux formes)']);
+  it('la peinture posee sur la balise svg elle-meme se transmet : plus rien a dire. Les animations, si', () => {
+    expect(ignoresDe('<path d="M0 0h1v1z"/>', ' fill="none" stroke="currentColor"')).toEqual([]);
     expect(ignoresDe('<path d="M0 0h1v1z"/>', ' width="100" height="100"')).toEqual([]);
     expect(ignoresDe('<path d="M0 0h1v1z"><animate attributeName="fill" values="red;blue" dur="1s"/></path>')).toEqual(['les animations']);
     expect(ignoresDe('<g><animateTransform attributeName="transform" type="rotate" dur="1s"/><path d="M0 0h1v1z"/></g>')).toEqual(['les animations']);
   });
 
   it('chaque chose n est dite qu une fois, dans l ordre ou elle a ete rencontree', () => {
-    const r = ignoresDe('<path d="M0 0h10" stroke="#000" stroke-dasharray="1" marker-end="url(#m)"/><path d="M0 5h10" stroke="#000" stroke-dasharray="2" marker-start="url(#m)"/>');
-    expect(r).toEqual(['les pointillés (le trait s’écrit plein)', 'les marqueurs des traits (pointes de flèche…)']);
+    const r = ignoresDe('<path d="M0 0h10" stroke="#000" stroke-dasharray="1mm" marker-end="url(#m)"/><path d="M0 5h10" stroke="#000" stroke-dasharray="2%" marker-start="url(#m)"/>');
+    expect(r).toEqual(['les pointillés dont une longueur est en pourcentage ou en unité autre que le pixel (le trait s’écrit plein)', 'les marqueurs des traits (pointes de flèche…)']);
   });
 
   it('un SVG refuse n a pas de liste', () => {
@@ -348,7 +341,7 @@ describe('ce que la lecture laisse tomber, et dit', () => {
   });
 
   it('lire ne change aucun octet : le SVG ecrit est le meme avec ou sans ce qui est ignore', () => {
-    const avec = lire('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="4 2" stroke-linecap="round" marker-end="url(#m)"/>');
+    const avec = lire('<path d="M0 0h10" fill="none" stroke="#000" stroke-dasharray="4mm" marker-end="url(#m)"/>');
     const sans = lire('<path d="M0 0h10" fill="none" stroke="#000"/>');
     expect(ecrireDessin(avec)).toBe(ecrireDessin(sans));
   });
