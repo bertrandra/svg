@@ -298,7 +298,6 @@ empreintes.
 - **L'outillage** : TypeScript strict, ESLint (aucun `any` dans le moteur, aucune assertion `!`,
   150 lignes par fonction au plus), cliquet de rigueur, test d'architecture (couches, cycles,
   pureté), CI `verifier` et construction de la page.
-
 - **Conformité** : boîte « À propos et crédits » (pied de page et menu Fichier), `THIRD-PARTY-NOTICES.md`
   et `dist/MENTIONS.txt` générés par `scripts/mentions.mjs` (les textes de licence sont lus dans les
   paquets, jamais recopiés ; un test confronte la liste au `package-lock.json`), `SECURITY.md`,
