@@ -24,22 +24,33 @@ s'embarque aussi comme composant React dans un autre produit.
     sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+S, Ctrl+C/X/V, Ctrl+G, G, Z…) ;
   - outils de tracé : rectangle, ellipse, étoile, ligne, plume ; texte en formes (neuf fontes libres
     ou la vôtre), une forme par lettre ;
-  - booléens : union, soustraction, intersection, exclusion ;
+  - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
+    menu Édition) ;
   - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
     inclinaison, échelle) et poignée de rotation ;
   - recoloration par palettes d'événements, par le nuancier ou d'une seule couleur ;
   - points et poignées : glisser une ancre, tirer une poignée, ajouter un point sans changer la
     courbe, redresser ou courber un segment, retirer un point ;
-  - couleurs : sélecteur, code, nuancier, remplacement d'une couleur partout ;
+  - couleurs : sélecteur, code, nuancier, remplacement d'une couleur partout ; opacité du fond et du
+    contour, bout, jonction et pointillés du trait ;
+  - calques par couleur : choisir, masquer, verrouiller, isoler, combiner, supprimer, recolorer les
+    formes d'une couleur, choisir ou fusionner les nuances proches ;
   - nettoyage du tracé : poussières sous un seuil, voisines de même couleur regroupées si le rendu
-    reste identique, plan de travail ajusté ;
+    reste identique, tracés simplifiés, plan de travail ajusté au trait réel ;
   - insertion d'une forme de la bibliothèque au centre du dessin, d'un panier en grille, ou d'une
     scène prête par événement ;
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
 - **Récupérer le résultat** : SVG, SVG de découpe (contours seuls), PNG à la largeur voulue, PDF
   vectoriel, copie du code. Rien ne quitte le navigateur.
-- **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, zoom à deux doigts.
+- **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
+  doigts.
+- **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,
+  Ctrl+flèches tournent, un réticule piloté aux flèches pose formes et points ; une région vocale
+  dit la sélection et chaque action ; le contraste forcé et les thèmes clair et sombre sont tenus
+  (audits `axe-core` en test).
+- **Gros dessins** : des milliers de formes et de couleurs restent fluides (listes fenêtrées,
+  historique borné selon la taille).
 
 Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, `<use>`.
 On n'édite pas ce qu'on ne saurait pas réécrire ; une image se vectorise d'abord.
