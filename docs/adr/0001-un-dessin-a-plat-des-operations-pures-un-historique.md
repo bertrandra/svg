@@ -46,3 +46,9 @@ produits, sans y apporter de magasin ni de plateforme.
   changement qui déplace une coordonnée est un événement de version majeure.
 - Un hôte qui embarque l'éditeur fournit les classes `editeur-*` et les jetons de couleur de
   `outils/editeur-svg/page.html`.
+- `engine/editionSvg.ts` est la seule porte d'entrée du moteur d'édition : l'implémentation vit dans
+  `engine/edition/` (chemins, géométrie, lecture, écriture, opérations, couleurs, nettoyage, points,
+  formes, assemblage, grille), sans cycle ; les autres couches n'importent jamais ces modules
+  directement. L'écriture est verrouillée par des SVG de référence (`tests/fixtures/svg`) : tout
+  écart est un événement de version majeure (`ACTUALISER_REFERENCES=1` pour le décider en connaissance
+  de cause).

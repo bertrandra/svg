@@ -7,6 +7,14 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Modifié
 
+- **Le traceur vtracer n'est plus dans la page** (ADR-0002) : il vit dans `dist/vtracer.js`, chargé au
+  premier tracé ; la page passe de 1,6 à 0,75 Mo. « Chargement du traceur… » s'affiche au premier
+  tracé ; si le fichier manque à côté de la page, le message dit où le placer. Le SVG produit est
+  identique à l'octet près (vtracer reste épinglé à 1.0.0-alpha.4).
+- **Découpage du code, sans changement de comportement** : l'éditeur (`zones/EditeurSvg.tsx`, 1 138
+  lignes) est réparti par responsabilité (gestes, clavier, vue, toile, calques, inspecteur, panneau du
+  dessin, actions), et `engine/editionSvg.ts` devient une façade sur `engine/edition/` (ADR-0001).
+  Le SVG réécrit est identique à l'octet près sur les 4 134 formes de la bibliothèque.
 - **Passe d'interface : menus, sections, trois voies** (ADR-0006) :
   - la barre de l'éditeur ne garde que les outils, les couleurs, l'historique et le zoom ; les formes
     se rangent derrière un outil à chevron, et les menus **Vue**, **Édition** et **Fichier** portent le
@@ -21,12 +29,26 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
   - au doigt (moins de 900 px ou pointeur grossier), cibles de 40 px et poignées de la toile
     agrandies.
 
+### Constaté, non corrigé (changerait des octets écrits : version majeure)
+
+- `stroke-width="0"` est écrit `1` ; l'alpha de `rgba()` est perdu à la lecture ; un nom de couleur hors
+  des douze connus est copié tel quel ; le crénage est nul pour cinq des neuf fontes
+  embarquées. Ces limites sont figées dans `tests/fixtures/svg/limites-connues.svg`.
+
 ### Corrigé
 
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
 
+- **Tests de non-régression de l'écriture SVG** : 25 cas de référence (`tests/fixtures/svg`) et la
+  bibliothèque entière relue puis réécrite à l'identique, avec une empreinte par forme ; tout écart
+  signale un événement de version majeure.
+- **Tests de la couche `io`** (traitement d'image avec le vrai vtracer, détourage, polices, fichiers,
+  chargements à la demande) sous un navigateur factice minimal.
+- **Tests de navigateur** : `npm run e2e` (68 tests Playwright pilotés par vitest sur la page
+  construite : accueil, menus, édition, calques par couleur, atelier de vectorisation, bibliothèque,
+  exports, tactile 420 px, accessibilité) et un job CI `navigateur`.
 - **Calques par couleur** (ADR-0006) : dans le panneau Calques, une section « Par couleur » liste
   chaque couleur du dessin, lue sur le remplissage, le contour ou les deux. Un clic choisit ses formes
   (Maj : les ajoute à la sélection) ; des boutons les masquent ou les affichent, les verrouillent ou
