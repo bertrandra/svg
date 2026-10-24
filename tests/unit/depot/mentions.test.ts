@@ -65,9 +65,10 @@ describe('les mentions des composants tiers', () => {
     expect(e.fichiers.some(f => f.endsWith('polygon-clipping/dist/polygon-clipping.umd.js'))).toBe(true);
   }, 60_000);
 
-  it('le depot ne choisit pas de licence a la place du proprietaire', () => {
+  it('la licence du depot est celle que le proprietaire a choisie : proprietaire, tous droits reserves', () => {
     const paquet = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8')) as Record<string, unknown>;
-    expect('license' in paquet).toBe(false);
-    expect(existsSync(join(racine, 'LICENSE'))).toBe(false);
+    // Jamais une licence ouverte posee par defaut : changer ceci est une decision du proprietaire.
+    expect(paquet['license']).toBe('UNLICENSED');
+    expect(readFileSync(join(racine, 'LICENSE'), 'utf8')).toContain('Tous droits réservés');
   });
 });
