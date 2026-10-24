@@ -138,6 +138,10 @@ La version du paquet (`package.json`) qui a construit le bundle.
 - Le SVG passe par `nettoyerSvg` : il porte toujours `xmlns` et `viewBox`, et ne garde ni script, ni
   `foreignObject`, ni gestionnaire d’évènement (`onload=`…), ni référence externe (`href`, `url()`,
   `@import` hors `#ancre` et images `data:`), ni `javascript:`.
+- **Une forme de la bibliothèque porte sa provenance.** Si le dessin contient au moins une forme visible venue de la
+  bibliothèque (game-icons.net, CC BY 3.0), le SVG rendu s’ouvre sur un élément `<metadata>` qui nomme la source et
+  la licence, et chaque `<path>` concerné porte `data-origine="game-icons:<identifiant>"` ; l’éditeur les retrouve à la
+  relecture. Sans forme de la bibliothèque, rien de tout cela n’est écrit. Voir « Attribution et licences » plus bas.
 - Un dessin sans aucune forme visible n’est pas enregistré : l’éditeur le dit et `onEnregistrer` n’est pas
   appelée.
 - Avec `fermerApresEnregistrer: false`, l’éditeur reste ouvert après l’enregistrement (on peut enregistrer
@@ -157,6 +161,7 @@ rattrapée par l’éditeur.
 | `editeur-svg-embarque.js` | 717 Ko (227 Ko compressé) | toujours | L’éditeur, ses styles, React |
 | `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
 | `polices.js` | 2,6 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte | Neuf fontes libres (OFL), chargées quand la personne ouvre l’outil Texte |
+| `MENTIONS.txt` | 18 Ko | **toujours, avec le bundle** | Le copyright et la licence de chaque composant tiers redistribué (voir « Attribution et licences ») |
 
 - **`vtracer.js` n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas, et rien dans
   son interface n’appelle le traceur. Le bundle n’en contient que le petit chargeur (qui poserait une
@@ -177,8 +182,7 @@ rattrapée par l’éditeur.
   La base se lit au chargement du fichier : une fois `bibliotheque.js` arrivé, une autre base n’y change
   rien. Un fichier introuvable se dit dans le panneau (« … est introuvable à côté de la page »).
 - Si vous livrez `bibliotheque.js`, créditez **game-icons.net** (licence CC BY 3.0) ; les fontes de
-  `polices.js` sont sous licence SIL OFL 1.1. L’éditeur le rappelle dans la page entière, pas dans le
-  bundle.
+  `polices.js` sont sous licence SIL OFL 1.1. Voir « Attribution et licences » ci-dessous.
 - Servez les `.js` avec un type `text/javascript` ; la compression (gzip, brotli) divise les annexes par
   deux et demi.
 
@@ -233,6 +237,45 @@ Ce que cette isolation ne couvre pas :
 
 Besoin d’une isolation totale (feuilles de l’hôte qui visent des classes génériques, règles `svg`) :
 prenez l’iframe (1).
+
+### Attribution et licences
+
+Ce que vous redistribuez en servant ces fichiers a des obligations de licence, que l’éditeur remplit en partie seul.
+
+**Ce que vous devez faire**
+
+- **Servir `MENTIONS.txt` avec le bundle** (`dist/MENTIONS.txt`, le même texte que `THIRD-PARTY-NOTICES.md` du dépôt) et
+  le laisser accessible : les licences MIT, SIL OFL et Apache des composants (React, opentype.js, polygon-clipping, les
+  fontes…) demandent que leur copyright et leur texte accompagnent chaque redistribution. Ne minifiez pas le bundle d’une façon
+  qui retire ses commentaires de licence.
+- **Afficher les crédits des formes de la bibliothèque** si vous livrez `bibliotheque.js` : la licence CC BY 3.0 exige de
+  nommer la source (« game-icons.net et ses contributeurs »), de donner sa licence et son adresse. L’éditeur le fait dans sa
+  boîte **« À propos et crédits »** (menu Fichier), qui reste accessible tant que l’éditeur est ouvert ; si votre produit présente
+  lui-même ces formes (une vitrine, un export, une page de mentions légales), reprenez la mention vous-même :
+
+  > Contient des formes dont la source est game-icons.net et ses contributeurs (https://game-icons.net), sous licence CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+
+- **Conserver la mention quand vous publiez le dessin.** Le SVG que `onEnregistrer` vous rend la porte dans son élément
+  `<metadata>` ; ne la retirez pas, et ne rasterisez pas le dessin sans la citer à côté de l’image.
+
+**Ce que l’éditeur fait seul**
+
+| Sortie | Quand le dessin contient une forme de la bibliothèque |
+|---|---|
+| SVG enregistré, `onEnregistrer`, téléchargement, « Copier le code SVG » | Un `<metadata>` en tête avec la mention et la liste des origines, et `data-origine` sur chaque forme créditée |
+| PDF vectoriel | La mention dans le champ `/Subject` des informations du document |
+| SVG de découpe | La mention en commentaire XML (ce fichier ne garde que des contours) |
+| PNG | **Rien** : un PNG ne porte pas de métadonnées ici. Citez la source à côté de l’image |
+
+La provenance suit la forme : dupliquée, collée, séparée, ou réunie à une autre (combiner, booléens, regroupement ; l’union des
+origines est gardée), elle reste. Elle disparaît avec la dernière forme créditée du dessin, et alors la mention n’est plus écrite.
+Le SVG que vous passez à `ouvrir` et qui porte déjà ces marques les garde. Un dessin qui ne contient aucune forme de la
+bibliothèque s’écrit exactement comme avant. Ce que l’éditeur écrit pour un dessin qui en contient a changé avec cette version
+(`<metadata>` et `data-origine` en plus), ce qui est un événement de version majeure.
+
+**Ce que l’éditeur ne sait pas faire** : le jeu de données ne dit pas qui a dessiné chaque icône, l’éditeur ne peut donc pas
+créditer un auteur par forme ; le crédit est celui de la source. Les licences du projet lui-même sont l’affaire de son
+propriétaire et ne sont pas couvertes ici.
 
 ### Sécurité
 

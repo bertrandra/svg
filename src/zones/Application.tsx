@@ -17,6 +17,8 @@ import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvg } from '../util/svg.js';
+import { DialogueCredits } from './Credits.js';
+import { svgDeBibliotheque } from './provenanceBibliotheque.js';
 
 interface Fichier { nom: string; svg: string }
 
@@ -52,6 +54,7 @@ function Accueil() {
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
   const [voie, poserVoie] = useState<Voie>('svg');
   const [message, dire] = useState('');
+  const [credits, poserCredits] = useState(false);
   const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon(STOCKAGE));
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
   // Chaque modification dans l'editeur laisse un brouillon : un rechargement ne perd rien.
@@ -130,7 +133,7 @@ function Accueil() {
         {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
         <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
-        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, x.svg)} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg))} /></div>
       </section>
 
       <details className="nuancier-page">
@@ -143,8 +146,10 @@ function Accueil() {
       </details>
 
       <footer className="pied">
-        <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> (licence CC BY 3.0) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
+        <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> et de ses contributeurs (licence <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
+        <p className="aide"><button type="button" className="discret" onClick={() => poserCredits(true)}>À propos et crédits</button></p>
       </footer>
+      {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE}

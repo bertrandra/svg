@@ -121,6 +121,6 @@ export function chainePdf(t: string): string {
 }
 
 /** Le dictionnaire d'informations : `Producer` seul (comme avant) ou avec un titre. Aucune date : le meme dessin, les memes octets. */
-export function infoPdf(o: OptionsPdf): string {
-  return '<< ' + (o.titre ? '/Title ' + chainePdf(o.titre) + ' ' : '') + '/Producer ' + chainePdf(o.producteur ?? 'svg') + ' >>';
+export function infoPdf(o: OptionsPdf, sujet = ''): string {
+  return '<< ' + (o.titre ? '/Title ' + chainePdf(o.titre) + ' ' : '') + '/Producer ' + chainePdf(o.producteur ?? 'svg') + (sujet ? ' /Subject ' + chainePdf(sujet) : '') + ' >>';
 }

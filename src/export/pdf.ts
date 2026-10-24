@@ -3,7 +3,8 @@
 // sa regle de remplissage. Pur et deterministe : ni date, ni identifiant tire au sort, pour que le
 // meme dessin donne toujours les memes octets.
 
-import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, originesDe, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { mentionOrigines } from '../model/credits.js';
 import { versCmjnNaif } from '../util/couleur.js';
 import { fluxMisEnPage, infoPdf, miseEnPage, tableau, type OptionsPdf } from './pdfPage.js';
 
@@ -113,7 +114,7 @@ export function ecrirePdf(dessin: DessinSvg, options: OptionsPdf = {}): Uint8Arr
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
     '<< /Type /Page /Parent 2 0 R' + boites + ' /Contents 4 0 R /Resources <<' + extg + ' >> >>',
     '<< /Length ' + octetsDe(contenu) + ' >>\nstream\n' + contenu + '\nendstream',
-    infoPdf(options)
+    infoPdf(options, sujetDeCredit(visibles))
   ];
   let corps = '%PDF-1.4\n%âãÏÓ\n';
   const positions: number[] = [];
@@ -122,6 +123,11 @@ export function ecrirePdf(dessin: DessinSvg, options: OptionsPdf = {}): Uint8Arr
   corps += 'xref\n0 ' + (objets.length + 1) + '\n0000000000 65535 f \n' + positions.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('');
   corps += 'trailer\n<< /Size ' + (objets.length + 1) + ' /Root 1 0 R /Info 5 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
   return latin1(corps);
+}
+
+/** La mention des formes creditees (CC BY 3.0) pour le `/Subject` du dictionnaire d'informations, ou rien sans forme creditee. */
+function sujetDeCredit(visibles: readonly Forme[]): string {
+  return mentionOrigines(originesDe(visibles));
 }
 
 /** La longueur en octets d'un texte ecrit en latin-1 : un octet par caractere. */

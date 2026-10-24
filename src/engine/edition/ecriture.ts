@@ -6,6 +6,7 @@ import type { DessinSvg, Forme } from './types.js';
 import { ecrireChemin, nb } from './chemins.js';
 import { attributsTrait } from './trait.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
+import { attributOrigine, metadonnees } from './provenance.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
 // operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
@@ -35,14 +36,20 @@ function composerForme(f: Forme, precision: number): string {
     if (opaciteDuContour(f) < 1) s += ' stroke-opacity="' + nb(opaciteDuContour(f), 3) + '"';
   } else if (f.remplissage) opacite = Math.round(opacite * opaciteDuRemplissage(f) * 1000) / 1000;
   if (opacite < 1) s += ' opacity="' + nb(opacite, 3) + '"';
-  return s + '/>';
+  // En dernier, et seulement pour une forme creditee : toute autre s'ecrit comme avant (provenance.ts).
+  return s + attributOrigine(f) + '/>';
 }
 
-/** Le SVG du dessin. Les formes masquees ne s'ecrivent pas : masquer, a l'enregistrement, c'est retirer. */
+/**
+ * Le SVG du dessin. Les formes masquees ne s'ecrivent pas : masquer, a l'enregistrement, c'est retirer. Quand une forme
+ * ecrite vient d'une source creditee (CC BY 3.0), un <metadata> d'attribution ouvre le SVG : sans forme creditee,
+ * rien de plus n'est ecrit.
+ */
 export function ecrireDessin(dessin: DessinSvg, precision = 2): string {
   const [x, y, l, h] = dessin.vb;
-  const corps = dessin.formes.filter(f => f.visible).map(f => ecrireForme(f, precision)).join('');
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '">' + corps + '</svg>';
+  const visibles = dessin.formes.filter(f => f.visible);
+  const corps = visibles.map(f => ecrireForme(f, precision)).join('');
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '">' + metadonnees(visibles) + corps + '</svg>';
 }
 
 export interface Statistiques { formes: number; points: number; octets: number }

@@ -203,6 +203,15 @@ const CAS: readonly Cas[] = [
       return c.id ? separer(c.dessin, c.id).dessin : c.dessin;
     }
   },
+  // La provenance (CC BY 3.0 des formes de game-icons.net, version majeure pour un dessin qui en porte) : une forme creditee
+  // s'ecrit avec `data-origine`, et le SVG s'ouvre sur un <metadata> d'attribution. Des cas NEUFS : sans origine, aucun octet
+  // ne change (les 26 references d'avant et les empreintes de la bibliotheque le prouvent). L'entree melange formes creditees,
+  // une origine en double et une origine inconnue (ecartee), et une forme sans origine.
+  { nom: 'provenance-ecriture', entree: 'provenance' },
+  { nom: 'provenance-combiner', entree: 'provenance', operation: d => combiner(d, ['f1', 'f3']).dessin },
+  { nom: 'provenance-union', entree: 'provenance', operation: booleen(['f1', 'f2'], 'union') },
+  { nom: 'provenance-masquee', entree: 'provenance', operation: enchainer(d => modifier(d, ['f1', 'f2', 'f4'], { visible: false })) },
+  { nom: 'provenance-decoupe', entree: 'provenance', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
   // Les calques par couleur : recolorer sur le fond ou le trait, fusionner les nuances (une forme verrouillee garde sa couleur).
   { nom: 'couleurs-recolorer-fond', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'remplissage') },
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },

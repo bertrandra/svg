@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M10 10h40v40h-40z" fill="#c81e28" data-origine="game-icons:3d-glasses"/>
+  <path d="M30 30h40v40h-40z" fill="#1428a0" data-origine="game-icons:abacus"/>
+  <path d="M60 60h30v30h-30z" fill="#228b22"/>
+  <path d="M5 80h20v15h-20z" fill="#d4a537" data-origine="game-icons:abacus game-icons:abacus inconnu:xyz"/>
+</svg>

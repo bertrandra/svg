@@ -1,9 +1,11 @@
 // Les trois menus de la barre principale (ADR-0006) : Vue, Edition, Fichier. Chacun lit ce qu'il
 // montre dans les contextes de l'editeur, pour que la barre n'ait ni a les connaitre ni a les passer.
 
+import { useState } from 'react';
 import { ecrireDessin } from '../engine/editionSvg.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { DialogueCredits } from './Credits.js';
 import { ContenuExport } from './Exporter.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
@@ -45,17 +47,23 @@ export function MenuEdition() {
   return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={elements} />;
 }
 
-/** Fichier : enregistrer, telecharger, copier, fermer, et les formats d'export en dessous. */
+/** Fichier : enregistrer, telecharger, copier, credits, fermer, et les formats d'export en dessous. */
 export function MenuFichier({ nom }: { nom: string }) {
   const mo = useDessin(), ac = useActions();
+  const [credits, poserCredits] = useState(false);
   const elements: ElementMenu[] = [
     { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length, onClick: ac.enregistrerTout },
     { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(ecrireDessin(mo.dessin, 3))).then(ac.dire); } },
     { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(ecrireDessin(mo.dessin, 3)).then(ok => ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.')); } },
+    { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
   return (
-    <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements}
-      enfants={<><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} /></>} />
+    <>
+      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements}
+        enfants={<><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} /></>} />
+      {/* Posee dans la racine de l'editeur : ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */}
+      {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} /> : null}
+    </>
   );
 }

@@ -2,7 +2,7 @@
 // enregistrement, fin du trace a la plume, insertions de la bibliotheque, booleens, transformations
 // chiffrees. Meme regle que actions.ts : l'etat se lit au moment de l'appel.
 
-import { ajouterForme, boiteDe, ecrireDessin, inserer, lireDessin, polygone } from '../engine/editionSvg.js';
+import { ajouterForme, boiteDe, ecrireDessin, inserer, lireDessin, marquerOrigine, polygone, type DessinSvg } from '../engine/editionSvg.js';
 import { appliquerBooleen } from '../engine/booleens.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../engine/transformations.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -12,6 +12,9 @@ import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 
 type ActionsDessin = Pick<ActionsEditeur, 'finirTrace' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
+
+/** Le dessin lu d'une forme a inserer, credite de son origine quand on la connait. */
+const creditee = (dessin: DessinSvg, origine: string | undefined): DessinSvg => (origine === undefined ? dessin : marquerOrigine(dessin, origine));
 
 export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
   const { appliquer, choisir, dire } = l;
@@ -43,12 +46,12 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       l.poserOutilBrut('selection');
       dire('Tracé ajouté : ' + points.length + ' points.');
     },
-    insererForme: (svgForme: string) => {
+    insererForme: (svgForme: string, origine?: string) => {
       const { dessin } = lire();
       const autre = lireDessin(svgForme);
       if ('erreur' in autre) { dire(autre.erreur); return; }
       const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh) / 3;
-      const r = inserer(dessin, autre.dessin, { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
+      const r = inserer(dessin, creditee(autre.dessin, origine), { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
       if (!r.ids.length) return;
       appliquer(() => r.dessin);
       choisir(r.ids);
@@ -64,7 +67,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       for (const e of elements) {
         const autre = lireDessin(e.svg);
         if ('erreur' in autre) continue;
-        const r = inserer(d, autre.dessin, { x: ox + e.x * c, y: oy + e.y * c, l: e.taille * c, h: e.taille * c });
+        const r = inserer(d, creditee(autre.dessin, e.origine), { x: ox + e.x * c, y: oy + e.y * c, l: e.taille * c, h: e.taille * c });
         d = r.dessin;
         ids.push(...r.ids);
       }

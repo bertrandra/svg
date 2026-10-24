@@ -122,8 +122,9 @@ export interface ActionsEditeur {
   choisirMemeCouleur: () => void;
   zoomerSelection: () => void;
   enregistrerTout: () => void;
-  insererForme: (svgForme: string) => void;
-  insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number }[]) => void;
+  /** Insere une forme au centre ; `origine` (`game-icons:<id>`) la credite : elle fera ecrire la mention CC BY 3.0 (engine/edition/provenance.ts). */
+  insererForme: (svgForme: string, origine?: string) => void;
+  insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number; origine?: string }[]) => void;
   booleen: (op: Booleen) => void;
   transformerNumerique: (t: { rotation?: number; inclinaisonX?: number; inclinaisonY?: number; echelle?: number }) => void;
 }

@@ -11,10 +11,13 @@ import { readFileSync } from 'node:fs';
 import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo, refuserFinDeScript } from './aide.mjs';
 import { feuillesEditeur } from './feuilles.mjs';
 
+// La version du produit (package.json) entre dans la page pour la boite « A propos et credits » (src/zones/produit.ts).
+const version = JSON.parse(readFileSync(depuisRacine('package.json'), 'utf8')).version;
+
 const moteur = await empaqueter({
   entryPoints: [depuisRacine('outils/editeur-svg/entree.tsx')],
   bundle: true, format: 'iife', globalName: 'EditeurSvg', target: 'es2020', minify: true, jsx: 'automatic',
-  define: { 'process.env.NODE_ENV': '"production"' }
+  define: { 'process.env.NODE_ENV': '"production"', VERSION_PRODUIT: JSON.stringify(version) }
 });
 // Un `</script` dans le moteur fermerait la balise qui l'embarque.
 refuserFinDeScript(moteur, 'le moteur');
