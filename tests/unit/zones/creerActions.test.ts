@@ -17,7 +17,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer: vi.fn(), modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage
+    enregistrer: vi.fn(), production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage
   };
   const poserQuitter = vi.fn();
   const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; etat.refaisable = h.futur.length > 0; };
@@ -28,6 +28,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter, poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: u => { annonces.push((typeof u === 'function' ? u({ texte: '', rang: 0 }) : u).texte); },
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
+    poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);

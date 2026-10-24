@@ -31,6 +31,7 @@ export {
 } from './edition/trait.js';
 
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
+export { marquerProduction, lireProduction, identifiantValide, CHAMPS_PRODUCTION, PREFIXE_PRODUCTION, type MarqueProduction } from './edition/production.js';
 export { ATTRIBUT_ORIGINE, avecOrigines, marquerOrigine, originesDe, lireOrigines } from './edition/provenance.js';
 
 export {

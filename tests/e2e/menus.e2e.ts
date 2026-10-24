@@ -13,12 +13,12 @@ describe('menus de la barre', () => {
     return session.page;
   }
 
-  it('annonce ses quatre menus comme des menus', async () => {
+  it('annonce ses cinq menus comme des menus, dont le contexte de production (ADR-0013)', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Fichier']);
+    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Générique', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {

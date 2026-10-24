@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { DessinSvg } from '../engine/editionSvg.js';
+import type { DessinSvg, MarqueProduction } from '../engine/editionSvg.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Stockage } from '../io/stockage.js';
 import { Cadre } from './Cadre.js';
@@ -103,7 +103,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
         </div>
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
-          <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>
+          <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>
         </FournisseurStockage>
       )}
     </div>,
@@ -112,7 +112,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 }
 
 interface ProprietesAtelier {
-  initial: DessinSvg; ignores: readonly string[]; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
+  initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
   fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined;
 }
 

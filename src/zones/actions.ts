@@ -2,6 +2,7 @@
 // au moment de l'appel (`lire`) : c'est ce qui permet au contexte des actions de ne jamais changer
 // d'identite, alors que le dessin change a chaque geste.
 
+import type { ChoixProduction } from '../model/contextes.js';
 import type { RefObject } from 'react';
 import { coller, combiner, dupliquer, idsMemeCouleur, modifier, separer, supprimer, supprimerAncre, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
@@ -12,7 +13,7 @@ import type { ActionsEditeur, Outil, Point, Vues } from './typesEditeur.js';
 /** L'etat du moment : ce que les actions lisent, jamais ce qu'elles posent. */
 export interface EtatLu {
   dessin: DessinSvg; sel: string[]; formeSeule: Forme | null; outil: Outil; point: number | null; style: Style; trace: readonly Point[];
-  presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string) => void;
+  presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string) => void; production: ChoixProduction;
 }
 
 /** Ce que les actions posent : des fonctions stables (setters de React, ou fabriquees une fois). */

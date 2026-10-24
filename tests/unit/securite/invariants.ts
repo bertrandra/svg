@@ -18,7 +18,9 @@ export const ELEMENTS_PERMIS: ReadonlySet<string> = new Set([
 export const ELEMENTS_ECRITURE: ReadonlySet<string> = new Set(['svg', 'path', 'metadata']);
 export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'xmlns', 'viewBox', 'width', 'height', 'd', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
-  'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'data-origine'
+  'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'data-origine',
+  // La marque du contexte de production (ADR-0013) : sur la racine seule, des identifiants courts et rien d'autre.
+  'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite'
 ]);
 
 const ESPACES_DE_NOMS_PERMIS = new Set([
@@ -235,7 +237,7 @@ export function violationsEcriture(svg: string): string[] {
     if ((e.nom === 'svg') !== (e.profondeur === 0)) d.push('<svg> hors de la racine');
     for (const [nom, valeur] of e.attributs) {
       if (!ATTRIBUTS_ECRITURE.has(nom)) { d.push('attribut ecrit inattendu ' + nom.slice(0, 40)); continue; }
-      if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
+      if (nom.startsWith('data-ed-')) { if (e.profondeur !== 0 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
         if (!/^[MLCQZ0-9eE.,\s+-]*$/.test(valeur)) d.push('chemin avec des caracteres inattendus');
       } else if (nom === 'fill' || nom === 'stroke') {
         // Une couleur #rrggbb, none, ou un mot-cle CSS en lettres : jamais d'adresse, de fonction ni de ponctuation.

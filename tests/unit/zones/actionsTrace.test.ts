@@ -15,7 +15,7 @@ function monter(corps: string) {
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer: vi.fn(), modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null
+    enregistrer: vi.fn(), production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null
   };
   const majour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; if (etat.sel.length === 1) etat.formeSeule = etat.dessin.formes.find(f => f.id === etat.sel[0]) ?? null; };
   const setters: Setters = {
@@ -23,7 +23,7 @@ function monter(corps: string) {
     choisir: u => { etat.sel = typeof u === 'function' ? u(etat.sel) : u; majour(); },
     poserOutilBrut: vi.fn(), poserPoint: u => { etat.point = typeof u === 'function' ? u(etat.point) : u; }, poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: vi.fn(),
-    poserVersions: vi.fn(), dire: u => { messages.push(typeof u === 'function' ? u('') : u); }, toile: { current: null }
+    poserVersions: vi.fn(), dire: u => { messages.push(typeof u === 'function' ? u('') : u); }, poserProduction: vi.fn(), toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
   return { actions, etat, messages, entrees: () => h.passe.length };

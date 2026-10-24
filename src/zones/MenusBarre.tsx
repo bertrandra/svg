@@ -2,12 +2,14 @@
 // montre dans les contextes de l'editeur, pour que la barre n'ait ni a les connaitre ni a les passer.
 
 import { useState } from 'react';
-import { ecrireDessin, sousChemins } from '../engine/editionSvg.js';
+import { sousChemins } from '../engine/editionSvg.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { DialogueCredits } from './Credits.js';
 import { ContenuExport } from './Exporter.js';
 import { allerAuChamp } from './OutilsTrace.js';
+import { svgDocument } from './actionsProduction.js';
+import { useRubriquesProduction } from './Production.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
@@ -68,11 +70,12 @@ export function MenuEdition() {
 
 /** Les elements du menu Fichier : enregistrer, telecharger, copier, credits, fermer. */
 function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void): ElementMenu[] {
-  const mo = useDessin(), ac = useActions();
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const svg = () => svgDocument(mo.dessin, ui.production);
   return [
-    { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length, onClick: ac.enregistrerTout },
-    { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(ecrireDessin(mo.dessin, 3))).then(ac.dire); } },
-    { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(ecrireDessin(mo.dessin, 3)).then(ok => ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.')); } },
+    { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length && !ui.productionModifiee, onClick: ac.enregistrerTout },
+    { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(svg())).then(ac.dire); } },
+    { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(svg()).then(ok => ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.')); } },
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
@@ -80,8 +83,8 @@ function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void
 
 /** Le panneau d'export, sous les elements du menu Fichier. */
 function PanneauExport({ nom }: { nom: string }) {
-  const mo = useDessin(), ac = useActions();
-  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} /></>;
+  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} {...(ui.profil ? { pourCricut: () => ac.exporterPourCricut(nom) } : {})} /></>;
 }
 
 /** La boite des credits : posee dans la racine de l'editeur, ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */
@@ -107,11 +110,13 @@ export function MenuFichier({ nom }: { nom: string }) {
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits);
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits), production = useRubriquesProduction();
   const sections: SectionMenu[] = [
     { id: 'vue', titre: 'Vue', elements: vue },
     { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
-    { id: 'edition', titre: 'Édition', elements: edition }
+    { id: 'edition', titre: 'Édition', elements: edition },
+    // Le contexte de production (ADR-0013) : la barre du bureau le porte, le telephone le range ici, en dernier.
+    ...production
   ];
   return (
     <>

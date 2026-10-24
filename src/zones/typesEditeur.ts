@@ -6,6 +6,8 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
+import type { CodeConstat, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
+import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
@@ -40,6 +42,18 @@ export interface ModeleDessin {
   bibliotheque: Bibliotheque | 'a-charger' | null;
   versions: readonly Version[];
   presse: readonly Forme[];
+  /** Le jugement du dessin pour la machine du contexte (ADR-0013) ; null en Generique, ou avant la premiere analyse. */
+  preparation: EtatPreparation | null;
+}
+
+/** Ce que le panneau « Pret pour Cricut » montre : les constats d'un dessin pour un profil, ses couches et sa taille finale. */
+export interface EtatPreparation {
+  readonly profil: ProfilProduction;
+  /** Le dessin juge : le panneau suit le dessin d'un instant de retard, pour ne pas mesurer pendant un geste. */
+  readonly dessin: DessinSvg;
+  readonly constats: readonly Constat[];
+  readonly couches: readonly Couche[];
+  readonly taille: { readonly l: number; readonly h: number } | null;
 }
 
 /** L'outil, la vue et ce qui n'est que d'affichage : rien de ce qui s'ecrit dans le SVG. */
@@ -70,6 +84,12 @@ export interface EtatInterface {
   focale: Focale | null;
   /** La derniere phrase a dire aux lecteurs d'ecran (region unique, voir RegionVocale.tsx). */
   annonce: Annonce;
+  /** Le contexte de production choisi dans la barre (ADR-0013) : il s'ecrit dans le SVG, mais n'est pas dans l'historique. */
+  production: ChoixProduction;
+  /** Son profil resolu ; null en Generique. */
+  profil: ProfilProduction | null;
+  /** Le contexte a change depuis l'ouverture : il y a quelque chose a enregistrer meme sans modification du dessin. */
+  productionModifiee: boolean;
 }
 
 /**
@@ -144,6 +164,12 @@ export interface ActionsEditeur {
   supprimerNoeudFidele: () => void;
   /** Inverse le sens du tracé des formes choisies. */
   inverserSens: () => void;
+  /** Change le contexte de production (barre) ; un choix incoherent est ramene au plus proche valide, et dit. */
+  poserProduction: (c: ChoixProduction) => void;
+  /** Applique la correction d'un constat du panneau, rejuge sur le dessin du moment : une entree d'historique. */
+  corrigerConstat: (code: CodeConstat) => void;
+  /** Exporte pour la machine du contexte : le SVG de decoupe, ou l'archive Print Then Cut. */
+  exporterPourCricut: (nom: string) => void;
 }
 
 export interface Vues { vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void }

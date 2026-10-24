@@ -13,6 +13,7 @@ import { FORMES, estHex } from './aidesEditeur.js';
 import { MenuDeroulant } from './commun/Menu.js';
 import { MenuEdition, MenuFichier, MenuPlus, MenuVue } from './MenusBarre.js';
 import { useTelephone } from './Vue.js';
+import { SelecteurContexte } from './Production.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
@@ -121,9 +122,9 @@ const GroupeZoom = memo(function GroupeZoom() {
 
 /** Enregistrer, grise tant que rien n'a change : il en dit la raison (BoutonRaison) et reste dans l'ordre de Tab. */
 export function BoutonEnregistrer() {
-  const { h } = useDessin(), ac = useActions();
+  const { h } = useDessin(), ac = useActions(), { productionModifiee } = useInterface();
   return (
-    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length ? null : 'Aucune modification à enregistrer'} onClick={ac.enregistrerTout}>
+    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length || productionModifiee ? null : 'Aucune modification à enregistrer'} onClick={ac.enregistrerTout}>
       <Icone nom="enregistrer" /> Enregistrer
     </BoutonRaison>
   );
@@ -158,6 +159,7 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
         <MenuVue />
         <MenuEdition />
       </div>
+      <SelecteurContexte />
       <span className="espace" />
       <div className="groupe fin" role="group" aria-label="Fichier">
         <MenuFichier nom={nom} />

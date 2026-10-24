@@ -374,3 +374,41 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .credits-dialogue code { font-family: var(--mono); font-size: 0.82rem; }
 .credits-dialogue .actions { margin-top: 16px; justify-content: flex-end; }
 @media (forced-colors: active) { .credits-dialogue { border: 2px solid CanvasText; } }
+
+/* Le contexte de production (ADR-0013) : le selecteur de la barre, le panneau « Pret pour Cricut », le gabarit du tapis. */
+.selecteur-contexte .menu-bouton { max-width: 14rem; }
+.selecteur-contexte .menu-bouton span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panneau-cricut { margin-bottom: 6px; }
+.panneau-cricut .section > summary .aide { color: var(--encre-douce); }
+.resume-cricut { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0; font-size: 0.8rem; }
+.resume-cricut dt { color: var(--encre-douce); }
+.resume-cricut dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.resume-cricut .pastilles { display: inline-flex; gap: 2px; }
+.resume-cricut .pastille { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--filet); }
+.panneau-cricut .pret { margin: 6px 0; font-size: 0.82rem; font-weight: 600; color: var(--encre); }
+.panneau-cricut .titre-gravite { margin: 10px 0 4px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--encre-douce); }
+.panneau-cricut .constats { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.panneau-cricut .constat { padding: 6px 8px; border-left: 3px solid var(--filet); border-radius: 0 6px 6px 0; background: var(--panneau); font-size: 0.8rem; }
+.panneau-cricut .constat p { margin: 0 0 4px; color: var(--encre); }
+.panneau-cricut .constat-bloquant { border-left-color: var(--echec); background: var(--echec-fond); }
+.panneau-cricut .constat-bloquant p { color: var(--echec); }
+.panneau-cricut .constat-a-corriger { border-left-color: var(--alerte); background: var(--alerte-fond); }
+.panneau-cricut .constat-a-corriger p { color: var(--alerte); }
+.panneau-cricut .a-verifier { font-style: italic; }
+.panneau-cricut .constat .boutons { display: flex; flex-wrap: wrap; gap: 4px; }
+.panneau-cricut .export-cricut { margin: 10px 0 6px; }
+.aide-cricut > summary { display: flex; align-items: center; min-height: 24px; font-size: 0.76rem; color: var(--cyan); cursor: pointer; }
+.aide-cricut p { margin: 4px 0; }
+.editeur-svg-toile .gabarit-tapis { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--filet); stroke-width: 1; vector-effect: non-scaling-stroke; }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .gabarit-tapis { fill: var(--repli-cyan-10); } }
+.editeur-svg-toile .gabarit-quadrillage { stroke: var(--filet); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .gabarit-zone { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .forme-debordante { fill: none; stroke: var(--echec); stroke-width: 2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .zone-fine { fill: var(--alerte); fill-opacity: 0.55; stroke: var(--alerte); stroke-width: 6; stroke-opacity: 0.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+@media (pointer: coarse), (max-width: 900px) {
+  .aide-cricut > summary { min-height: 40px; }
+}
+@media (forced-colors: active) {
+  .panneau-cricut .constat { border-left-color: CanvasText; }
+  .editeur-svg-toile .gabarit-zone, .editeur-svg-toile .forme-debordante, .editeur-svg-toile .zone-fine { stroke: Highlight; }
+}

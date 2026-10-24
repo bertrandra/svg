@@ -10,14 +10,18 @@ import { MenuDeroulant } from './commun/Menu.js';
 import { copierSvg, exporterDecoupe, exporterDxf, exporterEps, exporterPdf, exporterPng, exporterRaster, exporterSvg, svgPropreDe, type ContexteExport } from './actionsExport.js';
 import { OptionsExportPanneau } from './OptionsExport.js';
 
-interface Proprietes { svg: string; dessin?: DessinSvg; nom: string; dire: (t: string) => void }
+interface Proprietes {
+  svg: string; dessin?: DessinSvg; nom: string; dire: (t: string) => void;
+  /** En contexte Cricut (ADR-0013) : l'export pour la machine, seule action primaire de ce panneau. */
+  pourCricut?: () => void;
+}
 
 // Ce que la personne a regle survit a la fermeture du menu (qui demonte son contenu) le temps de la session ;
 // rien n'est ecrit dans le navigateur.
 const session = { options: OPTIONS_EXPORT_DEFAUT, largeurPng: 1024, couleurDecoupe: '#ff0000' };
 
 /** Les boutons d'export, sans cadre : a poser dans un menu ou dans une section. */
-export function ContenuExport({ svg, dessin, nom, dire }: Proprietes) {
+export function ContenuExport({ svg, dessin, nom, dire, pourCricut }: Proprietes) {
   const [options, poserOptions] = useState<OptionsExport>(session.options);
   const [largeurPng, poserLargeurPng] = useState(session.largeurPng);
   const [couleurDecoupe, poserCouleurDecoupe] = useState(session.couleurDecoupe);
@@ -26,6 +30,15 @@ export function ContenuExport({ svg, dessin, nom, dire }: Proprietes) {
   const c: ContexteExport = { lu, svgPropre: svgPropreDe(lu, svg), nom, options, couleurDecoupe, largeurPng, dire };
   return (
     <div className="contenu-export" role="group" aria-label="Formats d’export">
+      {pourCricut ? (
+        <>
+          <p className="menu-titre">Cricut</p>
+          <div className="ligne-export">
+            <button type="button" className="primaire" onClick={pourCricut}>Exporter pour Cricut</button>
+            <span className="aide">taille physique, fonds pleins, une couleur par tapis</span>
+          </div>
+        </>
+      ) : null}
       <p className="menu-titre">Vectoriel</p>
       <div className="ligne-export">
         <button type="button" onClick={() => exporterSvg(c)}>SVG</button>

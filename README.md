@@ -44,6 +44,12 @@ s'embarque aussi comme composant React dans un autre produit.
 - **Récupérer le résultat** : SVG, SVG de découpe (contours seuls), PNG à la largeur voulue, PDF
   vectoriel, copie du code. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur (un test en navigateur, réseau coupé, le vérifie).
+- **Préparer pour une Cricut** : un contexte de production se choisit dans la barre (Joy, Explore, Maker ; tapis ;
+  papier cartonné ; découpe ou Print Then Cut ; pouces ou millimètres). Le tapis et sa zone utile s’affichent sur la toile,
+  le panneau « Prêt pour Cricut » juge le dessin en continu (traits, transparences, dépassement, tracés ouverts, nuances
+  proches, parties trop fines…) et propose pour chaque constat une correction annulable ; « Exporter pour Cricut » écrit un
+  SVG à taille physique, ou une archive Print Then Cut. Les valeurs encore à vérifier sur une machine sont dans
+  [`docs/cricut/protocole.md`](docs/cricut/protocole.md) (ADR-0013).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.
 - **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,
@@ -118,9 +124,9 @@ React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteu
 | Chemin | Rôle |
 |---|---|
 | `src/util/` | Primitives pures : lecture XML sans DOM, nettoyage d'un SVG, historique immuable, couleur (OKLab), lecture indexée sûre (`au`) |
-| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme |
+| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) |
 | `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
-| `src/export/` | Le PDF vectoriel et le SVG de découpe. Pur |
+| `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |

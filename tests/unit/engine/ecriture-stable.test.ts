@@ -16,8 +16,12 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
+import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { svgCricut } from '../../../src/export/cricut.js';
+import { printThenCut } from '../../../src/export/printThenCut.js';
+import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
@@ -110,6 +114,18 @@ const casser = (id: string, i: number) => (d: DessinSvg): DessinSvg => {
 };
 
 const palette = (id: string) => au(PALETTES.filter(p => p.id === id), 0).couleurs;
+
+/** Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), avec des choix en plus. */
+const profilCricut = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, ...choix });
+  if (!p) throw new Error('profil Cricut introuvable');
+  return p;
+};
+const pourCricut = (choix: Partial<ChoixMachine>) => (t: string): string => { const r = svgCricut(lire(t), profilCricut(choix)); return 'erreur' in r ? 'REFUSE : ' + r.erreur : r.svg; };
+const pourPrintThenCut = (fichier: 'impression' | 'coupe') => (t: string): string => {
+  const r = printThenCut(lire(t), profilCricut({ procede: 'imprimer-decouper' }));
+  return 'erreur' in r ? 'REFUSE : ' + r.erreur : r[fichier];
+};
 
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
 
@@ -251,7 +267,15 @@ const CAS: readonly Cas[] = [
   { nom: 'jonctions-joindre', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f1', 'f2'])).dessin },
   { nom: 'jonctions-fermer', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f4'])).dessin },
   { nom: 'jonctions-inverser', entree: 'jonctions', operation: d => inverserSens(d, ['f1', 'f3', 'f4']) },
-  { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }
+  { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' },
+  // Le contexte de production Cricut (ADR-0013) : des cas NEUFS. Sans contexte, rien ne change (toutes les references
+  // ci-dessus, et les empreintes de la bibliotheque, le prouvent) ; avec, le document enregistre porte sa marque `data-ed-*`
+  // sur la racine, et les exports pour la machine ont une taille physique, des fonds pleins et des octets figes.
+  { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT })))?.svg ?? 'REFUSE' },
+  { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
+  { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
+  { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
+  { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') }
 ];
 
 const produire = (cas: Cas): string => {

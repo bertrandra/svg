@@ -12,9 +12,13 @@ import { heriter, refusDe } from './heritage.js';
 import { analyser, proprietesDe } from './cascade.js';
 import { visiter, type Parcours } from './parcours.js';
 import { COORDONNEE_MAX, coordonneeSaine, CONFRONTATIONS_MAX } from './limites.js';
+import { lireProduction, type MarqueProduction } from './production.js';
 
-/** Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu. */
-export interface DessinLu { dessin: DessinSvg; ignores: readonly string[] }
+/**
+ * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
+ * `production` est la marque de contexte de la racine (production.ts), absente d'un SVG qui n'en porte pas.
+ */
+export interface DessinLu { dessin: DessinSvg; ignores: readonly string[]; production?: MarqueProduction }
 export type LectureDessin = DessinLu | { erreur: string };
 
 /** Le plan de travail d'un <svg> : son viewBox, a defaut ses dimensions ; null s'il n'a ni l'un ni l'autre. */
@@ -63,5 +67,6 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   // Une forme sans aucune commande (chemin vide, nombre illisible) ne se dessine pas : un SVG qui n'en a que de telles formes est vide.
   const formes = p.formes.filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
-  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores] };
+  const production = lireProduction(racine.attributs);
+  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores], ...(production ? { production } : {}) };
 }
