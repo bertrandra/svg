@@ -42,7 +42,7 @@
 .editeur-barre .zoom { height: 30px; min-width: 52px; padding: 0 4px; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: 6px; }
 .editeur-barre .zoom:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre .zoom:hover { background: var(--repli-cyan-12); } }
-.editeur-barre button.texte { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; font-size: 0.78rem; margin-left: 4px; }
+.editeur-barre button.texte, .editeur-etat button.texte { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; font-size: 0.78rem; margin-left: 4px; }
 .editeur-barre button.texte:disabled { opacity: 0.45; cursor: not-allowed; }
 .style-courant { gap: 6px; }
 .pastille-style { position: relative; display: inline-flex; align-items: center; }
@@ -55,6 +55,10 @@
 .editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; padding: 2px 10px; border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background: var(--repli-cyan-6-panneau); } }
 .editeur-barre-selection > .aide { min-width: 96px; padding-right: 6px; }
+/* Un bouton grise par aria-disabled (Enregistrer : il dit pourquoi, et reste dans l'ordre de Tab) se lit comme un bouton desactive, sans survol ni enfoncement. */
+button[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+button.primaire[aria-disabled="true"]:hover:not(:disabled) { background: var(--cyan); }
+button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-barre-selection .icone-bouton { width: 28px; height: 28px; }
 .editeur-svg-toile .grille { stroke: color-mix(in srgb, var(--cyan) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .grille { stroke: var(--repli-cyan-35); } }
@@ -212,6 +216,9 @@
 .options-export .grille-2 .champ-ligne input[type="text"] { width: 100%; }
 .transformations-numeriques { display: grid; gap: 6px; margin-top: 4px; }
 .transformations-numeriques > button { justify-self: start; }
+/* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
+.menu-rubrique > .menu-titre { margin: 8px 8px 2px; }
+.menu-rubrique + .menu-rubrique { margin-top: 4px; border-top: 1px solid var(--filet); }
 .versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .versions li { display: flex; gap: 4px; align-items: center; font-size: 0.75rem; }
 .versions .nom-version { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -233,8 +240,18 @@
 .editeur-etat .message-etat { min-width: 0; }
 .editeur-inspecteur textarea { font: inherit; font-size: 0.82rem; }
 @media (max-width: 900px) {
-  .editeur-barre, .editeur-barre-selection { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; gap: 0; }
-  .editeur-barre .espace { flex: 0 0 8px; }
+  /* La barre principale passe a la ligne au lieu de defiler : ce qu'on ne voit pas, on ne le cherche pas (Enregistrer et Fichier
+     etaient hors ecran). La rangee de la selection, plus longue, defile : un degrade au bord dit qu'il y a de la suite, et le
+     focus clavier y fait defiler le bouton focalise en vue (le navigateur le fait de lui-meme). Les caches « local » reprennent la
+     teinte de la rangee par son jeton de repli (la meme valeur que color-mix) : ils effacent l'ombre quand on est au bout. */
+  .editeur-barre-selection { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; gap: 0;
+    background: linear-gradient(to right, var(--repli-cyan-6-panneau) 30%, transparent) 0 0 / 28px 100% no-repeat local,
+      linear-gradient(to left, var(--repli-cyan-6-panneau) 30%, transparent) 100% 0 / 28px 100% no-repeat local,
+      linear-gradient(to right, var(--ombre-tiroir), transparent) 0 0 / 12px 100% no-repeat scroll,
+      linear-gradient(to left, var(--ombre-tiroir), transparent) 100% 0 / 12px 100% no-repeat scroll,
+      color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
+  @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background-color: var(--repli-cyan-6-panneau); } }
+  .editeur-barre-selection > * { flex: none; }
   .editeur-titre { display: none; }
   .editeur-etat .tiroirs { display: inline-flex; }
   .editeur-etat .tiroirs .icone-bouton { width: 26px; height: 26px; }
@@ -249,10 +266,10 @@
 @keyframes voile-entree { from { opacity: 0; } }
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
-  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, .icone-bouton.petit { width: 40px; height: 40px; }
+  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
   .chevron-seul .icone-bouton { width: 40px; margin-left: -2px; }
   button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
-  .editeur-barre .zoom, .editeur-barre button.texte, .menu-bouton.texte { height: 40px; }
+  .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
   .menu-element { min-height: 44px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
@@ -260,6 +277,21 @@
   .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
   .nuances-proches input[type="range"] { min-height: 40px; }
   .calques-actions button { min-width: 56px; }
+/* Un telephone (LARGEUR_TELEPHONE dans Vue.ts : meme valeur) : la barre garde deux lignes, les outils et « Plus » (vue, edition,
+   fichier, zoom) puis les couleurs et l'historique ; Enregistrer passe dans la barre d'etat, sous le pouce. Rien ne defile. */
+@media (max-width: 640px) {
+  .editeur-barre.telephone { padding: 4px 8px; }
+  .editeur-barre.telephone .groupe { padding: 0 4px; }
+  .editeur-barre.telephone .groupe.outils { border-right: 0; }
+  .editeur-barre.telephone .groupe.plus { margin-left: auto; border-right: 0; }
+  .editeur-barre.telephone .groupe:last-child { border-right: 0; }
+  .editeur-etat { flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 4px 8px; }
+  .editeur-etat .tiroirs { order: 1; }
+  .editeur-etat .espace { order: 2; }
+  .editeur-etat .compte-modifications { order: 3; }
+  .editeur-etat button.texte { order: 4; }
+  .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
+}
   input[type="text"], input[type="search"], select { min-height: 40px; }
   input[type="color"], .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 44px; height: 40px; }
   .pastille-style input[type="color"] { width: 40px; height: 40px; }
@@ -291,7 +323,7 @@
 @media (forced-colors: active) {
   button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, .saut:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
   .editeur-svg-toile:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
-  button:disabled { color: GrayText; border-color: GrayText; opacity: 1; }
+  button:disabled, button[aria-disabled="true"] { color: GrayText; border-color: GrayText; opacity: 1; }
   .icone-bouton[aria-pressed="true"], button.primaire, .pastille-style button.aucun.actif { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: HighlightText; }
   .icone-bouton[aria-pressed="true"] .icone, button.primaire .icone { color: HighlightText; }
   .icone-bouton[aria-expanded="true"], .menu-bouton.texte[aria-expanded="true"] { border: 2px solid Highlight; }

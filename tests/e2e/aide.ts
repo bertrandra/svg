@@ -211,7 +211,8 @@ export function nombreDeCalques(page: Page): Promise<number> {
 
 /** Ouvre un menu de la barre (Fichier, Edition, Vue) par son nom visible. */
 export async function ouvrirMenu(page: Page, nom: string) {
-  const bouton = page.locator('.menu-bouton', { hasText: nom });
+  const direct = page.locator('.menu-bouton', { hasText: nom });
+  const bouton = (await direct.count()) ? direct : page.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
   await bouton.click();
   return bouton;
 }

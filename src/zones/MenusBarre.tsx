@@ -8,16 +8,21 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { DialogueCredits } from './Credits.js';
 import { ContenuExport } from './Exporter.js';
 import { allerAuChamp } from './OutilsTrace.js';
-import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
+import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
-export function MenuVue() {
+/** Les elements du menu Vue. `avecZoom` ajoute zoomer et dezoomer, que la barre des petits ecrans ne porte plus. */
+function useElementsVue(avecZoom: boolean): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const { vues } = ui;
-  const elements: ElementMenu[] = [
+  return [
+    ...(avecZoom ? [
+      { id: 'zoomer', libelle: 'Zoomer', icone: 'zoom-plus', raccourci: '+', onClick: () => vues.zoomer(1.25) },
+      { id: 'dezoomer', libelle: 'Dézoomer', icone: 'zoom-moins', raccourci: '−', onClick: () => vues.zoomer(0.8) }
+    ] satisfies ElementMenu[] : []),
     { id: 'ajuster', libelle: 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0', onClick: vues.ajuster },
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
     { id: 'selection', libelle: 'Zoomer sur la sélection', icone: 'zoom-selection', raccourci: 'Z', desactive: !mo.sel.length, onClick: ac.zoomerSelection },
@@ -26,13 +31,16 @@ export function MenuVue() {
     { id: 'contours', libelle: 'Vue contours', raccourci: 'O', coche: ui.contours, onClick: () => ac.poserContours(c => !c) },
     ...FONDS.map(([f, icone, libelle], i): ElementMenu => ({ id: 'fond-' + f, libelle, icone, coche: ui.fond === f, separateur: i === 0, onClick: () => ac.poserFond(f) }))
   ];
-  return <MenuDeroulant etiquette="Vue" libelle="Vue" elements={elements} />;
 }
 
-export function MenuEdition() {
+export function MenuVue() {
+  return <MenuDeroulant etiquette="Vue" libelle="Vue" elements={useElementsVue(false)} />;
+}
+
+function useElementsEdition(): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const rien = !mo.sel.length;
-  const elements: ElementMenu[] = [
+  return [
     { id: 'annuler', libelle: 'Annuler', icone: 'annuler', raccourci: 'Ctrl+Z', desactive: !mo.h.passe.length, onClick: ac.defaire },
     { id: 'retablir', libelle: 'Rétablir', icone: 'retablir', raccourci: 'Ctrl+Maj+Z', desactive: !mo.h.futur.length, onClick: ac.refaire },
     { id: 'copier', libelle: 'Copier', icone: 'copier', raccourci: 'Ctrl+C', desactive: rien, separateur: true, onClick: ac.copierSelection },
@@ -52,26 +60,63 @@ export function MenuEdition() {
     { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !mo.formeSeule || sousChemins(mo.formeSeule.d).length < 2, onClick: ac.separerSelection },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ac.supprimerSelection }
   ];
-  return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={elements} />;
 }
 
-/** Fichier : enregistrer, telecharger, copier, credits, fermer, et les formats d'export en dessous. */
-export function MenuFichier({ nom }: { nom: string }) {
+export function MenuEdition() {
+  return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={useElementsEdition()} />;
+}
+
+/** Les elements du menu Fichier : enregistrer, telecharger, copier, credits, fermer. */
+function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void): ElementMenu[] {
   const mo = useDessin(), ac = useActions();
-  const [credits, poserCredits] = useState(false);
-  const elements: ElementMenu[] = [
+  return [
     { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length, onClick: ac.enregistrerTout },
     { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(ecrireDessin(mo.dessin, 3))).then(ac.dire); } },
     { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(ecrireDessin(mo.dessin, 3)).then(ok => ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.')); } },
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
+}
+
+/** Le panneau d'export, sous les elements du menu Fichier. */
+function PanneauExport({ nom }: { nom: string }) {
+  const mo = useDessin(), ac = useActions();
+  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} /></>;
+}
+
+/** La boite des credits : posee dans la racine de l'editeur, ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */
+function BoiteCredits({ fermer }: { fermer: () => void }) {
+  return <DialogueCredits fermer={fermer} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} />;
+}
+
+/** Fichier : enregistrer, telecharger, copier, credits, fermer, et les formats d'export en dessous. */
+export function MenuFichier({ nom }: { nom: string }) {
+  const [credits, poserCredits] = useState(false);
+  const elements = useElementsFichier(nom, poserCredits);
   return (
     <>
-      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements}
-        enfants={<><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} /></>} />
-      {/* Posee dans la racine de l'editeur : ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */}
-      {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} /> : null}
+      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} enfants={<PanneauExport nom={nom} />} />
+      {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+    </>
+  );
+}
+
+/**
+ * « Plus » : sous une largeur de telephone, la barre ne porte plus que les outils, les couleurs et l'historique ; Vue, Edition et
+ * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique, chacune avec ses raccourcis. Le zoom y entre aussi.
+ */
+export function MenuPlus({ nom }: { nom: string }) {
+  const [credits, poserCredits] = useState(false);
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits);
+  const sections: SectionMenu[] = [
+    { id: 'vue', titre: 'Vue', elements: vue },
+    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
+    { id: 'edition', titre: 'Édition', elements: edition }
+  ];
+  return (
+    <>
+      <MenuDeroulant etiquette="Plus d’actions : vue, édition, fichier" icone="options" chevron={false} alignement="droite" sections={sections} />
+      {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
     </>
   );
 }
