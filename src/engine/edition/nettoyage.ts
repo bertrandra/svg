@@ -4,6 +4,7 @@
 import type { Boite, DessinSvg, Forme } from './types.js';
 import { boiteForme, seCroisent, unir } from './geometrie.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
+import { boiteAvecTrait } from './etendue.js';
 import { memeTrait } from './trait.js';
 
 /** Retirer les formes pleines dont la boite couvre moins de `part` du plan de travail : les poussieres du trace. */
@@ -43,12 +44,13 @@ export function regrouper(dessin: DessinSvg): { dessin: DessinSvg; reunies: numb
   return { dessin: reunies ? { ...dessin, formes } : dessin, reunies };
 }
 
-/** Ramener le plan de travail au dessin visible, avec une marge en part de sa plus grande dimension. */
+/**
+ * Ramener le plan de travail au dessin visible, avec une marge en part de sa plus grande dimension. La boite de
+ * chaque forme compte son contour tel qu'il se peint (`boiteAvecTrait`) : pointes de jonction et bouts carres
+ * depassent la demi-epaisseur, et un plan trop juste les couperait.
+ */
 export function ajusterPlan(dessin: DessinSvg, marge = 0.02): DessinSvg {
-  const b = unir(dessin.formes.filter(f => f.visible).map(f => {
-    const x = boiteForme(f), e = f.contour ? f.epaisseur / 2 : 0;
-    return x && { x: x.x - e, y: x.y - e, l: x.l + 2 * e, h: x.h + 2 * e };
-  }));
+  const b = unir(dessin.formes.filter(f => f.visible).map(boiteAvecTrait));
   if (!b || !(b.l > 0) || !(b.h > 0)) return dessin;
   const m = Math.max(b.l, b.h) * marge;
   return { ...dessin, vb: [b.x - m, b.y - m, b.l + 2 * m, b.h + 2 * m] };

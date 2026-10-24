@@ -47,6 +47,8 @@ export interface EtatInterface {
   trace: readonly Point[];
   grille: boolean;
   aimants: boolean;
+  /** Les booleens rebatissent en courbes les contours qui l'etaient (defaut : oui) ; sinon ils rendent des segments droits. */
+  lisserBooleens: boolean;
   guides: readonly Aimant[];
   tiroir: Tiroir;
   contours: boolean;
@@ -81,6 +83,7 @@ export interface ActionsEditeur {
   poserTrace: (t: readonly Point[]) => void;
   poserGrille: (g: boolean) => void;
   poserAimants: (a: boolean) => void;
+  poserLisserBooleens: (l: boolean) => void;
   poserGuides: (g: readonly Aimant[]) => void;
   poserTiroir: (t: Tiroir) => void;
   poserContours: (f: boolean | ((c: boolean) => boolean)) => void;

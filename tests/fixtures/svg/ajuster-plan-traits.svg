@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
+  <!-- Un chevron a pointe (angle de 40 degres, limite 4 : la pointe sort de 5,8 du sommet) -->
+  <path d="M20 40 L120 76.397 L20 112.794" fill="none" stroke="#1428a0" stroke-width="4" stroke-linejoin="miter"/>
+  <!-- Un trait a bouts carres en diagonale : ses coins sortent de la boite des points -->
+  <path d="M150 150 L190 190" fill="none" stroke="#c81e28" stroke-width="12" stroke-linecap="square"/>
+  <!-- Un trait ordinaire : la demi-epaisseur seule -->
+  <path d="M220 20 L260 20 L260 60" fill="none" stroke="#228b22" stroke-width="6"/>
+</svg>

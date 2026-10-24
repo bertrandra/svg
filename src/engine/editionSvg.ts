@@ -49,6 +49,7 @@ export {
 export { visibilitesDe, restaurerVisibilites, visibilitesConformes, type Visibilites } from './edition/isolement.js';
 
 export { retirerPetites, regrouper, ajusterPlan } from './edition/nettoyage.js';
+export { boiteAvecTrait } from './edition/etendue.js';
 
 export { simplifierChemin, simplifier, compterPoints } from './edition/simplification.js';
 
