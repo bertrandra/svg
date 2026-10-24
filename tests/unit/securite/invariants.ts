@@ -15,10 +15,10 @@ export const ELEMENTS_PERMIS: ReadonlySet<string> = new Set([
 ]);
 
 /** Les elements et attributs de l'ecriture (`ecrireDessin`) : rien d'autre ne doit en sortir. */
-export const ELEMENTS_ECRITURE: ReadonlySet<string> = new Set(['svg', 'path']);
+export const ELEMENTS_ECRITURE: ReadonlySet<string> = new Set(['svg', 'path', 'metadata']);
 export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'xmlns', 'viewBox', 'width', 'height', 'd', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
-  'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity'
+  'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'data-origine'
 ]);
 
 const ESPACES_DE_NOMS_PERMIS = new Set([
@@ -217,6 +217,8 @@ export function violationsNettoyage(svg: string): string[] {
   return d;
 }
 
+/** La mention de provenance telle que l'ecriture la pose : des caracteres sans rien a echapper, des adresses fixes. */
+const MENTION_ECRITE = /^Contient des formes dont la source est [A-Za-z0-9 .-]+ \(https:\/\/[a-z0-9./-]+\), sous licence [A-Za-z0-9 .]+ \(https:\/\/[a-z0-9./.-]+\)\.(?: Origines : [a-z0-9:, -]+\.)?$/;
 const NOMBRE = /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
 /** Tous les defauts d'un SVG ecrit par `ecrireDessin` : seulement <svg> et <path>, des attributs connus, des valeurs sans texte libre. */
@@ -225,13 +227,15 @@ export function violationsEcriture(svg: string): string[] {
   if ('erreur' in a) return ['mal forme : ' + a.erreur];
   const d: string[] = [];
   if (a.cdata > 0) d.push('CDATA dans une ecriture');
-  if (a.textes.some(t => t.texte.trim() !== '')) d.push('texte dans une ecriture');
+  // Le seul texte permis est la mention d'attribution des formes creditees (model/credits.ts), dans <metadata> : une
+  // phrase fixe et des origines validees, jamais ce que l'entree contenait.
+  if (a.textes.some(t => t.texte.trim() !== '' && !(t.parent === 'metadata' && MENTION_ECRITE.test(t.texte)))) d.push('texte dans une ecriture');
   for (const e of a.elements) {
     if (!ELEMENTS_ECRITURE.has(e.nom)) d.push('element ecrit inattendu <' + e.nom.slice(0, 40) + '>');
     if ((e.nom === 'svg') !== (e.profondeur === 0)) d.push('<svg> hors de la racine');
     for (const [nom, valeur] of e.attributs) {
       if (!ATTRIBUTS_ECRITURE.has(nom)) { d.push('attribut ecrit inattendu ' + nom.slice(0, 40)); continue; }
-      if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
+      if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
         if (!/^[MLCQZ0-9eE.,\s+-]*$/.test(valeur)) d.push('chemin avec des caracteres inattendus');
       } else if (nom === 'fill' || nom === 'stroke') {
         // Une couleur #rrggbb, none, ou un mot-cle CSS en lettres : jamais d'adresse, de fonction ni de ponctuation.
