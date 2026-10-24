@@ -5,12 +5,8 @@
 //
 //   npm run vtracer            -> dist/vtracer.js
 
-import { build } from 'esbuild';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { readFileSync } from 'node:fs';
+import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo, estLance } from './aide.mjs';
 
 // vtracer est construit pour Node : sa colle lit le .wasm sur le disque et le compile de facon
 // synchrone, ce que Chrome refuse au-dela de 4 Ko sur le fil principal. On remplace ces lignes par une
@@ -31,22 +27,20 @@ const vtracerNavigateur = {
 
 /** Le script compile, sans l'ecrire : les tests l'executent tel que la page le chargera. */
 export async function compilerVtracer() {
-  const { outputFiles } = await build({
-    entryPoints: [join(racine, 'outils/editeur-svg/vtracer-entree.ts')],
-    bundle: true, format: 'iife', target: 'es2020', minify: true, write: false,
+  return empaqueter({
+    entryPoints: [depuisRacine('outils/editeur-svg/vtracer-entree.ts')],
+    bundle: true, format: 'iife', target: 'es2020', minify: true,
     plugins: [vtracerNavigateur], loader: { '.wasm': 'binary' }
   });
-  return outputFiles[0]?.text ?? '';
 }
 
 export async function construireVtracer() {
   const texte = await compilerVtracer();
-  mkdirSync(join(racine, 'dist'), { recursive: true });
-  writeFileSync(join(racine, 'dist/vtracer.js'), texte);
+  ecrireDansDist('vtracer.js', texte);
   return { octets: texte.length };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (estLance(import.meta.url)) {
   const r = await construireVtracer();
-  console.log('Traceur construit : dist/vtracer.js (' + Math.round(r.octets / 1024) + ' Ko).');
+  annoncer('Traceur construit', 'vtracer.js', enKo(r.octets) + ' Ko');
 }

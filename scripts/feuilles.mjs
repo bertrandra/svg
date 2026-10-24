@@ -8,18 +8,17 @@
 // La page les remet a leur place, entre ses propres regles (page.html : /*JETONS*/, /*STYLE_BASE*/,
 // /*STYLE_EDITEUR*/), pour que la cascade reste celle d'avant ; l'embarquement les concatene.
 
-import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { depuisRacine, empaqueter } from './aide.mjs';
 
 /** Le CSS des jetons, tel que le registre le genere : on compile le registre et on l'importe. */
-async function cssDesJetons(racine) {
-  const r = await build({ entryPoints: [join(racine, 'src/styles/jetons.ts')], bundle: true, format: 'esm', target: 'es2020', write: false });
-  const { cssJetons } = await import('data:text/javascript;base64,' + Buffer.from(r.outputFiles[0]?.text ?? '').toString('base64'));
+async function cssDesJetons() {
+  const code = await empaqueter({ entryPoints: [depuisRacine('src/styles/jetons.ts')], bundle: true, format: 'esm', target: 'es2020' });
+  const { cssJetons } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
   return cssJetons();
 }
 
-export async function feuillesEditeur(racine) {
-  const lire = fichier => readFileSync(join(racine, 'outils/editeur-svg', fichier), 'utf8');
-  return { jetons: await cssDesJetons(racine), base: lire('base.css'), editeur: lire('editeur.css') };
+export async function feuillesEditeur() {
+  const lire = fichier => readFileSync(depuisRacine('outils/editeur-svg', fichier), 'utf8');
+  return { jetons: await cssDesJetons(), base: lire('base.css'), editeur: lire('editeur.css') };
 }
