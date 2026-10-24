@@ -17,6 +17,15 @@ empreintes.
   Avec un trait, `fill-opacity` n'estompe plus le trait. `hsl()` et `rgb(0 128 255 / 40%)` se lisent ;
   les 148 noms de couleur CSS se ramènent à `#rrggbb` (`steelblue` s'écrit `#4682b4`) ; une opacité
   en pourcentage ou illisible n'invisibilise plus la forme.
+- **La peinture de la balise `<svg>` racine se transmet aux formes** (`fill`, `stroke`, `stroke-width`,
+  opacités, `fill-rule`, `color`…) : une icône de type Feather (`fill="none" stroke="currentColor"`) s'ouvre
+  en traits, plus en noir plein ; l'opacité de la racine vaut pour tout le dessin. `currentColor` prend la
+  couleur courante de la forme (`color`, héritée, noire par défaut). Un masque, une découpe ou un filtre
+  posé sur la racine refuse le SVG, comme sur un groupe.
+- **Les pointillés, bouts, jonctions et limites de pointe sont lus, gardés et réécrits**
+  (`stroke-dasharray`, `-dashoffset`, `-linecap`, `-linejoin`, `-miterlimit`) ; une jonction non précisée
+  s'écrit toujours arrondie. Les longueurs de pointillés suivent l'épaisseur à la mise à l'échelle, la
+  limite de pointe non. `ignores` ne les signale plus.
 - **`stroke-width="0"` reste 0** : un trait invisible ne devient plus visible (il s'écrivait `1`). Le PDF
   ne trace plus un trait d'épaisseur nulle, et il sépare l'opacité du fond (`ca`) de celle du trait (`CA`).
 - **Texte** : le crénage des fontes Inter, Inter gras, Playfair Display gras et Fredoka est lu dans la
@@ -77,7 +86,8 @@ empreintes.
 - **À l'ouverture d'un SVG**, une phrase dit ce que la lecture n'a pas repris (marqueurs, pointillés,
   bouts et jonctions de trait, règles de style hors classe, peinture de la balise `<svg>`, animations) ;
   le panneau du dessin la répète. `lireDessin` rend pour cela `ignores`.
-- **L'inspecteur règle l'opacité du fond et celle du contour.**
+- **L'inspecteur règle l'opacité du fond et celle du contour, le bout, la jonction et le style du trait**
+  (plein, tirets, pointillés, mixte) ; la toile et le PDF (`J`, `j`, `M`, `d`) les dessinent.
 - **« Simplifier les tracés »** dans « Nettoyer le tracé » : retire les points inutiles des segments
   droits au seuil choisi ; courbes et formes verrouillées intactes (moteur : `simplifierChemin`,
   `simplifier`).

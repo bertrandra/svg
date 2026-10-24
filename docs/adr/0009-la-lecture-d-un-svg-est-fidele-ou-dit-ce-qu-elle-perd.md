@@ -29,7 +29,14 @@ lecture laissait tomber sans refuser (pointillés, bouts de trait, marqueurs…)
 
 - Les 26 références existantes et les 4 134 empreintes de la bibliothèque n'ont pas bougé : seuls les
   cas fautifs (`fidelite-lecture`, `booleens-*`) sont réécrits.
-- Restent signalés, non portés par le modèle (un autre événement majeur si on les porte) : pointillés,
-  bouts et jonctions de trait, marqueurs, règles de style hors classe, animations. Aussi, la peinture
-  posée sur la balise `<svg>` racine (`fill="none" stroke="currentColor"`, icônes de type Feather) n'est
-  pas héritée : ces formes s'importent en noir plein.
+- Le modèle `Forme` porte aussi `pointilles` (la liste paire normalisée, « 5 3 2 » devient
+  `[5, 3, 2, 5, 3, 2]`), `decalagePointilles`, `bout`, `jonction` et `limiteMitre`, tous absents quand ils
+  valent ce que l'écriture produisait déjà. Une jonction non précisée se lit arrondie (et non « miter »,
+  le défaut de la spécification), pour qu'aucun octet existant ne bouge ; seule une jonction non arrondie
+  explicite change la sortie. Épaisseur et longueurs de pointillés se mettent à l'échelle du même facteur
+  `sqrt(|det|)` ; la limite de pointe, rapport de la pointe à l'épaisseur, ne s'échelonne pas.
+- La peinture de la balise `<svg>` racine est héritée comme celle d'un `<g>`, et `currentColor` se
+  résout à la forme.
+- Restent signalés (`ignores`), non portés par le modèle : les marqueurs, les règles de style dont le
+  sélecteur n'est pas une classe, les animations, les pointillés en pourcentage ou hors du pixel, les
+  jonctions `arcs` et `miter-clip`. `ajusterPlan` ne compte pas les pointes de jonction ni les bouts carrés.
