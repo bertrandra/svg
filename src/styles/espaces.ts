@@ -36,6 +36,7 @@ export const COUCHES: readonly Mesure[] = [
   { id: 'couche-tiroir', valeur: '15', description: 'Les panneaux en tiroir sur tablette et téléphone' },
   { id: 'couche-saut', valeur: '40', description: 'Le lien d’évitement vers la toile' },
   { id: 'couche-editeur', valeur: '1000', description: 'L’éditeur en plein écran au-dessus de la page' },
+  { id: 'couche-visite', valeur: '1050', description: 'La bulle de la visite guidée et son repère : au-dessus de l’éditeur et de ses tiroirs, sous les menus' },
   { id: 'couche-menu', valeur: '1100', description: 'Les menus déroulants, au-dessus de l’éditeur' },
   { id: 'couche-dialogue', valeur: '1200', description: 'Le voile et la boîte « À propos et crédits »' }
 ];

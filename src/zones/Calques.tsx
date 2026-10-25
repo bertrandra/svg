@@ -10,6 +10,7 @@ import { ParCouleur } from './ParCouleur.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BoutonRaison } from './commun/BoutonRaison.js';
+import { EtatVide } from './commun/EtatVide.js';
 
 /** La liste des formes, du premier plan au fond : tout choisir ou rien, masquer, verrouiller. */
 export const Calques = memo(function Calques() {
@@ -50,6 +51,8 @@ export const Calques = memo(function Calques() {
       <ParCouleur />
       <h4>Formes</h4>
       <ol ref={liste} style={actif ? { paddingTop: fenetre.haut, paddingBottom: fenetre.bas, boxSizing: 'border-box', minHeight: fenetre.hauteur, alignContent: 'start' } : undefined}>{lignes}</ol>
+      {/* Un dessin sans forme ne s'ouvre pas : une liste vide est un dessin qu'on a vide, le retour est a Ctrl+Z. */}
+      {total ? null : <EtatVide genre="vide" titre="Toutes les formes ont été retirées.">Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>}
     </aside>
   );
 });

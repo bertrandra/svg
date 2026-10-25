@@ -12,9 +12,11 @@ import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
 import { phraseIgnores } from './aidesEditeur.js';
 import { FournisseurStockage } from './contexteStockage.js';
+import { FournisseurReperes, useReperes, type OptionsGuide } from './contexteGuide.js';
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
 import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
+import { insecables } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
@@ -45,7 +47,7 @@ const sansExtension = (nom: string) => nom.replace(/\.svg$/i, '').trim() || 'des
 
 /** La page : l'accueil, avec le stockage du navigateur pour ce qu'elle garde (brouillon, corrections) et pour l'editeur. */
 export function Application() {
-  return <FournisseurStockage stockage={STOCKAGE}><Accueil /></FournisseurStockage>;
+  return <FournisseurStockage stockage={STOCKAGE}><FournisseurReperes actif><Accueil /></FournisseurReperes></FournisseurStockage>;
 }
 
 function Accueil() {
@@ -56,6 +58,15 @@ function Accueil() {
   const [message, dire] = useState('');
   const [credits, poserCredits] = useState(false);
   const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon(STOCKAGE));
+  // La visite guidee ne s'ouvre d'elle-meme que si on l'a demandee (« Essayer avec la visite guidée ») : ouvrir l'exemple
+  // tout court ouvre l'exemple, rien d'autre (ADR-0019). Le menu Aide de l'editeur la rejoue.
+  const [visiteDemandee, demanderVisite] = useState(false);
+  const guide = useMemo<OptionsGuide>(() => ({
+    demarrer: visiteDemandee ? 'toujours' : 'jamais',
+    recuperer: 'telecharger',
+    // Une suite de la fin de visite : l'editeur s'est enregistre et ferme, la voie « Convertir une image » prend la main.
+    convertir: () => { poserVoie('image'); requestAnimationFrame(() => document.getElementById('voie-image')?.focus()); }
+  }), [visiteDemandee]);
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
   // Chaque modification dans l'editeur laisse un brouillon : un rechargement ne perd rien.
   const garder = useCallback((svg: string) => { if (fichier) garderBrouillon(STOCKAGE, fichier.nom, svg, Date.now()); }, [fichier]);
@@ -132,7 +143,7 @@ function Accueil() {
           ))}
         </div>
         {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
-        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} essayer={() => { demanderVisite(true); ouvrir('exemple', EXEMPLE); }} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg))} /></div>
       </section>
@@ -142,7 +153,7 @@ function Accueil() {
         <label className="champ">
           <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
           <textarea rows={5} value={nuancierTexte} spellCheck={false} onChange={e => poserNuancierTexte(e.target.value)} />
-          <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue : l’éditeur proposera seulement le sélecteur.'}</span>
+          <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue. Écrivez une teinte par ligne, par exemple « Rouge #c81e28 » ; sans teinte, l’éditeur ne propose que le sélecteur de couleur.'}</span>
         </label>
       </details>
 
@@ -153,16 +164,32 @@ function Accueil() {
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE}
-          fermer={() => poserEdition(false)}
-          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide}
+          fermer={() => { poserEdition(false); demanderVisite(false); }}
+          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); demanderVisite(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
       ) : null}
     </main>
   );
 }
 
+/**
+ * La premiere fois (la visite n'a jamais ete vue, ni dans ce navigateur, ni dans cette session sans stockage) : une phrase
+ * oriente vers l'essai guide sur l'exemple. Un bouton discret, pas une seconde action pleine (ADR-0006) ; une fois la visite
+ * vue, la phrase s'efface et le menu Aide de l'editeur la rejoue.
+ */
+function Invitation({ essayer }: { essayer: () => void }) {
+  const { memoire } = useReperes();
+  if (memoire.visite) return null;
+  return (
+    <p className="invitation">
+      <span>{insecables('Première fois ? Essayez avec notre exemple : changez une couleur en une minute.')}</span>
+      <button type="button" className="discret" onClick={essayer}>Essayer avec la visite guidée</button>
+    </p>
+  );
+}
+
 /** Deposer un fichier SVG, en coller le code, ou ouvrir l'exemple. */
-function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void }) {
+function OuvrirSvg({ ouvrir, essayer }: { ouvrir: (nom: string, texte: string) => void; essayer: () => void }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);
@@ -188,6 +215,7 @@ function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void })
           <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
         </div>
         <input ref={entree} type="file" accept=".svg,image/svg+xml" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
+        <Invitation essayer={essayer} />
       </div>
       <label className="champ">
         <span>Ou collez le code d’un SVG</span>

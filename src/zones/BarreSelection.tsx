@@ -5,6 +5,7 @@ import { memo } from 'react';
 import { aligner, retourner, sousChemins, tourner, type Alignement, type Ordre } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
 import { useActions, useDessin } from './contexteEditeur.js';
+import { useReperes } from './contexteGuide.js';
 import { Bouton } from './commun/Bouton.js';
 import { empiler } from './empilement.js';
 import type { NomIcone } from './icones.js';
@@ -23,7 +24,7 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 
 /** La rangee de la selection : aligner, retourner, tourner, empiler, booleens, combiner, separer, et le reste d'un geste. */
 export const BarreSelection = memo(function BarreSelection() {
-  const { sel, formeSeule, dessin } = useDessin(), ac = useActions();
+  const { sel, formeSeule, dessin } = useDessin(), ac = useActions(), { rencontrer } = useReperes();
   if (!sel.length) return null;
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
   const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
@@ -43,7 +44,7 @@ export const BarreSelection = memo(function BarreSelection() {
         {ORDRES_ICONES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} onClick={() => empiler(ac, dessin, sel, o)} />)}
       </div>
       <div className="groupe" role="group" aria-label="Booléens">
-        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => ac.booleen(op)} />)}
+        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => { if (ac.booleen(op)) rencontrer('booleen'); }} />)}
       </div>
       <div className="groupe" role="group" aria-label="Formes">
         <Bouton icone="combiner" aide="Combiner en une forme (Ctrl+G)" disabled={sel.length < 2} onClick={ac.combinerSelection} />

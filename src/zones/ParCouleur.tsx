@@ -10,6 +10,7 @@
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { couleursProches, lireCouleurs, type LectureCouleurs, type SurCouleur } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { ListeCouleurs } from './ListeCouleurs.js';
@@ -64,7 +65,9 @@ export function ParCouleur() {
       ) : null}
       {groupes.length ? (
         <ListeCouleurs groupes={groupes} choisies={mo.choisies} sur={sur} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
-      ) : <p className="aide">Aucune forme n’a de {sur === 'contour' ? 'contour' : 'remplissage'}.</p>}
+      ) : sur === 'tout'
+        ? <EtatVide genre="aucun-resultat" titre="Aucune forme n’a de couleur." />
+        : <EtatVide genre="aucun-resultat" titre={'Aucune forme n’a de ' + (sur === 'contour' ? 'contour' : 'remplissage') + '.'} action={{ libelle: 'Lire le fond et le trait', onClick: () => poserSur('tout') }} />}
       <div className="nuances-proches">
         <label className="champ-ligne">
           <span>Tolérance</span>

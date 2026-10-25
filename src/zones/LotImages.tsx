@@ -8,6 +8,7 @@ import { ecrireZip, ErreurZip, nomsUniques } from '../export/zip.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import type { Traitement } from '../io/image.js';
 import { convertirLot, sansExtension, type EtatLot, type ImageDuLot } from '../io/lot.js';
+import { EtatVide } from './commun/EtatVide.js';
 
 const LIBELLES: Record<EtatLot, string> = { attente: 'En attente', encours: 'En cours…', ok: 'Terminée', erreur: 'Échec', annule: 'Annulée' };
 
@@ -77,6 +78,9 @@ export function LotImages({ fichiers, traitement, ouvrir, fermer }: Proprietes) 
           </li>
         ))}
       </ul>
+      {!enCours && liste.length && !reussies.length ? (
+        <EtatVide genre="aucun-resultat" titre="Aucune image n’a été convertie.">Changez un réglage plus haut (le fond, la forme), puis « Refaire avec les réglages actuels ».</EtatVide>
+      ) : null}
       <div className="actions">
         {enCours ? <button type="button" onClick={() => { annule.current = true; dire('Annulation après l’image en cours…'); }}>Annuler le lot</button> : null}
         <button type="button" className={enCours ? 'discret' : 'primaire'} disabled={enCours || reussies.length === 0} onClick={telecharger}>Télécharger tout (ZIP)</button>

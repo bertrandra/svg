@@ -11,6 +11,7 @@ import { apercuDetoure, resumeConversion, type ApercuPretraite, type ImageConver
 import { Icone, type NomIcone } from './icones.js';
 import { ReglagesFinsPanneau } from './ReglagesFins.js';
 import { ReglagesPretraitementPanneau } from './ReglagesPretraitement.js';
+import { Repere } from './Repere.js';
 
 export const NOMS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)' };
 export const NOMS_FINESSES: Record<Finesse, string> = { fine: 'Fin : garde les petits détails', normale: 'Normal', lisse: 'Lisse : des courbes franches' };
@@ -117,6 +118,11 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             <input type="range" min={0} max={100} value={rideau} aria-label="Position du rideau" onChange={e => poserRideau(Number(e.target.value))} />
             <span className="aide">Vecteurs</span>
           </label>
+        ) : null}
+        {resultat && resultat.traces !== null ? (
+          <Repere id="conversion" titre="Votre image est devenue des formes">
+            La vue « Comparer » pose l’image d’origine et le résultat côte à côte. Trop de petites formes ? Passez le grain à « Lisse » ; trop peu ? à « Fin ». Puis « Ouvrir dans l’éditeur » pour recolorer chaque forme.
+          </Repere>
         ) : null}
         {resultat ? (
           <div className="fiche-resultat">

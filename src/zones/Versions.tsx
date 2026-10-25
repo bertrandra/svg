@@ -7,11 +7,13 @@ import { svgDocument } from './actionsProduction.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
+import { useStockage } from './contexteStockage.js';
 import { dateCourte } from './session.js';
 
 export function PanneauVersions() {
-  const mo = useDessin(), ac = useActions(), { production } = useInterface();
+  const mo = useDessin(), ac = useActions(), { production } = useInterface(), stockage = useStockage();
   const [nom, poserNom] = useState('');
   const garder = () => { ac.garderVersion(nom.trim() || 'Version ' + (mo.versions.length + 1), svgDocument(mo.dessin, production)); poserNom(''); };
   const revenir = (svg: string, nomVersion: string) => {
@@ -38,7 +40,12 @@ export function PanneauVersions() {
             </li>
           ))}
         </ul>
-      ) : <p className="aide">Aucune version gardée. Les versions restent dans ce navigateur.</p>}
+      ) : (
+        <EtatVide genre="premiere-fois" icone="versions" titre="Aucune version gardée.">
+          {'Une version garde le dessin tel qu’il est, pour y revenir plus tard (avant de tout recolorer, par exemple) : nommez-la, puis « Garder ». '
+            + (stockage ? 'Elle reste dans ce navigateur.' : 'Ici, elle ne dure que le temps de l’édition.')}
+        </EtatVide>
+      )}
       {mo.versions.length ? <button type="button" className="discret" onClick={() => { void proposer('versions.json', texteOctets(JSON.stringify(mo.versions, null, 1))).then(ac.dire); }}>Exporter les versions (JSON)</button> : null}
     </Section>
   );

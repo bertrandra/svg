@@ -8,6 +8,7 @@ import { chargerBibliotheque, type Bibliotheque } from '../io/bibliotheque.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { useStockage } from './contexteStockage.js';
 import { Icone } from './icones.js';
+import { EtatVide } from './commun/EtatVide.js';
 
 // Les corrections ne se gardent que si la page donne un stockage ; sans lui, elles vivent le temps de la page.
 const CLE_CORRECTIONS = 'svg.corrections';
@@ -76,6 +77,12 @@ export function RechercheFormes({ bibliotheque, choisir, ajouter, corriger = fal
       <p className="aide" aria-live="polite">{resultats.length} forme{resultats.length > 1 ? 's' : ''}{resultats.length !== entrees.length ? ' sur ' + entrees.length : ''}
         {corriger && nCorrections ? <> · {nCorrections} correction{nCorrections > 1 ? 's' : ''} <button type="button" className="discret" onClick={() => { void proposer('corrections.json', texteOctets(JSON.stringify(corrections, null, 1))).then(() => undefined); }}>Exporter les corrections</button></> : null}
       </p>
+      {resultats.length ? null : (
+        <EtatVide genre="aucun-resultat" titre={texte.trim() ? 'Aucune forme ne répond à « ' + texte.trim() + ' »' + (evenement ? ' pour cet événement.' : '.') : 'Aucune forme pour cet événement.'}
+          action={{ libelle: 'Effacer la recherche', onClick: () => { poserTexte(''); poserEvenement(null); poserPage(1); } }}>
+          Les noms sont en français : essayez un mot plus court, au singulier, ou « Tous les événements ».
+        </EtatVide>
+      )}
       <ul className="grille-formes">
         {montres.map(x => (
           <li key={x.id} className={enEdition === x.id ? 'en-edition' : undefined}>

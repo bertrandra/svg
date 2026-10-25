@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pluriel } from '../../../src/util/texte.js';
+import { insecables, pluriel } from '../../../src/util/texte.js';
 
 describe('pluriel', () => {
   it('laisse au singulier zero et un', () => {
@@ -14,5 +14,13 @@ describe('pluriel', () => {
 
   it('accepte un mot compose sans le toucher', () => {
     expect(pluriel(3, 'petite forme')).toBe('3 petite formes');
+  });
+});
+
+describe('insecables', () => {
+  it('pose une espace insecable avant ; : ? ! et », apres «, et nulle part ailleurs', () => {
+    expect(insecables('Première fois ? Essayez : « Plus » ; voilà !')).toBe('Première fois\u00a0? Essayez\u00a0: «\u00a0Plus\u00a0»\u00a0; voilà\u00a0!');
+    expect(insecables('Ctrl+Z, puis Tab.')).toBe('Ctrl+Z, puis Tab.');
+    expect(insecables('déjà\u00a0: rien')).toBe('déjà\u00a0: rien');
   });
 });

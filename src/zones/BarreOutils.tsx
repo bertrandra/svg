@@ -12,6 +12,8 @@ import { BoutonRaison } from './commun/BoutonRaison.js';
 import { FORMES, estHex } from './aidesEditeur.js';
 import { MenuDeroulant } from './commun/Menu.js';
 import { MenuEdition, MenuFichier, MenuPlus, MenuVue } from './MenusBarre.js';
+import { MenuAide } from './AideEditeur.js';
+import { useSignalVisite } from './contexteGuide.js';
 import { useTelephone } from './Vue.js';
 import { SelecteurContexte } from './Production.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
@@ -122,9 +124,9 @@ const GroupeZoom = memo(function GroupeZoom() {
 
 /** Enregistrer, grise tant que rien n'a change : il en dit la raison (BoutonRaison) et reste dans l'ordre de Tab. */
 export function BoutonEnregistrer() {
-  const { h } = useDessin(), ac = useActions(), { productionModifiee } = useInterface();
+  const { h } = useDessin(), ac = useActions(), { productionModifiee } = useInterface(), signaler = useSignalVisite();
   return (
-    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length || productionModifiee ? null : 'Aucune modification à enregistrer'} onClick={ac.enregistrerTout}>
+    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length || productionModifiee ? null : 'Aucune modification à enregistrer'} onClick={() => { signaler('recupere'); ac.enregistrerTout(); }}>
       <Icone nom="enregistrer" /> Enregistrer
     </BoutonRaison>
   );
@@ -158,6 +160,7 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       <div className="groupe menus" role="group" aria-label="Menus">
         <MenuVue />
         <MenuEdition />
+        <MenuAide />
       </div>
       <SelecteurContexte />
       <span className="espace" />

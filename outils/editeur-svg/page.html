@@ -17,8 +17,12 @@
 .tete h1 { font-size: var(--texte-titre-page); font-weight: 700; letter-spacing: -0.01em; margin: 0 0 var(--esp-s); }
 .tete p { margin: 0; color: var(--encre-douce); max-width: 70ch; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--esp-m); }
-.depot { border: 2px dashed var(--filet); border-radius: var(--rayon-carte); padding: var(--esp-2xl) var(--esp-xl); display: grid; gap: var(--esp-m); justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
+.depot { border: 2px dashed var(--filet); border-radius: var(--rayon-carte); padding: var(--esp-xl); display: grid; gap: var(--esp-m); justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
 .depot p { margin: 0; color: var(--encre-douce); }
+/* La premiere fois : une phrase et un bouton discret sous les deux actions du depot (ADR-0019) ; jamais une seconde action pleine.
+   Le bouton se lit comme un lien de la phrase (sans marge), pour que la ligne ne pousse pas la page plus bas qu'une ligne de texte. */
+.invitation { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--esp-s); }
+.invitation .discret { padding: 0 var(--esp-2xs); }
 .depot.survol { border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .depot.survol { background: var(--repli-cyan-8-panneau); } }
 .colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--esp-xl); }

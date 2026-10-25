@@ -18,6 +18,7 @@ import type { Stockage } from '../io/stockage.js';
 import { Cadre } from './Cadre.js';
 import { FournisseurSections } from './commun/Section.js';
 import { FournisseurEditeur } from './contexteEditeur.js';
+import { FournisseurReperes, FournisseurVisite, type OptionsGuide } from './contexteGuide.js';
 import { FournisseurStockage } from './contexteStockage.js';
 import { useEtatEditeur } from './etatEditeur.js';
 import { useFocusEditeur } from './focusEditeur.js';
@@ -49,6 +50,11 @@ export interface ProprietesEditeur {
    * magasin). La page lui donne celui du navigateur (`stockageNavigateur`), un hote ce qu'il veut.
    */
   stockage?: Stockage | null;
+  /**
+   * L'accueil guide (ADR-0019) : la visite de l'editeur, son menu, et les reperes de premiere rencontre. Absent : ni l'un ni
+   * l'autre, l'editeur se tait (un hote qui ne l'a pas demande). La page le donne toujours ; l'embarquement sur `visite: true`.
+   */
+  guide?: OptionsGuide | null;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -84,7 +90,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide }: ProprietesEditeur) {
   const lu = useMemo(() => lireDessinMemo(svg), [svg]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
@@ -103,7 +109,9 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
         </div>
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
-          <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>
+          <FournisseurReperes actif={!!guide}>
+            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null} /></FournisseurSections>
+          </FournisseurReperes>
         </FournisseurStockage>
       )}
     </div>,
@@ -113,15 +121,17 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 
 interface ProprietesAtelier {
   initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined;
+  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined; guide: OptionsGuide | null;
 }
 
 /** Garde l'etat de l'editeur et le donne aux contextes ; le dessin de l'ecran est dans `Cadre`. */
-function Atelier({ titre, nom, ...p }: ProprietesAtelier) {
+function Atelier({ titre, nom, guide, ...p }: ProprietesAtelier) {
   const e = useEtatEditeur(p);
   return (
     <FournisseurEditeur dessin={e.modele} actions={e.actions} etat={e.etat}>
-      <Cadre titre={titre} nom={nom} toile={e.toile} svgRef={e.svgRef} />
+      <FournisseurVisite options={guide}>
+        <Cadre titre={titre} nom={nom} toile={e.toile} svgRef={e.svgRef} />
+      </FournisseurVisite>
     </FournisseurEditeur>
   );
 }

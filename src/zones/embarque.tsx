@@ -41,6 +41,12 @@ export interface OptionsEmbarquees {
   stockage?: Stockage | false | null;
   /** Fermer l'editeur des que le dessin est enregistre. Vrai par defaut, comme la page. */
   fermerApresEnregistrer?: boolean;
+  /**
+   * L'accueil guide (ADR-0019) : la visite guidee de l'editeur (une fois, a la premiere ouverture, puis depuis le menu Aide) et les
+   * reperes de premiere rencontre, retenus dans `stockage` (cle `svg.guide`). Faux par defaut : un hote ne recoit pas de bulle
+   * qu'il n'a pas demandee.
+   */
+  visite?: boolean;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
   onEnregistrer: (svg: string) => void;
   /** Appelee une fois, quand l'editeur se ferme, quelle qu'en soit la cause. */
@@ -87,7 +93,7 @@ export function verifierOptions(options: unknown): string | null {
   if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
     return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
   }
-  if (o.fermerApresEnregistrer !== undefined && typeof o.fermerApresEnregistrer !== 'boolean') return 'L’option « fermerApresEnregistrer » doit être vraie ou fausse.';
+  for (const cle of ['fermerApresEnregistrer', 'visite'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
   return null;
 }
 
@@ -101,6 +107,9 @@ export function stockageDe(option: Stockage | false | null | undefined): Stockag
   if (option === undefined) return stockageNavigateur();
   return option === false || option === null ? null : stockageProtege(option);
 }
+
+/** La visite chez un hote : une fois tant que sa memoire ne l'a pas vue, et le dessin se recupere par « Enregistrer ». */
+const GUIDE_HOTE = { demarrer: 'si-nouveau', recuperer: 'enregistrer' } as const;
 
 const ID_STYLE = 'editeur-svg-embarque-style';
 
@@ -174,7 +183,7 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
       <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
         {...(bibliotheque === undefined ? {} : { bibliotheque })}
         {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
-        stockage={stockage} fermer={fermer}
+        stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null}
         enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
     );
     ouvert = { fermer };

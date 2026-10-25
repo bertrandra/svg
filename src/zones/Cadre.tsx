@@ -15,6 +15,7 @@ import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
+import { BulleVisite, LienVisite } from './BulleVisite.js';
 import { FORMES } from './aidesEditeur.js';
 import { pluriel } from '../util/texte.js';
 import type { Outil, Tiroir } from './typesEditeur.js';
@@ -135,6 +136,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
     <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '')} ref={racine}>
       <Raccourcis toile={toile} />
       <LienToile svgRef={svgRef} idToile={idToile} />
+      <LienVisite />
       <RegionVocale />
       <Barre titre={titre} nom={nom} />
       <BarreSelection />
@@ -144,6 +146,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
       <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} idToile={idToile} />
       <PanneauLateral nom={nom} />
       <BarreEtat />
+      <BulleVisite />
     </div>
   );
 });
