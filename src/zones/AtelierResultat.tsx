@@ -175,7 +175,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             <span className="aide">Vecteurs</span>
           </label>
         ) : null}
-        {resultat ? <FicheResultat nom={nom} resultat={resultat} ouvrir={ouvrir} /> : <p className="aide" role="status">{enCours ? message || 'Vectorisation…' : 'Pas encore de résultat : réglez, puis « Vectoriser ».'}</p>}
+        {resultat ? <FicheResultat nom={nom} resultat={resultat} ouvrir={ouvrir} /> : <p className="aide" role="status">{message || (enCours ? 'Vectorisation…' : 'Pas encore de résultat : réglez, puis « Vectoriser ».')}</p>}
         {essais.length > 1 ? <Essais essais={essais} cle={cle} reprendre={reprendre} /> : null}
       </div>
       <aside className="reglages-vecto" aria-label="Réglages du tracé">
@@ -205,7 +205,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
         <ReglagesPretraitementPanneau t={t} poserT={poserT} apercu={apercu} resultat={aJour ? resultat : null} reference={reference} mesurer={mesurerSans} enCours={enCours} />
         <div className="actions">
           {bouton ? <button type="button" className={resultat ? undefined : 'primaire'} disabled={enCours} onClick={rejouer}>{enCours ? 'En cours…' : resultat ? 'Rejouer' : v ? 'Vectoriser' : 'Créer le SVG'}</button> : null}
-          {/* Sans resultat, le message se lit deja sous la visionneuse : il ne se repete pas ici. */}
+          {/* Sans resultat, le message (progres, echec, ce qui manque au navigateur) se lit sous la visionneuse : pas deux fois. */}
           <span className="aide" role="status">{resultat ? message : ''}</span>
         </div>
       </aside>
