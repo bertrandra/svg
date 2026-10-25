@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AA, JETONS, PAIRES, ROLES, contrasteDe, cssJetons, lire, tableauJetons, valeur } from '../../../src/styles/jetons.js';
+import { AA, AA_GRAPHIQUE, JETONS, PAIRES, PAIRES_GRAPHIQUES, ROLES, contrasteDe, cssJetons, lire, tableauJetons, valeur } from '../../../src/styles/jetons.js';
+import { contraste, lireHex } from '../../../src/util/couleur.js';
+import { FAMILLES, TAILLES } from '../../../src/styles/typographie.js';
+import { COUCHES, ESPACES, RAYONS } from '../../../src/styles/espaces.js';
 
 // Le registre est la seule source des couleurs de l'interface : ces tests le confrontent au CSS de la
 // page et au code, et tiennent les contrastes. Ajouter un jeton, c'est l'ajouter dans src/styles/jetons.ts,
@@ -25,7 +28,8 @@ const lues = (texte: string) => new Set([...texte.matchAll(/var\(--([a-z][a-z0-9
 
 const HEX = /^#[0-9a-f]{6}$/;
 const RGBA = /^rgba\(\d{1,3}, \d{1,3}, \d{1,3}, (0|1|0?\.\d+)\)$/;
-const NON_COULEURS = new Set(['sans', 'mono']);
+// La typographie et les mesures ont leurs registres (typographie.ts, espaces.ts) et leurs tests : pas des couleurs.
+const NON_COULEURS = new Set([...FAMILLES.map(([id]) => id), ...[...TAILLES, ...ESPACES, ...RAYONS, ...COUCHES].map(t => t.id)]);
 
 describe('le registre', () => {
   it('a des identifiants uniques, en minuscules et tirets, et des valeurs que le CSS lit', () => {
@@ -60,8 +64,29 @@ describe('les contrastes', () => {
     }
   });
 
+  it('tiennent 3:1 hors texte pour les bords qui informent (pastilles, poignees de defilement), en clair comme en sombre', () => {
+    expect(PAIRES_GRAPHIQUES.length).toBeGreaterThan(0);
+    for (const p of PAIRES_GRAPHIQUES) {
+      expect(p.minimum).toBe(AA_GRAPHIQUE);
+      expect(contrasteDe(p, 'clair'), p.texte + ' sur ' + p.fond + ' (clair)').toBeGreaterThanOrEqual(p.minimum);
+      expect(contrasteDe(p, 'sombre'), p.texte + ' sur ' + p.fond + ' (sombre)').toBeGreaterThanOrEqual(p.minimum);
+    }
+  });
+
+  it('couvrent les surfaces du navigateur : le texte selectionne et le texte d exemple d un champ se lisent a 4,5:1', () => {
+    // ::selection pose l'encre sur --selection ; ::placeholder pose l'encre douce sur le fond d'un champ (la table), et un
+    // champ hors d'un panneau reste sur la table : les deux paires doivent exister, et tenir (test ci-dessus).
+    const existe = (texte: string, fond: string) => PAIRES.some(p => p.texte === texte && p.fond === fond);
+    expect(existe('encre', 'selection')).toBe(true);
+    expect(existe('encre-douce', 'table')).toBe(true);
+    expect(existe('encre-douce', 'panneau')).toBe(true);
+    // La pastille la plus sombre du nuancier par defaut (« Encre #15181d ») se detache du panneau sombre par le filet fort.
+    const fort = lireHex(valeur('filet-fort', 'sombre')), encreDuNuancier = lireHex('#15181d');
+    expect(fort && encreDuNuancier ? contraste(fort, encreDuNuancier) : 0).toBeGreaterThanOrEqual(AA_GRAPHIQUE);
+  });
+
   it('ne reference que des jetons du registre, en hexadecimal opaque', () => {
-    for (const p of PAIRES) for (const id of [p.texte, p.fond]) expect(HEX.test(lire(id).clair) && HEX.test(lire(id).sombre), id).toBe(true);
+    for (const p of [...PAIRES, ...PAIRES_GRAPHIQUES]) for (const id of [p.texte, p.fond]) expect(HEX.test(lire(id).clair) && HEX.test(lire(id).sombre), id).toBe(true);
     expect(PAIRES.every(p => p.minimum >= AA)).toBe(true);
   });
 });

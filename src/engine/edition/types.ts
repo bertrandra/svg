@@ -48,9 +48,48 @@ export interface Forme {
    * (provenance.ts) ; un assemblage (combiner, booleens, regrouper) garde l'union des origines de ses parties.
    */
   readonly origine?: readonly string[];
+  /**
+   * Le texte vivant (ADR-0022) : `d` est alors les contours composes de ce texte, poses par `texte.matrice`. ABSENT de
+   * toute autre forme, donc sans effet sur ses octets. Une operation qui change `d` sans connaitre le texte (booleen,
+   * points, contour en forme) le perd : la forme redevient un chemin ordinaire (`garderTextes`, texteVivant.ts).
+   */
+  readonly texte?: TexteVivant;
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;
+}
+
+/** L'alignement des lignes d'un texte vivant sur son point d'ancrage. */
+export type AlignementTexte = 'gauche' | 'centre' | 'droite';
+
+/**
+ * La police d'un texte vivant : son identifiant (une fonte livree, `u-` et l'empreinte d'une fonte deposee, ou `c-` et l'empreinte
+ * d'une variante du catalogue telechargeable, ADR-0025), sa version, son nom lisible.
+ */
+export interface PoliceTexte {
+  readonly id: string;
+  /** L'empreinte de la fonte qui a compose le texte (14 chiffres hexadecimaux) ; absente quand on ne la connait pas. */
+  readonly version?: string;
+  /** Le nom de famille, pour une fonte deposee ou une police du catalogue : de quoi dire « Police absente : … » sans l'index. */
+  readonly famille?: string;
+}
+
+/**
+ * Ce qui fait d'une forme un texte modifiable. Les longueurs sont dans le repere de composition (la premiere ligne de
+ * base passe par l'origine, Y vers le bas) ; `matrice` porte ce repere dans le plan, et suit chaque transformation de
+ * la forme : retaper le texte le recompose a la meme place, a la meme echelle, au meme angle.
+ */
+export interface TexteVivant {
+  readonly texte: string;
+  readonly police: PoliceTexte;
+  readonly taille: number;
+  /** En part de la taille, comme `OptionsTexte.interlettrage`. */
+  readonly interlettrage: number;
+  /** En part de la taille ; 1,2 par defaut. */
+  readonly interligne: number;
+  readonly alignement: AlignementTexte;
+  readonly ligatures: boolean;
+  readonly matrice: Matrice;
 }
 
 export interface DessinSvg { readonly vb: readonly [number, number, number, number]; readonly formes: readonly Forme[] }

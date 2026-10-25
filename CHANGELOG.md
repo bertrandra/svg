@@ -56,6 +56,8 @@ empreintes.
 
 ### Modifié
 
+- Le chapeau de l'accueil nomme la machine de découpe ; les audits axe de la bibliothèque se font sur toute la hauteur de
+  la page.
 - **Les boutons masquer et verrouiller des calques sont de vraies icônes** (cadenas ouvert ajouté), comme le
   bouton supprimer des versions ; noms et états inchangés. « Aller à la toile » est un lien, la page de
   l'hôte est cachée (`visibility: hidden`) en plus d'être inerte pendant l'édition, et les boutons de menu
@@ -115,6 +117,23 @@ empreintes.
 
 ### Corrigé
 
+- Refermer un repère par « Compris » au clavier donne le focus à ce qui suit avant que la note ne disparaisse : il ne
+  passe plus un instant par le corps de la page (un test de navigateur l'observait parfois en CI).
+- Un bouton discret survolé passait sous 4,5:1 en thème clair (4,49 sur un panneau, 4,05 sur la page) : son texte prend
+  le jeton `cyan-survol`.
+- Sur un téléphone (420 px), l'atelier de conversion débordait de 20 px dès que le prétraitement ajoutait
+  l'onglet « Prétraitée » : les six onglets de la visionneuse passent maintenant à la ligne. Firefox et WebKit le
+  montraient ; Chromium, qui élargit la fenêtre émulée jusqu'au contenu, le cachait aux tests, qui lisent
+  désormais `clientWidth`.
+- Sous Firefox et WebKit, Tab dans « Couleurs du dessin » ou « Par couleur » laissait le focus sur une ligne
+  coupée par le bas de la liste : au focus clavier, la ligne se montre entière (rien ne bouge à la souris).
+- Les tests de navigateur ne supposent plus Chromium là où Firefox et WebKit diffèrent sans défaut de la page
+  (requêtes `file://` invisibles sous Firefox, `innerText` d'une ligne non rendue, guillemets de
+  `FontFace.family`, `:focus-visible` après un focus par script, cran de molette ramené à une page, caractères
+  de contrôle retirés d'un `<textarea>`, pointeur grossier sous `hasTouch`) : même assertion, moyen
+  d'observation portable. Les audits attendent leurs animations deux secondes au plus. Le job `navigateur`
+  laisse 60 minutes à Firefox et WebKit (WebKit était coupé à 25). Détail dans `docs/navigateurs.md`.
+
 - Une couleur toute masquée du panneau « Par couleur » tombait à 2,2:1 de contraste (`opacity: 0.5`) : elle
   s'atténue maintenant par son échantillon.
 - Recolorer une couleur avec le sélecteur natif, dans « Par couleur » ou « Couleurs du dessin », ne le
@@ -134,6 +153,43 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Les polices libres à la demande** (ADR-0025) : « Toutes les polices » dans l'outil Texte ouvre plus de 2 000 familles
+  libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Collletttivo, Velvetyne, Fontshare) : recherche,
+  filtres, favoris, récentes, polices du document avec « Remplacer partout », vos polices (fichier déposé, ou polices de
+  l'appareil quand le navigateur le permet). Rien ne se télécharge sans votre accord, donné serveur par serveur, retenu et
+  révocable ; chaque fichier est vérifié par son empreinte sha256 avant d'être lu, une empreinte fausse est refusée et dite.
+  Un texte garde l'identifiant et la version de sa police pour se recomposer à l'identique ; la licence de chaque police
+  employée est nommée dans « À propos et crédits ». Chez un hôte, l'option `policesEnLigne` est fausse par défaut. L'index
+  est un instantané commis (`data/catalogue-polices.json`, `scripts/catalogue-polices.mjs`), livré dans l'annexe
+  `polices-catalogue.js` (1,3 Mo, à la demande) ; la page prend 38 Ko. Aucun octet écrit ne change.
+
+- **Un accueil par public** (ADR-0024) : l'accueil demande « Pour quoi dessinez-vous ? » (machine de découpe, retouche,
+  intégration), sans obligation (« Passer »), retenu dans le stockage injecté (`svg.accueil`, relu champ par champ ; le
+  temps de la page sans stockage) et changeable (« Changer de public »). Chaque public voit son circuit en trois étapes
+  jusqu'au fichier prêt et les voies dans son ordre ; la machine ouvre l'éditeur en contexte Cricut (Maker, découpe,
+  millimètres) ; la retouche met l'invitation à la visite en évidence ; les intégrateurs ont un panneau (options
+  principales, extrait copiable, guide, « Essayer l'éditeur embarqué »).
+- La propriété `production` d'`EditeurSvg` : un contexte de production de départ quand le SVG ne porte aucune marque ;
+  rien ne s'écrit sans modification.
+
+- **Cinq bibliothèques libres de plus** (ADR-0023) : Material Design Icons (Apache 2.0), Phosphor, Tabler, Healthicons (MIT)
+  et Lucide (ISC), soit 19 000 formes nommées en français par le lexique et rangées par les mêmes règles d'événement,
+  chacune chargée à la demande depuis sa pastille « Source ». Une pastille « Nature » sépare les formes pleines (découpe) des
+  formes en ligne (stylo) ; au stylo du contexte Cricut, « En ligne » vient d'abord. Les marques et logos sont écartés par
+  règle. Une forme garde son origine (`data-origine`) ; seule une forme CC BY fait écrire une mention dans le fichier. Aucun
+  octet existant ne change (l'annexe de game-icons et ses 4 134 empreintes sont intactes ; chaque source a les siennes).
+
+- **Le texte reste modifiable** (ADR-0022) : un texte créé dans l'éditeur garde sa chaîne, sa police, sa taille, son
+  interlettrage, son interligne et son alignement à côté de ses contours exacts ; un double-clic le rouvre dans le panneau
+  Texte. Le fichier écrit ne porte que les contours (jamais de `<text>`, jamais de fichier de police) ; la recomposition se
+  garde en `data-ed-*`. Aucune référence d'écriture existante ne change.
+- **Vectoriser le texte** (Ctrl+Maj+O) : trois façons, lettres séparées, souder les lettres qui se touchent, tout souder ;
+  l'export vectorise de lui-même. Le contexte Cricut signale des lettres qui se chevauchent (la lame couperait à travers).
+- **Dessin au stylo** : un procédé du contexte Cricut pour la machine qui écrit au lieu de couper ; il ne remplit jamais une
+  forme, propose des hachures, une police à trait unique (une lettre est une ligne, pas un contour) et la ligne médiane.
+- **« Aperçu forme / ligne »** à côté de chaque police, au clic seulement : la lettre telle que la machine la coupera ou
+  l'écrira.
 
 - **Ligatures du texte** : `composer(…, { ligatures })` (éteint par défaut dans le moteur, aucun octet existant
   ne bouge), lecture GSUB pure dans `io/ligaturesGsub.ts`, case « Ligatures (fi, fl…) » du panneau Texte,
@@ -361,3 +417,104 @@ empreintes.
 - **WCAG 2.5.8** : toutes les cibles font au moins 24 × 24 px (20 cibles trop petites dans l'éditeur avant, 0
   après), prouvé par `tests/e2e/cibles.e2e.ts` sur 18 écrans ; les pastilles de la barre disent leur couleur aux
   lecteurs d'écran ; le bouton « aucun » garde un nom fixe et `aria-pressed` porte seul l'état.
+- **Un contexte de production Cricut** (ADR-0013), choisi dans la barre (dans le menu « Plus » sur un téléphone) :
+  Joy, Explore (Air 2 / 3), Maker (Maker / Maker 3) ; tapis 12 × 12, 12 × 24, Smart Material, tapis Joy ; papier
+  cartonné (vinyle, thermocollant et feutre annoncés) ; découpe ou Print Then Cut ; pouces ou millimètres.
+  « Générique » reste le défaut et ne change rien : aucun octet écrit ne bouge.
+- **Le panneau « Prêt pour Cricut »** juge le dessin en continu (traits, transparences, pièces plus grandes que la
+  zone utile, dépassement du tapis, tracés ouverts, nuances proches, parties plus fines que la lame par ouverture
+  morphologique, trop de points, forme blanche posée comme un trou, pair-impair). Chaque constat a sa correction
+  par un outil existant, annulable par Ctrl+Z et dite à voix haute ; taille finale et couches toujours affichées.
+  Le tapis, sa zone utile et un quadrillage au pouce s'affichent sur la toile ; les outils prennent les valeurs
+  du papier cartonné.
+- **« Exporter pour Cricut »** écrit un SVG à taille physique (in ou mm), fonds pleins, une couleur par couche, sans
+  trait ni opacité, et refuse en le nommant ce qu'il ne saurait écrire. En Print Then Cut : une archive ZIP avec
+  l'image à imprimer et son fond perdu (PNG 300 ppp et SVG), la ligne de coupe (silhouette unie) et un mode d'emploi.
+- Le contexte se garde dans le SVG écrit (`data-ed-*` sur la racine, absents en Générique) et revient à la
+  réouverture. Les menus acceptent des éléments `menuitemradio`.
+- `docs/cricut/protocole.md` et six SVG témoins pour figer sur une vraie machine les 19 valeurs encore
+  « à vérifier » (zones utiles, détail minimal du papier cartonné, taille Print Then Cut, lecture des px nus).
+- **Typographie en cinq tailles nommées** (`src/styles/typographie.ts`, `--texte-petit`, `-compact`, `-corps`,
+  `-titre`, `-titre-page` : 12, 13, 14, 16 et 24 px) au lieu de dix-huit valeurs écrites en dur ; les textes les plus
+  petits passent de 11 à 12 px, la taille de base suit le réglage du navigateur (rem au lieu de px), les titres
+  coupent en lignes égales. Un test interdit toute taille écrite en dur, comme pour les couleurs.
+- **Corrigé** : le bouton « Choisir les formes » d'un constat bloquant n'atteignait que 4,34:1 (cyan sur le fond
+  d'échec) ; il prend l'encre du message (5,28:1). L'audit axe du panneau attend la fin des fondus avant de mesurer.
+- `PRODUCT.md` et `DESIGN.md` (« le carnet d'atelier ») décrivent le produit et son système visuel pour les travaux
+  de design ; la skill de design impeccable est rangée dans `.claude/skills/`.
+- **Espacements, rayons et couches en jetons** (`src/styles/espaces.ts` : `--esp-*` sur une base de 4 avec un pas de
+  6, `--rayon-*`, `--couche-*`) au lieu de valeurs écrites en dur ; les pas hors échelle (3, 5, 7, 9, 10, 14, 20,
+  28 px) se ramènent au plus proche, le plus serré à égalité. Un test interdit tout espacement, rayon ou couche en dur.
+- Les constats du panneau « Prêt pour Cricut » ont un filet tout autour au lieu d'une barre de couleur à gauche.
+- **Corrigé** : dans l'inspecteur, les étiquettes « Rotation ° », « Échelle % », « Incl. X ° », « Incl. Y ° » et « Angles du
+  décalage » passaient sur deux lignes (« Rotation » était rogné) : une étiquette courte tient sur une ligne, le champ cède
+  la place. Les crédits précisent que les fontes de l'interface ne sont pas dans l'éditeur embarqué.
+- **Bibliothèque : une recherche qui trouve ce qu'elle promet.** Elle porte aussi sur les noms d'événements et de
+  catégories, sans accents, au singulier près, et sur des synonymes en données (« sapin » : 0 → 20 résultats,
+  « anniversaire » : 0 → 97, « Noël » : 1 → 43) ; un classement par pertinence ; un état « aucun résultat » qui propose
+  un événement, une faute de frappe corrigée ou d'effacer. Les 45 événements se choisissent par pastilles (ceux qui
+  arrivent d'abord) ; un événement s'ouvre sur ses formes les plus représentatives ; les vignettes ont une hauteur
+  régulière.
+- **Convertir une image : l'essentiel au premier résultat.** Résultat, fond, mode, grain et « Ouvrir dans l'éditeur » ;
+  réglages fins et prétraitement repliés, les autres vues, le zoom et le fond du plan dans « Plus de vues » ; les réglages
+  en mots simples (« Ignorer les taches de moins de… », « Garder l'image telle quelle »), le nom technique en infobulle.
+  Aucune sortie du traceur ne change. Un menu ouvert bas dans l'écran s'ouvre au-dessus de son bouton.
+- **Finition du système** : couleur d'accent, texte d'exemple (5,70:1 au lieu de 3,89:1), texte sélectionné, curseur et
+  barres de défilement aux jetons (`--selection`, `--filet-fort`, contrastes hors texte vérifiés) ; un message neutre
+  (`role="status"`) pour les succès, l'ambre réservé aux avertissements ; seule l'action de l'instant est pleine (menu,
+  confirmation, contexte de production) ; « aucune couleur » en barre oblique et filet cyan au lieu du rouge ; chiffres
+  tabulaires ; chasse fixe en 400/500 seulement ; codes de couleur à l'encre, précédés de leur nom ; anneau de focus
+  sur les liens ; paragraphes bornés à 34em.
+- **Au doigt** : la rangée de sélection tient dans 390 px (menu « Plus »), les raccourcis des menus se masquent, les aides
+  disent « Touchez », le nuancier et le curseur du tiroir font 40 px, les boutons « Corriger » restent visibles ; le menu
+  « Plus » est rangé Édition, Fichier, Vue.
+- Les calques se nomment par leur genre (« Cercle 2 ») ; une forme sans fond a une pastille à filet.
+- **Corrigé** : « Abandonner la modification non enregistrée ? », « 2 tapis », « 3 petites formes » ; « 0 (zéro) »
+  distinct de « O » ; le zoom dit qu'il ajuste la vue ; une vraie violation axe `label-content-name-mismatch` sur les
+  noms des formes. L'audit axe Cricut juge chaque texte entier (son doute intermittent venait du défilement).
+- **Une visite guidée de l'éditeur** (ADR-0019), en cinq étapes sur le vrai éditeur, jusqu'à la première retouche
+  récupérée : choisir une forme, changer sa couleur, savoir revenir en arrière, récupérer le fichier, puis trois suites
+  (convertir une image, la bibliothèque, la Cricut). Elle avance sur le geste réel, sans voile ; elle se passe, se quitte
+  par Échap, s'atteint par F6 ou un lien d'évitement, se rejoue du nouveau menu **Aide** (en tête de « Plus » au
+  téléphone) et se retient (`svg.guide`, stockage injecté). Elle ne s'ouvre que demandée : « Essayer avec la visite
+  guidée » sur l'accueil, le menu Aide, ou l'option d'hôte `visite: true` de l'éditeur embarqué (prop `guide`).
+- **Quatre repères de première rencontre** (modifier les points, premier assemblage de formes, contexte Cricut, première
+  conversion), refermables et jamais répétés, et **des états vides qui disent quoi faire** partout (inspecteur, calques,
+  toile, couleurs, versions, panier, lot, nuancier, bibliothèque, panneau Cricut).
+- Sur téléphone, un tiroir ouvert masque le dessin qu'il recouvre ; l'aide de l'inspecteur dit « assembler des formes »
+  au lieu de « booléens » ; la typographie française pose ses espaces insécables dans les bulles et les états vides.
+- **Ouvrir un PDF depuis l'accueil** (ADR-0020), choisi ou déposé : ses tracés vectoriels et son texte deviennent des formes
+  éditables ; la première page par défaut, une autre se choisit (« Page 1 sur N ») ; ce qui n'est pas repris (images,
+  dégradés, découpes, couleurs approchées…) est dit à l'ouverture ; un PDF chiffré ou abîmé est refusé en le nommant.
+  Lecture pure et bornée (corpus de 39 PDF hostiles, fuzzer), aller-retour vérifié sur chaque PDF que l'éditeur exporte.
+- **Le texte d'un PDF ou d'un SVG s'importe en lettres**, une forme par lettre : une police TrueType ou OpenType embarquée
+  est dessinée exactement ; une police absente est remplacée par la plus proche des neuf fontes, et c'est dit (« 3 textes
+  en Arial, police remplacée par Inter ») ; le texte invisible (couche de reconnaissance de caractères) n'est jamais repris.
+
+### Version majeure (texte importé)
+
+- Un SVG qui contient du texte s'ouvre désormais en lettres quand la page a ses fontes (`polices.js`), au lieu d'être
+  refusé. Deux références neuves (`texte-svg`, `texte-svg-blancs`) ; aucune référence existante ne change.
+- **Récupérer son fichier** : « Télécharger le SVG » dans la barre de l'éditeur, « Autres formats » à côté (une ligne par
+  format qui dit à quoi il sert) ; le format recommandé suit le contexte (SVG, Cricut, Print Then Cut). Le doublon
+  « Copier le code SVG » est retiré. Parcours « changer une couleur puis récupérer le SVG » : 6 gestes → 4.
+- **« Terminer »** : le bouton de fin de la page s'appelle « Terminer » ; la fiche du dessin a pour action primaire
+  « Télécharger le SVG » (qui prend le focus), avec un message neutre. L'option d'hôte `libelleEnregistrer` (validée)
+  donne le libellé chez un hôte. La confirmation d'abandon propose aussi le geste de fin.
+- **Ctrl+S garde un brouillon et ne ferme jamais l'éditeur** (`onBrouillon` chez un hôte) ; il n'appelle plus
+  `onEnregistrer` : un hôte qui comptait dessus passe par le bouton (docs/integration.md).
+- **Fin du parcours Cricut** : « Exporter quand même (N points à corriger) » avec une confirmation dans le panneau ; carte
+  « Dans Design Space » après l'export ; « Ajuster » cadre le tapis entier, « Ajuster au dessin » (D) ; millimètre par
+  défaut, pouce retenu ; le sélecteur dit « Machine : … » et commence par la machine ; matériaux à venir sur une ligne.
+- Le fichier d'une forme de la bibliothèque porte son nom français (`bonhomme-de-neige.svg`). Dans un menu à contenu libre,
+  Tab circule au lieu de refermer le menu.
+- **Convertir une image : le mode « Ligne médiane (stylo) »** (ADR-0021) change un dessin au trait (écriture, croquis
+  scanné) en tracés ouverts d'une seule ligne au milieu du trait, sans remplissage, pour le stylo d'une Cricut. Calculé
+  dans le moteur pur, sans vtracer, de façon déterministe (seuil d'Otsu, squelette de Guo-Hall, barbules élaguées,
+  croisements traversés, coupures raccordées, cubiques ajustées). L'épaisseur du trait, mesurée sur l'image, se voit à côté
+  du mode ; seuil, taches, barbules, coupures et couleur sont dans les réglages fins. Le lot fonctionne dans ce mode.
+- Tests de sécurité : un dépassement du budget de temps se remesure une fois avant d'échouer (une machine chargée ne fait
+  plus échouer un fichier ordinaire ; une lenteur qui se répète reste un défaut).
+- **Corrigé** : « Lecture du texte… » s'annonçait comme une alerte pendant le chargement des polices (un test de sécurité
+  prenait ce message pour un refus, selon la vitesse de chargement) : c'est un message neutre. Le corpus hostile distingue
+  l'issue de la lecture pure et celle de la page, qui ouvre en lettres un fichier portant du texte (`attenduPage`).

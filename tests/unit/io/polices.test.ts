@@ -162,11 +162,15 @@ describe('lirePolice', () => {
 describe('policeDeposee', () => {
   const fichier = (nom: string, contenu: ArrayBuffer) => ({ name: nom, arrayBuffer: () => Promise.resolve(contenu) }) as unknown as File;
 
-  it('nomme la fonte d apres le fichier, sans son extension TTF ou OTF, majuscules comprises', async () => {
+  // L'identifiant est l'empreinte des octets (`u-` et 14 chiffres hexadecimaux, ADR-0022) : un texte vivant l'ecrit dans le
+  // SVG, jamais le fichier ni un nom libre. Il remplace l'ancien « deposee-<nom> », qu'aucun fichier ecrit ne portait.
+  it('nomme la fonte d apres le fichier, sans son extension TTF ou OTF, majuscules comprises, et l identifie par son empreinte', async () => {
     const a = await policeDeposee(fichier('Ma Fonte.ttf', bufferInter()));
-    expect(a).toMatchObject({ id: 'deposee-Ma Fonte', nom: 'Ma Fonte' });
+    expect(a).toMatchObject({ nom: 'Ma Fonte', nature: 'contour' });
+    expect('id' in a && a.id).toMatch(/^u-[0-9a-f]{14}$/);
     const b = await policeDeposee(fichier('AUTRE.OTF', bufferInter()));
-    expect(b).toMatchObject({ id: 'deposee-AUTRE', nom: 'AUTRE' });
+    expect(b).toMatchObject({ nom: 'AUTRE' });
+    expect('id' in b && 'id' in a && b.id === a.id && 'version' in a && a.id === 'u-' + a.version).toBe(true);
   });
 
   it('dit quels formats se deposent quand la fonte ne se lit pas', async () => {

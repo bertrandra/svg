@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, permettrePressePapiers, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -43,10 +43,22 @@ let dernierIncertains: Violation[] = [];
 
 async function auditer(page: Page, ecran: string): Promise<Violation[]> {
   // Une section qui se deplie fond en 150 ms : mesuree en route, un texte a demi transparent n'a pas son contraste.
-  await page.evaluate(() => Promise.race([
-    Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
-    new Promise(fini => setTimeout(fini, 2000))
-  ]).then(() => undefined));
+  // Un texte coupe par le bas de la fenetre ou par le defilement d'un panneau est un « doute » pour axe (fond
+  // indeterminable), pas un contraste : la fenetre prend la hauteur du contenu, page et panneaux, avant l'audit.
+  // Agrandir la fenetre peut remettre en page (la visionneuse suit la largeur et la hauteur) : on recommence tant que la
+  // hauteur du contenu bouge, trois fois au plus.
+  for (let essai = 0; essai < 3; essai++) {
+    const vue = page.viewportSize();
+    if (!vue) break;
+    await attendreAnimations(page);
+    const hauteur = await page.evaluate(() => {
+      const panneaux = [...document.querySelectorAll<HTMLElement>('.editeur-inspecteur, .editeur-calques')].map(e => e.scrollHeight - e.clientHeight);
+      return Math.max(document.documentElement.scrollHeight, innerHeight + Math.max(0, ...panneaux));
+    });
+    if (hauteur <= vue.height) break;
+    await page.setViewportSize({ width: vue.width, height: Math.min(4000, hauteur + 40) });
+  }
+  await attendreAnimations(page);
   await page.addScriptTag({ content: AXE });
   const resultat = await page.evaluate(async ecartees => {
     const w = window as unknown as FenetreAxe;
@@ -108,6 +120,46 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
+    // Un accueil par public (ADR-0024) : chaque etat de la question et chaque suite adaptee, clair et sombre, bureau et telephone.
+    for (const [publicAccueil, nom] of [[undefined, 'question de la première visite'], ['machine', 'public machine'], ['retouche', 'public retouche'], ['integration', 'public intégration'], ['aucun', 'question passée']] as const) {
+      for (const schema of ['light', 'dark'] as const) {
+        it(`${nom}, thème ${schema === 'light' ? 'clair' : 'sombre'}`, async () => {
+          const page = await accueil({ largeur: 1200, hauteur: 900, schema, ...(publicAccueil ? { publicAccueil } : {}) });
+          await page.locator('#titre-suite').waitFor();
+          exigerSansViolationGrave(await auditer(page, `accueil, ${nom}, ${schema === 'light' ? 'clair' : 'sombre'}`));
+        });
+      }
+    }
+
+    it('question rouverte par « Changer de public », le choix du moment marqué', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900, publicAccueil: 'machine' });
+      await page.getByRole('button', { name: 'Changer de public' }).click();
+      await page.locator('.publics .public.actuel').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, question rouverte'));
+    });
+
+    it('public intégration : code copié et SVG reçu de l’éditeur embarqué', async () => {
+      const { page, contexte } = await navigateur.ouvrir({ largeur: 1200, hauteur: 900, publicAccueil: 'integration' });
+      await permettrePressePapiers(page, contexte);
+      await page.getByRole('button', { name: 'Copier le code' }).click();
+      await page.getByRole('button', { name: 'Essayer l’éditeur embarqué' }).click();
+      await page.locator('.editeur-cadre').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, éditeur embarqué de la démonstration'));
+      await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+      await page.keyboard.press('Delete');
+      await page.getByRole('button', { name: 'Mettre à jour le logo', exact: true }).click();
+      await page.locator('section.integration .message.neutre').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, intégration, SVG reçu'));
+    });
+
+    for (const [publicAccueil, nom] of [[undefined, 'question'], ['machine', 'public machine'], ['integration', 'public intégration']] as const) {
+      it(`sur un téléphone de 390 px au doigt : ${nom}`, async () => {
+        const page = await accueil({ largeur: 390, hauteur: 800, tactile: true, ...(publicAccueil ? { publicAccueil } : {}) });
+        await page.locator('#titre-suite').waitFor();
+        exigerSansViolationGrave(await auditer(page, `accueil, 390 px tactile, ${nom}`));
+      });
+    }
+
     it('voie « bibliothèque » chargée, avec ses vignettes', async () => {
       const page = await accueil({ largeur: 1200, hauteur: 900 });
       await page.getByRole('tab', { name: /^Bibliothèque/ }).click();
@@ -145,7 +197,7 @@ describe('axe-core : accessibilite automatique', () => {
       await page.locator('.fiche-resultat').waitFor({ timeout: 60_000 });
       await page.locator('details.section summary', { hasText: 'Prétraitement' }).click();
       await page.getByRole('button', { name: 'Logo net', exact: true }).click();
-      await page.getByRole('button', { name: 'Prétraitée', exact: true }).click();
+      await choisirVue(page, 'Prétraitée');
       await attend(() => page.locator('.bilan-pretraitement .aide').first().innerText(), 60_000).toContain('couleur');
       exigerSansViolationGrave(await auditer(page, 'accueil, section Prétraitement ouverte'));
     });
@@ -236,6 +288,90 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, outil texte'));
     });
 
+    // Le texte vivant (ADR-0022) : la section « Texte » de l'inspecteur, l'apercu « forme / ligne » ouvert, la saisie en place.
+    async function texteVivant(page: Page, police = 'inter') {
+      await page.keyboard.press('t');
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption(police);
+      await page.getByRole('button', { name: 'Ajouter le texte' }).click();
+      await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().click();
+      await page.locator('.apercu-police').waitFor();
+      // On audite l'etat au repos : le pointeur laisse le bouton (le survol d'un bouton discret est un voile cyan, juge ailleurs).
+      await page.mouse.move(0, 0);
+    }
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec un texte vivant, sa section Texte et l apercu forme / ligne ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await texteVivant(page, schema === 'dark' ? 'ems-readability' : 'inter');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, texte vivant et aperçu (' + schema + ')'));
+      });
+    }
+
+    // Les polices en ligne (ADR-0025) : « Toutes les polices » ouvert sur la vraie liste fenetree (l'index de dist/), avec ses
+    // filtres et son pied ; puis le dialogue de consentement d'une police non livree (aucune requete : on ne l'accepte pas).
+    async function toutesLesPolices(page: Page) {
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('t');
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
+      await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
+      // Une recherche courte (« sat » : Satisfy, Satoshi et son badge ITF…) pour que chaque ligne tienne entiere dans la liste
+      // qui defile : une ligne coupee par son bord n'a pas de fond qu'axe sache lire (« incomplete »), et ses pareilles visibles
+      // sont jugees ici. Le fenetrage de la liste entiere a son propre test (tests/unit/model/cataloguePolices.test.ts).
+      await page.locator('.explorateur-polices input[type="search"]').fill('sat');
+      await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(4);
+      await page.mouse.move(0, 0);
+    }
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec « Toutes les polices » ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await toutesLesPolices(page);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, toutes les polices (' + schema + ')'));
+      });
+    }
+
+    it('avec le dialogue de consentement d une police à télécharger', async () => {
+      const page = await editeur({ largeur: 1200, hauteur: 900 });
+      await toutesLesPolices(page);
+      await page.locator('.explorateur-polices input[type="search"]').fill('satoshi');
+      await page.locator('.liste-polices .police-ligne', { hasText: 'Satoshi' }).first().click();
+      await page.getByRole('dialog', { name: /Télécharger la police/ }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, consentement d’une police'));
+    });
+
+    it('sur un téléphone de 390 px, « Toutes les polices » ouvert', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).tap();
+      await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
+      await page.locator('.explorateur-polices input[type="search"]').fill('sat');
+      await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(4);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, toutes les polices'));
+    });
+
+    it('avec la saisie en place d un texte vivant', async () => {
+      const page = await editeur({ largeur: 1200, hauteur: 900 });
+      await texteVivant(page);
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('Enter');
+      await page.locator('.saisie-texte textarea').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, saisie en place'));
+    });
+
+    it('sur un téléphone de 390 px, l inspecteur d un texte vivant et son apercu', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Ajouter le texte' }).tap();
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().tap();
+      await page.locator('.apercu-police').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, texte vivant et aperçu'));
+    });
+
     it('avec la confirmation d abandon', async () => {
       const page = await editeur();
       await page.keyboard.press('PageDown');
@@ -307,6 +443,72 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
+    for (const schema of ['light', 'dark'] as const) {
+      it(`sur un téléphone de 390 px, rangée de sélection resserrée et son menu « Plus » ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 390, hauteur: 800, tactile: true, schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').tap();
+        await page.locator('.editeur-barre-selection').getByRole('button', { name: /^Plus de gestes/ }).tap();
+        await page.getByRole('menu', { name: 'Empiler' }).waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, 390 px tactile, rangée de sélection et son menu, ${schema}`));
+      });
+
+      it(`avec « aucun » remplissage choisi, en contexte Cricut, « Terminer » posé en secondaire (${schema})`, async () => {
+        // Sans menu ouvert : un menu flottant recouvre l'inspecteur, dont axe ne saurait plus lire les fonds (le menu Fichier ouvert est
+        // audite ailleurs ; ici, ce qui compte est le contraste de l'action retiree et de « aucun » choisi). Un grand dessin : sur le
+        // petit exemple, le gabarit du tapis deborde de la toile en geometrie, et axe le croit par-dessus la barre d'etat (deja vrai avant).
+        const page = await accueil({ schema });
+        await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 700"><path d="M96 96H288V288H96Z" fill="#c81e28"/><path d="M384 96H576V288H384Z" fill="#1428a0"/></svg>');
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        await page.locator('.pastille-style button.aucun').first().click();
+        await page.locator('.selecteur-contexte .menu-bouton').click();
+        await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+        await page.locator('.panneau-cricut .constat, .panneau-cricut .pret').first().waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, aucun remplissage, Cricut, Terminer en secondaire, ${schema}`));
+      });
+
+      it(`sur l accueil après « Terminer », avec le message neutre et la fiche (${schema})`, async () => {
+        const page = await editeur({ schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        await page.keyboard.press('Delete');
+        await page.locator('.editeur-barre .groupe.fin button.primaire').click();
+        await page.locator('main.accueil > p.message.neutre[role="status"]').waitFor();
+        exigerSansViolationGrave(await auditer(page, `accueil, message neutre après enregistrement, ${schema}`));
+        // Le menu « Autres formats » de la fiche est le meme contenu que celui de l'editeur, audite plus bas. Ouvert sur l'accueil, son
+        // panneau fixe chevauche les voies de la page, et axe ne sait plus lire le fond de chaque ligne (« partially overlaps ») : un doute
+        // de mesure, pas de contraste, qu'on ne contourne pas en l'admettant.
+      });
+
+      it(`avec « Autres formats » ouvert dans l éditeur (${schema})`, async () => {
+        const page = await editeur({ schema });
+        await ouvrirMenu(page, 'Autres formats');
+        await page.locator('.menu-panneau .contenu-export').waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Autres formats ouvert, ${schema}`));
+      });
+
+      it(`en contexte Cricut, la confirmation d un export à corriger puis la carte « Dans Design Space » (${schema})`, async () => {
+        // Un grand dessin, comme plus haut ; la fenetre prend la hauteur de l'inspecteur, pour qu'axe juge chaque texte entier et non une
+        // position de defilement (un texte a demi cache est un doute pour lui).
+        const page = await accueil({ schema });
+        await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 700"><path d="M96 96H288V288H96Z" fill="#c81e28"/><path d="M384 96L576 96L480 288" fill="#1428a0"/></svg>');
+        await page.locator('.selecteur-contexte .menu-bouton').click();
+        await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+        const exporter = page.locator('.panneau-cricut .export-cricut button.primaire');
+        await attend(() => exporter.innerText()).toMatch(/^Exporter quand même/);
+        await exporter.click();
+        await page.locator('.panneau-cricut .confirmation-export').waitFor();
+        const grandir = async () => {
+          const h = await page.evaluate(() => { const i = document.querySelector('.editeur-inspecteur'); return i ? Math.ceil(i.scrollHeight - i.clientHeight + innerHeight) : innerHeight; });
+          await page.setViewportSize({ width: 1400, height: Math.min(4000, Math.max(900, h + 40)) });
+        };
+        await grandir();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Cricut, confirmation d’export, ${schema}`));
+        await Promise.all([page.waitForEvent('download'), page.locator('.panneau-cricut .confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click()]);
+        await page.locator('.panneau-cricut .carte-design-space').waitFor();
+        await grandir();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Cricut, carte Dans Design Space, ${schema}`));
+      });
+    }
+
     it('dans le thème sombre, avec une forme choisie', async () => {
       const page = await editeur({ schema: 'dark' });
       await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
@@ -335,6 +537,84 @@ describe('axe-core : accessibilite automatique', () => {
       await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
       await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, boîte À propos et crédits'));
+    });
+
+    // L'accueil guide (ADR-0019) : la bulle de la visite a chaque moment qui compte, les reperes et les etats vides.
+    async function visite(options: Parameters<typeof navigateur.ouvrir>[0] = {}) {
+      const page = await accueil(options);
+      const essayer = page.getByRole('button', { name: 'Essayer avec la visite guidée' });
+      if (options.tactile) await essayer.tap(); else await essayer.click();
+      await page.locator('.bulle-visite').waitFor();
+      return page;
+    }
+
+    it('à chaque étape de la visite guidée, menée par les vrais gestes (bulle et filet de la cible)', async () => {
+      const page = await visite();
+      const etape = (n: number) => page.locator('.bulle-progression', { hasText: 'Étape ' + n + ' sur 5' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 1'));
+      await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+      await etape(2);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 2'));
+      await page.locator('.editeur-barre input[type=color][aria-label="Remplissage"]').fill('#1f8a3a');
+      await etape(3);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 3'));
+      await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
+      await etape(4);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 4'));
+      await Promise.all([page.waitForEvent('download'), page.locator('.editeur-barre .recuperer-principal').click()]);
+      await etape(5);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 5'));
+    });
+
+    it('à la fin de la visite guidée, ses trois suites, dans le thème sombre', async () => {
+      const page = await visite({ schema: 'dark' });
+      for (let i = 0; i < 4; i++) await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
+      await page.locator('.bulle-progression', { hasText: 'Étape 5 sur 5' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, fin, sombre'));
+    });
+
+    it('sur un téléphone de 390 px, la bulle de la visite ouverte', async () => {
+      const page = await visite({ largeur: 390, hauteur: 800, tactile: true });
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px tactile, visite guidée'));
+    });
+
+    it('avec la boîte « Raccourcis clavier » du menu Aide', async () => {
+      const page = await editeur();
+      await page.locator('.menu-bouton', { hasText: 'Aide' }).click();
+      await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
+      await page.getByRole('dialog', { name: 'Raccourcis clavier' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, boîte Raccourcis clavier'));
+    });
+
+    it('avec le repère des points, au premier double-clic sur une forme', async () => {
+      const page = await editeur();
+      await page.locator('.editeur-svg-toile path[data-id="f3"]').dblclick();
+      await page.locator('.repere[data-repere="points"]').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, repère des points'));
+    });
+
+    // Au bureau, le gabarit du tapis Cricut deborde de la toile (il est plus grand que le dessin) et axe, qui lit les boites des
+    // formes SVG sans leur rognure, le croit sur la barre d'etat : un doute qui ne tient pas au repere. Le repere Cricut est audite
+    // dans le tiroir d'un telephone, ou le dessin (gabarit compris) est masque sous le tiroir ouvert.
+    it('sur un téléphone de 390 px, le repère du contexte Cricut dans le tiroir de l’inspecteur', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
+      await cricut.scrollIntoViewIfNeeded();
+      await cricut.tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.repere[data-repere="cricut"]').waitFor();
+      await attend(() => page.locator('.editeur-inspecteur').evaluate(e => getComputedStyle(e).transform)).toBe('none');
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px tactile, repère Cricut'));
+    });
+
+    it('avec un dessin vidé : les états vides des calques, de l’inspecteur et de la toile', async () => {
+      const page = await editeur();
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Delete');
+      await page.locator('.toile-vide').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, dessin vidé, états vides'));
     });
 
     it('dans le thème sombre, sur l accueil', async () => {

@@ -11,11 +11,17 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, URL_INTEGRATION } from './aide.js';
+import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, terminer, URL_INTEGRATION } from './aide.js';
 import { violationsEcriture, violationsNettoyage } from '../unit/securite/invariants.js';
+import { passer } from '../unit/securite/passage.js';
 
 const DOSSIER = resolve(RACINE_DEPOT, 'tests/fixtures/hostile');
-interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus' }
+/**
+ * `attendu` est l'issue de la lecture pure (et de l'embarquement sans polices) ; `attenduPage`, quand il differe, celle de la
+ * page, qui met le texte en lettres avec ses fontes (ADR-0020) : un fichier hostile qui porte du texte s'y ouvre, et ses
+ * invariants (aucun script, aucune requete, exports inertes) sont alors verifies comme pour tout fichier ouvert.
+ */
+interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus'; attenduPage?: 'ouvre' | 'refus' }
 const index = JSON.parse(readFileSync(resolve(DOSSIER, 'index.json'), 'utf8')) as { fichiers: Ligne[] };
 const octetsDe = (nom: string): Buffer => readFileSync(resolve(DOSSIER, nom));
 /** Le texte comme la page le lit : `File.text()` decode en UTF-8 et retire la marque d'ordre des octets. */
@@ -91,6 +97,16 @@ async function surveiller(s: Session): Promise<Surveillance> {
   return r;
 }
 
+/** Vrai quand `recu` est `texte` prive de quelques caracteres de controle C0 (ni tabulation, ni fin de ligne), et de rien d'autre. */
+function sansQueDesControles(texte: string, recu: string): boolean {
+  let j = 0;
+  for (const c of texte) {
+    if (recu.startsWith(c, j)) j += c.length;
+    else if (!(c.charCodeAt(0) < 0x20 && c !== '\t' && c !== '\n' && c !== '\r')) return false;
+  }
+  return j === recu.length;
+}
+
 /** Les defauts d'un PDF produit par la page : aucune action, aucun script, aucun lien, aucun fichier joint. */
 function defautsPdf(octets: Buffer): string[] {
   const texte = octets.toString('latin1');
@@ -122,10 +138,17 @@ describe('securite : le corpus hostile entre par la page', () => {
     return (await editeur.count()) > 0 ? 'ouvre' : 'refus';
   }
 
-  async function coller(page: Page, texte: string): Promise<'ouvre' | 'refus'> {
-    await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(texte);
+  /**
+   * Colle le texte et rend ce que la page en a fait, avec le texte que la zone de saisie lui a vraiment remis : Firefox retire
+   * des caracteres de controle (au moins U+0000) de ce qu'on tape dans un <textarea> (lu en CI : les deux fichiers du corpus
+   * qui en portent s'y ouvraient au lieu d'etre refuses), si bien que ces octets-la ne peuvent pas entrer par cette porte.
+   */
+  async function coller(page: Page, texte: string): Promise<{ issue: 'ouvre' | 'refus'; recu: string }> {
+    const zone = page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea');
+    await zone.fill(texte);
+    const recu = await zone.inputValue();
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
-    return issue(page);
+    return { issue: await issue(page), recu };
   }
 
   async function deposer(page: Page, octets: Buffer, nom: string): Promise<'ouvre' | 'refus'> {
@@ -182,20 +205,23 @@ describe('securite : le corpus hostile entre par la page', () => {
     await ouvrirMenu(page, 'Fichier');
     await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
     await page.locator('.resultat').waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const brut = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click());
+    // « Télécharger le SVG » de la fiche : le bouton « SVG » d'hier, devenu l'action primaire (memes octets).
+    const brut = await telecharger(page, () => page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click());
     expect(violationsNettoyage(brut.toString('utf8')), nom + ' : SVG telecharge sans edition').toEqual([]);
     await rouvrir(s, brut, nom);
     if (!complet) return;
-    // Apres « Enregistrer » : l'ecriture, regeneree depuis le modele a plat, et ses trois formats.
+    // Apres « Terminer » : l'ecriture, regeneree depuis le modele a plat, et ses trois formats. Sans modification, « Terminer » ne
+    // reecrit rien (la fiche garde le fichier tel qu'il est venu ; Ctrl+S ne garde qu'un brouillon) : un changement de machine, qui ne
+    // touche pas au dessin, suffit a ce que le dessin soit rendu, reecrit et nettoye, comme le faisait Ctrl+S.
     await page.getByRole('button', { name: 'Reprendre l’édition' }).click();
     await page.locator('.editeur-cadre').waitFor();
-    await page.keyboard.press('Control+s');
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const svg = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click());
+    await page.locator('.selecteur-contexte .menu-bouton').click();
+    await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+    await terminer(page);
+    const svg = await telecharger(page, () => page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click());
     expect(violationsEcriture(svg.toString('utf8')), nom + ' : SVG enregistre').toEqual([]);
     await rouvrir(s, svg, nom);
+    await ouvrirMenu(page, 'Autres formats');
     const png = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^PNG$/ }).click());
     const dims = dimensionsPng(png);
     expect(dims, nom + ' : PNG').not.toBeNull();
@@ -212,8 +238,21 @@ describe('securite : le corpus hostile entre par la page', () => {
   for (const l of index.fichiers) {
     it(l.fichier + ' : code colle, puis exports rouverts', async () => {
       const s = await session();
-      const issueCode = await coller(s.page, texteDe(l.fichier));
-      expect(issueCode, l.vecteur).toBe(l.attendu);
+      const texte = texteDe(l.fichier);
+      const { issue: issueCode, recu } = await coller(s.page, texte);
+      // HTML ramene les fins de ligne d'un <textarea> a LF ; Chromium garde pourtant CR dans la valeur lue (constate). Ni l'un ni
+      // l'autre n'est un changement du texte.
+      const ramene = texte.replace(/\r\n?/g, '\n');
+      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(l.attenduPage ?? l.attendu);
+      else {
+        // Le navigateur a change le texte avant la page : seul le retrait de caracteres de controle est admis, et la page doit
+        // faire du texte recu exactement ce qu'en fait le moteur, sans rompre un invariant. Le vecteur d'origine, octets exacts,
+        // passe toujours par le fichier depose (test suivant), qui garde son issue attendue dans tous les moteurs.
+        expect(sansQueDesControles(recu.includes('\r') ? texte : ramene, recu), l.fichier + ' : la zone de texte a change autre chose que des caracteres de controle').toBe(true);
+        const moteur = passer(recu);
+        expect(moteur.defauts, l.fichier + ' : texte recu par la zone de saisie').toEqual([]);
+        expect(issueCode, l.vecteur + ' (texte recu par la zone de saisie)').toBe(moteur.ouvre ? 'ouvre' : 'refus');
+      }
       await s.garde.verifier('apres ouverture');
       if (issueCode === 'ouvre') { await sorties(s, l.fichier, complets.has(l.fichier)); await s.garde.verifier('apres exports'); }
     }, 120_000);
@@ -221,7 +260,7 @@ describe('securite : le corpus hostile entre par la page', () => {
     it(l.fichier + ' : fichier depose', async () => {
       const s = await session();
       const issueDepot = await deposer(s.page, octetsDe(l.fichier), l.fichier);
-      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(l.attendu);
+      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(l.attenduPage ?? l.attendu);
       await s.garde.verifier('apres depot');
     }, 120_000);
   }
@@ -229,7 +268,7 @@ describe('securite : le corpus hostile entre par la page', () => {
   it('un fichier choisi par le selecteur de fichiers passe par la meme porte (octets exacts, UTF-16 compris)', async () => {
     for (const nom of ['encodage-utf16.svg', 'encodage-utf8-invalide.svg', 'script-balise.svg']) {
       const s = await session();
-      await s.page.locator('section[aria-label="Ouvrir un SVG"] input[type=file]').setInputFiles({ name: nom, mimeType: 'image/svg+xml', buffer: octetsDe(nom) });
+      await s.page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] input[type=file]').setInputFiles({ name: nom, mimeType: 'image/svg+xml', buffer: octetsDe(nom) });
       const sortie = await issue(s.page);
       if (!DECODAGE_DU_NAVIGATEUR.has(nom)) expect(sortie, nom).toBe(index.fichiers.find(f => f.fichier === nom)?.attendu);
       await s.garde.verifier(nom);
@@ -281,7 +320,11 @@ describe('securite : l\'option svg de l\'embarquement', () => {
       // Un refus de l'embarquement lit le texte brut (sans le nettoyage de la page) : il peut refuser ce que la page ouvre, jamais l'inverse en danger.
       expect(['ouvre', 'refus'], l.vecteur).toContain(issue);
       if (issue === 'ouvre') {
-        await s.page.keyboard.press('Control+s');
+        // « Enregistrer » ne rend qu'un dessin qui a change (Ctrl+S ne garde qu'un brouillon) : un changement de machine, qui ne touche
+        // pas au dessin, le permet ; le SVG rendu porte alors la marque du contexte, admise par les invariants sur la racine seule.
+        await s.page.locator('.selecteur-contexte .menu-bouton').click();
+        await s.page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+        await s.page.locator('.editeur-barre .groupe.fin button.primaire').click();
         await attend(() => s.page.evaluate(() => (window as unknown as { __recu: string[] }).__recu.length)).toBe(1);
         const recu = await s.page.evaluate(() => (window as unknown as { __recu: string[] }).__recu[0] ?? '');
         expect(violationsEcriture(recu), l.fichier).toEqual([]);

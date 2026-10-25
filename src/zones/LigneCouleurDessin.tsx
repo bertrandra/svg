@@ -22,12 +22,14 @@ interface Proprietes {
 }
 
 export const LigneCouleurDessin = memo(function LigneCouleurDessin({ c, nuancier, actions, rang, taille }: Proprietes) {
+  // Une couleur du nuancier se dit par son nom avant son code (« Rouge #C81E28 ») ; une teinte sans nom n'a que son code.
+  const teinte = nuancier.find(t => t.hex === c.couleur.toLowerCase() && t.nom !== t.hex);
   return (
     <li aria-posinset={taille ? rang : undefined} aria-setsize={taille || undefined}>
       <input type="color" aria-label={'Remplacer ' + c.couleur} value={estHex(c.couleur) ? c.couleur : '#000000'}
         onClick={actions.debuterRecolorer} onChange={e => actions.recolorer(c.couleur, e.target.value, rang)} onBlur={actions.finirRecolorer} />
-      <button type="button" className="discret" title="Sélectionner les formes de cette couleur" onClick={() => actions.choisir(c.couleur)}>
-        {c.couleur.toUpperCase()} · {c.formes}
+      <button type="button" className="discret couleur-code" title="Sélectionner les formes de cette couleur" onClick={() => actions.choisir(c.couleur)}>
+        {teinte ? <><span className="couleur-nom">{teinte.nom}</span> </> : null}<code>{c.couleur.toUpperCase()}</code> <span className="couleur-compte">· {c.formes}</span>
       </button>
       {nuancier.length ? (
         <MenuDeroulant etiquette={'Remplacer ' + c.couleur + ' par une couleur du nuancier'} icone="palette" chevron={false} alignement="droite"

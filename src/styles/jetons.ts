@@ -6,6 +6,8 @@
 // l'utilisateur (nuancier, palettes).
 
 import { contraste, lireHex, versHex } from '../util/couleur.js';
+import { declarationsEspaces, tableauEspaces } from './espaces.js';
+import { declarationsTypographie, tableauTypographie } from './typographie.js';
 
 export type RoleJeton = 'surface' | 'texte' | 'trait' | 'action' | 'etat' | 'toile' | 'relief' | 'repli';
 export type Theme = 'clair' | 'sombre';
@@ -36,10 +38,13 @@ const jeton = (id: string, role: RoleJeton, clair: string, sombre: string, descr
 const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('table', 'surface', '#e9ecef', '#121518', 'Le fond de la page, et du champ de travail autour du plan'),
   jeton('panneau', 'surface', '#f7f8f9', '#1a1e22', 'Les barres, panneaux, cartes et menus : ce qui se pose sur la table'),
+  jeton('selection', 'surface', '#c6dde6', '#2a4b5a', 'Le fond du texte sélectionné : la couleur d’outil adoucie, sous l’encre'),
   jeton('encre', 'texte', '#15181d', '#e6e9ec', 'Le texte courant et les icônes'),
   jeton('encre-douce', 'texte', '#555c66', '#9aa3ad', 'Le texte secondaire : aides, légendes, libellés de champ'),
   jeton('filet', 'trait', '#cfd4da', '#2f353c', 'Les bordures et séparations ; décoratif, il ne porte jamais seul une information'),
+  jeton('filet-fort', 'trait', '#7d848d', '#69717b', 'Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement'),
   jeton('cyan', 'action', '#00719c', '#4fb3dc', 'La couleur d’outil : action primaire, état actif, focus, liens'),
+  jeton('cyan-survol', 'action', '#006186', '#4fb3dc', 'Le texte d’un bouton discret survolé : le cyan s’assombrit en clair, où le voile du survol le ferait passer sous 4,5:1'),
   jeton('sur-cyan', 'action', '#ffffff', '#08202b', 'Le texte posé sur la couleur d’outil'),
   jeton('alerte', 'etat', '#8a5a00', '#e3b45a', 'Avertissement : le texte'),
   jeton('alerte-fond', 'etat', '#f8ecd2', '#33280f', 'Avertissement : le fond du message'),
@@ -49,6 +54,7 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('damier-b', 'toile', '#e6e6e6', '#e6e6e6', 'Le damier de transparence : les cases grises'),
   jeton('toile-blanc', 'toile', '#ffffff', '#ffffff', 'Le plan de travail en fond blanc'),
   jeton('toile-sombre', 'toile', '#1b1d20', '#1b1d20', 'Le plan de travail en fond sombre'),
+  jeton('encre-toile', 'toile', '#15181d', '#15181d', 'L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe)'),
   jeton('ombre-menu', 'relief', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.2)', 'L’ombre des menus déroulants'),
   jeton('ombre-tiroir', 'relief', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.25)', 'L’ombre des tiroirs mobiles'),
   jeton('voile', 'relief', 'rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)', 'Le voile qui assombrit la toile derrière un tiroir ouvert')
@@ -103,14 +109,30 @@ export const AA = 4.5;
 export const PAIRES: readonly PaireContraste[] = [
   { texte: 'encre', fond: 'table', minimum: AA, usage: 'texte sur la page' },
   { texte: 'encre', fond: 'panneau', minimum: AA, usage: 'texte dans les panneaux et menus' },
-  { texte: 'encre-douce', fond: 'table', minimum: AA, usage: 'aides sur la page' },
+  { texte: 'encre-douce', fond: 'table', minimum: AA, usage: 'aides sur la page, texte d’exemple d’un champ (::placeholder)' },
   { texte: 'encre-douce', fond: 'panneau', minimum: AA, usage: 'aides dans les panneaux' },
+  { texte: 'encre', fond: 'selection', minimum: AA, usage: 'texte sélectionné (::selection)' },
   { texte: 'cyan', fond: 'table', minimum: AA, usage: 'liens et boutons discrets sur la page' },
   { texte: 'cyan', fond: 'panneau', minimum: AA, usage: 'liens et boutons discrets dans les panneaux' },
+  { texte: 'cyan-survol', fond: 'panneau', minimum: AA, usage: 'bouton discret survolé dans un panneau (le voile de survol à 10 % est vérifié par un test de rendu)' },
+  { texte: 'cyan-survol', fond: 'table', minimum: AA, usage: 'bouton discret survolé sur la page' },
   { texte: 'sur-cyan', fond: 'cyan', minimum: AA, usage: 'libellé de l’action primaire et de l’outil actif' },
   { texte: 'alerte', fond: 'alerte-fond', minimum: AA, usage: 'message d’avertissement' },
   { texte: 'echec', fond: 'echec-fond', minimum: AA, usage: 'message d’échec, survol d’un geste destructif' },
   { texte: 'echec', fond: 'panneau', minimum: AA, usage: 'geste destructif au repos' }
+];
+
+/** WCAG 2.x 1.4.11, ce qui n'est pas du texte (le bord d'une commande, une forme qui informe) : 3:1. */
+export const AA_GRAPHIQUE = 3;
+
+/**
+ * Les bords qui portent une information (une pastille dont la couleur se confond avec le panneau, la poignee d'une barre
+ * de defilement) : 3:1 contre les deux fonds, dans les deux themes. Le filet ordinaire, decoratif, n'y figure pas.
+ */
+export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
+  { texte: 'filet-fort', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur un panneau' },
+  { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
+  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' }
 ];
 
 const parId = new Map(JETONS.map(j => [j.id, j] as const));
@@ -145,8 +167,8 @@ export function cssJetons(): string {
     '/* Généré depuis src/styles/jetons.ts : ne pas modifier ici. */',
     ':root {',
     declarations(JETONS, 'clair', '  '),
-    '  --sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;',
-    '  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;',
+    declarationsTypographie('  '),
+    declarationsEspaces('  '),
     '}',
     '@media (prefers-color-scheme: dark) {',
     '  :root:not([data-theme="light"]) {',
@@ -169,7 +191,8 @@ export function tableauJetons(): string {
     const lignes = JETONS.filter(j => j.role === role).map(j => '| ' + cellule('--' + j.id) + ' | ' + cellule(j.clair) + ' | ' + cellule(j.sombre) + ' | ' + j.description + ' |');
     return ['### ' + titre, '', '| Jeton | Clair | Sombre | Rôle |', '|---|---|---|---|', ...lignes].join('\n');
   });
-  const paires = PAIRES.map(p => '| ' + cellule('--' + p.texte) + ' sur ' + cellule('--' + p.fond) + ' | ' + contrasteDe(p, 'clair').toFixed(2) + ' | ' + contrasteDe(p, 'sombre').toFixed(2) + ' | ' + p.usage + ' |');
+  const ligne = (p: PaireContraste) => '| ' + cellule('--' + p.texte) + ' sur ' + cellule('--' + p.fond) + ' | ' + contrasteDe(p, 'clair').toFixed(2) + ' | ' + contrasteDe(p, 'sombre').toFixed(2) + ' | ' + p.usage + ' |';
+  const paires = PAIRES.map(ligne);
   return [
     ...sections.flatMap(s => [s, '']),
     '### Contrastes exigés (WCAG 2.x AA, au moins ' + AA + ':1)',
@@ -177,6 +200,16 @@ export function tableauJetons(): string {
     '| Paire | Clair | Sombre | Usage |',
     '|---|---|---|---|',
     ...paires,
+    '',
+    '### Contrastes exigés hors texte (WCAG 2.x 1.4.11, au moins ' + AA_GRAPHIQUE + ':1)',
+    '',
+    '| Paire | Clair | Sombre | Usage |',
+    '|---|---|---|---|',
+    ...PAIRES_GRAPHIQUES.map(ligne),
+    '',
+    tableauTypographie(),
+    '',
+    tableauEspaces(),
     ''
   ].join('\n');
 }

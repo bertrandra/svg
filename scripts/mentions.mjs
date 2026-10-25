@@ -16,7 +16,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ecrireDansDist, depuisRacine, empaqueter, estLance } from './aide.mjs';
 import { FONTES_INTERFACE } from './fontes-interface.mjs';
-import { POLICES } from './polices.mjs';
+import { POLICES, POLICES_TRAIT } from './polices.mjs';
 
 /** Un fichier en texte, en LF (le depot peut etre extrait en CRLF sous Windows) et sans blancs en fin de ligne. */
 const lire = chemin => readFileSync(chemin, 'utf8').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd();
@@ -25,9 +25,13 @@ const modules = depuisRacine('node_modules');
 const paquetDe = nom => join(modules, nom);
 const jsonDe = chemin => JSON.parse(readFileSync(chemin, 'utf8'));
 
-/** La liste des composants, lue dans src/model/credits.ts (compile a la volee, pas de copie). */
+/** La liste des composants, lue dans src/model/credits.ts, et le registre des sources de formes (compiles a la volee, pas de copie). */
 export async function lireCredits() {
-  const code = await empaqueter({ entryPoints: [depuisRacine('src/model/credits.ts')], bundle: true, format: 'esm', platform: 'node' });
+  // Le registre des sources de formes avec : la section des formes en tire chaque source libre.
+  const code = await empaqueter({
+    stdin: { contents: "export * from './src/model/credits.ts'; export { SOURCES_FORMES } from './src/model/sourcesFormes.ts';", resolveDir: depuisRacine(), loader: 'ts' },
+    bundle: true, format: 'esm', platform: 'node'
+  });
   return import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 }
 
@@ -73,6 +77,19 @@ const INTEGRES = {
 /** Les textes de licence que le depot garde en copie, faute d'un paquet installe qui les porte : copies verbatim du fichier LICENSE du paquet publie. */
 const LICENCES_COPIEES = { 'tiny-inflate': { fichier: 'scripts/licences/tiny-inflate-1.0.3.LICENSE', source: 'le fichier LICENSE du paquet tiny-inflate 1.0.3 publié sur npm (copie dans scripts/licences/)' } };
 
+/**
+ * Les licences des sources libres de formes : les paquets @iconify-json ne livrent ni fichier de licence ni notice, seulement
+ * l'identifiant SPDX et l'adresse de la licence du depot amont. Le depot garde une copie verbatim de ce fichier, relevee le
+ * 25 octobre 2026 sur la branche principale de chaque depot (un test verifie que le titulaire du registre y figure).
+ */
+export const LICENCES_SOURCES = {
+  '@iconify-json/mdi': { fichier: 'scripts/licences/mdi-MaterialDesign.LICENSE', amont: 'https://github.com/Templarian/MaterialDesign/blob/master/LICENSE' },
+  '@iconify-json/ph': { fichier: 'scripts/licences/ph-phosphor-core.LICENSE', amont: 'https://github.com/phosphor-icons/core/blob/main/LICENSE' },
+  '@iconify-json/tabler': { fichier: 'scripts/licences/tabler-icons.LICENSE', amont: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
+  '@iconify-json/healthicons': { fichier: 'scripts/licences/healthicons.LICENSE', amont: 'https://github.com/resolvetosavelives/healthicons/blob/main/LICENSE' },
+  '@iconify-json/lucide': { fichier: 'scripts/licences/lucide.LICENSE', amont: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' }
+};
+
 /** La version d'un composant integre, lue dans le fichier livre de son paquet ; lance si la preuve manque. */
 function constaterIntegre(c, embarques) {
   const marque = INTEGRES[c.paquet];
@@ -113,7 +130,7 @@ function verifierLockEtListe(credits, verrou, embarques) {
     if (c.installe === false) continue;
     const e = verrou.packages['node_modules/' + c.paquet];
     if (!e) { erreurs.push(c.paquet + ' : absent de package-lock.json'); continue; }
-    if (!String(e.license ?? '').includes(c.spdx)) erreurs.push(c.paquet + ' : package-lock.json dit « ' + (e.license ?? 'rien') + ' », credits.ts « ' + c.spdx + ' »');
+    if (!String(e.license ?? '').includes(c.spdxPaquet ?? c.spdx)) erreurs.push(c.paquet + ' : package-lock.json dit « ' + (e.license ?? 'rien') + ' », credits.ts « ' + (c.spdxPaquet ?? c.spdx) + ' »');
     if (!existsSync(paquetDe(c.paquet))) erreurs.push(c.paquet + ' : absent de node_modules (npm ci)');
   }
   // Les bundles embarquent tout paquet qu'ils importent : la liste (hors recopies, `dans`) doit etre exactement celle-la.
@@ -125,11 +142,17 @@ function verifierLockEtListe(credits, verrou, embarques) {
     try { constaterIntegre(c, embarques); } catch (e) { erreurs.push(e.message); }
   }
   const fontes = new Set(credits.COMPOSANTS.filter(c => c.genre === 'fonte').map(c => c.paquet));
-  const embarqueesFontes = new Set([...POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]), ...FONTES_INTERFACE.map(f => f.paquet)]);
+  const embarqueesFontes = new Set([...POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]), ...POLICES_TRAIT.map(p => p[2]), ...FONTES_INTERFACE.map(f => f.paquet)]);
   for (const p of embarqueesFontes) if (!fontes.has(p)) erreurs.push(p + ' : fonte embarquee (scripts/polices.mjs ou scripts/fontes-interface.mjs) absente de src/model/credits.ts');
   for (const p of fontes) if (!embarqueesFontes.has(p)) erreurs.push(p + ' : dans src/model/credits.ts mais embarquee nulle part');
   if (erreurs.length) throw new Error('mentions : la liste des composants ne tient pas\n  - ' + erreurs.join('\n  - '));
 }
+
+/**
+ * Les fontes dont le paquet ne livre pas le texte de licence (hersheytext : une ligne « License: SIL Open Font License » dans
+ * chaque police SVG) : le depot en garde une copie, avec la ligne de copyright, dans scripts/licences/.
+ */
+const LICENCES_FONTES_COPIEES = { hersheytext: 'scripts/licences/ems-readability-OFL.txt' };
 
 /** Le fichier de licence d'une fonte : LICENSE_FONT chez @expo-google-fonts (LICENSE y est celui du paquet MIT), LICENSE chez @fontsource. */
 const fichierLicenceFonte = paquet => ['LICENSE_FONT', 'LICENSE'].find(f => existsSync(join(paquetDe(paquet), f))) ?? 'LICENSE_FONT';
@@ -138,14 +161,15 @@ const fichierLicenceFonte = paquet => ['LICENSE_FONT', 'LICENSE'].find(f => exis
 function sectionFontes(credits, verrou) {
   const fontes = credits.composantsDe('fonte');
   const lignes = ['## Fontes', '',
-    POLICES.length + ' fontes (' + (fontes.length - FONTES_INTERFACE.length) + ' familles) sont embarquées dans `polices.js`, pour le texte en formes ; ' + FONTES_INTERFACE.length + ' familles de plus (Instrument Sans et IBM Plex Mono,',
+    (POLICES.length + POLICES_TRAIT.length) + ' fontes (' + (fontes.length - FONTES_INTERFACE.length) + ' familles, dont ' + POLICES_TRAIT.length + ' à trait unique) sont embarquées dans `polices.js`, pour le texte ; ' + FONTES_INTERFACE.length + ' familles de plus (Instrument Sans et IBM Plex Mono,',
     'sous-ensemble latin) sont incorporées à `editeur-svg.html`, pour l’interface de la page : la page ne les demande à aucun serveur. Toutes sont sous la licence SIL Open Font License 1.1.',
     'Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.', ''];
   const corps = new Map();
   for (const c of fontes) {
     const e = verrou.packages['node_modules/' + c.paquet];
-    const nomFichier = fichierLicenceFonte(c.paquet);
-    const { texte } = licenceDe(c.paquet, nomFichier);
+    const copie = LICENCES_FONTES_COPIEES[c.paquet];
+    const nomFichier = copie ?? fichierLicenceFonte(c.paquet);
+    const { texte } = copie ? { texte: lire(depuisRacine(copie)) } : licenceDe(c.paquet, nomFichier);
     if (!texte) throw new Error('mentions : ' + c.paquet + ' n’a pas de ' + nomFichier);
     // Certains paquets (IBM Plex) listent, sur la meme ligne, le copyright de chaque fichier de fonte : on garde le premier.
     const copyright = (texte.split('\n').find(l => l.trim() !== '') ?? '').replace(/ \S+\.ttf:.*$/, '');
@@ -219,7 +243,31 @@ function sectionFormes(credits) {
     '', 'Ce que l’éditeur fait pour vous : tout SVG écrit qui contient une forme de la bibliothèque porte un élément `<metadata>` avec cette mention, et chaque `<path>` issu',
     'de la bibliothèque un attribut `data-origine` (par exemple `game-icons:3d-glasses`) ; un PDF la porte dans ses informations (`/Subject`) ; un SVG de découpe',
     'la porte en commentaire. Un PNG ne peut pas la porter : citez la source là où vous le publiez. La mention écrite est :', '',
-    '> ' + credits.mentionOrigines([credits.origineDeBibliotheque('exemple')]), ''];
+    '> ' + credits.mentionOrigines([credits.origineDeBibliotheque('exemple')]), '',
+    ...sectionSourcesLibres(credits, verrou)];
+  return lignes;
+}
+
+/** Ce qu'on garde d'une source libre, en une phrase : ses variantes et leur nature. */
+const variantesDe = source => source.variantes.map(v => (v.suffixe ? '« ' + v.suffixe + ' »' : 'sans suffixe') + ' (' + (v.nature === 'plein' ? 'pleine' : 'en ligne') + ')').join(', ');
+
+/** Les sources libres de la bibliotheque : chacune avec sa version, sa licence, son titulaire et le texte de sa licence. */
+function sectionSourcesLibres(credits, verrou) {
+  const libres = credits.SOURCES_FORMES.filter(s => !s.mentionDansLeFichier);
+  const lignes = ['### Sources libres de la bibliothèque', '',
+    'Ces jeux sont livrés en annexes chargées à la demande (`bibliotheque-<source>.js`). Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention',
+    'dans chaque dessin : un SVG écrit garde seulement l’origine de la forme (`data-origine`, par exemple `mdi:heart`), sans `<metadata>`. Leur notice',
+    'et le texte de leur licence accompagnent la bibliothèque, ici et dans `MENTIONS.txt`. Les logos de marque sont écartés par règle (`MOTS_DE_MARQUE`).', ''];
+  for (const s of libres) {
+    const copie = LICENCES_SOURCES[s.paquet];
+    if (!copie) throw new Error('mentions : ' + s.paquet + ' : pas de copie de licence déclarée (LICENCES_SOURCES)');
+    const info = jsonDe(join(paquetDe(s.paquet), 'info.json'));
+    lignes.push('#### ' + s.nom, '',
+      '- Paquet `' + s.paquet + '` ' + verrou.packages['node_modules/' + s.paquet].version + ' (« ' + info.name + ' », ' + info.total + ' icônes dans le jeu) — ' + s.url,
+      '- Licence : **' + s.licence + '** (`' + s.spdx + '`) — ' + s.urlLicence + ' ; titulaire : ' + s.titulaire,
+      '- Variantes gardées : ' + variantesDe(s) + ' ; plan de ' + s.plan + ' unités.',
+      '- Texte de la licence, copié du dépôt amont (' + copie.amont + ') :', '', bloc(lire(depuisRacine(copie.fichier))), '');
+  }
   return lignes;
 }
 
@@ -235,6 +283,9 @@ export async function composerMentions() {
     'des paquets : ne le modifiez pas à la main. Il liste ce que l’éditeur redistribue dans `dist/` (la page, le bundle d’embarquement, la bibliothèque de formes,',
     'les fontes, le traceur vtracer). Le même texte est livré sous le nom `MENTIONS.txt` ; l’éditeur le résume dans « À propos et crédits » (menu Fichier).', '',
     'Ce fichier ne couvre que les composants tiers ; la licence du projet lui-même, s’il en porte une, est dans le fichier `LICENSE` du dépôt.', '',
+    'Les polices libres que la personne télécharge à la demande (ADR-0025) ne sont pas redistribuées et ne figurent pas ici : `polices-catalogue.js`',
+    'n’en est que l’index (noms, licences, versions épinglées, empreintes), sans aucune fonte ; le fichier vient de sa source, et la boîte « À propos et',
+    'crédits » nomme la licence de chaque police téléchargée qu’emploie un dessin.', '',
     ...sectionFormes(credits),
     ...sectionFontes(credits, verrou),
     ...sectionLogiciels(credits, verrou, embarques)

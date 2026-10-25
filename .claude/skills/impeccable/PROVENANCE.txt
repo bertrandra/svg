@@ -1,0 +1,2 @@
+pbakaus/impeccable, commit 9368675 (skill 4.7.1, moteur 0.1.17) : copie de .claude/skills/impeccable, licence Apache 2.0 (LICENSE, NOTICE.md).
+Outil de travail pour les agents, jamais embarque dans dist/.

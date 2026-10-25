@@ -2,7 +2,7 @@
 // enregistrement, fin du trace a la plume, insertions de la bibliotheque, booleens, transformations
 // chiffrees. Meme regle que actions.ts : l'etat se lit au moment de l'appel.
 
-import { ajouterForme, boiteDe, ecrireDessin, inserer, lireDessin, marquerOrigine, polygone, type DessinSvg } from '../engine/editionSvg.js';
+import { ajouterForme, boiteDe, inserer, lireDessin, marquerOrigine, polygone, type DessinSvg } from '../engine/editionSvg.js';
 import { appliquerBooleen } from '../engine/booleens.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../engine/transformations.js';
 import { nettoyerSvg } from '../util/svg.js';
@@ -10,6 +10,8 @@ import { pluriel } from '../util/texte.js';
 import { phraseBooleen, sansDoublons, styleLigne } from './aidesEditeur.js';
 import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
+import { svgDocument } from './actionsProduction.js';
+import { avecVectorisation } from './phrasesTexte.js';
 
 type ActionsDessin = Pick<ActionsEditeur, 'finirTrace' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
@@ -27,11 +29,13 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       vues.poserVue({ zoom, x: (el.clientWidth - bo.l * zoom) / 2 - bo.x * zoom, y: (el.clientHeight - bo.h * zoom) / 2 - bo.y * zoom });
     },
     enregistrerTout: () => {
-      const { dessin, enregistrer } = lire();
+      const { dessin, enregistrer, production } = lire();
       // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
-      const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(ecrireDessin(dessin, 3)) : null;
-      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return; }
+      // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
+      const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;
+      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return false; }
       enregistrer(propre.svg);
+      return true;
     },
     finirTrace: (fermerTrace: boolean) => {
       const { dessin, trace, style } = lire();
@@ -81,13 +85,14 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       const { dessin, sel, lisserBooleens } = lire();
       // Le moteur garde `lisser` faux par defaut (ses appelants et ses references ne bougent pas) ; l'editeur le propose actif.
       const r = appliquerBooleen(dessin, sel, op, undefined, { lisser: lisserBooleens });
-      if (r.erreur) { dire(r.erreur); return; }
+      if (r.erreur) { dire(r.erreur); return false; }
       appliquer(() => r.dessin);
       choisir(r.id ? [r.id] : []);
       const resultat = r.id ? r.dessin.formes.find(f => f.id === r.id) : undefined;
-      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return; }
+      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return false; }
       const reunies = dessin.formes.filter(f => sel.includes(f.id) && f.visible && !f.verrouille).length;
-      dire(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')));
+      dire(avecVectorisation(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')), dessin, sel));
+      return true;
     },
     transformerNumerique: t => {
       const { dessin, sel } = lire();

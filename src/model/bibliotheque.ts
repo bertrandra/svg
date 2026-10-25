@@ -1,10 +1,11 @@
-// La bibliotheque de formes : les 4 000 silhouettes de game-icons.net (CC BY 3.0), nommees en
-// francais et classees par evenement du calendrier francais (Noel, Paques, Halloween...), par
-// evenement de la vie (naissance, anniversaire, concert...) et par categorie (personnage, batiment,
-// animal...). Pur : le nom et le classement se deduisent de l'identifiant anglais de l'icone, par le
-// lexique et par des mots-cles ; la meme bibliotheque sort toujours de la meme source.
+// La bibliotheque de formes : les 4 000 silhouettes de game-icons.net (CC BY 3.0), et les jeux libres du
+// registre (model/sourcesFormes.ts), nommes en francais et classes par evenement du calendrier francais (Noel,
+// Paques, Halloween...), par evenement de la vie (naissance, anniversaire, concert...) et par categorie
+// (personnage, batiment, animal...). Pur : le nom et le classement se deduisent de l'identifiant anglais de
+// l'icone, par le lexique et par des mots-cles ; la meme bibliotheque sort toujours de la meme source.
 
-import { EXPRESSIONS, traduireMot } from './lexique.js';
+import { EXPRESSIONS, EXPRESSIONS_LIBRES, traduireMot, traduireMotLibre } from './lexique.js';
+import { SOURCE_PAR_DEFAUT, type NatureForme, type OrdreDesMots } from './sourcesFormes.js';
 
 export type FamilleEvenement = 'calendrier' | 'vie' | 'categorie';
 
@@ -14,20 +15,28 @@ export interface Evenement {
   famille: FamilleEvenement;
   /** Le mois du calendrier, 1 a 12, pour la famille `calendrier`. */
   mois?: number;
-  /** Les mots anglais (ou suites de mots, avec des tirets) qui rangent une icone ici. */
+  /**
+   * Les mots anglais (ou suites de mots, avec des tirets) qui rangent une icone ici, du plus typique au moins typique :
+   * l'appartenance ne depend pas de l'ordre, mais la recherche presente d'abord les formes qui portent les premiers
+   * (`rangDansEvenement`, model/recherche.ts).
+   */
   mots: readonly string[];
   /** Les mots qui, presents, l'en excluent malgre tout (« bell-pepper » n'est pas une cloche). */
   sauf?: readonly string[];
 }
 
 export interface EntreeBibliotheque {
-  /** L'identifiant de game-icons.net, en anglais. */
+  /** L'identifiant de l'icone dans sa source, en anglais. */
   id: string;
   /** Le nom en francais, tete en premier. */
   nom: string;
   evenements: readonly string[];
-  /** Le SVG complet, une seule couleur, sur un plan de 512 x 512. */
+  /** Le SVG complet, une seule couleur, sur un plan carre (512 pour game-icons, 480 pour les autres sources). */
   svg: string;
+  /** La source (model/sourcesFormes.ts) ; absente, c'est game-icons, la source d'avant le registre. */
+  source?: string;
+  /** Plein pour la lame, ligne pour le stylo ; absente, c'est plein. */
+  nature?: NatureForme;
 }
 
 const e = (id: string, nom: string, famille: FamilleEvenement, mots: readonly string[], mois?: number, sauf?: readonly string[]): Evenement =>
@@ -55,7 +64,7 @@ export const EVENEMENTS: readonly Evenement[] = [
   e('halloween', 'Halloween', 'calendrier', ['pumpkin', 'jack-o-lantern', 'ghost', 'spectre', 'skull', 'skulls', 'skeleton', 'skeletal', 'bat', 'bats', 'batwing', 'spider', 'cobweb', 'web', 'witch', 'warlock', 'wizard', 'zombie', 'vampire', 'dracula', 'werewolf', 'monster', 'mummy', 'frankenstein', 'cauldron', 'potion', 'coffin', 'tombstone', 'grave', 'graveyard', 'crypt', 'haunting', 'spooky', 'scythe', 'reaper', 'death', 'dead', 'devil', 'daemon', 'demon', 'imp', 'ogre', 'troll', 'goblin', 'evil', 'cursed', 'candy', 'lollipop', 'owl', 'raven', 'crow', 'black-cat', 'cat', 'full-moon', 'lantern', 'scarecrow', 'eyeball', 'fangs', 'bone', 'bones', 'poison', 'blood', 'bloody', 'terror', 'morgue', 'gargoyle', 'voodoo', 'calavera', 'eyepatch', 'hook', 'pirate', 'ninja', 'mask'], 10),
   e('toussaint', 'Toussaint', 'calendrier', ['grave', 'graveyard', 'tombstone', 'coffin', 'candle', 'candles', 'cross', 'crosses', 'crucifix', 'church', 'cathedral', 'angel', 'prayer', 'praying', 'memorial', 'urn', 'urns', 'dove', 'flower', 'flowers', 'chrysanthemum', 'saint', 'heaven', 'soul'], 11),
   e('armistice', '11 Novembre', 'calendrier', ['dove', 'peace', 'poppy', 'soldier', 'military', 'medal', 'medallist', 'flag', 'flags', 'memorial', 'monument', 'trench', 'helmet', 'brodie', 'stahlhelm', 'bugle', 'wreath', 'laurel', 'laurels', 'cannon', 'truce', 'veteran', 'rifle', 'bayonet'], 11),
-  e('noel', 'Noël', 'calendrier', ['christmas', 'santa', 'present', 'gift', 'gifts', 'pine', 'fir', 'snowman', 'snowflake', 'snow', 'snowing', 'sled', 'sleigh', 'reindeer', 'deer', 'stag', 'elf', 'elven', 'bell', 'bells', 'ringing', 'candle', 'candles', 'candy', 'gingerbread', 'cookie', 'stocking', 'socks', 'chimney', 'fireplace', 'wreath', 'holly', 'angel', 'winter', 'icicles', 'igloo', 'mistletoe', 'wrapped', 'wrapping', 'nutcracker', 'ornament', 'sweater', 'mittens', 'scarf', 'ushanka', 'beanie', 'turkey'], 12, ['pepper', 'shield', 'diving', 'card', 'skull']),
+  e('noel', 'Noël', 'calendrier', ['christmas', 'santa', 'snowman', 'pine', 'fir', 'present', 'gift', 'gifts', 'gingerbread', 'candy', 'reindeer', 'sleigh', 'sled', 'stocking', 'wreath', 'holly', 'mistletoe', 'ornament', 'snowflake', 'snow', 'snowing', 'deer', 'stag', 'bell', 'bells', 'ringing', 'candle', 'candles', 'cookie', 'socks', 'chimney', 'fireplace', 'angel', 'elf', 'elven', 'winter', 'icicles', 'igloo', 'wrapped', 'wrapping', 'nutcracker', 'sweater', 'mittens', 'scarf', 'ushanka', 'beanie', 'turkey'], 12, ['pepper', 'shield', 'diving', 'card', 'skull']),
   e('hiver', 'Hiver', 'calendrier', ['snow', 'snowing', 'snowflake', 'snowman', 'snowboard', 'ski', 'skis', 'skier', 'skate', 'ice', 'icicles', 'iceberg', 'icebergs', 'igloo', 'frozen', 'freeze', 'cold', 'polar', 'penguin', 'blizzard', 'winter', 'fireplace', 'mittens', 'gloves', 'scarf', 'beanie', 'ushanka', 'coat', 'hockey', 'sled', 'mountain', 'mountains', 'hot', 'soup', 'tea', 'teapot'], 1),
   e('hanoucca', 'Hanoucca', 'calendrier', ['menorah', 'candelabra', 'candlestick', 'candle', 'candles', 'dreidel', 'star-of-david', 'hexagram', 'jerusalem', 'olive', 'oil'], 12),
   e('ramadan', 'Ramadan et Aïd', 'calendrier', ['mosque', 'crescent', 'crescents', 'lantern', 'moon', 'lunar', 'prayer', 'praying', 'kaaba', 'date', 'dates', 'rub-el-hizb', 'sheep', 'lamb', 'arabic', 'star'], 3),
@@ -64,7 +73,7 @@ export const EVENEMENTS: readonly Evenement[] = [
   // Les evenements de la vie.
   e('naissance', 'Naissance', 'vie', ['baby', 'baby-bottle', 'baby-face', 'stork', 'cradle', 'pregnant', 'fetus', 'embryo', 'born', 'ultrasound', 'incubator', 'toy', 'teddy', 'rattle', 'pacifier', 'diaper', 'family', 'mother', 'father', 'balloon', 'balloons', 'bunny-slippers', 'duck', 'kid', 'sperm', 'dna1', 'dna2', 'nest-eggs', 'egg-clutch'], undefined, ['card', 'whale', 'hunting']),
   e('anniversaire', 'Anniversaire', 'vie', ['birthday', 'cake', 'cupcake', 'stairs-cake', 'candle', 'candles', 'balloon', 'balloons', 'party', 'present', 'gift', 'gifts', 'wrapped', 'ribbon', 'ribbons', 'confetti', 'popper', 'party-hat', 'party-flags', 'champagne', 'toast', 'donut', 'lollipop', 'candy', 'pinata', 'surprise', 'celebration', 'cheerful', 'happy', 'delighted', 'ice-cream', 'pie', 'number', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'twenty', 'hourglass', 'calendar', 'clown', 'juggler', 'trophy'], undefined),
-  e('mariage', 'Mariage', 'vie', ['wedding', 'ring', 'rings', 'engagement', 'bride', 'groom', 'dress', 'suit', 'tie', 'church', 'cathedral', 'chapel', 'heart', 'hearts', 'lovers', 'kiss', 'love', 'dove', 'rose', 'bouquet', 'flower', 'flowers', 'champagne', 'cake', 'stairs-cake', 'diamond', 'jewel', 'necklace', 'earrings', 'car', 'carriage', 'bell', 'bells', 'ringing', 'relationship', 'couple', 'cupidon', 'honey', 'moon', 'passion', 'veil', 'tiara', 'crown', 'candle', 'candles', 'calendar', 'toast'], undefined, ['card']),
+  e('mariage', 'Mariage', 'vie', ['wedding', 'engagement', 'ring', 'rings', 'bride', 'groom', 'dress', 'suit', 'tie', 'church', 'cathedral', 'chapel', 'heart', 'hearts', 'lovers', 'kiss', 'love', 'dove', 'rose', 'bouquet', 'flower', 'flowers', 'champagne', 'cake', 'stairs-cake', 'diamond', 'jewel', 'necklace', 'earrings', 'car', 'carriage', 'bell', 'bells', 'ringing', 'relationship', 'couple', 'cupidon', 'honey', 'moon', 'passion', 'veil', 'tiara', 'crown', 'candle', 'candles', 'calendar', 'toast'], undefined, ['card']),
   e('concert', 'Concert et spectacle', 'vie', ['music', 'musical', 'notes', 'guitar', 'microphone', 'drum', 'djembe', 'trumpet', 'saxophone', 'violin', 'viola', 'piano', 'pianist', 'flute', 'clarinet', 'trombone', 'tuba', 'harp', 'banjo', 'accordion', 'speaker', 'boombox', 'headphones', 'stage', 'theater', 'drama', 'curtains', 'ticket', 'spotlight', 'projector', 'crowd', 'sing', 'song', 'sound', 'dj', 'vuvuzelas', 'clapperboard', 'film', 'camera', 'opera', 'carillon', 'metronome', 'applause', 'juggler', 'juggling', 'acrobatic', 'ballerina', 'dancer', 'tightrope', 'contortionist', 'ringmaster', 'carousel', 'circus', 'magician', 'trick', 'clown', 'fireworks', 'firework'], undefined),
   e('sport', 'Sport', 'vie', ['ball', 'balls', 'football', 'footy', 'soccer', 'basketball', 'baseball', 'tennis', 'rugby', 'golf', 'hockey', 'cricket', 'volleyball', 'bowling', 'boxing', 'medal', 'medallist', 'trophy', 'trophies', 'podium', 'champions', 'winner', 'race', 'running', 'sprint', 'jump', 'jumping', 'swim', 'swimfins', 'dive', 'diving', 'ski', 'skis', 'skier', 'skate', 'skateboard', 'skateboarding', 'snowboard', 'surf', 'surfer', 'bike', 'cycling', 'unicycle', 'climbing', 'hiking', 'archery', 'fencer', 'racket', 'shuttlecock', 'ping', 'pong', 'frisbee', 'gym', 'weight', 'lifting', 'biceps', 'muscle', 'muscular', 'goal', 'whistle', 'stopwatch', 'team', 'player', 'players', 'dunk', 'kick', 'punch', 'judo', 'karate', 'wrestling', 'sport', 'babyfoot', 'curling', 'slalom', 'finish-line', 'horseback', 'saddle', 'canoe', 'paddle', 'sail', 'sailboat', 'parachute', 'glider', 'dumbbell', 'kettlebell'], undefined),
   e('voyage', 'Voyage', 'vie', ['travel', 'suitcase', 'passport', 'ticket', 'map', 'compass', 'globe', 'world', 'airplane', 'plane', 'biplane', 'jet', 'helicopter', 'train', 'locomotive', 'subway', 'bus', 'car', 'cadillac', 'jeep', 'van', 'caravan', 'motorcycle', 'scooter', 'bike', 'ship', 'boat', 'sailboat', 'canoe', 'galleon', 'caravel', 'cruiser', 'submarine', 'rocket', 'spaceship', 'ufo', 'balloon', 'air-balloon', 'zeppelin', 'road', 'crossroad', 'path', 'trail', 'journey', 'itinerary', 'tent', 'camping', 'campfire', 'backpack', 'knapsack', 'bindle', 'hiking', 'mountain', 'mountains', 'beach', 'island', 'desert', 'jungle', 'oasis', 'lighthouse', 'harbor', 'pier', 'dock', 'anchor', 'hotel', 'camel', 'pyramid', 'pyramids', 'eiffel', 'louvre', 'pisa', 'colosseum', 'coliseum', 'moai', 'uluru', 'sydney', 'fuji', 'tipi', 'igloo', 'binoculars', 'spyglass', 'photo', 'camera', 'arrival', 'departure'], undefined),
@@ -89,7 +98,7 @@ export const evenement = (id: string): Evenement | undefined => EVENEMENTS.find(
 const motsDe = (id: string): string[] => id.split('-').filter(Boolean);
 
 /** Vrai si la suite de mots `mot` (un ou plusieurs, separes par des tirets) figure dans ceux de l'icone, au pluriel pres. */
-function contient(mots: readonly string[], mot: string): boolean {
+export function contient(mots: readonly string[], mot: string): boolean {
   const suite = mot.split('-');
   const pareil = (a: string, b: string) => a === b || a === b + 's' || a === b + 'es' || (b.endsWith('y') && a === b.slice(0, -1) + 'ies');
   for (let i = 0; i + suite.length <= mots.length; i++) {
@@ -98,10 +107,38 @@ function contient(mots: readonly string[], mot: string): boolean {
   return false;
 }
 
+/** Les mots d'icone qu'un mot-cle accepte, au pluriel pres : ceux pour lesquels `pareil` est vrai, ecrits une fois. */
+const formesDe = (b: string): ReadonlySet<string> => new Set([b, b + 's', b + 'es', ...(b.endsWith('y') ? [b.slice(0, -1) + 'ies'] : [])]);
+
+interface Suite { readonly regle: number; readonly exclusion: boolean; readonly mots: readonly ReadonlySet<string>[] }
+
+/**
+ * Les regles d'EVENEMENTS indexees par le premier mot de chaque mot-cle (sous toutes ses formes) : classer vingt mille icones
+ * ne compare plus chaque mot a trois mille mots-cles. Le resultat est exactement celui de `contient` sur chaque regle.
+ */
+const INDEX_REGLES: ReadonlyMap<string, readonly Suite[]> = (() => {
+  const index = new Map<string, Suite[]>();
+  EVENEMENTS.forEach((ev, regle) => {
+    const ajouter = (mot: string, exclusion: boolean) => {
+      const mots = mot.split('-').map(formesDe);
+      for (const f of mots[0] ?? []) index.set(f, [...(index.get(f) ?? []), { regle, exclusion, mots }]);
+    };
+    ev.mots.forEach(m => ajouter(m, false));
+    (ev.sauf ?? []).forEach(m => ajouter(m, true));
+  });
+  return index;
+})();
+
 /** Les identifiants d'evenements d'une icone, dans l'ordre d'EVENEMENTS ; vide si rien ne la range. */
 export function classer(id: string): string[] {
   const mots = motsDe(id);
-  return EVENEMENTS.filter(ev => ev.mots.some(m => contient(mots, m)) && !(ev.sauf ?? []).some(m => contient(mots, m))).map(ev => ev.id);
+  const ranges = new Set<number>(), exclus = new Set<number>();
+  mots.forEach((m, i) => {
+    for (const s of INDEX_REGLES.get(m) ?? []) {
+      if (i + s.mots.length <= mots.length && s.mots.every((f, k) => f.has(mots[i + k] ?? ''))) (s.exclusion ? exclus : ranges).add(s.regle);
+    }
+  });
+  return EVENEMENTS.filter((_, k) => ranges.has(k) && !exclus.has(k)).map(ev => ev.id);
 }
 
 const NUMERIQUE = /^\d+$/;
@@ -111,8 +148,11 @@ const NUMERIQUE = /^\d+$/;
  * la tete en premier (« broken-heart » devient « cœur brisé »), les nombres a la fin. Un mot que le
  * lexique ignore reste en anglais.
  */
-export function nomFrancais(id: string): string {
-  const expr = EXPRESSIONS[id];
+export function nomFrancais(id: string, ordre: OrdreDesMots = 'anglais', libre = false): string {
+  // Les noms composes et les sens des sources libres ne s'appliquent qu'a elles : un nom de game-icons ne change pas.
+  const expressions = libre ? EXPRESSIONS_LIBRES : EXPRESSIONS;
+  const traduire = libre ? traduireMotLibre : traduireMot;
+  const expr = expressions[id];
   if (expr !== undefined) return expr;
   const mots = motsDe(id);
   const jetons: string[] = [], nombres: string[] = [];
@@ -121,24 +161,25 @@ export function nomFrancais(id: string): string {
     let pris = 0, texte: string | undefined;
     for (let n = Math.min(4, mots.length - i); n >= 2 && texte === undefined; n--) {
       const cle = mots.slice(i, i + n).join('-');
-      if (EXPRESSIONS[cle] !== undefined) { texte = EXPRESSIONS[cle]; pris = n; }
+      if (expressions[cle] !== undefined) { texte = expressions[cle]; pris = n; }
     }
     if (texte === undefined) {
       const mot = mots[i] ?? '';
       pris = 1;
       if (NUMERIQUE.test(mot)) { nombres.push(mot); i += 1; continue; }
-      texte = traduireMot(mot) ?? mot;
+      texte = traduire(mot) ?? mot;
     }
     if (texte) jetons.push(texte);
     i += pris;
   }
-  return [...jetons.reverse(), ...nombres].join(' ');
+  return [...(ordre === 'anglais' ? jetons.reverse() : jetons), ...nombres].join(' ');
 }
 
 /** Les mots d'un identifiant que le lexique ne traduit pas (hors nombres et expressions). */
-export function motsInconnus(id: string): string[] {
-  if (EXPRESSIONS[id] !== undefined) return [];
-  return motsDe(id).filter(m => !NUMERIQUE.test(m) && traduireMot(m) === undefined);
+export function motsInconnus(id: string, libre = false): string[] {
+  if ((libre ? EXPRESSIONS_LIBRES : EXPRESSIONS)[id] !== undefined) return [];
+  const traduire = libre ? traduireMotLibre : traduireMot;
+  return motsDe(id).filter(m => !NUMERIQUE.test(m) && traduire(m) === undefined);
 }
 
 export interface IconeSource { body: string; width?: number; height?: number }
@@ -179,21 +220,18 @@ export function lireCorrections(brut: unknown): Corrections {
   return r;
 }
 
+/**
+ * La cle d'une correction : l'identifiant nu pour game-icons (bibliotheque/corrections.json d'avant le registre), prefixe de
+ * sa source pour une autre (`mdi:heart`), pour que deux sources ne se corrigent pas l'une l'autre.
+ */
+export const cleCorrection = (e: EntreeBibliotheque): string => (e.source === undefined || e.source === SOURCE_PAR_DEFAUT ? e.id : e.source + ':' + e.id);
+
 /** Les entrees corrigees : le nom et le classement du fichier l'emportent sur ceux du code. */
 export function appliquerCorrections(entrees: readonly EntreeBibliotheque[], corrections: Corrections): EntreeBibliotheque[] {
   return entrees.map(e => {
-    const c = corrections[e.id];
+    const c = corrections[cleCorrection(e)];
     if (!c) return e;
     const nom = c.nom?.trim();
     return { ...e, ...(nom ? { nom } : {}), ...(c.evenements ? { evenements: [...c.evenements] } : {}) };
   });
-}
-
-const sansAccents = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').toLowerCase();
-
-/** Les entrees dont le nom francais ou l'identifiant contient chaque mot cherche, et qui portent l'evenement s'il est donne. */
-export function chercher(entrees: readonly EntreeBibliotheque[], texte: string, evenementId: string | null): EntreeBibliotheque[] {
-  const mots = sansAccents(texte).split(/\s+/).filter(Boolean);
-  return entrees.filter(x => (evenementId === null || x.evenements.includes(evenementId))
-    && mots.every(m => sansAccents(x.nom).includes(m) || x.id.includes(m)));
 }

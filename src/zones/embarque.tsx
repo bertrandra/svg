@@ -14,6 +14,8 @@ import { manquantes } from '../util/capacites.js';
 import { porterCss, remEnPixels } from '../util/cssPortee.js';
 import { LIMITES_XML } from '../util/xml.js';
 import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
+import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
+import { policesPosees } from '../io/polices.js';
 import { FenetreIncompatible } from './Incompatible.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
@@ -41,12 +43,30 @@ export interface OptionsEmbarquees {
   stockage?: Stockage | false | null;
   /** Fermer l'editeur des que le dessin est enregistre. Vrai par defaut, comme la page. */
   fermerApresEnregistrer?: boolean;
+  /**
+   * Le libelle du bouton qui rend le dessin a `onEnregistrer` (defaut « Enregistrer ») : « Valider », « Mettre à jour le logo »…
+   * Un texte d'une ligne, de 1 a 40 caracteres. La visite guidee et la confirmation d'abandon le reprennent.
+   */
+  libelleEnregistrer?: string;
+  /**
+   * L'accueil guide (ADR-0019) : la visite guidee de l'editeur (une fois, a la premiere ouverture, puis depuis le menu Aide) et les
+   * reperes de premiere rencontre, retenus dans `stockage` (cle `svg.guide`). Faux par defaut : un hote ne recoit pas de bulle
+   * qu'il n'a pas demandee.
+   */
+  visite?: boolean;
+  /**
+   * Les polices libres telechargeables (ADR-0025) : « Toutes les polices » dans l'outil Texte, et le telechargement d'une police
+   * apres l'accord de la personne (retenu dans `stockage`, cle `svg.polices.consentement`), aupres de cdn.jsdelivr.net,
+   * fonts.bunny.net, gitlab.com ou cdn.fontshare.com. Faux par defaut : aucune requete, seules les dix fontes livrees. Vrai
+   * demande de servir aussi polices-catalogue.js sous `baseAnnexes`.
+   */
+  policesEnLigne?: boolean;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
   onEnregistrer: (svg: string) => void;
   /** Appelee une fois, quand l'editeur se ferme, quelle qu'en soit la cause. */
   onFermer?: () => void;
-  /** Recoit le SVG du moment, une seconde apres la derniere modification. */
-  onBrouillon?: (svg: string) => void;
+  /** Recoit le SVG du moment, une seconde apres la derniere modification, et a chaque Ctrl+S (qui ne ferme jamais l'editeur). */
+  onBrouillon?: (svg: string) => unknown;
 }
 
 /** Ce que `ouvrir` rend. */
@@ -64,6 +84,10 @@ export interface ApiEditeurSvg {
 const estFonction = (v: unknown): boolean => typeof v === 'function';
 /** Un titre ou un nom de fichier propose : au-dela, ce n'est plus un nom. */
 const LONGUEUR_NOM_MAX = 500;
+/** Le libelle d'un bouton de la barre : au-dela, il ne tient plus a cote des outils. */
+export const LONGUEUR_LIBELLE_MAX = 40;
+/** Un libelle de bouton tient sur une ligne : ni retour a la ligne, ni caractere de controle (un hote mal type n'y glisse rien). */
+const CONTROLE = /[\p{Cc}\u2028\u2029]/u;
 /** Un dossier d'annexes devient l'adresse d'une balise <script> : ces schemas y executeraient du code ou lui donneraient une origine opaque. */
 const SCHEMA_ACTIF = /^(?:javascript|data|blob|vbscript|about):/i;
 /** L'adresse comme l'analyse un navigateur : espaces et controles retires (`java\tscript:` est `javascript:`). */
@@ -87,7 +111,18 @@ export function verifierOptions(options: unknown): string | null {
   if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
     return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
   }
-  if (o.fermerApresEnregistrer !== undefined && typeof o.fermerApresEnregistrer !== 'boolean') return 'L’option « fermerApresEnregistrer » doit être vraie ou fausse.';
+  for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
+  return verifierLibelle(o.libelleEnregistrer);
+}
+
+/** Le defaut de l'option `libelleEnregistrer`, ou null : absente, ou un texte d'une ligne de 1 a 40 caracteres (blancs du bord retires). */
+export function verifierLibelle(v: unknown): string | null {
+  if (v === undefined) return null;
+  if (typeof v !== 'string') return 'L’option « libelleEnregistrer » doit être un texte, par exemple « Valider ».';
+  const t = v.trim();
+  if (t === '') return 'L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».';
+  if (CONTROLE.test(t)) return 'L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.';
+  if ([...t].length > LONGUEUR_LIBELLE_MAX) return 'L’option « libelleEnregistrer » dépasse ' + LONGUEUR_LIBELLE_MAX + ' caractères : le bouton ne tiendrait plus dans la barre.';
   return null;
 }
 
@@ -101,6 +136,9 @@ export function stockageDe(option: Stockage | false | null | undefined): Stockag
   if (option === undefined) return stockageNavigateur();
   return option === false || option === null ? null : stockageProtege(option);
 }
+
+/** La visite chez un hote : une fois tant que sa memoire ne l'a pas vue, et le dessin se recupere par « Enregistrer ». */
+const GUIDE_HOTE = { demarrer: 'si-nouveau', recuperer: 'enregistrer' } as const;
 
 const ID_STYLE = 'editeur-svg-embarque-style';
 
@@ -170,13 +208,22 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
       return ouvert;
     }
     const bibliotheque = options.bibliotheque === 'a-charger' ? options.bibliotheque : options.bibliotheque === undefined ? undefined : normaliserBibliotheque(options.bibliotheque) ?? undefined;
-    racine.render(
-      <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
-        {...(bibliotheque === undefined ? {} : { bibliotheque })}
-        {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
-        stockage={stockage} fermer={fermer}
-        enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
-    );
+    const monter = (svg: string, ignores: readonly string[]): void => {
+      if (ferme) return;
+      racine.render(
+        <EditeurSvg svg={svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []} ignores={ignores}
+          {...(bibliotheque === undefined ? {} : { bibliotheque })}
+          {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
+          stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null} policesEnLigne={options.policesEnLigne === true}
+          {...(options.libelleEnregistrer === undefined ? {} : { libelleEnregistrer: options.libelleEnregistrer.trim() })}
+          enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
+      );
+    };
+    // Du texte : ses lettres deviennent des formes avec les fontes de polices.js, chargees a la demande, quand l'hote dit ou les
+    // trouver (baseAnnexes) ou les a deja posees. Sinon, ou si le fichier manque, l'editeur recoit le SVG tel quel et dit, comme
+    // avant, que le texte ne s'edite pas : un hote qui ne sert pas polices.js n'a pas une requete en echec a chaque ouverture (ADR-0020).
+    if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
+    else monter(options.svg, []);
     ouvert = { fermer };
     return ouvert;
   };

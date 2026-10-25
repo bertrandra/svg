@@ -15,6 +15,8 @@ import { ATTRIBUT_ORIGINE, lireOrigines } from './provenance.js';
 import { cheminDeForme } from './elements.js';
 import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
+import { lireTexte, type ContexteTexte } from './texteSvg.js';
+import { lireTexteVivant, MSG_TEXTE_ILLISIBLE } from './texteVivant.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
 import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_MAX } from './limites.js';
@@ -42,6 +44,8 @@ export interface Parcours {
   trop: boolean;
   /** Caracteres de trace lus jusqu'ici, clones compris (bornes par `DONNEES_TRACE_MAX`). */
   donnees: number;
+  /** De quoi lire le texte en lettres ; absent (null), un <text> est refuse en le nommant, comme avant. */
+  readonly texte?: ContexteTexte | null;
 }
 
 /** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
@@ -54,7 +58,7 @@ interface Pret extends Contexte { readonly pr: Proprietes }
 function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   const pr = proprietesDe(p.analyse, n);
   if ((pr.display ?? '').trim() === 'none') return null;
-  const nonPris = NON_PRIS.get(n.nom);
+  const nonPris = n.nom === 'text' && p.texte ? undefined : NON_PRIS.get(n.nom);
   if (nonPris) { p.refus.add(nonPris); return null; }
   const refusNoeud = refusDe(pr);
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
@@ -117,6 +121,11 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
   // La provenance qu'un SVG ecrit ici porte sur son <path> : on la reprend (rien si absente ou inconnue).
   const origine = lireOrigines(n.attributs[ATTRIBUT_ORIGINE]);
+  // Le texte vivant qu'un SVG ecrit ici porte sur son <path> (ADR-0022) : on le reprend, compose avec les groupes autour.
+  const lu = n.nom === 'path' ? lireTexteVivant(n.attributs, m) : null;
+  if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
+  else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);
+  const texte = lu && 'texte' in lu ? lu.texte : undefined;
   p.formes.push({
     id: 'f' + (p.formes.length + 1),
     d: chemin,
@@ -126,6 +135,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     ...styleTrait,
     ...lireOpacites(b.opacite, heritees, fond, trait),
     ...(origine ? { origine } : {}),
+    ...(texte ? { texte } : {}),
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
     verrouille: false
@@ -195,5 +205,6 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (!b) return;
   if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
+  else if (n.nom === 'text' && p.texte) lireTexte(p.texte, n, b.heritees, b.m, b.opacite);
   else poserForme(p, n, b);
 }

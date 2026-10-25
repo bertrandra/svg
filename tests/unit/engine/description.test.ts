@@ -94,12 +94,12 @@ describe('la description d une forme', () => {
   it('dit la peinture, les mesures et le nom accessible', () => {
     expect(peintureDite(f)).toBe('fond rouge #c81e28');
     expect(mesuresDites(f)).toBe('120 × 80 à 40, 60');
-    expect(nomDeForme(f)).toBe('Forme 1, rectangle, fond rouge #c81e28');
+    expect(nomDeForme(f)).toBe('Rectangle 1, fond rouge #c81e28');
   });
 
   it('dit un contour, l absence de fond, une forme verrouillee ou masquee', () => {
     const trait = premiere('<path d="M0 0L50 0" fill="none" stroke="#15181d" stroke-width="4"/>');
     expect(peintureDite(trait)).toBe('sans fond, contour noir #15181d');
-    expect(nomDeForme({ ...f, verrouille: true, visible: false })).toBe('Forme 1, rectangle, fond rouge #c81e28, verrouillée, masquée');
+    expect(nomDeForme({ ...f, verrouille: true, visible: false })).toBe('Rectangle 1, fond rouge #c81e28, verrouillée, masquée');
   });
 });

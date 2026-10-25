@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin, lireDessin, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
-import { mentionOrigines, origineDeBibliotheque } from '../../../src/model/credits.js';
+import { mentionOrigines, origineDeBibliotheque, origineDeForme } from '../../../src/model/credits.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
@@ -22,8 +22,9 @@ function monter() {
   const enregistrer = vi.fn();
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
-    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null
+    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() },
+    enregistrer, production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null,
+    productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
   };
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; etat.dessin = h.present; etat.modifie = h.passe.length > 0; },
@@ -31,7 +32,7 @@ function monter() {
     poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: vi.fn(),
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
-    dire: vi.fn(), toile: { current: null }
+    dire: vi.fn(), poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), toile: { current: null }
   };
   return { actions: creerActions(() => etat, setters), etat, enregistrer };
 }
@@ -101,5 +102,31 @@ describe('ouvrir une forme de la bibliotheque comme nouveau dessin', () => {
       expect(lu.dessin.formes.every(f => f.origine?.join() === origineDeBibliotheque(e.id)), e.id).toBe(true);
       expect(ecrireDessin(lu.dessin, 3), e.id).toBe(svg);
     }
+  });
+});
+
+describe('une forme d une source libre (MIT, ISC, Apache 2.0)', () => {
+  const LIGNE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480"><g transform="scale(20)"><path fill="none" stroke="#000000" stroke-width="2" d="M4 12h16"/></g></svg>';
+
+  it('inseree, garde son origine mais n ecrit aucune mention : data-origine, sans <metadata>', () => {
+    const { actions, etat, enregistrer } = monter();
+    actions.insererForme(FORME, origineDeForme('mdi', 'heart'));
+    actions.insererForme(LIGNE, origineDeForme('lucide', 'minus'));
+    expect(etat.dessin.formes.map(f => f.origine ?? null)).toEqual([null, ['mdi:heart'], ['lucide:minus']]);
+    actions.enregistrerTout();
+    const svg = String(enregistrer.mock.calls[0]?.[0]);
+    expect(svg).not.toContain('<metadata');
+    expect(svg).toContain('data-origine="mdi:heart"');
+    expect(svg).toMatch(/fill="none" stroke="#000000"[^>]*data-origine="lucide:minus"/);
+  });
+
+  it('ouverte comme nouveau dessin, se relit avec son origine et se reecrit a l identique', () => {
+    const svg = svgDeBibliotheque('minus', LIGNE, 'lucide');
+    expect(svg).not.toContain('<metadata');
+    expect(nettoyerSvg(svg)?.svg).toBe(svg);
+    const lu = lireDessin(svg);
+    if ('erreur' in lu) throw new Error(lu.erreur);
+    expect(lu.dessin.formes.map(f => f.origine)).toEqual([['lucide:minus']]);
+    expect(ecrireDessin(lu.dessin, 3)).toBe(svg);
   });
 });

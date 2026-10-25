@@ -3,32 +3,12 @@
 // interlettrage) et la conversion des commandes de glyphe en chemin, pures et deterministes. Le SVG
 // ecrit ne contient jamais de <text>.
 
-import { ancre, boiteChemin, prochainId, type Chemin, type Commande, type DessinSvg, type Forme, type Style } from './editionSvg.js';
+import { boiteChemin, cheminDeGlyphe, prochainId, type Chemin, type DessinSvg, type Forme, type Glyphes, type Style } from './editionSvg.js';
 import { au } from '../util/tableaux.js';
 
-/** Une commande de contour telle qu'un lecteur de fonte la rend (M, L, C, Q, Z, en absolu). */
-export interface CommandeGlyphe { type: 'M' | 'L' | 'C' | 'Q' | 'Z'; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }
-
-/**
- * Ce que l'on demande a la fonte pour chaque caractere : son contour a une taille et une position, et son avance.
- * « Caractere » est ici une chaine d'un seul caractere, ou, pour une ligature, la chaine de tous ceux qu'elle
- * remplace (« fi ») : `contour`, `avance` et `crenage` la prennent alors pour une seule glyphe.
- */
-export interface Glyphes {
-  unitesParEm: number;
-  /** Les commandes du contour du caractere, pose en (x, y) sur la ligne de base, a la taille donnee. */
-  contour(caractere: string, x: number, y: number, taille: number): CommandeGlyphe[];
-  /** L'avance du caractere, en unites de la fonte. */
-  avance(caractere: string): number;
-  /** Le crenage entre deux caracteres, en unites de la fonte. */
-  crenage(gauche: string, droite: string): number;
-  /**
-   * Facultatif : la fonte sait former des ligatures (elle en porte au moins une). Combien de caracteres de `caracteres`, a
-   * partir de `debut`, ne forment qu'une glyphe : au moins 2, ou 0 quand aucune ligature ne s'y applique. Une fonte qui
-   * n'en a pas ne definit pas cette methode, ce qui permet a l'interface de ne proposer l'option que pour elle.
-   */
-  ligature?(caracteres: readonly string[], debut: number): number;
-}
+// Les glyphes et leur conversion en chemin vivent dans edition/glyphes.ts, partages avec le texte lu d'un SVG ou d'un PDF.
+export type { CommandeGlyphe, Glyphes } from './editionSvg.js';
+export { cheminDeGlyphe };
 
 export interface OptionsTexte {
   taille: number;
@@ -42,44 +22,6 @@ export interface OptionsTexte {
    * Sans effet avec un interlettrage non nul (un texte espace ne se lie pas, comme en CSS) ou une fonte sans ligature.
    */
   ligatures?: boolean;
-}
-
-/**
- * Ferme les contours qui reviennent a leur point de depart sans le dire. opentype.js 2.0 n'emet jamais de
- * Z : un contour finit sur son premier point, et un trait y poserait deux bouts en capuchon au lieu d'une
- * jointure. Un dernier segment droit qui retombe sur le depart est retire : le Z le trace a sa place. Un
- * contour deja ferme, ou qui ne revient pas a son depart, reste tel quel.
- */
-function fermerContours(chemin: readonly Commande[]): Commande[] {
-  const out: Commande[] = [];
-  let debut = 0;
-  const clore = (fin: number) => {
-    const contour = out.slice(debut, fin), premier = contour[0], dernier = contour[contour.length - 1];
-    if (!premier || !dernier || premier.c !== 'M' || contour.length < 3 || dernier.c === 'Z') return;
-    const a = ancre(premier), b = ancre(dernier);
-    if (!a || !b || a[0] !== b[0] || a[1] !== b[1]) return;
-    if (dernier.c !== 'L') out.splice(fin, 0, { c: 'Z', p: [] });
-    else if (contour.length >= 4) out.splice(fin - 1, 1, { c: 'Z', p: [] });
-  };
-  for (const c of chemin) {
-    if (c.c === 'M') { clore(out.length); debut = out.length; }
-    out.push(c);
-  }
-  clore(out.length);
-  return out;
-}
-
-/** Un chemin a partir des commandes d'une glyphe ; les valeurs manquantes valent 0. */
-export function cheminDeGlyphe(commandes: readonly CommandeGlyphe[], precision = 3): Commande[] {
-  const n = (v: number | undefined) => Number((v ?? 0).toFixed(precision));
-  const out: Commande[] = [];
-  for (const c of commandes) {
-    if (c.type === 'Z') out.push({ c: 'Z', p: [] });
-    else if (c.type === 'C') out.push({ c: 'C', p: [n(c.x1), n(c.y1), n(c.x2), n(c.y2), n(c.x), n(c.y)] });
-    else if (c.type === 'Q') out.push({ c: 'Q', p: [n(c.x1), n(c.y1), n(c.x), n(c.y)] });
-    else out.push({ c: c.type, p: [n(c.x), n(c.y)] });
-  }
-  return fermerContours(out);
 }
 
 export interface Lettre{ caractere: string; d: Chemin }
@@ -100,6 +42,15 @@ function tailleLigature(glyphes: Glyphes, cars: readonly string[], i: number): n
  * glyphe de ligature, des deux cotes.
  */
 export function composer(texte: string, glyphes: Glyphes, options: OptionsTexte): Lettre[] {
+  return composerEtMesurer(texte, glyphes, options).lettres;
+}
+
+/**
+ * `composer`, et ou s'arrete la plume : l'abscisse apres le dernier caractere de la derniere ligne, interlettrage compris.
+ * Le texte vivant (texte/bloc.ts) s'en sert pour aligner une ligne au centre ou a droite ; les lettres sont exactement
+ * celles de `composer`, qui n'en est que l'enveloppe (ses references d'ecriture ne bougent pas).
+ */
+export function composerEtMesurer(texte: string, glyphes: Glyphes, options: OptionsTexte): { lettres: Lettre[]; fin: number } {
   const taille = options.taille, k = taille / glyphes.unitesParEm;
   const interlettrage = (options.interlettrage ?? 0) * taille, interligne = (options.interligne ?? 1.2) * taille;
   const lier = options.ligatures === true && glyphes.ligature !== undefined && interlettrage === 0;
@@ -121,7 +72,7 @@ export function composer(texte: string, glyphes: Glyphes, options: OptionsTexte)
     precedent = groupe;
     i += n || 1;
   }
-  return lettres;
+  return { lettres, fin: x };
 }
 
 /** Ajoute les lettres au dessin, au premier plan, avec le style donne ; rend les identifiants. */

@@ -190,8 +190,11 @@ function emettreAttribut(a: AttributBrut, c: ContexteBalise): string {
   if (c.metadonnees && prefixe === '' && nom !== 'id') return '';
   if (nom === 'xml:base' || ATTRIBUTS_A_ADRESSE.has(nom.toLowerCase())) return '';
   if (local === 'href') return prefixe === '' || prefixe === 'xlink' ? emettreHref(a, c) : '';
-  const neu = valeurNettoyee(a.valeur);
-  return neu === null ? emis(a, rendreBienForme(a.valeur)) : emis({ ...a, guillemet: '"' }, rendreBienForme(echapperAttribut(neu)));
+  // La valeur est d'abord rendue bien formee (caracteres interdits et references invalides retires), PUIS nettoyee : retirer
+  // un NUL apres le nettoyage pouvait reassembler un mot qu'il venait de juger inoffensif (« @\69m<NUL>port » : « @import »).
+  const forme = rendreBienForme(a.valeur);
+  const neu = valeurNettoyee(forme);
+  return neu === null ? emis(a, forme) : emis({ ...a, guillemet: '"' }, rendreBienForme(echapperAttribut(neu)));
 }
 
 /** Vrai quand une animation vise un attribut qui porte une adresse ou un gestionnaire (`href`, `onbegin`…) : elle part avec son contenu. */

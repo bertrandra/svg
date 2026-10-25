@@ -2,7 +2,10 @@
 // l'editeur retient vit ici, une fois ; `Atelier` n'a plus qu'a le donner aux contextes.
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { aimanter, boiteDe, ecrireDessin, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type Style } from '../engine/editionSvg.js';
+import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
+import type { ChoixProduction } from '../model/contextes.js';
+import { phraseProduction, svgDocument, usePreparation } from './actionsProduction.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
@@ -11,12 +14,20 @@ import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
-import type { ActionsEditeur, EtatInterface, Fond, ModeleDessin, Outil, Point, Teinte, Tiroir, Vues } from './typesEditeur.js';
+import type { ActionsEditeur, EtatInterface, Fond, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
 
 export interface ParametresEtat {
   initial: DessinSvg; ignores: readonly string[]; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  enregistrer: (svg: string) => void; fermer: () => void; brouillon?: ((svg: string) => void) | undefined;
+  enregistrer: (svg: string) => void; fermer: () => void; brouillon?: ((svg: string) => unknown) | undefined;
+  /** La marque de contexte lue dans le SVG ouvert (ADR-0013) : le panneau revient a la reouverture. */
+  production?: MarqueProduction | undefined;
+  /** Le contexte de depart quand le SVG ne porte aucune marque (la page, pour le public « machine » de l'accueil, ADR-0024). */
+  depart?: ChoixProduction | undefined;
+  /** Le libelle du bouton de fin (« Terminer » dans la page ; « Enregistrer » par defaut, ou celui de l'hote). */
+  libelleEnregistrer?: string | undefined;
+  /** Le bouton de fin ferme l'editeur meme sans modification (la page) ; sinon il reste inactif et dit pourquoi. */
+  fermerSansModification?: boolean | undefined;
 }
 
 export interface EtatEditeur {
@@ -47,12 +58,25 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [curseur, poserCurseur] = useState<Point | null>(null);
   const [focale, poserFocale] = useState<Focale | null>(null);
   const [annonce, poserAnnonce] = useState<Annonce>({ texte: '', rang: 0 });
+  // Le contexte de production : un etat d'interface (il n'entre pas dans l'historique), relu de la marque du SVG ouvert, ou le depart
+  // que la page propose quand le SVG n'en porte pas. Un depart est le contexte initial, pas une modification : rien ne se reecrit sans geste.
+  const [productionInitiale] = useState<ChoixProduction>(() => choixDeDepart(p.production, p.depart));
+  const [production, poserProduction] = useState<ChoixProduction>(productionInitiale);
+  const [suiteCricut, poserSuiteCricut] = useState<SuiteCricut>(null);
+  // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
+  const aBrouillon = !!p.brouillon;
+  const fin = useMemo<OptionsFin>(() => ({ libelle: p.libelleEnregistrer ?? 'Enregistrer', fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon }),
+    [p.libelleEnregistrer, p.fermerSansModification, aBrouillon]);
+  const profil = useMemo(() => resoudreProfil(production), [production]);
+  const productionModifiee = production !== productionInitiale;
   const toile = useRef<HTMLDivElement>(null), svgRef = useRef<SVGSVGElement>(null);
   const dessin = h.present;
   const modifie = h.passe.length > 0;
   const vues = useVue(toile, svgRef, dessin.vb);
 
-  const pas = useMemo(() => pasGrille(dessin.vb), [dessin.vb]);
+  // En contexte de production, la grille suit l'unite de la machine : un quart de pouce, ou 5 mm.
+  const pas = useMemo(() => (profil ? depuisUnite(profil.unite === 'in' ? 0.25 : 5, profil.unite) : pasGrille(dessin.vb)), [dessin.vb, profil]);
+  const preparation = usePreparation(dessin, profil);
   const presentes = useMemo(() => new Set(dessin.formes.map(f => f.id)), [dessin]);
   // Tant que toutes les formes choisies existent, la selection reste le meme tableau : rien en aval ne se recalcule pendant un geste.
   const sel = useMemo(() => (selection.every(id => presentes.has(id)) ? selection : selection.filter(id => presentes.has(id))), [selection, presentes]);
@@ -64,27 +88,47 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
 
   // L'etat du dernier rendu, que les verbes lisent au moment de l'appel : c'est ce qui les rend stables.
   const moment = useRef<EtatDuMoment | null>(null);
-  moment.current = { dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, modifie, refaisable: h.futur.length > 0, versions, fermer: p.fermer, stockage };
+  moment.current = {
+    dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
+    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut
+  };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, toile }
   ));
+
+  // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
+  const { production: marque } = p;
+  useEffect(() => {
+    const inconnu = choixDeMarque(marque).inconnu;
+    if (inconnu) actions.dire('Ce fichier a été préparé pour le contexte « ' + inconnu + ' », que cette version ne connaît pas : il s’ouvre en contexte générique.');
+  }, [actions, marque]);
+
+  // Un depart Cricut se voit comme un choix fait dans la barre : le tapis entier cadre (apres le rendu qui le pose) et la phrase du
+  // contexte, dite une fois. Seulement a l'ouverture, et seulement si le contexte vient du depart, pas d'une marque du fichier.
+  const departVisible = useRef(!p.production && productionInitiale.contexte === 'cricut');
+  useEffect(() => {
+    if (!departVisible.current) return;
+    departVisible.current = false;
+    const f = requestAnimationFrame(() => { actions.ajuster(); actions.dire(phraseProduction(productionInitiale)); });
+    return () => cancelAnimationFrame(f);
+  }, [actions, productionInitiale]);
 
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
   const { brouillon } = p;
   useEffect(() => {
     if (!brouillon || !modifie) return;
-    const t = setTimeout(() => brouillon(ecrireDessin(dessin, 3)), 1000);
+    const t = setTimeout(() => brouillon(svgDocument(dessin, production)), 1000);
     return () => clearTimeout(t);
-  }, [brouillon, dessin, modifie]);
+  }, [brouillon, dessin, modifie, production]);
 
   const modele = useMemo<ModeleDessin>(
-    () => ({ h, dessin, sel, choisies, boite, formeSeule, nuancier: p.nuancier, ignores: p.ignores, bibliotheque: p.bibliotheque, versions, presse }),
-    [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse]
+    () => ({ h, dessin, sel, choisies, boite, formeSeule, nuancier: p.nuancier, ignores: p.ignores, bibliotheque: p.bibliotheque, versions, presse, preparation }),
+    [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, fin }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, fin]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

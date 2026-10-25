@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T23:50:00Z",
+  "title": "Design System: Éditeur SVG",
+  "extensions": {
+    "colorMeta": {
+      "cyan-encre": { "role": "primary", "displayName": "Cyan d'encre", "canonical": "#00719c", "dark": "#4fb3dc", "tonalRamp": ["#00222f", "#003549", "#004a65", "#00719c", "#2b8db3", "#66afcb", "#a3d0e1", "#dcedf4"] },
+      "sur-cyan": { "role": "primary", "displayName": "Blanc sur cyan", "canonical": "#ffffff", "dark": "#08202b" },
+      "table-atelier": { "role": "neutral", "displayName": "Table d'atelier", "canonical": "#e9ecef", "dark": "#121518", "tonalRamp": ["#121518", "#2b3036", "#4a5058", "#6e757e", "#959ba3", "#bcc1c7", "#e9ecef", "#f7f8f9"] },
+      "feuille-panneau": { "role": "neutral", "displayName": "Feuille de panneau", "canonical": "#f7f8f9", "dark": "#1a1e22" },
+      "encre": { "role": "neutral", "displayName": "Encre", "canonical": "#15181d", "dark": "#e6e9ec" },
+      "encre-douce": { "role": "neutral", "displayName": "Encre douce", "canonical": "#555c66", "dark": "#9aa3ad" },
+      "filet": { "role": "neutral", "displayName": "Filet", "canonical": "#cfd4da", "dark": "#2f353c" },
+      "alerte": { "role": "tertiary", "displayName": "Ambre d'alerte", "canonical": "#8a5a00", "dark": "#e3b45a" },
+      "alerte-fond": { "role": "tertiary", "displayName": "Fond d'alerte", "canonical": "#f8ecd2", "dark": "#33280f" },
+      "echec": { "role": "tertiary", "displayName": "Rouge d'échec", "canonical": "#a8322a", "dark": "#f08b80" },
+      "echec-fond": { "role": "tertiary", "displayName": "Fond d'échec", "canonical": "#f7e0dd", "dark": "#3a1c19" },
+      "toile-blanc": { "role": "neutral", "displayName": "Plan blanc", "canonical": "#ffffff" },
+      "toile-sombre": { "role": "neutral", "displayName": "Plan sombre", "canonical": "#1b1d20" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Le titre de l'accueil, seul de son rang." },
+      "title": { "displayName": "Title", "purpose": "Titres de voie, de carte et de section." },
+      "body": { "displayName": "Body", "purpose": "Texte courant de la page et des panneaux." },
+      "label": { "displayName": "Label", "purpose": "Libellés de bouton ; plus petit dans la barre et les menus." },
+      "aide": { "displayName": "Aide", "purpose": "Aides, légendes et barre d'état, en encre douce." },
+      "mesure": { "displayName": "Mesure", "purpose": "Codes couleur, zoom, tailles, noms de fichier, code SVG." }
+    },
+    "shadows": [
+      { "name": "menu-flottant", "value": "0 8px 24px rgba(0, 0, 0, 0.2)", "purpose": "Menus déroulants et boîte de crédits : ce qui recouvre le travail un instant." },
+      { "name": "tiroir", "value": "rgba(0, 0, 0, 0.25) ; voile rgba(0, 0, 0, 0.35)", "purpose": "Panneaux en tiroir sur tablette et téléphone." }
+    ],
+    "motion": [
+      { "name": "etat", "value": "0.12s", "purpose": "Survol et appui des boutons ; supprimé par prefers-reduced-motion." },
+      { "name": "apparition", "value": "0.18s ease-out", "purpose": "Apparition d'un panneau de voie ou d'un menu." }
+    ],
+    "breakpoints": [
+      { "name": "telephone", "value": "640px" },
+      { "name": "tablette-ou-doigt", "value": "900px ou pointer: coarse" }
+    ]
+  },
+  "components": [
+    { "name": "Action primaire", "kind": "button", "refersTo": "button-primary", "description": "Une seule par panneau : l'action qui fait avancer.", "html": "<button class=\"ds-btn-primaire\">Exporter pour Cricut</button>", "css": ".ds-btn-primaire { font: 600 0.85rem 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--cyan, #00719c); background: var(--cyan, #00719c); color: var(--sur-cyan, #ffffff); cursor: pointer; transition: background-color 0.12s, transform 0.12s; } .ds-btn-primaire:hover { background: #006186; } .ds-btn-primaire:active { transform: translateY(1px); } .ds-btn-primaire:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Bouton secondaire", "kind": "button", "refersTo": "button-secondary", "description": "Le bouton par défaut : un filet, de l'encre.", "html": "<button class=\"ds-btn\">Contour en forme</button>", "css": ".ds-btn { font: 600 0.85rem 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--filet, #cfd4da); background: transparent; color: var(--encre, #15181d); cursor: pointer; transition: border-color 0.12s, color 0.12s, transform 0.12s; } .ds-btn:hover { border-color: var(--cyan, #00719c); color: var(--cyan, #00719c); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Bouton discret", "kind": "button", "refersTo": "button-discret", "description": "Un lien d'action en forme de bouton.", "html": "<button class=\"ds-btn-discret\">Choisir les formes</button>", "css": ".ds-btn-discret { font: 600 0.85rem 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif; padding: 7px 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--cyan, #00719c); cursor: pointer; transition: background-color 0.12s; } .ds-btn-discret:hover { background: rgba(0, 113, 156, 0.1); } .ds-btn-discret:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Outil de la barre", "kind": "button", "refersTo": "outil-barre", "description": "Bouton d'icône carré ; plein cyan quand l'outil est actif.", "html": "<div class=\"ds-outils\"><button class=\"ds-outil\" aria-pressed=\"true\" aria-label=\"Sélection\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M5 3l14 8-6 2-3 6z\"/></svg></button><button class=\"ds-outil\" aria-label=\"Main\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 12V6a1.5 1.5 0 013 0v5m0-6a1.5 1.5 0 013 0v6m0-5a1.5 1.5 0 013 0v7a6 6 0 01-6 6h-1a5 5 0 01-4-2l-3-4a1.5 1.5 0 012.3-2L8 14\"/></svg></button></div>", "css": ".ds-outils { display: flex; gap: 4px; padding: 4px; background: var(--panneau, #f7f8f9); } .ds-outil { width: 30px; height: 30px; padding: 0; display: inline-grid; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--encre, #15181d); cursor: pointer; } .ds-outil:hover { background: rgba(0, 113, 156, 0.12); } .ds-outil[aria-pressed=\"true\"] { background: var(--cyan, #00719c); color: var(--sur-cyan, #ffffff); } .ds-outil:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Champ de texte", "kind": "input", "refersTo": "champ-texte", "description": "Le champ creuse la feuille : il prend la couleur de la table.", "html": "<input class=\"ds-champ\" type=\"text\" value=\"#1428A0\" aria-label=\"Couleur\">", "css": ".ds-champ { font: 400 0.85rem 'IBM Plex Mono', ui-monospace, monospace; width: 100%; padding: 6px 8px; border: 1px solid var(--filet, #cfd4da); border-radius: 5px; background: var(--table, #e9ecef); color: var(--encre, #15181d); } .ds-champ:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Carte de voie", "kind": "card", "refersTo": "carte-voie", "description": "Une voie de l'accueil ; la voie choisie prend le filet et le voile cyan.", "html": "<button class=\"ds-voie\" aria-selected=\"true\"><span class=\"ds-voie-titre\">Convertir une image</span><span class=\"ds-voie-aide\">PNG, JPG… en vecteurs, fond détouré</span></button>", "css": ".ds-voie { display: grid; justify-items: start; gap: 4px; padding: 16px; text-align: left; border: 1px solid var(--filet, #cfd4da); border-radius: 10px; background: var(--panneau, #f7f8f9); color: var(--encre, #15181d); font: 400 14px 'Instrument Sans', sans-serif; cursor: pointer; } .ds-voie[aria-selected=\"true\"] { border-color: var(--cyan, #00719c); box-shadow: inset 0 0 0 1px var(--cyan, #00719c); background: #e6eff2; } .ds-voie-titre { font-weight: 600; font-size: 0.95rem; } .ds-voie-aide { font-size: 0.75rem; color: var(--encre-douce, #555c66); } .ds-voie:focus-visible { outline: 2px solid var(--cyan, #00719c); outline-offset: 2px; }" },
+    { "name": "Message d'alerte", "kind": "custom", "refersTo": "message-alerte", "description": "Un constat à corriger ou un avertissement.", "html": "<p class=\"ds-alerte\">Une forme a un tracé ouvert : fermez-le pour que la lame revienne à son point de départ.</p>", "css": ".ds-alerte { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--alerte-fond, #f8ecd2); color: var(--alerte, #8a5a00); font: 400 0.85rem 'Instrument Sans', sans-serif; }" }
+  ],
+  "narrative": {
+    "northStar": "Le carnet d'atelier",
+    "overview": "L'éditeur est un atelier de fabrication, pas une vitrine. Une table grise sur laquelle se posent des feuilles claires (barres, panneaux, menus), des repères et des gabarits (le tapis Cricut, la grille au ¼ po, la zone utile en pointillés), des mesures et des codes en chasse fixe, et une seule encre de couleur pour ce qu'on touche. Le dessin de la personne est la seule chose qui ait le droit d'être vivante et colorée ; tout le reste est l'outil qui le prépare. La densité est celle d'un outil de production : beaucoup de commandes à portée, chacune à sa place, rangée plutôt qu'exposée. Le caractère des composants est retenu au repos, franc à l'interaction.",
+    "keyCharacteristics": [
+      "Une table et des feuilles : deux fonds, deux encres, un filet ; aucune autre couleur d'interface.",
+      "Une seule couleur d'outil, le cyan d'encre, pour l'action, l'état actif, le focus et les liens.",
+      "Plat par défaut : l'ombre n'existe que pour ce qui flotte au-dessus du travail (menus, tiroirs).",
+      "Les mesures, codes et noms de fichier en chasse fixe, comme les annotations d'un carnet.",
+      "Thème clair et sombre symétriques, contraste forcé tenu."
+    ],
+    "rules": [
+      { "name": "La règle de l'encre unique", "body": "Le cyan d'encre est la seule couleur d'interface qui ne soit ni grise ni un message. Une seule action pleine par panneau ; si deux boutons cyan se voient côte à côte, l'un des deux a tort.", "section": "colors" },
+      { "name": "La règle du dessin roi", "body": "Aucune couleur d'interface ne se pose sur le dessin ni ne le concurrence : le plan de travail est blanc, sombre ou en damier, et les repères (tapis, grille, zone utile) restent en filets.", "section": "colors" },
+      { "name": "La règle du jeton", "body": "Aucune couleur écrite en dur dans la page ou les composants : un rôle nouveau devient un jeton de src/styles/jetons.ts, avec sa valeur claire, sa valeur sombre et sa paire de contraste.", "section": "colors" },
+      { "name": "La règle de la chasse fixe", "body": "Ce qui se mesure ou se copie s'écrit en IBM Plex Mono ; ce qui se lit, jamais.", "section": "typography" },
+      { "name": "La règle de l'établi rangé", "body": "La barre garde l'outil fréquent ; le reste vit dans un menu avec son raccourci. Une commande ne s'expose pas parce qu'elle existe.", "section": "layout" },
+      { "name": "La règle de la feuille posée", "body": "Une surface au repos est plate ; seule une surface qui recouvre le travail a une ombre.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do poser chaque couleur d'interface comme un jeton de src/styles/jetons.ts, avec ses valeurs claire et sombre et sa paire de contraste 4,5:1.",
+      "Do garder une seule action pleine en cyan d'encre par panneau ; tout autre bouton est secondaire ou discret.",
+      "Do écrire mesures, codes couleur et noms de fichier en IBM Plex Mono.",
+      "Do donner 24 × 24 px à toute cible à la souris et 40 px au doigt.",
+      "Do dessiner les repères de fabrication (tapis, grille, zone utile) en filets et pointillés, sous le dessin."
+    ],
+    "donts": [
+      "Don't écrire une couleur en dur dans la page ou un composant (un test l'interdit).",
+      "Don't poser une ombre sur une surface au repos.",
+      "Don't introduire une seconde couleur d'accent ; les messages (ambre, rouge) ne servent qu'aux messages.",
+      "Don't laisser un bouton inactif sans raison lisible.",
+      "Don't désactiver une règle d'audit axe-core ou un comportement prefers-reduced-motion."
+    ]
+  }
+}

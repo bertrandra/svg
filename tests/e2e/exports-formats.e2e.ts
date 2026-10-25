@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { RACINE_DEPOT, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { RACINE_DEPOT, attendreAnimations, boutonTelecharger, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 
 const AXE = readFileSync(RACINE_DEPOT + '/node_modules/axe-core/axe.min.js', 'utf8');
 const BOUTONS = '.menu-panneau .contenu-export button';
@@ -15,7 +15,7 @@ describe('exports : formats de fabrication et d\'impression', () => {
   async function menuExport(options: { largeur?: number; hauteur?: number; tactile?: boolean } = {}) {
     const { page } = await navigateur.ouvrir(options.tactile ? { largeur: 420, hauteur: 860, tactile: true } : {});
     await ouvrirExemple(page, options.tactile);
-    await ouvrirMenu(page, 'Fichier');
+    await ouvrirMenu(page, 'Autres formats');
     return page;
   }
 
@@ -120,16 +120,19 @@ describe('exports : formats de fabrication et d\'impression', () => {
 
   it('ecrit un SVG a la taille voulue et a la precision voulue, le SVG d\'avant sinon', async () => {
     const page = await menuExport();
-    const avant = await telecharger(page, () => bouton(page, /^SVG$/).click());
+    // Le SVG a son bouton dans la barre (« Télécharger le SVG ») : il suit les options d'export reglees sous « Autres formats ».
+    const avant = await telecharger(page, () => boutonTelecharger(page).click());
+    await ouvrirMenu(page, 'Autres formats');
     await ouvrirOptions(page);
     await champ(page, 'Unité d’export').selectOption('mm');
     await champ(page, 'Largeur du dessin exporté').fill('80,5');
     await champ(page, 'Décimales des coordonnées du SVG').selectOption('1');
-    const apres = await telecharger(page, () => bouton(page, /^SVG$/).click());
+    const apres = await telecharger(page, () => boutonTelecharger(page).click());
     const racine = /^<svg[^>]*>/.exec(apres.octets.toString('utf8'))?.[0] ?? '';
     expect(racine).toMatch(/width="80\.5mm" height="[\d.]+mm"/);
     expect(racine).toContain(/viewBox="[^"]*"/.exec(avant.octets.toString('utf8'))?.[0] ?? '?');
     expect(apres.octets.length).toBeLessThan(avant.octets.length);
+    await ouvrirMenu(page, 'Autres formats');
     const decoupe = await telecharger(page, () => bouton(page, 'SVG de découpe').click());
     expect(decoupe.octets.toString('utf8')).toMatch(/width="80\.5mm"/);
   });
@@ -139,7 +142,7 @@ describe('exports : formats de fabrication et d\'impression', () => {
     await ouvrirOptions(page);
     await champ(page, 'Résolution du PNG').selectOption('150');
     await page.keyboard.press('Escape');
-    await ouvrirMenu(page, 'Fichier');
+    await ouvrirMenu(page, 'Autres formats');
     await ouvrirOptions(page);
     expect(await champ(page, 'Résolution du PNG').inputValue()).toBe('150');
   });
@@ -150,7 +153,7 @@ describe('exports : formats de fabrication et d\'impression', () => {
     await champ(page, 'Format de page du PDF').selectOption({ label: 'Personnalisée' });
     await page.getByLabel('Fond perdu et repères de coupe').check();
     await page.getByLabel('Couleurs en CMJN (PDF et EPS)').check();
-    await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined))).then(() => undefined));
+    await attendreAnimations(page);
     await page.addScriptTag({ content: AXE });
     const r = await page.evaluate(async () => {
       const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { id: string; help: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }> } };
@@ -168,7 +171,7 @@ describe('exports : au doigt (420 px)', () => {
   it('tient dans l\'ecran et donne 40 px aux commandes, options ouvertes', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 420, hauteur: 860, tactile: true });
     await ouvrirExemple(page, true);
-    await ouvrirMenu(page, 'Fichier');
+    await ouvrirMenu(page, 'Autres formats');
     await page.locator('.menu-panneau .section > summary', { hasText: 'Options d’export' }).click();
     await page.locator('.menu-panneau [aria-label="Format de page du PDF"]').selectOption({ label: 'Personnalisée' });
     await page.getByLabel('Fond perdu et repères de coupe').check();
@@ -181,7 +184,8 @@ describe('exports : au doigt (420 px)', () => {
     expect(panneau!.y + panneau!.height).toBeLessThanOrEqual(860 + 0.5);
     // Pas de defilement horizontal du menu ni de la page.
     expect(await page.locator('.menu-panneau').evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // `clientWidth` : sous `isMobile`, Chromium elargit `innerWidth` jusqu'au contenu qui deborde.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     const petites = await page.locator('.menu-panneau .contenu-export').evaluate(zone => {
       const cibles = [...zone.querySelectorAll<HTMLElement>('button:not([hidden]), select, input[type="text"], input[type="color"], label.case')];
       return cibles.map(e => { const r = e.getBoundingClientRect(); return { nom: (e.getAttribute('aria-label') ?? e.innerText ?? e.className).slice(0, 30), l: Math.round(r.width), h: Math.round(r.height) }; })

@@ -4,8 +4,11 @@
 import { memo, useId, type RefObject } from 'react';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { useGestes } from './Gestes.js';
-import { Calque, Grille, surcouche } from './Toile.js';
+import { Calque, cheminDe, Grille, surcouche } from './Toile.js';
+import { AlertesToile, GabaritTapis } from './Production.js';
 import { useTactile } from './Vue.js';
+import { insecables } from '../util/texte.js';
+import { SaisieTexte } from './SaisieTexte.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface();
@@ -29,11 +32,18 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
             </pattern>
           </defs>
           <rect className="plan-travail" x={vx} y={vy} width={vl} height={vh} fill={fond === 'damier' ? 'url(#damier-editeur)' : undefined} pointerEvents="none" />
+          <GabaritTapis />
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
           {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} />)}
+          <AlertesToile chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, gestes.cadre, tactile)}</g>
         </g>
       </svg>
+      <SaisieTexte svgRef={svgRef} />
+      {/* Un plan vide (ADR-0019) : le premier geste, sur la toile meme. Les clics passent a travers ; l'inspecteur le dit aux lecteurs d'ecran. */}
+      {dessin.formes.length || ui.outil !== 'selection' ? null : (
+        <p className="toile-vide" aria-hidden="true" data-vide="vide">{insecables('Le plan est vide : Ctrl+Z fait revenir les formes, ou le rectangle (R) en trace une neuve.')}</p>
+      )}
     </div>
   );
 });

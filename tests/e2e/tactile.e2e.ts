@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, formesVisibles, ouvrirExemple, pilote, sauteSauf } from './aide.js';
+import { attend, formesVisibles, ouvrirExemple, pilote } from './aide.js';
 
 const TELEPHONE = { largeur: 420, hauteur: 860, tactile: true } as const;
 const CIBLE_MIN = 40;
@@ -26,8 +26,8 @@ describe('editeur au doigt (420 px)', () => {
     CIBLE_MIN
   );
 
-  // Saut : Firefox n'a pas `isMobile` (Playwright le refuse), donc aucun contexte ne s'y annonce « pointer: coarse ».
-  it.skipIf(sauteSauf(['chromium', 'webkit'], 'isMobile absent de Firefox : (pointer: coarse) y reste faux'))('detecte un pointeur grossier', async () => {
+  // Les trois moteurs : Firefox n'a pas `isMobile`, mais `hasTouch` seul y suffit a annoncer « pointer: coarse » (lu en CI).
+  it('detecte un pointeur grossier', async () => {
     const { page } = await navigateur.ouvrir(TELEPHONE);
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
   });

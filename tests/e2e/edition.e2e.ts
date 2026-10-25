@@ -66,9 +66,14 @@ describe('edition', () => {
     const page = await editeur();
     const toile = page.locator('.editeur-svg-toile');
     expect(await toile.getAttribute('aria-label')).toBe('Plan de travail de exemple.svg : 4 formes');
-    // Une touche de clavier puis le focus : :focus-visible s'applique, le contour fait 3 px.
-    await page.keyboard.press('Shift');
+    // Le focus arrive par le clavier : Tab quitte la toile (rien n'est choisi), Maj+Tab y revient. :focus-visible s'applique
+    // alors partout, le contour fait 3 px. (Une touche Maj seule puis un focus par script ne suffit qu'a Chromium : en CI,
+    // Firefox et WebKit n'appliquaient pas :focus-visible apres ce focus-la, leur heuristique pour un focus par script differe.)
     await toile.focus();
+    await attend(() => aLeFocus(toile)).toBe(true);
+    await page.keyboard.press('Tab');
+    await attend(() => aLeFocus(toile)).toBe(false);
+    await page.keyboard.press('Shift+Tab');
     await attend(() => aLeFocus(toile)).toBe(true);
     const anneau = await toile.evaluate(e => ({ visible: e.matches(':focus-visible'), largeur: getComputedStyle(e).outlineWidth }));
     expect(anneau).toEqual({ visible: true, largeur: '3px' });
@@ -137,12 +142,19 @@ describe('edition', () => {
     await attend(() => nombreDeCalques(page)).toBe(avant - 1);
   });
 
-  it('enregistre par Ctrl+S et montre le resultat sur l\'accueil', async () => {
+  it('garde un brouillon par Ctrl+S sans fermer, puis « Terminer » montre le resultat sur l\'accueil', async () => {
     const page = await editeur();
     await forme(page, 'f2').click();
     await page.keyboard.press('Delete');
     await attend(() => nombreDeCalques(page)).toBe(3);
+    // Ctrl+S garde le travail (le brouillon du navigateur) et le dit : l'editeur reste ouvert.
     await page.keyboard.press('Control+s');
+    await attend(() => texteDe(page.locator('.message-etat'))).toBe('Brouillon gardé.');
+    expect(await page.locator('.editeur-cadre').count()).toBe(1);
+    const brouillon = await page.evaluate(() => JSON.parse(localStorage.getItem('svg.brouillon') ?? 'null') as { svg?: string } | null);
+    expect(brouillon?.svg?.match(/<path /g)?.length).toBe(3);
+    // Fermer est un geste a part : « Terminer ».
+    await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await page.locator('.resultat').waitFor();
     expect(await texteDe(page.locator('.resultat .fiche .aide'))).toMatch(/^3 formes/);
     expect(await page.locator('.editeur-cadre').count()).toBe(0);

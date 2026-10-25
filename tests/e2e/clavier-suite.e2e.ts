@@ -22,7 +22,10 @@ describe('clavier et lecteur d ecran : la suite', () => {
 
   const toile = (page: Page) => page.locator('.editeur-svg-toile');
   const dit = (page: Page) => page.locator('.editeur-cadre > .annonces').evaluate(e => (e.textContent ?? '').trim());
-  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => (e as HTMLElement).innerText.trim()));
+  // textContent, pas innerText : une ligne des calques hors de l'ecran (`content-visibility: auto`) n'est pas rendue, et Firefox
+  // et WebKit lui donnent alors un innerText vide.
+  // Le nom d'une ligne est le genre et le numero (« Triangle 3 ») : l'identite de la forme se lit dans `data-forme`.
+  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => 'Forme ' + (e.getAttribute('data-forme') ?? '').slice(1)));
   const barre = (page: Page, nom: string) => page.locator('.editeur-barre-selection').getByRole('button', { name: nom, exact: true });
   async function pages(page: Page, n: number) {
     for (let i = 0; i < n; i++) await page.keyboard.press('PageDown');
@@ -315,7 +318,7 @@ describe('clavier et lecteur d ecran : la suite', () => {
       await pages(page, 1);
       await page.keyboard.press('Shift+PageDown');
       expect(await page.locator('.editeur-svg-toile path.focale').count()).toBe(1);
-      await page.locator('.editeur-calques .calque-nom', { hasText: 'Forme 3' }).click();
+      await page.locator('.editeur-calques button.calque-nom[data-forme="f3"]').click();
       await attend(() => page.locator('.editeur-svg-toile path.focale').count()).toBe(0);
       await toile(page).focus();
       // Le curseur est de nouveau la derniere forme choisie : la 3.

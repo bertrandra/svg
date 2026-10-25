@@ -1,7 +1,8 @@
 # Sécurité : le SVG d’un inconnu
 
 L’éditeur ouvre des SVG qu’il n’a pas écrits (fichier déposé, code collé, option `svg` d’un hôte, formes d’une
-bibliothèque d’hôte, brouillon laissé dans le navigateur) et en réécrit. Ce document dit ce qu’il protège, par où
+bibliothèque d’hôte, brouillon laissé dans le navigateur), et des PDF (fichier déposé ou choisi sur l’accueil, avec les
+programmes de fonte qu’ils embarquent), et en réécrit. Ce document dit ce qu’il protège, par où
 l’on peut l’atteindre, ce que chaque couche garantit, ce qui reste à l’hôte, et **comment chaque affirmation est
 prouvée** (tests, corpus, fuzzing, navigateur). Une affirmation qu’aucun test ne vérifie n’y figure pas.
 
@@ -21,6 +22,9 @@ prouvée** (tests, corpus, fuzzing, navigateur). Une affirmation qu’aucun test
 | Porte | Chemin dans le code | Ce qui lit le texte |
 |---|---|---|
 | Fichier déposé ou choisi | `zones/Application.tsx` (`OuvrirSvg`) | `nettoyerSvgNomme`, puis `lireDessin` |
+| PDF déposé ou choisi | `zones/OuvrirPdf.tsx` → `io/pdf.ts` | `lirePdf` (`engine/pdf/`, pur ; décompression du navigateur injectée), puis le SVG écrit passe par `nettoyerSvgNomme` et `lireDessin` comme un fichier SVG |
+| Programme de fonte embarqué dans un PDF (TrueType, OpenType) | `io/policesPdf.ts` | `opentype.js` (épinglé), dans un `try`, une glyphe à la fois ; sa table `cmap` est lue à part, bornée |
+| SVG qui porte du texte (fichier, code, option `svg`) | `io/texteSvg.ts` | `lireDessin` avec les fontes de `polices.js` : une forme par lettre, puis le SVG réécrit sans `<text>` |
 | Code collé | idem | idem |
 | Image à vectoriser | `io/image.ts` | `nettoyerSvg` sur la sortie de vtracer (un texte que nous produisons, d’un contenu que nous ne contrôlons pas) |
 | Option `svg` de l’embarquement | `zones/embarque.tsx` → `EditeurSvg` | `lireDessin` **sans** nettoyage préalable (l’éditeur ne montre que le modèle à plat) |
@@ -73,6 +77,20 @@ jamais** ce qu’elle ne sait pas réécrire, et refuse en le nommant : texte, i
 imbriqué, `<use>` en cycle ou vers l’extérieur, plus de 16 niveaux de `<use>`, plus de 20 000 clones. Elle ne lève jamais :
 une pile qui déborderait malgré les bornes devient un refus.
 
+### `lirePdf` : un PDF se lit, rien ne s’y exécute (ADR-0020)
+
+Le PDF est lu par un analyseur linéaire écrit à la main sur ses octets (`engine/pdf/lexique.ts`) : objets, table des objets
+classique ou en flux, flux d’objets, chaîne `/Prev`, arbre des pages, contenu de page. **Rien n’est exécuté ni suivi** :
+JavaScript (`/OpenAction`, `/AA`, `/JS`), actions `/Launch` et `/URI`, fichiers joints, formulaires XFA ne sont jamais lus
+(seuls le catalogue, les pages, leurs ressources et leurs contenus le sont) ; les annotations sont comptées, pas dessinées.
+Un PDF chiffré est refusé en le nommant (aucun mot de passe n’est essayé, même vide). La décompression (FlateDecode) passe par
+`DecompressionStream`, arrêtée dès que la sortie dépasse la borne : une bombe ne produit jamais plus de 128 Mo. LZW, et les
+compressions d’image sur un contenu, sont refusés en le nommant. Un programme de fonte est lu par `opentype.js` dans un `try` :
+illisible, la police est remplacée (et c’est dit), jamais une exception. La lecture ne lève jamais pour un fichier : tout refus
+est une phrase ; le seul signal qui la traverse, `FluxEnAttente`, est rattrapé par `io/pdf.ts`. Son résultat est un dessin à
+plat, écrit par `ecrireDessin` puis relu par `nettoyerSvgNomme` et `lireDessin` : les garanties de l’écriture ci-dessous
+s’appliquent telles quelles.
+
 ### `ecrireDessin` : tout est regénéré depuis le modèle
 
 Le SVG enregistré (« Enregistrer », `onEnregistrer`, les exports PNG/PDF/SVG après enregistrement) est **écrit à neuf** :
@@ -101,6 +119,26 @@ Chacune refuse en français, en disant quoi faire. Elles sont hautes exprès : u
 | Plan de travail | ± 1 milliard, au moins 0,001 | `edition/lecture.ts` | l’écriture garde le millième |
 | Confrontations règle de style × élément | 2 000 000 | `edition/limites.ts` | ~150 000 pour 1 000 règles sur 5 000 éléments (les règles sont rangées par classe, identifiant, type) |
 | Clones `<use>`, niveaux de `<use>` | 20 000, 16 | `edition/clones.ts` | inchangés (ADR-0009) |
+| Caractères de texte d’un SVG lu en lettres | 100 000 | `edition/texteSvg.ts` | un livre entier ; au-delà, des dizaines de milliers de formes |
+
+Les bornes de la lecture d’un PDF (`engine/pdf/limites.ts`), chacune un refus nommé :
+
+| Borne | Valeur | Un PDF réel est à… |
+|---|---|---|
+| Taille du fichier | 100 Mo | un export d’Illustrator avec ses données privées : 60 Mo |
+| Octets décompressés, tous flux confondus (FlateDecode, RunLength, ASCII85) | 128 Mo | quelques Mo de contenu |
+| Objets de la table, objets lus | 1 000 000 | un atlas de mille pages : quelques centaines de milliers |
+| Imbrication de tableaux et dictionnaires | 256 | moins de 10 |
+| Renvois enchaînés, sections `/Prev` | 32, 64 | 1 à 3 |
+| Pages, profondeur de l’arbre des pages | 100 000, 64 | |
+| Pile d’états `q` | 1 024 | moins de 50 |
+| Formulaires imbriqués, formulaires dessinés (glyphes Type 3 comprises) | 16, 20 000 | |
+| Opérateurs exécutés, opérandes en attente | 5 000 000, 10 000 | |
+| Formes, segments de tracé par page | 100 000, 2 000 000 | |
+| Coordonnée après transformations | ± 1 milliard | |
+| Programme de fonte | 32 Mo (au-delà : remplacé) | les plus grosses fontes CJK : 20 Mo |
+| Entrées d’une CMap (`/ToUnicode`), par plage et en tout | 65 536, 200 000 | |
+| Fonction PostScript (tons directs) : opérations, pile, imbrication | 10 000, 100, 8 | |
 
 Le temps est borné par construction plutôt que mesuré : les balayages sont linéaires (plus d’expression régulière qui
 relit le reste du texte à chaque `url(`, `/*` ou `scale(` non fermé) et les bornes ci-dessus plafonnent le travail. Le pire
@@ -129,6 +167,14 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
 - **Rien à savoir sur les polices** : la page autonome ne contacte plus aucun hôte au chargement (ses polices sont dans le
   fichier, voir le constat 14). Le bundle d’embarquement n’en charge pas non plus ; si vous voulez la typographie de la page
   entière chez vous, c’est à vous de servir *Instrument Sans* et *IBM Plex Mono* (voir `docs/integration.md`).
+- **Les polices téléchargées** (ADR-0025) : aucune requête tant que la personne n’a pas accepté, serveur par serveur
+  (`cdn.jsdelivr.net`, `fonts.bunny.net`, `gitlab.com`, `cdn.fontshare.com`) ; chez un hôte, seulement avec
+  `policesEnLigne: true`. La requête ne porte ni cookie ni référent ; chaque fichier est vérifié par son empreinte sha256
+  (`crypto.subtle`) contre l’index commis avant d’être lu par opentype.js : un serveur compromis ou un miroir d’une autre
+  version ne fait lire aucun octet inattendu, et le refus est dit. Le fichier est borné (8 Mo, puis les bornes du WOFF :
+  256 tables, 32 Mo décompressés). L’index (`polices-catalogue.js`) est validé en entier (licence de la liste blanche, version
+  épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Un seul `fetch` existe dans
+  `src/`, et un test le garde.
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
   valide ce qu’il y lit (types, longueurs, clés de prototype retirées), il ne le chiffre pas.
 
@@ -165,6 +211,8 @@ d’hôte (vignettes inertes, insertion par le moteur à plat).
 |---|---|---|
 | Invariants de sortie | `tests/unit/securite/invariants.ts` | une spécification exécutable, indépendante de `src/` : XML 1.0 bien formé (analyseur strict), éléments et attributs permis, aucun `<script`, `on*=`, `javascript:`/`vbscript:`/`data:` actif, `href` externe, `url()` externe, `@import`, DOCTYPE, instruction, entité ; pour l’écriture : seulement `svg` et `path` |
 | Corpus hostile | `tests/fixtures/hostile/*.svg` (166 fichiers) et `index.json` | un fichier par vecteur, nommé pour lui, avec son attendu (« s’ouvre » ou « est refusé ») |
+| Corpus de PDF hostiles | `tests/fixtures/hostile-pdf/*.pdf` (39 fichiers) et `index.json`, fabriqués par `tests/unit/securite/hostilesPdf.ts` | bombes (FlateDecode, flux d’objets, RunLength), chiffrement, boucles (`/Prev`, arbre des pages, formulaires, glyphe Type 3), renvois en chaîne, tables démesurées, fichier tronqué, coordonnées démesurées, programmes de fonte tronqués ou faux, CMap démesurée, JavaScript et actions : par la lecture pure et par la voie de la page (`DecompressionStream`), aucune exception, un temps borné, l’attendu, et les invariants de l’écriture sur ce qui s’ouvre (`tests/unit/securite/corpus-pdf.test.ts`) |
+| Fuzzing des PDF | `tests/unit/securite/fuzz-pdf.test.ts` | 4 000 PDF par défaut, mutés octet par octet ou engendrés par une grammaire d’opérateurs (texte compris), graine fixe : aucune exception, aucun appel au-delà de 1,5 s, invariants de l’écriture ; 70 000 de plus explorés à l’écriture de l’ADR-0020 sans un échec |
 | Entrées volumineuses | `tests/unit/securite/volumineux.ts` | 100 000 niveaux, 1,1 million d’éléments, un million de points, 64 Mo, bombes de règles et de clones… avec leur temps |
 | Fuzzing déterministe | `tests/unit/securite/fuzz.test.ts`, `mutateur.ts` | 12 000 entrées par défaut (octets, jetons, imbrication, nombres, grammaire), graine fixe, aucune exception, aucun appel au-delà de 1,5 s, invariants, relecture de sa propre écriture idempotente |
 | Régressions du fuzzer | `tests/fixtures/regressions/` | chaque entrée réduite qui a échoué une fois, rejouée à chaque test |
@@ -180,6 +228,12 @@ FUZZ_ECRIRE=1 …    # écrit l’entrée réduite d’un échec dans tests/fixt
 ```
 
 ## 8. Ajouter un vecteur
+
+Un PDF : une entrée dans `HOSTILES` (`tests/unit/securite/hostilesPdf.ts`), puis
+`ACTUALISER_REFERENCES=1 npx vitest run tests/unit/securite/corpus-pdf.test.ts`, qui écrit le fichier et sa ligne
+d’`index.json` ; le test échoue si le fichier, la ligne et l’entrée ne se correspondent pas.
+
+Un SVG :
 
 Un fichier `tests/fixtures/hostile/<famille>-<vecteur>.svg` et sa ligne dans `index.json` (`attendu` : `ouvre` ou
 `refus`). Le test du corpus échoue si l’un des deux manque. Un échec du fuzzer se range, réduit, dans

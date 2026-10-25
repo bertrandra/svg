@@ -42,12 +42,12 @@ describe('reecriture identique d\'un navigateur a l\'autre', () => {
     await page.getByLabel('Incl. Y °').fill(t.iy);
     await page.getByLabel('Échelle %').fill(t.echelle);
     await page.getByRole('button', { name: 'Appliquer', exact: true }).click();
-    await page.keyboard.press('Control+s');
+    // « Terminer » rend le dessin transforme (il a change) ; la fiche le telecharge comme le faisait le bouton « SVG » d'hier.
+    await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await page.locator('.resultat').waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
     const [telechargement]: [Download, void] = await Promise.all([
       page.waitForEvent('download'),
-      page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click()
+      page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click()
     ]);
     return readFileSync(await telechargement.path(), 'utf8');
   }

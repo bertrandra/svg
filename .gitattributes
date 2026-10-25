@@ -1,0 +1,2 @@
+# Les PDF sont binaires : une conversion des fins de ligne (autocrlf) fausserait leurs decalages d octets.
+*.pdf binary

@@ -12,12 +12,16 @@ import { annoncer, depuisRacine, ecrireDansDist, empaqueter, enKo, refuserFinDeS
 import { composerPage } from './page.mjs';
 
 // La version du produit (package.json) entre dans la page pour la boite « A propos et credits » (src/zones/produit.ts).
-const version = JSON.parse(readFileSync(depuisRacine('package.json'), 'utf8')).version;
+const paquet = JSON.parse(readFileSync(depuisRacine('package.json'), 'utf8'));
+const version = paquet.version;
+// Le depot declare par package.json : le panneau des integrateurs de l'accueil y renvoie vers docs/integration.md
+// (src/zones/produit.ts, depotProduit). Une valeur declaree, jamais une adresse inventee ; sans elle, la page renvoie a une ancre.
+const depot = typeof paquet.repository === 'object' && paquet.repository !== null ? String(paquet.repository.url ?? '') : String(paquet.repository ?? '');
 
 const moteur = await empaqueter({
   entryPoints: [depuisRacine('outils/editeur-svg/entree.tsx')],
   bundle: true, format: 'iife', globalName: 'EditeurSvg', target: 'es2020', minify: true, jsx: 'automatic',
-  define: { 'process.env.NODE_ENV': '"production"', VERSION_PRODUIT: JSON.stringify(version) }
+  define: { 'process.env.NODE_ENV': '"production"', VERSION_PRODUIT: JSON.stringify(version), DEPOT_PRODUIT: JSON.stringify(depot) }
 });
 // Un `</script` dans le moteur fermerait la balise qui l'embarque.
 refuserFinDeScript(moteur, 'le moteur');

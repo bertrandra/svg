@@ -5,6 +5,7 @@
 import type { Boite, DessinSvg, Forme, Matrice } from './types.js';
 import { echellerTrait, reglerTrait, type ReglageTrait } from './trait.js';
 import { boiteDe, echelle, facteur, multiplier, rotation, transformerChemin, translation } from './geometrie.js';
+import { avecTexteTransforme } from './texteVivant.js';
 
 export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: Forme) => Forme): DessinSvg {
   const voulus = new Set(ids);
@@ -20,7 +21,8 @@ export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: 
 
 export function transformer(dessin: DessinSvg, ids: readonly string[], m: Matrice): DessinSvg {
   const k = facteur(m);
-  return surFormes(dessin, ids, f => ({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }));
+  // Un texte vivant suit sa forme : sa matrice de composition prend la transformation (texteVivant.ts).
+  return surFormes(dessin, ids, f => avecTexteTransforme({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }, f, m));
 }
 
 export const deplacer = (dessin: DessinSvg, ids: readonly string[], dx: number, dy: number): DessinSvg =>
@@ -101,7 +103,7 @@ export function dupliquer(dessin: DessinSvg, ids: readonly string[], dx = 0, dy 
     if (!voulus.has(f.id)) continue;
     const id = 'f' + n++;
     nouveaux.push(id);
-    formes.push({ ...f, id, verrouille: false, d: dx || dy ? transformerChemin(f.d, translation(dx, dy)) : f.d });
+    formes.push(dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false });
   }
   return { dessin: nouveaux.length ? { ...dessin, formes } : dessin, ids: nouveaux };
 }

@@ -52,8 +52,10 @@ describe('calques par couleur, suite', () => {
     const f = surToile(page, id);
     return { fond: await f.getAttribute('fill'), trait: await f.getAttribute('stroke') };
   };
-  const calque = (page: Page, id: string) => page.locator('.editeur-calques ol > li button.calque-nom', { hasText: new RegExp('^\\s*Forme ' + id.slice(1) + '$') });
-  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi').evaluateAll(l => l.map(e => (e.querySelector('.calque-nom') as HTMLElement).innerText.trim()));
+  const calque = (page: Page, id: string) => page.locator('.editeur-calques ol > li button.calque-nom[data-forme="' + id + '"]');
+  // textContent, pas innerText : une ligne des calques hors de l'ecran (`content-visibility: auto`) n'est pas rendue, et Firefox
+  // et WebKit lui donnent alors un innerText vide.
+  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi').evaluateAll(l => l.map(e => 'Forme ' + (e.querySelector('.calque-nom')?.getAttribute('data-forme') ?? '').slice(1)));
   const message = (page: Page) => texteDe(page.locator('.message-etat'));
   const autresActions = (page: Page, couleur: string) => page.locator(`[aria-label="Autres actions sur ${couleur}"]`);
   const apercu = (page: Page) => texteDe(page.locator('.nuances-proches [role=status]'));
@@ -489,7 +491,8 @@ describe('calques par couleur au doigt (420 px)', () => {
       const dehors = [...calques.querySelectorAll('.par-couleur, .par-couleur li, .nuances-proches, .nuances-proches button, .mini-onglets')]
         .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > cadre.right + 0.5 || r.left < cadre.left - 0.5); })
         .map(e => e.className || e.tagName);
-      return { dehors, panneau: calques.scrollWidth - calques.clientWidth, page: document.documentElement.scrollWidth - window.innerWidth };
+      // La page : `clientWidth`, que Chromium n'elargit pas sous `isMobile` comme il elargit `innerWidth`.
+      return { dehors, panneau: calques.scrollWidth - calques.clientWidth, page: document.documentElement.scrollWidth - document.documentElement.clientWidth };
     });
     expect(await debordements()).toEqual({ dehors: [], panneau: 0, page: 0 });
 

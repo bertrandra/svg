@@ -7,7 +7,7 @@ import { formeTracee } from './Gestes.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
-function cheminDe(f: Forme): string {
+export function cheminDe(f: Forme): string {
   let d = cacheChemins.get(f);
   if (d === undefined) { d = ecrireChemin(f.d, 3); cacheChemins.set(f, d); }
   return d;

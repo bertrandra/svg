@@ -16,14 +16,23 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
+import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { svgCricut } from '../../../src/export/cricut.js';
+import { printThenCut } from '../../../src/export/printThenCut.js';
+import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.js';
+import { cheminDuTexte, lettresDuTexte } from '../../../src/engine/texte/bloc.js';
+import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
+import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
 import { svgDecoupe } from '../../../src/export/svgs.js';
+import { svgStylo } from '../../../src/export/stylo.js';
+import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
@@ -90,6 +99,54 @@ const glyphesLiees: Glyphes = {
   ligature: (cars, i) => (cars[i] === 'f' && cars[i + 1] === 'i' ? 2 : 0)
 };
 
+// Le texte d'un SVG lu en lettres (ADR-0020) : neuf fontes factices, une par fonte embarquee, que la hauteur et l'avance de leurs
+// glyphes distinguent. Un remplacement qui changerait de fonte changerait donc les octets ecrits.
+const IDS_POLICES = ['inter', 'inter-gras', 'oswald', 'bebas', 'playfair', 'lobster', 'pacifico', 'caveat', 'fredoka'];
+const policesFactices: PolicesTexte = {
+  glyphes: id => {
+    const rang = IDS_POLICES.indexOf(id);
+    if (rang < 0) return null;
+    return {
+      ...glyphesFactices,
+      contour: (c, x, y, t) => (c === ' ' ? [] : glyphesFactices.contour(c, x, y, t * (1 + rang / 10))),
+      avance: c => glyphesFactices.avance(c) + rang * 20
+    };
+  }
+};
+const lireTexteSvg = (svg: string): DessinSvg => {
+  const r = lireDessin(svg, { polices: policesFactices });
+  if ('erreur' in r) throw new Error(r.erreur);
+  return r.dessin;
+};
+
+// Le texte vivant (ADR-0022) : une forme par texte, ses contours composes et ses attributs `data-ed-*`. La fonte factice
+// courbe ci-dessus ; une fonte a trait factice, des traces ouverts en zigzag (la course d'une plume).
+const glyphesTraitFactices: Glyphes = {
+  ...glyphesFactices,
+  contour: (c, x, y, t) => {
+    const k = t / 1000;
+    return c.charCodeAt(0) % 2 === 0
+      ? [{ type: 'M', x, y }, { type: 'L', x: x + 250 * k, y: y - 700 * k }, { type: 'L', x: x + 500 * k, y }]
+      : [{ type: 'M', x, y: y - 700 * k }, { type: 'L', x, y }, { type: 'M', x, y: y - 350 * k }, { type: 'Q', x1: x + 500 * k, y1: y - 700 * k, x: x + 450 * k, y }];
+  }
+};
+const POLICE_FACTICE = { id: 'inter', version: '0123456789abcd' };
+const texteFactice = (texte: string, m: Matrice, reglages: Partial<TexteVivant> = {}): TexteVivant => ({ ...nouveauTexte(texte, POLICE_FACTICE, 18, m), ...reglages });
+const vivant = (t: TexteVivant, peinture: Parameters<typeof creerTexte>[3], g: Glyphes = glyphesFactices) => (d: DessinSvg): DessinSvg => creerTexte(d, t, cheminDuTexte(t, g), peinture).dessin;
+const FOND = peintureDuTexte('contour', { remplissage: '#15181d', contour: null, epaisseur: 1 }, 1);
+const TROIS_TEXTES = enchainerTot(
+  vivant(texteFactice('Joyeux Noël\nà tous', [1, 0, 0, 1, 100, 30], { alignement: 'centre', interligne: 1.4 }), FOND),
+  vivant(texteFactice('url(x) javascript: @import <b>&"\'', [1, 0, 0, 1, 8, 92], { interlettrage: 0.02, taille: 9 }), peintureDuTexte('contour', { remplissage: null, contour: '#b3202c', epaisseur: 0.8 }, 1)),
+  vivant(texteFactice('AVfi', [0.866025, 0.5, -0.5, 0.866025, 150, 60], { ligatures: true, alignement: 'droite' }), FOND, glyphesLiees)
+);
+/** Un mot aux lettres serrees (interlettrage negatif) : elles se chevauchent, de quoi souder ; le « c » de la seconde ligne reste seul. */
+const MOT_SERRE = texteFactice('Abba\nc', [1, 0, 0, 1, 20, 60], { interlettrage: -0.25, taille: 30 });
+const vectoriser = (mode: ModeVectorisation, avecLettres: boolean) => (d: DessinSvg): DessinSvg => {
+  const avec = vivant(MOT_SERRE, FOND)(d);
+  const id = au(avec.formes, avec.formes.length - 1).id;
+  return vectoriserTextes(avec, [id], mode, { lisser: true, ...(avecLettres ? { lettres: new Map([[id, lettresDuTexte(MOT_SERRE, glyphesFactices).map(l => l.d)]]) } : {}) }).dessin;
+};
+
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
@@ -111,7 +168,25 @@ const casser = (id: string, i: number) => (d: DessinSvg): DessinSvg => {
 
 const palette = (id: string) => au(PALETTES.filter(p => p.id === id), 0).couleurs;
 
+/**
+ * Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), en pouces, avec des choix en plus. Les references ont ete
+ * ecrites en pouces avant que le millimetre devienne l'unite par defaut de l'interface : elles le restent (cricut-export-mm couvre
+ * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference.
+ */
+const CRICUT_POUCES: ChoixMachine = { ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
+const profilCricut = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
+  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, ...choix });
+  if (!p) throw new Error('profil Cricut introuvable');
+  return p;
+};
+const pourCricut = (choix: Partial<ChoixMachine>) => (t: string): string => { const r = svgCricut(lire(t), profilCricut(choix)); return 'erreur' in r ? 'REFUSE : ' + r.erreur : r.svg; };
+const pourPrintThenCut = (fichier: 'impression' | 'coupe') => (t: string): string => {
+  const r = printThenCut(lire(t), profilCricut({ procede: 'imprimer-decouper' }));
+  return 'erreur' in r ? 'REFUSE : ' + r.erreur : r[fichier];
+};
+
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
+function enchainerTot(...ops: Array<(d: DessinSvg) => DessinSvg>): (d: DessinSvg) => DessinSvg { return d => ops.reduce((x, op) => op(x), d); }
 
 interface Cas {
   nom: string;
@@ -187,6 +262,11 @@ const CAS: readonly Cas[] = [
     entree: 'texte-par-lettre',
     operation: d => ajouterTexte(d, composer('fi AfiA fifi.', glyphesLiees, { taille: 30, x: 10, y: 60, ligatures: true }), { remplissage: '#15181d', contour: null, epaisseur: 1 }).dessin
   },
+  // Le texte d'un SVG lu en lettres (ADR-0020, version majeure pour un SVG AVEC texte) : <text> et <tspan>, listes de positions,
+  // rotate, text-anchor, familles remplacees, gras, italique synthetique, interlettrage, blancs ramenes, <a> en ligne, <textPath>
+  // ignore. Des cas NEUFS : un SVG sans texte se lit comme avant, et sans polices un <text> reste refuse.
+  { nom: 'texte-svg', produire: t => ecrireEnregistre(lireTexteSvg(t)) },
+  { nom: 'texte-svg-blancs', produire: t => ecrireEnregistre(lireTexteSvg(t)) },
   { nom: 'palette-evenement', entree: 'palette', operation: d => appliquerPalette(d, palette('noel')) },
   { nom: 'palette-une-couleur', entree: 'palette', operation: d => uneCouleur(d, '#7b2d8e') },
   {
@@ -226,6 +306,12 @@ const CAS: readonly Cas[] = [
   { nom: 'provenance-union', entree: 'provenance', operation: booleen(['f1', 'f2'], 'union') },
   { nom: 'provenance-masquee', entree: 'provenance', operation: enchainer(d => modifier(d, ['f1', 'f2', 'f4'], { visible: false })) },
   { nom: 'provenance-decoupe', entree: 'provenance', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  // Les sources libres de la bibliotheque (MIT, ISC, Apache 2.0) : des cas NEUFS. Leur forme garde son `data-origine`, sans
+  // <metadata> (leur licence ne demande pas de mention dans le fichier) ; melangee a une forme de game-icons, la mention ne
+  // nomme que game-icons, et la liste des origines les nomme toutes. La decoupe n'ecrit aucun commentaire pour elles.
+  { nom: 'provenance-sources', entree: 'provenance-sources' },
+  { nom: 'provenance-sources-decoupe', entree: 'provenance-sources', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  { nom: 'provenance-mixte', entree: 'provenance-mixte' },
   // Les calques par couleur : recolorer sur le fond ou le trait, fusionner les nuances (une forme verrouillee garde sa couleur).
   { nom: 'couleurs-recolorer-fond', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'remplissage') },
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },
@@ -251,7 +337,34 @@ const CAS: readonly Cas[] = [
   { nom: 'jonctions-joindre', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f1', 'f2'])).dessin },
   { nom: 'jonctions-fermer', entree: 'jonctions', operation: d => sansRefus(joindreExtremites(d, ['f4'])).dessin },
   { nom: 'jonctions-inverser', entree: 'jonctions', operation: d => inverserSens(d, ['f1', 'f3', 'f4']) },
-  { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' }
+  { nom: 'nettoyage-import', produire: t => nettoyerSvg(t)?.svg ?? 'REFUSE' },
+  // Le contexte de production Cricut (ADR-0013) : des cas NEUFS. Sans contexte, rien ne change (toutes les references
+  // ci-dessus, et les empreintes de la bibliotheque, le prouvent) ; avec, le document enregistre porte sa marque `data-ed-*`
+  // sur la racine, et les exports pour la machine ont une taille physique, des fonds pleins et des octets figes.
+  { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES })))?.svg ?? 'REFUSE' },
+  { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
+  { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
+  { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
+  { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') },
+  // Le texte vivant et sa vectorisation (ADR-0022) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus
+  // (toutes les references ci-dessus et les empreintes de la bibliotheque le prouvent) ; un texte vivant s'ecrit en contours
+  // exacts, plus ses `data-ed-*` encodes, et se relit tel quel.
+  { nom: 'texte-vivant', operation: TROIS_TEXTES },
+  {
+    nom: 'texte-vivant-transforme',
+    entree: 'texte-vivant',
+    operation: enchainer(TROIS_TEXTES, d => tourner(d, ['f2'], 25), d => deplacer(d, ['f3'], -4, 6), d => redimensionner(d, ['f4'], { x: 120, y: 10, l: 60, h: 40 }), d => dupliquer(d, ['f2'], 0, 12).dessin)
+  },
+  { nom: 'texte-vivant-lecture' },
+  { nom: 'texte-vivant-trait', entree: 'texte-vivant', operation: vivant(texteFactice('Lune et soleil', [1, 0, 0, 1, 15, 55], { taille: 24 }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.6), glyphesTraitFactices) },
+  { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
+  { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
+  { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },
+  { nom: 'vectoriser-parties', entree: 'texte-vivant', operation: vectoriser('lettres', false) },
+  // Le stylo (ADR-0022) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
+  // respectes ; et l'export du procede « Dessin au stylo » : des traits, aucun fond, une taille physique. Des cas NEUFS.
+  { nom: 'hachures', entree: 'stylo', operation: enchainer(d => hachurerFormes(d, ['f1', 'f4'], 1.512).dessin, d => hachurerFormes(d, ['f2'], 1.512, 0).dessin) },
+  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg }
 ];
 
 const produire = (cas: Cas): string => {

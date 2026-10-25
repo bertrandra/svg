@@ -7,9 +7,18 @@ import {
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
 import { NoeudsPoint, OutilsTrace } from './OutilsTrace.js';
-import { arrondi, estHex } from './aidesEditeur.js';
+import { estHex, genreAffiche } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useTactile } from './Vue.js';
+import { selonSaisie } from '../util/texte.js';
+import { useReperes } from './contexteGuide.js';
+import { Repere } from './Repere.js';
 import type { Teinte } from './typesEditeur.js';
+import { Nombre } from './commun/Nombre.js';
+import { SectionTexte } from './InspecteurTexte.js';
+
+// Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
+export { Nombre };
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
 export function Inspecteur() {
@@ -21,9 +30,13 @@ export function Inspecteur() {
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ac.appliquer(d => modifier(d, sel, r), cle === null ? ac.nouvelleCle() : cle + ':' + sel.join(','));
   const points = ui.outil === 'points' && mo.formeSeule;
+  const doigt = useTactile();
   return (
     <>
-      <h3>{sel.length > 1 ? sel.length + ' formes' : 'Forme ' + premiere.id.slice(1)}</h3>
+      <h3>{sel.length > 1 ? sel.length + ' formes' : genreAffiche(premiere) + ' ' + premiere.id.slice(1)}</h3>
+      <ReperesSelection points={!!points} />
+      {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
+      {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
       <Section titre="Apparence" ouverte>
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
@@ -50,14 +63,28 @@ export function Inspecteur() {
           </div>
         </Section>
       ) : null}
-      <Section titre="Transformer" note="angle, échelle, inclinaison, contour">
+      <Section titre="Transformer" note="angle, échelle, contour">
         <TransformationsNumeriques />
         <OutilsTrace />
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
-      <p className="aide">{sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : ''}Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.</p>
+      <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour modifier son contour point par point. ' : '') + 'Aligner, empiler, assembler des formes (les unir, découper l’une dans l’autre), miroirs : la rangée au-dessus de la toile.', doigt)}</p>
     </>
   );
+}
+
+/**
+ * Le repere du premier assemblage de formes (ADR-0019) : apres un booleen, il n'y a plus qu'une forme, a la couleur de celle du
+ * dessous. Celui des points vit dans la section du point (PanneauPoint).
+ */
+function ReperesSelection({ points }: { points: boolean }) {
+  const { rencontres } = useReperes();
+  if (points) return null;
+  return rencontres.has('booleen') ? (
+    <Repere id="booleen" titre="Les formes n’en font plus qu’une">
+      Le résultat est une seule forme, à la couleur de celle du dessous. Annuler (Ctrl+Z) rend les formes séparées.
+    </Repere>
+  ) : null;
 }
 
 /** Un curseur d'opacite, de 0 a 100 %. */
@@ -100,10 +127,14 @@ function TransformationsNumeriques() {
 }
 
 function PanneauPoint({ forme }: { forme: Forme }) {
-  const ac = useActions(), ui = useInterface();
+  const ac = useActions(), ui = useInterface(), doigt = useTactile();
   const p = ui.point, c = p !== null ? forme.d[p] : undefined, suivante = p !== null ? forme.d[p + 1] : undefined;
   return (
     <Section titre={'Point' + (c && p !== null ? ' ' + (p + 1) + ' sur ' + forme.d.filter(x => x.c !== 'Z').length : '')} ouverte>
+      {/* Le repere des points vit ici, avec les reglages du point : il ne pousse pas le reste de l'inspecteur. */}
+      <Repere id="points" titre="Modifier le contour point par point">
+        Les petits carrés sont les points du contour : glissez-en un pour changer la forme. Un point de courbe a des poignées rondes, qui règlent l’arrondi. L’outil sélection (V) rend la forme entière.
+      </Repere>
       {c && p !== null ? (
         <>
           <div className="boutons">
@@ -113,7 +144,7 @@ function PanneauPoint({ forme }: { forme: Forme }) {
           </div>
           <NoeudsPoint forme={forme} point={p} />
         </>
-      ) : <p className="aide">Cliquez un point pour le régler ; glissez-le, ou ses poignées. Flèches : au millième du plan.</p>}
+      ) : <p className="aide">{selonSaisie('Cliquez un point pour le régler ; glissez-le, ou ses poignées. Flèches : au millième du plan.', doigt)}</p>}
     </Section>
   );
 }
@@ -142,22 +173,6 @@ export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { l
         </div>
       ) : null}
     </div>
-  );
-}
-
-export function Nombre({ libelle, valeur, poser, min }: { libelle: string; valeur: number; poser: (v: number) => void; min?: number }) {
-  const [t, poserT] = useState(String(arrondi(valeur)));
-  useEffect(() => { poserT(String(arrondi(valeur))); }, [valeur]);
-  const valider = () => {
-    const v = Number(t.replace(',', '.'));
-    if (Number.isFinite(v) && v !== arrondi(valeur) && (min === undefined || v >= min)) poser(v);
-    else poserT(String(arrondi(valeur)));
-  };
-  return (
-    <label className="champ-ligne nombre">
-      <span>{libelle}</span>
-      <input type="text" inputMode="decimal" value={t} onChange={e => poserT(e.target.value)} onBlur={valider} onKeyDown={e => { if (e.key === 'Enter') valider(); }} />
-    </label>
   );
 }
 

@@ -12,7 +12,7 @@
 // Ce fichier n'est plus que la facade : le travail vit dans `edition/`, un module par sujet. Les
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
 
-export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde } from './edition/types.js';
+export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde, TexteVivant, PoliceTexte, AlignementTexte } from './edition/types.js';
 export { IDENTITE } from './edition/types.js';
 
 export { lireChemin, ecrireChemin, ancre, depart } from './edition/chemins.js';
@@ -23,7 +23,8 @@ export {
 } from './edition/geometrie.js';
 
 export { lirePeinture, lirePeintureAlpha, type PeintureLue } from './edition/peinture.js';
-export { lireDessin, type DessinLu, type LectureDessin } from './edition/lecture.js';
+export { lireDessin, type DessinLu, type LectureDessin, type OptionsLecture } from './edition/lecture.js';
+export { CARACTERES_MAX, type PolicesTexte } from './edition/texteSvg.js';
 export { opaciteDuRemplissage, opaciteDuContour } from './edition/opacites.js';
 export {
   LIMITE_MITRE_DEFAUT, attributsTrait, pointillesEcrits, normaliserPointilles, genrePointilles, motifDeGenre,
@@ -31,7 +32,12 @@ export {
 } from './edition/trait.js';
 
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
+export { marquerProduction, lireProduction, identifiantValide, CHAMPS_PRODUCTION, PREFIXE_PRODUCTION, type MarqueProduction } from './edition/production.js';
 export { ATTRIBUT_ORIGINE, avecOrigines, marquerOrigine, originesDe, lireOrigines } from './edition/provenance.js';
+export {
+  encoderTexte, decoderTexte, attributsTexte, lireTexteVivant, transformerTexte, sansTexte, dessinSansTextes, garderTextes,
+  ATTRIBUTS_TEXTE, TEXTE_MAX, INTERLIGNE_DEFAUT, MSG_TEXTE_ILLISIBLE, type TexteLu
+} from './edition/texteVivant.js';
 
 export {
   transformer, deplacer, retourner, tourner, redimensionner, aligner, modifier, supprimer,
@@ -77,3 +83,8 @@ export {
 export { inserer, combiner, sousChemins, separer, coller } from './edition/assemblage.js';
 
 export { pasGrille, aimanter } from './edition/grille.js';
+
+export {
+  cheminDeGlyphe, sourceDeGlyphes, formesDeGlyphes, PENCHE,
+  type CommandeGlyphe, type Glyphes, type SourceContours, type GlypheAPoser, type StyleGlyphes
+} from './edition/glyphes.js';

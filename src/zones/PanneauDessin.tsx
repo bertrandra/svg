@@ -5,12 +5,14 @@ import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
-import { origineDeBibliotheque } from '../model/credits.js';
+import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
 import { FORMES } from './aidesEditeur.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
+import { ListeRaccourcis } from './AideEditeur.js';
 import { CouleursDuDessin } from './CouleursDuDessin.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
@@ -34,7 +36,7 @@ export function PanneauDessin() {
     <>
       <h3>{ui.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
       {ui.outil === 'texte' ? <PanneauTexte /> : null}
-      {trace ? <StyleNouvelleForme /> : null}
+      {trace ? <StyleNouvelleForme /> : <SansSelection />}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
       <CouleursDuDessin />
@@ -50,31 +52,37 @@ export function PanneauDessin() {
         <div className="boutons">
           <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ac.appliquer(() => r.dessin); ac.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
           <button type="button" onClick={() => { const r = regrouper(dessin); ac.appliquer(() => r.dessin); ac.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
-          <button type="button" title="Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent" onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ac.appliquer(() => r.dessin); ac.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
+          <button type="button" title={ui.profil ? 'Retire les points inutiles des segments droits, à la tolérance du matériau ; les courbes et les formes verrouillées restent' : 'Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent'} onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), ui.profil ? ui.profil.toleranceNettoyage : Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ac.appliquer(() => r.dessin); ac.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
           <button type="button" onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>
       <PanneauVersions />
       <Section titre="Raccourcis">
-        <ul className="raccourcis">
-          <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
-          <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
-          <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
-          <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
-          <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
-          <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
-          <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
-          <li>G grille magnétique · Z zoom sur la sélection · C choisir les formes de même couleur · Ctrl+S enregistrer</li>
-          <li>Flèches : déplacer (Maj : ×10) · Alt+flèches : redimensionner, coin haut gauche fixe (Maj : ×10) · Ctrl+flèche gauche ou droite : tourner de 15° (Maj : 1°) · Maj en glissant : contraindre</li>
-          <li>Au clavier, sur la toile : Tab et Maj+Tab passent à la forme suivante ou précédente (en mode points, au point suivant ou précédent) ; après la dernière, Tab quitte la toile · Page suivante et Page précédente : forme suivante ou précédente, en boucle · Entrée sur une forme : ses points</li>
-          <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme à sa taille par défaut au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
-          <li>Une forme à deux coins au clavier : Espace (ou Maj+Entrée) pose le premier coin au réticule, les flèches déplacent l’autre coin (un aperçu en pointillés suit), Espace ou Entrée le pose ; Échap annule le premier coin</li>
-          <li>Sélection additive au clavier (outil sélection) : Maj+Page suivante ou Maj+Page précédente ajoute la forme voisine à la sélection et y place le curseur ; Espace ajoute ou retire la forme au curseur. Il n’y a pas de cadre de sélection au clavier : Ctrl+A, « Tout », « Inverser » et C (même couleur) en tiennent lieu</li>
-          <li>Outil texte : Entrée met le focus dans le champ Texte du panneau ; « Ajouter le texte » pose les lettres au centre du plan</li>
-          <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
-        </ul>
+        <ListeRaccourcis />
       </Section>
     </>
+  );
+}
+
+/**
+ * Rien n'est choisi (ADR-0019, etats vides) : dire ce que ce panneau regle alors, et le geste qui donne une forme a regler. Un
+ * dessin sans forme ne s'ouvre pas (la lecture le refuse) : s'il est vide, c'est qu'on a tout retire, et le retour est a un clic.
+ */
+function SansSelection() {
+  const mo = useDessin(), ac = useActions();
+  const choisissables = mo.dessin.formes.filter(f => f.visible && !f.verrouille);
+  if (!mo.dessin.formes.length) {
+    return (
+      <EtatVide genre="vide" icone="annuler" titre="Vous avez retiré toutes les formes." action={{ libelle: 'Faire revenir les formes', onClick: ac.defaire }}>
+        Annuler (Ctrl+Z) défait le dernier geste : rien n’est perdu. Ou tracez une forme neuve avec les outils de la barre.
+      </EtatVide>
+    );
+  }
+  const premiere = choisissables[0];
+  return (
+    <EtatVide genre="premiere-fois" titre="Aucune forme choisie." action={premiere ? { libelle: 'Choisir la forme ' + premiere.id.slice(1), onClick: () => ac.choisir([premiere.id]) } : undefined}>
+      Cliquez une forme sur la toile pour régler sa couleur, sa taille et sa place. En attendant, ce panneau règle le dessin entier.
+    </EtatVide>
   );
 }
 
@@ -104,18 +112,21 @@ function PanneauBibliotheque({ bibliotheque }: { bibliotheque: Bibliotheque | 'a
 
 const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
   const ac = useActions();
+  // Le procede du contexte de production : au stylo, les formes en ligne sont proposees d'abord (NATURE_PROPOSEE_PAR_PROCEDE).
+  const procede = useInterface().profil?.procede;
   const chargee = useBibliotheque();
   const [panier, poserPanier] = useState<EntreeBibliotheque[]>([]);
   const [sceneId, poserSceneId] = useState(SCENES[0]?.id ?? '');
   const b = bibliotheque !== 'a-charger' ? bibliotheque : chargee.bibliotheque;
   if (chargee.erreur && !b) return <p className="aide" role="alert">{chargee.erreur}</p>;
   if (!b) return <p className="aide" role="status">Chargement…</p>;
-  // Chaque forme de la bibliotheque s'insere avec son origine : c'est ce qui fait ecrire la mention CC BY 3.0 dans le SVG.
-  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg, origineDeBibliotheque(x.id));
+  // Chaque forme de la bibliotheque s'insere avec son origine (`game-icons:…`, `mdi:…`) : celle de game-icons fait ecrire la
+  // mention CC BY 3.0 dans le SVG ; celle d'une source libre ne laisse que son `data-origine`.
+  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg, origineDeForme(x.source, x.id));
   // Le panier en grille : autant de colonnes que la racine du nombre, chaque case a 80 % de sa cellule.
   const insererPanier = () => {
     const n = panier.length, cols = Math.ceil(Math.sqrt(n)), lignes = Math.ceil(n / cols), cellule = 1 / Math.max(cols, lignes);
-    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, origine: origineDeBibliotheque(x.id), x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
+    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, origine: origineDeForme(x.source, x.id), x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
     poserPanier([]);
   };
   const insererScene = () => {
@@ -131,7 +142,7 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
         <select aria-label="Scène prête" value={sceneId} onChange={e => poserSceneId(e.target.value)}>{SCENES.map(sc => <option key={sc.id} value={sc.id}>{sc.nom}</option>)}</select>
         <button type="button" title="Insérer la scène : ses formes, à leur place" aria-label="Insérer la scène" onClick={insererScene}><Icone nom="scene" taille={14} /></button>
       </div>
-      <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact />
+      <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact procede={procede} />
       {panier.length ? (
         <div className="panier">
           <span className="aide">{panier.length} dans le panier : {panier.map(x => x.nom).join(', ')}</span>
@@ -140,7 +151,7 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
             <button type="button" className="discret" onClick={() => poserPanier([])}>Vider</button>
           </div>
         </div>
-      ) : <p className="aide">Un clic insère au centre ; « + » met dans le panier pour insérer plusieurs formes en grille.</p>}
+      ) : <p className="aide">Panier vide. Un clic sur une forme l’insère au centre du dessin ; « + » la met dans le panier, pour en insérer plusieurs d’un coup, rangées en grille.</p>}
     </>
   );
 });

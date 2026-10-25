@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator } from 'playwright';
-import { attend, nombreDeCalques, ouvrirExemple, pilote, texteDe } from './aide.js';
+import { attend, choisirEvenement, nombreDeCalques, ouvrirExemple, pilote, texteDe } from './aide.js';
 
 // Lire et analyser la bibliotheque prend un instant sur une machine lente.
 const CHARGEMENT = 60_000;
@@ -34,7 +34,7 @@ describe('bibliotheque de formes', () => {
     expect(tout).toBe(total);
 
     // Chaque evenement garde au moins dix formes (tests/unit/model/bibliotheque.test.ts le garantit aussi).
-    await page.locator('.bibliotheque select[aria-label="Événement"]').selectOption('paques');
+    await choisirEvenement(page.locator('.bibliotheque'), 'Pâques');
     await attend(async () => (await decompte(compte))[0], 10_000).toBeLessThan(total);
     expect((await decompte(compte))[0]).toBeGreaterThanOrEqual(10);
 
@@ -67,7 +67,7 @@ describe('bibliotheque de formes', () => {
   it('insere une forme de la bibliotheque au centre du dessin, et l\'historique la retire', async () => {
     const page = await editeurAvecBibliotheque();
     const avant = await nombreDeCalques(page);
-    await page.locator('.editeur-inspecteur select[aria-label="Événement"]').selectOption('noel');
+    await choisirEvenement(page.locator('.editeur-inspecteur'), 'Noël');
     await page.locator('.editeur-inspecteur input[type=search]').fill('bonhomme de neige');
     const vignette = page.locator('.editeur-inspecteur .vignette').first();
     await vignette.waitFor();

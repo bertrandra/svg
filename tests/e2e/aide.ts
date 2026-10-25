@@ -76,6 +76,13 @@ export interface OptionsSession {
   naviguer?: boolean;
   /** JavaScript coupe : ce que voit un navigateur qui n'execute rien. */
   sansJavaScript?: boolean;
+  /**
+   * Un public de l'accueil deja retenu (ADR-0024), pose dans le stockage du contexte avant le premier chargement, comme si la personne
+   * avait repondu lors d'une visite precedente : de quoi auditer un accueil adapte sans rejouer la question. Pose seulement si le
+   * stockage n'a pas deja une reponse, pour qu'un choix fait pendant le test survive au rechargement. Sans l'option, l'accueil est
+   * celui d'une premiere visite (la question en tete, les trois voies dessous, dans l'ordre d'avant) : les tests d'avant y passent tels quels.
+   */
+  publicAccueil?: 'machine' | 'retouche' | 'integration' | 'aucun';
 }
 
 /**
@@ -118,7 +125,8 @@ export function pilote() {
         viewport: { width: options.largeur ?? 1400, height: options.hauteur ?? 900 },
         acceptDownloads: true
       };
-      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport ni pointeur grossier.
+      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport. Firefox
+      // annonce pourtant `(pointer: coarse)` des que le tactile est emule (lu en CI : Firefox 142, contexte a `hasTouch` seul).
       if (options.tactile) { contexteOptions.hasTouch = true; if (NAVIGATEUR !== 'firefox') contexteOptions.isMobile = true; contexteOptions.deviceScaleFactor = 2; }
       if (options.mouvementReduit) contexteOptions.reducedMotion = 'reduce';
       if (options.schema) contexteOptions.colorScheme = options.schema;
@@ -131,6 +139,11 @@ export function pilote() {
       page.on('console', m => { if (m.type() === 'error') erreurs.push('console.error : ' + m.text()); });
       const session = { page, contexte, erreurs };
       ouvertes.push(session);
+      if (options.publicAccueil) {
+        await contexte.addInitScript(v => {
+          try { if (localStorage.getItem('svg.accueil') === null) localStorage.setItem('svg.accueil', JSON.stringify({ public: v })); } catch { /* sans stockage : rien a poser */ }
+        }, options.publicAccueil);
+      }
       if (options.naviguer !== false) await page.goto(URL_PAGE);
       return session;
     }
@@ -166,6 +179,41 @@ export function attend<T>(lire: () => Promise<T>, delai = DELAI) {
   return expect.poll(lire, { timeout: delai, interval: 40 });
 }
 
+/**
+ * Laisse finir les animations d'ouverture (une section qui se deplie, un menu qui fond) avant une mesure : un texte a demi
+ * transparent n'a pas son contraste. Bornee a deux secondes et sans les animations infinies : sous Firefox et WebKit, attendre
+ * la fin de toutes les animations sans borne a bloque deux tests jusqu'a leur delai de 60 s (CI). Cause probable : le corps
+ * d'une section repliee reste dans le DOM avec son animation d'entree, que Chromium fait avancer et que ces moteurs, qui ne
+ * le rendent pas, laissent en suspens.
+ */
+export async function attendreAnimations(page: Page): Promise<void> {
+  // Une animation peut repartir apres l'attente (un panneau recalcule 200 ms apres un geste remonte sa section) :
+  // on sonde jusqu'a trois fois de suite sans animation en cours, dans la limite de 3 s pour les moteurs qui
+  // laissent en suspens l'animation d'un element non rendu.
+  await page.evaluate(async () => {
+    const enCours = () => document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity);
+    const limite = performance.now() + 3000;
+    let calmes = 0;
+    while (calmes < 3 && performance.now() < limite) {
+      const actives = enCours();
+      if (actives.length) { calmes = 0; await Promise.race([Promise.all(actives.map(a => a.finished.catch(() => undefined))), new Promise(fini => setTimeout(fini, 500))]); }
+      else { calmes++; await new Promise(fini => setTimeout(fini, 120)); }
+    }
+  });
+}
+
+/**
+ * Fait `faire` (un audit axe) avec une fenetre aussi haute que la page, puis rend la fenetre d'avant. Un texte a cheval sur le bord
+ * de la fenetre (la page defilee jusqu'a un champ) est un « doute » pour axe, fond indeterminable, pas un contraste : depuis que la
+ * question du public (ADR-0024) allonge l'accueil, la presentation de la bibliotheque y tombait. accessibilite-axe.e2e.ts fait de meme.
+ */
+export async function surToutLaHauteur<T>(page: Page, faire: () => Promise<T>): Promise<T> {
+  const vue = page.viewportSize();
+  const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
+  if (vue && hauteur > vue.height) await page.setViewportSize({ width: vue.width, height: Math.min(4000, hauteur + 40) });
+  try { return await faire(); } finally { if (vue) await page.setViewportSize(vue); }
+}
+
 /** Vrai quand l'element a le focus clavier. */
 export function aLeFocus(l: Locator): Promise<boolean> {
   return l.evaluate(e => e === document.activeElement);
@@ -188,7 +236,7 @@ export async function ouvrirExemple(page: Page, tactile = false): Promise<void> 
  * fichier a ranger, et le dessin d'un test se lit dans le test. Attend l'editeur.
  */
 export async function ouvrirCode(page: Page, svg: string, tactile = false): Promise<void> {
-  await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(svg);
+  await page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(svg);
   const bouton = page.getByRole('button', { name: 'Ouvrir ce code' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
@@ -220,14 +268,57 @@ export function nombreDeCalques(page: Page): Promise<number> {
 }
 
 /**
+ * Le presse-papiers d'un test : les permissions `clipboard-read` et `clipboard-write` n'existent que dans chromium (firefox et
+ * webkit les refusent comme inconnues). On y garde le vrai presse-papiers ; ailleurs, `writeText` retient le texte sans
+ * toucher a celui de la machine. Dans les deux cas, `textePressePapiers` rend ce que la page a copie en dernier.
+ */
+export async function permettrePressePapiers(page: Page, contexte: BrowserContext): Promise<void> {
+  if (NAVIGATEUR === 'chromium') await contexte.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate((reel) => {
+    // Un navigateur qui ne donne pas `navigator.clipboard` a cette page (contexte juge non sur) en recoit un qui retient.
+    if (!('clipboard' in navigator) || !navigator.clipboard) Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => undefined }, configurable: true });
+    const presse = navigator.clipboard as Clipboard & { __copie?: string };
+    const ecrire = presse.writeText.bind(presse);
+    presse.writeText = async (texte: string) => { presse.__copie = texte; if (reel) await ecrire(texte); };
+  }, NAVIGATEUR === 'chromium');
+}
+
+/** Le dernier texte que la page a copie (voir `permettrePressePapiers`). */
+export function textePressePapiers(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => (navigator.clipboard as Clipboard & { __copie?: string }).__copie);
+}
+
+/**
  * Ouvre un menu de la barre (Fichier, Edition, Vue) par son nom visible. Sur un telephone (640 px et moins), ces trois
  * menus ne sont plus que des rubriques du menu « Plus » : c'est lui qu'on ouvre, et le menu demande (`role=menu` du meme nom) y est.
  */
 export async function ouvrirMenu(page: Page, nom: string) {
-  const direct = page.locator('.menu-bouton', { hasText: nom });
-  const bouton = (await direct.count()) ? direct : page.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
+  // L'editeur ouvert, on ne cherche que dans l'editeur : la fiche du dessin, dessous, a aussi son menu « Autres formats ».
+  const racine = (await page.locator('.editeur-svg .editeur-cadre').count()) ? page.locator('.editeur-svg') : page;
+  // « Autres formats » est, dans la barre de l'editeur, le chevron accole a « Télécharger le SVG » (nomme par aria-label).
+  const direct = nom === 'Autres formats' && racine !== page
+    ? racine.locator('.editeur-barre .autres-formats .menu-bouton')
+    : racine.locator('.menu-bouton', { hasText: nom });
+  const bouton = (await direct.count()) ? direct : racine.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
   await bouton.click();
+  // Sur un telephone, les autres formats sont repliees en fin de la rubrique Fichier de « Plus » : on les deplie.
+  if (nom === 'Autres formats' && !(await direct.count())) {
+    const repli = page.locator('.menu-panneau details.autres-formats-repli');
+    if (!(await repli.evaluate(d => (d as HTMLDetailsElement).open))) await repli.locator('> summary').click();
+  }
   return bouton;
+}
+
+/** Le bouton « Télécharger le SVG » de la barre de l'editeur (au bureau) : le geste unique pour recuperer le dessin. */
+export function boutonTelecharger(page: Page): Locator {
+  return page.locator('.editeur-barre .recuperer-principal');
+}
+
+/** « Terminer » : le geste de fin de la page, qui ramene a la fiche du dessin. Attend la fiche. */
+export async function terminer(page: Page): Promise<void> {
+  await page.locator('.editeur-barre .groupe.fin button.primaire, .editeur-etat button.primaire').first().click();
+  await page.locator('.editeur-cadre').waitFor({ state: 'detached' });
+  await page.locator('.resultat').waitFor();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -303,4 +394,29 @@ export function imageDeTest(): { name: string; mimeType: string; buffer: Buffer 
     return null;
   });
   return { name: 'essai.png', mimeType: 'image/png', buffer: png };
+}
+
+/**
+ * Choisit une vue de la visionneuse de la voie « Convertir une image » : Comparer et Contours sont des boutons a etat, les autres
+ * vues, le zoom et le fond du plan des elements du menu « Plus de vues » (ADR-0006 : le rare dans un menu). Attend que le choix soit pris.
+ */
+export async function choisirVue(page: Page, nom: string): Promise<void> {
+  const bouton = page.locator('.barre-visionneuse .mini-onglets').getByRole('button', { name: nom, exact: true });
+  if (await bouton.count()) { await bouton.click(); await attend(() => bouton.getAttribute('aria-pressed')).toBe('true'); return; }
+  await page.locator('.barre-visionneuse .vue-plus .menu-bouton').click();
+  const element = page.getByRole('menuitemradio', { name: nom, exact: true });
+  await element.click();
+  await attend(() => element.count()).toBe(0);
+}
+
+/**
+ * Choisit un evenement parmi les pastilles de la bibliotheque de `zone` (« Tous » compris) ; deplie « Plus d'evenements » s'il
+ * le faut, puisque les pastilles repliees ne montrent que les evenements proches de la date. Attend que la pastille soit choisie.
+ */
+export async function choisirEvenement(zone: Locator, nom: string): Promise<void> {
+  const groupe = zone.getByRole('group', { name: 'Événement' });
+  const pastille = groupe.getByRole('button', { name: nom, exact: true }).first();
+  if (!(await pastille.count())) await groupe.getByRole('button', { name: /^Plus d’événements/ }).click();
+  await pastille.click();
+  await attend(() => pastille.getAttribute('aria-pressed')).toBe('true');
 }

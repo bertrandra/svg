@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { EVENEMENTS, appliquerCorrections, chercher, classer, construireBibliotheque, motsInconnus, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
+import { EVENEMENTS, appliquerCorrections, classer, construireBibliotheque, motsInconnus, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { lireDessin } from '../../../src/engine/editionSvg.js';
+import { chercher } from '../../../src/model/recherche.js';
 
 const jeu = JSON.parse(readFileSync(resolve(__dirname, '../../../node_modules/@iconify-json/game-icons/icons.json'), 'utf8')) as { width: number; icons: Record<string, IconeSource> };
 

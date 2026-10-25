@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288" width="5in" height="3in">
+  <!-- Un dessin pret pour Cricut : deux couleurs, un anneau en trace compose (trou dessine a contresens), une forme courbe. -->
+  <rect x="24" y="24" width="192" height="192" fill="#C81E28"/>
+  <path d="M336 24A96 96 0 1 1 335.99 24Z M336 72A48 48 0 1 0 336.01 72Z" fill="#1428a0"/>
+  <path d="M24 240C120 200 216 280 312 240L312 264L24 264Z" fill="#c81e28"/>
+</svg>

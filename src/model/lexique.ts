@@ -1,7 +1,9 @@
 // Le lexique des noms d'icones : chaque mot anglais d'un identifiant de game-icons.net, et son
 // equivalent francais. Un nom se traduit mot a mot, tete en premier (« broken-heart » devient
 // « coeur brise ») ; les expressions qui ne se traduisent pas mot a mot sont dans EXPRESSIONS. Un
-// mot absent reste en anglais : on le voit, et on l'ajoute ici.
+// mot absent reste en anglais : on le voit, et on l'ajoute ici (ou, pour les sources libres, dans lexiqueSources.ts).
+
+import { EXPRESSIONS_SOURCES, SENS_SOURCES, TABLE_SOURCES } from './lexiqueSources.js';
 
 const TABLE = `
 abstract:abstrait
@@ -3449,15 +3451,24 @@ export const EXPRESSIONS: Readonly<Record<string, string>> = {
   'rank-3': 'grade 3'
 };
 
-const LEXIQUE: ReadonlyMap<string, string> = new Map(
-  TABLE.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-    const k = l.indexOf(':');
-    return [l.slice(0, k), l.slice(k + 1)] as [string, string];
-  })
-);
+const lireTable = (table: string): Array<[string, string]> => table.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+  const k = l.indexOf(':');
+  return [l.slice(0, k), l.slice(k + 1)] as [string, string];
+});
+
+// Les mots des sources libres d'abord, ceux de game-icons ensuite : a doublon, game-icons l'emporte et ses noms ne bougent pas.
+const LEXIQUE: ReadonlyMap<string, string> = new Map([...lireTable(TABLE_SOURCES), ...lireTable(TABLE)]);
+
+/** Les expressions des sources libres : celles de game-icons, et les noms composes propres a ces jeux (game-icons l'emporte). */
+export const EXPRESSIONS_LIBRES: Readonly<Record<string, string>> = { ...EXPRESSIONS_SOURCES, ...EXPRESSIONS };
 
 /** Le francais d'un mot anglais d'identifiant, ou undefined s'il n'est pas dans le lexique. */
 export const traduireMot = (mot: string): string | undefined => LEXIQUE.get(mot);
+
+const SENS_LIBRES: ReadonlyMap<string, string> = new Map(lireTable(SENS_SOURCES));
+
+/** Le francais d'un mot d'une source libre : son sens dans un jeu d'interface s'il en a un, sinon celui du lexique. */
+export const traduireMotLibre = (mot: string): string | undefined => SENS_LIBRES.get(mot) ?? LEXIQUE.get(mot);
 
 /** Les mots du lexique, pour le compter et le verifier. */
 export const tailleLexique = (): number => LEXIQUE.size;

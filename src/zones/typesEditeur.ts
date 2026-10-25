@@ -6,6 +6,8 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
+import type { CodeConstat, CodeCorrection, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
+import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
@@ -21,6 +23,15 @@ export type Point = readonly [number, number];
 export interface Vue { zoom: number; x: number; y: number }
 export type Fond = 'damier' | 'blanc' | 'sombre';
 export type Tiroir = 'calques' | 'inspecteur' | null;
+/** Ce qui suit « Exporter pour Cricut » dans le panneau : la confirmation tant qu'un point reste a corriger, puis les etapes dans Design Space. */
+export type SuiteCricut = 'confirmer' | 'design-space' | null;
+
+/**
+ * Le geste de fin, tel que la page ou l'hote le veut : son libelle (« Terminer » dans la page, « Enregistrer » par defaut), s'il
+ * ferme l'editeur meme sans modification (la page : on revient a la fiche, rien n'est reecrit), et s'il existe un brouillon a garder
+ * (Ctrl+S). L'editeur ne devine pas ou il est : on le lui dit.
+ */
+export interface OptionsFin { readonly libelle: string; readonly fermerSansModification: boolean; readonly brouillon: boolean }
 
 // L'editeur se partage en trois contextes (contexteEditeur.tsx), pour qu'un panneau ne se redessine que
 // pour ce qu'il lit : le dessin (ce qu'on voit), l'interface (l'outil et la vue), les actions (les verbes).
@@ -40,6 +51,18 @@ export interface ModeleDessin {
   bibliotheque: Bibliotheque | 'a-charger' | null;
   versions: readonly Version[];
   presse: readonly Forme[];
+  /** Le jugement du dessin pour la machine du contexte (ADR-0013) ; null en Generique, ou avant la premiere analyse. */
+  preparation: EtatPreparation | null;
+}
+
+/** Ce que le panneau « Pret pour Cricut » montre : les constats d'un dessin pour un profil, ses couches et sa taille finale. */
+export interface EtatPreparation {
+  readonly profil: ProfilProduction;
+  /** Le dessin juge : le panneau suit le dessin d'un instant de retard, pour ne pas mesurer pendant un geste. */
+  readonly dessin: DessinSvg;
+  readonly constats: readonly Constat[];
+  readonly couches: readonly Couche[];
+  readonly taille: { readonly l: number; readonly h: number } | null;
 }
 
 /** L'outil, la vue et ce qui n'est que d'affichage : rien de ce qui s'ecrit dans le SVG. */
@@ -70,6 +93,16 @@ export interface EtatInterface {
   focale: Focale | null;
   /** La derniere phrase a dire aux lecteurs d'ecran (region unique, voir RegionVocale.tsx). */
   annonce: Annonce;
+  /** Le contexte de production choisi dans la barre (ADR-0013) : il s'ecrit dans le SVG, mais n'est pas dans l'historique. */
+  production: ChoixProduction;
+  /** Son profil resolu ; null en Generique. */
+  profil: ProfilProduction | null;
+  /** Le contexte a change depuis l'ouverture : il y a quelque chose a enregistrer meme sans modification du dessin. */
+  productionModifiee: boolean;
+  /** La confirmation d'un export Cricut avec des points a corriger, ou la carte « Dans Design Space » apres l'export. */
+  suiteCricut: SuiteCricut;
+  /** Le geste de fin (libelle, fermeture sans modification, brouillon) : une donnee de la page ou de l'hote, constante. */
+  fin: OptionsFin;
 }
 
 /**
@@ -105,6 +138,16 @@ export interface ActionsEditeur {
   demanderFermeture: () => void;
   /** Ferme l'editeur sans rien demander (la confirmation « Abandonner »). */
   fermer: () => void;
+  /** Le bouton de fin : rend le dessin s'il a change, ferme sans rien reecrire si la page le veut, sinon dit pourquoi il n'y a rien a faire. */
+  terminer: () => void;
+  /** La confirmation d'abandon, troisieme choix : rendre le dessin, puis fermer (jamais fermer si le dessin n'a pas pu etre rendu). */
+  enregistrerEtFermer: () => void;
+  /** Ctrl+S : garde le brouillon du moment, sans fermer, et le dit. */
+  garderBrouillon: () => void;
+  /** « Ajuster » : le tapis entier en contexte de decoupe Cricut (le dessin dedans), le dessin sinon. */
+  ajuster: () => void;
+  /** « Ajuster au dessin » : le dessin seul, quel que soit le contexte. */
+  ajusterAuDessin: () => void;
   /** Referme la confirmation et reprend l'edition. */
   continuerEdition: () => void;
   garderVersion: (nom: string, svg: string) => void;
@@ -122,16 +165,20 @@ export interface ActionsEditeur {
   /** Choisit toutes les formes de la couleur de la premiere forme choisie (son remplissage, ou son contour sans remplissage). */
   choisirMemeCouleur: () => void;
   zoomerSelection: () => void;
-  enregistrerTout: () => void;
+  /** Rend le dessin nettoye a `enregistrer` ; faux quand il n'y a rien a rendre (aucune forme visible), et l'editeur l'a dit. */
+  enregistrerTout: () => boolean;
   /** Insere une forme au centre ; `origine` (`game-icons:<id>`) la credite : elle fera ecrire la mention CC BY 3.0 (engine/edition/provenance.ts). */
   insererForme: (svgForme: string, origine?: string) => void;
   insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number; origine?: string }[]) => void;
-  booleen: (op: Booleen) => void;
+  /** Unit, soustrait, croise ou exclut les formes choisies ; vrai quand le resultat a remplace les formes. */
+  booleen: (op: Booleen) => boolean;
   transformerNumerique: (t: { rotation?: number; inclinaisonX?: number; inclinaisonY?: number; echelle?: number }) => void;
   /** Le contour des formes choisies devient une forme pleine (couleur du trait en fond). */
   contourEnForme: () => void;
   /** Decale le contour des formes choisies : positif vers l'exterieur, negatif vers l'interieur. */
   decalerContour: (distance: number, jonction: Jonction) => void;
+  /** Hachure les formes pleines choisies a l'angle donne, a la largeur du stylo (ADR-0022) : des lignes, plus de fond. */
+  hachurer: (angle: number) => void;
   /** Arrondit les angles des formes choisies au rayon donne, ramene la ou les segments sont trop courts. */
   arrondirAngles: (rayon: number) => void;
   /** Change le type du point actif (outil points) : angle, lisse ou symetrique. */
@@ -144,6 +191,21 @@ export interface ActionsEditeur {
   supprimerNoeudFidele: () => void;
   /** Inverse le sens du tracé des formes choisies. */
   inverserSens: () => void;
+  /** Change le contexte de production (barre) ; un choix incoherent est ramene au plus proche valide, et dit. */
+  poserProduction: (c: ChoixProduction) => void;
+  /** Applique la correction d'un constat du panneau, rejuge sur le dessin du moment : une entree d'historique. */
+  corrigerConstat: (code: CodeConstat, correction?: CodeCorrection) => void;
+  /**
+   * Exporte pour la machine du contexte : le SVG de decoupe, ou l'archive Print Then Cut. Tant qu'un constat « à corriger » reste,
+   * l'export attend une confirmation dans le panneau (`quandMeme` la donne) ; un constat bloquant le refuse.
+   */
+  exporterPourCricut: (nom: string, quandMeme?: boolean) => void;
+  /** Referme la confirmation de l'export ou la carte « Dans Design Space ». */
+  fermerSuiteCricut: () => void;
 }
 
-export interface Vues { vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void }
+export interface Vues {
+  vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void;
+  /** Cadre une boite du plan (x, y, largeur, hauteur) a l'ecran, comme « Ajuster » cadre le dessin. */
+  cadrer: (b: { readonly x: number; readonly y: number; readonly l: number; readonly h: number }) => void;
+}

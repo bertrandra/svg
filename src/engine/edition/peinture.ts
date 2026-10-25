@@ -88,8 +88,9 @@ export const lirePeinture = (v: string): string | null => lirePeintureAlpha(v).c
 /**
  * Vrai quand une peinture que la lecture n'a pas ramenee a #rrggbb est assez simple pour etre reecrite telle quelle dans un
  * attribut : un mot-cle (`inherit`, `context-fill`), un nom, ou une fonction de couleur a un seul niveau (`color-mix(…)`).
- * Le reste (guillemets, `;`, `url(` au milieu, controles…) n'est pas une couleur : il serait ecrit dans `fill="…"`.
+ * Le reste (guillemets, `;`, `url(` au milieu, controles…) n'est pas une couleur : il serait ecrit dans `fill="…"`. Un mot
+ * de plus de 41 lettres n'est le nom d'aucune couleur (le plus long en a 20) : c'est la borne des invariants d'ecriture.
  */
 export function peintureSure(v: string): boolean {
-  return v.length <= 200 && (/^#[0-9a-f]{3,8}$/.test(v) || /^[a-z][a-z0-9-]*(?:\([a-z0-9#%.,\s/+-]*\))?$/.test(v));
+  return v.length <= 200 && (/^#[0-9a-f]{3,8}$/.test(v) || /^[a-z][a-z0-9-]{0,40}(?:\([a-z0-9#%.,\s/+-]*\))?$/.test(v));
 }

@@ -2,7 +2,8 @@
 
 import { memo, useEffect } from 'react';
 import { modifier, type Forme } from '../engine/editionSvg.js';
-import { nomDeForme } from '../engine/description.js';
+import { nomDeForme, numeroDeForme } from '../engine/description.js';
+import { genreAffiche } from './aidesEditeur.js';
 import { au } from '../util/tableaux.js';
 import { pluriel } from '../util/texte.js';
 import { useFenetre } from './Fenetre.js';
@@ -10,6 +11,7 @@ import { ParCouleur } from './ParCouleur.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BoutonRaison } from './commun/BoutonRaison.js';
+import { EtatVide } from './commun/EtatVide.js';
 
 /** La liste des formes, du premier plan au fond : tout choisir ou rien, masquer, verrouiller. */
 export const Calques = memo(function Calques() {
@@ -50,12 +52,15 @@ export const Calques = memo(function Calques() {
       <ParCouleur />
       <h4>Formes</h4>
       <ol ref={liste} style={actif ? { paddingTop: fenetre.haut, paddingBottom: fenetre.bas, boxSizing: 'border-box', minHeight: fenetre.hauteur, alignContent: 'start' } : undefined}>{lignes}</ol>
+      {/* Un dessin sans forme ne s'ouvre pas : une liste vide est un dessin qu'on a vide, le retour est a Ctrl+Z. */}
+      {total ? null : <EtatVide genre="vide" titre="Toutes les formes ont été retirées.">Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>}
     </aside>
   );
 });
 
 /**
- * Une ligne : le nom (qui choisit), masquer, verrouiller. `rang` n'est donne que pour une liste
+ * Une ligne : le nom (qui choisit), masquer, verrouiller. Le nom visible est le genre de la forme suivi de son numero, et le nom
+ * accessible commence par lui (« Triangle 3, fond bleu… », description.ts). `data-forme` porte l'identifiant, pour qui doit le lire. `rang` n'est donne que pour une liste
  * fenetree, dont les lignes absentes du DOM doivent quand meme se compter pour les lecteurs d'ecran.
  */
 function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; choisie: boolean; rang: readonly [number, number] | null }) {
@@ -64,12 +69,13 @@ function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; chois
   const fenetree = rang ? { contentVisibility: 'visible' as const } : undefined;
   return (
     <li className={choisie ? 'choisi' : undefined} style={fenetree} aria-posinset={rang?.[0]} aria-setsize={rang?.[1]}>
-      <button type="button" className="calque-nom" aria-label={nomDeForme(f)} aria-pressed={choisie} disabled={f.verrouille} onClick={e => {
+      <button type="button" className="calque-nom" data-forme={f.id} aria-label={nomDeForme(f)} aria-pressed={choisie} disabled={f.verrouille} onClick={e => {
         ac.choisir(e.shiftKey ? (choisie ? sel.filter(s => s !== f.id) : [...sel, f.id]) : [f.id]);
         ac.poserPoint(null);
       }}>
-        <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', borderColor: f.contour ?? undefined }} />
-        {'Forme ' + f.id.slice(1)}
+        {/* Le contour se dit par un anneau interieur : en bordure, une encre sombre disparaissait sur le panneau sombre (le filet fort reste autour). */}
+        <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', boxShadow: f.contour ? 'inset 0 0 0 2px ' + f.contour : undefined }} />
+        <span className="calque-genre">{genreAffiche(f)}</span> <span className="calque-numero">{numeroDeForme(f)}</span>
       </button>
       <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + f.id.slice(1)}
         onClick={() => ac.appliquer(d => modifier(d, [f.id], { visible: !f.visible }))} />

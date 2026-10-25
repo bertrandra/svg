@@ -13,58 +13,132 @@
 /*STYLE_BASE*/
 
 /* La page d'accueil : ouvrir un SVG, puis le resultat. */
-.accueil { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
-.tete h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
-.tete p { margin: 0; color: var(--encre-douce); max-width: 70ch; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.depot { border: 2px dashed var(--filet); border-radius: 10px; padding: 28px 16px; display: grid; gap: 10px; justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
+.accueil { max-width: 960px; margin: 0 auto; padding: var(--esp-2xl) var(--esp-xl) var(--esp-3xl); display: grid; gap: var(--esp-xl); }
+.tete h1 { font-size: var(--texte-titre-page); font-weight: 700; letter-spacing: -0.01em; margin: 0 0 var(--esp-s); }
+.tete p { margin: 0; color: var(--encre-douce); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--esp-m); }
+.depot { border: 2px dashed var(--filet); border-radius: var(--rayon-carte); padding: var(--esp-xl); display: grid; gap: var(--esp-m); justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
 .depot p { margin: 0; color: var(--encre-douce); }
+/* La premiere fois : une phrase et un bouton discret sous les deux actions du depot (ADR-0019) ; jamais une seconde action pleine.
+   Le bouton se lit comme un lien de la phrase (sans marge), pour que la ligne ne pousse pas la page plus bas qu'une ligne de texte. */
+.invitation { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--esp-s); }
+.invitation .discret { padding: 0 var(--esp-2xs); }
 .depot.survol { border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .depot.survol { background: var(--repli-cyan-8-panneau); } }
-.colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.champ { display: grid; gap: 6px; min-width: 0; align-content: start; }
-.champ > span { font-size: 0.82rem; font-weight: 600; }
+.colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--esp-xl); }
+.champ { display: grid; gap: var(--esp-s); min-width: 0; align-content: start; }
+.champ > span { font-size: var(--texte-compact); font-weight: 600; }
 .champ > button { justify-self: start; }
-.resultat { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 16px; }
-.apercu { width: 100%; max-height: 320px; object-fit: contain; border: 1px solid var(--filet); border-radius: 6px; padding: 10px; background-color: var(--damier-a); background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
-.fiche { display: grid; gap: 8px; align-content: start; }
-.fiche h2 { font-size: 1rem; margin: 0; font-family: var(--mono); font-weight: 500; overflow-wrap: anywhere; }
+.resultat { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--esp-xl); align-items: start; border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.apercu { width: 100%; max-height: 320px; object-fit: contain; border: 1px solid var(--filet); border-radius: var(--rayon-bouton); padding: var(--esp-m); background-color: var(--damier-a); background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.fiche { display: grid; gap: var(--esp-m); align-content: start; }
+.fiche h2 { font-size: var(--texte-titre); margin: 0; font-family: var(--mono); font-weight: 500; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .resultat { grid-template-columns: minmax(0, 1fr); } }
-section h2 { font-size: 1.05rem; margin: 0 0 8px; }
-.ouvrir, .vectoriser { display: grid; gap: 10px; }
-.nuancier-page { border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 0 16px; }
-.nuancier-page > summary { display: flex; gap: 8px; align-items: baseline; padding: 12px 0; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-.nuancier-page[open] > summary { border-bottom: 1px solid var(--filet); margin-bottom: 12px; }
-.nuancier-page > .champ { padding-bottom: 16px; }
+section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
+.ouvrir, .vectoriser { display: grid; gap: var(--esp-m); }
+/* Le choix de page d'un PDF de plusieurs pages (ADR-0020) : la carte d'une reprise, la phrase a gauche, le choix et l'action ensemble a droite. */
+.choix-page p { flex: 1 1 auto; }
+.choix-page .champ-ligne > span:first-child { min-width: 0; }
+.nuancier-page { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: 0 var(--esp-xl); }
+.nuancier-page > summary { display: flex; gap: var(--esp-m); align-items: baseline; padding: var(--esp-l) 0; cursor: pointer; font-size: var(--texte-corps); font-weight: 600; }
+.nuancier-page[open] > summary { border-bottom: 1px solid var(--filet); margin-bottom: var(--esp-l); }
+.nuancier-page > .champ { padding-bottom: var(--esp-xl); }
 /* Trois voies pour commencer, cote a cote ; celle du moment ouvre son panneau dessous. */
-.voies { display: grid; gap: 12px; }
-.voies-choix { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.voie { display: grid; justify-items: start; align-content: start; gap: 4px; padding: 16px; text-align: left; border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); color: var(--encre); font-weight: 400; }
-.voie .icone { color: var(--cyan); margin-bottom: 4px; }
-.voie-titre { font-weight: 600; font-size: 0.95rem; }
-.voie-aide { font-size: 0.75rem; color: var(--encre-douce); }
+.voies { display: grid; gap: var(--esp-l); }
+.voies-choix { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-l); }
+.voie { display: grid; justify-items: start; align-content: start; gap: var(--esp-xs); padding: var(--esp-xl); text-align: left; border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); color: var(--encre); font-weight: 400; }
+.voie .icone { color: var(--cyan); margin-bottom: var(--esp-xs); }
+.voie-titre { font-weight: 600; font-size: var(--texte-titre); }
+.voie-aide { font-size: var(--texte-petit); color: var(--encre-douce); }
 .voie[aria-selected="true"] { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); color: var(--encre); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .voie[aria-selected="true"] { background: var(--repli-cyan-7-panneau); } }
 @media (forced-colors: active) { .voie[aria-selected="true"] { outline: 3px solid Highlight; outline-offset: -3px; } .depot.survol { border-color: Highlight; } .voie:hover { border-color: Highlight; } }
-.voie-panneau { border: 1px solid var(--filet); border-radius: 10px; background: var(--panneau); padding: 16px; animation: apparition 0.18s ease-out; }
+.voie-panneau { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); animation: apparition 0.18s ease-out; }
 .voie-panneau .depot { background: var(--table); }
 @media (max-width: 640px) {
-  .voies-choix { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .voie { grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; padding: 12px 16px; }
+  .voies-choix { grid-template-columns: minmax(0, 1fr); gap: var(--esp-m); }
+  .voie { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--esp-l); padding: var(--esp-l) var(--esp-xl); }
   .voie .icone { grid-row: 1 / 3; align-self: center; margin: 0; }
 }
-.depot.petit { padding: 16px; }
-.reglages-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
+/* Un accueil par public (ADR-0024). La question est une feuille de carnet, pas trois cartes : trois lignes d'un meme formulaire,
+   separees par un filet, de meme forme et de meme poids, toutes secondaires (choisir un public regle l'accueil, ce n'est pas
+   l'action du moment) ; « Passer » discret en bas a droite. Une fois repondue, une ligne la rappelle. */
+.public-question { display: grid; gap: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.public-question h2 { margin: 0; }
+.public-question > .aide { margin: 0; max-width: 34em; }
+.publics { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--filet); }
+.publics > li { border-bottom: 1px solid var(--filet); padding: var(--esp-xs) 0; }
+.public { width: 100%; display: grid; grid-template-columns: auto minmax(14em, 17em) minmax(0, 1fr); align-items: baseline; column-gap: var(--esp-l); padding: var(--esp-m) var(--esp-l); border-color: transparent; text-align: left; color: var(--encre); }
+.public .icone { color: var(--cyan); align-self: center; }
+.public-titre { font-size: var(--texte-corps); font-weight: 600; }
+.public-phrase { font-size: var(--texte-compact); font-weight: 400; color: var(--encre-douce); }
+.public.actuel { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .public.actuel { background: var(--repli-cyan-7-panneau); } }
+.public-passer { margin: 0; justify-self: end; }
+.public-rappel p { margin: 0; color: var(--encre-douce); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--esp-s); }
+.public-rappel strong { color: var(--encre); font-weight: 600; }
+.public-rappel .discret { padding: 0 var(--esp-xs); }
+@media (max-width: 640px) {
+  .public { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--esp-2xs); }
+  .public-phrase { grid-column: 2; }
+}
+/* Le circuit « l'ensemble sur une plateforme » : trois etapes liees par un filet en tirets, comme le gabarit d'un carnet ; un
+   pictogramme sur une petite feuille (decoratif), un numero en chasse fixe, le texte reel a cote. Au-dessus des voies : l'etape 1
+   est ce que les voies proposent. Sous 640 px, le filet descend a gauche. */
+.circuit-public, .integration { display: grid; gap: var(--esp-l); }
+.circuit-public h2, .integration h2 { margin: 0; }
+.circuit-public h2:focus, .integration h2:focus { outline: none; }
+.circuit-public h2:focus-visible, .integration h2:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.circuit { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-xl); }
+.etape { position: relative; display: grid; grid-template-rows: auto auto; gap: var(--esp-m); align-content: start; justify-items: start; }
+/* Le filet va d'une feuille a la suivante, a mi-hauteur, sans toucher au texte qui est dessous. */
+.etape:not(:last-child)::after { content: ""; position: absolute; top: calc(var(--esp-2xl) - 1px); left: calc(var(--esp-3xl) + var(--esp-m)); right: calc(var(--esp-m) - var(--esp-xl)); border-top: 2px dashed var(--filet-fort); }
+.etape-picto { display: grid; place-items: center; width: var(--esp-3xl); height: var(--esp-3xl); border: 1px solid var(--filet); border-radius: var(--rayon-menu); background: var(--panneau); color: var(--encre); }
+.etape-texte { display: grid; gap: var(--esp-2xs); }
+.etape-titre { font-weight: 600; display: flex; gap: var(--esp-s); align-items: baseline; }
+.etape-numero { font-family: var(--mono); font-weight: 500; font-size: var(--texte-petit); color: var(--encre-douce); }
+.etape-aide { font-size: var(--texte-compact); color: var(--encre-douce); max-width: 22em; }
+.circuit-public > p { margin: 0; max-width: 46em; }
+/* Pour le public « retouche », l'invitation a la visite est la suite du circuit, en evidence : une note comme un repere (filet et voile
+   cyan), jamais une seconde action pleine (DESIGN.md, « le guide discret »). */
+.circuit-public .invitation { justify-content: flex-start; justify-self: start; border: 1px solid var(--cyan); border-radius: var(--rayon-bouton); padding: var(--esp-m) var(--esp-l); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .circuit-public .invitation { background: var(--repli-cyan-8-panneau); } }
+@media (max-width: 640px) {
+  .circuit { grid-template-columns: minmax(0, 1fr); gap: var(--esp-l); }
+  .etape { grid-template-rows: none; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--esp-l); }
+  .etape:not(:last-child)::after { top: calc(var(--esp-3xl) + var(--esp-xs)); bottom: calc(var(--esp-xs) - var(--esp-l)); left: calc(var(--esp-2xl) - 1px); right: auto; border-top: 0; border-left: 2px dashed var(--filet-fort); }
+}
+/* Le panneau des integrateurs : une feuille, les options en deux colonnes (le nom en chasse fixe, ce qu'il fait), l'extrait de code
+   sur la table, qui defile en largeur plutot que de couper une ligne de JavaScript. */
+.integration { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.integration p { margin: 0; }
+.integration > .aide { max-width: 46em; font-size: var(--texte-corps); }
+.integration h3 { font-size: var(--texte-corps); margin: var(--esp-xs) 0 0; }
+.integration code { font-family: var(--mono); font-weight: 400; font-size: var(--texte-compact); }
+.options-integration { margin: 0; display: grid; gap: var(--esp-s); }
+.options-integration > div { display: grid; grid-template-columns: minmax(10em, 13em) minmax(0, 1fr); gap: var(--esp-l); align-items: baseline; }
+.options-integration dt, .options-integration dd { margin: 0; }
+.options-integration dd { color: var(--encre-douce); font-size: var(--texte-compact); }
+.code-integration { margin: 0; padding: var(--esp-l); overflow-x: auto; background: var(--table); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); line-height: 1.6; }
+.code-integration:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+@media (max-width: 640px) { .options-integration > div { grid-template-columns: minmax(0, 1fr); gap: var(--esp-2xs); } }
+.depot.petit { padding: var(--esp-xl); }
+.reglages-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--esp-l); align-items: start; }
 .reglages-image .actions { grid-column: 1 / -1; align-items: center; }
 /* L'atelier du resultat : la visionneuse a gauche, les reglages du trace a droite, les essais dessous. */
-.depot .miniature { max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid var(--filet); border-radius: 6px; padding: 4px; background-color: var(--damier-a); background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 12px 12px; background-position: 0 0, 6px 6px; }
-.atelier-vecto { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
+.depot .miniature { max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid var(--filet); border-radius: var(--rayon-bouton); padding: var(--esp-xs); background-color: var(--damier-a); background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 12px 12px; background-position: 0 0, 6px 6px; }
+.atelier-vecto { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--esp-xl); align-items: start; border-top: 1px dashed var(--filet); padding-top: var(--esp-l); }
 .atelier-vecto[aria-busy="true"] .visionneuse { opacity: 0.7; }
-.colonne-resultat { display: grid; gap: 8px; min-width: 0; }
-.barre-visionneuse { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.barre-visionneuse select { width: auto; font-size: 0.78rem; }
+.colonne-resultat { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-m); min-width: 0; }
+.barre-visionneuse { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-m); }
+.barre-visionneuse select { width: auto; font-size: var(--texte-compact); }
 .barre-visionneuse .groupe { display: flex; gap: 1px; }
-.visionneuse { display: flex; max-height: 520px; overflow: auto; border: 1px solid var(--filet); border-radius: 8px; padding: 8px; background-color: var(--toile-blanc); transition: opacity 0.15s; }
+.barre-visionneuse .mini-onglets { flex-wrap: wrap; }
+.barre-visionneuse .menu-bouton.texte { font-size: var(--texte-compact); border-color: var(--filet); }
+.barre-visionneuse .vue-plus.active .menu-bouton.texte { border-color: var(--cyan); color: var(--cyan); }
+/* « Garder l'image telle quelle (dans un SVG) » est long : les deux choix de forme passent a la ligne plutot que de deborder. */
+.reglages-image .mini-onglets button { white-space: normal; }
+.visionneuse { display: flex; max-height: 520px; overflow: auto; border: 1px solid var(--filet); border-radius: var(--rayon-menu); padding: var(--esp-m); background-color: var(--toile-blanc); transition: opacity 0.15s; }
 .visionneuse.fond-damier { background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
 .visionneuse.fond-sombre { background: var(--toile-sombre); }
 .visionneuse .plan { position: relative; margin: auto; line-height: 0; }
@@ -73,46 +147,56 @@ section h2 { font-size: 1.05rem; margin: 0 0 8px; }
 .visionneuse .calque.cache { opacity: 0; }
 .visionneuse .calque.haut { position: absolute; inset: 0; width: 100%; height: 100%; }
 .visionneuse .ligne-rideau { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--cyan); box-shadow: 0 0 0 1px var(--panneau); pointer-events: none; }
-.rideau { display: flex; align-items: center; gap: 8px; }
+.rideau { display: flex; align-items: center; gap: var(--esp-m); }
 .rideau input[type="range"] { flex: 1; min-width: 0; }
-.rideau select { width: auto; flex: 0 0 auto; font-size: 0.78rem; }
-.fiche-resultat { display: grid; gap: 6px; }
+.rideau select { width: auto; flex: 0 0 auto; font-size: var(--texte-compact); }
+.fiche-resultat { display: grid; gap: var(--esp-s); }
 .fiche-resultat p { margin: 0; }
-.essais h3 { font-size: 0.8rem; margin: 4px 0 6px; display: flex; gap: 8px; align-items: baseline; }
-.essais ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
-.essais li button { display: grid; gap: 2px; justify-items: center; width: 118px; padding: 6px 4px; background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: 6px; font-weight: 400; font-size: 0.68rem; line-height: 1.25; text-align: center; }
+.essais h3 { font-size: var(--texte-compact); margin: var(--esp-xs) 0 var(--esp-s); display: flex; gap: var(--esp-m); align-items: baseline; }
+.essais ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--esp-s); overflow-x: auto; padding-bottom: var(--esp-xs); }
+.essais li button { display: grid; gap: var(--esp-2xs); justify-items: center; width: 118px; padding: var(--esp-s) var(--esp-xs); background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); font-weight: 400; font-size: var(--texte-petit); line-height: 1.25; text-align: center; }
 .essais li button[aria-pressed="true"] { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
-.essais li button img { width: 64px; height: 64px; object-fit: contain; background: var(--toile-blanc); border-radius: 4px; padding: 2px; }
-.reglages-vecto { display: grid; gap: 10px; min-width: 0; }
-.reglages-fins .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: 6px; font-size: 0.78rem; }
+.essais li button img { width: 64px; height: 64px; object-fit: contain; background: var(--toile-blanc); border-radius: var(--rayon-pastille); padding: var(--esp-2xs); }
+.reglages-vecto { display: grid; gap: var(--esp-m); min-width: 0; }
+/* Un reglage fin : son libelle en mots simples sur sa ligne, puis le curseur, la valeur et le retour a la valeur du mode. */
+.reglages-fins { display: grid; gap: var(--esp-m); }
+.reglages-fins > p { margin: 0; }
+.reglages-fins > button { justify-self: start; }
+.reglages-fins .fin { display: grid; grid-template-columns: minmax(0, 1fr) 48px 22px; align-items: center; gap: var(--esp-2xs) var(--esp-s); font-size: var(--texte-compact); }
+.reglages-fins .fin-libelle { grid-column: 1 / -1; }
 .reglages-fins .fin-libelle { color: var(--encre-douce); }
 .reglages-fins .fin.touche .fin-libelle, .reglages-fins .champ-ligne.touche > span:first-child { color: var(--cyan); font-weight: 600; }
 .reglages-fins .fin.touche .fin-libelle::before, .reglages-fins .champ-ligne.touche > span:first-child::before { content: "● "; }
-.reglages-fins output { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
+.reglages-fins output { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); text-align: right; }
 .icone-bouton.petit { width: 22px; height: 22px; }
-.reglages-pretraitement { display: grid; gap: 8px; }
-.reglages-pretraitement .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: 6px; font-size: 0.78rem; }
+.reglages-pretraitement { display: grid; gap: var(--esp-m); }
+.reglages-pretraitement .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: var(--esp-s); font-size: var(--texte-compact); }
 .reglages-pretraitement .fin-libelle { color: var(--encre-douce); }
 .reglages-pretraitement .fin.touche .fin-libelle { color: var(--cyan); font-weight: 600; }
 .reglages-pretraitement .fin.touche .fin-libelle::before { content: "● "; }
-.reglages-pretraitement output { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
+.reglages-pretraitement output { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); text-align: right; }
 .reglages-pretraitement .mini-onglets { flex-wrap: wrap; }
-.bilan-pretraitement { display: grid; gap: 4px; }
+.bilan-pretraitement { display: grid; gap: var(--esp-xs); }
 .bilan-pretraitement p { margin: 0; }
 .essais .pre-essai { overflow-wrap: anywhere; }
-.lot { display: grid; gap: 8px; border-top: 1px dashed var(--filet); padding-top: 12px; }
-.lot h3 { font-size: 0.9rem; margin: 0; display: flex; gap: 8px; align-items: baseline; }
+.lot { display: grid; gap: var(--esp-m); border-top: 1px dashed var(--filet); padding-top: var(--esp-l); }
+.lot h3 { font-size: var(--texte-corps); margin: 0; display: flex; gap: var(--esp-m); align-items: baseline; }
 .lot progress { width: 100%; accent-color: var(--cyan); }
-.lot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.lot li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 4px 0; border-bottom: 1px solid var(--filet); font-size: 0.8rem; }
+.lot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
+.lot li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-s) var(--esp-l); padding: var(--esp-xs) 0; border-bottom: 1px solid var(--filet); font-size: var(--texte-compact); }
 .lot .lot-nom { font-weight: 600; overflow-wrap: anywhere; flex: 1 1 140px; }
 .lot .lot-etat { color: var(--encre-douce); flex: 2 1 160px; }
-.reglages-fins .champ-ligne select { flex: 1; min-width: 0; font-size: 0.75rem; }
+.reglages-fins .champ-ligne select { flex: 1; min-width: 0; font-size: var(--texte-petit); }
 @media (max-width: 900px) { .atelier-vecto { grid-template-columns: minmax(0, 1fr); } }
-.resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; border-top: 1px dashed var(--filet); padding-top: 12px; }
+.resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--esp-xl); align-items: start; border-top: 1px dashed var(--filet); padding-top: var(--esp-l); }
 @media (max-width: 640px) { .resultat-image { grid-template-columns: minmax(0, 1fr); } }
+/* Une ligne se lit d'un seul regard sous 75 caracteres : le chapeau, le pied et les presentations des voies ne s'etirent pas sur toute
+   la colonne (96 et 112 caracteres auparavant). La mesure est en em, pas en ch : le ch est la chasse du zero, large dans Instrument
+   Sans (deux tiers d'em), et 68ch y laissaient encore 96 caracteres ; 34em en donnent environ 72. Le bouton « À propos et crédits »
+   aligne son texte sur celui du paragraphe : sa marge interne et son filet transparent sortent a gauche de la colonne. */
+.tete p, .pied p, .bibliotheque > p.aide, .voie-panneau p.aide { max-width: 34em; }
 .pied p { margin: 0; }
-.pied a { color: var(--cyan); }
+.pied .discret { margin-left: calc(-1 * var(--esp-l) - 1px); }
 /*STYLE_EDITEUR*/
 </style>
 

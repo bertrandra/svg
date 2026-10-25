@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M10 10L60 10L60 40Z" fill="#c81e28" data-ed-texte="javascript:alert(1)" data-ed-police="../../etc/passwd" data-ed-famille="url(https://exemple.invalid/x)" data-ed-taille="1e400" data-ed-matrice="NaN 0 0 1 0 0"/>
+  <path d="M10 50L60 50L60 80Z" fill="#1f4e8c" data-ed-texte="%3Cscript%3Ealert%281%29%3C%2Fscript%3E%22%20onload%3D%22x" data-ed-police="inter" data-ed-taille="12" data-ed-matrice="1 0 0 1 10 50"/>
+  <path d="M70 50L90 50L90 80Z" fill="#1f4e8c" data-ed-texte="%E2%80%AE%00%01%F0%9F%92%A3" data-ed-police="u-0123456789abcd" data-ed-famille="%22%3E%3Cimg%20src%3Dx%3E" data-ed-taille="12" data-ed-matrice="0 0 0 0 0 0"/>
+</svg>

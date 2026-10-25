@@ -12,13 +12,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { DessinSvg } from '../engine/editionSvg.js';
+import type { DessinSvg, MarqueProduction } from '../engine/editionSvg.js';
+import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Stockage } from '../io/stockage.js';
 import { Cadre } from './Cadre.js';
 import { FournisseurSections } from './commun/Section.js';
 import { FournisseurEditeur } from './contexteEditeur.js';
+import { FournisseurReperes, FournisseurVisite, type OptionsGuide } from './contexteGuide.js';
 import { FournisseurStockage } from './contexteStockage.js';
+import { ContextePolicesEnLigne } from './contexteTexte.js';
 import { useEtatEditeur } from './etatEditeur.js';
 import { useFocusEditeur } from './focusEditeur.js';
 import { lireDessinMemo } from './lecture.js';
@@ -42,13 +45,40 @@ export interface ProprietesEditeur {
   fermer: () => void;
   /** Recoit le SVG retouche, deja nettoye par `nettoyerSvg`. */
   enregistrer: (svg: string) => void;
-  /** Recoit le SVG du moment apres chaque modification (une seconde de repos) : de quoi reprendre apres un rechargement. */
-  brouillon?: (svg: string) => void;
+  /**
+   * Recoit le SVG du moment apres chaque modification (une seconde de repos), et a chaque Ctrl+S : de quoi reprendre apres un
+   * rechargement. Rendre `false` dit que le brouillon n'a pas ete garde (l'editeur ne pretend pas le contraire).
+   */
+  brouillon?: (svg: string) => unknown;
+  /**
+   * Le libelle du bouton de fin, qui rend le dessin a `enregistrer` (defaut « Enregistrer »). La page dit « Terminer » ; un hote dit
+   * le sien. L'editeur ne devine pas ou il est : il recoit son libelle.
+   */
+  libelleEnregistrer?: string;
+  /** Le bouton de fin ferme l'editeur meme sans modification, sans rien reecrire (la page). Faux par defaut : il reste inactif et dit pourquoi. */
+  fermerSansModification?: boolean;
   /**
    * Ou garder les versions nommees. Absent ou null : l'editeur ne garde rien (il ne connait aucun
    * magasin). La page lui donne celui du navigateur (`stockageNavigateur`), un hote ce qu'il veut.
    */
   stockage?: Stockage | null;
+  /**
+   * L'accueil guide (ADR-0019) : la visite de l'editeur, son menu, et les reperes de premiere rencontre. Absent : ni l'un ni
+   * l'autre, l'editeur se tait (un hote qui ne l'a pas demande). La page le donne toujours ; l'embarquement sur `visite: true`.
+   */
+  guide?: OptionsGuide | null;
+  /** Ce que la lecture du document d'origine n'a pas repris (un PDF, le texte d'un SVG mis en lettres) : dit avec ce que perd la lecture du SVG. */
+  ignores?: readonly string[] | undefined;
+  /**
+   * Le contexte de production de depart (ADR-0013), quand le SVG n'en porte aucun : la page le donne pour le public « machine » de
+   * l'accueil (ADR-0024). Une marque du SVG l'emporte toujours ; rien ne s'ecrit tant que la personne ne modifie pas le dessin.
+   */
+  production?: ChoixProduction | undefined;
+  /**
+   * Les polices libres telechargeables (ADR-0025) : l'outil Texte propose « Toutes les polices », et une police choisie se
+   * telecharge apres l'accord de la personne. Faux par defaut : rien ne se telecharge, seules les dix fontes livrees se proposent.
+   */
+  policesEnLigne?: boolean;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -84,8 +114,8 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage }: ProprietesEditeur) {
-  const lu = useMemo(() => lireDessinMemo(svg), [svg]);
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false }: ProprietesEditeur) {
+  const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
   useFocusEditeur(racine);
@@ -103,7 +133,12 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
         </div>
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
-          <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} /></FournisseurSections>
+          <ContextePolicesEnLigne.Provider value={policesEnLigne}>
+          <FournisseurReperes actif={!!guide}>
+            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} depart={depart} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
+              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} /></FournisseurSections>
+          </FournisseurReperes>
+          </ContextePolicesEnLigne.Provider>
         </FournisseurStockage>
       )}
     </div>,
@@ -112,16 +147,19 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 }
 
 interface ProprietesAtelier {
-  initial: DessinSvg; ignores: readonly string[]; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined;
+  initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; depart?: ChoixProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
+  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => unknown) | undefined; guide: OptionsGuide | null;
+  libelleEnregistrer?: string | undefined; fermerSansModification?: boolean | undefined;
 }
 
 /** Garde l'etat de l'editeur et le donne aux contextes ; le dessin de l'ecran est dans `Cadre`. */
-function Atelier({ titre, nom, ...p }: ProprietesAtelier) {
+function Atelier({ titre, nom, guide, ...p }: ProprietesAtelier) {
   const e = useEtatEditeur(p);
   return (
     <FournisseurEditeur dessin={e.modele} actions={e.actions} etat={e.etat}>
-      <Cadre titre={titre} nom={nom} toile={e.toile} svgRef={e.svgRef} />
+      <FournisseurVisite options={guide}>
+        <Cadre titre={titre} nom={nom} toile={e.toile} svgRef={e.svgRef} />
+      </FournisseurVisite>
     </FournisseurEditeur>
   );
 }

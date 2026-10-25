@@ -10,8 +10,9 @@
 import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { couleursProches, lireCouleurs, type LectureCouleurs, type SurCouleur } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
-import { useDessin } from './contexteEditeur.js';
+import { useDessin, useInterface } from './contexteEditeur.js';
 import { ListeCouleurs } from './ListeCouleurs.js';
 import { useActionsCouleur } from './actionsCouleur.js';
 
@@ -32,7 +33,9 @@ export function ParCouleur() {
   const mo = useDessin();
   const { dessin } = mo;
   const [sur, poserSur] = useState<SurCouleur>('tout');
-  const [tolerance, poserTolerance] = useState(TOLERANCE_DEFAUT);
+  const { profil } = useInterface();
+  // En contexte de production, la tolerance de depart est la distance de fusion du materiau (deux papiers que l'oeil confond).
+  const [tolerance, poserTolerance] = useState(() => (profil ? Math.min(TOLERANCE_MAX, Math.max(TOLERANCE_MIN, Math.round(profil.fusionNuances * 100))) : TOLERANCE_DEFAUT));
   // Les groupes se relisent quand une couleur, une visibilite ou un verrou change, pas quand une forme bouge ; les
   // groupes inchanges gardent leur objet, et leur ligne ne se redessine pas. La lecture garde aussi un dessin
   // stable tant que les couleurs le sont : c'est de lui que dependent les nuances proches.
@@ -62,7 +65,9 @@ export function ParCouleur() {
       ) : null}
       {groupes.length ? (
         <ListeCouleurs groupes={groupes} choisies={mo.choisies} sur={sur} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
-      ) : <p className="aide">Aucune forme n’a de {sur === 'contour' ? 'contour' : 'remplissage'}.</p>}
+      ) : sur === 'tout'
+        ? <EtatVide genre="aucun-resultat" titre="Aucune forme n’a de couleur." />
+        : <EtatVide genre="aucun-resultat" titre={'Aucune forme n’a de ' + (sur === 'contour' ? 'contour' : 'remplissage') + '.'} action={{ libelle: 'Lire le fond et le trait', onClick: () => poserSur('tout') }} />}
       <div className="nuances-proches">
         <label className="champ-ligne">
           <span>Tolérance</span>

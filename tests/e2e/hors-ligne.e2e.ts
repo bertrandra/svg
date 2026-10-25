@@ -58,7 +58,7 @@ async function verifierPolices(page: Page): Promise<void> {
     };
     return {
       charges,
-      dejaChargees: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight),
+      dejaChargees: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^(["'])(.*)\1$/, '$2') + ' ' + f.weight),
       sansDiffere: largeur('600 20px "Instrument Sans", monospace') !== largeur('600 20px monospace'),
       monoDiffere: largeur('400 20px "IBM Plex Mono", serif') !== largeur('400 20px serif'),
       corps: getComputedStyle(document.body).fontFamily
@@ -87,7 +87,8 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     const { page, reseau } = await session();
     await page.getByRole('tab').first().waitFor();
     // Les polices servent deja, sans que le test les ait demandees : la page elle-meme les a utilisees pour se rendre.
-    const tot = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight); });
+    // Le nom de famille se lit sans guillemets : Firefox rend `"Instrument Sans"` la ou Chromium rend `Instrument Sans`.
+    const tot = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^(["'])(.*)\1$/, '$2') + ' ' + f.weight); });
     expect(tot).toContain('Instrument Sans 400');
     await verifierPolices(page);
     // Les fontes redistribuees sont creditees (SIL OFL 1.1 : le copyright accompagne la fonte), dans la boite « A propos et credits ».
@@ -115,6 +116,31 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     // La police a chasse fixe sert dans l'editeur (le pourcentage de zoom, les codes de couleur).
     const mono = await page.locator('.editeur-barre .zoom').evaluate(e => getComputedStyle(e).fontFamily);
     expect(mono.startsWith('"IBM Plex Mono"')).toBe(true);
+    aucuneRequete(reseau);
+  });
+
+  // ADR-0025 : l'index des polices est une annexe voisine (file://) ; l'ouvrir, y chercher, choisir une police non livree ne
+  // contacte personne tant que la personne n'a pas accepte. Le dialogue s'ouvre, « Pas maintenant » le ferme : aucune requete.
+  it('le catalogue des polices s\'ouvre et se cherche sans requete ; une police non livree demande l\'accord, refuse : rien ne part', async () => {
+    const { page, reseau } = await session();
+    await ouvrirExemple(page);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('t');
+    const inspecteur = page.locator('.editeur-inspecteur');
+    await inspecteur.locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await inspecteur.getByRole('button', { name: 'Toutes les polices' }).click();
+    await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/^\d[\d\s ]* polices$/);
+    // Plus de deux mille polices, une poignee de lignes dans la page : la liste se fenetre (ADR-0008).
+    const total = Number((await page.locator('.explorateur-polices .polices-total').innerText()).replace(/\D/g, ''));
+    expect(total).toBeGreaterThan(2000);
+    expect(await page.locator('.liste-polices .police-ligne').count()).toBeLessThan(100);
+    await page.locator('.explorateur-polices input[type="search"]').fill('roboto');
+    const roboto = page.locator('.liste-polices .police-ligne', { hasText: /^Roboto\s*Google Fonts$/ });
+    await roboto.first().click();
+    const dialogue = page.getByRole('dialog', { name: 'Télécharger la police « Roboto » ?' });
+    await dialogue.waitFor();
+    await page.getByRole('button', { name: 'Pas maintenant' }).click();
+    await attend(() => dialogue.count()).toBe(0);
     aucuneRequete(reseau);
   });
 

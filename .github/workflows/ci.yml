@@ -41,7 +41,9 @@ jobs:
   navigateur:
     name: navigateur (${{ matrix.navigateur }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Chromium passe la suite en 8 minutes. Firefox en a mis 19 (dont 15 pour les 510 tests du corpus hostile, securite.e2e.ts),
+    # et WebKit a ete coupe par l'ancienne limite de 25 minutes avant d'avoir fini ce fichier : sans resultat, il ne disait rien.
+    timeout-minutes: ${{ matrix.navigateur == 'chromium' && 25 || 60 }}
     # Chromium est exige. Firefox et WebKit n'ont jamais tourne en CI : leurs premiers essais peuvent echouer
     # sans que la PR le soit.
     # TODO : retirer `continue-on-error` pour firefox et webkit (et en faire des controles requis de la

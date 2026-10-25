@@ -3,7 +3,7 @@
 // position fixe sous le bouton : les barres d'outils defilent sur mobile et couperaient un panneau
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent as KE, type ReactNode } from 'react';
 import { dernier, premier, suivant } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
 
@@ -17,6 +17,8 @@ export interface ElementMenu {
   desactive?: boolean;
   /** Un element a deux etats (grille, aimants) : la coche dit celui d'aujourd'hui. */
   coche?: boolean;
+  /** Un choix parmi les elements de sa rubrique (un contexte, une machine) : `menuitemradio`, la coche dit le choix. */
+  radio?: boolean;
   danger?: boolean;
   /** Une pastille de couleur a la place de l'icone (un nuancier). */
   pastille?: string;
@@ -55,12 +57,25 @@ interface Proprietes {
 
 interface Position { top: number; left?: number; right?: number }
 
+/**
+ * Ce qu'un menu ouvert dit au cadre qui le porte (l'editeur) : tant qu'un menu est ouvert, il porte l'action de l'instant, et le
+ * cadre pose les autres actions pleines en secondaires (DESIGN.md, l'encre unique). Hors de tout fournisseur (la page), rien.
+ */
+const ContexteMenusOuverts = createContext<((ouvert: boolean) => void) | null>(null);
+export const FournisseurMenusOuverts = ContexteMenusOuverts.Provider;
+
 export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className }: Proprietes) {
   const [ouvert, poserOuvert] = useState(false);
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
   const focusInitial = useRef<'premier' | 'dernier' | null>(null);
   const origine = useRef<{ top: number; left: number } | null>(null);
+  const signaler = useContext(ContexteMenusOuverts);
+  useEffect(() => {
+    if (!ouvert || !signaler) return;
+    signaler(true);
+    return () => signaler(false);
+  }, [ouvert, signaler]);
 
   const fermer = useCallback((rendreFocus: boolean) => {
     poserOuvert(false);
@@ -89,9 +104,13 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   useLayoutEffect(() => {
     const el = panneau.current;
     if (!ouvert || !el) return;
-    const marge = 8, largeur = el.offsetWidth, ecran = window.innerWidth;
-    poserPosition(p => {
-      if (!p) return p;
+    const marge = 8, largeur = el.offsetWidth, ecran = window.innerWidth, hauteur = el.offsetHeight, bas = window.innerHeight;
+    poserPosition(p0 => {
+      if (!p0) return p0;
+      // Un bouton bas dans l'ecran (la visionneuse de la conversion) : le panneau s'ouvre au-dessus s'il y tient, sinon il
+      // remonte juste assez pour finir dans l'ecran. Les barres du haut ne sont jamais concernees.
+      const haut = origine.current?.top ?? p0.top;
+      const p = p0.top + hauteur <= bas - marge ? p0 : { ...p0, top: haut - 4 - hauteur >= marge ? haut - 4 - hauteur : Math.max(marge, bas - marge - hauteur) };
       if (p.right !== undefined) {
         const gauche = ecran - p.right - largeur;
         return gauche < marge ? { ...p, right: Math.max(marge, p.right - (marge - gauche)) } : p;
@@ -126,7 +145,13 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     else if (e.key === 'Home') { e.preventDefault(); aller(premier(d)); }
     else if (e.key === 'End') { e.preventDefault(); aller(dernier(d)); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(true); }
-    else if (e.key === 'Tab') fermer(false);
+    // Tab sort d'un menu d'elements ; dans un contenu libre (les autres formats, leurs options), il va d'un controle a l'autre, et le
+    // menu ne se ferme que quand le focus le quitte (ci-dessous). Avant, Tab fermait tout : ce contenu ne s'atteignait pas au clavier.
+    else if (e.key === 'Tab' && (e.target as HTMLElement).closest('[role="menu"]')) fermer(false);
+  };
+  const quitte = (e: FocusEvent<HTMLDivElement>) => {
+    const vers = e.relatedTarget as Node | null;
+    if (vers && !panneau.current?.contains(vers) && !bouton.current?.contains(vers)) fermer(false);
   };
   const clavierBouton = (e: KE<HTMLButtonElement>) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); ouvrir('premier'); }
@@ -146,7 +171,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
-        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
+        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau} onBlur={quitte}>
           {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
           {sections ? sections.map(sc => (
             <div key={sc.id} className="menu-rubrique">
@@ -172,7 +197,7 @@ function ListeElements({ titre, elements, fermer }: { titre: string; elements: r
     <div role="menu" aria-label={titre}>{elements.map(el => (
       <div key={el.id} className="menu-ligne">
         {el.separateur ? <hr className="menu-filet" /> : null}
-        <button type="button" role={el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
+        <button type="button" role={el.radio ? 'menuitemradio' : el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
           onClick={() => { fermer(true); el.onClick?.(); }}>
           <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
           <span className="menu-libelle">{el.libelle}</span>

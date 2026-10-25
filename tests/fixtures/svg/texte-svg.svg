@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <style>.titre { fill: #c81e28; font-family: "Helvetica Neue", Arial, sans-serif; font-weight: 700 }</style>
+  <rect x="0" y="0" width="320" height="200" fill="#e9ecef"/>
+  <text class="titre" x="20" y="40" font-size="28">AVE <tspan fill="#1428a0" font-weight="400">12</tspan></text>
+  <g font-family="Lobster" font-size="2em" transform="translate(160 0)">
+    <text x="0" y="90" text-anchor="middle" fill="none" stroke="#15181d" stroke-width="1.5">Ba</text>
+    <text x="0" y="130" text-anchor="end" opacity="0.5">Ok</text>
+  </g>
+  <text x="20 40 60" y="170" dy="0 -5 -10" rotate="0 15" font-size="18" font-family="Times New Roman" font-style="italic">ABCD</text>
+  <text x="180" y="180" font-size="14pt" letter-spacing="3" word-spacing="10" font-family="Courier, monospace">A B<tspan dx="4" dy="-6">c</tspan></text>
+</svg>
