@@ -3,7 +3,7 @@
 Le contexte de production Cricut (ADR-0013) repose sur des valeurs et des comportements de Design Space que nous
 connaissons **de mémoire ou par la documentation**, pas par un essai. Chacune porte `aVerifier: true` et une note
 dans `src/model/contextes.ts`, et le panneau « Prêt pour Cricut » les marque « à vérifier ». Ce protocole dit
-comment les vérifier sur une vraie machine, avec huit SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
+comment les vérifier sur une vraie machine, avec treize SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
 qu’on observe. Une fois rempli, il suffit de reporter les valeurs mesurées dans `src/model/contextes.ts`, de
 retirer `aVerifier` de celles qui sont confirmées, et d’annoncer le changement dans `CHANGELOG.md`.
 
@@ -197,6 +197,35 @@ le comportement du stylo sur des lignes très serrées.
 >
 >
 
+## Témoin 9 — couper et écrire
+
+Fichiers : `temoin-9-couper-ecrire-a-couper.svg`, `temoin-9-couper-ecrire-a-ecrire.svg` et
+`temoin-9-couper-ecrire-combine.svg` (6,5 × 3,5 po chacun), écrits par « Exporter pour Cricut » d’un dessin qui mêle les deux
+opérations (ADR-0028) : une carte de 4 × 2,5 po et un disque de 1 po **à couper** (rouge, bleu), et le mot « Merci » **à
+écrire** au stylo, dans la police à trait unique, posé sur la carte. Le premier fichier ne porte que les fonds pleins à couper,
+le deuxième que les traits du stylo, sans remplissage ; le troisième porte les deux, en deux groupes `<g id="a-couper">` puis
+`<g id="a-ecrire">`. Depuis l’éditeur, les trois arrivent dans une archive ZIP avec un mode d’emploi.
+
+Ce qu’on vérifie : `designSpace.operations.superposition`, `designSpace.operations.dessiner`,
+`designSpace.operations.attacher` et `designSpace.operations.groupes` (le tableau des comportements ci-dessous), soit
+**la façon la plus simple de mêler la lame et le stylo dans Design Space**, que nous n’avons pas pu essayer.
+
+À observer :
+
+1. Importer `…-a-couper.svg`, puis `…-a-ecrire.svg`, sans changer leur taille : se posent-ils l’un sur l’autre, le mot
+   à sa place sur la carte ? Sinon, de combien sont-ils décalés ?
+2. Passer les calques de `…-a-ecrire.svg` en **« Dessiner »** : la ligne reste-t-elle ouverte, sans remplissage ? Le stylo
+   demandé est-il celui de la couleur du mot ?
+3. Sélectionner tout et **« Attacher »** : sur l’aperçu du tapis, le mot reste-t-il sur la carte ? Sans « Attacher », Design
+   Space le pose-t-il ailleurs ?
+4. Importer `…-combine.svg` seul : Design Space garde-t-il les deux groupes ? Comment les nomme-t-il (« a-couper »,
+   « a-ecrire », autre chose) ? Peut-on passer tout le groupe « a-ecrire » en « Dessiner » d’un coup ?
+5. Lancer : la machine écrit-elle avant de couper ? Le mot est-il bien centré sur la carte découpée ?
+
+> Résultat observé (superposition ; « Dessiner » ; « Attacher » ; groupes du fichier combiné ; ordre écrire puis couper) :
+>
+>
+
 ---
 
 ## Les valeurs à vérifier
@@ -244,3 +273,8 @@ Ils ne sont pas des nombres, mais le panneau s’appuie sur eux ; chacun est dit
 | Un tracé ouvert s’importe ouvert, et passe en « Dessiner » sans être refermé ni rempli | « trait ouvert » (découpe), étapes du stylo | 7 | |
 | Le stylo ne remplit pas : une forme pleine est dessinée par son pourtour | « Le stylo trace le pourtour des formes pleines » | 7 | |
 | Des hachures espacées de la largeur du stylo paraissent pleines | correction « Hachurer » | 8 | |
+| `designSpace.operations.superposition` : deux fichiers au même cadre et à la même taille physique se superposent exactement | export « couper et écrire » | 9 | |
+| `designSpace.operations.dessiner` : « Dessiner » se règle sur les calques d’un fichier importé, un trait sans fond y reste une ligne | carte « Dans Design Space » | 7 et 9 | |
+| `designSpace.operations.attacher` : « Attacher » garde le trait du stylo à sa place sur la pièce découpée | carte « Dans Design Space » | 9 | |
+| `designSpace.operations.groupes` : les groupes « a-couper » et « a-ecrire » du fichier combiné restent des groupes nommés | fichier combiné | 9 | |
+| Les attributs `data-ed-operation` d’un `<path>` (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |

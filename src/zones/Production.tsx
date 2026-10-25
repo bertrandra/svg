@@ -13,6 +13,7 @@ import { Section } from './commun/Section.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useStockage } from './contexteStockage.js';
 import { ExportCricut } from './FinCricut.js';
+import { operationsPeintes } from '../export/operations.js';
 import { libelleSelecteur, phraseCouches } from './parcoursCricut.js';
 import { Repere } from './Repere.js';
 
@@ -124,6 +125,7 @@ export function PanneauCricut({ nom }: { nom: string }) {
               {ptc ? pluriel(preparation.couches.length, 'couleur') + ', imprimées ensemble' : stylo ? pluriel(preparation.couches.length, 'couleur') + ' : ' + pluriel(preparation.couches.length, 'stylo') : phraseCouches(preparation.couches.length)}
               <span className="pastilles" aria-hidden="true">{preparation.couches.slice(0, 12).map(x => <span key={x.couleur} className="pastille" style={{ background: x.couleur }} />)}</span>
             </dd>
+            <ResumeOperations />
           </dl>
         ) : <p className="aide" role="status">Analyse du dessin…</p>}
         {preparation && !constats.length ? (
@@ -150,6 +152,23 @@ export function PanneauCricut({ nom }: { nom: string }) {
         </details>
       </Section>
     </div>
+  );
+}
+
+/**
+ * Ce que la machine fait du dessin quand il mele couper et ecrire (ADR-0028) : combien de formes de chaque cote, et ce que l'export
+ * livrera. Rien quand une seule operation compte : le panneau dit deja tout.
+ */
+function ResumeOperations() {
+  const { preparation } = useDessin(), { profil } = useInterface();
+  if (!preparation || !profil) return null;
+  const n = operationsPeintes(preparation.dessin, profil);
+  if (!n.decoupe || !n.ecriture) return null;
+  return (
+    <>
+      <dt>Opérations</dt>
+      <dd>{n.decoupe} à couper · {n.ecriture} à écrire : un fichier pour chaque</dd>
+    </>
   );
 }
 

@@ -18,7 +18,8 @@ import { resolve } from 'node:path';
 import {
   type PolicesTexte, type Matrice, type TexteVivant, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
-import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { exportParOperation } from '../../../src/export/operations.js';
 import { svgCricut } from '../../../src/export/cricut.js';
 import { printThenCut } from '../../../src/export/printThenCut.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
@@ -183,6 +184,17 @@ const pourCricut = (choix: Partial<ChoixMachine>) => (t: string): string => { co
 const pourPrintThenCut = (fichier: 'impression' | 'coupe') => (t: string): string => {
   const r = printThenCut(lire(t), profilCricut({ procede: 'imprimer-decouper' }));
   return 'erreur' in r ? 'REFUSE : ' + r.erreur : r[fichier];
+};
+
+/** Le cercle a contour (f4) et le carre plein (f1) passes a l'ecriture : un dessin qui mele les deux operations. */
+const aEcrire = (d: DessinSvg): DessinSvg => poserOperation(d, ['f1', 'f4'], 'ecriture', 'decoupe').dessin;
+/** Le document d'un contexte Cricut en decoupe, tel que l'editeur l'enregistre (zones/actionsProduction.ts, svgDocument). */
+const documentCricut = (d: DessinSvg): string => marquerProduction(ecrireDessin(operationsAEcrire(d, 'decoupe'), 3, true), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES }));
+const couperEcrire = (t: string, fichier: 'a-couper' | 'a-ecrire' | 'combine'): string => {
+  const r = exportParOperation(aEcrire(lire(t)), profilCricut());
+  if ('erreur' in r) return 'REFUSE : ' + r.erreur;
+  if (r.genre !== 'mixte') return 'UNE SEULE OPERATION';
+  return fichier === 'a-couper' ? r.aCouper : fichier === 'a-ecrire' ? r.aEcrire : r.combine;
 };
 
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
@@ -367,7 +379,12 @@ const CAS: readonly Cas[] = [
   // Le stylo (ADR-0022) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
   // respectes ; et l'export du procede « Dessin au stylo » : des traits, aucun fond, une taille physique. Des cas NEUFS.
   { nom: 'hachures', entree: 'stylo', operation: enchainer(d => hachurerFormes(d, ['f1', 'f4'], 1.512).dessin, d => hachurerFormes(d, ['f2'], 1.512, 0).dessin) },
-  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg }
+  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg },
+  // Couper ou ecrire (ADR-0028) : des cas NEUFS. Sans choix de la personne, aucun attribut de plus (toutes les references ci-dessus
+  // le prouvent) ; en contexte Cricut, le document porte `data-ed-operation` sur une forme dont le choix differe de la regle ; et
+  // l'export d'un dessin mele livre trois fichiers aux octets figes.
+  { nom: 'cricut-operations', entree: 'stylo', produire: t => nettoyerSvg(documentCricut(aEcrire(lire(t))))?.svg ?? 'REFUSE' },
+  ...(['a-couper', 'a-ecrire', 'combine'] as const).map((fichier): Cas => ({ nom: 'couper-ecrire-' + fichier, entree: 'stylo', produire: t => couperEcrire(t, fichier) }))
 ];
 
 const produire = (cas: Cas): string => {

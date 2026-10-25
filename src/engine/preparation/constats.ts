@@ -12,6 +12,7 @@ import { silhouetteDe } from './silhouette.js';
 import { texteMesure, texteTaille, unitesDePouces, type ProfilProduction } from './profil.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { constatTraitsOuverts, constatsStylo, textesQuiSeChevauchent, traitOuvert, type ConstatTexte } from './stylo.js';
+import { partagerOperations } from './operations.js';
 
 export type Gravite = 'bloquant' | 'a-corriger' | 'conseil';
 export const GRAVITES: readonly Gravite[] = ['bloquant', 'a-corriger', 'conseil'];
@@ -25,7 +26,7 @@ export type CodeConstat =
 export type CodeCorrection =
   | 'contour-en-forme' | 'rendre-opaque' | 'ajuster-zone' | 'fermer' | 'fusionner-nuances'
   | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder'
-  | 'garder-contour' | 'hachurer' | 'police-trait' | 'procede-stylo';
+  | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire';
 
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'contour-en-forme': 'Contour en forme',
@@ -41,7 +42,7 @@ export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'garder-contour': 'Garder le contour',
   hachurer: 'Hachurer',
   'police-trait': 'Police à trait unique',
-  'procede-stylo': 'Passer au dessin au stylo'
+  ecrire: 'Écrire au stylo'
 };
 
 export interface Constat {
@@ -230,19 +231,26 @@ const constatTraitOuvert = (dessin: DessinSvg): Constat | null => {
   return c ? versConstat(c) : null;
 };
 
-/** Les constats du dessin pour ce profil, du plus grave au plus leger, dans un ordre fixe. */
+/**
+ * Les constats du dessin pour ce profil, du plus grave au plus leger, dans un ordre fixe. Hors de Print Then Cut, chaque forme est
+ * jugee selon son operation (ADR-0028) : les formes a couper par la lame, les formes a ecrire par le stylo ; la taille, le nombre de
+ * points et le dessin vide se jugent sur tout le dessin (tout passe sur le meme tapis).
+ */
 export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Constat[] {
   const peintes = formesPeintes(dessin);
   if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
-  const r: Array<Constat | null> = p.procede === 'imprimer-decouper'
-    ? [...constatPrintThenCut(dessin, p), constatNoeuds(peintes, p)]
-    : p.procede === 'dessin-stylo'
-      // Le stylo (ADR-0022) : la taille compte comme pour la lame ; un trait n'est plus un defaut, un fond si.
-      ? [...constatsTaille(peintes, dessin, p), ...constatsStylo(dessin).map(versConstat), constatNoeuds(peintes, p)]
-      : [
-      constatTraitOuvert(dessin), constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p), constatOuverts(peintes), constatLettres(dessin), constatNuances(dessin, p),
-      ...constatsFinesse(peintes, dessin, p), constatNoeuds(peintes, p), constatTrous(dessin), constatPairImpair(peintes)
+  let r: Array<Constat | null>;
+  if (p.procede === 'imprimer-decouper') r = [...constatPrintThenCut(dessin, p), constatNoeuds(peintes, p)];
+  else {
+    const { decoupe, ecriture } = partagerOperations(dessin, p.procede);
+    const coupees = formesPeintes(decoupe);
+    r = [
+      constatTraitOuvert(decoupe), constatTrait(coupees), constatOpacite(coupees), ...constatsTaille(peintes, dessin, p), constatOuverts(coupees), constatLettres(decoupe),
+      constatNuances(decoupe, p), ...constatsFinesse(coupees, decoupe, p), constatNoeuds(peintes, p), constatTrous(decoupe), constatPairImpair(coupees),
+      // Le stylo (ADR-0022) : un trait n'est plus un defaut, un fond si.
+      ...constatsStylo(ecriture).map(versConstat)
     ];
+  }
   return r.filter((c): c is Constat => c !== null).sort((a, b) => GRAVITES.indexOf(a.gravite) - GRAVITES.indexOf(b.gravite) || ORDRE.indexOf(a.code) - ORDRE.indexOf(b.code));
 }
 
@@ -251,8 +259,9 @@ export function constatsBloquants(dessin: DessinSvg, p: ProfilProduction): Const
   const peintes = formesPeintes(dessin);
   if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
   if (p.procede === 'imprimer-decouper') return constatPrintThenCut(dessin, p);
-  if (p.procede === 'dessin-stylo') return constatsTaille(peintes, dessin, p).filter(c => c.gravite === 'bloquant');
-  return [constatTraitOuvert(dessin), constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p)].filter((c): c is Constat => c !== null && c.gravite === 'bloquant');
+  const { decoupe } = partagerOperations(dessin, p.procede);
+  const coupees = formesPeintes(decoupe);
+  return [constatTraitOuvert(decoupe), constatTrait(coupees), constatOpacite(coupees), ...constatsTaille(peintes, dessin, p)].filter((c): c is Constat => c !== null && c.gravite === 'bloquant');
 }
 
 /** Ce que le panneau affiche en permanence : les couches et la taille finale. */

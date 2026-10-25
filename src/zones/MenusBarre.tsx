@@ -15,6 +15,7 @@ import { allerAuChamp } from './OutilsTrace.js';
 import { useActionsTexte } from './actionsTexte.js';
 import { MODES_VECTORISATION, NOMS_MODES } from '../engine/texte/vectoriser.js';
 import { useRubriquesProduction } from './Production.js';
+import { operationsApplicables } from '../engine/preparation.js';
 import { AutresFormatsRepliees, useElementRecuperer } from './Recuperer.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
@@ -38,6 +39,11 @@ function useElementsVue(avecZoom: boolean): ElementMenu[] {
     { id: 'grille', libelle: 'Grille magnétique (pas ' + ui.pas + ')', raccourci: 'G', coche: ui.grille, separateur: true, onClick: () => ac.poserGrille(!ui.grille) },
     { id: 'aimants', libelle: 'Aimants vers les autres formes', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
     { id: 'contours', libelle: 'Vue contours', raccourci: 'O', coche: ui.contours, onClick: () => ac.poserContours(c => !c) },
+    // L'apercu de la machine (ADR-0028) : en contexte Cricut qui coupe ou ecrit, la toile montre ce que la lame detache et ce que le
+    // stylo trace ; ce reglage le retire pour revenir aux couleurs du dessin. La vue contours (O) le remplace tant qu'elle est active.
+    ...(ui.profil && operationsApplicables(ui.profil.procede)
+      ? [{ id: 'apercu-machine', libelle: 'Aperçu de la machine', raccourci: 'Maj+O', coche: ui.apercuMachine, onClick: () => ac.poserApercuMachine(a => !a) } satisfies ElementMenu]
+      : []),
     ...FONDS.map(([f, icone, libelle], i): ElementMenu => ({ id: 'fond-' + f, libelle, icone, coche: ui.fond === f, separateur: i === 0, onClick: () => ac.poserFond(f) })),
     // Au telephone, le zoom vient en dernier : le pincement de deux doigts le fait deja, et le niveau reste dans la barre.
     ...(avecZoom ? [
@@ -69,6 +75,11 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
+    // Couper ou ecrire (ADR-0028), en contexte Cricut qui coupe ou ecrit : la selection passe d'un groupe a l'autre.
+    ...(ui.profil && operationsApplicables(ui.profil.procede) ? [
+      { id: 'operation-decoupe', libelle: 'Sélection à couper', icone: 'couper', raccourci: 'Maj+X', separateur: true, desactive: rien, onClick: () => ac.poserOperation('decoupe') },
+      { id: 'operation-ecriture', libelle: 'Sélection à écrire au stylo', icone: 'stylo', raccourci: 'Maj+E', desactive: rien, onClick: () => ac.poserOperation('ecriture') }
+    ] satisfies ElementMenu[] : []),
     { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
     ...vectoriser,
     { id: 'contour-en-forme', libelle: 'Contour en forme', separateur: true, desactive: rien, onClick: ac.contourEnForme },

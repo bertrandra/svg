@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { identifiantValide } from '../../../src/engine/editionSvg.js';
 import {
-  CHOIX_CRICUT_DEFAUT, CONTEXTES, CRICUT, DESIGN_SPACE_PX_NU_PAR_POUCE, FAMILLES, NOMS_PROCEDE, UNITES_PLAN_PAR_POUCE, type Valeur
+  CHOIX_CRICUT_DEFAUT, CONTEXTES, CRICUT, DESIGN_SPACE_OPERATIONS, DESIGN_SPACE_PX_NU_PAR_POUCE, FAMILLES, NOMS_PROCEDE, UNITES_PLAN_PAR_POUCE, type Valeur
 } from '../../../src/model/contextes.js';
 
 /** Toutes les valeurs d'un objet de profil, avec leur chemin (`cricut.tapis.12x12.zoneUtile.largeur`). */
@@ -89,5 +89,16 @@ describe('les profils de production', () => {
     const protocole = readFileSync(resolve(__dirname, '../../../docs/cricut/protocole.md'), 'utf8');
     const absentes = aVerifier.map(x => x.chemin).filter(c => !protocole.includes('`' + c + '`'));
     expect(absentes, 'valeurs a verifier absentes de docs/cricut/protocole.md').toEqual([]);
+  });
+
+  it('font figurer chaque comportement de Design Space a verifier (couper et ecrire, ADR-0028) dans le protocole, avec sa raison', () => {
+    const protocole = readFileSync(resolve(__dirname, '../../../docs/cricut/protocole.md'), 'utf8');
+    expect(DESIGN_SPACE_OPERATIONS.length).toBeGreaterThan(0);
+    for (const c of DESIGN_SPACE_OPERATIONS) {
+      expect(c.aVerifier, c.id).toBe(true);
+      expect(c.note.length, c.id).toBeGreaterThan(20);
+      expect(protocole, c.id).toContain('`' + c.id + '`');
+    }
+    expect(new Set(DESIGN_SPACE_OPERATIONS.map(c => c.id)).size).toBe(DESIGN_SPACE_OPERATIONS.length);
   });
 });

@@ -1,7 +1,7 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, Operation, Style, TypeNoeud } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
@@ -101,6 +101,11 @@ export interface EtatInterface {
   productionModifiee: boolean;
   /** La confirmation d'un export Cricut avec des points a corriger, ou la carte « Dans Design Space » apres l'export. */
   suiteCricut: SuiteCricut;
+  /**
+   * L'apercu de la machine (ADR-0028) : en contexte Cricut, la toile montre ce que la lame detache (hachure) et ce que le stylo trace
+   * (un trait). Un reglage de vue, jamais ecrit ; vrai par defaut, sans effet hors d'un contexte qui coupe ou ecrit.
+   */
+  apercuMachine: boolean;
   /** Le geste de fin (libelle, fermeture sans modification, brouillon) : une donnee de la page ou de l'hote, constante. */
   fin: OptionsFin;
 }
@@ -202,6 +207,13 @@ export interface ActionsEditeur {
   exporterPourCricut: (nom: string, quandMeme?: boolean) => void;
   /** Referme la confirmation de l'export ou la carte « Dans Design Space ». */
   fermerSuiteCricut: () => void;
+  /**
+   * Couper ou ecrire (ADR-0028) : pose l'operation sur les formes nommees, ou sur la selection ; une entree d'historique, dite a voix
+   * haute. Hors d'un contexte Cricut qui coupe ou ecrit, ne change rien et le dit.
+   */
+  poserOperation: (operation: Operation, ids?: readonly string[]) => void;
+  /** Montre ou retire l'apercu de la machine sur la toile, et le dit. */
+  poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
 }
 
 export interface Vues {

@@ -13,6 +13,7 @@ import { useVisite } from './contexteGuide.js';
 import { empiler } from './empilement.js';
 import { useSaisie } from './contexteSaisie.js';
 import { useActionsTexte } from './actionsTexte.js';
+import { operationsApplicables } from '../engine/preparation.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
 
 const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte' };
@@ -63,6 +64,12 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       const direction = directionDe(e.key);
       if (direction) { e.preventDefault(); fleche(m, u, ac, direction, e); return; }
       if (mod) return;
+      // En contexte Cricut qui coupe ou ecrit (ADR-0028) : Maj+X range la selection a couper, Maj+E a ecrire, Maj+O montre ou retire
+      // l'apercu de la machine. Ailleurs ces touches gardent leur sens (Maj+E reste l'ellipse, Maj+O la vue contours).
+      if (e.shiftKey && !e.altKey && u.profil && operationsApplicables(u.profil.procede)) {
+        if (t === 'x' || t === 'e') { e.preventDefault(); ac.poserOperation(t === 'x' ? 'decoupe' : 'ecriture'); return; }
+        if (t === 'o') { e.preventDefault(); ac.poserApercuMachine(a => !a); return; }
+      }
       const outil = RACCOURCIS_OUTILS[t];
       if (outil) ac.poserOutil(outil);
       else if (t === 'o') ac.poserContours(v => !v);

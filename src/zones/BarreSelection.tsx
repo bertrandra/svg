@@ -14,6 +14,7 @@ import type { NomIcone } from './icones.js';
 import { phraseAlignement, phraseMiroir } from './phrasesSelection.js';
 import { phraseRotation } from './annonces.js';
 import { useRangeeCompacte } from './Vue.js';
+import { OperationSelection } from './OperationSelection.js';
 
 const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
   ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
@@ -60,6 +61,7 @@ function RangeeEntiere() {
   return (
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{libelleSelection(sel.length)}</span>
+      <OperationSelection />
       <div className="groupe" role="group" aria-label="Aligner">
         {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => g.aligner(a)} />)}
       </div>
@@ -123,6 +125,7 @@ function RangeeCompacte() {
   return (
     <div className="editeur-barre-selection compacte" role="toolbar" aria-label="Sélection">
       <span className="aide">{libelleSelection(sel.length)}</span>
+      <OperationSelection compacte />
       <div className="groupe" role="group" aria-label="Gestes fréquents">
         <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ac.dupliquerSelection} />
         <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => g.miroir('h')} />

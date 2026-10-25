@@ -17,6 +17,8 @@ colors:
   echec-fond: "#f7e0dd"
   toile-blanc: "#ffffff"
   toile-sombre: "#1b1d20"
+  apercu-coupe: "#cc4a1a"
+  apercu-stylo: "#3d6fe0"
 typography:
   display:
     fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
@@ -254,6 +256,12 @@ Une palette d'atelier : des gris de table et de papier, deux encres, et un seul 
   « à corriger ».
 - **Rouge d'échec** (#a8322a sur #f7e0dd) : un échec, un geste destructif, un constat bloquant, une forme qui
   déborde du tapis.
+
+### L'aperçu de la machine (ADR-0028)
+- **Orange de coupe** (#cc4a1a, les deux thèmes) et **bleu de stylo** (#3d6fe0) : les seules couleurs d'interface posées sur le
+  dessin, et seulement quand on le demande (« Aperçu de la machine », actif par défaut en Cricut) : ce que la lame détache, hachuré,
+  et ce que le stylo trace. Ils ne changent pas avec le thème parce qu'ils se posent sur le plan (blanc, sombre ou damier), contre
+  lequel chacun tient 3:1. Le bleu suit la convention « bleu pour dessiner » de Design Space, l'orange se distingue du rouge d'échec.
 
 ### Named Rules
 **La règle de l'encre unique.** Le cyan d'encre est la seule couleur d'interface qui ne soit ni grise ni un
@@ -556,6 +564,22 @@ primaire, « Exporter pour Cricut », qui dit « Exporter quand même (2 points 
   dit alors « · Stylo »), les outils à venir sur une ligne inactive (« Bientôt : gravure, dorure (foil) ») ; le panneau
   devient « Prêt pour le stylo », ses couches des stylos (une couleur, un stylo), son action « Exporter pour le stylo ». Un
   constat qui propose plusieurs corrections les aligne en boutons secondaires, la conseillée d'abord.
+
+### Couper ou écrire (ADR-0028)
+Une forme est « À couper » ou « À écrire » ; on le voit, on le change d'un geste, on ne le cherche pas.
+- **Les calques en deux groupes**, en Cricut (découpe ou stylo) : « À couper » (ciseaux) puis « À écrire » (stylo), titrés comme les
+  sous-titres des calques (Aide 600, encre douce) avec leur nombre à droite en chiffres tabulaires, avant « Par couleur ». Une ligne :
+  une vignette de 18 px (la forme sur le plan blanc, filet fort, coins de pastille ; pleine pour la lame, en trait de 1,5 px pour le
+  stylo), le genre et le numéro, puis trois bascules d'icône de 26 px (40 au doigt) : l'autre opération, masquer, verrouiller. Une
+  seule colonne qui ne déborde jamais du panneau. Un groupe vide est un état vide (titre, phrase, sans bouton). Glisser une ligne
+  sur l'autre groupe est un raccourci de souris, jamais le seul chemin.
+- **La rangée de la sélection** : deux boutons d'icône à état, ciseaux et stylo, juste après le compte ; l'opération de la
+  sélection est enfoncée (plein cyan, comme l'outil actif : un état, pas une action) ; une sélection mêlée n'en enfonce aucun. Au
+  doigt sur un petit écran, un seul bouton de menu (l'icône de l'opération) et deux choix radio.
+- **L'aperçu de la machine** sur la toile : la zone découpée hachurée à 45°, lignes de 1,25 px tous les 7 px à l'écran (quel que soit
+  le zoom), le contour de coupe en trait plein de 1,75 px, les deux en orange de coupe ; la ligne du stylo en bleu de stylo, à la
+  largeur du stylo, bouts et jonctions ronds. Les formes restent dessous, transparentes : la sélection, ses poignées et ses gestes
+  ne changent pas. Aucun mouvement. En contraste forcé, la toile garde ces couleurs, le contour s'épaissit à 2,5 px.
 
 ### Texte vivant (ADR-0022, ADR-0027)
 Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d'une barre ; le panneau garde tout.

@@ -63,6 +63,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [productionInitiale] = useState<ChoixProduction>(() => choixDeDepart(p.production, p.depart));
   const [production, poserProduction] = useState<ChoixProduction>(productionInitiale);
   const [suiteCricut, poserSuiteCricut] = useState<SuiteCricut>(null);
+  // L'apercu de la machine (ADR-0028) : un reglage de vue de la session, actif par defaut ; il n'agit qu'en contexte Cricut.
+  const [apercuMachine, poserApercuMachine] = useState(true);
   // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
   const aBrouillon = !!p.brouillon;
   const fin = useMemo<OptionsFin>(() => ({ libelle: p.libelleEnregistrer ?? 'Enregistrer', fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon }),
@@ -90,11 +92,11 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const moment = useRef<EtatDuMoment | null>(null);
   moment.current = {
     dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
-    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut
+    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, toile }
   ));
 
   // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
@@ -127,8 +129,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, fin }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, fin]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

@@ -11,6 +11,7 @@ import { insecables } from '../util/texte.js';
 import { SaisieTexte } from './SaisieTexte.js';
 import { FondPrise, SurvolToile } from './PriseToile.js';
 import { useSaisie } from './contexteSaisie.js';
+import { ApercuMachine } from './ApercuMachine.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
@@ -37,6 +38,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           <rect className="plan-travail" x={vx} y={vy} width={vl} height={vh} fill={fond === 'damier' ? 'url(#damier-editeur)' : undefined} pointerEvents="none" />
           <GabaritTapis />
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
+          {/* L'apercu de la machine (ADR-0028) : avant les formes, qu'il rend transparentes (editeur.css) ; elles gardent les clics. */}
+          <ApercuMachine />
           {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} masquee={sx.vide && f.id === sx.saisie?.id} />)}
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />

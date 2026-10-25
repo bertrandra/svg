@@ -7,6 +7,16 @@ import type { Constat } from '../engine/preparation.js';
 import { BoutonRaison } from './commun/BoutonRaison.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { etapesDesignSpace, etatExport, pointsACorriger } from './parcoursCricut.js';
+import { operationsPeintes } from '../export/operations.js';
+import type { DessinSvg } from '../engine/editionSvg.js';
+import type { ProfilProduction } from '../engine/preparation.js';
+
+/** Vrai quand le dessin juge mele des formes a couper et des formes a ecrire (ADR-0028) : l'export livre alors une archive. */
+export function estMelange(dessin: DessinSvg | undefined, profil: ProfilProduction): boolean {
+  if (!dessin) return false;
+  const n = operationsPeintes(dessin, profil);
+  return n.decoupe > 0 && n.ecriture > 0;
+}
 
 /** Les tiroirs ne s'ouvrent que sous 900 px (editeur.css) : au-dessus, le panneau est deja la. */
 const avecTiroirs = (): boolean => typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 900px)').matches;
@@ -21,13 +31,14 @@ const apresTiroir = (f: () => void): void => { setTimeout(f, 60); };
 export function ExportCricut({ nom }: { nom: string }) {
   const { preparation } = useDessin(), { profil, suiteCricut } = useInterface(), ac = useActions();
   if (!profil) return null;
-  const e = etatExport(preparation?.constats ?? null, profil.procede);
-  const ptc = profil.procede === 'imprimer-decouper', stylo = profil.procede === 'dessin-stylo';
+  const melange = estMelange(preparation?.dessin, profil);
+  const e = etatExport(preparation?.constats ?? null, profil.procede, melange);
+  const ptc = profil.procede === 'imprimer-decouper', stylo = profil.procede === 'dessin-stylo' && !melange;
   if (suiteCricut === 'confirmer' && e.raison === null && e.aCorriger.length) return <Confirmation nom={nom} aCorriger={e.aCorriger} />;
   return (
     <>
       <div className="boutons export-cricut">
-        <BoutonRaison className="primaire" aide={ptc ? 'L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP' : stylo ? 'Un SVG à taille physique, des traits sans remplissage, une couleur par stylo' : 'Un SVG à taille physique, fonds pleins, une couleur par tapis'}
+        <BoutonRaison className="primaire" aide={ptc ? 'L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP' : melange ? 'Une archive ZIP : un SVG à couper, un SVG à écrire au stylo, et les deux ensemble, à taille physique' : stylo ? 'Un SVG à taille physique, des traits sans remplissage, une couleur par stylo' : 'Un SVG à taille physique, fonds pleins, une couleur par tapis'}
           raison={e.raison} onClick={() => ac.exporterPourCricut(nom)}>{e.libelle}</BoutonRaison>
       </div>
       {suiteCricut === 'design-space' ? <CarteDesignSpace nom={nom} /> : null}
@@ -73,7 +84,7 @@ function Confirmation({ nom, aCorriger }: { nom: string; aCorriger: readonly Con
 function CarteDesignSpace({ nom }: { nom: string }) {
   const { preparation } = useDessin(), { profil } = useInterface(), ac = useActions(), id = useId();
   if (!profil) return null;
-  const etapes = etapesDesignSpace(profil, nom, preparation?.taille ?? null);
+  const etapes = etapesDesignSpace(profil, nom, preparation?.taille ?? null, estMelange(preparation?.dessin, profil));
   return (
     <section className="carte-design-space" aria-labelledby={id}>
       <h3 id={id}>Dans Design Space</h3>

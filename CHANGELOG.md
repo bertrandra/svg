@@ -56,6 +56,9 @@ empreintes.
 
 ### Modifié
 
+- En découpe, une forme sans fond n'est plus un constat bloquant : elle se range « À écrire ». La correction « Passer au dessin
+  au stylo » devient « Écrire au stylo ». Le SVG enregistré en contexte Cricut porte `data-ed-operation` sur une forme dont
+  l'opération choisie diffère de la proposition ; jamais en Générique ni dans un export. Aucune référence existante ne change.
 - Échap termine la saisie d'un texte en le gardant (Ctrl+Z le rend). Entrée avec l'outil Texte ouvre la saisie sur la toile au
   lieu du champ du panneau. L'aperçu « Ligne (stylo) » d'une police à contour montre la ligne médiane au lieu du double trait.
   Les champs chiffrés du panneau Texte s'appliquent à la validation.
@@ -168,6 +171,15 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Couper ou écrire, forme par forme** (ADR-0028) : en contexte Cricut, chaque forme est « À couper » ou « À écrire ». Une forme
+  pleine se propose à la découpe ; un trait seul, une ligne médiane ou un texte à trait unique à l'écriture ; tout au stylo par
+  défaut. Le panneau de gauche range les formes en deux groupes (vignette, sélection Maj/Ctrl, bouton pour changer de groupe,
+  glisser). La rangée de la sélection et le menu Édition changent l'opération (Maj+X, Maj+E, Ctrl+Z annule).
+- **Aperçu de la machine sur la toile** (menu Vue, Maj+O, actif par défaut en Cricut) : la zone que la lame découpe est hachurée,
+  trous respectés, et la ligne du stylo est tracée à sa largeur. Deux jetons : `--apercu-coupe`, `--apercu-stylo`.
+- Export d'un dessin mêlé : une archive avec le fichier à couper, le fichier à écrire, les deux ensemble en deux groupes, et un
+  mode d'emploi. Témoin 9 au protocole, quatre comportements de Design Space à vérifier.
 
 - **Le texte se tape sur la toile** (ADR-0027) : un clic de l'outil Texte (ou Entrée au clavier) pose un point d'insertion et
   l'on tape directement sur la toile ; Entrée va à la ligne, Échap ou un clic hors du texte termine la saisie, et un texte vide

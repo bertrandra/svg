@@ -140,6 +140,11 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
   le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques. Millimètre par défaut, pouce retenu ;
   un point « à corriger » demande une confirmation, jamais un bloquant de plus.
+- **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
+  pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
+  se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin
+  mêlé s'exporte en archive (à couper, à écrire, combiné), son comportement dans Design Space reste `aVerifier` ; l'aperçu de la
+  machine est une vue, jamais écrite.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

@@ -5,11 +5,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ecrireDessin, marquerProduction, type DessinSvg } from '../engine/editionSvg.js';
 import {
-  cadreTapis, constatsPreparation, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, resoudreProfil, resumePreparation, texteMesure, texteTaille,
-  unionCadres, versUnite, type CadreTapis, type ProfilProduction
+  cadreTapis, constatsPreparation, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
+  resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
-import { svgCricut } from '../export/cricut.js';
-import { svgPourStylo } from '../export/stylo.js';
+import { archiveOperations, exportParOperation, nomsOperations, operationsPeintes } from '../export/operations.js';
 import { toutesLesPolices } from '../io/polices.js';
 import { policeTraitProche } from '../model/polices.js';
 import { natureDuTexte } from '../engine/texte/vivant.js';
@@ -26,8 +25,16 @@ import type { EtatDuMoment } from './creerActions.js';
 import { CLE_UNITE, demandeConfirmation, etatExport, lireUnite, phraseConfirmation, phraseConfirmationCourte, phraseCouches } from './parcoursCricut.js';
 import type { ActionsEditeur, EtatPreparation, SuiteCricut } from './typesEditeur.js';
 
-/** Le SVG du document tel qu'on l'enregistre : l'ecriture ordinaire, plus la marque du contexte (rien en Generique). */
-export const svgDocument = (dessin: DessinSvg, production: ChoixProduction): string => marquerProduction(ecrireDessin(dessin, 3), marqueDeChoix(production));
+/**
+ * Le SVG du document tel qu'on l'enregistre : l'ecriture ordinaire, plus la marque du contexte (rien en Generique). En contexte Cricut,
+ * l'operation d'une forme s'ecrit sur son <path> quand elle differe de celle que la regle proposerait (ADR-0028) ; en Generique,
+ * jamais : aucun octet de plus.
+ */
+export function svgDocument(dessin: DessinSvg, production: ChoixProduction): string {
+  const choix = normaliserChoix(production);
+  const procede = choix.contexte === 'cricut' ? choix.procede : null;
+  return marquerProduction(ecrireDessin(operationsAEcrire(dessin, procede), 3, procede !== null), marqueDeChoix(choix));
+}
 
 /** La phrase qui dit le contexte choisi. */
 export function phraseProduction(c: ChoixProduction): string {
@@ -59,7 +66,7 @@ export function usePreparation(dessin: DessinSvg, profil: ProfilProduction | nul
   return profil && etat?.profil === profil ? etat : null;
 }
 
-type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut'>;
+type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut' | 'poserOperation' | 'poserApercuMachine'>;
 
 /**
  * Ce que « Ajuster » cadre en contexte de decoupe : le tapis entier tel que la toile le dessine, et le dessin s'il en deborde ; null
@@ -90,20 +97,22 @@ function retenirUnite(stockage: Stockage | null, u: UniteLongueur): void {
 
 const remettre = (nom: string, donnees: Uint8Array | Blob, dire: (t: string) => void, suite: string) => { void proposer(nom, donnees).then(m => dire(m + (suite ? ' ' + suite : ''))); };
 
-/** Le SVG de decoupe, ou l'archive Print Then Cut (avec son PNG a la resolution du profil), remis au telechargement. Faux s'il est refuse. */
+/**
+ * Le SVG de decoupe, le SVG du stylo, l'archive d'un dessin qui mele les deux (ADR-0028), ou l'archive Print Then Cut (avec son PNG
+ * a la resolution du profil), remis au telechargement. Faux s'il est refuse.
+ */
 function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t: string) => void): boolean {
-  if (p.procede === 'dessin-stylo') {
-    const r = svgPourStylo(dessin, p);
-    if (r.erreur !== undefined) { dire(r.erreur); return false; }
-    const taille = resumePreparation(dessin).taille;
-    remettre(nom + '-stylo.svg', texteOctets(r.svg), dire, pluriel(r.couches, 'couleur') + ' : ' + pluriel(r.couches, 'stylo') + (taille ? ', ' + texteTaille(taille.l, taille.h, p.unite) : '') + '.');
-    return true;
-  }
-  if (p.procede === 'decoupe') {
-    const r = svgCricut(dessin, p);
+  if (operationsApplicables(p.procede)) {
+    const r = exportParOperation(dessin, p);
     if ('erreur' in r) { dire(r.erreur); return false; }
-    const taille = resumePreparation(dessin).taille;
-    remettre(nom + '-cricut.svg', texteOctets(r.svg), dire, phraseCouches(r.couches) + (taille ? ', ' + texteTaille(taille.l, taille.h, p.unite) : '') + '.');
+    const t = resumePreparation(dessin).taille, taille = t ? ', ' + texteTaille(t.l, t.h, p.unite) : '';
+    if (r.genre === 'ecriture') remettre(nom + '-stylo.svg', texteOctets(r.svg), dire, pluriel(r.couches, 'couleur') + ' : ' + pluriel(r.couches, 'stylo') + taille + '.');
+    else if (r.genre === 'decoupe') remettre(nom + '-cricut.svg', texteOctets(r.svg), dire, phraseCouches(r.couches) + taille + '.');
+    else {
+      const f = nomsOperations(nom);
+      remettre(f.archive, new Blob([archiveOperations(nom, dessin, p, r) as BlobPart], { type: 'application/zip' }), dire,
+        'Un fichier à couper (' + phraseCouches(r.couches) + '), un fichier à écrire (' + pluriel(r.stylos, 'stylo') + ') et les deux ensemble' + taille + '.');
+    }
     return true;
   }
   const r = printThenCut(dessin, p);
@@ -121,7 +130,15 @@ function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t:
 /** Apres le prochain rendu (le gabarit pose, le panneau ouvert) ; tout de suite hors d'un navigateur (les tests sous Node). */
 const apresRendu = (f: () => void): void => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(f); else f(); };
 
-interface SettersProduction { poserProduction: (c: ChoixProduction) => void; poserSuiteCricut: (s: SuiteCricut) => void }
+interface SettersProduction {
+  poserProduction: (c: ChoixProduction) => void; poserSuiteCricut: (s: SuiteCricut) => void;
+  poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
+}
+
+/** Ce que dit l'apercu de la machine quand on le montre ou le retire. */
+export const phraseApercu = (actif: boolean): string => (actif
+  ? 'Aperçu de la machine : les zones que la lame découpe sont hachurées, les lignes du stylo tracées.'
+  : 'Aperçu de la machine retiré : le dessin dans ses couleurs.');
 
 export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: SettersProduction): ActionsProduction {
   const { appliquer, dire } = l;
@@ -155,8 +172,7 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       const c = constatsPreparation(dessin, p).find(x => x.code === code);
       const correction = voulue && (c?.correction === voulue || c?.autres?.includes(voulue)) ? voulue : c?.correction;
       if (!c || !correction) { dire('Ce constat ne se pose plus : le dessin a changé.'); return; }
-      // Deux corrections ne sont pas du moteur (ADR-0022) : passer au procede du stylo, et recomposer un texte dans une police a trait.
-      if (correction === 'procede-stylo' && production.contexte === 'cricut') { actions.poserProduction({ ...production, procede: 'dessin-stylo' }); return; }
+      // Une correction n'est pas du moteur (ADR-0022) : recomposer un texte dans une police a trait demande une fonte.
       if (correction === 'police-trait') { void policeTrait(c.formes, p); return; }
       const r = corrigerPreparation(dessin, correction, c, p);
       if ('erreur' in r) { dire(r.erreur); return; }
@@ -169,7 +185,8 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       if (!p) { dire('Choisissez d’abord une machine Cricut dans la barre.'); return; }
       // Le jugement du moment, pas celui du panneau (qui suit le dessin d'un instant) : un point a corriger demande une confirmation ;
       // un bloquant laisse l'export le refuser, qui nomme la cause.
-      const e = etatExport(constatsPreparation(dessin, p), p.procede);
+      const n = operationsPeintes(dessin, p);
+      const e = etatExport(constatsPreparation(dessin, p), p.procede, n.decoupe > 0 && n.ecriture > 0);
       // La barre d'etat dit l'essentiel en une ligne (sur un telephone, la liste y prendrait cinq lignes) ; la region vocale dit chaque
       // point, puisque le focus va a « Revoir » et qu'un lecteur d'ecran n'y lirait pas la liste.
       if (demandeConfirmation(e, quandMeme)) {
@@ -180,7 +197,27 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       }
       s.poserSuiteCricut(exporter(dessin, p, nom, dire) ? 'design-space' : null);
     },
-    fermerSuiteCricut: () => s.poserSuiteCricut(null)
+    fermerSuiteCricut: () => s.poserSuiteCricut(null),
+    poserOperation: (operation, ids) => {
+      const { dessin, production, sel } = lire();
+      const p = resoudreProfil(production);
+      if (!p || !operationsApplicables(p.procede)) { dire('Couper ou écrire se choisit en contexte Cricut, pour la découpe ou le stylo.'); return; }
+      const cibles = ids ?? sel;
+      if (!cibles.length) { dire('Choisissez d’abord une forme à ' + (operation === 'decoupe' ? 'couper.' : 'écrire.')); return; }
+      const voulues = new Set(cibles);
+      if (dessin.formes.filter(f => voulues.has(f.id)).every(f => f.verrouille)) { dire('Ces formes sont verrouillées : déverrouillez-les pour changer ce que la machine en fait.'); return; }
+      const r = poserOperation(dessin, cibles, operation, p.procede);
+      // Rien ne change pour la machine : pas d'entree d'historique pour rien.
+      if (!r.changees) { dire(r.phrase); return; }
+      appliquer(d => poserOperation(d, cibles, operation, p.procede).dessin);
+      dire(r.phrase + ' Ctrl+Z annule.');
+    },
+    poserApercuMachine: a => {
+      const avant = lire().apercuMachine;
+      const apres = typeof a === 'function' ? a(avant) : a;
+      s.poserApercuMachine(apres);
+      dire(phraseApercu(apres));
+    }
   };
   return actions;
 }

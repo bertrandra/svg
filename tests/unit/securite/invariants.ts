@@ -23,12 +23,14 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite',
   // Le texte vivant (ADR-0022) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
-  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice'
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice',
+  // L'operation de production (ADR-0028) : sur un <path> seul, l'une des deux valeurs exactes.
+  'data-ed-operation'
 ]);
 
 const NOMBRE_TEXTE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
 /**
- * La forme exacte de chaque attribut du texte vivant. Le texte et la famille sont en pourcentage de leurs octets UTF-8,
+ * La forme exacte de chaque attribut du texte vivant, et de l'operation de production (ADR-0028). Le texte et la famille sont en pourcentage de leurs octets UTF-8,
  * lettres ASCII et chiffres seuls en clair : ni espace, ni ponctuation, rien que le nettoyage ou un navigateur puisse lire
  * comme une adresse, un schema ou du CSS. Aucun texte libre n'entre ainsi dans une ecriture.
  */
@@ -43,7 +45,8 @@ const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
   'data-ed-alignement': /^(?:centre|droite)$/,
   'data-ed-ligatures': /^1$/,
   'data-ed-trace': /^median$/,
-  'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i')
+  'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i'),
+  'data-ed-operation': /^(?:decoupe|ecriture)$/
 };
 
 const ESPACES_DE_NOMS_PERMIS = new Set([

@@ -13,6 +13,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { LigneSvg, ListeFormats, optionsDeSession } from './Exporter.js';
 import { etatExport } from './parcoursCricut.js';
+import { estMelange } from './FinCricut.js';
 import { Icone } from './icones.js';
 
 /** Le geste recommande dans ce contexte : son libelle, pourquoi il est refuse (un constat bloquant), et ce qu'il fait. */
@@ -29,12 +30,14 @@ export function useRecuperation(nom: string): Recuperation {
   const mo = useDessin(), ui = useInterface(), ac = useActions(), signaler = useSignalVisite();
   const telecharger = useTelechargerSvg(nom);
   if (!ui.profil) return { libelle: 'Télécharger le SVG', raison: null, aide: 'Le dessin en SVG, dans vos téléchargements', faire: telecharger };
-  const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo';
-  const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede);
+  // Un dessin qui mele couper et ecrire (ADR-0028) s'exporte « pour Cricut » meme au stylo : l'archive porte les deux.
+  const melange = estMelange(mo.preparation?.dessin, ui.profil);
+  const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo' && !melange;
+  const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede, melange);
   return {
     libelle: ptc ? 'Exporter pour Print Then Cut' : stylo ? 'Exporter pour le stylo' : 'Exporter pour Cricut',
     raison: e.raison,
-    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : stylo ? 'Des traits sans remplissage, à taille physique, une couleur par stylo' : 'Le fichier à importer dans Design Space',
+    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : melange ? 'Le fichier à couper et le fichier à écrire, dans une archive ZIP' : stylo ? 'Des traits sans remplissage, à taille physique, une couleur par stylo' : 'Le fichier à importer dans Design Space',
     faire: () => { ac.exporterPourCricut(nom); signaler('recupere'); }
   };
 }

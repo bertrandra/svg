@@ -51,8 +51,10 @@ function deuxLignes(l: HTMLElement): [Element | undefined, Element | undefined] 
 }
 
 /** Ce que les deux crochets partagent. `interne` : la liste est son propre conteneur qui defile. */
-function useMesureFenetre<L extends HTMLElement>(total: number, seuil: number, interne: boolean) {
-  const racine = useRef<HTMLElement | null>(null), liste = useRef<L | null>(null);
+function useMesureFenetre<L extends HTMLElement>(total: number, seuil: number, interne: boolean, externe?: RefObject<HTMLElement | null>) {
+  const propre = useRef<HTMLElement | null>(null), liste = useRef<L | null>(null);
+  // Deux listes dans le meme panneau (les groupes « À couper » et « À écrire », ADR-0028) partagent le conteneur qui defile.
+  const racine = externe ?? propre;
   const [mesure, poserMesure] = useState<Mesure>({ defile: 0, visible: 0, pas: PAS_INITIAL });
   const pas = useRef(PAS_INITIAL);
   const actif = total > seuil;
@@ -125,9 +127,12 @@ export function montrerLigneAuClavier(e: FocusEvent<HTMLElement>): void {
   if (auClavier) ligne.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-/** Les lignes a dessiner d'une liste de `total` lignes de meme hauteur, dans un panneau qui defile. */
-export function useFenetre(total: number): FenetreListe {
-  return useMesureFenetre<HTMLOListElement>(total, SEUIL_FENETRE, false);
+/**
+ * Les lignes a dessiner d'une liste de `total` lignes de meme hauteur, dans un panneau qui defile. `panneau` : le conteneur qui
+ * defile, quand il est deja tenu ailleurs (plusieurs listes dans un meme panneau) ; absent, le crochet donne le sien (`racine`).
+ */
+export function useFenetre(total: number, panneau?: RefObject<HTMLElement | null>): FenetreListe {
+  return useMesureFenetre<HTMLOListElement>(total, SEUIL_FENETRE, false, panneau);
 }
 
 /**

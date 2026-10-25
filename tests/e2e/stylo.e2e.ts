@@ -91,14 +91,23 @@ describe('le dessin au stylo', () => {
     await expect(carte.locator('li', { hasText: 'Pour chaque couche, choisissez « Dessiner »' }).locator('.a-verifier').count()).resolves.toBe(1);
   });
 
-  it('en decoupe, un texte a trait unique est un trait ouvert : le constat propose le stylo, qui s y substitue', async () => {
+  it('en decoupe, un texte a trait unique se range « À écrire » ; dit « à couper », le constat du trait ouvert propose d y revenir', async () => {
     const page = await editeur('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288"><path d="M48 48H240V240H48Z" fill="#c81e28"/></svg>');
     await choisir(page, 'Découpe');
     await ajouterTexte(page, 'Lune', 'ems-readability');
+    // ADR-0028 : un texte a trait unique se propose a ecrire, le carre plein a couper ; aucun constat ne bloque.
+    const aEcrire = page.locator('.editeur-calques .groupe-ecriture');
+    await attend(() => aEcrire.locator('li').count()).toBe(1);
     const constat = panneau(page).locator('.constat', { hasText: /^Un trait ouvert ne se découpe pas/ });
+    await attend(() => constat.count()).toBe(0);
+    // Le texte choisi (il vient d'etre pose), Maj+X le dit « à couper » : la lame ne le saurait pas, le constat le dit.
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('Shift+X');
     await attend(() => constat.count()).toBe(1);
-    await constat.getByRole('button', { name: 'Passer au dessin au stylo' }).click();
-    await attend(() => texteDe(panneau(page).locator('summary').first())).toMatch(/^Prêt pour le stylo/);
+    await constat.getByRole('button', { name: 'Écrire au stylo' }).click();
+    await attend(() => constat.count()).toBe(0);
+    await attend(() => aEcrire.locator('li').count()).toBe(1);
+    expect(await texteDe(panneau(page).locator('summary').first())).toMatch(/^Prêt pour Cricut/);
   });
 
   it('en decoupe, des lettres serrees se chevauchent : « Souder » les rend d un seul tenant', async () => {

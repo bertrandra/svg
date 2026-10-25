@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M10 10L60 10L60 40Z" fill="#c81e28" data-ed-operation="javascript:alert(1)"/>
+  <path d="M10 50L60 50L60 80Z" fill="#1f4e8c" data-ed-operation="ecriture&quot; onload=&quot;alert(1)"/>
+  <g data-ed-operation="ecriture"><path d="M70 50L90 50L90 80Z" fill="#1f4e8c" data-ed-operation=" DECOUPE "/></g>
+  <path d="M70 10L90 10L90 40Z" fill="#1f4e8c" data-ed-operation="url(https://exemple.invalid/x)"/>
+</svg>

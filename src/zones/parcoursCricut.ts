@@ -25,11 +25,14 @@ export const pointsACorriger = (n: number): string => pluriel(n, 'point') + ' à
  * L'etat du bouton d'export pour des constats (null : l'analyse n'est pas finie). Un bloquant refuse, un « à corriger » demande
  * une confirmation, un conseil ne change rien : il dit un risque, pas un defaut.
  */
-/** Le libelle de l'export selon le procede : le stylo a le sien (ADR-0022), la decoupe et Print Then Cut gardent « Exporter pour Cricut ». */
-export const libelleExport = (procede: Procede | null = null): string => (procede === 'dessin-stylo' ? 'Exporter pour le stylo' : 'Exporter pour Cricut');
+/**
+ * Le libelle de l'export selon le procede : le stylo a le sien (ADR-0022), la decoupe et Print Then Cut gardent « Exporter pour
+ * Cricut », comme un dessin qui mele couper et ecrire (ADR-0028 : `melange`), dont l'export livre les deux.
+ */
+export const libelleExport = (procede: Procede | null = null, melange = false): string => (procede === 'dessin-stylo' && !melange ? 'Exporter pour le stylo' : 'Exporter pour Cricut');
 
-export function etatExport(constats: readonly Constat[] | null, procede: Procede | null = null): EtatExport {
-  const base = libelleExport(procede);
+export function etatExport(constats: readonly Constat[] | null, procede: Procede | null = null, melange = false): EtatExport {
+  const base = libelleExport(procede, melange);
   if (!constats) return { raison: 'L’analyse du dessin n’est pas finie', aCorriger: [], libelle: base };
   const bloquants = constats.filter(c => c.gravite === 'bloquant').length;
   const aCorriger = constats.filter(c => c.gravite === 'a-corriger');
@@ -59,8 +62,17 @@ export interface EtapeDesignSpace { readonly texte: string; readonly aVerifier?:
  * imprimer puis decouper (Print Then Cut). Rien n'est promis que l'on n'ait pas vu : ce que le protocole (docs/cricut/protocole.md)
  * n'a pas confirme est marque. `taille` est celle du dessin, en unites du plan ; null pour un dessin vide (l'export le refuse).
  */
-export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { readonly l: number; readonly h: number } | null): EtapeDesignSpace[] {
+export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { readonly l: number; readonly h: number } | null, melange = false): EtapeDesignSpace[] {
   const dimension = taille ? texteTaille(taille.l, taille.h, p.unite) : null;
+  if (melange && p.procede !== 'imprimer-decouper') {
+    // Couper et ecrire (ADR-0028) : deux fichiers a importer, le second passe en « Dessiner » ; rien de cela n'a ete essaye (temoin 9).
+    return [
+      { texte: 'Ouvrez l’archive ' + nom + '-cricut.zip : le fichier à couper, le fichier à écrire, les deux ensemble et un mode d’emploi.' },
+      { texte: 'Dans Design Space, « Nouveau projet », puis « Importer » ' + nom + '-a-couper.svg, puis ' + nom + '-a-ecrire.svg, sans changer leur taille' + (dimension ? ' (' + dimension + ')' : '') + '.', aVerifier: true },
+      { texte: 'Passez les calques de ' + nom + '-a-ecrire.svg en « Dessiner » (une couleur, un stylo) ; ceux de ' + nom + '-a-couper.svg restent sur « Couper ».', aVerifier: true },
+      { texte: 'Sélectionnez tout et « Attachez » : le stylo écrit à sa place sur la pièce découpée.', aVerifier: true }
+    ];
+  }
   if (p.procede === 'imprimer-decouper') {
     return [
       { texte: 'Ouvrez l’archive ' + nom + '-print-then-cut.zip : l’image à imprimer, la ligne de coupe et un mode d’emploi.' },
