@@ -268,6 +268,27 @@ export function nombreDeCalques(page: Page): Promise<number> {
 }
 
 /**
+ * Le presse-papiers d'un test : les permissions `clipboard-read` et `clipboard-write` n'existent que dans chromium (firefox et
+ * webkit les refusent comme inconnues). On y garde le vrai presse-papiers ; ailleurs, `writeText` retient le texte sans
+ * toucher a celui de la machine. Dans les deux cas, `textePressePapiers` rend ce que la page a copie en dernier.
+ */
+export async function permettrePressePapiers(page: Page, contexte: BrowserContext): Promise<void> {
+  if (NAVIGATEUR === 'chromium') await contexte.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate((reel) => {
+    // Un navigateur qui ne donne pas `navigator.clipboard` a cette page (contexte juge non sur) en recoit un qui retient.
+    if (!('clipboard' in navigator) || !navigator.clipboard) Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => undefined }, configurable: true });
+    const presse = navigator.clipboard as Clipboard & { __copie?: string };
+    const ecrire = presse.writeText.bind(presse);
+    presse.writeText = async (texte: string) => { presse.__copie = texte; if (reel) await ecrire(texte); };
+  }, NAVIGATEUR === 'chromium');
+}
+
+/** Le dernier texte que la page a copie (voir `permettrePressePapiers`). */
+export function textePressePapiers(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => (navigator.clipboard as Clipboard & { __copie?: string }).__copie);
+}
+
+/**
  * Ouvre un menu de la barre (Fichier, Edition, Vue) par son nom visible. Sur un telephone (640 px et moins), ces trois
  * menus ne sont plus que des rubriques du menu « Plus » : c'est lui qu'on ouvre, et le menu demande (`role=menu` du meme nom) y est.
  */

@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, permettrePressePapiers, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -140,7 +140,7 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('public intégration : code copié et SVG reçu de l’éditeur embarqué', async () => {
       const { page, contexte } = await navigateur.ouvrir({ largeur: 1200, hauteur: 900, publicAccueil: 'integration' });
-      await contexte.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await permettrePressePapiers(page, contexte);
       await page.getByRole('button', { name: 'Copier le code' }).click();
       await page.getByRole('button', { name: 'Essayer l’éditeur embarqué' }).click();
       await page.locator('.editeur-cadre').waitFor();

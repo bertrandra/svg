@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, ouvrirExemple, pilote, texteDe, URL_PAGE } from './aide.js';
+import { aLeFocus, attend, NAVIGATEUR, ouvrirExemple, permettrePressePapiers, pilote, textePressePapiers, texteDe, URL_PAGE } from './aide.js';
 
 const memoire = (page: Page) => page.evaluate(() => localStorage.getItem('svg.accueil'));
 const question = (page: Page) => page.locator('.public-question');
@@ -96,7 +96,7 @@ describe('un accueil par public', () => {
 
   it('integration : ce que fait l embarquement, ses options, un extrait copiable, le guide, et l editeur ouvert comme un hote', async () => {
     const { page, contexte } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
-    await contexte.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await permettrePressePapiers(page, contexte);
     await option(page, 'Intégrer l’éditeur à mon produit').click();
     await attend(() => aLeFocus(titreSuite(page))).toBe(true);
     const panneau = page.locator('section.integration');
@@ -113,7 +113,8 @@ describe('un accueil par public', () => {
     expect(await panneau.getByRole('link', { name: 'docs/integration.md' }).getAttribute('href')).toBe('https://github.com/bertrandra/svg/blob/main/docs/integration.md');
     await panneau.getByRole('button', { name: 'Copier le code' }).click();
     await attend(() => panneau.locator('p[role=status]').first().textContent()).toBe('Code copié.');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('EditeurSvg.ouvrir({');
+    expect(await textePressePapiers(page)).toContain('EditeurSvg.ouvrir({');
+    if (NAVIGATEUR === 'chromium') expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('EditeurSvg.ouvrir({');
     // Aucune promesse : ni client, ni chiffre d'usage.
     expect(await panneau.textContent()).not.toMatch(/clients?\b|utilisateurs satisfaits|\d+\s?%/i);
     expect(await ordreDesOnglets(page)).toEqual(['voie-svg', 'voie-image', 'voie-formes']);
