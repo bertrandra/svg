@@ -76,9 +76,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Un bord de tracé se déduit d'une union, il ne se suit pas** (ADR-0015) : contour en forme et décalage unissent des
   morceaux qui partagent leurs arêtes exactes ; le type d'un nœud se lit sur la géométrie ; un échec réessaie à
   tolérance ×3 puis ×9, puis refuse en le nommant ; un outil neuf ajoute des références, n'en réécrit aucune.
-- **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
-  `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures GSUB en option). Jamais
-  de `<text>` dans un SVG écrit.
+- **Le texte reste vivant, le fichier porte des contours** (ADR-0022) : `Forme.texte` garde de quoi recomposer, composé en pur
+  (`engine/texte.ts`) au-dessus d'une interface `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures
+  GSUB en option). Jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes ; au stylo, rien ne se remplit.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

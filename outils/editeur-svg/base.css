@@ -26,8 +26,10 @@ button.primaire { border-color: var(--cyan); background: var(--cyan); color: var
 button.primaire:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 86%, black); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { button.primaire:hover:not(:disabled) { background: var(--repli-cyan-fonce); } }
 button.discret { border-color: transparent; background: transparent; color: var(--cyan); }
-button.discret:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 10%, transparent); }
-@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { button.discret:hover:not(:disabled) { background: var(--repli-cyan-10); } }
+/* Au survol, le voile cyan a 10 % fait passer le cyan sous 4,5:1 en theme clair (4,49 sur un panneau, 4,05 sur la page) :
+   le texte prend le cyan de survol, plus fonce en clair, identique en sombre. */
+button.discret:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 10%, transparent); color: var(--cyan-survol); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { button.discret:hover:not(:disabled) { background: var(--repli-cyan-10); color: var(--cyan-survol); } }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* Une cible fait 24 x 24 px au moins (WCAG 2.5.8) : un plancher pour tout ce qu'on clique, que les regles plus fines depassent. */
 button, summary, input[type="text"], input[type="search"], select { min-height: 24px; }
