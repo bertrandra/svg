@@ -56,6 +56,10 @@ empreintes.
 
 ### Modifié
 
+- L'éditeur reçoit des propriétés facultatives pour un hôte qui garde des projets (`dessin`, `enregistrement`, `changement`,
+  `ctrlSEnregistre`, `actionsHote`), et `enregistrer` reçoit l'état du modèle en second argument ; aucun effet pour la page ni
+  pour l'embarquement. « Un seul `fetch` dans `src/` » devient « le réseau passe par `io/` » (`io/policesEnLigne.ts`,
+  `io/serveur.ts`). Un plan vide sans rien à défaire (projet vierge) dit le premier geste au lieu de proposer d'annuler.
 - En découpe, une forme sans fond n'est plus un constat bloquant : elle se range « À écrire ». La correction « Passer au dessin
   au stylo » devient « Écrire au stylo ». Le SVG enregistré en contexte Cricut porte `data-ed-operation` sur une forme dont
   l'opération choisie diffère de la proposition ; jamais en Générique ni dans un export. Aucune référence existante ne change.
@@ -171,6 +175,18 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Le site PHP** (ADR-0030), construit dans `dist/php/` à côté de la page autonome, qui ne change pas : connexion par un mot
+  de passe unique, en empreinte dans `data/pwd` (`php outils/mot-de-passe.php`), session sûre, jeton CSRF, délai croissant après
+  trois échecs ; écran « Mes projets » (nouveau, ouvrir, renommer, dupliquer, supprimer vers la corbeille) ; « Enregistrer »,
+  Ctrl+S et « Enregistrer sous… » écrivent le projet sur le serveur, avec l'état « Enregistré / Modifications non
+  enregistrées » et un contrôle de révision entre onglets ; bibliothèques, index et aperçus des polices servis en JSON depuis
+  `data/json`, fontes depuis `data/font` ; une police du catalogue téléchargée et vérifiée par sha256 par le serveur : le
+  navigateur ne contacte que le site. Installation : `docs/deploiement-php.md`.
+- **Le projet JSON natif** (`model/projet.ts`, `engine/projet.ts`) : versionné, migré, validé sans lever ; il contient tout le
+  modèle (textes vivants et leur disposition, opérations Cricut, contexte, nuancier, fonte déposée, image source) et, rouvert,
+  réécrit le même SVG à l'octet.
+- Tests PHP sans dépendance (`npm run test:php`) et leur étape dans la CI ; `tests/e2e/site-php.e2e.ts` contre `php -S`.
 
 - **Le texte épouse une forme** (ADR-0031). Posé sur une forme, il suit son tracé : le cercle d'un badge, un arc, une vague ;
   ses lettres sont tournées sans être déformées ; on choisit le point de départ (poignée sur la toile, clavier ou panneau), le

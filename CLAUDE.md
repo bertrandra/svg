@@ -16,6 +16,7 @@ Ce que lance la CI (`.github/workflows/ci.yml`, job `verifier`) — tout doit pa
 ```bash
 npm run verifier     # typecheck && lint && cliquet && test
 npm run construire   # la page, la bibliothèque et les fontes se construisent
+npm run test:php     # les tests du site PHP (tests/php/)
 ```
 
 - `tests/unit/architecture.test.ts` impose les couches : `util/shell` → `geometry` →
@@ -64,7 +65,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   jamais posé sur la toile au survol (il restylerait chaque forme) ; le liseré de survol est en `--cyan` sur `--panneau`.
 - **Rien ne s'écrit sans le geste de fin** (« Enregistrer », le libellé de l'hôte par `libelleEnregistrer`, « Terminer »
   dans la page) ; Ctrl+S ne garde qu'un brouillon et ne ferme jamais ; récupérer un fichier (« Télécharger le SVG »,
-  « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg`.
+  « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg` ; sur le site PHP, Ctrl+S est ce
+  geste et enregistre le projet sans fermer (`ctrlSEnregistre`, ADR-0030).
 - **La vectorisation est vtracer en WASM, épinglé, chargé à la demande** (ADR-0002) ; le réglage
   est pur et déterministe ; une image entièrement détourée n'est jamais tracée.
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
@@ -97,12 +99,18 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
   main par `scripts/catalogue-polices.mjs`, jamais au build) ; le choix d'une police non livrée vaut demande, et rien ne part
   sans ce geste (ouvrir la liste, chercher, voir les aperçus : aucune requête ; `policesEnLigne` faux chez un hôte) ; chaque
-  fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit `c-…` avec sa version ; un seul `fetch` dans `src/`.
+  fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit `c-…` avec sa version ; le réseau passe par `io/` (`policesEnLigne.ts`, `serveur.ts`).
 - **Une police se voit avant de se télécharger, une ligne par famille** (ADR-0026) : le nom se dessine dans sa fonte, calculé
   sur place pour une police disponible (`engine/texte/apercuNom.ts`), préparé pour le catalogue dans `data/apercus-polices.json`
   (commis, refait à la main par `scripts/apercus-polices.mjs` après l'index, chaque fichier vérifié par sha256, jamais au
   build), livré dans l'annexe facultative `polices-apercus.js` validée sans lever ; l'aperçu est décoratif (`aria-hidden`,
   `currentColor`) ; une famille de plusieurs sources ne montre que la mieux placée de `PREFERENCE_SOURCES`, sauf filtre de source.
+- **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/` (`public/` racine web, `data/` à côté,
+  `DATA_DIR` dans `config.local.php`) ; un seul mot de passe en empreinte dans `data/pwd` ; `src/site/` monte l'éditeur, qui ne
+  connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet (`model/projet.ts`,
+  `engine/projet.ts`) garde tout le modèle à pleine précision, se migre, se valide sans lever et réécrit le même SVG à l'octet ;
+  les annexes de données passent par `definirSourceDonnees`, les polices du catalogue par le serveur, qui les vérifie ; toute
+  route sous session, toute écriture sous jeton CSRF et révision.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
