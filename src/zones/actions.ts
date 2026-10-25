@@ -8,13 +8,13 @@ import { coller, combiner, dupliquer, idsMemeCouleur, modifier, separer, supprim
 import { pluriel } from '../util/texte.js';
 import { actionsDessin } from './actionsDessin.js';
 import { phraseCombinaison, phraseDuplication, phraseMasquage, phraseVerrouillage } from './phrasesSelection.js';
-import type { ActionsEditeur, Outil, Point, Vues } from './typesEditeur.js';
+import type { ActionsEditeur, EtatRendu, Outil, Point, Vues } from './typesEditeur.js';
 import { avecVectorisation } from './phrasesTexte.js';
 
 /** L'etat du moment : ce que les actions lisent, jamais ce qu'elles posent. */
 export interface EtatLu {
   dessin: DessinSvg; sel: string[]; formeSeule: Forme | null; outil: Outil; point: number | null; style: Style; trace: readonly Point[];
-  presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string) => void; production: ChoixProduction;
+  presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string, etat: EtatRendu) => void; production: ChoixProduction;
 }
 
 /** Ce que les actions posent : des fonctions stables (setters de React, ou fabriquees une fois). */

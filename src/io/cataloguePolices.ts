@@ -12,6 +12,7 @@ const annexe: Annexe<CataloguePolices> = {
   globale: '__cataloguePolicesSvg',
   contenu: 'l’index des polices',
   consigne: 'lancez « npm run construire »',
+  donnees: true,
   valider: v => { if (v === undefined) return undefined; const c = validerCatalogue(v); return 'erreur' in c ? undefined : c; }
 };
 

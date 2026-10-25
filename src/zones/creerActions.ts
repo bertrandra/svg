@@ -14,7 +14,8 @@ import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
-import type { ActionsEditeur, Fond, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
+import type { ActionsEditeur, EtatEnregistrement, Fond, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
+import { aEnregistrer, perdrait } from './enregistrement.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 
@@ -22,6 +23,8 @@ import type { Aimant } from '../engine/transformations.js';
 export interface EtatDuMoment extends EtatLu {
   modifie: boolean; refaisable: boolean; versions: readonly Version[]; fermer: () => void; stockage: Stockage | null;
   brouillon?: ((svg: string) => unknown) | undefined; productionModifiee: boolean; fin: OptionsFin; suiteCricut: SuiteCricut; apercuMachine: boolean;
+  /** L'etat d'enregistrement que l'hote annonce (le site, ADR-0030) ; absent chez un hote qui ne garde rien. */
+  enregistrement?: EtatEnregistrement | null | undefined;
 }
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
@@ -96,18 +99,24 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     nouvelleCle: () => 'geste-' + ++compteur,
     dire, annoncer, poserCurseur: s.poserCurseur, poserFocale: s.poserFocale, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
     poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
-    demanderFermeture: () => { const e = lire(); if (e.modifie) s.poserQuitter(true); else e.fermer(); },
+    demanderFermeture: () => { const e = lire(); if (perdrait(e.modifie, e.enregistrement)) s.poserQuitter(true); else e.fermer(); },
     fermer: () => lire().fermer(),
     terminer: () => {
       const e = lire();
       // Rien n'a change : la page referme sans rien reecrire (la fiche garde le fichier tel qu'il est venu) ; ailleurs, on le dit.
-      if (e.modifie || e.productionModifiee) metier.enregistrerTout();
+      if (aEnregistrer(e.modifie, e.productionModifiee, e.enregistrement)) metier.enregistrerTout();
       else if (e.fin.fermerSansModification) e.fermer();
-      else dire('Aucune modification à enregistrer.');
+      else dire(e.enregistrement?.etat === 'en-cours' ? 'Enregistrement en cours…' : 'Aucune modification à enregistrer.');
     },
     enregistrerEtFermer: () => { if (metier.enregistrerTout()) lire().fermer(); },
     garderBrouillon: () => {
       const e = lire();
+      // Chez un hote qui garde des projets (le site, ADR-0030), Ctrl+S est le geste d'enregistrer : il rend le dessin, sans fermer.
+      if (e.fin.ctrlSEnregistre) {
+        if (aEnregistrer(e.modifie, e.productionModifiee, e.enregistrement)) metier.enregistrerTout();
+        else dire(e.enregistrement?.etat === 'en-cours' ? 'Enregistrement en cours…' : 'Aucune modification : rien à enregistrer.');
+        return;
+      }
       // Ctrl+S ne ferme jamais : fermer est un geste a part (le bouton de fin, Echap). Sans brouillon a garder, on dit ou va le dessin.
       if (!e.brouillon) { dire('Ctrl+S ne garde rien ici : « ' + e.fin.libelle + ' » rend votre dessin.'); return; }
       if (!e.modifie && !e.productionModifiee) { dire('Aucune modification : rien à garder.'); return; }

@@ -53,7 +53,9 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
       <SaisieTexte svgRef={svgRef} />
       {/* Un plan vide (ADR-0019) : le premier geste, sur la toile meme. Les clics passent a travers ; l'inspecteur le dit aux lecteurs d'ecran. */}
       {dessin.formes.length || ui.outil !== 'selection' ? null : (
-        <p className="toile-vide" aria-hidden="true" data-vide="vide">{insecables('Le plan est vide : Ctrl+Z fait revenir les formes, ou le rectangle (R) en trace une neuve.')}</p>
+        mo.h.passe.length
+          ? <p className="toile-vide" aria-hidden="true" data-vide="vide">{insecables('Le plan est vide : Ctrl+Z fait revenir les formes, ou le rectangle (R) en trace une neuve.')}</p>
+          : <p className="toile-vide" aria-hidden="true" data-vide="premiere-fois">{insecables('Le plan est vide : le rectangle (R) y trace une première forme.')}</p>
       )}
     </div>
   );

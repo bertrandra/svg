@@ -14,12 +14,12 @@ import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
-import type { ActionsEditeur, EtatInterface, Fond, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
+import type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Fond, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
 
 export interface ParametresEtat {
   initial: DessinSvg; ignores: readonly string[]; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  enregistrer: (svg: string) => void; fermer: () => void; brouillon?: ((svg: string) => unknown) | undefined;
+  enregistrer: (svg: string, etat: EtatRendu) => void; fermer: () => void; brouillon?: ((svg: string) => unknown) | undefined;
   /** La marque de contexte lue dans le SVG ouvert (ADR-0013) : le panneau revient a la reouverture. */
   production?: MarqueProduction | undefined;
   /** Le contexte de depart quand le SVG ne porte aucune marque (la page, pour le public « machine » de l'accueil, ADR-0024). */
@@ -28,6 +28,11 @@ export interface ParametresEtat {
   libelleEnregistrer?: string | undefined;
   /** Le bouton de fin ferme l'editeur meme sans modification (la page) ; sinon il reste inactif et dit pourquoi. */
   fermerSansModification?: boolean | undefined;
+  /** L'hote qui garde des projets (le site, ADR-0030) : l'etat d'enregistrement qu'il annonce, et chaque changement du modele. */
+  enregistrement?: EtatEnregistrement | null | undefined;
+  changement?: ((etat: EtatRendu) => void) | undefined;
+  ctrlSEnregistre?: boolean | undefined;
+  actionsHote?: readonly ActionHote[] | undefined;
 }
 
 export interface EtatEditeur {
@@ -67,8 +72,12 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [apercuMachine, poserApercuMachine] = useState(true);
   // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
   const aBrouillon = !!p.brouillon;
-  const fin = useMemo<OptionsFin>(() => ({ libelle: p.libelleEnregistrer ?? 'Enregistrer', fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon }),
-    [p.libelleEnregistrer, p.fermerSansModification, aBrouillon]);
+  const { ctrlSEnregistre = false, actionsHote } = p;
+  const fin = useMemo<OptionsFin>(() => ({
+    libelle: p.libelleEnregistrer ?? 'Enregistrer', fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon,
+    ...(ctrlSEnregistre ? { ctrlSEnregistre } : {}), ...(actionsHote?.length ? { actionsHote } : {})
+  }), [p.libelleEnregistrer, p.fermerSansModification, aBrouillon, ctrlSEnregistre, actionsHote]);
+  const enregistrement = p.enregistrement ?? null;
   const profil = useMemo(() => resoudreProfil(production), [production]);
   const productionModifiee = production !== productionInitiale;
   const toile = useRef<HTMLDivElement>(null), svgRef = useRef<SVGSVGElement>(null);
@@ -92,7 +101,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const moment = useRef<EtatDuMoment | null>(null);
   moment.current = {
     dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
-    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine
+    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
@@ -116,6 +125,14 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     return () => cancelAnimationFrame(f);
   }, [actions, productionInitiale]);
 
+  // L'hote qui garde des projets suit chaque changement du modele (le dessin, le contexte) : il sait ainsi si le travail est
+  // enregistre. Le rappel est lu par une reference : un hote qui le recree a chaque rendu ne relance rien.
+  const changement = useRef(p.changement);
+  changement.current = p.changement;
+  useEffect(() => { changement.current?.({ dessin, production }); }, [dessin, production]);
+  // Ce que l'hote dit de l'enregistrement (« Projet enregistré. », un conflit, une session expiree) se dit comme toute phrase de l'editeur.
+  useEffect(() => { if (enregistrement?.message) actions.dire(enregistrement.message); }, [actions, enregistrement]);
+
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
   const { brouillon } = p;
   useEffect(() => {
@@ -129,8 +146,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin]
+    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement }),
+    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

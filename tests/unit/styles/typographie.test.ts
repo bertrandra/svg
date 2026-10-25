@@ -7,7 +7,8 @@ import { TAILLES } from '../../../src/styles/typographie.js';
 
 // Comme les couleurs (ADR-0007), une taille de texte est un jeton : la feuille lit une variable, jamais une valeur.
 const racine = join(import.meta.dirname, '..', '..', '..');
-const FEUILLES = ['outils/editeur-svg/base.css', 'outils/editeur-svg/editeur.css', 'outils/editeur-svg/page.html'];
+// site.css : les regles du site PHP (ADR-0030), ajoutees a celles de la page dans assets/site.css.
+const FEUILLES = ['outils/editeur-svg/base.css', 'outils/editeur-svg/editeur.css', 'outils/editeur-svg/page.html', 'outils/editeur-svg/site.css'];
 const lire = (f: string) => readFileSync(join(racine, f), 'utf8');
 
 describe('la typographie de l interface', () => {
@@ -35,7 +36,7 @@ describe('la typographie de l interface', () => {
     // Un bouton est en 600 : une regle qui y pose IBM Plex Mono sans dire sa graisse le faisait grossir par un gras artificiel.
     for (const f of FEUILLES) {
       const regles = [...lire(f).replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*font-family:\s*var\(--mono\)[^{}]*)\}/g)];
-      expect(regles.length, f).toBeGreaterThanOrEqual(f.endsWith('base.css') ? 1 : 2);
+      expect(regles.length, f).toBeGreaterThanOrEqual(f.endsWith('site.css') ? 0 : f.endsWith('base.css') ? 1 : 2);
       const sansGraisse = regles.filter(m => !/font-weight:\s*(400|500)\s*[;}]?/.test(m[2] ?? '')).map(m => (m[1] ?? '').trim());
       expect(sansGraisse, f).toEqual([]);
     }

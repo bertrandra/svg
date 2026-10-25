@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'opentype.js';
 import {
-  ANCIENNE_CLE_CONSENTEMENT, empreinteSha256, glyphesComposes, oublierAncienConsentement, telechargerVariante, variantesEmployees,
+  ANCIENNE_CLE_CONSENTEMENT, definirServeurPolices, empreinteSha256, glyphesComposes, oublierAncienConsentement, telechargerVariante, variantesEmployees,
   type CachePolices, type OutilsTelechargement
 } from '../../../src/io/policesEnLigne.js';
 import { enSfnt, genreFonte } from '../../../src/io/woff.js';
@@ -173,5 +173,30 @@ describe('les polices employees, pour les credits', () => {
     const l = variantesEmployees(c, [{ id: VARIANTE.id, version: VARIANTE.version }, { id: VARIANTE.id }, { id: 'inter' }]);
     expect(l.map(v => v.nom)).toEqual(['Essai']);
     expect(variantesEmployees(null, [{ id: VARIANTE.id }])).toEqual([]);
+  });
+});
+
+describe('un hote qui sert lui-meme les polices (le site PHP, ADR-0030)', () => {
+  it('ne demande que son adresse, avec la session, et verifie encore l empreinte', async () => {
+    const SITE = 'api.php?r=police&sha=' + encodeURIComponent(sha(WOFF));
+    definirServeurPolices({ adresse: e => 'api.php?r=police&sha=' + encodeURIComponent(e), nom: 'le site' });
+    try {
+      const r = reseau({ [SITE]: WOFF });
+      const p = await telechargerVariante(VARIANTE, r.outils);
+      if ('erreur' in p) throw new Error(p.erreur);
+      expect(r.demandes).toEqual([SITE]);
+      expect(r.inits[0]).toMatchObject({ credentials: 'same-origin', mode: 'same-origin' });
+      // Un site qui servirait un autre fichier est refuse comme un serveur de polices.
+      const faux = reseau({ [SITE]: WOFF_EXT });
+      expect(await telechargerVariante(VARIANTE, faux.outils)).toEqual({ erreur: 'Essai : le fichier servi par le site n’a pas l’empreinte attendue : refusé.' });
+      const absent = reseau({ [SITE]: 404 });
+      expect(await telechargerVariante(VARIANTE, absent.outils)).toEqual({ erreur: 'Essai : le site a répondu 404.' });
+    } finally {
+      definirServeurPolices(null);
+    }
+    // Sans hote, de nouveau les serveurs du registre.
+    const r = reseau({ [JSD]: WOFF });
+    expect('erreur' in (await telechargerVariante(VARIANTE, r.outils))).toBe(false);
+    expect(r.demandes).toEqual([JSD]);
   });
 });

@@ -26,14 +26,19 @@ import { useEtatEditeur } from './etatEditeur.js';
 import { useFocusEditeur } from './focusEditeur.js';
 import { lireDessinMemo } from './lecture.js';
 import { estHex } from './aidesEditeur.js';
-import type { Teinte } from './typesEditeur.js';
+import type { ActionHote, EtatEnregistrement, EtatRendu, Teinte } from './typesEditeur.js';
 
 // Les types que les autres zones lisent ici : ils vivent dans typesEditeur.ts (types seuls, sans cycle).
-export type { ActionsEditeur, EtatInterface, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
+export type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
 
 export interface ProprietesEditeur {
-  /** Le SVG a retoucher, tel quel. */
+  /** Le SVG a retoucher, tel quel (ignore quand `dessin` est donne). */
   svg: string;
+  /**
+   * Le dessin du modele a ouvrir tel quel, sans relire de SVG : un projet rouvert (le site, ADR-0030). Le SVG ecrit ensuite est
+   * celui qu'ecrivait ce dessin avant son enregistrement, octet pour octet.
+   */
+  dessin?: DessinSvg | undefined;
   /** Le titre de la fenetre. */
   titre: string;
   /** Le nom du fichier propose au telechargement, sans extension. */
@@ -43,8 +48,11 @@ export interface ProprietesEditeur {
   /** La bibliotheque de formes a inserer : deja chargee, ou a charger au premier besoin. */
   bibliotheque?: Bibliotheque | 'a-charger';
   fermer: () => void;
-  /** Recoit le SVG retouche, deja nettoye par `nettoyerSvg`. */
-  enregistrer: (svg: string) => void;
+  /**
+   * Recoit le SVG retouche, deja nettoye par `nettoyerSvg`, et l'etat du modele (le dessin, le contexte) : de quoi ecrire un projet
+   * pour un hote qui en garde (le site, ADR-0030). Un hote qui ne veut que le SVG ignore le second argument.
+   */
+  enregistrer: (svg: string, etat: EtatRendu) => void;
   /**
    * Recoit le SVG du moment apres chaque modification (une seconde de repos), et a chaque Ctrl+S : de quoi reprendre apres un
    * rechargement. Rendre `false` dit que le brouillon n'a pas ete garde (l'editeur ne pretend pas le contraire).
@@ -79,6 +87,17 @@ export interface ProprietesEditeur {
    * telecharge apres l'accord de la personne. Faux par defaut : rien ne se telecharge, seules les dix fontes livrees se proposent.
    */
   policesEnLigne?: boolean;
+  /**
+   * Pour un hote qui garde des projets (le site, ADR-0030) : l'etat de l'enregistrement, que la barre affiche et qui dit s'il reste
+   * quelque chose a enregistrer ou a perdre en fermant. Absent : la regle d'avant (une modification depuis l'ouverture).
+   */
+  enregistrement?: EtatEnregistrement | null | undefined;
+  /** Appele a chaque changement du dessin ou du contexte, avec l'etat du moment : l'hote en deduit « enregistré » ou « modifié ». */
+  changement?: ((etat: EtatRendu) => void) | undefined;
+  /** Ctrl+S rend le dessin a `enregistrer` sans fermer (le site) ; faux par defaut : Ctrl+S garde un brouillon. */
+  ctrlSEnregistre?: boolean | undefined;
+  /** Des gestes de l'hote ajoutes au menu Fichier (« Enregistrer sous… ») ; chacun recoit l'etat du moment. */
+  actionsHote?: readonly ActionHote[] | undefined;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -109,13 +128,18 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
     <>
       <button type="button" className="discret" disabled={!ok} title={ok ? 'Ouvrir l’éditeur SVG plein écran' : 'Une image enveloppée ne s’édite pas : vectorisez-la d’abord.'}
         onClick={() => ouvrir(true)}>Éditer le SVG en plein écran</button>
-      {ouvert ? <EditeurSvg svg={svg} titre={titre} nom={nom} nuancier={nuancier ?? SANS_NUANCIER} {...(bibliotheque === undefined ? {} : { bibliotheque })} {...(stockage === undefined ? {} : { stockage })} fermer={() => ouvrir(false)} enregistrer={s => { enregistrer(s); ouvrir(false); }} /> : null}
+      {ouvert ? <EditeurSvg svg={svg} titre={titre} nom={nom} nuancier={nuancier ?? SANS_NUANCIER} {...(bibliotheque === undefined ? {} : { bibliotheque })} {...(stockage === undefined ? {} : { stockage })} fermer={() => ouvrir(false)} enregistrer={(s, etat) => { enregistrer(s, etat); ouvrir(false); }} /> : null}
     </>
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false }: ProprietesEditeur) {
-  const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
+export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, ...hote }: ProprietesEditeur) {
+  // Un dessin donne (un projet rouvert) s'ouvre tel quel : sans marque lue, son contexte est le depart que l'hote donne.
+  const lu = useMemo(() => {
+    if (dessin) return { dessin, ignores: avant ?? [], production: undefined };
+    const l = lireDessinMemo(svg);
+    return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] };
+  }, [svg, dessin, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
   useFocusEditeur(racine);
@@ -136,7 +160,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
           <ContextePolicesEnLigne.Provider value={policesEnLigne}>
           <FournisseurReperes actif={!!guide}>
             <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} depart={depart} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
-              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} /></FournisseurSections>
+              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} {...hote} /></FournisseurSections>
           </FournisseurReperes>
           </ContextePolicesEnLigne.Provider>
         </FournisseurStockage>
@@ -148,8 +172,10 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 
 interface ProprietesAtelier {
   initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; depart?: ChoixProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => unknown) | undefined; guide: OptionsGuide | null;
+  fermer: () => void; enregistrer: (svg: string, etat: EtatRendu) => void; brouillon?: ((svg: string) => unknown) | undefined; guide: OptionsGuide | null;
   libelleEnregistrer?: string | undefined; fermerSansModification?: boolean | undefined;
+  enregistrement?: EtatEnregistrement | null | undefined; changement?: ((etat: EtatRendu) => void) | undefined;
+  ctrlSEnregistre?: boolean | undefined; actionsHote?: readonly ActionHote[] | undefined;
 }
 
 /** Garde l'etat de l'editeur et le donne aux contextes ; le dessin de l'ecran est dans `Cadre`. */

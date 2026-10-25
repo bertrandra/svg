@@ -1,0 +1,9 @@
+# Le dossier des donnees du site (ADR-0030) : jamais servi par HTTP. Il vit hors de la racine web par defaut ; si un hebergeur
+# impose de le placer sous public/, ce fichier refuse tout acces direct (Apache 2.4, et 2.2 en repli).
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order deny,allow
+  Deny from all
+</IfModule>

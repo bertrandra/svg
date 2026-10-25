@@ -32,6 +32,8 @@ prouvée** (tests, corpus, fuzzing, navigateur). Une affirmation qu’aucun test
 | Bibliothèque du build (`bibliotheque.js`) | `io/annexes.ts` | du code que nous avons construit ; hors modèle de menace |
 | Brouillon, versions, corrections (`localStorage`) | `io/stockage.ts`, `zones/session.ts`, `zones/Bibliotheque.tsx` | JSON validé champ par champ |
 | Options de l’hôte (`titre`, `nom`, `nuancier`, `baseAnnexes`, `stockage`) | `zones/embarque.tsx` (`verifierOptions`) | validées, en français |
+| Projet ouvert depuis le site PHP | `site/Site.tsx` → `io/serveur.ts` | `lireProjet` (`model/projet.ts`) : migré, validé champ par champ, borné, puis `etatDuProjet` ; voir § 9 |
+| Annexes de données du site PHP (JSON de `data/json`) | `io/annexes.ts` (`definirSourceDonnees`) | les mêmes validations que les globales des scripts |
 
 Aucun chemin n’utilise `innerHTML`, `dangerouslySetInnerHTML`, `DOMParser` ni `eval` : le dessin est affiché par React à
 partir du modèle à plat, les aperçus sont des `<img>` en `data:` (inertes par construction : ni script, ni requête).
@@ -174,8 +176,9 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
   (`crypto.subtle`) contre l’index commis avant d’être lu par opentype.js : un serveur compromis ou un miroir d’une autre
   version ne fait lire aucun octet inattendu, et le refus est dit. Le fichier est borné (8 Mo, puis les bornes du WOFF :
   256 tables, 32 Mo décompressés). L’index (`polices-catalogue.js`) est validé en entier (licence de la liste blanche, version
-  épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Un seul `fetch` existe dans
-  `src/`, et un test le garde. Les aperçus (`polices-apercus.js`, ADR-0026) sont validés de même avant d’être crus (forme, cadre, clés, caractères et
+  épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Le réseau ne passe que par `io/` :
+  le téléchargement d’une police (`io/policesEnLigne.ts`) et, pour le site PHP seulement, son serveur (`io/serveur.ts`, § 9) ; un
+  test le garde. Les aperçus (`polices-apercus.js`, ADR-0026) sont validés de même avant d’être crus (forme, cadre, clés, caractères et
   longueur de chaque code, taille totale bornée) ; un code se décode par une fonction pure qui ne lève jamais, et une annexe refusée laisse
   les noms écrits.
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
@@ -241,3 +244,39 @@ Un SVG :
 Un fichier `tests/fixtures/hostile/<famille>-<vecteur>.svg` et sa ligne dans `index.json` (`attendu` : `ouvre` ou
 `refus`). Le test du corpus échoue si l’un des deux manque. Un échec du fuzzer se range, réduit, dans
 `tests/fixtures/regressions/` avec la correction.
+
+## 9. Le site PHP (ADR-0030)
+
+Le site PHP ajoute ce que la page autonome n’a pas : un serveur, un mot de passe, des projets enregistrés. Ce qui précède vaut tel
+quel pour l’éditeur qu’il monte ; voici ce qu’il protège de plus, et comment c’est prouvé.
+
+| Actif | Menace | Garantie |
+|---|---|---|
+| L’accès au site | deviner le mot de passe, voler la session, forcer une connexion | un seul mot de passe, en empreinte (`password_hash`, argon2id ou bcrypt) dans `data/pwd`, posé en ligne de commande ; `password_verify` en temps constant ; trois essais libres par client puis un délai qui double jusqu’à 15 min, sans même vérifier pendant l’attente ; jeton CSRF sur le formulaire ; `session_regenerate_id` à la connexion ; cookie `HttpOnly`, `SameSite=Strict`, `Secure` en HTTPS ; expiration d’inactivité ; sessions dans `data/sessions` |
+| Les projets | écriture par un autre site, écrasement par un autre onglet, chemin hostile, fichier géant, JSON piégé | toute route exige la session ; toute écriture exige POST, du JSON, le jeton CSRF (`X-CSRF`, `hash_equals`) et pas un autre site (`Sec-Fetch-Site`) ; un identifiant de disque tiré au hasard (`[a-f0-9]{16}`), seul à fabriquer un chemin, le nom affiché à part et assaini ; la révision ouverte exigée pour écraser (409, 428) ; taille bornée avant lecture (413) ; JSON analysé à profondeur bornée, structure et format vérifiés (400) ; écriture sous verrou, d’un seul geste ; suppression vers une corbeille |
+| L’éditeur qui rouvre un projet | un projet altéré sur le disque ou en transit | `lireProjet` migre, valide chaque champ et chaque borne, refuse en le nommant sans lever, reconstruit le projet sans champ inconnu ni clé de prototype ; les peintures suivent la règle de l’écriture ; une fonte déposée relue doit redonner son identifiant (empreinte de ses octets) |
+| Le navigateur | un tiers qui voit l’adresse de la personne, un script injecté | aucune requête hors du site : la politique de sécurité n’autorise que `'self'` (`connect-src 'self'`, aucun domaine tiers) ; les polices du catalogue passent par le serveur ; la vignette d’un projet est le SVG de l’éditeur, refusée au moindre élément ou attribut actif, servie avec `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox` et `nosniff` |
+| Le serveur | une police détournée, une requête vers un hôte arbitraire, une fuite d’information | une police ne se demande que par une empreinte sha256 présente dans l’index (sinon 404, avant toute requête) ; les adresses sont recalculées de l’index et des préfixes de `POLICES_SOURCES`, sans redirection, HTTP(S) seulement, 8 Mo au plus ; une empreinte fausse n’est jamais rangée ; aucune erreur PHP affichée (journal dans `data/journal/`), pas de `X-Powered-By`, `config.php` et `inc/` muets demandés directement |
+| `data/` | lu depuis le Web | hors de la racine web par défaut ; sinon `data/.htaccess` (« Require all denied ») et `index.php` qui vérifie que `data/pwd` ne répond pas, et avertit sinon |
+
+En-têtes de chaque page et de l’API : `Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src
+'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; manifest-src 'none'; base-uri 'none';
+form-action 'self'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options:
+DENY`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`, `Permissions-Policy`, et
+`Strict-Transport-Security` en HTTPS. `unsafe-inline` reste pour les styles parce que l’éditeur pose des attributs `style` ;
+`wasm-unsafe-eval` pour le traceur.
+
+**Limites, honnêtement** : un seul mot de passe pour tous ; la limitation se compte par client (une attaque répartie n’est ralentie
+que par le coût de l’empreinte) ; les projets ne sont pas chiffrés sur le disque ; la vérification HTTP de `data/pwd` demande cURL ;
+le journal des connexions garde une empreinte salée de l’adresse, pas l’adresse.
+
+**Les preuves** :
+
+| Preuve | Où | Ce qu’elle établit |
+|---|---|---|
+| Lecture d’un projet | `tests/unit/model/projet.test.ts` | refus nommés champ par champ, bornes, version plus récente refusée, chaîne de migration complète, clé de prototype et champ inconnu écartés, 2 000 projets mutés au hasard sans exception |
+| Aller-retour | `tests/unit/engine/projet.test.ts` | projet → dessin → projet identique, et le même SVG octet pour octet, sur chaque référence de `tests/fixtures/svg` |
+| Client de l’API | `tests/unit/io/serveur.test.ts` | jeton CSRF sur chaque écriture, révision sur un écrasement, projet invalide refusé, réseau coupé et réponse illisible sans exception |
+| Fonctions du serveur | `tests/php/unitaires.php` | noms et identifiants hostiles, structure d’un projet, vignette piégée, écriture atomique, contrôle de version, corbeille, empreinte du mot de passe, délai des essais, police hors index, adresses d’un index altéré |
+| Le site par HTTP | `tests/php/http.php` (`npm run test:php`) | en-têtes, cookie, bon et mauvais mot de passe, CSRF de connexion, limitation, installation sans `data/pwd`, toute route sous session, écritures sous jeton, chemins hostiles, JSON invalide, profond ou géant, conflit de révision, police servie, empreinte fausse refusée, hors index refusé, déconnexion, expiration |
+| Navigateur | `tests/e2e/site-php.e2e.ts` | contre `php -S` sur `dist/php` : la page ne contacte que le site, la politique de sécurité appliquée, axe sans violation grave sur la connexion et l’écran Projets |

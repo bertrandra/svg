@@ -1,0 +1,46 @@
+/* Le site PHP (ADR-0030) : la connexion et l'ecran « Projets ». Ces regles s'ajoutent a celles de la page autonome (jetons, base,
+   page, editeur) dans assets/site.css ; elles ne lisent que des jetons, aucune couleur ni mesure ecrite a la main. */
+
+/* La connexion : une feuille au milieu, le champ et l'action pleine dessous. */
+.connexion { max-width: 30rem; }
+.carte-connexion { display: grid; gap: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.carte-connexion h2 { margin: 0; }
+.carte-connexion p { margin: 0; }
+.carte-connexion .champ > span { font-size: var(--texte-compact); font-weight: 600; }
+.carte-connexion input[type="password"] { width: 100%; }
+
+/* L'avertissement de l'administrateur : en tete, une ligne, au-dessus de l'application. */
+.site-avertissement { margin: var(--esp-l) auto 0; max-width: 960px; }
+
+/* L'en-tete de l'ecran « Projets » : le titre, et la deconnexion discrete a droite. */
+.site-tete { display: flex; flex-wrap: wrap; gap: var(--esp-l); align-items: flex-start; justify-content: space-between; }
+.site-tete > div { flex: 1 1 20rem; }
+.site-deconnexion { margin: 0; }
+
+/* La liste des projets : une feuille, une ligne par projet (vignette, nom et date, gestes). */
+.projets { display: grid; gap: var(--esp-l); border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.projets-tete { display: flex; flex-wrap: wrap; gap: var(--esp-m); align-items: center; justify-content: space-between; }
+.projets-tete h2 { margin: 0; display: flex; gap: var(--esp-m); align-items: baseline; }
+.liste-projets { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--filet); }
+.projet { display: grid; grid-template-columns: var(--esp-3xl) minmax(0, 1fr) auto; gap: var(--esp-l); align-items: center; padding: var(--esp-m) 0; border-bottom: 1px solid var(--filet); }
+.projet-vignette { width: var(--esp-3xl); height: var(--esp-3xl); object-fit: contain; border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: var(--toile-blanc); padding: var(--esp-2xs); }
+.projet-vignette.vide { display: block; background: var(--table); }
+.projet-infos { display: grid; gap: var(--esp-2xs); min-width: 0; }
+.projet-infos p { margin: 0; }
+.projet-nom { margin: 0; font-size: var(--texte-corps); }
+/* Le nom ouvre le projet : un bouton qui se lit comme un titre, souligne au survol et au focus. */
+.lien-projet { padding: 0; border: 0; background: none; color: var(--encre); font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+.lien-projet:hover, .lien-projet:focus-visible { text-decoration: underline; color: var(--cyan); }
+.projet-actions { justify-content: flex-end; }
+.projet-renommer { display: grid; gap: var(--esp-s); }
+.projet-renommer label { font-size: var(--texte-compact); font-weight: 600; }
+.projet-supprimer { display: grid; gap: var(--esp-s); border-left: 2px solid var(--filet-fort); padding-left: var(--esp-m); }
+@media (max-width: 640px) {
+  .projet { grid-template-columns: var(--esp-3xl) minmax(0, 1fr); }
+  .projet-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* « Enregistrer sous… », dans l'editeur : la boite des credits, plus etroite. */
+.enregistrer-sous { max-width: 28rem; display: grid; gap: var(--esp-m); }
+.enregistrer-sous h2, .enregistrer-sous p { margin: 0; }
+.enregistrer-sous input { width: 100%; }

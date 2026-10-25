@@ -22,7 +22,7 @@ export {
   boiteChemin, unir, seCroisent, boiteForme, boiteDe
 } from './edition/geometrie.js';
 
-export { lirePeinture, lirePeintureAlpha, type PeintureLue } from './edition/peinture.js';
+export { lirePeinture, lirePeintureAlpha, peintureSure, type PeintureLue } from './edition/peinture.js';
 export { lireDessin, type DessinLu, type LectureDessin, type OptionsLecture } from './edition/lecture.js';
 export { CARACTERES_MAX, type PolicesTexte } from './edition/texteSvg.js';
 export { opaciteDuRemplissage, opaciteDuContour } from './edition/opacites.js';

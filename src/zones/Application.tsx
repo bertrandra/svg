@@ -36,14 +36,14 @@ import { circuitDu, DEMO_HOTE, ordreDesVoies, phraseRecu, phraseReglageMachine, 
 /** Le dessin ouvert ; `production` : le contexte de depart propose a l'editeur (le public « machine »), quand il y en a un. */
 interface Fichier { nom: string; svg: string; ignores?: readonly string[]; production?: ChoixProduction }
 
-const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
+export const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
   + '<rect x="16" y="16" width="208" height="128" rx="14" fill="#e9ecef"/>'
   + '<circle cx="80" cy="80" r="40" fill="#c81e28"/>'
   + '<path d="M130 120 L170 40 L210 120 Z" fill="#1428a0"/>'
   + '<path d="M40 130 Q120 90 200 130" fill="none" stroke="#15181d" stroke-width="4"/>'
   + '</svg>';
 
-const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
+export const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
 
 /** Chaque voie : son icone, son titre, son aide. Leur ordre vient du public (publics.ts, ordreDesVoies). */
 const VOIES: Readonly<Record<Voie, readonly [NomIcone, string, string]>> = {
@@ -254,7 +254,7 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
  * trois panneaux restent montes, dans un ordre fixe : ce qu'on a regle dans l'un survit a un detour par un autre, et a un changement
  * de public.
  */
-function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
+export function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
   return (
     <section className="voies" aria-label="Par où commencer">
       <div className="voies-choix" role="tablist" aria-label="Point de départ">
@@ -301,7 +301,7 @@ function Invitation({ essayer }: { essayer: () => void }) {
 }
 
 /** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit. */
-function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void; invitation: boolean }) {
+export function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void; invitation: boolean }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);

@@ -20,6 +20,7 @@ import { AutresFormatsRepliees, useElementRecuperer } from './Recuperer.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
+import { aEnregistrer } from './enregistrement.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -104,12 +105,15 @@ export function MenuEdition() {
  */
 function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
-  const rien = !mo.h.passe.length && !ui.productionModifiee;
+  const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
+  // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
+  const hote: ElementMenu[] = (ui.fin.actionsHote ?? []).map(a => ({ id: 'hote-' + a.id, libelle: a.libelle, onClick: () => a.faire({ dessin: mo.dessin, production: ui.production }) }));
   return [
     ...(recuperer ? [recuperer] : []),
     // Le geste de fin acheve l'etape « Récupérez votre dessin » chez un hote, ou le dessin se recupere par lui (sans visite, rien).
     // Pas de coche pour « Terminer » : dans un menu, la colonne des icones dit aussi un etat coche, et on y lirait un choix fait.
-    { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
+    { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
+    ...hote,
     ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }

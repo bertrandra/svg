@@ -6,7 +6,8 @@ import { COUCHES, ESPACES, RAYONS } from '../../../src/styles/espaces.js';
 
 // Comme les couleurs et les tailles de texte, un espacement, un rayon et une couche sont des jetons.
 const racine = join(import.meta.dirname, '..', '..', '..');
-const FEUILLES = ['outils/editeur-svg/base.css', 'outils/editeur-svg/editeur.css', 'outils/editeur-svg/page.html'];
+// site.css : les regles du site PHP (ADR-0030), ajoutees a celles de la page dans assets/site.css.
+const FEUILLES = ['outils/editeur-svg/base.css', 'outils/editeur-svg/editeur.css', 'outils/editeur-svg/page.html', 'outils/editeur-svg/site.css'];
 const lire = (f: string) => readFileSync(join(racine, f), 'utf8');
 const PROPRIETES = /(?<![\w-])(?:padding|margin)(?:-[a-z-]+)?\s*:\s*([^;}]+)|(?<![\w-])(?:row-|column-)?gap\s*:\s*([^;}]+)/g;
 

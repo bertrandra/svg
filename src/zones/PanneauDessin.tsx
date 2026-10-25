@@ -71,6 +71,14 @@ export function PanneauDessin() {
 function SansSelection() {
   const mo = useDessin(), ac = useActions();
   const choisissables = mo.dessin.formes.filter(f => f.visible && !f.verrouille);
+  // Un projet vierge du site (ADR-0030) part sans forme et sans rien a defaire : il dit le premier geste, pas le retour.
+  if (!mo.dessin.formes.length && !mo.h.passe.length) {
+    return (
+      <EtatVide genre="premiere-fois" titre="Le plan est vide.">
+        Tracez une première forme avec les outils de la barre, ou insérez-en une de la bibliothèque de formes, ci-dessous.
+      </EtatVide>
+    );
+  }
   if (!mo.dessin.formes.length) {
     return (
       <EtatVide genre="vide" icone="annuler" titre="Vous avez retiré toutes les formes." action={{ libelle: 'Faire revenir les formes', onClick: ac.defaire }}>

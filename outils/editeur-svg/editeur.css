@@ -259,6 +259,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .compte-modifications, .editeur-barre-selection > .aide, .editeur-calques h3 .aide, .section > summary .aide, .editeur-inspecteur > p.aide, .recherche-formes > .aide,
 .champ-ligne > .aide, .champ-ligne input[type="text"], .resume-cricut dd, .titre-gravite, .versions li, output { font-variant-numeric: tabular-nums; }
 .champ-ligne > .aide { flex: none; min-width: 4.5ch; text-align: right; }
+/* L'etat d'enregistrement qu'un hote annonce (le site, ADR-0030) : une etiquette de la barre d'etat, en encre pleine quand il reste
+   quelque chose a enregistrer ; la couleur ne dit rien seule, le mot le dit. */
+.etat-enregistrement { white-space: nowrap; }
+.etat-enregistrement[data-etat="modifie"], .etat-enregistrement[data-etat="echec"] { color: var(--encre); font-weight: 600; }
 /* L'action de l'instant (DESIGN.md, l'encre unique) : un menu ou une confirmation ouverts portent la seule action pleine qu'on voit ; ailleurs,
    les actions primaires se posent en secondaires le temps qu'ils restent ouverts, sans rien changer de ce qu'elles font. En contexte de
    production, l'export du panneau est l'action du moment : « Enregistrer » de la barre (ou de la barre d'etat) se pose en secondaire. */
@@ -380,7 +384,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-etat { flex-wrap: wrap; align-items: center; gap: var(--esp-xs) var(--esp-m); padding: var(--esp-xs) var(--esp-m); }
   .editeur-etat .tiroirs { order: 1; }
   .editeur-etat .espace { order: 2; }
-  .editeur-etat .compte-modifications { order: 3; }
+  .editeur-etat .compte-modifications, .editeur-etat .etat-enregistrement { order: 3; }
   .editeur-etat button.texte { order: 4; }
   .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
   /* Un tiroir ouvert couvre presque toute la toile d'un telephone, sous un voile qui recoit les touchers : le dessin y est
