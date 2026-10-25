@@ -465,3 +465,10 @@ empreintes.
   défaut, pouce retenu ; le sélecteur dit « Machine : … » et commence par la machine ; matériaux à venir sur une ligne.
 - Le fichier d'une forme de la bibliothèque porte son nom français (`bonhomme-de-neige.svg`). Dans un menu à contenu libre,
   Tab circule au lieu de refermer le menu.
+- **Convertir une image : le mode « Ligne médiane (stylo) »** (ADR-0021) change un dessin au trait (écriture, croquis
+  scanné) en tracés ouverts d'une seule ligne au milieu du trait, sans remplissage, pour le stylo d'une Cricut. Calculé
+  dans le moteur pur, sans vtracer, de façon déterministe (seuil d'Otsu, squelette de Guo-Hall, barbules élaguées,
+  croisements traversés, coupures raccordées, cubiques ajustées). L'épaisseur du trait, mesurée sur l'image, se voit à côté
+  du mode ; seuil, taches, barbules, coupures et couleur sont dans les réglages fins. Le lot fonctionne dans ce mode.
+- Tests de sécurité : un dépassement du budget de temps se remesure une fois avant d'échouer (une machine chargée ne fait
+  plus échouer un fichier ordinaire ; une lenteur qui se répète reste un défaut).
