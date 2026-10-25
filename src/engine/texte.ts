@@ -42,6 +42,15 @@ function tailleLigature(glyphes: Glyphes, cars: readonly string[], i: number): n
  * glyphe de ligature, des deux cotes.
  */
 export function composer(texte: string, glyphes: Glyphes, options: OptionsTexte): Lettre[] {
+  return composerEtMesurer(texte, glyphes, options).lettres;
+}
+
+/**
+ * `composer`, et ou s'arrete la plume : l'abscisse apres le dernier caractere de la derniere ligne, interlettrage compris.
+ * Le texte vivant (texte/bloc.ts) s'en sert pour aligner une ligne au centre ou a droite ; les lettres sont exactement
+ * celles de `composer`, qui n'en est que l'enveloppe (ses references d'ecriture ne bougent pas).
+ */
+export function composerEtMesurer(texte: string, glyphes: Glyphes, options: OptionsTexte): { lettres: Lettre[]; fin: number } {
   const taille = options.taille, k = taille / glyphes.unitesParEm;
   const interlettrage = (options.interlettrage ?? 0) * taille, interligne = (options.interligne ?? 1.2) * taille;
   const lier = options.ligatures === true && glyphes.ligature !== undefined && interlettrage === 0;
@@ -63,7 +72,7 @@ export function composer(texte: string, glyphes: Glyphes, options: OptionsTexte)
     precedent = groupe;
     i += n || 1;
   }
-  return lettres;
+  return { lettres, fin: x };
 }
 
 /** Ajoute les lettres au dessin, au premier plan, avec le style donne ; rend les identifiants. */

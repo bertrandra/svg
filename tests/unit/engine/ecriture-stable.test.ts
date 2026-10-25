@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  type PolicesTexte, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { svgCricut } from '../../../src/export/cricut.js';
@@ -26,6 +26,9 @@ import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../sr
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.js';
+import { cheminDuTexte, lettresDuTexte } from '../../../src/engine/texte/bloc.js';
+import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
+import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
 import { svgDecoupe } from '../../../src/export/svgs.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
@@ -114,6 +117,34 @@ const lireTexteSvg = (svg: string): DessinSvg => {
   return r.dessin;
 };
 
+// Le texte vivant (ADR-0021) : une forme par texte, ses contours composes et ses attributs `data-ed-*`. La fonte factice
+// courbe ci-dessus ; une fonte a trait factice, des traces ouverts en zigzag (la course d'une plume).
+const glyphesTraitFactices: Glyphes = {
+  ...glyphesFactices,
+  contour: (c, x, y, t) => {
+    const k = t / 1000;
+    return c.charCodeAt(0) % 2 === 0
+      ? [{ type: 'M', x, y }, { type: 'L', x: x + 250 * k, y: y - 700 * k }, { type: 'L', x: x + 500 * k, y }]
+      : [{ type: 'M', x, y: y - 700 * k }, { type: 'L', x, y }, { type: 'M', x, y: y - 350 * k }, { type: 'Q', x1: x + 500 * k, y1: y - 700 * k, x: x + 450 * k, y }];
+  }
+};
+const POLICE_FACTICE = { id: 'inter', version: '0123456789abcd' };
+const texteFactice = (texte: string, m: Matrice, reglages: Partial<TexteVivant> = {}): TexteVivant => ({ ...nouveauTexte(texte, POLICE_FACTICE, 18, m), ...reglages });
+const vivant = (t: TexteVivant, peinture: Parameters<typeof creerTexte>[3], g: Glyphes = glyphesFactices) => (d: DessinSvg): DessinSvg => creerTexte(d, t, cheminDuTexte(t, g), peinture).dessin;
+const FOND = peintureDuTexte('contour', { remplissage: '#15181d', contour: null, epaisseur: 1 }, 1);
+const TROIS_TEXTES = enchainerTot(
+  vivant(texteFactice('Joyeux Noël\nà tous', [1, 0, 0, 1, 100, 30], { alignement: 'centre', interligne: 1.4 }), FOND),
+  vivant(texteFactice('url(x) javascript: @import <b>&"\'', [1, 0, 0, 1, 8, 92], { interlettrage: 0.02, taille: 9 }), peintureDuTexte('contour', { remplissage: null, contour: '#b3202c', epaisseur: 0.8 }, 1)),
+  vivant(texteFactice('AVfi', [0.866025, 0.5, -0.5, 0.866025, 150, 60], { ligatures: true, alignement: 'droite' }), FOND, glyphesLiees)
+);
+/** Un mot aux lettres serrees (interlettrage negatif) : elles se chevauchent, de quoi souder ; le « c » de la seconde ligne reste seul. */
+const MOT_SERRE = texteFactice('Abba\nc', [1, 0, 0, 1, 20, 60], { interlettrage: -0.25, taille: 30 });
+const vectoriser = (mode: ModeVectorisation, avecLettres: boolean) => (d: DessinSvg): DessinSvg => {
+  const avec = vivant(MOT_SERRE, FOND)(d);
+  const id = au(avec.formes, avec.formes.length - 1).id;
+  return vectoriserTextes(avec, [id], mode, { lisser: true, ...(avecLettres ? { lettres: new Map([[id, lettresDuTexte(MOT_SERRE, glyphesFactices).map(l => l.d)]]) } : {}) }).dessin;
+};
+
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
@@ -148,6 +179,7 @@ const pourPrintThenCut = (fichier: 'impression' | 'coupe') => (t: string): strin
 };
 
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
+function enchainerTot(...ops: Array<(d: DessinSvg) => DessinSvg>): (d: DessinSvg) => DessinSvg { return d => ops.reduce((x, op) => op(x), d); }
 
 interface Cas {
   nom: string;
@@ -300,7 +332,22 @@ const CAS: readonly Cas[] = [
   { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
   { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
   { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
-  { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') }
+  { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') },
+  // Le texte vivant et sa vectorisation (ADR-0021) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus
+  // (toutes les references ci-dessus et les empreintes de la bibliotheque le prouvent) ; un texte vivant s'ecrit en contours
+  // exacts, plus ses `data-ed-*` encodes, et se relit tel quel.
+  { nom: 'texte-vivant', operation: TROIS_TEXTES },
+  {
+    nom: 'texte-vivant-transforme',
+    entree: 'texte-vivant',
+    operation: enchainer(TROIS_TEXTES, d => tourner(d, ['f2'], 25), d => deplacer(d, ['f3'], -4, 6), d => redimensionner(d, ['f4'], { x: 120, y: 10, l: 60, h: 40 }), d => dupliquer(d, ['f2'], 0, 12).dessin)
+  },
+  { nom: 'texte-vivant-lecture' },
+  { nom: 'texte-vivant-trait', entree: 'texte-vivant', operation: vivant(texteFactice('Lune et soleil', [1, 0, 0, 1, 15, 55], { taille: 24 }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.6), glyphesTraitFactices) },
+  { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
+  { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
+  { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },
+  { nom: 'vectoriser-parties', entree: 'texte-vivant', operation: vectoriser('lettres', false) }
 ];
 
 const produire = (cas: Cas): string => {

@@ -20,8 +20,30 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'xmlns', 'viewBox', 'width', 'height', 'd', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
   'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'data-origine',
   // La marque du contexte de production (ADR-0013) : sur la racine seule, des identifiants courts et rien d'autre.
-  'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite'
+  'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite',
+  // Le texte vivant (ADR-0021) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
+  'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
 ]);
+
+const NOMBRE_TEXTE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
+/**
+ * La forme exacte de chaque attribut du texte vivant. Le texte et la famille sont en pourcentage de leurs octets UTF-8,
+ * lettres ASCII et chiffres seuls en clair : ni espace, ni ponctuation, rien que le nettoyage ou un navigateur puisse lire
+ * comme une adresse, un schema ou du CSS. Aucun texte libre n'entre ainsi dans une ecriture.
+ */
+const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
+  'data-ed-texte': /^(?:[A-Za-z0-9]|%[0-9A-F]{2})+$/,
+  'data-ed-famille': /^(?:[A-Za-z0-9]|%[0-9A-F]{2})+$/,
+  'data-ed-police': /^(?:[a-z0-9][a-z0-9-]{0,31}|u-[0-9a-f]{14})$/,
+  'data-ed-police-version': /^[0-9a-f]{14}$/,
+  'data-ed-taille': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-interlettrage': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-interligne': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-alignement': /^(?:centre|droite)$/,
+  'data-ed-ligatures': /^1$/,
+  'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i')
+};
 
 const ESPACES_DE_NOMS_PERMIS = new Set([
   'http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink', 'http://www.inkscape.org/namespaces/inkscape',
@@ -237,7 +259,8 @@ export function violationsEcriture(svg: string): string[] {
     if ((e.nom === 'svg') !== (e.profondeur === 0)) d.push('<svg> hors de la racine');
     for (const [nom, valeur] of e.attributs) {
       if (!ATTRIBUTS_ECRITURE.has(nom)) { d.push('attribut ecrit inattendu ' + nom.slice(0, 40)); continue; }
-      if (nom.startsWith('data-ed-')) { if (e.profondeur !== 0 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
+      const formeTexte = VALEURS_TEXTE[nom];
+      if (formeTexte) { if (e.nom !== 'path' || e.profondeur !== 1 || !formeTexte.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom.startsWith('data-ed-')) { if (e.profondeur !== 0 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
         if (!/^[MLCQZ0-9eE.,\s+-]*$/.test(valeur)) d.push('chemin avec des caracteres inattendus');
       } else if (nom === 'fill' || nom === 'stroke') {
         // Une couleur #rrggbb, none, ou un mot-cle CSS en lettres : jamais d'adresse, de fonction ni de ponctuation.

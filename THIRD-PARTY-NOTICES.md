@@ -24,7 +24,7 @@ la porte en commentaire. Un PNG ne peut pas la porter : citez la source là où 
 
 ## Fontes
 
-9 fontes (8 familles) sont embarquées dans `polices.js`, pour le texte en formes ; 2 familles de plus (Instrument Sans et IBM Plex Mono,
+10 fontes (9 familles, dont 1 à trait unique) sont embarquées dans `polices.js`, pour le texte ; 2 familles de plus (Instrument Sans et IBM Plex Mono,
 sous-ensemble latin) sont incorporées à `editeur-svg.html`, pour l’interface de la page : la page ne les demande à aucun serveur. Toutes sont sous la licence SIL Open Font License 1.1.
 Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.
 
@@ -44,6 +44,8 @@ Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redi
   https://github.com/googlefonts/caveat
 - **Fredoka** (`@expo-google-fonts/fredoka` 0.4.1) : Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)
   https://github.com/hafontia/Fredoka-One
+- **EMS Readability** (`hersheytext` 2.0.0) : Copyright 2010, 2012 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name 'Source' (Source Sans Pro, dont EMS Readability derive). EMS Readability : derive a trait unique par Sheldon B. Michaels, conversion en police SVG par Windell H. Oskay (Evil Mad Scientist Laboratories, www.evilmadscientist.com), sous la licence SIL OFL 1.1 declaree dans le fichier EMSReadability.svg du paquet hersheytext 2.0.0.
+  https://gitlab.com/oskay/svg-fonts
 - **Instrument Sans** (`@fontsource/instrument-sans` 5.3.0) : Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
   https://github.com/Instrument/instrument-sans
 - **IBM Plex Mono** (`@fontsource/ibm-plex-mono` 5.3.0) : Copyright 2017 IBM Corp. All rights reserved.

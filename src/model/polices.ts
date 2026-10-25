@@ -14,12 +14,45 @@
 //   - aucune fonte embarquee n'est italique : une italique demandee se penche de 12 degres (italique synthetique), et c'est dit.
 
 export type IdPolice = 'inter' | 'inter-gras' | 'oswald' | 'bebas' | 'playfair' | 'lobster' | 'pacifico' | 'caveat' | 'fredoka';
+/** Les fontes a trait unique (ADR-0021) : un trace ouvert par trait de plume, pour le stylo d'une machine, jamais un remplissage. */
+export type IdPoliceTrait = 'ems-readability';
+export type IdPoliceLivree = IdPolice | IdPoliceTrait;
 
 /** Le nom lisible de chaque fonte embarquee, celui de scripts/polices.mjs. */
-export const NOMS_POLICES: Readonly<Record<IdPolice, string>> = {
+export const NOMS_POLICES: Readonly<Record<IdPoliceLivree, string>> = {
   inter: 'Inter', 'inter-gras': 'Inter gras', oswald: 'Oswald', bebas: 'Bebas Neue', playfair: 'Playfair Display gras',
-  lobster: 'Lobster', pacifico: 'Pacifico', caveat: 'Caveat gras', fredoka: 'Fredoka'
+  lobster: 'Lobster', pacifico: 'Pacifico', caveat: 'Caveat gras', fredoka: 'Fredoka', 'ems-readability': 'EMS Readability (trait unique)'
 };
+
+/**
+ * La nature d'une police : `contour` dessine des lettres pleines (un fond, ou un double trait au stylo) ; `trait` dessine
+ * des traces ouverts, ce que suit la pointe d'un stylo. Une donnee : le texte vivant et la vectorisation la gardent.
+ */
+export type NaturePolice = 'contour' | 'trait';
+
+/** Toutes les fontes livrees, dans l'ordre du selecteur : les fontes a contour, puis celles a trait unique. */
+export const POLICES_LIVREES: readonly IdPoliceLivree[] = ['inter', 'inter-gras', 'oswald', 'bebas', 'playfair', 'lobster', 'pacifico', 'caveat', 'fredoka', 'ems-readability'];
+const TRAITS: ReadonlySet<string> = new Set<IdPoliceTrait>(['ems-readability']);
+
+export const estPoliceLivree = (id: string): id is IdPoliceLivree => (POLICES_LIVREES as readonly string[]).includes(id);
+/** La nature d'une police par son identifiant ; une fonte deposee (TTF, OTF) est toujours a contour. */
+export const naturePolice = (id: string): NaturePolice => (TRAITS.has(id) ? 'trait' : 'contour');
+
+/** Les variantes grasses des fontes livrees : la case « Gras » n'existe que pour une famille qui en a une. */
+export const VARIANTES_GRASSES: Readonly<Partial<Record<IdPoliceLivree, IdPoliceLivree>>> = { inter: 'inter-gras' };
+/** La fonte de base d'une variante grasse (« inter-gras » : « inter »), ou null. */
+export const baseDeGrasse = (id: string): IdPoliceLivree | null =>
+  (Object.entries(VARIANTES_GRASSES) as Array<[IdPoliceLivree, IdPoliceLivree]>).find(([, g]) => g === id)?.[0] ?? null;
+
+/**
+ * La police a trait unique la plus proche d'une police a contour : celle que propose la correction « Police à trait
+ * unique » du stylo. Une seule fonte a trait est livree aujourd'hui ; la table est la pour en accueillir d'autres
+ * (une scripte pour Pacifico, Lobster, Caveat).
+ */
+export function policeTraitProche(id: string): IdPoliceTrait {
+  void id;
+  return 'ems-readability';
+}
 
 export interface DemandePolice {
   /** Le nom demande : une famille CSS, un /BaseFont de PDF (« ABCDEF+Arial-BoldMT »). */

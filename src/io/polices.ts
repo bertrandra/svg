@@ -8,9 +8,17 @@ import type { Glyphes } from '../engine/texte.js';
 import { annexePosee, fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
 import { lireCrenageGpos } from './crenageGpos.js';
 import { lireLigaturesGsub } from './ligaturesGsub.js';
+import { glyphesTrait, validerTrait } from './policesTrait.js';
+import { empreinteOctets, empreinteTexte } from '../util/empreinte.js';
+import type { NaturePolice } from '../model/polices.js';
 
-export interface PoliceEmbarquee { id: string; nom: string; base64: string }
-export interface Police { id: string; nom: string; glyphes: Glyphes }
+/** Une fonte de polices.js : une fonte TrueType en base64, ou une fonte a trait unique en donnees (policesTrait.ts). */
+export type PoliceEmbarquee = { id: string; nom: string; base64: string } | { id: string; nom: string; nature: 'trait'; unitesParEm: number; avance: number; glyphes: unknown };
+/**
+ * Une fonte lue : ses glyphes, sa nature (a contour, ou a trait unique) et sa version, l'empreinte de ses octets (ADR-0021) :
+ * un texte vivant la garde, pour dire a la relecture que la police a change depuis.
+ */
+export interface Police { id: string; nom: string; glyphes: Glyphes; nature: NaturePolice; version: string }
 
 export const FICHIER_POLICES = 'polices.js';
 
@@ -71,21 +79,45 @@ export function glyphesDe(fonte: Font, octets?: ArrayBuffer): Glyphes {
 
 /** Lit une fonte depuis ses octets ; rend null si elle ne se lit pas. */
 export function lirePolice(id: string, nom: string, octets: ArrayBuffer): Police | null {
-  try { return { id, nom, glyphes: glyphesDe(parse(octets), octets) }; } catch { return null; }
+  try { return { id, nom, glyphes: glyphesDe(parse(octets), octets), nature: 'contour', version: empreinteOctets(new Uint8Array(octets)) }; } catch { return null; }
+}
+
+/** Une fonte de polices.js, lue ; null si elle ne se lit pas. */
+function lireEmbarquee(p: PoliceEmbarquee): Police | null {
+  if ('base64' in p) return lirePolice(p.id, p.nom, decoderBase64(p.base64));
+  const donnees = validerTrait(p);
+  return donnees ? { id: p.id, nom: p.nom, glyphes: glyphesTrait(donnees), nature: 'trait', version: empreinteTexte(JSON.stringify(donnees.glyphes)) } : null;
 }
 
 /** Les fontes embarquees, chargees une fois, a la demande. */
 export const chargerPolices: () => Promise<Police[]> = memoiserSucces(async () =>
-  (await embarquees.charger()).map(p => lirePolice(p.id, p.nom, decoderBase64(p.base64))).filter((p): p is Police => p !== null)).charger;
+  (await embarquees.charger()).map(lireEmbarquee).filter((p): p is Police => p !== null)).charger;
 
 /** Les fontes embarquees par identifiant : de quoi remplacer la police d'un texte lu (model/polices.ts). */
 export async function fontesDeRemplacement(): Promise<ReadonlyMap<string, Glyphes>> {
-  return new Map((await chargerPolices()).map(p => [p.id, p.glyphes]));
+  // Un texte lu d'un SVG ou d'un PDF se dessine en lettres pleines : une fonte a trait n'y remplace jamais rien.
+  return new Map((await chargerPolices()).filter(p => p.nature === 'contour').map(p => [p.id, p.glyphes]));
 }
 
 /** Une fonte deposee par la personne (TTF ou OTF). */
 export async function policeDeposee(fichier: File): Promise<Police | { erreur: string }> {
-  const nom = fichier.name.replace(/\.(ttf|otf)$/i, '');
-  const p = lirePolice('deposee-' + nom, nom, await fichier.arrayBuffer());
+  const nom = fichier.name.replace(/\.(ttf|otf)$/i, '').slice(0, 60);
+  const octets = await fichier.arrayBuffer();
+  // L'identifiant d'une fonte deposee est son empreinte (`u-…`) : un texte vivant le garde, jamais le fichier (ADR-0021).
+  const p = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), nom, octets);
   return p ?? { erreur: 'Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.' };
+}
+
+// Les fontes deposees pendant la session : une fois lue, une fonte sert a tous les panneaux (creer un texte, le retaper,
+// l'apercu) tant que la page est ouverte. Rien ne se garde au-dela : le fichier n'est jamais ecrit (ADR-0021).
+const deposees: Police[] = [];
+
+/** Retient une fonte deposee pour la session ; une fonte deja retenue (meme empreinte) ne se double pas. */
+export function retenirDeposee(p: Police): void {
+  if (!deposees.some(d => d.id === p.id)) deposees.push(p);
+}
+
+/** Les fontes embarquees, puis celles deposees pendant la session. */
+export async function toutesLesPolices(): Promise<Police[]> {
+  return [...(await chargerPolices()), ...deposees];
 }

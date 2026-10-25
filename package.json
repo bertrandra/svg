@@ -52,6 +52,7 @@
     "axe-core": "4.14.0",
     "esbuild": "0.24.2",
     "eslint": "^9.17.0",
+    "hersheytext": "2.0.0",
     "playwright": "1.56.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

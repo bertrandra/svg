@@ -996,6 +996,18 @@
       "famille": "xml",
       "vecteur": "Un DOCTYPE dont une valeur d'entite contient un faux <svg onload> : la racine est le vrai <svg> qui suit",
       "attendu": "ouvre"
+    },
+    {
+      "fichier": "texte-vivant-attributs-pieges.svg",
+      "famille": "encodage",
+      "vecteur": "Attributs du texte vivant (data-ed-texte, -police, -famille, -matrice) pieges : schema actif en clair, chemin de fichier, url() dans la famille, nombres demesures, texte encode qui decode en balises et caracteres de controle",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "css-echappement-nul-reassemble.svg",
+      "famille": "css",
+      "vecteur": "Un NUL glisse dans un echappement CSS (« @\\69m<NUL>port ») : retirer le caractere interdit apres le nettoyage reassemblait @import dans une valeur d'attribut (trouve par le fuzzer)",
+      "attendu": "ouvre"
     }
   ]
 }
