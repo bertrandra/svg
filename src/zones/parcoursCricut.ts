@@ -6,7 +6,7 @@
 // papier, et rien ne disait quoi faire du fichier une fois telecharge. Un maker debutant restait seul au pire moment.
 
 import { texteTaille, type Constat, type ProfilProduction } from '../engine/preparation.js';
-import { CRICUT, type ChoixProduction, type UniteLongueur } from '../model/contextes.js';
+import { CRICUT, type ChoixProduction, type Procede, type UniteLongueur } from '../model/contextes.js';
 import { pluriel } from '../util/texte.js';
 
 /** Ce que le bouton d'export montre et fait : sa raison d'etre inactif, les points qui demandent une confirmation, son libelle. */
@@ -25,12 +25,16 @@ export const pointsACorriger = (n: number): string => pluriel(n, 'point') + ' à
  * L'etat du bouton d'export pour des constats (null : l'analyse n'est pas finie). Un bloquant refuse, un « à corriger » demande
  * une confirmation, un conseil ne change rien : il dit un risque, pas un defaut.
  */
-export function etatExport(constats: readonly Constat[] | null): EtatExport {
-  if (!constats) return { raison: 'L’analyse du dessin n’est pas finie', aCorriger: [], libelle: 'Exporter pour Cricut' };
+/** Le libelle de l'export selon le procede : le stylo a le sien (ADR-0022), la decoupe et Print Then Cut gardent « Exporter pour Cricut ». */
+export const libelleExport = (procede: Procede | null = null): string => (procede === 'dessin-stylo' ? 'Exporter pour le stylo' : 'Exporter pour Cricut');
+
+export function etatExport(constats: readonly Constat[] | null, procede: Procede | null = null): EtatExport {
+  const base = libelleExport(procede);
+  if (!constats) return { raison: 'L’analyse du dessin n’est pas finie', aCorriger: [], libelle: base };
   const bloquants = constats.filter(c => c.gravite === 'bloquant').length;
   const aCorriger = constats.filter(c => c.gravite === 'a-corriger');
-  if (bloquants) return { raison: 'Corrigez d’abord ' + (bloquants > 1 ? 'les ' + bloquants + ' constats bloquants' : 'le constat bloquant'), aCorriger, libelle: 'Exporter pour Cricut' };
-  return { raison: null, aCorriger, libelle: aCorriger.length ? 'Exporter quand même (' + pointsACorriger(aCorriger.length) + ')' : 'Exporter pour Cricut' };
+  if (bloquants) return { raison: 'Corrigez d’abord ' + (bloquants > 1 ? 'les ' + bloquants + ' constats bloquants' : 'le constat bloquant'), aCorriger, libelle: base };
+  return { raison: null, aCorriger, libelle: aCorriger.length ? 'Exporter quand même (' + pointsACorriger(aCorriger.length) + ')' : base };
 }
 
 /** Vrai quand l'export doit d'abord demander : il est permis, et un point reste a corriger. `quandMeme` est la reponse. */
@@ -66,6 +70,16 @@ export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { re
       { texte: 'Imprimez, posez la feuille sur le tapis comme l’aperçu le montre, puis lancez la coupe.' }
     ];
   }
+  if (p.procede === 'dessin-stylo') {
+    // Le stylo (ADR-0022) : ce que Design Space fait d'un trace ouvert n'a pas ete essaye (temoin 7) ; c'est dit.
+    return [
+      { texte: 'Dans Design Space, « Nouveau projet », puis « Importer ».' },
+      { texte: 'Choisissez le fichier ' + nom + '-stylo.svg, importez-le, puis ajoutez-le au projet.' },
+      { texte: (dimension ? 'Vérifiez sa taille : ' + dimension + '.' : 'Vérifiez sa taille.') + ' Ne la changez pas.', aVerifier: true },
+      { texte: 'Pour chaque couche, choisissez « Dessiner » et la couleur du stylo : une couleur, un stylo.', aVerifier: true },
+      { texte: 'Vérifiez que les lignes restent ouvertes et sans remplissage, puis insérez le stylo quand la machine le demande.', aVerifier: true }
+    ];
+  }
   return [
     { texte: 'Dans Design Space, « Nouveau projet », puis « Importer ».' },
     { texte: 'Choisissez le fichier ' + nom + '-cricut.svg, importez-le, puis ajoutez-le au projet.' },
@@ -87,7 +101,7 @@ const tapisCourt = (id: string): string => {
 export function libelleSelecteur(c: ChoixProduction): string {
   if (c.contexte !== 'cricut') return 'Machine : Générique';
   const machine = CRICUT.machines.find(m => m.id === c.machine)?.nom.split(' ')[0] ?? c.machine;
-  return 'Cricut ' + machine + ' · ' + tapisCourt(c.tapis) + (c.procede === 'imprimer-decouper' ? ' · Print Then Cut' : '');
+  return 'Cricut ' + machine + ' · ' + tapisCourt(c.tapis) + (c.procede === 'imprimer-decouper' ? ' · Print Then Cut' : c.procede === 'dessin-stylo' ? ' · Stylo' : '');
 }
 
 /** La cle de l'unite retenue dans le stockage injecte : un confort, comme le brouillon. */

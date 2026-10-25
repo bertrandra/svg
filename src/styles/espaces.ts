@@ -32,6 +32,7 @@ export const RAYONS: readonly Mesure[] = [
 ];
 
 export const COUCHES: readonly Mesure[] = [
+  { id: 'couche-saisie', valeur: '5', description: 'La saisie en place d’un texte vivant, sur la toile : au-dessus du dessin, sous les tiroirs' },
   { id: 'couche-voile', valeur: '14', description: 'Le voile sous un tiroir ouvert' },
   { id: 'couche-tiroir', valeur: '15', description: 'Les panneaux en tiroir sur tablette et téléphone' },
   { id: 'couche-saut', valeur: '40', description: 'Le lien d’évitement vers la toile' },

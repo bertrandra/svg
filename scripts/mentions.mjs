@@ -16,7 +16,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ecrireDansDist, depuisRacine, empaqueter, estLance } from './aide.mjs';
 import { FONTES_INTERFACE } from './fontes-interface.mjs';
-import { POLICES } from './polices.mjs';
+import { POLICES, POLICES_TRAIT } from './polices.mjs';
 
 /** Un fichier en texte, en LF (le depot peut etre extrait en CRLF sous Windows) et sans blancs en fin de ligne. */
 const lire = chemin => readFileSync(chemin, 'utf8').replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trimEnd();
@@ -113,7 +113,7 @@ function verifierLockEtListe(credits, verrou, embarques) {
     if (c.installe === false) continue;
     const e = verrou.packages['node_modules/' + c.paquet];
     if (!e) { erreurs.push(c.paquet + ' : absent de package-lock.json'); continue; }
-    if (!String(e.license ?? '').includes(c.spdx)) erreurs.push(c.paquet + ' : package-lock.json dit « ' + (e.license ?? 'rien') + ' », credits.ts « ' + c.spdx + ' »');
+    if (!String(e.license ?? '').includes(c.spdxPaquet ?? c.spdx)) erreurs.push(c.paquet + ' : package-lock.json dit « ' + (e.license ?? 'rien') + ' », credits.ts « ' + (c.spdxPaquet ?? c.spdx) + ' »');
     if (!existsSync(paquetDe(c.paquet))) erreurs.push(c.paquet + ' : absent de node_modules (npm ci)');
   }
   // Les bundles embarquent tout paquet qu'ils importent : la liste (hors recopies, `dans`) doit etre exactement celle-la.
@@ -125,11 +125,17 @@ function verifierLockEtListe(credits, verrou, embarques) {
     try { constaterIntegre(c, embarques); } catch (e) { erreurs.push(e.message); }
   }
   const fontes = new Set(credits.COMPOSANTS.filter(c => c.genre === 'fonte').map(c => c.paquet));
-  const embarqueesFontes = new Set([...POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]), ...FONTES_INTERFACE.map(f => f.paquet)]);
+  const embarqueesFontes = new Set([...POLICES.map(p => '@expo-google-fonts/' + p[2].split('/')[0]), ...POLICES_TRAIT.map(p => p[2]), ...FONTES_INTERFACE.map(f => f.paquet)]);
   for (const p of embarqueesFontes) if (!fontes.has(p)) erreurs.push(p + ' : fonte embarquee (scripts/polices.mjs ou scripts/fontes-interface.mjs) absente de src/model/credits.ts');
   for (const p of fontes) if (!embarqueesFontes.has(p)) erreurs.push(p + ' : dans src/model/credits.ts mais embarquee nulle part');
   if (erreurs.length) throw new Error('mentions : la liste des composants ne tient pas\n  - ' + erreurs.join('\n  - '));
 }
+
+/**
+ * Les fontes dont le paquet ne livre pas le texte de licence (hersheytext : une ligne « License: SIL Open Font License » dans
+ * chaque police SVG) : le depot en garde une copie, avec la ligne de copyright, dans scripts/licences/.
+ */
+const LICENCES_FONTES_COPIEES = { hersheytext: 'scripts/licences/ems-readability-OFL.txt' };
 
 /** Le fichier de licence d'une fonte : LICENSE_FONT chez @expo-google-fonts (LICENSE y est celui du paquet MIT), LICENSE chez @fontsource. */
 const fichierLicenceFonte = paquet => ['LICENSE_FONT', 'LICENSE'].find(f => existsSync(join(paquetDe(paquet), f))) ?? 'LICENSE_FONT';
@@ -138,14 +144,15 @@ const fichierLicenceFonte = paquet => ['LICENSE_FONT', 'LICENSE'].find(f => exis
 function sectionFontes(credits, verrou) {
   const fontes = credits.composantsDe('fonte');
   const lignes = ['## Fontes', '',
-    POLICES.length + ' fontes (' + (fontes.length - FONTES_INTERFACE.length) + ' familles) sont embarquées dans `polices.js`, pour le texte en formes ; ' + FONTES_INTERFACE.length + ' familles de plus (Instrument Sans et IBM Plex Mono,',
+    (POLICES.length + POLICES_TRAIT.length) + ' fontes (' + (fontes.length - FONTES_INTERFACE.length) + ' familles, dont ' + POLICES_TRAIT.length + ' à trait unique) sont embarquées dans `polices.js`, pour le texte ; ' + FONTES_INTERFACE.length + ' familles de plus (Instrument Sans et IBM Plex Mono,',
     'sous-ensemble latin) sont incorporées à `editeur-svg.html`, pour l’interface de la page : la page ne les demande à aucun serveur. Toutes sont sous la licence SIL Open Font License 1.1.',
     'Le copyright de chacune ci-dessous accompagne la fonte partout où elle est redistribuée ; le texte de la licence suit, une fois par variante.', ''];
   const corps = new Map();
   for (const c of fontes) {
     const e = verrou.packages['node_modules/' + c.paquet];
-    const nomFichier = fichierLicenceFonte(c.paquet);
-    const { texte } = licenceDe(c.paquet, nomFichier);
+    const copie = LICENCES_FONTES_COPIEES[c.paquet];
+    const nomFichier = copie ?? fichierLicenceFonte(c.paquet);
+    const { texte } = copie ? { texte: lire(depuisRacine(copie)) } : licenceDe(c.paquet, nomFichier);
     if (!texte) throw new Error('mentions : ' + c.paquet + ' n’a pas de ' + nomFichier);
     // Certains paquets (IBM Plex) listent, sur la meme ligne, le copyright de chaque fichier de fonte : on garde le premier.
     const copyright = (texte.split('\n').find(l => l.trim() !== '') ?? '').replace(/ \S+\.ttf:.*$/, '');

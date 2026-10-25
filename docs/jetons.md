@@ -48,6 +48,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--damier-b` | `#e6e6e6` | `#e6e6e6` | Le damier de transparence : les cases grises |
 | `--toile-blanc` | `#ffffff` | `#ffffff` | Le plan de travail en fond blanc |
 | `--toile-sombre` | `#1b1d20` | `#1b1d20` | Le plan de travail en fond sombre |
+| `--encre-toile` | `#15181d` | `#15181d` | L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe) |
 
 ### Les ombres et voiles, translucides
 
@@ -93,6 +94,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
+| `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
 
 ### La typographie : cinq tailles nommées par leur rôle
 
@@ -131,6 +133,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 
 | Jeton | Valeur | Rôle |
 |---|---|---|
+| `--couche-saisie` | `5` | La saisie en place d’un texte vivant, sur la toile : au-dessus du dessin, sous les tiroirs |
 | `--couche-voile` | `14` | Le voile sous un tiroir ouvert |
 | `--couche-tiroir` | `15` | Les panneaux en tiroir sur tablette et téléphone |
 | `--couche-saut` | `40` | Le lien d’évitement vers la toile |

@@ -511,10 +511,10 @@ describe('embarquement : exemples/integration.html', () => {
     await page.locator('.editeur-inspecteur .vignette').first().click();
     await attend(() => formesVisibles(page)).toBeGreaterThan(avant);
 
-    await page.locator('.editeur-barre button[title^="Texte en formes"]').click();
+    await page.locator('.editeur-barre button[title^="Texte (T)"]').click();
     await attend(() => page.evaluate(() => ((window as unknown as { __policesSvg?: unknown[] }).__policesSvg ?? []).length)).toBeGreaterThan(0);
     expect((await annexes()).map(u => u.slice(u.lastIndexOf('/dist/'))).sort()).toEqual(['/dist/bibliotheque.js', '/dist/polices.js']);
-    await attend(() => page.locator('.editeur-inspecteur legend', { hasText: 'Texte en formes' }).isVisible()).toBe(true);
+    await attend(() => page.locator('.editeur-inspecteur legend', { hasText: 'Texte' }).isVisible()).toBe(true);
   });
 
   // ----- Le theme : l'hote decide par data-theme, sinon le systeme -----

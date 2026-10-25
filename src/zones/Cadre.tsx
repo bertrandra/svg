@@ -13,6 +13,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Inspecteur } from './Inspecteur.js';
 import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
+import { FournisseurTexte } from './contexteTexte.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BulleVisite, LienVisite } from './BulleVisite.js';
@@ -151,6 +152,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
   useFocusTiroir(racine, tiroir);
   return (
     <FournisseurMenusOuverts value={signaler}>
+      <FournisseurTexte>
       <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
         <LienToile svgRef={svgRef} idToile={idToile} />
@@ -166,6 +168,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
         <BarreEtat />
         <BulleVisite />
       </div>
+      </FournisseurTexte>
     </FournisseurMenusOuverts>
   );
 });

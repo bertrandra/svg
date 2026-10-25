@@ -14,6 +14,12 @@ import { svgCricut } from '../../../src/export/cricut.js';
 import { printThenCut } from '../../../src/export/printThenCut.js';
 import { svgExporte } from '../../../src/export/svgs.js';
 import { CHOIX_CRICUT_DEFAUT } from '../../../src/model/contextes.js';
+import { svgPourStylo } from '../../../src/export/stylo.js';
+import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
+import { cheminDuTexte } from '../../../src/engine/texte/bloc.js';
+import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
+import { glyphesTrait, type DonneesTrait } from '../../../src/io/policesTrait.js';
+import { pathToFileURL } from 'node:url';
 
 const DOSSIER = resolve(__dirname, '../../../docs/cricut/temoins');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
@@ -24,13 +30,20 @@ const lire = (corps: string, l: number, h: number): DessinSvg => {
   if ('erreur' in r) throw new Error(r.erreur);
   return r.dessin;
 };
-const profilDe = (procede: 'decoupe' | 'imprimer-decouper'): ProfilProduction => {
+const profilDe = (procede: 'decoupe' | 'imprimer-decouper' | 'dessin-stylo'): ProfilProduction => {
   // Les temoins sont en pouces, l'unite de Design Space et du protocole : le millimetre par defaut de l'interface ne les touche pas.
   const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', procede });
   if (!p) throw new Error('profil');
   return p;
 };
-const MAKER = profilDe('decoupe'), PTC = profilDe('imprimer-decouper');
+const MAKER = profilDe('decoupe'), PTC = profilDe('imprimer-decouper'), STYLO = profilDe('dessin-stylo');
+const pourStylo = (d: DessinSvg): string => { const r = svgPourStylo(d, STYLO); if ('erreur' in r) throw new Error(r.erreur); return r.svg; };
+
+// La vraie police a trait unique (ADR-0022), lue comme scripts/polices.mjs la lit : le temoin 7 ecrit ce que l'editeur ecrirait.
+interface ScriptPolices { lirePoliceSvg: (t: string) => unknown; POLICES_TRAIT: Array<[string, string, string, string]> }
+const { lirePoliceSvg, POLICES_TRAIT } = (await import(pathToFileURL(resolve(__dirname, '../../../scripts/polices.mjs')).href)) as ScriptPolices;
+const [, , paquetTrait = '', fichierTrait = ''] = POLICES_TRAIT[0] ?? [];
+const glyphesTraitUnique = glyphesTrait(lirePoliceSvg(readFileSync(resolve(__dirname, '../../../node_modules', paquetTrait, fichierTrait), 'utf8')) as DonneesTrait);
 const rect = (x: number, y: number, l: number, h: number, couleur: string) => '<rect x="' + x * P + '" y="' + y * P + '" width="' + l * P + '" height="' + h * P + '" fill="' + couleur + '"/>';
 const pourCricut = (d: DessinSvg): string => { const r = svgCricut(d, MAKER); if ('erreur' in r) throw new Error(r.erreur); return r.svg; };
 /** L'ecriture d'un dessin que l'export Cricut refuserait (c'est l'objet de l'essai) : taille physique et marque quand meme. */
@@ -81,7 +94,30 @@ const TEMOINS: ReadonlyArray<{ nom: string; fabriquer: () => string }> = [
       if ('erreur' in r) throw new Error(r.erreur);
       return r[fichier];
     }
-  }))
+  })),
+  // 7. Le trait unique : un mot dans la police a trait (1 po de corps), une ligne droite de 4 po, un zigzag, et un carre de 1 po
+  //    en trait seul, exportes pour le stylo. Design Space les passe-t-il en « Dessiner » ? Les lignes restent-elles ouvertes ?
+  {
+    nom: 'temoin-7-trait-unique.svg',
+    fabriquer: () => {
+      const d = lire('<path d="M' + 0.5 * P + ' ' + 2 * P + 'H' + 4.5 * P + '" fill="none" stroke="#1f4e8c" stroke-width="1.5"/>'
+        + '<path d="M' + 0.5 * P + ' ' + 2.75 * P + 'l' + P / 4 + ' ' + -P / 4 + 'l' + P / 4 + ' ' + P / 4 + 'l' + P / 4 + ' ' + -P / 4 + 'l' + P / 4 + ' ' + P / 4 + '" fill="none" stroke="#1f4e8c" stroke-width="1.5"/>'
+        + '<rect x="' + 5 * P + '" y="' + 0.5 * P + '" width="' + P + '" height="' + P + '" fill="none" stroke="#15181d" stroke-width="1.5"/>', 6.5, 3.25);
+      const t = nouveauTexte('Merci', { id: 'ems-readability' }, P, [1, 0, 0, 1, 0.5 * P, 1.25 * P]);
+      return pourStylo(creerTexte(d, t, cheminDuTexte(t, glyphesTraitUnique), peintureDuTexte('trait', { remplissage: '#15181d', contour: null, epaisseur: 1 }, STYLO.largeurStylo)).dessin);
+    }
+  },
+  // 8. Les hachures : deux carres de 1 po hachures a la largeur du stylo (a 45 et a 0 degre) et un anneau de 2 po (trou de
+  //    1 po) a 45 degres. Le trait remplit-il bord a bord ? Combien de temps dure le trace ? La largeur du stylo est-elle juste ?
+  {
+    nom: 'temoin-8-hachures.svg',
+    fabriquer: () => {
+      const d = lire(rect(0.5, 0.5, 1, 1, '#c81e28') + rect(2, 0.5, 1, 1, '#1f4e8c')
+        + '<path d="' + ANNEAU(4.25, true) + '" fill="#15181d"/>', 5.5, 3);
+      const a = hachurerFormes(d, ['f1', 'f3'], STYLO.largeurStylo, 45).dessin;
+      return pourStylo(hachurerFormes(a, ['f2'], STYLO.largeurStylo, 0).dessin);
+    }
+  }
 ];
 
 describe('les temoins du protocole Cricut', () => {
@@ -113,5 +149,9 @@ describe('les temoins du protocole Cricut', () => {
     expect(constats('temoin-4-trait.svg')).toEqual(['trait', 'detail-fin']);
     expect(constats('temoin-5-depasse-le-tapis.svg')).toEqual(['piece-trop-grande']);
     expect(constats('temoin-6-print-then-cut-impression.svg', PTC)).toEqual([]);
+    // Au stylo, des traits seuls : rien a dire ; a la lame, le trait unique ne se decoupe pas.
+    expect(constats('temoin-7-trait-unique.svg', STYLO)).toEqual([]);
+    expect(constats('temoin-7-trait-unique.svg')).toContain('decoupe-trait-ouvert');
+    expect(constats('temoin-8-hachures.svg', STYLO)).toEqual([]);
   });
 });

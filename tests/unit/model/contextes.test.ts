@@ -38,8 +38,9 @@ describe('les profils de production', () => {
       expect(m.procedes).toContain('decoupe');
       for (const p of m.procedes) expect(Object.keys(NOMS_PROCEDE)).toContain(p);
     }
-    // La Joy ne fait pas Print Then Cut ; l'Explore et la Maker, si.
-    expect(CRICUT.machines.find(m => m.id === 'joy')?.procedes).toEqual(['decoupe']);
+    // La Joy ne fait pas Print Then Cut ; l'Explore et la Maker, si. Toutes dessinent au stylo (ADR-0022).
+    expect(CRICUT.machines.find(m => m.id === 'joy')?.procedes).toEqual(['decoupe', 'dessin-stylo']);
+    expect(CRICUT.machines.every(m => m.procedes.includes('dessin-stylo'))).toBe(true);
     expect(CRICUT.machines.filter(m => m.procedes.includes('imprimer-decouper')).map(m => m.id)).toEqual(['explore', 'maker']);
   });
 

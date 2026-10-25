@@ -11,18 +11,21 @@ import { couchesDe, etendueVisible, formesPeintes, tientDans } from './mesures.j
 import { silhouetteDe } from './silhouette.js';
 import { texteMesure, texteTaille, unitesDePouces, type ProfilProduction } from './profil.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
+import { constatTraitsOuverts, constatsStylo, textesQuiSeChevauchent, traitOuvert, type ConstatTexte } from './stylo.js';
 
 export type Gravite = 'bloquant' | 'a-corriger' | 'conseil';
 export const GRAVITES: readonly Gravite[] = ['bloquant', 'a-corriger', 'conseil'];
 
 export type CodeConstat =
   | 'vide' | 'trait' | 'opacite' | 'piece-trop-grande' | 'ptc-trop-grand'
-  | 'depassement' | 'trace-ouvert' | 'nuances-proches' | 'detail-fin'
-  | 'trop-de-noeuds' | 'trou-superpose' | 'pair-impair' | 'analyse-limitee';
+  | 'depassement' | 'trace-ouvert' | 'lettres-chevauchent' | 'nuances-proches' | 'detail-fin'
+  | 'trop-de-noeuds' | 'trou-superpose' | 'pair-impair' | 'analyse-limitee'
+  | 'decoupe-trait-ouvert' | 'stylo-plein' | 'stylo-double-trait';
 
 export type CodeCorrection =
   | 'contour-en-forme' | 'rendre-opaque' | 'ajuster-zone' | 'fermer' | 'fusionner-nuances'
-  | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens';
+  | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder'
+  | 'garder-contour' | 'hachurer' | 'police-trait' | 'procede-stylo';
 
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'contour-en-forme': 'Contour en forme',
@@ -33,7 +36,12 @@ export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   epaissir: 'Épaissir',
   nettoyer: 'Nettoyer le tracé',
   percer: 'Percer la forme du dessous',
-  'trous-selon-sens': 'Réécrire les trous'
+  'trous-selon-sens': 'Réécrire les trous',
+  souder: 'Souder',
+  'garder-contour': 'Garder le contour',
+  hachurer: 'Hachurer',
+  'police-trait': 'Police à trait unique',
+  'procede-stylo': 'Passer au dessin au stylo'
 };
 
 export interface Constat {
@@ -44,6 +52,8 @@ export interface Constat {
   /** Les formes en cause, dans l'ordre du dessin. */
   readonly formes: readonly string[];
   readonly correction: CodeCorrection | null;
+  /** D'autres corrections possibles, apres celle qu'on conseille (le stylo en propose trois pour une forme pleine). */
+  readonly autres?: readonly CodeCorrection[];
   /** Le comportement de Design Space sur lequel repose le constat n'est pas encore verifie sur la machine. */
   readonly aVerifier?: true;
   /** Un tapis de la meme machine sur lequel le dessin tiendrait. */
@@ -55,7 +65,7 @@ export interface Constat {
 /** Au-dela, les parties fines ne se mesurent que sur les premieres formes : le panneau juge en continu. */
 export const FORMES_MAX_FINESSE = 300;
 
-const ORDRE: readonly CodeConstat[] = ['vide', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'trace-ouvert', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee'];
+const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
 const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
@@ -67,7 +77,8 @@ export const aUnTrait = (f: Forme): boolean => f.contour !== null && f.epaisseur
 export const estTransparente = (f: Forme): boolean => f.opacite < 1 || (f.remplissage !== null && (f.opaciteRemplissage ?? 1) < 1);
 
 function constatTrait(peintes: readonly Forme[]): Constat | null {
-  const t = peintes.filter(aUnTrait);
+  // Un trait ouvert sans fond a son propre constat (decoupe-trait-ouvert, ADR-0022), qui propose aussi le stylo.
+  const t = peintes.filter(f => aUnTrait(f) && !traitOuvert(f));
   if (!t.length) return null;
   return {
     code: 'trait', gravite: 'bloquant', formes: ids(t), correction: 'contour-en-forme',
@@ -118,6 +129,13 @@ function constatOuverts(peintes: readonly Forme[]): Constat | null {
     code: 'trace-ouvert', gravite: 'a-corriger', formes: ids(o), correction: 'fermer', aVerifier: true,
     message: (o.length > 1 ? o.length + ' formes ont un tracé ouvert' : 'Une forme a un tracé ouvert') + ' : fermez-' + accord(o.length, 'le', 'les') + ' pour que la lame revienne à son point de départ.'
   };
+}
+
+/** Un texte vivant dont des lettres se chevauchent (ADR-0022) : la lame couperait chacune a travers sa voisine. */
+function constatLettres(dessin: DessinSvg): Constat | null {
+  const t = textesQuiSeChevauchent(dessin);
+  if (!t.length) return null;
+  return { code: 'lettres-chevauchent', gravite: 'a-corriger', formes: ids(t), correction: 'souder', message: 'Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.' };
 }
 
 function constatNuances(dessin: DessinSvg, p: ProfilProduction): Constat | null {
@@ -200,14 +218,29 @@ function constatPrintThenCut(dessin: DessinSvg, p: ProfilProduction): Constat[] 
   }];
 }
 
+/** Un constat du texte et du stylo (stylo.ts) dans la forme du panneau : la premiere correction, les autres ensuite. */
+function versConstat(c: ConstatTexte): Constat {
+  const [premiere, ...autres] = c.corrections;
+  return { code: c.code, gravite: c.gravite, message: c.message, formes: c.formes, correction: premiere ?? null, ...(autres.length ? { autres } : {}), ...(c.aVerifier ? { aVerifier: c.aVerifier } : {}) };
+}
+
+/** Le trait ouvert en decoupe (bloquant) : le seul constat du texte qui empeche l'export. */
+const constatTraitOuvert = (dessin: DessinSvg): Constat | null => {
+  const c = constatTraitsOuverts(dessin);
+  return c ? versConstat(c) : null;
+};
+
 /** Les constats du dessin pour ce profil, du plus grave au plus leger, dans un ordre fixe. */
 export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Constat[] {
   const peintes = formesPeintes(dessin);
   if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
   const r: Array<Constat | null> = p.procede === 'imprimer-decouper'
     ? [...constatPrintThenCut(dessin, p), constatNoeuds(peintes, p)]
-    : [
-      constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p), constatOuverts(peintes), constatNuances(dessin, p),
+    : p.procede === 'dessin-stylo'
+      // Le stylo (ADR-0022) : la taille compte comme pour la lame ; un trait n'est plus un defaut, un fond si.
+      ? [...constatsTaille(peintes, dessin, p), ...constatsStylo(dessin).map(versConstat), constatNoeuds(peintes, p)]
+      : [
+      constatTraitOuvert(dessin), constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p), constatOuverts(peintes), constatLettres(dessin), constatNuances(dessin, p),
       ...constatsFinesse(peintes, dessin, p), constatNoeuds(peintes, p), constatTrous(dessin), constatPairImpair(peintes)
     ];
   return r.filter((c): c is Constat => c !== null).sort((a, b) => GRAVITES.indexOf(a.gravite) - GRAVITES.indexOf(b.gravite) || ORDRE.indexOf(a.code) - ORDRE.indexOf(b.code));
@@ -218,7 +251,8 @@ export function constatsBloquants(dessin: DessinSvg, p: ProfilProduction): Const
   const peintes = formesPeintes(dessin);
   if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
   if (p.procede === 'imprimer-decouper') return constatPrintThenCut(dessin, p);
-  return [constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p)].filter((c): c is Constat => c !== null && c.gravite === 'bloquant');
+  if (p.procede === 'dessin-stylo') return constatsTaille(peintes, dessin, p).filter(c => c.gravite === 'bloquant');
+  return [constatTraitOuvert(dessin), constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p)].filter((c): c is Constat => c !== null && c.gravite === 'bloquant');
 }
 
 /** Ce que le panneau affiche en permanence : les couches et la taille finale. */

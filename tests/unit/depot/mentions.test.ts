@@ -17,6 +17,7 @@ const COMMANDE = 'ACTUALISER_REFERENCES=1 npx vitest run tests/unit/depot/mentio
 interface Script { composerMentions: () => Promise<string>; paquetsEmbarques: () => Promise<{ paquets: string[]; fichiers: string[] }> }
 const charger = async () => (await import(pathToFileURL(join(racine, 'scripts/mentions.mjs')).href)) as Script;
 const lireLf = (chemin: string) => readFileSync(chemin, 'utf8').replace(/\r\n/g, '\n');
+const { POLICES_TRAIT } = (await import(pathToFileURL(join(racine, 'scripts/polices.mjs')).href)) as { POLICES_TRAIT: Array<[string, string, string, string]> };
 
 describe('les mentions des composants tiers', () => {
   it('THIRD-PARTY-NOTICES.md est celui que scripts/mentions.mjs ecrit aujourd hui', async () => {
@@ -52,6 +53,8 @@ describe('les mentions des composants tiers', () => {
       const dossier = join(racine, 'node_modules', c.paquet);
       const textes = readdirSync(dossier).filter(f => /^(licen[cs]e|readme)/i.test(f)).map(f => lireLf(join(dossier, f)));
       textes.push(readFileSync(join(dossier, 'package.json'), 'utf8'));
+      // Une police SVG a trait unique (ADR-0022) porte son auteur dans son propre <metadata> : le paquet ne le dit nulle part ailleurs.
+      for (const [, , paquet, fichier] of POLICES_TRAIT) if (paquet === c.paquet) textes.push(lireLf(join(dossier, fichier)));
       const trouve = textes.some(t => sansEspaces(t).includes(sansEspaces(c.titulaire)));
       expect(trouve, c.paquet + ' : « ' + c.titulaire + ' » ne figure ni dans sa licence ni dans ses metadonnees').toBe(true);
     }

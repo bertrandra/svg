@@ -173,7 +173,7 @@ rattrapée par l’éditeur.
 |---|---|---|---|
 | `editeur-svg-embarque.js` | 717 Ko (227 Ko compressé) | toujours | L’éditeur, ses styles, React |
 | `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
-| `polices.js` | 2,6 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Neuf fontes libres (OFL), chargées quand la personne ouvre l’outil Texte, ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
+| `polices.js` | 2,7 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Dix fontes libres (OFL, dont une à trait unique), chargées quand la personne ouvre l’outil Texte (ou retape un texte vivant), ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
 | `MENTIONS.txt` | 18 Ko | **toujours, avec le bundle** | Le copyright et la licence de chaque composant tiers redistribué (voir « Attribution et licences ») |
 
 - **`vtracer.js` n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas, et rien dans
@@ -325,6 +325,10 @@ Pour un hôte, l’essentiel :
     répondez-en par un type `image/svg+xml` avec `Content-Security-Policy: default-src 'none'; style-src
     'unsafe-inline'; sandbox` quand vous le servez.
   - **Ne pas prendre `onBrouillon` pour un enregistrement** : il n’est pas nettoyé.
+- **Le texte vivant** (ADR-0022) : un texte créé dans l’éditeur s’écrit en contours (`<path>`), suivis d’attributs
+  `data-ed-texte`, `data-ed-police`… qui permettent de le rouvrir comme texte. Le texte y est **encodé en pourcentage** (lettres
+  ASCII et chiffres seuls en clair) : votre nettoyage peut garder ces attributs tels quels, ou les retirer (le dessin ne change
+  pas, le texte n’est plus modifiable). Aucun fichier de police n’est écrit : une fonte déposée n’y laisse que son empreinte.
 - **Stockage** : l’éditeur garde les **versions nommées** (trente au plus, celles du panneau « Versions
   nommées ») et rien d’autre (pas de brouillon : c’est à vous de le garder par `onBrouillon`). **Par défaut**,
   elles vont dans le `localStorage` de **votre origine**, sous la clé `svg.versions`, partagées par tous les
