@@ -25,7 +25,10 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
   'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice',
   // L'operation de production (ADR-0028) : sur un <path> seul, l'une des deux valeurs exactes.
-  'data-ed-operation'
+  'data-ed-operation',
+  // Le texte pose sur ou dans une forme (ADR-0031) : sur un <path> seul, chacun avec sa forme exacte ; le trace d'une forme masquee est encode.
+  'data-ed-disposition', 'data-ed-depart', 'data-ed-cote', 'data-ed-repartir', 'data-ed-marge', 'data-ed-ajuster', 'data-ed-justifier',
+  'data-ed-forme', 'data-ed-forme-d', 'data-ed-forme-regle'
 ]);
 
 const NOMBRE_TEXTE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
@@ -46,7 +49,17 @@ const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
   'data-ed-ligatures': /^1$/,
   'data-ed-trace': /^median$/,
   'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i'),
-  'data-ed-operation': /^(?:decoupe|ecriture)$/
+  'data-ed-operation': /^(?:decoupe|ecriture)$/,
+  'data-ed-disposition': /^(?:sur|dans)$/,
+  'data-ed-depart': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-cote': /^dessous$/,
+  'data-ed-repartir': /^1$/,
+  'data-ed-marge': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-ajuster': /^1$/,
+  'data-ed-justifier': /^1$/,
+  'data-ed-forme': /^[1-9]\d{0,6}$/,
+  'data-ed-forme-d': /^(?:[A-Za-z0-9]|%[0-9A-F]{2})+$/,
+  'data-ed-forme-regle': /^evenodd$/
 };
 
 const ESPACES_DE_NOMS_PERMIS = new Set([

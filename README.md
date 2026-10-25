@@ -68,6 +68,10 @@ s'embarque aussi comme composant React dans un autre produit.
   trait seul s’écrit au stylo, et chacun se change dans le panneau de gauche, la rangée de la sélection, Maj+X ou Maj+E) ; la toile
   hachure ce que la lame détache et trace la ligne du stylo (« Aperçu de la machine », Maj+O) ; un dessin mêlé s’exporte en un fichier
   à couper, un fichier à écrire et les deux ensemble (ADR-0028).
+- **Le texte épouse une forme** : posé **sur** une forme, il suit son tracé (le cercle d’un badge, un arc, une vague), ses
+  lettres tournées sans être déformées, son point de départ glissé à la souris ou réglé au clavier ; posé **dans** une forme
+  fermée, il la remplit, ligne à ligne coupée sur ses bords, trous respectés, à la taille voulue ou ajustée pour la remplir.
+  Le texte reste modifiable et suit sa forme quand elle change ; le fichier ne porte que des contours (ADR-0031).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.
 - **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,

@@ -6,7 +6,7 @@ import { boiteForme, echelle, multiplier, transformerChemin, translation, unir }
 import { prochainId } from './operations.js';
 import { echellerTrait } from './trait.js';
 import { avecOrigines, originesDe } from './provenance.js';
-import { avecTexteTransforme } from './texteVivant.js';
+import { avecTexteTransforme, relierCopies } from './texteVivant.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -19,13 +19,14 @@ export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { de
   const k = b.l > 0 && b.h > 0 ? Math.min(cible.l / b.l, cible.h / b.h) : 1;
   const m = multiplier(translation(cible.x + (cible.l - b.l * k) / 2 - b.x * k, cible.y + (cible.h - b.h * k) / 2 - b.y * k), echelle(k, k));
   let n = prochainId(dessin);
-  const ids: string[] = [];
+  const ids: string[] = [], copies = new Map<string, string>();
   const formes = visibles.map(f => {
     const id = 'f' + n++;
     ids.push(id);
+    copies.set(f.id, id);
     return avecTexteTransforme({ ...echellerTrait(f, k), id, verrouille: false, d: transformerChemin(f.d, m) }, f, m);
   });
-  return { dessin: { ...dessin, formes: [...dessin.formes, ...formes] }, ids };
+  return { dessin: { ...dessin, formes: [...dessin.formes, ...relierCopies(formes, copies)] }, ids };
 }
 
 /**
@@ -67,11 +68,14 @@ export function separer(dessin: DessinSvg, id: string): { dessin: DessinSvg; ids
 /** Coller des formes copiees, au premier plan, decalees ; rend les identifiants nouveaux. */
 export function coller(dessin: DessinSvg, formes: readonly Forme[], dx = 0, dy = 0): { dessin: DessinSvg; ids: string[] } {
   let n = prochainId(dessin);
-  const ids: string[] = [];
-  const nouvelles = formes.map(f => {
+  const ids: string[] = [], copies = new Map<string, string>();
+  const copiees = formes.map(f => {
     const id = 'f' + n++;
     ids.push(id);
+    copies.set(f.id, id);
     return dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, visible: true, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false, visible: true };
   });
+  // Un texte pose colle avec sa forme se pose sur la copie de la forme (ADR-0031) ; colle seul, il redevient libre.
+  const nouvelles = relierCopies(copiees, copies);
   return { dessin: nouvelles.length ? { ...dessin, formes: [...dessin.formes, ...nouvelles] } : dessin, ids };
 }

@@ -8,6 +8,7 @@ import type { Forme } from '../engine/editionSvg.js';
 import { genreDeForme, numeroDeForme } from '../engine/description.js';
 import { candidates, formeDessous, optionsPrise, zoneDePrise, type OptionsPrise } from '../engine/prise.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useSaisie } from './contexteSaisie.js';
 import type { Vue } from './typesEditeur.js';
 
 /** Ce qu'il faut d'un evenement de pointeur (ou de souris, pour le double-clic : pas de `pointerType`, c'est une souris). */
@@ -45,6 +46,8 @@ export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
   return {
     /** La forme qu'un double-clic vise : la meilleure, sans cycle. */
     viser: (e: Pointage): string | null => sous(e)[0] ?? null,
+    /** Toutes les formes que le pointeur peut prendre, la meilleure d'abord (le choix de la forme d'un texte pose, ADR-0031). */
+    toutes: (e: Pointage): string[] => sous(e),
     /** La forme qu'un appui prend ; Alt passe a celle du dessous, en boucle. */
     prendre(e: Pointage): string | null {
       const svg = svgRef.current, ids = sous(e);
@@ -67,7 +70,7 @@ export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
 interface Survol { readonly id: string; readonly doigt: boolean }
 
 /** Les poignees de la surcouche ont leur propre curseur : sur elles, rien n'est survole. */
-const SUR_POIGNEE = '[data-coin], [data-rotation], [data-ancre], [data-poignee]';
+const SUR_POIGNEE = '[data-coin], [data-rotation], [data-ancre], [data-poignee], [data-depart]';
 
 /**
  * Le fond de la toile, sous les formes : ce que le pointeur touche hors d'une forme, et qui porte le curseur « deplacer » pres
@@ -82,7 +85,7 @@ export const FondPrise = memo(function FondPrise() {
 /** Le survol de la toile : curseur « deplacer » et lisere, avec l'outil de selection seulement. */
 // Le chemin d'une forme vient de la toile (`cheminDe`, memorise par forme), comme pour AlertesToile : sans import de Toile.tsx, pas de cycle.
 export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRef: RefObject<SVGSVGElement | null>; chemin: (f: Forme) => string }) {
-  const mo = useDessin(), ui = useInterface();
+  const mo = useDessin(), ui = useInterface(), { choixForme } = useSaisie();
   const [survol, poserSurvol] = useState<Survol | null>(null);
   // Les ecouteurs sont poses une fois : ils lisent l'etat du dernier rendu.
   const etat = useRef({ formes: mo.dessin.formes, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil });
@@ -137,7 +140,8 @@ export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRe
 
   const f = survol ? mo.dessin.formes.find(x => x.id === survol.id) : undefined;
   // Une forme deja choisie a son trace de selection : le lisere ne s'y ajoute qu'au doigt, pour montrer ce qu'il touche.
-  if (!survol || !f || !f.visible || f.verrouille || (!survol.doigt && mo.sel.includes(f.id)) || ui.outil !== 'selection') return null;
+  // Pendant le choix de la forme d'un texte (ADR-0031), c'est ce choix qui montre la forme visee.
+  if (!survol || !f || !f.visible || f.verrouille || (!survol.doigt && mo.sel.includes(f.id)) || ui.outil !== 'selection' || choixForme) return null;
   const b = zoneDePrise(f, optionsPrise(ui.vues.vue.zoom, survol.doigt, ui.contours));
   return (
     <g pointerEvents="none" aria-hidden="true">

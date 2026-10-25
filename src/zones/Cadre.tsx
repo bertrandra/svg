@@ -16,6 +16,7 @@ import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
 import { FournisseurTexte } from './contexteTexte.js';
 import { FournisseurSaisie, useSaisie } from './contexteSaisie.js';
+import { SuiviDispositions } from './DispositionToile.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BulleVisite, LienVisite } from './BulleVisite.js';
@@ -171,6 +172,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
       <FournisseurSaisie>
       <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
+        <SuiviDispositions />
         <LienToile svgRef={svgRef} idToile={idToile} />
         <LienVisite />
         <RegionVocale />

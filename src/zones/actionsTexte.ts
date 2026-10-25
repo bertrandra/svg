@@ -3,8 +3,10 @@
 // par les verbes de l'editeur (une entree d'historique par geste, une saisie fondue par sa cle).
 
 import { useCallback } from 'react';
-import { boiteChemin, transformerTexte, translation, type Chemin, type DessinSvg, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
+import { boiteChemin, MARGE_DEFAUT, sansDisposition, transformerTexte, translation, type Chemin, type DessinSvg, type DispositionTexte, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
 import { cheminDuTexte, lettresDuTexte } from '../engine/texte/bloc.js';
+import { composerDansDessin, peutPorter, texteDispose } from '../engine/texte/disposition.js';
+import { traceFerme } from '../engine/texte/surTrace.js';
 import { avecTrace, basculerPeinture, creerTexte, natureDuTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
 import { NOMS_MODES, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { toleranceBooleen } from '../engine/booleens.js';
@@ -42,8 +44,11 @@ export function nomDePolice(id: string, polices: readonly Police[] | null, famil
 /** Les contours d'un texte avec cette fonte (sa ligne au milieu du trait, en trace median) ; vides si rien ne se dessine. */
 export const contoursDe = (t: TexteVivant, police: Police): Chemin => cheminDuTexte(t, police.glyphes);
 
-/** Ce qui change d'un texte : les reglages, eventuellement la police (et donc sa version), et le trace (ADR-0027). */
-export type ChangementTexte = Partial<Pick<TexteVivant, 'texte' | 'taille' | 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> & { police?: Police; trace?: TraceTexte };
+/**
+ * Ce qui change d'un texte : les reglages, eventuellement la police (et donc sa version), le trace (ADR-0027), et sa disposition sur
+ * ou dans une forme (ADR-0031 ; null : il redevient libre).
+ */
+export type ChangementTexte = Partial<Pick<TexteVivant, 'texte' | 'taille' | 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> & { police?: Police; trace?: TraceTexte; disposition?: DispositionTexte | null };
 
 /** Le trace des lettres, tel que la barre le propose : pleines (celui de la police), ou une ligne au milieu du trait. */
 export type TraceTexte = 'plein' | 'median';
@@ -62,21 +67,58 @@ export function policeDuTexte(police: Police): PoliceTexte {
 
 /** Le texte vivant modifie : les reglages, la police (avec sa version, et sa famille si elle est deposee ou telechargee). */
 export function texteModifie(t: TexteVivant, c: ChangementTexte): TexteVivant {
-  const { police, trace, ...reglages } = c;
-  const m: TexteVivant = { ...t, ...reglages, police: police ? policeDuTexte(police) : t.police };
+  const { police, trace, disposition, ...reglages } = c;
+  const brut: TexteVivant = { ...t, ...reglages, police: police ? policeDuTexte(police) : t.police };
+  const m = disposition === null ? sansDisposition(brut) : disposition ? { ...brut, disposition } : brut;
   return avecTrace(m, (trace ?? (t.trace === 'median' ? 'median' : 'plein')) === 'median');
+}
+
+/** Ou se pose le texte sur un trace ouvert selon son alignement (ADR-0031) : au debut, au milieu, a la fin. */
+const DEPART_OUVERT = { gauche: 0, centre: 0.5, droite: 1 } as const;
+
+/**
+ * La disposition d'un texte qu'on pose sur ou dans une forme : centre, au point le plus haut d'une forme fermee (a l'exterieur), au
+ * milieu d'un trace ouvert ; dans une forme, la marge par defaut. Une disposition deja la sur la meme forme garde ses reglages.
+ */
+export function dispositionPour(mode: DispositionTexte['mode'], base: Forme, avant?: DispositionTexte): DispositionTexte {
+  if (avant?.mode === mode) return { ...avant, forme: base.id };
+  return mode === 'sur' ? { mode, forme: base.id, depart: traceFerme(base) ? 0 : 0.5, cote: 'dessus', repartir: false } : { mode, forme: base.id, marge: MARGE_DEFAUT, ajuster: false, justifier: false };
 }
 
 /** Le dessin ou le texte `id` prend ces changements, recompose avec sa fonte ; le meme dessin s'il ne se compose pas. */
 export function appliquerChangement(d: DessinSvg, id: string, c: ChangementTexte, police: Police, profil: ProfilProduction | null): DessinSvg {
   const f = d.formes.find(x => x.id === id);
   if (!f?.texte) return d;
-  const t = texteModifie(f.texte, c), chemin = contoursDe(t, police);
+  // Sur un trace ouvert, changer l'alignement pose le texte au debut, au milieu ou a la fin du trace (sans quoi il deborderait).
+  const p = f.texte.disposition, base = p ? d.formes.find(x => x.id === p.forme) : undefined;
+  const realigne = c.alignement && c.disposition === undefined && p?.mode === 'sur' && base && !traceFerme(base) ? { ...c, disposition: { ...p, depart: DEPART_OUVERT[c.alignement] } } : c;
+  const compose = composerDansDessin(d, id, texteModifie(f.texte, realigne), police.glyphes), t = compose.texte, chemin = compose.d;
   // Un texte qui change de nature (une police a trait unique, ou le trace median, ou l'inverse) change aussi la peinture : un fond ou un trait.
   const avant = natureDuTexte(f.texte), apres = natureDuTexte(t);
   const peinture = avant !== apres ? basculerPeinture(f, apres, largeurTrait(t.taille * Math.sqrt(Math.abs(t.matrice[0] * t.matrice[3] - t.matrice[1] * t.matrice[2])), profil)) : undefined;
   return poserTexte(d, id, t, chemin, peinture);
 }
+
+/**
+ * Vrai si ce changement ne laisserait rien de dessine d'un texte pose (ADR-0031 : aucune lettre sur le trace, aucun mot dans la
+ * forme) : le changement ne se fait pas (une forme sans contours ne s'ecrit pas), et l'interface le dit.
+ */
+export function rienNeSePose(d: DessinSvg, id: string, c: ChangementTexte, police: Police): boolean {
+  const f = d.formes.find(x => x.id === id);
+  if (!f?.texte?.disposition || c.disposition === null) return false;
+  const r = composerDansDessin(d, id, texteModifie(f.texte, c), police.glyphes);
+  return !!r.texte.disposition && !r.d.some(x => x.c !== 'M' && x.c !== 'Z');
+}
+
+/** Les lettres d'un texte vivant dans ce dessin : posees sur ou dans sa forme s'il en a une (ADR-0031), en ligne droite sinon. */
+export const lettresDansDessin = (d: DessinSvg, f: Forme, police: Police): Chemin[] =>
+  (texteDispose(d, f, police.glyphes)?.pose.lettres ?? (f.texte ? lettresDuTexte(f.texte, police.glyphes) : [])).map(l => l.d);
+
+/** La forme peut-elle porter ce texte (ADR-0031) : ni un texte, ni lui-meme, et un trace a elle. */
+export const formePorteuse = (d: DessinSvg, idForme: string, idTexte: string): Forme | null => {
+  const f = d.formes.find(x => x.id === idForme);
+  return peutPorter(f, idTexte) ? f : null;
+};
 
 /** La fonte d'un texte parmi celles chargees, ou null (fonte deposee absente). */
 export const policeDe = (f: Forme | null | undefined, polices: readonly Police[] | null): Police | null =>
@@ -112,7 +154,7 @@ export function useActionsTexte() {
     const lettres = new Map<string, Chemin[]>();
     for (const f of textes) {
       const p = policeDe(f, polices);
-      if (p && f.texte) lettres.set(f.id, lettresDuTexte(f.texte, p.glyphes).map(l => l.d));
+      if (p && f.texte) lettres.set(f.id, lettresDansDessin(dessin, f, p));
     }
     const r = vectoriserTextes(dessin, textes.map(f => f.id), mode, { lettres, tolerance: toleranceBooleen(dessin), lisser: lisserBooleens });
     if (!r.textes) { ac.dire('Ce texte est verrouillé : déverrouillez-le pour le vectoriser.'); return; }
