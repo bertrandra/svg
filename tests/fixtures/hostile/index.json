@@ -539,7 +539,8 @@
       "fichier": "parsing-entites-limites.svg",
       "famille": "parsing",
       "vecteur": "Entites numeriques limites : &#0;, &#x110000;, &#xD800;, &#x;, &#99999999999;, &amp;amp;",
-      "attendu": "refus"
+      "attendu": "refus",
+      "attenduPage": "ouvre"
     },
     {
       "fichier": "parsing-nom-balise-etrange.svg",
@@ -929,7 +930,8 @@
       "fichier": "divers-texte-avec-evenements.svg",
       "famille": "divers",
       "vecteur": "<text>, <tspan>, <textPath> avec gestionnaires et href externe",
-      "attendu": "refus"
+      "attendu": "refus",
+      "attenduPage": "ouvre"
     },
     {
       "fichier": "divers-switch-et-conditions.svg",

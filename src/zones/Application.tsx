@@ -92,7 +92,7 @@ function Accueil() {
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
     // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
-    if (contientTexte(propre.svg)) { dire('Lecture du texte…'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores]))); return; }
+    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores]))); return; }
     const lu = lireDessinMemo(propre.svg);
     if ('erreur' in lu) { dire(lu.erreur); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores });

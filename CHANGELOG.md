@@ -472,3 +472,6 @@ empreintes.
   du mode ; seuil, taches, barbules, coupures et couleur sont dans les réglages fins. Le lot fonctionne dans ce mode.
 - Tests de sécurité : un dépassement du budget de temps se remesure une fois avant d'échouer (une machine chargée ne fait
   plus échouer un fichier ordinaire ; une lenteur qui se répète reste un défaut).
+- **Corrigé** : « Lecture du texte… » s'annonçait comme une alerte pendant le chargement des polices (un test de sécurité
+  prenait ce message pour un refus, selon la vitesse de chargement) : c'est un message neutre. Le corpus hostile distingue
+  l'issue de la lecture pure et celle de la page, qui ouvre en lettres un fichier portant du texte (`attenduPage`).
