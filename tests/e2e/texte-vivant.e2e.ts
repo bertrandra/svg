@@ -1,10 +1,10 @@
-// Le texte vivant (ADR-0021), par la vraie page : creer un texte, le retaper en place, changer de police, l'enregistrer et
+// Le texte vivant (ADR-0022), par la vraie page : creer un texte, le retaper en place, changer de police, l'enregistrer et
 // le rouvrir comme texte ; le vectoriser dans les trois modes ; l'apercu « forme / ligne » ; le clavier seul ; au doigt.
 
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, modifications, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+import { aLeFocus, attend, boutonTelecharger, modifications, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
 
 const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
 
@@ -28,15 +28,9 @@ describe('le texte vivant', () => {
     return 'f2';
   }
 
-  /** Les attributs data-ed-texte du SVG enregistre puis telecharge depuis l'accueil. */
+  /** Le SVG telecharge par « Télécharger le SVG » de la barre : ce que l'on rouvre. */
   async function enregistrerEtTelecharger(page: Page): Promise<string> {
-    await page.keyboard.press('Control+s');
-    await page.locator('.resultat').waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const [telechargement]: [Download, void] = await Promise.all([
-      page.waitForEvent('download'),
-      page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click()
-    ]);
+    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
     return readFileSync(await telechargement.path(), 'utf8');
   }
 

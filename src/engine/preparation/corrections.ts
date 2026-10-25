@@ -133,7 +133,12 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
     }
     case 'percer': return percer(dessin);
     case 'trous-selon-sens': return trous(dessin, formes);
-    // Souder un texte (ADR-0021) : le vectoriser en unissant les lettres qui se touchent, d'un seul tenant pour la lame.
+    // Souder un texte (ADR-0022) : le vectoriser en unissant les lettres qui se touchent, d'un seul tenant pour la lame.
     case 'souder': return corrigerTexte(dessin, 'souder', formes, 0);
+    // Le stylo (ADR-0022) : le pourtour en trait, ou des hachures a la largeur du stylo.
+    case 'garder-contour': return corrigerTexte(dessin, 'garder-contour', formes, p.largeurStylo);
+    case 'hachurer': return corrigerTexte(dessin, 'hachurer', formes, p.largeurStylo);
+    // Changer de police demande une fonte, changer de procede demande l'interface : elles le font, pas le moteur.
+    case 'police-trait': case 'procede-stylo': return { erreur: 'Cette correction se fait dans l’éditeur.' };
   }
 }

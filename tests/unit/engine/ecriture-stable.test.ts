@@ -119,7 +119,7 @@ const lireTexteSvg = (svg: string): DessinSvg => {
   return r.dessin;
 };
 
-// Le texte vivant (ADR-0021) : une forme par texte, ses contours composes et ses attributs `data-ed-*`. La fonte factice
+// Le texte vivant (ADR-0022) : une forme par texte, ses contours composes et ses attributs `data-ed-*`. La fonte factice
 // courbe ci-dessus ; une fonte a trait factice, des traces ouverts en zigzag (la course d'une plume).
 const glyphesTraitFactices: Glyphes = {
   ...glyphesFactices,
@@ -340,7 +340,7 @@ const CAS: readonly Cas[] = [
   { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
   { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
   { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') },
-  // Le texte vivant et sa vectorisation (ADR-0021) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus
+  // Le texte vivant et sa vectorisation (ADR-0022) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus
   // (toutes les references ci-dessus et les empreintes de la bibliotheque le prouvent) ; un texte vivant s'ecrit en contours
   // exacts, plus ses `data-ed-*` encodes, et se relit tel quel.
   { nom: 'texte-vivant', operation: TROIS_TEXTES },
@@ -355,7 +355,7 @@ const CAS: readonly Cas[] = [
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },
   { nom: 'vectoriser-parties', entree: 'texte-vivant', operation: vectoriser('lettres', false) },
-  // Le stylo (ADR-0021) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
+  // Le stylo (ADR-0022) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
   // respectes ; et l'export du procede « Dessin au stylo » : des traits, aucun fond, une taille physique. Des cas NEUFS.
   { nom: 'hachures', entree: 'stylo', operation: enchainer(d => hachurerFormes(d, ['f1', 'f4'], 1.512).dessin, d => hachurerFormes(d, ['f2'], 1.512, 0).dessin) },
   { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg }

@@ -9,6 +9,10 @@ import {
   unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { svgCricut } from '../export/cricut.js';
+import { svgPourStylo } from '../export/stylo.js';
+import { toutesLesPolices } from '../io/polices.js';
+import { naturePolice, policeTraitProche } from '../model/polices.js';
+import { appliquerChangement } from './actionsTexte.js';
 import { avecDpiPng } from '../export/png.js';
 import { archivePrintThenCut, printThenCut } from '../export/printThenCut.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
@@ -29,11 +33,11 @@ export function phraseProduction(c: ChoixProduction): string {
   if (c.contexte !== 'cricut') return 'Contexte générique : le dessin n’est plus jugé pour une machine.';
   const p = resoudreProfil(c);
   if (!p) return 'Contexte Cricut.';
-  return 'Contexte Cricut : ' + p.machine.nom + ', ' + p.tapis.nom.toLowerCase() + ', ' + p.materiau.nom.toLowerCase() + (p.procede === 'imprimer-decouper' ? ', Print Then Cut' : '') + ', en ' + (p.unite === 'in' ? 'pouces' : 'millimètres') + '.';
+  return 'Contexte Cricut : ' + p.machine.nom + ', ' + p.tapis.nom.toLowerCase() + ', ' + p.materiau.nom.toLowerCase() + (p.procede === 'imprimer-decouper' ? ', Print Then Cut' : p.procede === 'dessin-stylo' ? ', dessin au stylo' : '') + ', en ' + (p.unite === 'in' ? 'pouces' : 'millimètres') + '.';
 }
 
 /** Le resume du jugement : le nombre de constats, ou « pret ». */
-export const phraseReste = (n: number, procede: ProfilProduction['procede']): string => (n ? 'Reste ' + pluriel(n, 'constat') + '.' : procede === 'imprimer-decouper' ? 'Prêt pour Print Then Cut.' : 'Prêt à découper.');
+export const phraseReste = (n: number, procede: ProfilProduction['procede']): string => (n ? 'Reste ' + pluriel(n, 'constat') + '.' : procede === 'imprimer-decouper' ? 'Prêt pour Print Then Cut.' : procede === 'dessin-stylo' ? 'Prêt à dessiner.' : 'Prêt à découper.');
 
 /**
  * Le jugement du dessin pour le profil, un instant apres la derniere modification : pendant un geste continu, le panneau
@@ -62,7 +66,8 @@ type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConst
  */
 export function cadreDeVue(dessin: DessinSvg, production: ChoixProduction): CadreTapis | null {
   const p = resoudreProfil(production);
-  if (!p || p.procede !== 'decoupe') return null;
+  // Le tapis compte pour la lame et pour le stylo (ADR-0022) ; Print Then Cut n'a pas de gabarit.
+  if (!p || p.procede === 'imprimer-decouper') return null;
   const etendue = etendueVisible(dessin);
   return unionCadres(cadreTapis(p, etendue ?? { x: dessin.vb[0], y: dessin.vb[1] }), etendue);
 }
@@ -86,6 +91,13 @@ const remettre = (nom: string, donnees: Uint8Array | Blob, dire: (t: string) => 
 
 /** Le SVG de decoupe, ou l'archive Print Then Cut (avec son PNG a la resolution du profil), remis au telechargement. Faux s'il est refuse. */
 function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t: string) => void): boolean {
+  if (p.procede === 'dessin-stylo') {
+    const r = svgPourStylo(dessin, p);
+    if (r.erreur !== undefined) { dire(r.erreur); return false; }
+    const taille = resumePreparation(dessin).taille;
+    remettre(nom + '-stylo.svg', texteOctets(r.svg), dire, pluriel(r.couches, 'couleur') + ' : ' + pluriel(r.couches, 'stylo') + (taille ? ', ' + texteTaille(taille.l, taille.h, p.unite) : '') + '.');
+    return true;
+  }
   if (p.procede === 'decoupe') {
     const r = svgCricut(dessin, p);
     if ('erreur' in r) { dire(r.erreur); return false; }
@@ -112,7 +124,17 @@ interface SettersProduction { poserProduction: (c: ChoixProduction) => void; pos
 
 export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: SettersProduction): ActionsProduction {
   const { appliquer, dire } = l;
-  return {
+  /** « Police à trait unique » : chaque texte vivant a contour du constat, recompose dans la police a trait la plus proche. */
+  const policeTrait = async (formes: readonly string[], p: ProfilProduction): Promise<void> => {
+    const polices = await toutesLesPolices().catch(() => []);
+    const textes = lire().dessin.formes.filter(f => formes.includes(f.id) && f.texte && naturePolice(f.texte.police.id) === 'contour');
+    appliquer(d => textes.reduce((x, f) => {
+      const police = polices.find(q => q.id === policeTraitProche(f.texte?.police.id ?? ''));
+      return police ? appliquerChangement(x, f.id, { police }, police, p) : x;
+    }, d));
+    dire(textes.length ? pluriel(textes.length, 'texte') + ' en police à trait unique : chaque lettre s’écrit d’une seule ligne, sans fond. Ctrl+Z annule.' : 'Aucun texte vivant à recomposer : le dessin a changé.');
+  };
+  const actions: ActionsProduction = {
     poserProduction: c => {
       const n = normaliserChoix(c), avant = lire().production;
       s.poserProduction(n);
@@ -125,13 +147,17 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       if (!nouveau) { dire(phraseProduction(n)); return; }
       apresRendu(() => { const e = lire(), cadre = cadreDeVue(e.dessin, n); if (cadre) e.vues.cadrer(cadre); dire(phraseProduction(n)); });
     },
-    corrigerConstat: code => {
+    corrigerConstat: (code, voulue) => {
       const { dessin, production } = lire();
       const p = resoudreProfil(production);
       if (!p) return;
       const c = constatsPreparation(dessin, p).find(x => x.code === code);
-      if (!c?.correction) { dire('Ce constat ne se pose plus : le dessin a changé.'); return; }
-      const r = corrigerPreparation(dessin, c.correction, c, p);
+      const correction = voulue && (c?.correction === voulue || c?.autres?.includes(voulue)) ? voulue : c?.correction;
+      if (!c || !correction) { dire('Ce constat ne se pose plus : le dessin a changé.'); return; }
+      // Deux corrections ne sont pas du moteur (ADR-0022) : passer au procede du stylo, et recomposer un texte dans une police a trait.
+      if (correction === 'procede-stylo' && production.contexte === 'cricut') { actions.poserProduction({ ...production, procede: 'dessin-stylo' }); return; }
+      if (correction === 'police-trait') { void policeTrait(c.formes, p); return; }
+      const r = corrigerPreparation(dessin, correction, c, p);
       if ('erreur' in r) { dire(r.erreur); return; }
       appliquer(() => r.dessin);
       dire(r.phrase + ' ' + phraseReste(constatsPreparation(r.dessin, p).length, p.procede) + ' Ctrl+Z annule.');
@@ -142,7 +168,7 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       if (!p) { dire('Choisissez d’abord une machine Cricut dans la barre.'); return; }
       // Le jugement du moment, pas celui du panneau (qui suit le dessin d'un instant) : un point a corriger demande une confirmation ;
       // un bloquant laisse l'export le refuser, qui nomme la cause.
-      const e = etatExport(constatsPreparation(dessin, p));
+      const e = etatExport(constatsPreparation(dessin, p), p.procede);
       // La barre d'etat dit l'essentiel en une ligne (sur un telephone, la liste y prendrait cinq lignes) ; la region vocale dit chaque
       // point, puisque le focus va a « Revoir » et qu'un lecteur d'ecran n'y lirait pas la liste.
       if (demandeConfirmation(e, quandMeme)) {
@@ -155,6 +181,7 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
     },
     fermerSuiteCricut: () => s.poserSuiteCricut(null)
   };
+  return actions;
 }
 
 /** Le nom court d'un tapis, pour un bouton (« tapis 12 × 24 po »). */

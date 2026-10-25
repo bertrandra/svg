@@ -27,7 +27,7 @@ describe('outils de l\'editeur', () => {
     return s;
   }
 
-  // Depuis le texte vivant (ADR-0021), un texte ajoute est UNE forme modifiable (il se vectorise ensuite, texte-vivant.e2e.ts).
+  // Depuis le texte vivant (ADR-0022), un texte ajoute est UNE forme modifiable (il se vectorise ensuite, texte-vivant.e2e.ts).
   it('compose un texte vivant, une seule forme, jamais en <text>', async () => {
     const page = await editeur();
     const avant = await nombreDeCalques(page);

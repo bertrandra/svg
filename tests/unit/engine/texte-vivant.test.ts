@@ -1,4 +1,4 @@
-// Le texte vivant (ADR-0021) : encodage, ecriture et relecture idempotentes, survie au nettoyage, garde des outils qui
+// Le texte vivant (ADR-0022) : encodage, ecriture et relecture idempotentes, survie au nettoyage, garde des outils qui
 // cassent le texte, transformations qui le suivent, composition en bloc.
 
 import { describe, expect, it } from 'vitest';

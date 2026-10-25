@@ -50,7 +50,7 @@ export function MenuVue() {
 function useElementsEdition(): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
-  // Vectoriser le texte (ADR-0021) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
+  // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
   const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
     id: 'vectoriser-' + m, libelle: 'Vectoriser le texte : ' + NOMS_MODES[m].toLowerCase(), separateur: i === 0, desactive: sansTexte,
     ...(m === at.mode ? { raccourci: 'Ctrl+Maj+O' } : {}), onClick: () => { void at.vectoriser(m); }

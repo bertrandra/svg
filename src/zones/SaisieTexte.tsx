@@ -1,4 +1,4 @@
-// La saisie en place d'un texte vivant (ADR-0021) : double-clic ou Entree sur un texte ouvre un champ sous lui, sur la
+// La saisie en place d'un texte vivant (ADR-0022) : double-clic ou Entree sur un texte ouvre un champ sous lui, sur la
 // toile. On tape, le texte se recompose sous les yeux ; Entree valide, Maj+Entree va a la ligne, Echap rend le texte
 // d'avant. Toute la frappe est un seul geste de l'historique (fondu par sa cle). Le champ est un vrai <textarea> nomme :
 // le clavier complet et les lecteurs d'ecran y sont chez eux. En le quittant, le focus revient a la toile.

@@ -35,7 +35,7 @@ export function Inspecteur() {
     <>
       <h3>{sel.length > 1 ? sel.length + ' formes' : genreAffiche(premiere) + ' ' + premiere.id.slice(1)}</h3>
       <ReperesSelection points={!!points} />
-      {/* Un texte vivant (ADR-0021) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
+      {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
       {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
       <Section titre="Apparence" ouverte>
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />

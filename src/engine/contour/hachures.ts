@@ -1,4 +1,4 @@
-// Les hachures (ADR-0021) : remplir une forme de lignes paralleles, pour un stylo qui ne sait pas remplir. Les lignes sont
+// Les hachures (ADR-0022) : remplir une forme de lignes paralleles, pour un stylo qui ne sait pas remplir. Les lignes sont
 // espacees de la largeur du stylo (elles se touchent bord a bord : la forme parait pleine), a l'angle voulu, et restent DANS
 // la forme : la region peinte (sa regle, trous compris) est celle des booleens, et chaque ligne de balayage n'en garde que
 // les intervalles interieurs. Les lignes vont et viennent (en boustrophedon) pour que la pointe voyage le moins possible.

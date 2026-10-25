@@ -1,4 +1,4 @@
-// La composition d'un texte vivant (ADR-0021) : des lignes, alignees sur l'origine, l'une sous l'autre d'un interligne.
+// La composition d'un texte vivant (ADR-0022) : des lignes, alignees sur l'origine, l'une sous l'autre d'un interligne.
 // Chaque ligne est composee par `composer` (engine/texte.ts), sans rien y changer : memes avances, meme crenage, memes
 // ligatures. Pur et deterministe ; la fonte arrive par l'interface `Glyphes`, chargee cote io/.
 

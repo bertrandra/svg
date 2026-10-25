@@ -15,7 +15,7 @@ import type { NaturePolice } from '../model/polices.js';
 /** Une fonte de polices.js : une fonte TrueType en base64, ou une fonte a trait unique en donnees (policesTrait.ts). */
 export type PoliceEmbarquee = { id: string; nom: string; base64: string } | { id: string; nom: string; nature: 'trait'; unitesParEm: number; avance: number; glyphes: unknown };
 /**
- * Une fonte lue : ses glyphes, sa nature (a contour, ou a trait unique) et sa version, l'empreinte de ses octets (ADR-0021) :
+ * Une fonte lue : ses glyphes, sa nature (a contour, ou a trait unique) et sa version, l'empreinte de ses octets (ADR-0022) :
  * un texte vivant la garde, pour dire a la relecture que la police a change depuis.
  */
 export interface Police { id: string; nom: string; glyphes: Glyphes; nature: NaturePolice; version: string }
@@ -103,13 +103,13 @@ export async function fontesDeRemplacement(): Promise<ReadonlyMap<string, Glyphe
 export async function policeDeposee(fichier: File): Promise<Police | { erreur: string }> {
   const nom = fichier.name.replace(/\.(ttf|otf)$/i, '').slice(0, 60);
   const octets = await fichier.arrayBuffer();
-  // L'identifiant d'une fonte deposee est son empreinte (`u-…`) : un texte vivant le garde, jamais le fichier (ADR-0021).
+  // L'identifiant d'une fonte deposee est son empreinte (`u-…`) : un texte vivant le garde, jamais le fichier (ADR-0022).
   const p = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), nom, octets);
   return p ?? { erreur: 'Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.' };
 }
 
 // Les fontes deposees pendant la session : une fois lue, une fonte sert a tous les panneaux (creer un texte, le retaper,
-// l'apercu) tant que la page est ouverte. Rien ne se garde au-dela : le fichier n'est jamais ecrit (ADR-0021).
+// l'apercu) tant que la page est ouverte. Rien ne se garde au-dela : le fichier n'est jamais ecrit (ADR-0022).
 const deposees: Police[] = [];
 
 /** Retient une fonte deposee pour la session ; une fonte deja retenue (meme empreinte) ne se double pas. */

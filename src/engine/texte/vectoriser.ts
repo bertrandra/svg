@@ -1,4 +1,4 @@
-// Vectoriser un texte vivant (ADR-0021) : il devient des formes ordinaires, qu'on ne retape plus. Trois modes :
+// Vectoriser un texte vivant (ADR-0022) : il devient des formes ordinaires, qu'on ne retape plus. Trois modes :
 //   - « lettres » : une forme par lettre (par ligature) ;
 //   - « souder-touchantes » : les lettres qui se touchent n'en font qu'une (un mot manuscrit d'un seul tenant), les autres
 //     restent seules : ce qu'attend une machine de decoupe, qui couperait sinon chaque lettre a travers sa voisine ;
@@ -9,7 +9,7 @@
 // Les lettres viennent de la composition (texte/bloc.ts) quand l'interface a la fonte et que ses contours sont ceux de la
 // forme ; sinon (fonte absente, ou d'une autre version), la forme se coupe en « parties » : chaque contour exterieur avec
 // ses trous, ou chaque trace pour une police a trait. Les soudures donnent alors le meme resultat ; seules les lettres en
-// plusieurs morceaux (i, é) se separent en morceaux. Pur et deterministe.
+// plusieurs morceaux (i, e accent aigu) se separent en morceaux. Pur et deterministe.
 
 import clipping, { type MultiPolygon } from 'polygon-clipping';
 import { boiteChemin, prochainId, sansTexte, seCroisent, sousChemins, type Boite, type Chemin, type Commande, type DessinSvg, type Forme } from '../editionSvg.js';

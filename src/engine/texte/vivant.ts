@@ -1,4 +1,4 @@
-// Les operations du texte vivant (ADR-0021) : en creer un, le retaper ou le restyler. Le moteur ne charge aucune fonte :
+// Les operations du texte vivant (ADR-0022) : en creer un, le retaper ou le restyler. Le moteur ne charge aucune fonte :
 // l'interface compose (texte/bloc.ts, avec les glyphes que io/polices.ts lui donne) et passe les contours a ces
 // operations pures, qui rendent un nouveau dessin, ou le meme quand rien ne change.
 

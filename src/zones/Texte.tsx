@@ -1,4 +1,4 @@
-// L'outil Texte (ADR-0021) : un texte tape, une police livree ou deposee, une taille, un interlettrage ; il devient un
+// L'outil Texte (ADR-0022) : un texte tape, une police livree ou deposee, une taille, un interlettrage ; il devient un
 // texte VIVANT au centre du plan, une seule forme qu'on retape ensuite (double-clic, Entree ou l'inspecteur) et qu'on
 // vectorise apres le design. Une police a trait unique se compose en traits ouverts, pour le stylo. Le SVG ecrit ne
 // contient jamais de <text> : des contours, et de quoi les recomposer.

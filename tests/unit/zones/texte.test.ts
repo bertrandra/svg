@@ -1,4 +1,4 @@
-// Les aides du texte vivant cote interface (ADR-0021) : le mode de vectorisation selon le contexte, l'epaisseur d'un trait,
+// Les aides du texte vivant cote interface (ADR-0022) : le mode de vectorisation selon le contexte, l'epaisseur d'un trait,
 // le texte modifie, et la phrase qui dit qu'un outil a vectorise un texte.
 
 import { describe, expect, it } from 'vitest';

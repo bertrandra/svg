@@ -48,7 +48,7 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }
       if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }
       if (mod && t === 'v') { e.preventDefault(); ac.collerPresse(); return; }
-      // Ctrl+Maj+O : vectoriser le texte choisi, dans le mode du moment (ADR-0021 ; le raccourci des logiciels de dessin).
+      // Ctrl+Maj+O : vectoriser le texte choisi, dans le mode du moment (ADR-0022 ; le raccourci des logiciels de dessin).
       if (mod && e.shiftKey && t === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
       if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) ac.separerSelection(); else ac.combinerSelection(); return; }
       if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }

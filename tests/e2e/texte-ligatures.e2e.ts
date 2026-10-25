@@ -1,5 +1,5 @@
 // Les ligatures du texte (troisieme lot de l'ADR-0009), par la vraie page : la case « Ligatures » n'existe que pour une fonte
-// qui en a, elle est cochee par defaut, et « fi » donne une forme avec elle, deux sans. Depuis le texte vivant (ADR-0021), un
+// qui en a, elle est cochee par defaut, et « fi » donne une forme avec elle, deux sans. Depuis le texte vivant (ADR-0022), un
 // texte ajoute est UNE forme ; on compte ses lettres en le vectorisant en lettres separees (menu Edition).
 
 import { describe, expect, it } from 'vitest';

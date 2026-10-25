@@ -185,7 +185,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (ui.outil === 'plume') { ac.finirTrace(true); return; }
     // La capture du pointeur fait de la toile la cible du double-clic : on lit la forme sous le curseur.
     const id = document.elementFromPoint(e.clientX, e.clientY)?.getAttribute('data-id');
-    // Un texte vivant se retape en place (ADR-0021) ; une autre forme passe en mode points.
+    // Un texte vivant se retape en place (ADR-0022) ; une autre forme passe en mode points.
     if (id && ui.outil === 'selection') { ac.choisir([id]); if (mo.dessin.formes.find(f => f.id === id)?.texte) tx.ouvrirSaisie(id); else ac.poserOutil('points'); }
   };
   return { appuyer, bouger, lacher, doubleClic, cadre };

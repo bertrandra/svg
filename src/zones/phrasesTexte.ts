@@ -1,4 +1,4 @@
-// Ce que l'editeur dit quand un outil vectorise un texte vivant (ADR-0021) : booleen, contour en forme, decalage, angles,
+// Ce que l'editeur dit quand un outil vectorise un texte vivant (ADR-0022) : booleen, contour en forme, decalage, angles,
 // jonctions, combiner ou separer changent son trace sans le connaitre ; la garde (garderTextes) lui retire son texte, et la
 // phrase de l'action le dit. Pur : des phrases.
 

@@ -1,5 +1,5 @@
 // Le choix d'une police, partout ou l'on en choisit une (creer un texte, le restyler) : le selecteur des fontes livrees
-// (lettres pleines, puis trait unique), celles deposees pendant la session, et l'apercu « forme / ligne » (ADR-0021).
+// (lettres pleines, puis trait unique), celles deposees pendant la session, et l'apercu « forme / ligne » (ADR-0022).
 // L'apercu ne s'ouvre qu'au clic : rien n'est obligatoire ni bloquant, il montre seulement ce que la lame et le stylo
 // feront de ce texte avec cette police, rendu par le moteur.
 

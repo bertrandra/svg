@@ -1,4 +1,4 @@
-// L'etat du texte vivant dans l'interface (ADR-0021) : la saisie en place ouverte (sur quelle forme), le mode de
+// L'etat du texte vivant dans l'interface (ADR-0022) : la saisie en place ouverte (sur quelle forme), le mode de
 // vectorisation choisi, et les fontes chargees. Un contexte a part des trois de l'editeur (ADR-0010) : il ne change que
 // quand on tape ou qu'on choisit, et seuls les panneaux du texte le lisent. Rien de tout cela n'entre dans l'historique.
 

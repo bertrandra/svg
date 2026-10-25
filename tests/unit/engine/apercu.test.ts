@@ -1,4 +1,4 @@
-// L'apercu « forme / ligne » d'une police (ADR-0021) : un verdict neutre par nature de police, et deux rendus faits par le
+// L'apercu « forme / ligne » d'une police (ADR-0022) : un verdict neutre par nature de police, et deux rendus faits par le
 // moteur (des lettres pleines pour la lame, des lignes sans remplissage pour le stylo).
 
 import { describe, expect, it } from 'vitest';

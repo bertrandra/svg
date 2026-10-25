@@ -1,10 +1,10 @@
-// Le texte vivant dans le fichier (ADR-0021) : un <path> ecrit en contours exacts, plus des attributs `data-ed-*` qui
+// Le texte vivant dans le fichier (ADR-0022) : un <path> ecrit en contours exacts, plus des attributs `data-ed-*` qui
 // permettent de le rouvrir comme texte. Ici, seulement ce qui touche aux octets et a l'identite du texte : l'encodage,
 // l'ecriture et la lecture des attributs, la matrice qui suit les transformations, et la garde qui retire le texte d'une
 // forme dont un outil a change le trace sans le connaitre. Pur ; n'importe que des modules d'edition de bas niveau.
 //
 // L'encodage : tout ce qui n'est pas une lettre ASCII ou un chiffre s'ecrit en pourcentage de ses octets UTF-8
-// (« Noël » : « No%C3%ABl »). La valeur ne porte alors ni espace, ni deux-points, ni parenthese, ni arobase, ni tiret :
+// (« Noel » avec son trema : « No%C3%ABl »). La valeur ne porte alors ni espace, ni deux-points, ni parenthese, ni arobase, ni tiret :
 // aucune expression du nettoyage (`assainirSvg`) ni des invariants de securite n'y trouve prise, quel que soit le texte
 // tape (« javascript: », « url(x) », « @import », « -moz-binding »). L'annexe 4 de l'ADR-0012 gardait les lettres non
 // ASCII en clair ; tout encoder rend l'attribut verifiable par une seule expression, au prix de quelques octets.

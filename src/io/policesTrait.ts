@@ -1,4 +1,4 @@
-// Les fontes a trait unique (ADR-0021) : des glyphes en donnees (scripts/polices.mjs les tire d'une police SVG), chacun
+// Les fontes a trait unique (ADR-0022) : des glyphes en donnees (scripts/polices.mjs les tire d'une police SVG), chacun
 // un ou plusieurs traces OUVERTS, la course d'une plume. Ce module en fait l'interface `Glyphes` du moteur, comme
 // polices.ts le fait d'une fonte TrueType : le moteur compose une police a trait comme une autre, et ses traces restent
 // ouverts (aucun Z n'est ajoute ; un trace qui revient a son depart, un « O », se ferme comme n'importe quel contour).

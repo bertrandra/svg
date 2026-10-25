@@ -1,4 +1,4 @@
-// Les hachures pour le stylo (ADR-0021) : l'aire couverte, l'espacement, aucune ligne hors de la forme, les trous respectes,
+// Les hachures pour le stylo (ADR-0022) : l'aire couverte, l'espacement, aucune ligne hors de la forme, les trous respectes,
 // le va-et-vient de la pointe, le determinisme et les bornes.
 
 import { describe, expect, it } from 'vitest';

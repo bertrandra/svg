@@ -111,7 +111,7 @@ export const COMPOSANTS: readonly Composant[] = [
   { paquet: '@expo-google-fonts/pacifico', nom: 'Pacifico', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Pacifico Project Authors', url: 'https://github.com/googlefonts/Pacifico' },
   { paquet: '@expo-google-fonts/caveat', nom: 'Caveat', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Caveat Project Authors', url: 'https://github.com/googlefonts/caveat' },
   { paquet: '@expo-google-fonts/fredoka', nom: 'Fredoka', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Fredoka Project Authors', url: 'https://github.com/hafontia/Fredoka-One' },
-  // La police a trait unique (ADR-0021) : seule sa police SVG est redistribuee (en donnees dans polices.js), pas le code du paquet.
+  // La police a trait unique (ADR-0022) : seule sa police SVG est redistribuee (en donnees dans polices.js), pas le code du paquet.
   { paquet: 'hersheytext', nom: 'EMS Readability', genre: 'fonte', usage: 'Police à trait unique, pour le stylo d’une machine de découpe', ...OFL, spdxPaquet: 'MIT', titulaire: 'Sheldon B. Michaels', url: 'https://gitlab.com/oskay/svg-fonts' },
   // Les fontes de l'interface de la page autonome, incorporees en data: URI (scripts/fontes-interface.mjs) : la page ne les demande a personne.
   { paquet: '@fontsource/instrument-sans', nom: 'Instrument Sans', genre: 'fonte', usage: 'Police de l’interface de la page autonome (l’éditeur embarqué ne l’emporte pas)', ...OFL, titulaire: 'The Instrument Sans Project Authors', url: 'https://github.com/Instrument/instrument-sans' },

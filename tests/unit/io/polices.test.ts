@@ -162,7 +162,7 @@ describe('lirePolice', () => {
 describe('policeDeposee', () => {
   const fichier = (nom: string, contenu: ArrayBuffer) => ({ name: nom, arrayBuffer: () => Promise.resolve(contenu) }) as unknown as File;
 
-  // L'identifiant est l'empreinte des octets (`u-` et 14 chiffres hexadecimaux, ADR-0021) : un texte vivant l'ecrit dans le
+  // L'identifiant est l'empreinte des octets (`u-` et 14 chiffres hexadecimaux, ADR-0022) : un texte vivant l'ecrit dans le
   // SVG, jamais le fichier ni un nom libre. Il remplace l'ancien « deposee-<nom> », qu'aucun fichier ecrit ne portait.
   it('nomme la fonte d apres le fichier, sans son extension TTF ou OTF, majuscules comprises, et l identifie par son empreinte', async () => {
     const a = await policeDeposee(fichier('Ma Fonte.ttf', bufferInter()));

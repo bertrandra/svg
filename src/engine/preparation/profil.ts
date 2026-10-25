@@ -30,6 +30,8 @@ export interface ProfilProduction {
   readonly noeudsParForme: number;
   /** Les bornes de Print Then Cut en unites du plan ; null si la machine ne le fait pas. */
   readonly printThenCut: { readonly l: number; readonly h: number; readonly fondPerdu: number; readonly resolution: number } | null;
+  /** La largeur du trait du stylo, en unites du plan (ADR-0022) : l'ecart des hachures, l'epaisseur d'un pourtour. */
+  readonly largeurStylo: number;
 }
 
 /** Des pouces en unites du plan. */
@@ -81,7 +83,8 @@ export function resoudreProfil(brut: ChoixProduction): ProfilProduction | null {
     toleranceNettoyage: unitesDePouces(seuils.toleranceNettoyage.valeur),
     fusionNuances: seuils.fusionNuances.valeur,
     noeudsParForme: seuils.noeudsParForme.valeur,
-    printThenCut: ptc ? { l: unitesDePouces(ptc.largeurMax.valeur), h: unitesDePouces(ptc.hauteurMax.valeur), fondPerdu: unitesDePouces(ptc.fondPerdu.valeur), resolution: ptc.resolution.valeur } : null
+    printThenCut: ptc ? { l: unitesDePouces(ptc.largeurMax.valeur), h: unitesDePouces(ptc.hauteurMax.valeur), fondPerdu: unitesDePouces(ptc.fondPerdu.valeur), resolution: ptc.resolution.valeur } : null,
+    largeurStylo: unitesDePouces(CRICUT.stylo?.largeur.valeur ?? 0.4 / 25.4)
   };
 }
 
@@ -103,7 +106,7 @@ export function choixDeMarque(marque: MarqueProduction | null | undefined): { ch
   if (marque.contexte !== 'cricut') return { choix: { contexte: 'generique' }, inconnu: marque.contexte };
   const brut: ChoixMachine = {
     machine: marque.machine ?? CHOIX_CRICUT_DEFAUT.machine, tapis: marque.tapis ?? CHOIX_CRICUT_DEFAUT.tapis, materiau: marque.materiau ?? CHOIX_CRICUT_DEFAUT.materiau,
-    procede: marque.procede === 'imprimer-decouper' ? 'imprimer-decouper' : 'decoupe', unite: marque.unite === 'mm' ? 'mm' : 'in'
+    procede: marque.procede === 'imprimer-decouper' || marque.procede === 'dessin-stylo' ? marque.procede : 'decoupe', unite: marque.unite === 'mm' ? 'mm' : 'in'
   };
   return { choix: normaliserChoix({ contexte: 'cricut', ...brut }) };
 }

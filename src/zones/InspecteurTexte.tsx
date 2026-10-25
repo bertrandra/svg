@@ -1,4 +1,4 @@
-// La section « Texte » de l'inspecteur (ADR-0021) : un texte vivant se retape et se restyle ici, comme un formulaire
+// La section « Texte » de l'inspecteur (ADR-0022) : un texte vivant se retape et se restyle ici, comme un formulaire
 // (le clavier y fait tout), et se vectorise d'ici dans l'un des trois modes. Chaque reglage est une entree d'historique ;
 // la frappe dans le champ se fond en une seule, par sa cle, jusqu'a ce qu'on le quitte.
 

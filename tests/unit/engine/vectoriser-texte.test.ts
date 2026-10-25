@@ -1,4 +1,4 @@
-// Vectoriser un texte vivant (ADR-0021) : trois modes, des aires qui se conservent, des lettres soudees d'un seul tenant,
+// Vectoriser un texte vivant (ADR-0022) : trois modes, des aires qui se conservent, des lettres soudees d'un seul tenant,
 // des traces ouverts qui restent ouverts, et une coupe par parties quand la fonte n'est pas la.
 
 import { describe, expect, it } from 'vitest';

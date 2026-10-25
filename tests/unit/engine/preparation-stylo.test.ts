@@ -1,4 +1,4 @@
-// Les constats du stylo et de la lame pour le texte et les traits ouverts (ADR-0021), et leurs corrections.
+// Les constats du stylo et de la lame pour le texte et les traits ouverts (ADR-0022), et leurs corrections.
 
 import { describe, expect, it } from 'vitest';
 import type { Chemin, DessinSvg, Forme, TexteVivant } from '../../../src/engine/editionSvg.js';

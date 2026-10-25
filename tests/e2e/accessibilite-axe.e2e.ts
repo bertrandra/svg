@@ -248,7 +248,7 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, outil texte'));
     });
 
-    // Le texte vivant (ADR-0021) : la section « Texte » de l'inspecteur, l'apercu « forme / ligne » ouvert, la saisie en place.
+    // Le texte vivant (ADR-0022) : la section « Texte » de l'inspecteur, l'apercu « forme / ligne » ouvert, la saisie en place.
     async function texteVivant(page: Page, police = 'inter') {
       await page.keyboard.press('t');
       await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });

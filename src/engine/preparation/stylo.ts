@@ -1,4 +1,4 @@
-// Le jugement d'un dessin pour le stylo et pour la lame, la ou le texte et les traits ouverts changent tout (ADR-0021).
+// Le jugement d'un dessin pour le stylo et pour la lame, la ou le texte et les traits ouverts changent tout (ADR-0022).
 // La Cricut ecrit avec un stylo : elle NE REMPLIT PAS. Une forme pleine sera dessinee par son pourtour, une lettre a contour
 // en double trait (creuse). A l'inverse, la lame ne decoupe pas un trait ouvert, et des lettres qui se chevauchent se coupent
 // l'une a travers l'autre. Ces constats sont purs, comme ceux de constats.ts ; chacun propose des corrections faites par des
@@ -13,14 +13,15 @@ import { pluriel } from '../../util/texte.js';
 import type { Gravite } from './constats.js';
 
 export type CodeConstatTexte = 'stylo-plein' | 'stylo-double-trait' | 'decoupe-trait-ouvert' | 'lettres-chevauchent';
-export type CodeCorrectionTexte = 'garder-contour' | 'hachurer' | 'police-trait' | 'contour-en-forme' | 'souder';
+export type CodeCorrectionTexte = 'garder-contour' | 'hachurer' | 'police-trait' | 'contour-en-forme' | 'souder' | 'procede-stylo';
 
 export const LIBELLES_CORRECTION_TEXTE: Readonly<Record<CodeCorrectionTexte, string>> = {
   'garder-contour': 'Garder le contour',
   hachurer: 'Hachurer',
   'police-trait': 'Police à trait unique',
   'contour-en-forme': 'Contour en forme',
-  souder: 'Souder'
+  souder: 'Souder',
+  'procede-stylo': 'Passer au dessin au stylo'
 };
 
 export interface ConstatTexte {
@@ -41,7 +42,7 @@ const texteAContour = (f: Forme): boolean => !!f.texte && naturePolice(f.texte.p
 
 /**
  * Le procede « Dessin au stylo » : une forme pleine se dessine par son pourtour (le stylo ne remplit pas) ; un texte a contour
- * se dessine en double trait. La premiere correction de chaque constat est la plus sure ; « Police à trait unique » n'est
+ * se dessine en double trait. La premiere correction de chaque constat est la plus sure ; « Police a trait unique » n'est
  * proposee que s'il y a un texte vivant a contour.
  */
 export function constatsStylo(dessin: DessinSvg): ConstatTexte[] {
@@ -65,7 +66,7 @@ export function constatsStylo(dessin: DessinSvg): ConstatTexte[] {
 }
 
 /** Vrai si la forme porte un trace ouvert sans fond : une ligne, que la lame ne sait pas decouper. */
-const traitOuvert = (f: Forme): boolean => f.remplissage === null && f.contour !== null
+export const traitOuvert = (f: Forme): boolean => f.remplissage === null && f.contour !== null
   && ((!!f.texte && naturePolice(f.texte.police.id) === 'trait') || sousChemins(f.d).some(s => !s.some(c => c.c === 'Z')));
 
 /** Les textes vivants a contour dont des lettres (des parties) se chevauchent : la lame couperait l'une a travers l'autre. */
@@ -77,16 +78,22 @@ export function textesQuiSeChevauchent(dessin: DessinSvg, tolerance = toleranceB
   });
 }
 
+/** Le constat d'un trait ouvert en decoupe (ou d'un texte a trait unique), ou null. */
+export function constatTraitsOuverts(dessin: DessinSvg): ConstatTexte | null {
+  const ouverts = visibles(dessin).filter(traitOuvert);
+  if (!ouverts.length) return null;
+  return {
+    // Bloquant, comme le constat « trait » qu'il precise pour ces formes : l'export de decoupe ne garde que des fonds.
+    code: 'decoupe-trait-ouvert', gravite: 'bloquant', formes: ids(ouverts), corrections: ['contour-en-forme', 'procede-stylo'],
+    message: 'Un trait ouvert ne se découpe pas : ' + pluriel(ouverts.length, 'forme') + ' n’' + accord(ouverts.length, 'est', 'ont') + (ouverts.length > 1 ? ' que des lignes' : ' qu’une ligne') + '. Transformez le contour en forme, ou choisissez le procédé Dessin au stylo.'
+  };
+}
+
 /** Le procede « Decoupe » : un trait ouvert (ou un texte a trait unique) ne se decoupe pas ; des lettres qui se chevauchent se soudent. */
 export function constatsDecoupeTexte(dessin: DessinSvg): ConstatTexte[] {
   const r: ConstatTexte[] = [];
-  const ouverts = visibles(dessin).filter(traitOuvert);
-  if (ouverts.length) {
-    r.push({
-      code: 'decoupe-trait-ouvert', gravite: 'a-corriger', formes: ids(ouverts), corrections: ['contour-en-forme'],
-      message: 'Un trait ouvert ne se découpe pas : ' + pluriel(ouverts.length, 'forme') + ' n’' + accord(ouverts.length, 'est', 'ont') + (ouverts.length > 1 ? ' que des lignes' : ' qu’une ligne') + '. Transformez le contour en forme, ou choisissez le procédé Dessin au stylo.'
-    });
-  }
+  const ouverts = constatTraitsOuverts(dessin);
+  if (ouverts) r.push(ouverts);
   const chevauchent = textesQuiSeChevauchent(dessin);
   if (chevauchent.length) {
     r.push({
@@ -102,10 +109,10 @@ export type ResultatCorrectionTexte = { readonly dessin: DessinSvg; readonly phr
 const RIEN = 'Rien à corriger : le dessin a changé depuis le constat.';
 
 /**
- * Applique une correction qui ne demande que le dessin (« Police à trait unique » demande une fonte : l'interface la
+ * Applique une correction qui ne demande que le dessin (« Police a trait unique » demande une fonte : l'interface la
  * compose, puis pose le texte). `largeur` est celle du stylo, en unites du plan. Pur ; le meme dessin rendu par l'erreur.
  */
-export function corrigerTexte(dessin: DessinSvg, code: Exclude<CodeCorrectionTexte, 'police-trait' | 'contour-en-forme'>, formes: readonly string[], largeur: number): ResultatCorrectionTexte {
+export function corrigerTexte(dessin: DessinSvg, code: Exclude<CodeCorrectionTexte, 'police-trait' | 'contour-en-forme' | 'procede-stylo'>, formes: readonly string[], largeur: number): ResultatCorrectionTexte {
   const voulus = new Set(formes);
   if (code === 'garder-contour') {
     let n = 0;

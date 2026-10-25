@@ -1,4 +1,4 @@
-// Les gestes du texte vivant (ADR-0021) : creer un texte, le retaper ou le restyler, le vectoriser. Le moteur compose et
+// Les gestes du texte vivant (ADR-0022) : creer un texte, le retaper ou le restyler, le vectoriser. Le moteur compose et
 // pose (engine/texte/) ; ici, on trouve la fonte, on lui demande les contours, et on passe le resultat aux operations pures
 // par les verbes de l'editeur (une entree d'historique par geste, une saisie fondue par sa cle).
 
@@ -24,7 +24,7 @@ export const TEXTE_APERCU = 'Abc';
  * vingtieme de la taille (un trait de plume lisible a l'ecran, que l'inspecteur regle ensuite comme tout contour).
  */
 export function largeurTrait(taille: number, profil: ProfilProduction | null): number {
-  const stylo = (profil as { largeurStylo?: number } | null)?.largeurStylo;
+  const stylo = profil?.largeurStylo;
   return stylo && stylo > 0 ? stylo : Math.round(taille * 50) / 1000;
 }
 

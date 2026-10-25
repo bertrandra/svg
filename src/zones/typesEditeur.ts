@@ -6,7 +6,7 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
-import type { CodeConstat, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
+import type { CodeConstat, CodeCorrection, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
@@ -177,6 +177,8 @@ export interface ActionsEditeur {
   contourEnForme: () => void;
   /** Decale le contour des formes choisies : positif vers l'exterieur, negatif vers l'interieur. */
   decalerContour: (distance: number, jonction: Jonction) => void;
+  /** Hachure les formes pleines choisies a l'angle donne, a la largeur du stylo (ADR-0022) : des lignes, plus de fond. */
+  hachurer: (angle: number) => void;
   /** Arrondit les angles des formes choisies au rayon donne, ramene la ou les segments sont trop courts. */
   arrondirAngles: (rayon: number) => void;
   /** Change le type du point actif (outil points) : angle, lisse ou symetrique. */
@@ -192,7 +194,7 @@ export interface ActionsEditeur {
   /** Change le contexte de production (barre) ; un choix incoherent est ramene au plus proche valide, et dit. */
   poserProduction: (c: ChoixProduction) => void;
   /** Applique la correction d'un constat du panneau, rejuge sur le dessin du moment : une entree d'historique. */
-  corrigerConstat: (code: CodeConstat) => void;
+  corrigerConstat: (code: CodeConstat, correction?: CodeCorrection) => void;
   /**
    * Exporte pour la machine du contexte : le SVG de decoupe, ou l'archive Print Then Cut. Tant qu'un constat « à corriger » reste,
    * l'export attend une confirmation dans le panneau (`quandMeme` la donne) ; un constat bloquant le refuse.

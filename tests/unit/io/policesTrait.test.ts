@@ -1,4 +1,4 @@
-// La fonte a trait unique (ADR-0021) : la vraie police SVG du paquet hersheytext, lue comme scripts/polices.mjs la lit,
+// La fonte a trait unique (ADR-0022) : la vraie police SVG du paquet hersheytext, lue comme scripts/polices.mjs la lit,
 // composee par le moteur en traces OUVERTS, sans remplissage, avec les lettres accentuees du francais.
 
 import { describe, expect, it } from 'vitest';

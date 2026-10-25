@@ -53,7 +53,7 @@ describe('les mentions des composants tiers', () => {
       const dossier = join(racine, 'node_modules', c.paquet);
       const textes = readdirSync(dossier).filter(f => /^(licen[cs]e|readme)/i.test(f)).map(f => lireLf(join(dossier, f)));
       textes.push(readFileSync(join(dossier, 'package.json'), 'utf8'));
-      // Une police SVG a trait unique (ADR-0021) porte son auteur dans son propre <metadata> : le paquet ne le dit nulle part ailleurs.
+      // Une police SVG a trait unique (ADR-0022) porte son auteur dans son propre <metadata> : le paquet ne le dit nulle part ailleurs.
       for (const [, , paquet, fichier] of POLICES_TRAIT) if (paquet === c.paquet) textes.push(lireLf(join(dossier, fichier)));
       const trouve = textes.some(t => sansEspaces(t).includes(sansEspaces(c.titulaire)));
       expect(trouve, c.paquet + ' : « ' + c.titulaire + ' » ne figure ni dans sa licence ni dans ses metadonnees').toBe(true);

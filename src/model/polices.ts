@@ -14,7 +14,7 @@
 //   - aucune fonte embarquee n'est italique : une italique demandee se penche de 12 degres (italique synthetique), et c'est dit.
 
 export type IdPolice = 'inter' | 'inter-gras' | 'oswald' | 'bebas' | 'playfair' | 'lobster' | 'pacifico' | 'caveat' | 'fredoka';
-/** Les fontes a trait unique (ADR-0021) : un trace ouvert par trait de plume, pour le stylo d'une machine, jamais un remplissage. */
+/** Les fontes a trait unique (ADR-0022) : un trace ouvert par trait de plume, pour le stylo d'une machine, jamais un remplissage. */
 export type IdPoliceTrait = 'ems-readability';
 export type IdPoliceLivree = IdPolice | IdPoliceTrait;
 

@@ -121,7 +121,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
   // La provenance qu'un SVG ecrit ici porte sur son <path> : on la reprend (rien si absente ou inconnue).
   const origine = lireOrigines(n.attributs[ATTRIBUT_ORIGINE]);
-  // Le texte vivant qu'un SVG ecrit ici porte sur son <path> (ADR-0021) : on le reprend, compose avec les groupes autour.
+  // Le texte vivant qu'un SVG ecrit ici porte sur son <path> (ADR-0022) : on le reprend, compose avec les groupes autour.
   const lu = n.nom === 'path' ? lireTexteVivant(n.attributs, m) : null;
   if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
   else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);

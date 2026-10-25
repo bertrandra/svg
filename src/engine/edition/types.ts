@@ -49,7 +49,7 @@ export interface Forme {
    */
   readonly origine?: readonly string[];
   /**
-   * Le texte vivant (ADR-0021) : `d` est alors les contours composes de ce texte, poses par `texte.matrice`. ABSENT de
+   * Le texte vivant (ADR-0022) : `d` est alors les contours composes de ce texte, poses par `texte.matrice`. ABSENT de
    * toute autre forme, donc sans effet sur ses octets. Une operation qui change `d` sans connaitre le texte (booleen,
    * points, contour en forme) le perd : la forme redevient un chemin ordinaire (`garderTextes`, texteVivant.ts).
    */

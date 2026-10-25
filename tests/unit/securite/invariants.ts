@@ -21,7 +21,7 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-opacity', 'opacity', 'data-origine',
   // La marque du contexte de production (ADR-0013) : sur la racine seule, des identifiants courts et rien d'autre.
   'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite',
-  // Le texte vivant (ADR-0021) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
+  // Le texte vivant (ADR-0022) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
   'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
 ]);

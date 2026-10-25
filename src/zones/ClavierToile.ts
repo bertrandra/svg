@@ -146,7 +146,7 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (parcourt && page) return changerForme(c, page);
   if (outil === 'texte' && e.key === 'Enter') return ouvrirChampTexte(c, c.toile.current?.closest('.editeur-cadre') ?? null);
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
-  // Entree sur un texte vivant ouvre sa saisie en place (ADR-0021) ; sur une autre forme, le mode points.
+  // Entree sur un texte vivant ouvre sa saisie en place (ADR-0022) ; sur une autre forme, le mode points.
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && c.tx) { c.tx.ouvrirSaisie(c.m.formeSeule.id); return true; }
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule) { c.ac.poserOutil('points'); return true; }
   return false;

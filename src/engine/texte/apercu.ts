@@ -1,4 +1,4 @@
-// L'apercu « forme / ligne » d'une police (ADR-0021) : le meme texte, rendu deux fois par le moteur, tel que la lame le
+// L'apercu « forme / ligne » d'une police (ADR-0022) : le meme texte, rendu deux fois par le moteur, tel que la lame le
 // decouperait (des lettres pleines) et tel que le stylo le tracerait (des lignes, sans aucun remplissage). Une police a
 // contour donne au stylo un double trait (le pourtour de chaque lettre) ; une police a trait donne a la lame des traits
 // epaissis par l'outil « contour en forme » existant. Le verdict est un constat neutre, jamais un refus. Pur.

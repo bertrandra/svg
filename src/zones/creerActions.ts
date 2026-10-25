@@ -38,14 +38,14 @@ export interface Setters {
 
 export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEditeur {
   let compteur = 0;
-  // La garde du texte vivant (ADR-0021) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
+  // La garde du texte vivant (ADR-0022) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
   // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts).
   const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => { s.poserH(x => { const d = garderTextes(x.present, f(x.present)).dessin; return avancer(x, d, cle, limitePourTaille(d.formes.length)); }); };
   const finir = () => s.poserH(x => clore(x));
   // Changer d'outil, de quelque facon que ce soit, rend aussi le reticule du clavier : il n'a de sens que pour l'outil qui l'a pose.
   const poserOutilBrut = (o: Outil) => { s.poserOutilBrut(o); s.poserCurseur(null); };
   const poserOutil = (o: Outil) => {
-    // Modifier les points d'un texte vivant, c'est le vectoriser d'abord (ADR-0021) : on le fait, une entree d'historique, et on le dit.
+    // Modifier les points d'un texte vivant, c'est le vectoriser d'abord (ADR-0022) : on le fait, une entree d'historique, et on le dit.
     const seule = o === 'points' ? lire().formeSeule : null;
     if (seule?.texte && !seule.verrouille) {
       appliquer(d => ({ ...d, formes: d.formes.map(f => (f.id === seule.id ? sansTexte(f) : f)) }));
