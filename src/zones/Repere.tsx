@@ -28,9 +28,12 @@ export function Repere({ id, titre, children }: { id: IdRepere; titre: string; c
   const refermer = () => {
     const note = racine.current;
     // Le bouton va disparaitre avec la note : le focus clavier passe a ce qui la suit, au lieu de tomber sur le corps de la page.
+    // Le focus part avant que la note ne quitte la page : il ne passe jamais par le corps, meme un instant. Si le rendu qui
+    // retire la note l'a fait tomber malgre tout, l'image suivante le rend a la meme suite.
     const suite = note && note.contains(document.activeElement) ? suivantApres(note, note) : null;
+    suite?.focus({ preventScroll: true });
     compris();
-    if (suite) requestAnimationFrame(() => suite.focus({ preventScroll: true }));
+    if (suite) requestAnimationFrame(() => { if (document.activeElement === document.body && suite.isConnected) suite.focus({ preventScroll: true }); });
   };
   return (
     <div className="repere" role="note" aria-label={titre} ref={racine} data-repere={id}>

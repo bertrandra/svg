@@ -117,6 +117,8 @@ empreintes.
 
 ### Corrigé
 
+- Refermer un repère par « Compris » au clavier donne le focus à ce qui suit avant que la note ne disparaisse : il ne
+  passe plus un instant par le corps de la page (un test de navigateur l'observait parfois en CI).
 - Un bouton discret survolé passait sous 4,5:1 en thème clair (4,49 sur un panneau, 4,05 sur la page) : son texte prend
   le jeton `cyan-survol`.
 - Sur un téléphone (420 px), l'atelier de conversion débordait de 20 px dès que le prétraitement ajoutait
