@@ -21,6 +21,7 @@ import { FournisseurSections } from './commun/Section.js';
 import { FournisseurEditeur } from './contexteEditeur.js';
 import { FournisseurReperes, FournisseurVisite, type OptionsGuide } from './contexteGuide.js';
 import { FournisseurStockage } from './contexteStockage.js';
+import { ContextePolicesEnLigne } from './contexteTexte.js';
 import { useEtatEditeur } from './etatEditeur.js';
 import { useFocusEditeur } from './focusEditeur.js';
 import { lireDessinMemo } from './lecture.js';
@@ -73,6 +74,11 @@ export interface ProprietesEditeur {
    * l'accueil (ADR-0024). Une marque du SVG l'emporte toujours ; rien ne s'ecrit tant que la personne ne modifie pas le dessin.
    */
   production?: ChoixProduction | undefined;
+  /**
+   * Les polices libres telechargeables (ADR-0025) : l'outil Texte propose « Toutes les polices », et une police choisie se
+   * telecharge apres l'accord de la personne. Faux par defaut : rien ne se telecharge, seules les dix fontes livrees se proposent.
+   */
+  policesEnLigne?: boolean;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -108,7 +114,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false }: ProprietesEditeur) {
   const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
@@ -127,10 +133,12 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
         </div>
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
+          <ContextePolicesEnLigne.Provider value={policesEnLigne}>
           <FournisseurReperes actif={!!guide}>
             <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} depart={depart} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
               libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} /></FournisseurSections>
           </FournisseurReperes>
+          </ContextePolicesEnLigne.Provider>
         </FournisseurStockage>
       )}
     </div>,

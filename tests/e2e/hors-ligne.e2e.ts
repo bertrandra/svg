@@ -119,6 +119,31 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     aucuneRequete(reseau);
   });
 
+  // ADR-0025 : l'index des polices est une annexe voisine (file://) ; l'ouvrir, y chercher, choisir une police non livree ne
+  // contacte personne tant que la personne n'a pas accepte. Le dialogue s'ouvre, « Pas maintenant » le ferme : aucune requete.
+  it('le catalogue des polices s\'ouvre et se cherche sans requete ; une police non livree demande l\'accord, refuse : rien ne part', async () => {
+    const { page, reseau } = await session();
+    await ouvrirExemple(page);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('t');
+    const inspecteur = page.locator('.editeur-inspecteur');
+    await inspecteur.locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await inspecteur.getByRole('button', { name: 'Toutes les polices' }).click();
+    await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/^\d[\d\s ]* polices$/);
+    // Plus de deux mille polices, une poignee de lignes dans la page : la liste se fenetre (ADR-0008).
+    const total = Number((await page.locator('.explorateur-polices .polices-total').innerText()).replace(/\D/g, ''));
+    expect(total).toBeGreaterThan(2000);
+    expect(await page.locator('.liste-polices .police-ligne').count()).toBeLessThan(100);
+    await page.locator('.explorateur-polices input[type="search"]').fill('roboto');
+    const roboto = page.locator('.liste-polices .police-ligne', { hasText: /^Roboto\s*Google Fonts$/ });
+    await roboto.first().click();
+    const dialogue = page.getByRole('dialog', { name: 'Télécharger la police « Roboto » ?' });
+    await dialogue.waitFor();
+    await page.getByRole('button', { name: 'Pas maintenant' }).click();
+    await attend(() => dialogue.count()).toBe(0);
+    aucuneRequete(reseau);
+  });
+
   it('coupe vraiment le reseau : une requete vers un hote est vue et avortee (le test n\'est pas aveugle)', async () => {
     const { page, reseau, erreurs } = await session();
     await page.getByRole('tab').first().waitFor();

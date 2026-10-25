@@ -308,6 +308,50 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
+    // Les polices en ligne (ADR-0025) : « Toutes les polices » ouvert sur la vraie liste fenetree (l'index de dist/), avec ses
+    // filtres et son pied ; puis le dialogue de consentement d'une police non livree (aucune requete : on ne l'accepte pas).
+    async function toutesLesPolices(page: Page) {
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('t');
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
+      await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
+      // Une recherche courte (« sat » : Satisfy, Satoshi et son badge ITF…) pour que chaque ligne tienne entiere dans la liste
+      // qui defile : une ligne coupee par son bord n'a pas de fond qu'axe sache lire (« incomplete »), et ses pareilles visibles
+      // sont jugees ici. Le fenetrage de la liste entiere a son propre test (tests/unit/model/cataloguePolices.test.ts).
+      await page.locator('.explorateur-polices input[type="search"]').fill('sat');
+      await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(4);
+      await page.mouse.move(0, 0);
+    }
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec « Toutes les polices » ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await toutesLesPolices(page);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, toutes les polices (' + schema + ')'));
+      });
+    }
+
+    it('avec le dialogue de consentement d une police à télécharger', async () => {
+      const page = await editeur({ largeur: 1200, hauteur: 900 });
+      await toutesLesPolices(page);
+      await page.locator('.explorateur-polices input[type="search"]').fill('satoshi');
+      await page.locator('.liste-polices .police-ligne', { hasText: 'Satoshi' }).first().click();
+      await page.getByRole('dialog', { name: /Télécharger la police/ }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, consentement d’une police'));
+    });
+
+    it('sur un téléphone de 390 px, « Toutes les polices » ouvert', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).tap();
+      await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
+      await page.locator('.explorateur-polices input[type="search"]').fill('sat');
+      await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(4);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, toutes les polices'));
+    });
+
     it('avec la saisie en place d un texte vivant', async () => {
       const page = await editeur({ largeur: 1200, hauteur: 900 });
       await texteVivant(page);

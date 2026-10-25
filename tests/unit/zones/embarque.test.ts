@@ -42,6 +42,12 @@ describe('verifierOptions', () => {
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, baseAnnexes: 4 })).toMatch(/« baseAnnexes »/);
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, fermerApresEnregistrer: 'oui' })).toMatch(/« fermerApresEnregistrer »/);
   });
+
+  // ADR-0025 : les polices en ligne ne s'ouvrent que sur un vrai booleen ; absente, l'option vaut faux (aucune requete).
+  it('accepte « policesEnLigne » vrai, faux ou absent, et refuse tout le reste', () => {
+    for (const v of [true, false, undefined]) expect(verifierOptions({ svg: SVG, onEnregistrer: ok, policesEnLigne: v }), String(v)).toBeNull();
+    for (const v of ['true', 1, 'oui', {}, null]) expect(verifierOptions({ svg: SVG, onEnregistrer: ok, policesEnLigne: v }), String(v)).toMatch(/« policesEnLigne » doit être vraie ou fausse/);
+  });
 });
 
 describe('estEditable', () => {

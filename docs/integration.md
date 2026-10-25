@@ -20,7 +20,7 @@ les fontes et le bundle. `npm run embarquer` ne refait que le bundle.
 
 ## 1. L’iframe de la page entière
 
-On sert `dist/editeur-svg.html` avec ses trois fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les trois annexes, au premier besoin.
+On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`, `polices-catalogue.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte d’elle-même : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les annexes, au premier besoin. La page propose les polices libres téléchargeables (ADR-0025) : une police du catalogue ne se télécharge qu’après l’accord de la personne, auprès des serveurs nommés dans « Les serveurs de polices ».
 
 ```html
 <iframe src="/svg/editeur-svg.html" title="Éditeur SVG" style="width: 100%; height: 720px; border: 0"
@@ -111,6 +111,7 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S`. Rendre `false` dit que le brouillon n’a pas été gardé : l’éditeur l’annonce au lieu de « Brouillon gardé. » |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 | `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
+| `policesEnLigne` | `boolean` | `false` | Les polices libres téléchargeables (ADR-0025) : l’outil Texte propose « Toutes les polices » (plus de 2 000 familles libres, recherche, filtres, favoris, polices du document). Une police choisie se télécharge **seulement après l’accord de la personne**, serveur par serveur, retenu dans `stockage` (clé `svg.polices.consentement`, révocable dans le même panneau) ; chaque fichier est vérifié par son empreinte sha256 avant d’être lu. Faux ou absent : aucune requête, seules les dix fontes de `polices.js` se proposent. Vrai demande de servir aussi `polices-catalogue.js` sous `baseAnnexes`, et d’autoriser les serveurs de polices dans votre politique de sécurité (voir « Les serveurs de polices ») |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
@@ -175,6 +176,7 @@ rattrapée par l’éditeur.
 | `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
 | `bibliotheque-<source>.js` | de 0,9 à 3,6 Mo chacun (voir ci-dessous) | facultatifs, si vous passez `bibliotheque` | Les cinq bibliothèques libres (Material, Phosphor, Tabler, Healthicons, Lucide), chacune chargée quand la personne choisit sa pastille « Source » (ou « Toutes », ou une nature qu’elle propose). Un fichier absent se dit dans le panneau ; le reste de la bibliothèque marche |
 | `polices.js` | 2,7 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Dix fontes libres (OFL, dont une à trait unique), chargées quand la personne ouvre l’outil Texte (ou retape un texte vivant), ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
+| `polices-catalogue.js` | 1,4 Mo (0,7 Mo compressé) | seulement avec `policesEnLigne: true` | L’index des polices libres téléchargeables : noms, catégories, licences, versions épinglées et empreintes sha256. **Il ne contient aucune fonte.** Chargé quand la personne ouvre « Toutes les polices » (ou rouvre un texte composé dans une police du catalogue). Sans lui, le panneau le dit et propose les fontes livrées |
 | `MENTIONS.txt` | 18 Ko | **toujours, avec le bundle** | Le copyright et la licence de chaque composant tiers redistribué (voir « Attribution et licences ») |
 
 - **`vtracer.js` n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas, et rien dans
@@ -300,6 +302,12 @@ Le SVG que vous passez à `ouvrir` et qui porte déjà ces marques les garde. Un
 bibliothèque s’écrit exactement comme avant. Ce que l’éditeur écrit pour un dessin qui en contient a changé avec cette version
 (`<metadata>` et `data-origine` en plus), ce qui est un événement de version majeure.
 
+**Les polices téléchargées** (`policesEnLigne: true`, ADR-0025) ne sont pas redistribuées : la personne télécharge le
+fichier depuis sa source, et le dessin n’en contient que les contours des lettres (permis par chaque licence admise : OFL,
+Apache 2.0, UFL, CC0 et l’ITF Free Font License de Fontshare, affichée avec le badge « ITF »). `MENTIONS.txt` ne les liste donc
+pas ; `polices-catalogue.js` n’est qu’un index (noms, licences, empreintes). La boîte « À propos et crédits » nomme la source et
+la licence de chaque police téléchargée qu’emploie le dessin.
+
 **Ce que l’éditeur ne sait pas faire** : le jeu de données ne dit pas qui a dessiné chaque icône, l’éditeur ne peut donc pas
 créditer un auteur par forme ; le crédit est celui de la source. Les licences du projet lui-même sont l’affaire de son
 propriétaire et ne sont pas couvertes ici.
@@ -351,14 +359,27 @@ Pour un hôte, l’essentiel :
   ```
 
   Un stockage d’hôte a trois verbes : `lire(cle)` rend la valeur (du JSON déjà décodé) ou `null`, `ecrire(cle,
-  valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. Les clés écrites sont `svg.versions`, et `svg.guide`
-  avec `visite: true` (la visite vue, les repères refermés). Si l’un
+  valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. Les clés écrites sont `svg.versions`, `svg.guide`
+  avec `visite: true` (la visite vue, les repères refermés), et avec `policesEnLigne: true` `svg.polices.consentement`
+  (les serveurs acceptés), `svg.polices.favoris` et `svg.polices.recentes`. Si l’un
   des verbes lève une exception, l’éditeur la rattrape et lit le stockage comme refusé. Le stockage est un
   confort : refusé, absent ou plein, tout marche sans lui, les versions vivant alors le temps de l’éditeur.
-- **Aucun réseau** : l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>` des
-  deux annexes, et seulement si la personne ouvre la bibliothèque ou l’outil Texte.
+- **Aucun réseau sans accord** : par défaut l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>`
+  des annexes, et seulement si la personne ouvre la bibliothèque ou l’outil Texte. Avec `policesEnLigne: true`, une police
+  du catalogue se télécharge auprès d’un serveur de polices, et seulement après l’accord de la personne (voir ci-dessous).
+- **Les serveurs de polices** (seulement avec `policesEnLigne: true`, et seulement après l’accord de la personne) :
+  `cdn.jsdelivr.net` (paquets npm `@fontsource/*` à une version épinglée), `fonts.bunny.net` (le même fichier, en repli si
+  jsDelivr ne répond pas ou sert un autre fichier), `gitlab.com` (fontes de Velvetyne, par l’API au commit épinglé) et
+  `cdn.fontshare.com` (fontes de Fontshare). Le dialogue nomme le serveur avant toute requête. Ce qui part : une requête GET du
+  fichier demandé, sans cookie (`credentials: 'omit'`) ni page d’origine (`referrerPolicy: 'no-referrer'`) ; le serveur voit
+  l’adresse IP, comme pour toute page. Chaque fichier est vérifié par son empreinte sha256 (`crypto.subtle`, qui demande un
+  contexte sécurisé : https ou localhost) contre l’index avant d’être lu ; une empreinte fausse est refusée et dite. Un fichier
+  vérifié se garde dans Cache Storage (`svg-polices-v1`), un confort. La police téléchargée n’est jamais écrite dans le SVG :
+  seulement les contours des lettres, et `data-ed-police="c-…"` avec sa version pour la recomposer à l’identique.
 - **Politique de sécurité du contenu** : vérifiée avec
-  `default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data: blob:`. Le
+  `default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data: blob:`. Avec `policesEnLigne: true`, ajoutez
+  `connect-src https://cdn.jsdelivr.net https://fonts.bunny.net https://gitlab.com https://cdn.fontshare.com` : sans elle, le
+  téléchargement échoue et l’éditeur le dit. Le
   `style-src 'unsafe-inline'` est nécessaire (la feuille est ajoutée à l’exécution et l’éditeur pose des
   styles en ligne) ; `img-src data:` pour les vignettes de la bibliothèque, `blob:` pour les téléchargements.
   Sans `style-src 'unsafe-inline'`, l’éditeur s’ouvre mais sans mise en forme.
@@ -426,6 +447,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `fermerSansModification?` | `boolean` | Le geste de fin reste actif sans modification et appelle alors `fermer` (rien n’est réécrit) ; faux par défaut : il est grisé et dit pourquoi. La page le pose |
 | `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
 | `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
+| `policesEnLigne?` | `boolean` | Les polices libres téléchargeables (ADR-0025), après l’accord de la personne. **Absent : faux**, aucune requête ; la page autonome le donne vrai |
 | `production?` | `ChoixProduction` (`src/model/contextes.ts`) | Le contexte de production de départ (ADR-0013), quand le SVG ne porte aucune marque `data-ed-*` : par exemple `{ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' }`. Une marque du SVG l’emporte toujours ; rien ne s’écrit tant que la personne ne modifie pas le dessin. La page le pose pour le public « machine » de son accueil (ADR-0024) ; le bundle ne l’expose pas |
 
 À savoir, côté React :

@@ -189,7 +189,7 @@ function Accueil() {
 
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores}
-          production={fichier.production} libelleEnregistrer="Terminer" fermerSansModification
+          production={fichier.production} libelleEnregistrer="Terminer" fermerSansModification policesEnLigne
           fermer={() => { poserEdition(false); demanderVisite(false); }}
           enregistrer={s => {
             // Le dessin rendu porte sa marque s'il a ete prepare : la reprise de l'edition la relit, le depart ne sert plus.

@@ -6,10 +6,15 @@
 // paquet hersheytext, dont chaque glyphe est un trace OUVERT (la course d'une plume). opentype.js ne lit pas une police
 // SVG, et une fonte TrueType ne sait pas dire un trace ouvert : on en garde les glyphes tels quels, en donnees.
 //
-//   npm run polices            -> dist/polices.js
+// S'y ajoute l'index des polices libres telechargeables a la demande (ADR-0025) : dist/polices-catalogue.js, tire de
+// l'instantane commis data/catalogue-polices.json (scripts/catalogue-polices.mjs le produit a la main). Il ne contient aucune
+// fonte, seulement les noms, licences, versions epinglees et empreintes ; il est valide par la page avant d'etre ecrit.
+//
+//   npm run polices            -> dist/polices.js et dist/polices-catalogue.js
 
 import { readFileSync } from 'node:fs';
 import { annoncer, base64DeFichier, depuisRacine, ecrireDansDist, enKo, estLance, refuserFinDeScript } from './aide.mjs';
+import { FICHIER_CATALOGUE, lireRegistre } from './catalogue-polices.mjs';
 
 export const POLICES = [
   ['inter', 'Inter', 'inter/400Regular/Inter_400Regular.ttf'],
@@ -59,7 +64,21 @@ export function construirePolices() {
   return { polices: liste.length, octets: texte.length };
 }
 
+/** L'annexe de l'index : l'instantane commis, valide par la page (une entree hors de la liste blanche arrete le build). */
+export async function construireCatalogue() {
+  const { validerCatalogue } = await lireRegistre();
+  const donnees = JSON.parse(readFileSync(FICHIER_CATALOGUE, 'utf8'));
+  const v = validerCatalogue(donnees);
+  if ('erreur' in v) throw new Error('data/catalogue-polices.json refusé : ' + v.erreur);
+  const texte = 'window.__cataloguePolicesSvg=' + JSON.stringify(donnees) + ';';
+  refuserFinDeScript(texte, 'l’index des polices');
+  ecrireDansDist('polices-catalogue.js', texte);
+  return { familles: donnees.familles.length, octets: texte.length };
+}
+
 if (estLance(import.meta.url)) {
   const r = construirePolices();
   annoncer('Polices construites', 'polices.js', r.polices + ' fontes, ' + enKo(r.octets) + ' Ko');
+  const c = await construireCatalogue();
+  annoncer('Index des polices construit', 'polices-catalogue.js', c.familles + ' familles, ' + enKo(c.octets) + ' Ko');
 }

@@ -6,6 +6,7 @@
 import { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { SOURCES_ORIGINE, composantsDe, type Composant } from '../model/credits.js';
+import type { LicencePolice } from '../model/sourcesPolices.js';
 import { SOURCE_PAR_DEFAUT, sourceFormes } from '../model/sourcesFormes.js';
 
 /** Le paquet de la source par defaut : celle dont la mention est ecrite dans le fichier, presentee a part. */
@@ -28,8 +29,29 @@ function Liste({ titre, composants }: { titre: string; composants: readonly Comp
   );
 }
 
-/** Le contenu : pur affichage de la liste des crédits. */
-export function ContenuCredits() {
+/** Une police telechargee qu'emploie le dessin (ADR-0025) : son nom, sa source, sa licence (null quand l'index n'est pas la). */
+export interface PoliceCreditee { readonly nom: string; readonly source: string; readonly licence: LicencePolice | null }
+
+/** Les polices telechargees du dessin : leur licence nommee, et ce qu'elles sont (pas redistribuees par l'editeur). */
+function PolicesTelechargees({ polices }: { polices: readonly PoliceCreditee[] }) {
+  return (
+    <section className="credits-section">
+      <h3>Polices téléchargées employées dans ce dessin</h3>
+      <ul>
+        {polices.map(p => (
+          <li key={p.nom}>{p.nom}{p.source ? ' · ' + p.source : ''}{p.licence ? <> · <Lien href={p.licence.url}>{p.licence.nom}</Lien></> : ' · licence : voir l’index des polices'}</li>
+        ))}
+      </ul>
+      <p className="aide">
+        Ces polices ne sont pas livrées avec l’éditeur : vous les avez téléchargées depuis leur source. Le dessin enregistré n’en contient
+        que les contours des lettres, jamais le fichier de la police.
+      </p>
+    </section>
+  );
+}
+
+/** Le contenu : pur affichage de la liste des crédits, et des polices telechargees du dessin quand il y en a. */
+export function ContenuCredits({ polices = [] }: { polices?: readonly PoliceCreditee[] } = {}) {
   const source = SOURCES_ORIGINE[0];
   return (
     <>
@@ -56,6 +78,7 @@ export function ContenuCredits() {
         de leur licence accompagnent l’éditeur dans MENTIONS.txt.
       </p>
       <Liste titre="Fontes" composants={composantsDe('fonte')} />
+      {polices.length ? <PolicesTelechargees polices={polices} /> : null}
       <Liste titre="Logiciels" composants={composantsDe('logiciel')} />
       <p className="aide">Le texte complet de chaque licence est dans le fichier MENTIONS.txt, livré avec l’éditeur.</p>
     </>
@@ -66,14 +89,14 @@ export function ContenuCredits() {
  * La boîte, posée dans `conteneur` : l’éditeur quand elle s’ouvre de son menu Fichier (elle reste ainsi dans la racine dont
  * les styles sont cantonnés), le corps de la page sinon. `fermer` est appelé par Échap et par « Fermer ».
  */
-export function DialogueCredits({ fermer, conteneur }: { fermer: () => void; conteneur: HTMLElement }) {
+export function DialogueCredits({ fermer, conteneur, polices }: { fermer: () => void; conteneur: HTMLElement; polices?: readonly PoliceCreditee[] }) {
   const voile = useRef<HTMLDivElement>(null), boite = useRef<HTMLDivElement>(null), idTitre = useId();
   useFocusDialogue(voile, boite, fermer);
   return createPortal(
     <div className="credits-voile" ref={voile}>
       <div className="credits-dialogue" role="dialog" aria-modal="true" aria-labelledby={idTitre} tabIndex={-1} ref={boite}>
         <h2 id={idTitre}>À propos et crédits</h2>
-        <ContenuCredits />
+        <ContenuCredits {...(polices ? { polices } : {})} />
         <div className="actions"><button type="button" className="primaire" onClick={fermer}>Fermer</button></div>
       </div>
     </div>,

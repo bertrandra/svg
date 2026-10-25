@@ -42,7 +42,7 @@ export function PanneauTexte() {
     <fieldset className="editeur-groupe">
       <legend>Texte</legend>
       <textarea rows={2} value={texte} onChange={e => poserTexte(e.target.value)} aria-label="Texte" placeholder="Votre texte" />
-      <ChoixPolice polices={polices} valeur={police?.id ?? ''} poser={poserPoliceId} texte={texte} />
+      <ChoixPolice polices={polices} valeur={police?.id ?? ''} poser={id => poserPoliceId(id)} texte={texte} />
       <div className="grille-2">
         <label className="champ-ligne"><span>Taille</span><input type="text" inputMode="decimal" value={String(taille)} onChange={e => poserTaille(Math.max(1, Number(e.target.value.replace(',', '.')) || 1))} /></label>
         <label className="champ-ligne"><span>Espace</span><input type="text" inputMode="decimal" value={String(interlettrage)} onChange={e => poserInterlettrage(Number(e.target.value.replace(',', '.')) || 0)} title="Interlettrage, en part de la taille" /></label>

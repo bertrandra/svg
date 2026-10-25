@@ -1,12 +1,16 @@
 // Les trois menus de la barre principale (ADR-0006) : Vue, Edition, Fichier. Chacun lit ce qu'il
 // montre dans les contextes de l'editeur, pour que la barre n'ait ni a les connaitre ni a les passer.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sousChemins } from '../engine/editionSvg.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { useBoiteRaccourcis, useElementsAide } from './AideEditeur.js';
-import { DialogueCredits } from './Credits.js';
+import { DialogueCredits, type PoliceCreditee } from './Credits.js';
+import { useTexte } from './contexteTexte.js';
+import { estIdCatalogue } from '../model/cataloguePolices.js';
+import { LICENCES_POLICES, sourcePolices } from '../model/sourcesPolices.js';
+import { variantesEmployees } from '../io/policesEnLigne.js';
 import { allerAuChamp } from './OutilsTrace.js';
 import { useActionsTexte } from './actionsTexte.js';
 import { MODES_VECTORISATION, NOMS_MODES } from '../engine/texte/vectoriser.js';
@@ -103,7 +107,22 @@ function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: 
 
 /** La boite des credits : posee dans la racine de l'editeur, ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */
 function BoiteCredits({ fermer }: { fermer: () => void }) {
-  return <DialogueCredits fermer={fermer} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} />;
+  const polices = usePolicesDuDessin();
+  return <DialogueCredits fermer={fermer} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} polices={polices} />;
+}
+
+/**
+ * Les polices telechargees qu'emploie le dessin (ADR-0025), pour nommer leur licence dans les credits. Sans l'index (un hote
+ * sans polices en ligne), le nom de famille garde par le texte suffit ; la licence se lit alors dans l'index, ailleurs.
+ */
+function usePolicesDuDessin(): PoliceCreditee[] {
+  const mo = useDessin(), tx = useTexte();
+  const textes = mo.dessin.formes.flatMap(f => (f.texte && estIdCatalogue(f.texte.police.id) ? [f.texte.police] : []));
+  const avecCatalogue = textes.length > 0 && tx.enLigne;
+  useEffect(() => { if (avecCatalogue) tx.chargerCatalogue(); }, [avecCatalogue, tx]);
+  const lues = variantesEmployees(tx.catalogue, textes);
+  if (lues.length) return lues.map(v => ({ nom: v.famille.nom, source: sourcePolices(v.famille.source)?.nom ?? v.famille.source, licence: LICENCES_POLICES[v.famille.licence] }));
+  return [...new Set(textes.map(p => p.famille ?? p.id))].map(nom => ({ nom, source: '', licence: null }));
 }
 
 /** Fichier : le geste de fin, le brouillon, les credits, fermer. */

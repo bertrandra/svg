@@ -62,12 +62,15 @@ export interface Forme {
 /** L'alignement des lignes d'un texte vivant sur son point d'ancrage. */
 export type AlignementTexte = 'gauche' | 'centre' | 'droite';
 
-/** La police d'un texte vivant : son identifiant (une fonte livree, ou `u-` et l'empreinte d'une fonte deposee), sa version, son nom lisible. */
+/**
+ * La police d'un texte vivant : son identifiant (une fonte livree, `u-` et l'empreinte d'une fonte deposee, ou `c-` et l'empreinte
+ * d'une variante du catalogue telechargeable, ADR-0025), sa version, son nom lisible.
+ */
 export interface PoliceTexte {
   readonly id: string;
   /** L'empreinte de la fonte qui a compose le texte (14 chiffres hexadecimaux) ; absente quand on ne la connait pas. */
   readonly version?: string;
-  /** Le nom de famille, seulement pour une fonte deposee : de quoi dire « Police absente : … ». */
+  /** Le nom de famille, pour une fonte deposee ou une police du catalogue : de quoi dire « Police absente : … » sans l'index. */
   readonly famille?: string;
 }
 

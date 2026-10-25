@@ -96,7 +96,11 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `URL.createObjectURL` | 23 | 19 | 7 | Garde de démarrage. Sur iOS, un téléchargement s’ouvre dans l’aperçu ou la feuille de partage plutôt que dans un dossier |
 | `localStorage` | 4 | 3.5 | 4 | Dans un `try` (accès refusé, navigation privée, `file://`) : brouillon et versions nommées disparaissent, l’éditeur marche |
 | `TextEncoder` | 38 | 18 | 10.1 | Aucun, toujours présent |
-| `DecompressionStream` | 80 | 113 | 16.4 | Testé avant emploi, à l’ouverture d’un PDF : sans lui, un PDF dont les flux sont compressés est refusé en le disant (« ce navigateur ne sait pas décompresser… ») ; un PDF sans flux compressé s’ouvre |
+| `DecompressionStream` | 80 | 113 | 16.4 | Testé avant emploi, à l’ouverture d’un PDF et d’une police WOFF du catalogue : sans lui, une police WOFF n’est pas lue ; un PDF dont les flux sont compressés est refusé en le disant (« ce navigateur ne sait pas décompresser… ») ; un PDF sans flux compressé s’ouvre |
+| `fetch` | 42 | 39 | 10.1 | Aucun, sous le plancher technique : il ne sert qu’à télécharger une police du catalogue, après l’accord de la personne (ADR-0025) ; la page ne l’appelle jamais d’elle-même |
+| `crypto.subtle` | 37 | 34 | 11 | Testé avant emploi ; il n’existe qu’en contexte sécurisé (https, localhost, `file://` selon le navigateur) : sans lui, une police téléchargée n’est pas lue (son empreinte ne peut pas être vérifiée) et la page le dit |
+| `caches` | 43 | 41 | 11.1 | Dans un `try` : sans Cache Storage (contexte non sécurisé, refus, stockage plein), une police du catalogue se retélécharge à la session suivante |
+| `queryLocalFonts` | 103 | — | — | Testé avant emploi : sans lui, le bouton « Polices de cet appareil » n’apparaît pas ; déposer un fichier TTF ou OTF reste possible partout |
 | `Blob.arrayBuffer` | 76 | 69 | 14 | Aucun, sous le plancher technique : lire les octets d’un PDF ou d’une fonte déposés |
 | `canvas` | 4 | 3 | 3.1 | Garde avant de lire une image. iOS Safari borne un canvas à environ 16,7 millions de pixels : une très grande image ne se lit pas (voir la liste manuelle) |
 | `requestAnimationFrame` | 24 | 23 | 6.1 | Aucun, toujours présent |

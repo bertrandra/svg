@@ -104,6 +104,21 @@ describe('l ecriture et la relecture', () => {
     expect(r.ignores.join(' ')).toMatch(/police remplacée par Inter/);
   });
 
+  // ADR-0025 : une police du catalogue telechargeable (`c-` et 14 chiffres) se garde a la relecture, avec sa version et son nom :
+  // l'interface la retrouve dans l'index ; elle n'est jamais remplacee par la regle, et la relecture reste un point fixe.
+  it('une police du catalogue se garde telle quelle, avec sa version et son nom, et se relit a l identique', () => {
+    const catalogue = { id: 'c-1b0c5ca30f8f68', version: 'fedcba98765432', famille: 'Roboto Grasse italique' };
+    const { dessin } = texteDe('Été', { police: catalogue });
+    const svg = enregistrer(dessin);
+    expect(svg).toContain('data-ed-police="c-1b0c5ca30f8f68" data-ed-police-version="fedcba98765432" data-ed-famille="Roboto%20Grasse%20italique"');
+    const r = lireDessin(svg);
+    if ('erreur' in r) throw new Error(r.erreur);
+    expect(r.dessin.formes[0]?.texte?.police).toEqual(catalogue);
+    expect(r.ignores.join(' ')).not.toMatch(/remplacée/);
+    expect(enregistrer(r.dessin)).toBe(svg);
+    expect(violationsEcriture(svg)).toEqual([]);
+  });
+
   it('un dessin sans texte s ecrit exactement comme avant ; dessinSansTextes retire les attributs', () => {
     const { dessin } = texteDe('A');
     expect(ecrireDessin(dessinSansTextes(dessin), 3)).not.toContain('data-ed-');
