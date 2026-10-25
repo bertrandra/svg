@@ -54,10 +54,19 @@ export interface Forme {
    * points, contour en forme) le perd : la forme redevient un chemin ordinaire (`garderTextes`, texteVivant.ts).
    */
   readonly texte?: TexteVivant;
+  /**
+   * Ce que la machine fait de la forme en contexte de production (ADR-0028) : la lame la decoupe, ou le stylo l'ecrit. ABSENT
+   * tant que personne ne l'a choisie : la forme suit alors la regle de proposition (engine/preparation/operations.ts). Le
+   * fichier ne la porte (`data-ed-operation`) qu'en contexte Cricut et quand elle differe de ce que la regle proposerait.
+   */
+  readonly operation?: Operation;
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;
 }
+
+/** Ce que la machine fait d'une forme (ADR-0028) : la decouper a la lame, ou l'ecrire (la dessiner) au stylo. */
+export type Operation = 'decoupe' | 'ecriture';
 
 /** L'alignement des lignes d'un texte vivant sur son point d'ancrage. */
 export type AlignementTexte = 'gauche' | 'centre' | 'droite';

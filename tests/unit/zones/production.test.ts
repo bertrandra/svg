@@ -19,14 +19,14 @@ function monter(svg: string, production: ChoixProduction) {
     dessin: lire(svg), sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() }, enregistrer: vi.fn(), production,
     modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null, productionModifiee: false,
-    fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
+    fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null, apercuMachine: true
   };
   const messages: string[] = [], historique: DessinSvg[] = [];
   const poser = vi.fn((c: ChoixProduction) => { etat.production = c; });
   const actions = actionsProduction(() => etat, {
     appliquer: f => { historique.push(etat.dessin); etat.dessin = f(etat.dessin); }, choisir: vi.fn(), poserPoint: vi.fn(), poserOutil: vi.fn(), poserOutilBrut: vi.fn(),
     poserTrace: vi.fn(), poserPresse: vi.fn(), dire: t => { messages.push(t); }, toile: { current: null }
-  }, { poserProduction: poser, poserSuiteCricut: s => { etat.suiteCricut = s; } });
+  }, { poserProduction: poser, poserSuiteCricut: s => { etat.suiteCricut = s; }, poserApercuMachine: vi.fn() });
   return { actions, etat, messages, historique, poser };
 }
 

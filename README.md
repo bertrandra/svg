@@ -64,6 +64,10 @@ s'embarque aussi comme composant React dans un autre produit.
   constat une correction annulable ; « Exporter pour Cricut » écrit un SVG à taille physique, ou une archive Print Then Cut,
   demande confirmation tant qu’un point reste « à corriger », puis dit les étapes dans Design Space. Les valeurs encore à vérifier sur une machine sont dans
   [`docs/cricut/protocole.md`](docs/cricut/protocole.md) (ADR-0013).
+- **Couper et écrire dans le même projet** : en Cricut, chaque forme est « À couper » ou « À écrire » (une forme pleine se coupe, un
+  trait seul s’écrit au stylo, et chacun se change dans le panneau de gauche, la rangée de la sélection, Maj+X ou Maj+E) ; la toile
+  hachure ce que la lame détache et trace la ligne du stylo (« Aperçu de la machine », Maj+O) ; un dessin mêlé s’exporte en un fichier
+  à couper, un fichier à écrire et les deux ensemble (ADR-0028).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.
 - **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,

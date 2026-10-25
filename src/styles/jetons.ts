@@ -55,6 +55,8 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('toile-blanc', 'toile', '#ffffff', '#ffffff', 'Le plan de travail en fond blanc'),
   jeton('toile-sombre', 'toile', '#1b1d20', '#1b1d20', 'Le plan de travail en fond sombre'),
   jeton('encre-toile', 'toile', '#15181d', '#15181d', 'L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe)'),
+  jeton('apercu-coupe', 'toile', '#cc4a1a', '#cc4a1a', 'L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier'),
+  jeton('apercu-stylo', 'toile', '#3d6fe0', '#3d6fe0', 'L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier'),
   jeton('ombre-menu', 'relief', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.2)', 'L’ombre des menus déroulants'),
   jeton('ombre-tiroir', 'relief', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.25)', 'L’ombre des tiroirs mobiles'),
   jeton('voile', 'relief', 'rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)', 'Le voile qui assombrit la toile derrière un tiroir ouvert')
@@ -132,7 +134,14 @@ export const AA_GRAPHIQUE = 3;
 export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'filet-fort', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur un panneau' },
   { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
-  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' }
+  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' },
+  // L'apercu de la machine (ADR-0028) se pose sur le plan, quel que soit son fond : blanc, sombre, ou les deux cases du damier.
+  { texte: 'apercu-coupe', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan blanc' },
+  { texte: 'apercu-coupe', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan sombre' },
+  { texte: 'apercu-coupe', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur la case grise du damier' },
+  { texte: 'apercu-stylo', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan blanc' },
+  { texte: 'apercu-stylo', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan sombre' },
+  { texte: 'apercu-stylo', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur la case grise du damier' }
 ];
 
 const parId = new Map(JETONS.map(j => [j.id, j] as const));

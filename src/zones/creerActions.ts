@@ -19,7 +19,7 @@ import type { Aimant } from '../engine/transformations.js';
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
 export interface EtatDuMoment extends EtatLu {
   modifie: boolean; refaisable: boolean; versions: readonly Version[]; fermer: () => void; stockage: Stockage | null;
-  brouillon?: ((svg: string) => unknown) | undefined; productionModifiee: boolean; fin: OptionsFin; suiteCricut: SuiteCricut;
+  brouillon?: ((svg: string) => unknown) | undefined; productionModifiee: boolean; fin: OptionsFin; suiteCricut: SuiteCricut; apercuMachine: boolean;
 }
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
@@ -33,6 +33,7 @@ export interface Setters {
   poserFond: Dispatch<SetStateAction<Fond>>; dire: Dispatch<SetStateAction<string>>; poserQuitter: Dispatch<SetStateAction<boolean>>;
   poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
   poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
+  poserApercuMachine: Dispatch<SetStateAction<boolean>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -62,7 +63,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, annoncer, toile: s.toile };
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
-  const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut });
+  const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
   return {
     appliquer, finir, poserOutil,
     faire: (f, texte = '') => { appliquer(f); dire(texte); },

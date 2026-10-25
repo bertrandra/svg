@@ -82,7 +82,9 @@ describe('les constats, un a un', () => {
   it('trait : un contour visible bloque ; un trait d epaisseur nulle, non', () => {
     expect(codes(lire('<path d="M96 96H288V288H96Z" fill="#c81e28" stroke="#000000" stroke-width="8"/>'))).toContain('trait');
     expect(codes(lire('<path d="M96 96H288V288H96Z" fill="#c81e28" stroke="#000000" stroke-width="0"/>'))).not.toContain('trait');
-    expect(constat(lire('<path d="M96 96H288V288H96Z" fill="none" stroke="#000" stroke-width="8"/>'), 'trait').gravite).toBe('bloquant');
+    // Un contour sans fond se propose a ecrire au stylo (ADR-0028) : il ne bloque plus la decoupe ; dit « à couper », il bloque.
+    expect(codes(lire('<path d="M96 96H288V288H96Z" fill="none" stroke="#000" stroke-width="8"/>'))).not.toContain('trait');
+    expect(constat(lire('<path d="M96 96H288V288H96Z" fill="none" stroke="#000" stroke-width="8" data-ed-operation="decoupe"/>'), 'trait').gravite).toBe('bloquant');
   });
 
   it('opacite : une forme transparente bloque ; une forme opaque, non', () => {

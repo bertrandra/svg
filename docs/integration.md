@@ -345,6 +345,10 @@ Pour un hôte, l’essentiel :
   `data-ed-texte`, `data-ed-police`… qui permettent de le rouvrir comme texte. Le texte y est **encodé en pourcentage** (lettres
   ASCII et chiffres seuls en clair) : votre nettoyage peut garder ces attributs tels quels, ou les retirer (le dessin ne change
   pas, le texte n’est plus modifiable). Aucun fichier de police n’est écrit : une fonte déposée n’y laisse que son empreinte.
+- **Couper ou écrire** (ADR-0028) : en contexte Cricut seulement, un `<path>` peut porter `data-ed-operation="decoupe"` ou
+  `data-ed-operation="ecriture"`, quand la personne a choisi pour cette forme autre chose que ce que l’éditeur propose (une forme
+  pleine se coupe, un trait seul s’écrit au stylo). L’attribut n’a que ces deux valeurs ; votre nettoyage peut le garder, ou le
+  retirer (la forme reprend l’opération proposée). Un SVG sans contexte Cricut n’en porte jamais, et aucune option d’hôte ne change.
 - **Stockage** : l’éditeur garde les **versions nommées** (trente au plus, celles du panneau « Versions
   nommées ») et rien d’autre (pas de brouillon : c’est à vous de le garder par `onBrouillon`). **Par défaut**,
   elles vont dans le `localStorage` de **votre origine**, sous la clé `svg.versions`, partagées par tous les

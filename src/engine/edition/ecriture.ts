@@ -8,6 +8,7 @@ import { attributsTrait } from './trait.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 import { attributOrigine, metadonnees } from './provenance.js';
 import { attributsTexte } from './texteVivant.js';
+import { attributOperation } from './operation.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
 // operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
@@ -41,15 +42,22 @@ function composerForme(f: Forme, precision: number): string {
   return s + attributOrigine(f) + attributsTexte(f) + '/>';
 }
 
+/** Une forme ecrite, et son operation en dernier attribut quand elle en porte une (ADR-0028). */
+const avecOperation = (f: Forme, ecrite: string): string => (f.operation ? ecrite.slice(0, -2) + attributOperation(f) + '/>' : ecrite);
+
 /**
  * Le SVG du dessin. Les formes masquees ne s'ecrivent pas : masquer, a l'enregistrement, c'est retirer. Quand une forme
  * ecrite vient d'une source creditee (CC BY 3.0), un <metadata> d'attribution ouvre le SVG : sans forme creditee,
  * rien de plus n'est ecrit.
+ *
+ * `operations` (ADR-0028) n'est vrai que pour le document d'un contexte de production : l'operation qu'une forme porte s'y ecrit
+ * (`data-ed-operation`). Partout ailleurs (exports, telechargements, Generique), elle ne s'ecrit jamais, meme presente dans le
+ * modele : c'est l'appelant qui decide, apres avoir retire ce qui vaut le defaut (`operationsAEcrire`).
  */
-export function ecrireDessin(dessin: DessinSvg, precision = 2): string {
+export function ecrireDessin(dessin: DessinSvg, precision = 2, operations = false): string {
   const [x, y, l, h] = dessin.vb;
   const visibles = dessin.formes.filter(f => f.visible);
-  const corps = visibles.map(f => ecrireForme(f, precision)).join('');
+  const corps = visibles.map(f => (operations ? avecOperation(f, ecrireForme(f, precision)) : ecrireForme(f, precision))).join('');
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '">' + metadonnees(visibles) + corps + '</svg>';
 }
 

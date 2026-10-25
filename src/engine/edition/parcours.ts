@@ -17,6 +17,7 @@ import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './herit
 import { proprietesDe, type Analyse } from './cascade.js';
 import { lireTexte, type ContexteTexte } from './texteSvg.js';
 import { lireTexteVivant, MSG_TEXTE_ILLISIBLE } from './texteVivant.js';
+import { ATTRIBUT_OPERATION, lireOperation } from './operation.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
 import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_MAX } from './limites.js';
@@ -126,6 +127,8 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
   else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);
   const texte = lu && 'texte' in lu ? lu.texte : undefined;
+  // L'operation de production (ADR-0028) qu'un SVG ecrit ici porte sur la forme elle-meme (jamais heritee d'un groupe).
+  const operation = lireOperation(n.attributs[ATTRIBUT_OPERATION]);
   p.formes.push({
     id: 'f' + (p.formes.length + 1),
     d: chemin,
@@ -136,6 +139,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     ...lireOpacites(b.opacite, heritees, fond, trait),
     ...(origine ? { origine } : {}),
     ...(texte ? { texte } : {}),
+    ...(operation ? { operation } : {}),
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
     verrouille: false

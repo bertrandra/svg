@@ -16,3 +16,7 @@ export { couchesDe, etendueVisible, formesPeintes, tientDans, type Couche } from
 export { finesseDe, AIRE_MIN, POINTS_MAX_MESURE, type Finesse } from './preparation/finesse.js';
 export { silhouetteDe, regionPeinte, unirRegions } from './preparation/silhouette.js';
 export { boiteDeRegion, pairesTrous } from './preparation/geometrie.js';
+export {
+  operationProposee, operationDe, operationsApplicables, partagerOperations, compterOperations, operationsMelees, poserOperation, phraseOperation,
+  operationsAEcrire, sansOperation, type Operations, type ResultatOperation
+} from './preparation/operations.js';

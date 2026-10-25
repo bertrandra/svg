@@ -50,6 +50,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--toile-blanc` | `#ffffff` | `#ffffff` | Le plan de travail en fond blanc |
 | `--toile-sombre` | `#1b1d20` | `#1b1d20` | Le plan de travail en fond sombre |
 | `--encre-toile` | `#15181d` | `#15181d` | L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe) |
+| `--apercu-coupe` | `#cc4a1a` | `#cc4a1a` | L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier |
+| `--apercu-stylo` | `#3d6fe0` | `#3d6fe0` | L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier |
 
 ### Les ombres et voiles, translucides
 
@@ -98,6 +100,12 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
 | `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
+| `--apercu-coupe` sur `--toile-blanc` | 4.60 | 4.60 | hachures et contour de coupe de l’aperçu de la machine sur le plan blanc |
+| `--apercu-coupe` sur `--toile-sombre` | 3.67 | 3.67 | hachures et contour de coupe de l’aperçu de la machine sur le plan sombre |
+| `--apercu-coupe` sur `--damier-b` | 3.69 | 3.69 | hachures et contour de coupe de l’aperçu de la machine sur la case grise du damier |
+| `--apercu-stylo` sur `--toile-blanc` | 4.62 | 4.62 | ligne du stylo de l’aperçu de la machine sur le plan blanc |
+| `--apercu-stylo` sur `--toile-sombre` | 3.66 | 3.66 | ligne du stylo de l’aperçu de la machine sur le plan sombre |
+| `--apercu-stylo` sur `--damier-b` | 3.70 | 3.70 | ligne du stylo de l’aperçu de la machine sur la case grise du damier |
 
 ### La typographie : cinq tailles nommées par leur rôle
 

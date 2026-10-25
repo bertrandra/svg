@@ -9,6 +9,7 @@ import { AlertesToile, GabaritTapis } from './Production.js';
 import { useTactile } from './Vue.js';
 import { insecables } from '../util/texte.js';
 import { SaisieTexte } from './SaisieTexte.js';
+import { ApercuMachine } from './ApercuMachine.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface();
@@ -34,6 +35,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           <rect className="plan-travail" x={vx} y={vy} width={vl} height={vh} fill={fond === 'damier' ? 'url(#damier-editeur)' : undefined} pointerEvents="none" />
           <GabaritTapis />
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
+          {/* L'apercu de la machine (ADR-0028) : avant les formes, qu'il rend transparentes (editeur.css) ; elles gardent les clics. */}
+          <ApercuMachine />
           {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} />)}
           <AlertesToile chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, gestes.cadre, tactile)}</g>
