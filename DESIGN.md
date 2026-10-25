@@ -610,6 +610,22 @@ Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d
   plein ou en trait fin de 1,5 px qui ne grossit pas avec la vue ; dessous, son titre (Compact 600) et un verdict court et
   neutre (Aide), qui est aussi son texte alternatif. Rien n'y est obligatoire ni bloquant ; « Fermer l'aperçu » (discret).
 
+### Texte sur et dans une forme (ADR-0031)
+Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un geste, rien ne s'ajoute au dessin.
+- **La disposition** : dans la barre de texte, un groupe de trois boutons d'icône à état (« Libre », « Sur la forme », « Dans la
+  forme »), après le tracé et avant l'alignement : filet et icône cyan quand il est choisi, comme l'alignement, jamais plein. Dans le
+  panneau Texte, les mêmes trois boutons à libellés, en tête d'un groupe à filet « Disposition ». Au doigt ou sous 640 px, une
+  rubrique de trois choix radio dans le menu de la barre resserrée.
+- **Le choix de la forme** : la toile prend la croix de visée (posée une fois, jamais au survol), la forme visée le liseré de survol
+  (ADR-0029) ; la barre d'état dit le geste (« Cliquez… » ou « Touchez… », Échap, Tab puis Entrée). Aucune bulle, aucun voile.
+- **Le guide** : la forme d'un texte posé choisi seul se dessine en tirets fins à la couleur d'outil (1 px, tirets de 2 et 3, qui
+  ne grossissent pas avec la vue), même masquée ; jamais écrit.
+- **La poignée de départ** : un rond plein cyan d'encre de 5 px de rayon, bordé de 2 px de panneau, posé sur le tracé ; une cible
+  invisible de 24 px (40 au doigt) ; curseur « déplacer » (ce qui se déplace) ; au focus, un anneau cyan de 2 px autour. En
+  contraste forcé, `Highlight` sur `Canvas`. Rien ne s'anime.
+- **Ce qui ne tient pas** : dans le panneau, un message d'alerte (ambre, coins de 6 px) sous les réglages, qui dit le nombre de
+  lettres hors du tracé ou de mots hors de la forme ; la région vocale le dit quand il change. Jamais un bloquant.
+
 ## Surfaces du navigateur
 
 Ce que le navigateur dessine seul porte aussi le système (`base.css`), dans les deux thèmes :

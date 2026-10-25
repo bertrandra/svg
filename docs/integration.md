@@ -345,6 +345,12 @@ Pour un hôte, l’essentiel :
   `data-ed-texte`, `data-ed-police`… qui permettent de le rouvrir comme texte. Le texte y est **encodé en pourcentage** (lettres
   ASCII et chiffres seuls en clair) : votre nettoyage peut garder ces attributs tels quels, ou les retirer (le dessin ne change
   pas, le texte n’est plus modifiable). Aucun fichier de police n’est écrit : une fonte déposée n’y laisse que son empreinte.
+- **Le texte posé sur ou dans une forme** (ADR-0031) : un texte vivant peut porter en plus `data-ed-disposition` (`sur` ou
+  `dans`), ses réglages (`data-ed-depart`, `data-ed-cote`, `data-ed-repartir`, `data-ed-marge`, `data-ed-ajuster`,
+  `data-ed-justifier`) et le lien vers sa forme : `data-ed-forme`, le rang de la forme parmi les chemins du fichier, ou, pour une
+  forme masquée, son tracé encodé en pourcentage (`data-ed-forme-d`, et `data-ed-forme-regle="evenodd"`). Ce ne sont que des
+  nombres, des mots fixes et du texte encodé ; les contours du `<path>` restent la vérité du dessin. Votre nettoyage peut les
+  garder, ou les retirer (le texte n’est plus lié à sa forme, ou plus modifiable du tout).
 - **Couper ou écrire** (ADR-0028) : en contexte Cricut seulement, un `<path>` peut porter `data-ed-operation="decoupe"` ou
   `data-ed-operation="ecriture"`, quand la personne a choisi pour cette forme autre chose que ce que l’éditeur propose (une forme
   pleine se coupe, un trait seul s’écrit au stylo). L’attribut n’a que ces deux valeurs ; votre nettoyage peut le garder, ou le

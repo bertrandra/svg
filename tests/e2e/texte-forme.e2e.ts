@@ -220,6 +220,23 @@ describe('le texte sur et dans une forme', () => {
     expect(svg).toMatch(/<path d="M[^"]+" fill="none" stroke="[^"]+" stroke-width="[^"]+"[^>]* data-ed-trace="median"[^>]* data-ed-disposition="sur"[^>]* data-ed-forme="1"/);
   });
 
+  it('masque la forme de base : elle ne s ecrit pas, son guide reste, le texte garde son lien dans le fichier', async () => {
+    const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
+    await avecTexte(page, 'CACHÉ');
+    await poser(page, 'Sur la forme', 120, 160);
+    await page.getByRole('button', { name: 'Plus d’options' }).click();
+    await page.locator('.editeur-inspecteur .disposition-texte').getByLabel('Montrer la forme de base').uncheck();
+    await attend(() => dit(page)).toMatch(/^La forme de base est masquée/);
+    // Masquee, la forme ne se dessine plus ; son trace se voit en tirets tant que le texte est choisi.
+    await attend(() => page.locator('.editeur-svg-toile path[data-id="f1"]').count()).toBe(0);
+    expect(await page.locator('.guide-disposition .guide-forme').count()).toBe(1);
+    const [t]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const svg = readFileSync(await t.path(), 'utf8');
+    expect(svg.match(/<path /g)).toHaveLength(2);
+    expect(svg).toMatch(/data-ed-disposition="sur"[^>]* data-ed-forme-d="M/);
+    expect(svg).not.toContain('data-ed-forme="');
+  });
+
   it('se fait tout au clavier : la barre, Tab parmi les formes candidates, Entree ; Echap abandonne', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await avecTexte(page, 'CLAVIER');
