@@ -497,12 +497,12 @@ describe('embarquement : exemples/integration.html', () => {
     const { page, requetes } = await hote();
     await editer(page);
     const annexes = async () => (await requetes()).filter(u => /\/(bibliotheque|polices)\.js$/.test(u));
-    // Ouvrir l'editeur ne charge rien : ni les 7 Mo de formes, ni les fontes.
+    // Ouvrir l'editeur ne charge rien : ni les 7 Mo de formes (elles attendent l'ouverture de leur section), ni les fontes.
     expect(await annexes()).toEqual([]);
 
     const section = page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Bibliothèque de formes' }) });
     if (!(await section.evaluate(e => (e as HTMLDetailsElement).open))) await section.locator('summary').click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
+    // Ouvrir la section suffit : la bibliotheque se charge d'elle-meme, sans bouton « Charger ».
     await attend(() => page.locator('.editeur-inspecteur .vignette').count()).toBeGreaterThan(0);
     expect((await annexes()).map(u => u.slice(u.lastIndexOf('/dist/')))).toEqual(['/dist/bibliotheque.js']);
     expect(await page.evaluate(() => (window as unknown as { __bibliothequeSvg?: unknown }).__bibliothequeSvg !== undefined)).toBe(true);

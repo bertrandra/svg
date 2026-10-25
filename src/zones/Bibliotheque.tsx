@@ -1,4 +1,4 @@
-// La bibliotheque de formes dans la page : chargee a la demande, cherchee par nom et par
+// La bibliotheque de formes dans la page : chargee d'elle-meme quand sa voie s'ouvre (un fichier voisin, aucun serveur), cherchee par nom et par
 // evenement, et chaque forme s'ouvre dans l'editeur. Le meme composant de recherche sert dans
 // l'editeur, pour inserer une forme dans le dessin en cours. Ce qu'un mot trouve et dans quel ordre
 // est du modele (model/recherche.ts) ; ici, le champ, les pastilles, la grille et l'etat vide.
@@ -195,14 +195,20 @@ function Correcteur({ entree, evenements, poser, fermer }: { entree: EntreeBibli
   );
 }
 
-/** La section de la page : chargement, recherche, et l'ouverture d'une forme dans l'editeur. */
-export function SectionBibliotheque({ ouvrir, enfants }: { ouvrir: (e: EntreeBibliotheque) => void; enfants?: ReactNode }) {
-  const [voulue, vouloir] = useState(false);
+/**
+ * La section de la page : chargement, recherche, et l'ouverture d'une forme dans l'editeur. La bibliotheque se charge a la
+ * premiere ouverture de sa voie (`active`), puis reste : c'est un fichier voisin de la page (bibliotheque.js), lu sans contacter
+ * aucun serveur ; ouvrir la voie « Formes » est deja le geste qui la demande, un bouton de plus ne protegeait rien. Les panneaux
+ * des voies restent montes : sans `active`, la page chargerait les 7 Mo des son ouverture.
+ */
+export function SectionBibliotheque({ ouvrir, active = true, enfants }: { ouvrir: (e: EntreeBibliotheque) => void; active?: boolean; enfants?: ReactNode }) {
+  const [vue, poserVue] = useState(active);
+  useEffect(() => { if (active) poserVue(true); }, [active]);
   return (
     <section className="bibliotheque" aria-label="Bibliothèque de formes">
       <h2 className="sr-only">Bibliothèque de formes</h2>
       <p className="aide">Plus de 4 000 silhouettes nommées en français et classées par événement du calendrier (Noël, Pâques, Halloween…), par événement de la vie (naissance, anniversaire, concert…) et par catégorie (personnage, bâtiment, animal…). Une forme s’ouvre dans l’éditeur, où elle se recolore et se retouche. Source : game-icons.net, licence CC BY 3.0. Cinq autres bibliothèques libres se chargent à la demande (pastilles « Source »), en formes pleines pour la découpe ou en ligne pour le stylo ; leurs licences sont dans « À propos et crédits ».</p>
-      {voulue ? <Chargee ouvrir={ouvrir} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
+      {vue || active ? <Chargee ouvrir={ouvrir} /> : null}
       {enfants}
     </section>
   );

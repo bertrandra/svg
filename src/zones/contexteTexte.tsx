@@ -3,20 +3,18 @@
 // quand on tape ou qu'on choisit, et seuls les panneaux du texte le lisent. Rien de tout cela n'entre dans l'historique.
 //
 // S'y ajoutent les polices libres telechargeables (ADR-0025) : l'index (une annexe voisine, chargee a la demande), le
-// consentement (les serveurs acceptes, retenus dans le stockage injecte sous `svg.polices.consentement`), le dialogue qui le
-// demande, et les favoris et polices recentes (des conforts du stockage). Tant que la personne n'a rien accepte, aucune requete.
+// telechargement d'une police choisie, et les favoris et polices recentes (des conforts du stockage). Le choix d'une police non
+// livree vaut demande : c'est le seul geste qui fait partir une requete ; ouvrir la liste, chercher, voir les apercus, jamais.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { policeDeposee, retenirDeposee, toutesLesPolices, type Police } from '../io/polices.js';
 import { chargerCatalogue as chargerIndex } from '../io/cataloguePolices.js';
 import { chargerApercus as chargerAnnexeApercus } from '../io/apercusPolices.js';
-import { accorderConsentement, cacheNavigateur, lireConsentement, retirerConsentement, serveursAAccepter, telechargerVariante } from '../io/policesEnLigne.js';
+import { cacheNavigateur, oublierAncienConsentement, telechargerVariante } from '../io/policesEnLigne.js';
 import type { CataloguePolices, VariantePolice } from '../model/cataloguePolices.js';
 import type { AnnexeApercus } from '../model/apercusPolices.js';
-import type { IdServeur } from '../model/sourcesPolices.js';
 import type { ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { useStockage } from './contexteStockage.js';
-import { DialogueConsentement } from './ConsentementPolices.js';
 
 /** Les cles des conforts du stockage : favoris (des familles ou des fontes) et polices recentes (des identifiants de police). */
 export const CLE_FAVORIS = 'svg.polices.favoris';
@@ -29,8 +27,8 @@ export function listeDeCles(v: unknown, max: number): string[] {
   return Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && CLE_ENTREE.test(x)))].slice(0, max) : [];
 }
 
-/** Le resultat d'un telechargement demande : la police (son identifiant), une erreur nommee, ou null quand la personne a refuse. */
-export type ResultatTelechargement = { id: string; police: Police } | { erreur: string } | null;
+/** Le resultat d'un telechargement demande : la police (son identifiant), ou une erreur nommee. */
+export type ResultatTelechargement = { id: string; police: Police } | { erreur: string };
 
 export interface EtatTexte {
   /** La forme dont le texte se saisit en place sur la toile, ou null. */
@@ -59,11 +57,8 @@ export interface EtatTexte {
    */
   readonly apercus: AnnexeApercus | null;
   readonly erreurApercus: string;
-  /** Les serveurs acceptes par la personne ; vide : aucune requete. */
-  readonly acceptes: ReadonlySet<IdServeur>;
-  /** Telecharge une variante : demande d'abord le consentement s'il manque pour ses serveurs. */
+  /** Telecharge une variante que la personne vient de choisir : le seul chemin vers le reseau. */
   readonly telecharger: (v: VariantePolice) => Promise<ResultatTelechargement>;
-  readonly revoquer: () => void;
   readonly favoris: readonly string[];
   readonly basculerFavori: (cle: string) => void;
   readonly recentes: readonly string[];
@@ -74,8 +69,6 @@ export interface EtatTexte {
 export const ContextePolicesEnLigne = createContext(false);
 
 const Contexte = createContext<EtatTexte | null>(null);
-
-interface Demande { readonly variante: VariantePolice; readonly serveurs: readonly IdServeur[]; readonly repondre: (oui: boolean) => void }
 
 export function FournisseurTexte({ children }: { children: ReactNode }) {
   const stockage = useStockage(), enLigne = useContext(ContextePolicesEnLigne);
@@ -89,12 +82,10 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   const [catalogueDemande, demanderCatalogue] = useState(false);
   const [apercus, poserApercus] = useState<AnnexeApercus | null>(null);
   const [erreurApercus, poserErreurApercus] = useState('');
-  const [acceptes, poserAcceptes] = useState<ReadonlySet<IdServeur>>(() => (enLigne ? lireConsentement(stockage) : new Set()));
-  const [demande, poserDemande] = useState<Demande | null>(null);
   const [favoris, poserFavoris] = useState<readonly string[]>(() => listeDeCles(stockage?.lire(CLE_FAVORIS), FAVORIS_MAX));
   const [recentes, poserRecentes] = useState<readonly string[]>(() => listeDeCles(stockage?.lire(CLE_RECENTES), RECENTES_MAX));
-  const acceptesRef = useRef(acceptes);
-  acceptesRef.current = acceptes;
+  // L'ancien accord par serveur (retire, ADR-0025) ne decide plus de rien : s'il en reste un dans le stockage, il s'efface.
+  useEffect(() => { oublierAncienConsentement(stockage); }, [stockage]);
   // Les fontes ne se chargent qu'au premier besoin (polices.js pese plusieurs centaines de Ko) : un panneau du texte le demande.
   useEffect(() => {
     if (!demandees) return;
@@ -121,23 +112,13 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   }, [rafraichir]);
   const retenir = useCallback((p: Police) => { retenirDeposee(p); void rafraichir(); }, [rafraichir]);
   const telecharger = useCallback(async (v: VariantePolice): Promise<ResultatTelechargement> => {
+    // L'option de l'hote, pas un accord de la personne : sans elle, aucune requete.
     if (!enLigne) return { erreur: 'Les polices en ligne ne sont pas permises dans cet éditeur.' };
-    const manque = serveursAAccepter(v, acceptesRef.current);
-    // Tant qu'un serveur que la police demande n'est pas accepte, on demande, et rien ne part avant la reponse.
-    if (manque.length) {
-      const oui = await new Promise<boolean>(repondre => poserDemande({ variante: v, serveurs: manque, repondre }));
-      poserDemande(null);
-      if (!oui) return null;
-      const tous = accorderConsentement(stockage, acceptesRef.current, manque);
-      acceptesRef.current = tous;
-      poserAcceptes(tous);
-    }
-    const r = await telechargerVariante(v, acceptesRef.current, { cache: cacheNavigateur() });
+    const r = await telechargerVariante(v, { cache: cacheNavigateur() });
     if ('erreur' in r) return r;
     await rafraichir();
     return { id: r.id, police: r };
-  }, [enLigne, stockage, rafraichir]);
-  const revoquer = useCallback(() => { retirerConsentement(stockage); acceptesRef.current = new Set(); poserAcceptes(new Set()); }, [stockage]);
+  }, [enLigne, rafraichir]);
   const basculerFavori = useCallback((cle: string) => {
     poserFavoris(avant => {
       const apres = avant.includes(cle) ? avant.filter(c => c !== cle) : [cle, ...avant].slice(0, FAVORIS_MAX);
@@ -157,22 +138,17 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   const valeur = useMemo<EtatTexte & { demander: () => void }>(() => ({
     saisie, ouvrirSaisie: id => { demander(true); poserSaisie(id); }, fermerSaisie: () => poserSaisie(null),
     mode, poserMode, polices, erreurPolices, deposer, retenir, demander: () => demander(true),
-    enLigne, catalogue, erreurCatalogue, chargerCatalogue: () => demanderCatalogue(true), apercus, erreurApercus, acceptes, telecharger, revoquer,
+    enLigne, catalogue, erreurCatalogue, chargerCatalogue: () => demanderCatalogue(true), apercus, erreurApercus, telecharger,
     favoris, basculerFavori, recentes, noterRecente
-  }), [saisie, mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, apercus, erreurApercus, acceptes, telecharger, revoquer, favoris, basculerFavori, recentes, noterRecente]);
-  return (
-    <Contexte.Provider value={valeur}>
-      {children}
-      {demande ? <DialogueConsentement variante={demande.variante} serveurs={demande.serveurs} retenu={stockage !== null} repondre={demande.repondre} /> : null}
-    </Contexte.Provider>
-  );
+  }), [saisie, mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, apercus, erreurApercus, telecharger, favoris, basculerFavori, recentes, noterRecente]);
+  return <Contexte.Provider value={valeur}>{children}</Contexte.Provider>;
 }
 
 const HORS: EtatTexte & { demander: () => void } = {
   saisie: null, ouvrirSaisie: () => undefined, fermerSaisie: () => undefined, mode: null, poserMode: () => undefined,
   polices: null, erreurPolices: '', deposer: () => Promise.resolve({ erreur: 'Aucun éditeur.' }), retenir: () => undefined, demander: () => undefined,
-  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', acceptes: new Set(), telecharger: () => Promise.resolve(null),
-  revoquer: () => undefined, favoris: [], basculerFavori: () => undefined, recentes: [], noterRecente: () => undefined
+  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', telecharger: () => Promise.resolve({ erreur: 'Aucun éditeur.' }),
+  favoris: [], basculerFavori: () => undefined, recentes: [], noterRecente: () => undefined
 };
 
 /** L'etat du texte ; hors d'un editeur, un etat inerte (un panneau rendu seul dans un test). */

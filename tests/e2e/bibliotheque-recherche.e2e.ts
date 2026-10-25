@@ -42,8 +42,9 @@ describe('recherche dans la bibliotheque', () => {
   async function bibliotheque(options: Parameters<typeof navigateur.ouvrir>[0] = {}) {
     const { page } = await navigateur.ouvrir(options);
     const tap = options.tactile === true;
-    const onglet = page.getByRole('tab', { name: /^Bibliothèque/ }), charger = page.getByRole('button', { name: /Charger la bibliothèque/ });
-    if (tap) { await onglet.tap(); await charger.tap(); } else { await onglet.click(); await charger.click(); }
+    const onglet = page.getByRole('tab', { name: /^Bibliothèque/ });
+    // La bibliotheque se charge d'elle-meme a l'ouverture de sa voie : aucun bouton « Charger ».
+    if (tap) await onglet.tap(); else await onglet.click();
     await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: CHARGEMENT });
     return page;
   }

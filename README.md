@@ -34,7 +34,7 @@ s'embarque aussi comme composant React dans un autre produit.
     soudé ; l'aperçu « forme / ligne » montre ce qu'en feraient la lame et le stylo (ADR-0022) ; « Toutes les polices »
     ouvre plus de 2 000 familles libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Velvetyne, Fontshare…),
     avec recherche, filtres, favoris, récentes, polices du document et « Remplacer partout » : une police se télécharge
-    seulement après votre accord, serveur par serveur, et chaque fichier est vérifié par son empreinte (ADR-0025) ;
+    seulement quand vous la choisissez, et chaque fichier est vérifié par son empreinte (ADR-0025) ;
   - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
     menu Édition) ;
   - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
@@ -56,7 +56,7 @@ s'embarque aussi comme composant React dans un autre produit.
   (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. « Terminer » ramène à la
   fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur d'elle-même (un test en navigateur, réseau coupé, le vérifie) ; seule une police libre que
-  vous choisissez de télécharger, après avoir accepté, se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
+  vous choisissez se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
 - **Préparer pour une Cricut** : la machine se choisit dans la barre (« Machine : Générique », puis Joy, Explore, Maker ;
   tapis ; papier cartonné ; découpe ou Print Then Cut ; millimètres, ou pouces, retenus). Le tapis entier s’affiche et se
   cadre sur la toile (« Ajuster », touche 0 ; « Ajuster au dessin », D), le panneau « Prêt pour Cricut » juge le dessin en

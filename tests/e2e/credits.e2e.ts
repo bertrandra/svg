@@ -104,7 +104,6 @@ describe('à propos et crédits', () => {
       const { page } = await navigateur.ouvrir();
       await ouvrirExemple(page);
       await page.locator('.editeur-inspecteur .section > summary', { hasText: 'Bibliothèque de formes' }).click();
-      await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: CHARGEMENT });
       return page;
     }
@@ -140,7 +139,6 @@ describe('à propos et crédits', () => {
     it('est présente quand on ouvre une forme de la bibliothèque depuis la page, et se retire avec la forme', async () => {
       const { page } = await navigateur.ouvrir();
       await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-      await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
       await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: CHARGEMENT });
       await page.locator('.bibliotheque .vignette').first().click();
       await page.locator('.editeur-cadre').waitFor();
@@ -179,7 +177,6 @@ describe('à propos et crédits', () => {
       const page = await hoteOuvert();
       const section = page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Bibliothèque de formes' }) });
       if (!(await section.evaluate(e => (e as HTMLDetailsElement).open))) await section.locator('summary').click();
-      await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: CHARGEMENT });
       await page.locator('.editeur-inspecteur .vignette').first().click();
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);

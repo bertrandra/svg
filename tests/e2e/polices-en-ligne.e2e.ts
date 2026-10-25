@@ -1,8 +1,9 @@
 // Les polices libres telechargeables (ADR-0025), par la vraie page, sans vrai reseau : l'index est pose avant la page (un
 // petit index d'essai, a la place de l'annexe), et chaque requete vers un serveur de polices est interceptee (`route`) et servie
-// d'un fichier d'essai (Inter, mise en WOFF). On verifie : rien ne part sans accord ; l'accord se donne serveur par serveur et
-// se retient ; le fichier est verifie par son empreinte puis compose ; une empreinte fausse est refusee en le disant ; l'accord se
-// retire ; un hote ne voit le catalogue que s'il l'a demande.
+// d'un fichier d'essai (Inter, mise en WOFF). On verifie : rien ne part tant qu'on ne choisit pas (ouvrir, chercher, voir) ; le
+// choix d'une police non livree la telecharge aussitot (plus de dialogue d'accord) ; le fichier est verifie par son empreinte puis
+// compose ; la ligne dit le telechargement en cours ; une empreinte fausse est refusee en le disant ; un ancien accord reste dans
+// le stockage est ignore et efface ; un hote ne voit le catalogue que s'il l'a demande.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -32,13 +33,17 @@ const SERVEURS = /^https:\/\/(cdn\.jsdelivr\.net|fonts\.bunny\.net|gitlab\.com|c
 
 interface Reseau { requetes: Request[] }
 
-/** Une page dont l'index est celui d'essai et dont chaque requete vers un serveur de polices est servie ici, et notee. */
-async function preparer(s: Session): Promise<Reseau> {
+/**
+ * Une page dont l'index est celui d'essai et dont chaque requete vers un serveur de polices est servie ici, et notee. `retenir`
+ * fait attendre la reponse jusqu'a ce que la promesse donnee se resolve (pour voir la ligne pendant le telechargement).
+ */
+async function preparer(s: Session, retenir?: Promise<void>): Promise<Reseau> {
   const r: Reseau = { requetes: [] };
   await s.contexte.addInitScript(index => { (window as unknown as Record<string, unknown>)['__cataloguePolicesSvg'] = index; }, INDEX);
-  await s.contexte.route(url => SERVEURS.test(url.href), route => {
+  await s.contexte.route(url => SERVEURS.test(url.href), async route => {
     const req = route.request();
     r.requetes.push(req);
+    if (retenir) await retenir;
     // Le faux et le fichier de Fontshare : un autre fichier que celui que l'index annonce.
     const corps = req.url().includes('essai-faux') ? AUTRE : WOFF;
     return route.fulfill({ status: 200, body: Buffer.from(corps), headers: { 'access-control-allow-origin': '*', 'content-type': 'font/woff' } });
@@ -59,43 +64,33 @@ async function explorer(page: Page): Promise<void> {
 }
 
 const ligne = (page: Page, nom: string) => page.locator('.liste-polices .police-ligne', { hasText: nom });
-const dialogue = (page: Page) => page.getByRole('dialog', { name: /Télécharger la police/ });
 
 describe('les polices libres en ligne', () => {
   const navigateur = pilote();
 
-  it('ne fait aucune requete sans accord : le dialogue dit le serveur et ce qui part, « Pas maintenant » ne telecharge rien', async () => {
-    const s = await navigateur.ouvrir({ naviguer: false });
-    const reseau = await preparer(s);
-    await s.page.goto(URL_PAGE);
-    await explorer(s.page);
-    expect(reseau.requetes).toEqual([]);
-    await ligne(s.page, 'Police Essai').click();
-    await dialogue(s.page).waitFor();
-    const texte = await texteDe(dialogue(s.page));
-    for (const attendu of ['jsDelivr (cdn.jsdelivr.net)', 'Bunny Fonts (fonts.bunny.net)', 'aucune donnée personnelle', 'SIL Open Font License 1.1', 'Accepter et retenir']) expect(texte, attendu).toContain(attendu);
-    expect(reseau.requetes).toEqual([]);
-    await s.page.getByRole('button', { name: 'Pas maintenant' }).click();
-    await attend(() => dialogue(s.page).count()).toBe(0);
-    expect(await selectPolice(s.page).inputValue()).not.toBe(ID_ESSAI);
-    expect(reseau.requetes).toEqual([]);
-    expect(await s.page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
-  });
-
-  it('telecharge apres accord, verifie l empreinte, compose un texte qui garde sa police, et retient l accord', async () => {
+  it('ne fait aucune requete sans choix ; choisir telecharge aussitot, verifie l empreinte et compose un texte qui garde sa police', async () => {
     const s = await navigateur.ouvrir({ naviguer: false });
     const reseau = await preparer(s);
     await s.page.goto(URL_PAGE);
     const page = s.page;
+    // Ouvrir la liste, chercher, filtrer : aucune requete.
     await explorer(page);
+    await page.locator('.explorateur-polices input[type="search"]').fill('essai');
+    await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(3);
+    await page.locator('.explorateur-polices input[type="search"]').fill('');
+    expect(reseau.requetes).toEqual([]);
+    expect(await page.getByRole('dialog', { name: /Télécharger la police/ }).count()).toBe(0);
+    expect(await texteDe(page.locator('.explorateur-polices'))).toContain('Choisir une police qui n’est pas livrée la télécharge depuis sa source');
+
+    // Le choix vaut demande : aucun dialogue, la police arrive, verifiee.
     await ligne(page, 'Police Essai').click();
-    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
     await attend(() => selectPolice(page).inputValue()).toBe(ID_ESSAI);
-    // Une seule requete, sans cookie ni page d'origine.
+    expect(await page.getByRole('dialog', { name: /Télécharger la police/ }).count()).toBe(0);
+    // Une seule requete, sans cookie ni page d'origine ; aucun accord ecrit dans le stockage.
     expect(reseau.requetes.map(r => r.url())).toEqual([URL_ESSAI]);
     const entetes = await reseau.requetes[0]?.allHeaders();
     expect(Object.keys(entetes ?? {}).filter(k => /^(cookie|referer)$/i.test(k))).toEqual([]);
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('svg.polices.consentement'))) ?? 'null')).toEqual({ serveurs: ['jsdelivr', 'bunny'] });
+    expect(await page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
 
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await attend(() => nombreDeCalques(page)).toBe(2);
@@ -107,15 +102,11 @@ describe('les polices libres en ligne', () => {
 
     // Le texte ajoute est choisi : l'inspecteur montre sa section Texte, avec son propre « Toutes les polices ».
     await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
-    // Une police d'un autre serveur redemande l'accord, en nommant ce serveur ; l'ITF FFL a son badge.
+    // Une police d'un autre serveur : l'ITF FFL a son badge, et la chercher ne la demande pas.
     await page.locator('.explorateur-polices input[type="search"]').fill('itf');
     expect(await texteDe(ligne(page, 'Essai ITF'))).toContain('ITF');
-    await ligne(page, 'Essai ITF').click();
-    await dialogue(page).waitFor();
-    expect(await texteDe(dialogue(page))).toContain('Fontshare (cdn.fontshare.com)');
-    expect(await texteDe(dialogue(page))).toContain('ITF Free Font License');
-    await page.getByRole('button', { name: 'Pas maintenant' }).click();
     expect(reseau.requetes).toHaveLength(1);
+    await page.locator('.explorateur-polices input[type="search"]').fill('');
 
     // Un second texte, en Inter : « Remplacer partout » recompose en Inter le texte en Police Essai, en un seul geste.
     await page.locator('.editeur-svg-toile').focus();
@@ -147,7 +138,6 @@ describe('les polices libres en ligne', () => {
     await explorer(page);
     const avant = await selectPolice(page).inputValue();
     await ligne(page, 'Essai Faux').click();
-    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
     const alerte = page.locator('.explorateur-polices [role="alert"]');
     await alerte.waitFor();
     expect(await texteDe(alerte)).toBe('Essai Faux : le fichier servi par cdn.jsdelivr.net n’a pas l’empreinte attendue : refusé ; le fichier servi par fonts.bunny.net n’a pas l’empreinte attendue : refusé.');
@@ -156,21 +146,29 @@ describe('les polices libres en ligne', () => {
     expect(await selectPolice(page).locator('optgroup[label="Téléchargées"]').count()).toBe(0);
   });
 
-  it('retire l accord dans le meme panneau : plus rien ne part sans le redemander', async () => {
+  it('ignore et efface un ancien accord reste dans le stockage ; la ligne dit le telechargement en cours', async () => {
     const s = await navigateur.ouvrir({ naviguer: false });
-    const reseau = await preparer(s);
-    await s.page.addInitScript(() => localStorage.setItem('svg.polices.consentement', JSON.stringify({ serveurs: ['jsdelivr', 'bunny'] })));
+    let liberer: () => void = () => undefined;
+    const retenue = new Promise<void>(r => { liberer = r; });
+    const reseau = await preparer(s, retenue);
+    await s.page.addInitScript(() => { if (!sessionStorage.getItem('deja')) { sessionStorage.setItem('deja', '1'); localStorage.setItem('svg.polices.consentement', JSON.stringify({ serveurs: ['jsdelivr', 'bunny'] })); } });
     await s.page.goto(URL_PAGE);
     const page = s.page;
     await explorer(page);
-    expect(await texteDe(page.locator('.pied-consentement'))).toContain('Téléchargement autorisé auprès de jsDelivr, Bunny Fonts.');
-    await page.getByRole('button', { name: 'Retirer l’autorisation' }).click();
-    expect(await page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
-    expect(await texteDe(page.locator('.pied-consentement'))).toContain('Aucun téléchargement n’est autorisé');
-    await ligne(page, 'Police Essai').click();
-    await dialogue(page).waitFor();
-    await page.getByRole('button', { name: 'Pas maintenant' }).click();
+    // L'ancienne cle ne decide plus de rien : elle s'efface, et rien n'est parti pour autant.
+    await attend(() => page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
+    expect(await page.getByRole('button', { name: /Retirer l’autorisation/ }).count()).toBe(0);
     expect(reseau.requetes).toEqual([]);
+    // Pendant le telechargement : la ligne le dit (et se refuse a un second clic), la note aussi.
+    await ligne(page, 'Police Essai').click();
+    const enCours = ligne(page, 'Police Essai');
+    await attend(() => texteDe(enCours)).toContain('Téléchargement…');
+    expect(await enCours.getAttribute('aria-busy')).toBe('true');
+    expect(await texteDe(page.locator('.explorateur-polices'))).toContain('Téléchargement de la police Police Essai…');
+    liberer();
+    await attend(() => selectPolice(page).inputValue()).toBe(ID_ESSAI);
+    await attend(() => texteDe(ligne(page, 'Police Essai'))).not.toContain('Téléchargement…');
+    expect(reseau.requetes.map(r => r.url())).toEqual([URL_ESSAI]);
   });
 
   it('chez un hote : rien du catalogue par defaut, « Toutes les polices » seulement avec policesEnLigne: true', async () => {

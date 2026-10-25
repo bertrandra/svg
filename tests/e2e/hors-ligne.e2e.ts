@@ -119,10 +119,11 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     aucuneRequete(reseau);
   });
 
-  // ADR-0025 : l'index des polices est une annexe voisine (file://) ; l'ouvrir, y chercher, choisir une police non livree ne
-  // contacte personne tant que la personne n'a pas accepte. Le dialogue s'ouvre, « Pas maintenant » le ferme : aucune requete.
-  it('le catalogue des polices s\'ouvre et se cherche sans requete ; une police non livree demande l\'accord, refuse : rien ne part', async () => {
-    const { page, reseau } = await session();
+  // ADR-0025 : l'index des polices est une annexe voisine (file://) ; l'ouvrir, y chercher, voir les apercus ne contacte personne.
+  // Seul le choix d'une police non livree fait partir une requete, vers son serveur et son repli seulement : coupees ici, elles
+  // echouent, et la page le dit.
+  it('le catalogue des polices s\'ouvre et se cherche sans requete ; seul le choix d\'une police non livree la demande', async () => {
+    const { page, reseau, erreurs } = await session();
     await ouvrirExemple(page);
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
@@ -136,12 +137,20 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     expect(await page.locator('.liste-polices .police-ligne').count()).toBeLessThan(100);
     await page.locator('.explorateur-polices input[type="search"]').fill('roboto');
     const roboto = page.locator('.liste-polices .police-ligne', { hasText: /^Roboto\s*Google Fonts$/ });
-    await roboto.first().click();
-    const dialogue = page.getByRole('dialog', { name: 'Télécharger la police « Roboto » ?' });
-    await dialogue.waitFor();
-    await page.getByRole('button', { name: 'Pas maintenant' }).click();
-    await attend(() => dialogue.count()).toBe(0);
+    await roboto.first().waitFor();
+    // Les apercus se dessinent (l'annexe voisine), la liste defile : toujours rien.
+    await attend(() => page.locator('.liste-polices .police-nom-apercu svg').count()).toBeGreaterThan(0);
+    await page.locator('.liste-polices').evaluate(l => { l.scrollTop = l.scrollHeight; });
     aucuneRequete(reseau);
+    // Le choix vaut demande : la requete part vers jsDelivr, puis Bunny Fonts en repli ; coupees, l'erreur est dite.
+    await roboto.first().click();
+    const alerte = page.locator('.explorateur-polices [role="alert"]');
+    await alerte.waitFor();
+    expect(await alerte.innerText()).toMatch(/^Roboto : cdn\.jsdelivr\.net ne répond pas ; fonts\.bunny\.net ne répond pas\.$/);
+    expect(reseau.requetes.length).toBeGreaterThan(0);
+    expect([...new Set(reseau.requetes.map(u => new URL(u).hostname))].sort()).toEqual(['cdn.jsdelivr.net', 'fonts.bunny.net']);
+    // Le navigateur ecrit « Failed to load resource » pour ces requetes avortees : ce n'est pas une erreur de la page.
+    erreurs.length = 0;
   });
 
   it('coupe vraiment le reseau : une requete vers un hote est vue et avortee (le test n\'est pas aveugle)', async () => {

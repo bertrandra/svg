@@ -1,8 +1,10 @@
-# ADR-0025 — Les polices libres à la demande : un index commis, un accord par serveur, une empreinte par fichier
+# ADR-0025 — Les polices libres à la demande : un index commis, le choix qui vaut demande, une empreinte par fichier
 
 **Date :** 25 octobre 2026
 **Statut :** acceptée (prolonge les ADR-0017, 0020 et 0022 ; s’appuie sur les ADR-0008, 0011, 0014 et 0016) ; **aucun octet
 écrit pour un dessin existant ne change** : les dix fontes livrées, `polices.js` et toutes les références d’écriture sont intactes
+**Amendée le 25 octobre 2026 :** l’accord par serveur est retiré (décision du propriétaire) ; le choix d’une police vaut demande, et
+rien ne part sans ce geste (§ 4)
 
 ## Contexte
 
@@ -24,7 +26,7 @@ recomposer demain avec les mêmes octets. Le cœur pur ne touche pas au réseau.
   Fontshare, qui n’est pas l’OFL (elle permet l’usage commercial, interdit de redistribuer le fichier) : affichée avec un badge
   « ITF » et nommée en toutes lettres. Toute autre licence est refusée par la validation de l’index, même « libre » ailleurs : MIT
   (Comic Mono) et Unlicense (Metropolis), présentes chez Fontsource, sont écartées faute d’avoir été relues pour cet usage ;
-- **les serveurs** contactés, chacun avec son hôte et le préfixe obligé de ses adresses : jsDelivr (`cdn.jsdelivr.net`), Bunny
+- **les serveurs** contactés (seulement au choix d’une police qu’ils servent), chacun avec son hôte et le préfixe obligé de ses adresses : jsDelivr (`cdn.jsdelivr.net`), Bunny
   Fonts (`fonts.bunny.net`, **repli** seulement), GitLab (`gitlab.com`), Fontshare (`cdn.fontshare.com`) ;
 - **les sources** et ce qui fixe la version de leurs fichiers :
 
@@ -105,20 +107,31 @@ Quand l’index est rafraîchi, la version qu’il remplace (ou une famille qu�
 retrouve ses fichiers à leur adresse versionnée, donc immuable. Sans l’index (un hôte sans polices en ligne), le texte garde ses
 contours et dit « Police absente : Roboto ».
 
-### 4. Rien ne part sans accord, et l’accord se donne serveur par serveur
+### 4. Le choix d’une police vaut demande : rien ne part sans ce geste
 
-- Tant que la personne n’a pas accepté, **aucune requête**. Au premier choix d’une police non livrée, un dialogue (modal, focus
-  pris et rendu, Échap vaut refus) dit **quel serveur sera contacté** (« jsDelivr (cdn.jsdelivr.net), puis, s’il ne répond pas,
-  Bunny Fonts (fonts.bunny.net) »), **ce qui part** (la demande du fichier, rien d’autre : ni le dessin, ni le texte, ni aucune
-  donnée personnelle ; le serveur voit l’adresse IP, comme pour toute page), la source et la licence. Une seule action pleine :
-  « Accepter et retenir » ; « Pas maintenant » ne télécharge rien.
-- L’accord se retient dans le **stockage injecté**, clé `svg.polices.consentement` (`{ serveurs: [...] }`) ; il est **révocable**
-  dans le même panneau (« Retirer l’autorisation »). Une police d’un serveur pas encore accepté (Fontshare après jsDelivr)
-  redemande l’accord en nommant ce serveur. Sans stockage, l’accord vaut pour la session et le bouton le dit.
-- `telechargerVariante` (`io/policesEnLigne.ts`) vérifie aussi l’accord : sans serveur accepté pour chaque fichier, il refuse
-  avant toute requête. La requête part sans cookie (`credentials: 'omit'`) ni référent (`referrerPolicy: 'no-referrer'`).
+*Amendé le 25 octobre 2026.* La première version demandait un accord serveur par serveur, dans un dialogue (« Accepter et
+retenir », « Pas maintenant »), retenu dans le stockage injecté sous `svg.polices.consentement` et révocable dans le panneau
+(« Retirer l’autorisation »). Décision du propriétaire : **supprimer les accords pour les fontes et les images**. Choisir une
+police dans la liste est déjà demander cette police ; un second geste, qui redisait la même chose, ne protégeait rien de plus.
+
+- **Aucune requête sans geste.** Ouvrir « Toutes les polices », chercher, filtrer, faire défiler la liste et voir les aperçus
+  (ADR-0026) ne contacte personne : l’index et les aperçus sont des annexes voisines. Seul **le choix d’une police non livrée**
+  (une ligne de la liste, un favori, une récente, un style, « Télécharger » pour une police d’un document rouvert) la télécharge,
+  aussitôt, auprès du serveur que l’index désigne, puis de son repli. Le test réseau coupé (`tests/e2e/hors-ligne.e2e.ts`) le
+  garde : aucune requête à l’ouverture de la page ni de la liste ; au choix, seulement `cdn.jsdelivr.net` et `fonts.bunny.net`.
+- **Ce qui part** : une requête GET du fichier demandé, sans cookie (`credentials: 'omit'`) ni référent
+  (`referrerPolicy: 'no-referrer'`) ; ni le dessin, ni le texte, ni aucune donnée personnelle ; le serveur voit l’adresse IP,
+  comme pour toute page. Le pied du panneau le dit en une phrase.
+- **Pendant le téléchargement**, la ligne choisie le dit (« Téléchargement… », `aria-busy`), une note le répète, la région
+  vocale l’annonce, et les autres lignes attendent ; une erreur (réseau, empreinte fausse, fichier trop gros) est dite comme
+  avant, en nommant l’hôte.
+- `telechargerVariante` (`io/policesEnLigne.ts`) ne demande qu’une adresse qui part du préfixe de son serveur (le registre) ;
+  une autre est refusée avant toute requête.
+- **L’ancienne clé** `svg.polices.consentement`, restée dans le stockage d’une personne, ne décide plus de rien : elle est
+  ignorée, et effacée à l’ouverture de l’éditeur (le stockage ne lève jamais).
 - **Chez un hôte**, l’option `policesEnLigne` (booléen validé, ADR-0014) vaut **faux par défaut** : rien ne se télécharge, le
-  bouton « Toutes les polices » n’existe pas, seules les dix fontes se proposent. La page autonome la donne vraie.
+  bouton « Toutes les polices » n’existe pas, seules les dix fontes se proposent. C’est le réglage de l’hôte, pas un accord de
+  la personne. La page autonome la donne vraie.
 
 ### 5. Chaque fichier vérifié avant d’être lu
 
@@ -138,7 +151,7 @@ Le `<select>` « Police » reste (fontes livrées, téléchargées, déposées),
 filtres (genre, tracé — contour ou trait unique —, source), **polices du document** en tête avec « Remplacer partout » (une entrée
 d’historique, Ctrl+Z la défait), **favoris** et **récentes** (`svg.polices.favoris`, `svg.polices.recentes`, lus avec méfiance),
 **vos polices** (déposer un fichier ; « Polices de cet appareil » par Local Font Access seulement si `queryLocalFonts` existe,
-derrière sa garde, `docs/navigateurs.md`), et le pied qui dit l’accord et le retire. La longue liste **se fenêtre** au-delà de
+derrière sa garde, `docs/navigateurs.md`), et le pied qui dit ce que le choix d’une police fait partir. La longue liste **se fenêtre** au-delà de
 150 lignes (ADR-0008) : plus de deux mille polices, une vingtaine de lignes dans la page. Les noms s’écrivaient dans la police de
 l’interface : **aucun aperçu ne télécharge rien** ; depuis l’ADR-0026, chaque nom se dessine dans sa propre fonte (la fonte quand
 on l’a, sinon un aperçu préparé dans une annexe voisine), toujours sans aucune requête, et la liste ne montre qu’**une ligne par
@@ -161,16 +174,18 @@ chaque police téléchargée qu’emploie le dessin, sa source et sa licence (av
 - **Poids** : la page autonome prend 38 Ko (le sélecteur, le téléchargement, la lecture du WOFF), le bundle d’embarquement 45 Ko ;
   `dist/` gagne `polices-catalogue.js` (1,33 Mo, 0,66 Mo compressé), chargé à la demande.
 - **Tests** : unitaires (registre et liste blanche, index commis relu en entier, identité figée, adresses et repli, refus de la
-  validation, consentement, empreinte fausse, cache empoisonné, WOFF, option d’hôte, `fetch` dans `io` seul) ; en navigateur, une
-  police d’essai servie par `page.route` (rien sans accord ; empreinte vérifiée ; texte composé qui garde `c-…` ; « Remplacer
-  partout » ; crédits ; empreinte fausse refusée ; accord retiré ; hôte sans option), le test réseau coupé ouvre le **vrai** index
-  et choisit une police sans l’accepter, et axe audite le sélecteur (clair, sombre, téléphone) et le dialogue. Aucun vrai réseau.
+  validation, adresse hors préfixe refusée, ancienne clé d’accord effacée, empreinte fausse, cache empoisonné, WOFF, option
+  d’hôte, `fetch` dans `io` seul) ; en navigateur, une police d’essai servie par `page.route` (rien sans choix ; le choix
+  télécharge sans dialogue ; empreinte vérifiée ; texte composé qui garde `c-…` ; « Remplacer partout » ; crédits ; empreinte
+  fausse refusée ; ligne « Téléchargement… » ; ancienne clé ignorée et effacée ; hôte sans option), le test réseau coupé ouvre le
+  **vrai** index sans requête puis choisit une police (requêtes vers jsDelivr et Bunny seulement, erreur dite), et axe audite le
+  sélecteur (clair, sombre, téléphone) et une police en cours de téléchargement. Aucun vrai réseau.
 - **Navigateurs** : `fetch`, `crypto.subtle` (contexte sécurisé : https, localhost, `file://` selon le navigateur ; vérifié en
   Chromium depuis `file://`), `caches` et `queryLocalFonts` entrent au tableau de `docs/navigateurs.md`, chacun avec son repli.
 - **Limites, honnêtement** : la version de chaque paquet est la dernière au jour de l’instantané (pas de délai de deux semaines
   comme pour l’ADR-0023) ; la catégorie des fontes de Velvetyne est « Affiche » par défaut (le dépôt ne la dit pas) et leur nom
   est celui du dépôt ; les fontes variables de Velvetyne sont écartées ; Fontshare et le reste de Collletttivo restent `aVerifier` ;
-  une police téléchargée sert le temps de la session ; à la suivante, elle se relit du cache quand le navigateur l’a gardée, toujours après l’accord ; un texte rouvert dans une police du catalogue attend un geste (« Télécharger … ») plutôt que de se télécharger seul ; la
+  une police téléchargée sert le temps de la session ; à la suivante, elle se relit du cache quand le navigateur l’a gardée, toujours au choix de la police ; un texte rouvert dans une police du catalogue attend un geste (« Télécharger … ») plutôt que de se télécharger seul ; la
   politique de sécurité d’un hôte doit autoriser les quatre serveurs en `connect-src` (`docs/integration.md`).
 
 ## Alternatives écartées
@@ -179,8 +194,11 @@ chaque police téléchargée qu’emploie le dessin, sa source et sa licence (av
   WOFF2 selon le navigateur. Fontsource sert les mêmes fontes en paquets npm versionnés.
 - **Embarquer l’index dans la page** : 1,3 Mo de plus pour tous, même pour qui n’ouvre jamais l’outil Texte.
 - **Construire l’index au build** : le build contacterait le réseau, et deux builds d’un même commit pourraient différer.
-- **Télécharger sans demander, ou demander une fois pour tous les serveurs** : contraire à la promesse de l’ADR-0017 ; l’accord
-  par serveur dit exactement qui sera contacté.
+- **Télécharger sans geste** (à l’ouverture de la liste, pour un aperçu, ou un texte rouvert qui se retélécharge seul) :
+  contraire à la promesse de l’ADR-0017 ; seul le choix d’une police fait partir une requête.
+- **Un accord par serveur, dans un dialogue** (la première version de cette décision, retirée le 25 octobre 2026) : il redisait
+  le choix qu’on venait de faire, sans rien protéger de plus ; le pied du panneau dit ce qui part, et les serveurs sont nommés
+  ici et dans `docs/integration.md`.
 - **Faire confiance au serveur (HTTPS) sans empreinte** : un miroir d’une autre version ou un serveur compromis ferait lire des
   octets inattendus à opentype.js ; l’empreinte coûte un hachage.
 - **Le WOFF2** : opentype.js ne le lit pas, et le décompresser (Brotli) demanderait une bibliothèque de plus.

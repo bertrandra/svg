@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { CLE_FAVORIS, CLE_RECENTES, listeDeCles } from '../../../src/zones/contexteTexte.js';
-import { phraseServeurs } from '../../../src/zones/ConsentementPolices.js';
 import { policeDuTexte } from '../../../src/zones/actionsTexte.js';
 import { glyphesCarres } from '../engine/glyphesFactices.js';
 
-// Les polices en ligne dans l'interface (ADR-0025) : les conforts du stockage (favoris, recentes) lus avec mefiance, la phrase
-// du dialogue qui nomme les serveurs, ce qu'un texte garde de sa police, et la regle qui tient le reseau dans `io`.
+// Les polices en ligne dans l'interface (ADR-0025) : les conforts du stockage (favoris, recentes) lus avec mefiance, ce qu'un
+// texte garde de sa police, la regle qui tient le reseau dans `io`, et l'accord par serveur retire (le choix vaut demande).
 
 const racine = resolve(__dirname, '../../..');
 function fichiers(dir: string): string[] {
@@ -24,11 +23,13 @@ describe('les favoris et les recentes du stockage', () => {
   });
 });
 
-describe('le dialogue de consentement', () => {
-  it('nomme chaque serveur et son hote, le repli apres le principal', () => {
-    expect(phraseServeurs(['jsdelivr', 'bunny'])).toBe('jsDelivr (cdn.jsdelivr.net), puis, s’il ne répond pas, Bunny Fonts (fonts.bunny.net)');
-    expect(phraseServeurs(['fontshare'])).toBe('Fontshare (cdn.fontshare.com)');
-    expect(phraseServeurs(['bunny'])).toBe('Bunny Fonts (fonts.bunny.net)');
+describe('plus d accord par serveur', () => {
+  it('aucun dialogue de consentement ni ecriture de l ancienne cle dans src/ : choisir une police vaut demande', () => {
+    for (const f of fichiers(join(racine, 'src'))) {
+      const t = readFileSync(f, 'utf8'), chemin = relative(racine, f).replace(/\\/g, '/');
+      expect(/DialogueConsentement|Accepter et retenir|Retirer l’autorisation|ecrire\(ANCIENNE_CLE/.test(t), chemin).toBe(false);
+      if (chemin !== 'src/io/policesEnLigne.ts') expect(t.includes('svg.polices.consentement'), chemin).toBe(false);
+    }
   });
 });
 

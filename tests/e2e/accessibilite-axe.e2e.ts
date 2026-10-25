@@ -163,7 +163,6 @@ describe('axe-core : accessibilite automatique', () => {
     it('voie « bibliothèque » chargée, avec ses vignettes', async () => {
       const page = await accueil({ largeur: 1200, hauteur: 900 });
       await page.getByRole('tab', { name: /^Bibliothèque/ }).click();
-      await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
       await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: 60_000 });
       exigerSansViolationGrave(await auditer(page, 'accueil, bibliothèque chargée'));
     });
@@ -276,7 +275,6 @@ describe('axe-core : accessibilite automatique', () => {
     it('avec la bibliothèque chargée dans le panneau du dessin', async () => {
       const page = await editeur();
       await page.locator('.editeur-inspecteur details.section', { hasText: 'Bibliothèque de formes' }).locator('> summary').click();
-      await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: 60_000 });
       exigerSansViolationGrave(await auditer(page, 'éditeur, bibliothèque chargée'));
     });
@@ -309,7 +307,7 @@ describe('axe-core : accessibilite automatique', () => {
     }
 
     // Les polices en ligne (ADR-0025) : « Toutes les polices » ouvert sur la vraie liste fenetree (l'index de dist/), avec ses
-    // filtres et son pied ; puis le dialogue de consentement d'une police non livree (aucune requete : on ne l'accepte pas).
+    // filtres et son pied ; puis une police non livree en cours de telechargement (la requete est retenue, jamais servie).
     async function toutesLesPolices(page: Page) {
       await page.locator('.editeur-svg-toile').focus();
       await page.keyboard.press('t');
@@ -331,13 +329,16 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
-    it('avec le dialogue de consentement d une police à télécharger', async () => {
+    it('avec une police en cours de téléchargement', async () => {
       const page = await editeur({ largeur: 1200, hauteur: 900 });
+      // Aucun vrai reseau : la requete du fichier reste en suspens le temps de l'audit.
+      await page.route(url => url.hostname === 'cdn.fontshare.com' || url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.bunny.net', () => undefined);
       await toutesLesPolices(page);
       await page.locator('.explorateur-polices input[type="search"]').fill('satoshi');
       await page.locator('.liste-polices .police-ligne', { hasText: 'Satoshi' }).first().click();
-      await page.getByRole('dialog', { name: /Télécharger la police/ }).waitFor();
-      exigerSansViolationGrave(await auditer(page, 'éditeur, consentement d’une police'));
+      await page.locator('.liste-polices .police-arrive').waitFor();
+      await page.mouse.move(0, 0);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, police en cours de téléchargement'));
     });
 
     it('sur un téléphone de 390 px, « Toutes les polices » ouvert', async () => {

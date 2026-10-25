@@ -157,7 +157,6 @@ describe('les apercus des polices', () => {
     // Avant : une famille de l'index d'essai, sans apercu prepare (l'annexe ne la connait pas) : son nom ecrit.
     expect((await apercuDe(page, 'Police Essai')).source).toBe('nom');
     await ligne(page, 'Police Essai').click();
-    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
     await attend(() => apercuDe(page, 'Police Essai').then(a => a.source)).toBe('disponible');
   });
 

@@ -174,7 +174,7 @@ function Accueil() {
         {{
           svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} />,
           image: <Vectoriser ouvrir={ouvrir} />,
-          formes: <SectionBibliotheque ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
+          formes: <SectionBibliotheque active={voie === 'formes'} ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
         }}
       </Voies>
 
