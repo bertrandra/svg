@@ -98,6 +98,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Un SVG d'inconnu se lit, il ne se nettoie pas** (ADR-0014) : analyse linéaire bornée qui ne développe aucune
   entité, liste blanche réémise (`util/assainirSvg.ts`), lecture qui refuse sans jamais lever ; stockage et options
   d'hôte validés ; un vecteur nouveau entre dans `tests/fixtures/hostile/` avec sa ligne d'`index.json`.
+- **Un PDF se lit en formes, le texte en lettres** (ADR-0020) : lecture pure et bornée, décompression injectée par `io`, une
+  police absente est remplacée par la règle de `model/polices.ts` et c'est dit ; ce qui n'est pas repris passe par `ignores`.
 - **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
   dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
 - **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,

@@ -100,7 +100,7 @@ describe('la finition transversale', () => {
 
       it('donne au texte d exemple 4,5:1 sur le fond de son champ, et la grotesque quand ce sont des mots', async () => {
         const { page } = await navigateur.ouvrir({ schema, largeur: 1280, hauteur: 800 });
-        const accueil = await exemple(page.locator('section[aria-label="Ouvrir un SVG"] textarea'));
+        const accueil = await exemple(page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea'));
         expect(contraste(accueil.couleur, accueil.fond), JSON.stringify(accueil)).toBeGreaterThanOrEqual(4.5);
         expect(accueil.opacite).toBe('1');
         await ouvrirExemple(page);
