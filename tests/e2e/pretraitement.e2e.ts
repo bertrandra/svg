@@ -278,6 +278,9 @@ describe('pretraitement et lot', () => {
     await page.locator('.lot').waitFor();
     await attend(async () => (await page.locator('.lot li .lot-etat').allInnerTexts()).filter(e => e.startsWith('Terminée')).length, TRACE).toBe(2);
     expect(await petites('.lot')).toEqual([]);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+    // `clientWidth`, pas `innerWidth` : sous `isMobile`, Chromium elargit la fenetre jusqu'au contenu qui deborde, et la mesure
+    // y restait nulle alors que les six onglets de la visionneuse (« Prétraitée » en plus) poussaient la page de 20 px, ce que
+    // Firefox et WebKit, eux, voyaient.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   });
 });

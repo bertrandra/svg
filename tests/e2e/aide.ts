@@ -118,7 +118,8 @@ export function pilote() {
         viewport: { width: options.largeur ?? 1400, height: options.hauteur ?? 900 },
         acceptDownloads: true
       };
-      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport ni pointeur grossier.
+      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport. Firefox
+      // annonce pourtant `(pointer: coarse)` des que le tactile est emule (lu en CI : Firefox 142, contexte a `hasTouch` seul).
       if (options.tactile) { contexteOptions.hasTouch = true; if (NAVIGATEUR !== 'firefox') contexteOptions.isMobile = true; contexteOptions.deviceScaleFactor = 2; }
       if (options.mouvementReduit) contexteOptions.reducedMotion = 'reduce';
       if (options.schema) contexteOptions.colorScheme = options.schema;
@@ -164,6 +165,29 @@ const DELAI = 10_000;
  */
 export function attend<T>(lire: () => Promise<T>, delai = DELAI) {
   return expect.poll(lire, { timeout: delai, interval: 40 });
+}
+
+/**
+ * Laisse finir les animations d'ouverture (une section qui se deplie, un menu qui fond) avant une mesure : un texte a demi
+ * transparent n'a pas son contraste. Bornee a deux secondes et sans les animations infinies : sous Firefox et WebKit, attendre
+ * la fin de toutes les animations sans borne a bloque deux tests jusqu'a leur delai de 60 s (CI). Cause probable : le corps
+ * d'une section repliee reste dans le DOM avec son animation d'entree, que Chromium fait avancer et que ces moteurs, qui ne
+ * le rendent pas, laissent en suspens.
+ */
+export async function attendreAnimations(page: Page): Promise<void> {
+  // Une animation peut repartir apres l'attente (un panneau recalcule 200 ms apres un geste remonte sa section) :
+  // on sonde jusqu'a trois fois de suite sans animation en cours, dans la limite de 3 s pour les moteurs qui
+  // laissent en suspens l'animation d'un element non rendu.
+  await page.evaluate(async () => {
+    const enCours = () => document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity);
+    const limite = performance.now() + 3000;
+    let calmes = 0;
+    while (calmes < 3 && performance.now() < limite) {
+      const actives = enCours();
+      if (actives.length) { calmes = 0; await Promise.race([Promise.all(actives.map(a => a.finished.catch(() => undefined))), new Promise(fini => setTimeout(fini, 500))]); }
+      else { calmes++; await new Promise(fini => setTimeout(fini, 120)); }
+    }
+  });
 }
 
 /** Vrai quand l'element a le focus clavier. */

@@ -60,10 +60,11 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .depot .miniature { max-width: 160px; max-height: 120px; object-fit: contain; border: 1px solid var(--filet); border-radius: var(--rayon-bouton); padding: var(--esp-xs); background-color: var(--damier-a); background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 12px 12px; background-position: 0 0, 6px 6px; }
 .atelier-vecto { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--esp-xl); align-items: start; border-top: 1px dashed var(--filet); padding-top: var(--esp-l); }
 .atelier-vecto[aria-busy="true"] .visionneuse { opacity: 0.7; }
-.colonne-resultat { display: grid; gap: var(--esp-m); min-width: 0; }
+.colonne-resultat { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-m); min-width: 0; }
 .barre-visionneuse { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-m); }
 .barre-visionneuse select { width: auto; font-size: var(--texte-compact); }
 .barre-visionneuse .groupe { display: flex; gap: 1px; }
+.barre-visionneuse .mini-onglets { flex-wrap: wrap; }
 .visionneuse { display: flex; max-height: 520px; overflow: auto; border: 1px solid var(--filet); border-radius: var(--rayon-menu); padding: var(--esp-m); background-color: var(--toile-blanc); transition: opacity 0.15s; }
 .visionneuse.fond-damier { background-image: linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%), linear-gradient(45deg, var(--damier-b) 25%, transparent 25%, transparent 75%, var(--damier-b) 75%); background-size: 16px 16px; background-position: 0 0, 8px 8px; }
 .visionneuse.fond-sombre { background: var(--toile-sombre); }
