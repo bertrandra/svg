@@ -79,7 +79,7 @@ export function LotImages({ fichiers, traitement, ouvrir, fermer }: Proprietes) 
         ))}
       </ul>
       {!enCours && liste.length && !reussies.length ? (
-        <EtatVide genre="aucun-resultat" titre="Aucune image n’a été convertie.">Changez un réglage plus haut (le fond, la forme), puis « Refaire avec les réglages actuels ».</EtatVide>
+        <EtatVide genre="aucun-resultat" titre="Aucune image n’a été convertie.">Chaque ligne dit pourquoi. Déposez d’autres images, ou changez un réglage plus haut puis « Refaire avec les réglages actuels ».</EtatVide>
       ) : null}
       <div className="actions">
         {enCours ? <button type="button" onClick={() => { annule.current = true; dire('Annulation après l’image en cours…'); }}>Annuler le lot</button> : null}

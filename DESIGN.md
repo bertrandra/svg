@@ -105,6 +105,23 @@ components:
     textColor: "{colors.alerte}"
     rounded: "{rounded.bouton}"
     padding: "10px 12px"
+  bulle-visite:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.body}"
+    rounded: "{rounded.menu}"
+    padding: "12px 16px"
+  repere:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "12px 16px"
+  etat-vide:
+    backgroundColor: "transparent"
+    textColor: "{colors.encre-douce}"
+    typography: "{typography.aide}"
+    padding: "4px 0 8px"
 ---
 
 # Design System: Éditeur SVG
@@ -206,7 +223,7 @@ taille se décide dans le registre, avec sa raison.
 ## Layout
 
 L'éditeur est une grille d'application plein écran : une barre en haut (outils, couleurs, historique, zoom,
-menus Vue, Édition, Fichier et contexte de production, « Enregistrer »), les calques à gauche, la toile au centre
+menus Vue, Édition, Aide, Fichier et contexte de production, « Enregistrer »), les calques à gauche, la toile au centre
 sur la table, l'inspecteur à droite (sections repliables), une barre d'état en bas qui dit l'aide du moment et le
 nombre de modifications. L'accueil est une colonne centrée de trois voies côte à côte (Ouvrir, Convertir,
 Bibliothèque), une seule visible à la fois.
@@ -218,8 +235,9 @@ test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la
 
 - **Au-dessous de 900 px ou au doigt** : les panneaux deviennent des tiroirs sur voile, les cibles passent à
   40 px (44 px dans les menus).
-- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Vue, Fichier, Édition,
-  contexte) ; « Enregistrer » passe dans la barre d'état ; les voies de l'accueil s'empilent.
+- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Aide en tête, puis Vue,
+  Fichier, Édition, contexte) ; « Enregistrer » passe dans la barre d'état ; les voies de l'accueil s'empilent ; un
+  tiroir ouvert masque le dessin qu'il recouvre (le voile reçoit les touchers, on n'en voyait qu'une lisière).
 
 ### Named Rules
 **La règle de l'établi rangé.** La barre garde l'outil fréquent ; le reste vit dans un menu avec son raccourci.
@@ -238,6 +256,9 @@ d'une ombre au repos. L'ombre n'existe que pour ce qui flotte au-dessus du trava
 ### Named Rules
 **La règle de la feuille posée.** Une surface au repos est plate ; seule une surface qui recouvre le travail a
 une ombre.
+
+**La règle du guide discret.** Ce qui guide (la bulle, un repère, un état vide) ne porte jamais d'action pleine et ne
+cache jamais le dessin : le seul geste qui compte est celui que la personne fait dans l'éditeur.
 
 ## Shapes
 
@@ -280,6 +301,31 @@ Retenus au repos, francs à l'interaction.
 - **Sections de l'inspecteur:** repliables (`details`), contenu dense, mémoire d'ouverture.
 - **Messages:** fond et texte d'alerte ou d'échec, coins de 6 px, 10 × 12 px.
 
+### Bulle de la visite guidée (ADR-0019)
+Une feuille de panneau qui flotte : filet, coins de 8 px, ombre de menu flottant, 340 px au plus (la largeur de l'écran
+moins 16 px sur un téléphone). Dans l'ordre : la progression (« Étape 2 sur 5 », Aide, encre douce), le titre (Title),
+une ou deux phrases (Body), puis « Passer la visite » (discret, à gauche), « Précédent » et « Suivant » (secondaires,
+à droite). **Aucune action pleine** : l'action de l'étape est le vrai geste dans l'éditeur, pas un bouton de la bulle.
+La fin remplace la ligne par trois suites (secondaires, pleine largeur) et « Terminer ».
+- **Où :** toujours sur la toile, jamais sur la barre, la rangée de la sélection ou un panneau ; en haut sous une cible de
+  la barre, en bas pour la toile ou la barre d'état ; la vue se recadre pour que le dessin tienne à côté. Une flèche
+  (un carré tourné, même feuille, même filet) pointe la cible quand elle est au-dessus ou au-dessous.
+- **La cible :** un filet cyan de 2 px autour (rayon du bouton ; rayon de pastille, en dedans, autour de la toile), qui
+  laisse passer les clics. C'est le seul repère visuel : pas de voile, rien d'assombri.
+- **Mouvement :** l'apparition partagée (fondu et 4 px), 0,18 s, éteinte par `prefers-reduced-motion`.
+
+### Repères de première rencontre
+Une note posée dans le flux du panneau, là où l'on bloque : filet cyan de 1 px, coins de 6 px, voile cyan à 8 % sur la
+feuille (celui du bandeau de reprise), 12 × 16 px ; un titre (Compact 600), une phrase (Compact), « Compris » (discret,
+sans marge). Elle ne flotte pas, ne recouvre rien, ne parle pas, et ne revient jamais une fois refermée.
+
+### États vides
+Retenus : un titre court (Compact 600, encre), une phrase (Aide, encre douce), au plus une icône déjà dessinée (20 px,
+encre douce) et un bouton discret qui commence. Pas de cadre, pas d'illustration : un état vide est un mode d'emploi.
+Le texte dit le genre : la première fois (à quoi sert la zone), vidé (le retour est à un geste), aucun résultat (quoi
+changer). Sur la toile vide, la phrase est une étiquette de feuille (filet, coins de 8 px) centrée en haut, que les clics
+traversent.
+
 ### Panneau « Prêt pour Cricut » (signature)
 Le carnet d'atelier le plus littéral : un profil en une ligne d'aide, la taille finale et les couches comme des
 mesures, puis les constats classés Bloquant (rouge d'échec), À corriger (ambre d'alerte), Conseil (encre douce),
@@ -301,3 +347,5 @@ chacun avec ses boutons secondaires de correction ; une seule action primaire, �
 - **Don't** introduire une seconde couleur d'accent ; les messages (ambre, rouge) ne servent qu'aux messages.
 - **Don't** laisser un bouton inactif sans raison lisible.
 - **Don't** désactiver une règle d'audit axe-core ou un comportement `prefers-reduced-motion`.
+- **Don't** poser un voile pour guider, ni une bulle sur ce qu'elle demande de toucher ; un repère est une note dans le
+  flux, pas une seconde bulle.
