@@ -4,7 +4,8 @@
 // stylo feront de ce texte avec cette police, rendu par le moteur.
 //
 // Quand les polices en ligne sont permises (ADR-0025), « Toutes les polices » ouvre, dans le flux, la recherche parmi les
-// polices libres de l'index ; une police du catalogue choisie montre ses autres styles. Rien ne se telecharge sans accord.
+// polices libres de l'index ; une police du catalogue choisie montre ses autres styles. Seul le choix d'une police (ou d'un
+// style) non livree la telecharge : le geste vaut demande, et rien ne part sans lui.
 
 import { useId, useMemo, useState } from 'react';
 import { ecrireChemin } from '../engine/editionSvg.js';
@@ -39,6 +40,7 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
   const [ouvert, ouvrir] = useState(false);
   const [explorer, poserExplorer] = useState(false);
   const [erreurStyle, poserErreurStyle] = useState('');
+  const [styleEnCours, poserStyleEnCours] = useState('');
   const idApercu = useId(), idExplorateur = useId();
   const police = polices?.find(p => p.id === valeur) ?? null;
   // Une famille livree, une ligne : la variante grasse se choisit dans « Style ».
@@ -48,7 +50,7 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
   const deposees = polices?.filter(p => p.id.startsWith('u-')) ?? [];
   const telechargees = polices?.filter(p => estIdCatalogue(p.id)) ?? [];
   const poser = (id: string, p?: Police) => { tx.noterRecente(id); poserBrut(id, p); };
-  // Les autres styles d'une police du catalogue : chacun se telecharge a son tour, l'accord une fois donne.
+  // Les autres styles d'une police du catalogue : chacun se telecharge quand on le choisit.
   const styles = useMemo<VariantePolice[]>(() => {
     if (!estIdCatalogue(valeur) || !tx.catalogue) return [];
     const f = familleDe(tx.catalogue, valeur);
@@ -63,8 +65,9 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
     if (!v) return;
     const deja = polices?.find(p => p.id === v.id);
     if (deja) { poser(deja.id, deja); return; }
+    poserStyleEnCours(v.nom);
     const r = await tx.telecharger(v);
-    if (r === null) return;
+    poserStyleEnCours('');
     if ('erreur' in r) { poserErreurStyle(r.erreur); ac.dire(r.erreur); return; }
     poserErreurStyle('');
     poser(r.id, r.police);
@@ -91,7 +94,7 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
           </select>
         </label>
       ) : null}
-      {erreurStyle ? <p className="aide" role="alert">{erreurStyle}</p> : null}
+      {styleEnCours ? <p className="aide">Téléchargement de {styleEnCours}…</p> : erreurStyle ? <p className="aide" role="alert">{erreurStyle}</p> : null}
       <div className="boutons">
         <button type="button" className="discret apercu-bascule" aria-expanded={ouvert} aria-controls={idApercu} disabled={!police} onClick={() => ouvrir(o => !o)}>
           Aperçu forme / ligne

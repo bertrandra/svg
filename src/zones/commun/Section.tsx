@@ -5,6 +5,9 @@
 // La memoire est celle d'un editeur, pas du module : deux editeurs dans la meme page (l'hote qui
 // embarque l'editeur, ou deux appels a `ouvrir` l'un apres l'autre) ne se passent pas leurs sections.
 // Hors de tout fournisseur, une section n'a pas de memoire et suit sa valeur par defaut.
+//
+// Une section `differee` ne monte son contenu qu'a sa premiere ouverture, puis le garde : ce qui se charge en s'affichant (la
+// bibliotheque de formes) attend ainsi que la section soit ouverte, sans bouton « Charger » de plus.
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
@@ -16,12 +19,14 @@ export function FournisseurSections({ children }: { children: ReactNode }) {
   return <ContexteSections.Provider value={memoire}>{children}</ContexteSections.Provider>;
 }
 
-export function Section({ titre, ouverte = false, note, children }: { titre: string; ouverte?: boolean; note?: ReactNode; children: ReactNode }) {
+export function Section({ titre, ouverte = false, note, differee = false, children }: { titre: string; ouverte?: boolean; note?: ReactNode; differee?: boolean; children: ReactNode }) {
   const memoire = useContext(ContexteSections);
+  const ouvert = memoire?.get(titre) ?? ouverte;
+  const [vue, poserVue] = useState(ouvert);
   return (
-    <details className="section" open={memoire?.get(titre) ?? ouverte} onToggle={e => { memoire?.set(titre, (e.currentTarget as HTMLDetailsElement).open); }}>
+    <details className="section" open={ouvert} onToggle={e => { const o = (e.currentTarget as HTMLDetailsElement).open; memoire?.set(titre, o); if (o) poserVue(true); }}>
       <summary><span>{titre}</span>{note ? <span className="aide">{note}</span> : null}</summary>
-      <div className="section-corps">{children}</div>
+      <div className="section-corps">{!differee || vue || ouvert ? children : null}</div>
     </details>
   );
 }

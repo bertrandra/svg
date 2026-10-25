@@ -467,7 +467,6 @@ describe('les etats vides', () => {
     await attend(() => section.getByRole('button', { name: 'Les deux', exact: true }).getAttribute('aria-pressed')).toBe('true');
     // La bibliotheque du panneau : un panier vide qui dit a quoi il sert, puis une recherche sans resultat.
     await page.locator('.editeur-inspecteur details.section', { hasText: 'Bibliothèque de formes' }).locator('> summary').click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: 60_000 });
     expect(await page.locator('.editeur-inspecteur').innerText()).toContain('Panier vide.');
     await page.locator('.editeur-inspecteur input[type=search]').fill('zzqxw');

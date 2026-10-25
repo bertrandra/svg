@@ -1,4 +1,4 @@
-// La bibliotheque de formes (ADR-0003), chargee a la demande : dans la page pour ouvrir une forme,
+// La bibliotheque de formes (ADR-0003), chargee d'elle-meme a l'ouverture de sa voie ou de sa section : dans la page pour ouvrir une forme,
 // dans l'editeur pour en inserer une, une scene ou un panier. Le fichier fait pres de 7 Mo : on ne
 // le charge que dans les tests qui en ont besoin.
 
@@ -21,11 +21,13 @@ describe('bibliotheque de formes', () => {
     return [n, m[2] ? Number(m[2]) : n];
   }
 
-  it('se charge a la demande dans la page, puis se filtre par evenement et par mot', async () => {
+  it('se charge d elle-meme a l ouverture de sa voie, sans bouton, puis se filtre par evenement et par mot', async () => {
     const { page } = await navigateur.ouvrir();
+    // L'accueil ne charge pas les formes : seule l'ouverture de la voie « Bibliothèque » les demande (un fichier voisin).
+    await page.getByRole('tab').first().waitFor();
+    expect(await page.evaluate(() => (window as unknown as { __bibliothequeSvg?: unknown }).__bibliothequeSvg === undefined)).toBe(true);
     await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-    expect(await page.locator('.bibliotheque .vignette').count()).toBe(0);
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
+    expect(await page.getByRole('button', { name: /Charger la bibliothèque/ }).count()).toBe(0);
     await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: CHARGEMENT });
 
     const compte = page.locator('.bibliotheque .aide[aria-live]');
@@ -46,7 +48,6 @@ describe('bibliotheque de formes', () => {
   it('ouvre dans l\'editeur la forme cliquee dans la page', async () => {
     const { page } = await navigateur.ouvrir();
     await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     const vignette = page.locator('.bibliotheque .vignette').first();
     await vignette.waitFor({ timeout: CHARGEMENT });
     await vignette.click();
@@ -59,7 +60,6 @@ describe('bibliotheque de formes', () => {
     const { page } = await navigateur.ouvrir();
     await ouvrirExemple(page);
     await page.locator('.editeur-inspecteur .section > summary', { hasText: 'Bibliothèque de formes' }).click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: CHARGEMENT });
     return page;
   }

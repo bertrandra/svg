@@ -249,7 +249,6 @@ describe('la fin du parcours Cricut', () => {
   it('nomme le fichier d une forme de la bibliotheque par son nom francais : bonhomme-de-neige.svg, bonhomme-de-neige-cricut.svg', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await page.locator('.bibliotheque input[type=search]').waitFor({ timeout: CHARGEMENT });
     await page.locator('.bibliotheque input[type=search]').fill('bonhomme de neige');
     const vignette = page.locator('.bibliotheque .vignette', { hasText: /^bonhomme de neige$/ });

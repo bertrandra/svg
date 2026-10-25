@@ -7,8 +7,9 @@ change** : l’aperçu n’est qu’un affichage de la liste, il n’entre ni da
 ## Contexte
 
 Dans « Toutes les polices » (ADR-0025), chaque ligne écrivait le nom de la famille dans la police de l’interface : on ne voyait
-l’allure d’une police qu’après l’avoir téléchargée, donc après avoir donné son accord à un serveur. Décision du propriétaire :
-**voir les polices en parcourant la liste, sans aucune requête réseau et sans consentement**, en deux parties :
+l’allure d’une police qu’après l’avoir téléchargée (alors après avoir donné son accord à un serveur ; cet accord est retiré
+depuis l’amendement de l’ADR-0025 du 25 octobre 2026 : le choix d’une police vaut demande). Décision du propriétaire :
+**voir les polices en parcourant la liste, sans aucune requête réseau et sans rien choisir**, en deux parties :
 
 1. les polices **déjà disponibles** (les dix livrées, celles téléchargées dans la session, les polices déposées ou de
    l’appareil) se dessinent dans leur propre fonte, calculées sur place ;
@@ -39,7 +40,7 @@ décode une fois par annexe (ADR-0008). Seules les lignes visibles le demandent 
 déposée étrange, qui lèverait en composant, laisse le nom écrit. La police à trait unique se peint au trait, sans fond.
 
 Une police gardée dans Cache Storage mais pas encore relue dans la session montre l’aperçu préparé : relire le cache sans geste
-contournerait la règle de l’ADR-0025 (« toujours après l’accord »), et c’est le même fichier, vérifié par la même empreinte,
+contournerait la règle de l’ADR-0025 (rien sans le choix de la police), et c’est le même fichier, vérifié par la même empreinte,
 composé par la même fonction.
 
 ### 3. Tout le catalogue : un instantané commis, jamais construit en ligne
@@ -159,7 +160,7 @@ le dit à côté de l’index.
 
 ## Alternatives écartées
 
-- **Télécharger les fontes pour les montrer** : contraire à l’ADR-0025 (aucune requête sans accord) et à l’ADR-0017.
+- **Télécharger les fontes pour les montrer** : contraire à l’ADR-0025 (aucune requête sans le choix d’une police) et à l’ADR-0017.
 - **Une image (PNG, sprite) par famille** : plus lourd, flou au zoom et en haute densité, et une couleur figée qui ignorerait les
   thèmes et le contraste forcé.
 - **Un sous-ensemble de fonte par famille (les lettres du nom en WOFF, `@font-face`)** : redistribuerait un morceau de fonte (l’ITF

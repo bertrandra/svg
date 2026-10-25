@@ -36,13 +36,13 @@ export const LICENCES_POLICES: Readonly<Record<IdLicencePolice, LicencePolice>> 
 /** Vrai pour une licence de la liste blanche ; toute autre est refusee par la validation de l'index. */
 export const estLicenceAdmise = (l: unknown): l is IdLicencePolice => typeof l === 'string' && Object.prototype.hasOwnProperty.call(LICENCES_POLICES, l);
 
-/** Les serveurs que la page peut contacter, et seulement apres le consentement de la personne. */
+/** Les serveurs que la page peut contacter, et seulement quand la personne choisit une police qu'ils servent. */
 export type IdServeur = 'jsdelivr' | 'bunny' | 'gitlab' | 'fontshare';
 
 export interface ServeurPolices {
   readonly id: IdServeur;
   readonly nom: string;
-  /** L'hote contacte, tel que le dialogue de consentement le nomme. */
+  /** L'hote contacte, tel que les messages d'erreur le nomment. */
   readonly hote: string;
   readonly url: string;
   /** Le debut de toute adresse de fichier servie par ce serveur : une adresse calculee qui n'en part pas est refusee. */

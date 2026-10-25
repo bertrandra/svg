@@ -251,7 +251,7 @@ describe('la finition transversale', () => {
     expect(await parLigne(page.locator('.pied p').first())).toBeLessThanOrEqual(76);
     expect(await parLigne(page.locator('.tete p'))).toBeLessThanOrEqual(76);
     await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-    expect(await parLigne(page.locator('.bibliotheque > p.aide'))).toBeLessThanOrEqual(76);
+    expect(await parLigne(page.locator('.bibliotheque > p.aide').first())).toBeLessThanOrEqual(76);
     const texte = await page.locator('.pied p').first().evaluate(e => e.getBoundingClientRect().left);
     const libelle = await page.getByRole('button', { name: 'À propos et crédits' }).evaluate(e => {
       const r = document.createRange();

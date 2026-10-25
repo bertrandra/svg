@@ -104,7 +104,6 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
     it('voie « bibliotheque » chargee', async () => {
       const page = await ouvrirPage();
       await cliquer(page.getByRole('tab', { name: /^Bibliothèque/ }));
-      await cliquer(page.getByRole('button', { name: /Charger la bibliothèque/ }));
       await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: 60_000 });
       await exiger(page);
     });
@@ -164,7 +163,6 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       const page = await editeur();
       await tiroir(page, 'Inspecteur');
       await cliquer(page.locator('.editeur-inspecteur details.section', { hasText: 'Bibliothèque de formes' }).locator('> summary'));
-      await cliquer(page.getByRole('button', { name: /Charger la bibliothèque/ }));
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: 60_000 });
       await exiger(page);
     });

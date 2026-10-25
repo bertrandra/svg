@@ -96,7 +96,6 @@ function RetrouverPolice({ texte, poser }: { texte: TexteVivant; poser: (id: str
   if (!v) return null;
   const telecharger = async () => {
     const r = await tx.telecharger(v);
-    if (r === null) return;
     if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
     poserErreur('');
     // A la meme version, rien ne change : la police revient, le texte n'est pas recompose. A une autre, il l'est au prochain reglage.

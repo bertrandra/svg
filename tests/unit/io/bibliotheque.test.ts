@@ -32,16 +32,6 @@ function installerPage(arrivee: 'charge' | 'vide' | 'introuvable') {
   return { w, scripts };
 }
 
-describe('bibliothequeChargee', () => {
-  it('dit si le script est deja arrive, sans le demander', async () => {
-    vi.stubGlobal('window', {});
-    const { bibliothequeChargee } = await module();
-    expect(bibliothequeChargee()).toBe(false);
-    vi.stubGlobal('window', { __bibliothequeSvg: bibliotheque });
-    expect(bibliothequeChargee()).toBe(true);
-  });
-});
-
 describe('chargerBibliotheque', () => {
   it('ajoute ' + FICHIER_BIBLIOTHEQUE + ' a la page une fois, le retire, et memorise le resultat', async () => {
     const { scripts } = installerPage('charge');

@@ -307,7 +307,7 @@ export function famillesMontrees(familles: readonly FamilleCatalogue[], options:
   return uneParNom(elements, e => e.nom, e => e.source).flatMap(e => (e.famille ? [e.famille] : []));
 }
 
-/** Les serveurs qu'une liste de variantes ferait contacter, sans doublon : ce que le dialogue de consentement nomme. */
+/** Les serveurs qu'une liste de variantes ferait contacter, sans doublon : ceux qu'un hote doit autoriser en `connect-src`. */
 export function serveursDe(variantes: readonly VariantePolice[]): IdServeur[] {
   return [...new Set(variantes.flatMap(v => v.fichiers.flatMap(f => f.adresses.map(a => a.serveur))))];
 }

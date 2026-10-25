@@ -3,7 +3,7 @@
 
 import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
-import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
+import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
@@ -100,12 +100,14 @@ function StyleNouvelleForme() {
   );
 }
 
-/** La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. */
+/**
+ * La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. Elle se charge d'elle-meme a la premiere
+ * ouverture de sa section (un fichier voisin, aucun serveur) : une section fermee ne coute rien, ouverte elle montre les formes.
+ */
 function PanneauBibliotheque({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
-  const [voulue, vouloir] = useState(bibliotheque !== 'a-charger' || bibliothequeChargee());
   return (
-    <Section titre="Bibliothèque de formes">
-      {voulue ? <BibliothequeChargee bibliotheque={bibliotheque} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
+    <Section titre="Bibliothèque de formes" differee>
+      <BibliothequeChargee bibliotheque={bibliotheque} />
     </Section>
   );
 }

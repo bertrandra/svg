@@ -47,7 +47,6 @@ describe('bibliotheques libres', () => {
   async function page(options: Parameters<typeof navigateur.ouvrir>[0] = {}) {
     const { page: p } = await navigateur.ouvrir(options);
     await p.getByRole('tab', { name: /Bibliothèque/ }).click();
-    await p.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await p.locator('.bibliotheque .vignette').first().waitFor({ timeout: CHARGEMENT });
     return p;
   }
@@ -135,7 +134,6 @@ describe('bibliotheques libres', () => {
     const { page: p } = await navigateur.ouvrir();
     await ouvrirExemple(p);
     await p.locator('.editeur-inspecteur .section > summary', { hasText: 'Bibliothèque de formes' }).click();
-    await p.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     const zone = p.locator('.editeur-inspecteur');
     await zone.locator('.vignette').first().waitFor({ timeout: CHARGEMENT });
 
