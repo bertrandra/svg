@@ -58,7 +58,7 @@ async function verifierPolices(page: Page): Promise<void> {
     };
     return {
       charges,
-      dejaChargees: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight),
+      dejaChargees: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^(["'])(.*)\1$/, '$2') + ' ' + f.weight),
       sansDiffere: largeur('600 20px "Instrument Sans", monospace') !== largeur('600 20px monospace'),
       monoDiffere: largeur('400 20px "IBM Plex Mono", serif') !== largeur('400 20px serif'),
       corps: getComputedStyle(document.body).fontFamily
@@ -87,7 +87,8 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     const { page, reseau } = await session();
     await page.getByRole('tab').first().waitFor();
     // Les polices servent deja, sans que le test les ait demandees : la page elle-meme les a utilisees pour se rendre.
-    const tot = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight); });
+    // Le nom de famille se lit sans guillemets : Firefox rend `"Instrument Sans"` la ou Chromium rend `Instrument Sans`.
+    const tot = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/^(["'])(.*)\1$/, '$2') + ' ' + f.weight); });
     expect(tot).toContain('Instrument Sans 400');
     await verifierPolices(page);
     // Les fontes redistribuees sont creditees (SIL OFL 1.1 : le copyright accompagne la fonte), dans la boite « A propos et credits ».

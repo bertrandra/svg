@@ -41,7 +41,7 @@ Ne sont pas pris en charge : Internet Explorer, les navigateurs de console ou de
 |---|---|---|
 | Les versions récentes de Chromium, Firefox et WebKit | La suite `tests/e2e` complète, dans les trois moteurs que Playwright 1.56.1 embarque (Chromium 141, Firefox 142, WebKit 26.0) | job `navigateur` de la CI, une passe par moteur (`NAVIGATEUR=chromium\|firefox\|webkit npm run e2e`) |
 | Chromium | Exigé : la CI échoue si un test tombe | idem |
-| Firefox et WebKit | **Pas encore exigés** (`continue-on-error`) : ils n’avaient jamais tourné quand cette page a été écrite. Le TODO du workflow dit de les rendre obligatoires dès que leurs premiers passages sont verts, puis de remplacer ce paragraphe | idem |
+| Firefox et WebKit | **Pas encore exigés** (`continue-on-error`, 60 minutes au lieu de 25). Premiers passages lus (voir « Premiers passages de Firefox et WebKit ») : quinze échecs sous Firefox, onze sous WebKit, qui coupait avant la fin. Les causes sont corrigées, mais seul Chromium a pu rejouer la suite depuis : le TODO du workflow dit de les rendre obligatoires dès qu’un passage est vert | idem |
 | Les replis de `color-mix()` | Test de navigateur : chaque teinte de repli égale ce que `color-mix()` calcule, à un pas de 8 bits | `tests/e2e/compatibilite.e2e.ts` |
 | Les gardes (API de base manquante, WebAssembly manquant, JavaScript coupé) | Tests de navigateur qui retirent l’API avant l’ouverture de la page | idem |
 | Le moteur et les versions plus anciennes | Aucun test : l’audit statique de ce document, relu par `tests/unit/depot/navigateurs.test.ts` | ce fichier |
@@ -141,17 +141,44 @@ test de dépôt vérifie que la raison est écrite ici, mot pour mot.
 | Test | Moteurs qui le jouent | Raison (texte du code) |
 |---|---|---|
 | `contraste-force.e2e.ts` (tout le fichier) | Chromium | `emulateMedia({ forcedColors }) : emulation verifiee sur Chromium seulement` |
-| `tactile.e2e.ts`, « detecte un pointeur grossier » | Chromium, WebKit | `isMobile absent de Firefox : (pointer: coarse) y reste faux` |
 
 À essayer quand la CI aura tourné : Playwright expose `forcedColors` aussi pour Firefox et WebKit ; si
-l’émulation y agit, lever le saut. Adaptations qui ne sont pas des sauts : sur Firefox, un contexte tactile n’a
-que `hasTouch` (pas de `isMobile`), et le test de l’embarquement sur 390 px y attend un pointeur fin.
+l’émulation y agit, lever le saut. Le saut de « detecte un pointeur grossier » sous Firefox est levé : un contexte
+tactile n’y a que `hasTouch` (Playwright refuse `isMobile`), mais Firefox annonce quand même `(pointer: coarse)`
+(lu en CI, Firefox 142), et les trois moteurs attendent maintenant un pointeur grossier.
 
 Autres différences relues dans les specs, sans changement : les raccourcis `Control+…` passent partout parce que
 l’éditeur accepte Ctrl ou Cmd ; les durées calculées se lisent en secondes par `parseFloat`, donc `1e-05s` passe ;
 les couleurs calculées s’écrivent `rgb(…)` dans les trois moteurs ; le rideau de l’atelier accepte `inset(0px …)`
-comme `inset(0 …)`. Restent à confirmer par la CI : le `tap()` de Firefox, le téléchargement d’un `blob:` sous
-WebKit, `localStorage` sous `file://` dans Firefox et WebKit, et `:focus-visible` après un `focus()` par script.
+comme `inset(0 …)`. Confirmés par les premiers passages : le `tap()` de Firefox, le téléchargement d’un `blob:` sous
+WebKit, `localStorage` sous `file://` dans Firefox et WebKit. Infirmé : `:focus-visible` après une touche Maj et un
+`focus()` par script, que seul Chromium applique (le test y arrive maintenant par Tab).
+
+## Premiers passages de Firefox et WebKit
+
+Journaux lus : run 40135888510 (commit `a0596d8`), jobs 120997443898 (Firefox 142, 15 échecs sur 884 tests) et
+120997443791 (WebKit 26, coupé à 25 minutes pendant `securite.e2e.ts`, sans message d’échec : seuls les noms des onze
+tests tombés sont connus). Les captures des échecs Firefox (artefact `traces-navigateur-firefox`) ont été relues.
+Firefox et WebKit ne sont pas installés là où les corrections ont été faites : **chaque cause ci-dessous est établie par
+le journal et par la lecture du code, puis la correction est rejouée sous Chromium seulement.** Un test qui tombait sous
+WebKit seul est marqué ainsi ; sa cause est déduite de celle de Firefox.
+
+| Échec | Moteurs | Cause établie | Correction |
+|---|---|---|---|
+| Atelier à 420 px : la page défile de 20 px (`pretraitement.e2e.ts`) | Firefox, WebKit | **Bug de la page.** Avec « Prétraitée », la visionneuse a six onglets qui ne passent pas à la ligne (406 px dans une colonne de 354) ; la colonne de grille s’élargit. Chromium le cachait : sous `isMobile`, il élargit `innerWidth` jusqu’au contenu (440 px, mesuré) et `scrollWidth - innerWidth` restait nul | Les onglets de la visionneuse passent à la ligne, la colonne du résultat est `minmax(0, 1fr)`. Les mesures de défilement de la page lisent `clientWidth` (cinq tests), qui voit ce débordement aussi sous Chromium |
+| Tab dans « Couleurs du dessin » (et « Par couleur », WebKit seul) : le contrôle focalisé sort de la liste | Firefox, WebKit | **Défaut de la page sous ces moteurs.** Ils ne font pas défiler la liste pour un contrôle à demi visible (capture : ligne 8 coupée, liste à 0) ; Chromium la montre entière | Au focus clavier (`:focus-visible`), la liste montre la ligne entière (`montrerLigneAuClavier`, `zones/Fenetre.ts`) ; rien ne bouge au focus de la souris |
+| La molette ne mène pas la liste « Par couleur » où elle va | Firefox, WebKit | Test : un cran de 300 px dépasse la liste (260 px), Firefox le ramène à une page (234 px = 90 %, lu) | Crans de 200 px (dix-huit, les mêmes 3 600 px) ; le cran de 200 px du test voisin passait déjà partout |
+| Les formes choisies se lisent vides (`couleurs-suite.e2e.ts`) | Firefox, WebKit | Test : une ligne des calques hors de l’écran est en `content-visibility: auto`, son `innerText` y est vide | Le nom se lit par `textContent` (aussi dans les deux suites du clavier) |
+| Anneau de focus de la toile absent (`edition.e2e.ts`) | Firefox, WebKit | Test : une touche Maj puis un `focus()` par script ne déclenche `:focus-visible` que sous Chromium | Le focus arrive par Tab puis Maj+Tab |
+| Audit axe qui ne finit pas en 60 s (outils de tracé, exports) | Firefox, WebKit | Test, cause probable : l’attente de **toutes** les animations, sans borne ; le corps d’une section repliée garde son animation d’entrée, que Chromium fait avancer (vérifié) et ces moteurs non (non vérifié). L’audit commun, borné à 2 s, passait partout | Une seule attente bornée, `attendreAnimations` (`tests/e2e/aide.ts`), pour tous les audits et mesures |
+| Polices chargées : `"Instrument Sans" 400` au lieu de `Instrument Sans 400` | Firefox (WebKit : même test tombé) | Test : `FontFace.family` garde ses guillemets sous Firefox | Le nom se lit sans guillemets |
+| Bibliothèque, polices, bundle : aucune requête vue (`embarquement.e2e.ts`, deux tests) | Firefox | Test : Playwright ne signale aucune requête `file://` sous Firefox (le bundle chargé n’y figurait pas) | Second témoin dans la page : chaque `<script src>` posé, relevé avant tout script ; les annexes se chargent justement ainsi (`io/annexes.ts`) |
+| Pointeur grossier à 390 px | Firefox | Test : il attendait un pointeur fin sous Firefox, qui annonce en fait `(pointer: coarse)` | Pointeur grossier attendu dans les trois moteurs, saut de `tactile.e2e.ts` levé |
+| Deux fichiers du corpus collés s’ouvrent au lieu d’être refusés (`securite.e2e.ts`) | Firefox | Ni la page ni le test : Firefox retire des caractères de contrôle (au moins U+0000) de ce qu’on tape dans un `<textarea>`, les octets hostiles n’entrent pas par cette porte | Le test lit ce que la zone a reçu : si le moteur l’a changé, seul un retrait de caractères de contrôle est admis, et la page doit faire du texte reçu ce qu’en fait le moteur, sans défaut. Le même fichier déposé garde son issue attendue partout |
+| WebKit coupé avant la fin | WebKit | CI : la limite de 25 minutes ; le corpus hostile (510 tests) a pris 15 minutes sous Firefox | 60 minutes pour Firefox et WebKit, 25 pour Chromium |
+
+Non vérifié : que ces corrections suffisent sous Firefox et WebKit (aucun passage depuis), la cause exacte des deux audits
+axe, et le reste de `securite.e2e.ts` sous WebKit, qui n’a jamais fini.
 
 ## Reproductibilité d’un navigateur à l’autre
 

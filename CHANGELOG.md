@@ -115,6 +115,19 @@ empreintes.
 
 ### Corrigé
 
+- Sur un téléphone (420 px), l'atelier de conversion débordait de 20 px dès que le prétraitement ajoutait
+  l'onglet « Prétraitée » : les six onglets de la visionneuse passent maintenant à la ligne. Firefox et WebKit le
+  montraient ; Chromium, qui élargit la fenêtre émulée jusqu'au contenu, le cachait aux tests, qui lisent
+  désormais `clientWidth`.
+- Sous Firefox et WebKit, Tab dans « Couleurs du dessin » ou « Par couleur » laissait le focus sur une ligne
+  coupée par le bas de la liste : au focus clavier, la ligne se montre entière (rien ne bouge à la souris).
+- Les tests de navigateur ne supposent plus Chromium là où Firefox et WebKit diffèrent sans défaut de la page
+  (requêtes `file://` invisibles sous Firefox, `innerText` d'une ligne non rendue, guillemets de
+  `FontFace.family`, `:focus-visible` après un focus par script, cran de molette ramené à une page, caractères
+  de contrôle retirés d'un `<textarea>`, pointeur grossier sous `hasTouch`) : même assertion, moyen
+  d'observation portable. Les audits attendent leurs animations deux secondes au plus. Le job `navigateur`
+  laisse 60 minutes à Firefox et WebKit (WebKit était coupé à 25). Détail dans `docs/navigateurs.md`.
+
 - Une couleur toute masquée du panneau « Par couleur » tombait à 2,2:1 de contraste (`opacity: 0.5`) : elle
   s'atténue maintenant par son échantillon.
 - Recolorer une couleur avec le sélecteur natif, dans « Par couleur » ou « Couleurs du dessin », ne le

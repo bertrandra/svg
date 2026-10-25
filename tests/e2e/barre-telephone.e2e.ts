@@ -23,7 +23,9 @@ describe('barre de l editeur sur un telephone', () => {
       const mesure = await page.evaluate(() => {
         const barre = document.querySelector('.editeur-barre');
         const boutons = Array.from(barre?.querySelectorAll('button, input') ?? []).map(e => e.getBoundingClientRect());
-        return { defile: (barre?.scrollWidth ?? 0) - (barre?.clientWidth ?? 0), page: document.documentElement.scrollWidth - innerWidth, hors: boutons.filter(r => r.right > innerWidth + 0.5 || r.left < -0.5).length, nombre: boutons.length };
+        // La largeur visible est `clientWidth` : sous `isMobile`, Chromium elargit `innerWidth` jusqu'au contenu qui deborde.
+        const visible = document.documentElement.clientWidth;
+        return { defile: (barre?.scrollWidth ?? 0) - (barre?.clientWidth ?? 0), page: document.documentElement.scrollWidth - visible, hors: boutons.filter(r => r.right > visible + 0.5 || r.left < -0.5).length, nombre: boutons.length };
       });
       expect(mesure).toMatchObject({ defile: 0, page: 0, hors: 0 });
       expect(mesure.nombre).toBeGreaterThan(8);

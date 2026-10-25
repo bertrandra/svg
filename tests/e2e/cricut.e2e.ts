@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
@@ -193,10 +193,7 @@ describe('le contexte Cricut', () => {
     await attend(() => nombreDeConstats(page)).toBe(5);
     await page.locator('.aide-cricut > summary').click();
     const axe = async () => {
-      await page.evaluate(() => Promise.race([
-        Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
-        new Promise(fini => setTimeout(fini, 2000))
-      ]).then(() => undefined));
+      await attendreAnimations(page);
       if (!(await page.evaluate(() => 'axe' in window))) await page.addScriptTag({ content: AXE });
       const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { resultTypes: ['violations', 'incomplete'] })));
       expect(r.violations.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);

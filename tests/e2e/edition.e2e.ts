@@ -66,9 +66,14 @@ describe('edition', () => {
     const page = await editeur();
     const toile = page.locator('.editeur-svg-toile');
     expect(await toile.getAttribute('aria-label')).toBe('Plan de travail de exemple.svg : 4 formes');
-    // Une touche de clavier puis le focus : :focus-visible s'applique, le contour fait 3 px.
-    await page.keyboard.press('Shift');
+    // Le focus arrive par le clavier : Tab quitte la toile (rien n'est choisi), Maj+Tab y revient. :focus-visible s'applique
+    // alors partout, le contour fait 3 px. (Une touche Maj seule puis un focus par script ne suffit qu'a Chromium : en CI,
+    // Firefox et WebKit n'appliquaient pas :focus-visible apres ce focus-la, leur heuristique pour un focus par script differe.)
     await toile.focus();
+    await attend(() => aLeFocus(toile)).toBe(true);
+    await page.keyboard.press('Tab');
+    await attend(() => aLeFocus(toile)).toBe(false);
+    await page.keyboard.press('Shift+Tab');
     await attend(() => aLeFocus(toile)).toBe(true);
     const anneau = await toile.evaluate(e => ({ visible: e.matches(':focus-visible'), largeur: getComputedStyle(e).outlineWidth }));
     expect(anneau).toEqual({ visible: true, largeur: '3px' });

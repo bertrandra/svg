@@ -13,6 +13,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
 import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, URL_INTEGRATION } from './aide.js';
 import { violationsEcriture, violationsNettoyage } from '../unit/securite/invariants.js';
+import { passer } from '../unit/securite/passage.js';
 
 const DOSSIER = resolve(RACINE_DEPOT, 'tests/fixtures/hostile');
 interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus' }
@@ -91,6 +92,16 @@ async function surveiller(s: Session): Promise<Surveillance> {
   return r;
 }
 
+/** Vrai quand `recu` est `texte` prive de quelques caracteres de controle C0 (ni tabulation, ni fin de ligne), et de rien d'autre. */
+function sansQueDesControles(texte: string, recu: string): boolean {
+  let j = 0;
+  for (const c of texte) {
+    if (recu.startsWith(c, j)) j += c.length;
+    else if (!(c.charCodeAt(0) < 0x20 && c !== '\t' && c !== '\n' && c !== '\r')) return false;
+  }
+  return j === recu.length;
+}
+
 /** Les defauts d'un PDF produit par la page : aucune action, aucun script, aucun lien, aucun fichier joint. */
 function defautsPdf(octets: Buffer): string[] {
   const texte = octets.toString('latin1');
@@ -122,10 +133,17 @@ describe('securite : le corpus hostile entre par la page', () => {
     return (await editeur.count()) > 0 ? 'ouvre' : 'refus';
   }
 
-  async function coller(page: Page, texte: string): Promise<'ouvre' | 'refus'> {
-    await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(texte);
+  /**
+   * Colle le texte et rend ce que la page en a fait, avec le texte que la zone de saisie lui a vraiment remis : Firefox retire
+   * des caracteres de controle (au moins U+0000) de ce qu'on tape dans un <textarea> (lu en CI : les deux fichiers du corpus
+   * qui en portent s'y ouvraient au lieu d'etre refuses), si bien que ces octets-la ne peuvent pas entrer par cette porte.
+   */
+  async function coller(page: Page, texte: string): Promise<{ issue: 'ouvre' | 'refus'; recu: string }> {
+    const zone = page.locator('section[aria-label="Ouvrir un SVG"] textarea');
+    await zone.fill(texte);
+    const recu = await zone.inputValue();
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
-    return issue(page);
+    return { issue: await issue(page), recu };
   }
 
   async function deposer(page: Page, octets: Buffer, nom: string): Promise<'ouvre' | 'refus'> {
@@ -212,8 +230,21 @@ describe('securite : le corpus hostile entre par la page', () => {
   for (const l of index.fichiers) {
     it(l.fichier + ' : code colle, puis exports rouverts', async () => {
       const s = await session();
-      const issueCode = await coller(s.page, texteDe(l.fichier));
-      expect(issueCode, l.vecteur).toBe(l.attendu);
+      const texte = texteDe(l.fichier);
+      const { issue: issueCode, recu } = await coller(s.page, texte);
+      // HTML ramene les fins de ligne d'un <textarea> a LF ; Chromium garde pourtant CR dans la valeur lue (constate). Ni l'un ni
+      // l'autre n'est un changement du texte.
+      const ramene = texte.replace(/\r\n?/g, '\n');
+      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(l.attendu);
+      else {
+        // Le navigateur a change le texte avant la page : seul le retrait de caracteres de controle est admis, et la page doit
+        // faire du texte recu exactement ce qu'en fait le moteur, sans rompre un invariant. Le vecteur d'origine, octets exacts,
+        // passe toujours par le fichier depose (test suivant), qui garde son issue attendue dans tous les moteurs.
+        expect(sansQueDesControles(recu.includes('\r') ? texte : ramene, recu), l.fichier + ' : la zone de texte a change autre chose que des caracteres de controle').toBe(true);
+        const moteur = passer(recu);
+        expect(moteur.defauts, l.fichier + ' : texte recu par la zone de saisie').toEqual([]);
+        expect(issueCode, l.vecteur + ' (texte recu par la zone de saisie)').toBe(moteur.ouvre ? 'ouvre' : 'refus');
+      }
       await s.garde.verifier('apres ouverture');
       if (issueCode === 'ouvre') { await sorties(s, l.fichier, complets.has(l.fichier)); await s.garde.verifier('apres exports'); }
     }, 120_000);

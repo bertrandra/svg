@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -43,10 +43,7 @@ let dernierIncertains: Violation[] = [];
 
 async function auditer(page: Page, ecran: string): Promise<Violation[]> {
   // Une section qui se deplie fond en 150 ms : mesuree en route, un texte a demi transparent n'a pas son contraste.
-  await page.evaluate(() => Promise.race([
-    Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
-    new Promise(fini => setTimeout(fini, 2000))
-  ]).then(() => undefined));
+  await attendreAnimations(page);
   await page.addScriptTag({ content: AXE });
   const resultat = await page.evaluate(async ecartees => {
     const w = window as unknown as FenetreAxe;

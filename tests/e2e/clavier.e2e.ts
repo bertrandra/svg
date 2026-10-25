@@ -23,7 +23,9 @@ describe('clavier et lecteur d ecran', () => {
   const forme = (page: Page, id: string) => page.locator(`.editeur-svg-toile path[data-id="${id}"]`);
   const annonces = (page: Page) => page.locator('.editeur-cadre > .annonces');
   const dit = (page: Page) => annonces(page).evaluate(e => (e.textContent ?? '').trim());
-  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => (e as HTMLElement).innerText.trim()));
+  // textContent, pas innerText : une ligne des calques hors de l'ecran (`content-visibility: auto`) n'est pas rendue, et Firefox
+  // et WebKit lui donnent alors un innerText vide.
+  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => (e.textContent ?? '').trim()));
   /** Le focus est-il sur la toile ? */
   const surLaToile = (page: Page) => aLeFocus(toile(page));
   async function choisirForme(page: Page, numero: number) {

@@ -118,7 +118,8 @@ export function pilote() {
         viewport: { width: options.largeur ?? 1400, height: options.hauteur ?? 900 },
         acceptDownloads: true
       };
-      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport ni pointeur grossier.
+      // `isMobile` n'existe pas dans Firefox (Playwright le refuse) : un doigt s'y limite a `hasTouch`, sans meta viewport. Firefox
+      // annonce pourtant `(pointer: coarse)` des que le tactile est emule (lu en CI : Firefox 142, contexte a `hasTouch` seul).
       if (options.tactile) { contexteOptions.hasTouch = true; if (NAVIGATEUR !== 'firefox') contexteOptions.isMobile = true; contexteOptions.deviceScaleFactor = 2; }
       if (options.mouvementReduit) contexteOptions.reducedMotion = 'reduce';
       if (options.schema) contexteOptions.colorScheme = options.schema;
@@ -164,6 +165,20 @@ const DELAI = 10_000;
  */
 export function attend<T>(lire: () => Promise<T>, delai = DELAI) {
   return expect.poll(lire, { timeout: delai, interval: 40 });
+}
+
+/**
+ * Laisse finir les animations d'ouverture (une section qui se deplie, un menu qui fond) avant une mesure : un texte a demi
+ * transparent n'a pas son contraste. Bornee a deux secondes et sans les animations infinies : sous Firefox et WebKit, attendre
+ * la fin de toutes les animations sans borne a bloque deux tests jusqu'a leur delai de 60 s (CI). Cause probable : le corps
+ * d'une section repliee reste dans le DOM avec son animation d'entree, que Chromium fait avancer et que ces moteurs, qui ne
+ * le rendent pas, laissent en suspens.
+ */
+export async function attendreAnimations(page: Page): Promise<void> {
+  await page.evaluate(() => Promise.race([
+    Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
+    new Promise(fini => setTimeout(fini, 2000))
+  ]).then(() => undefined));
 }
 
 /** Vrai quand l'element a le focus clavier. */

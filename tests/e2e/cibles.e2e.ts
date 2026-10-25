@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { attend, attendreAnimations, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 
 const MIN = 24;
 
@@ -50,10 +50,7 @@ const dit = (p: readonly Petite[]) => 'Cibles de moins de 24 × 24 :\n' + p.map(
 
 /** Laisse finir les animations d'entree (une section qui se deplie, un menu qui apparait) : on mesure des tailles posees. */
 async function poser(page: Page): Promise<void> {
-  await page.evaluate(() => Promise.race([
-    Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
-    new Promise(fini => setTimeout(fini, 2000))
-  ]).then(() => undefined));
+  await attendreAnimations(page);
 }
 
 const APPAREILS = [

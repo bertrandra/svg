@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { RACINE_DEPOT, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { RACINE_DEPOT, attendreAnimations, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 
 const AXE = readFileSync(RACINE_DEPOT + '/node_modules/axe-core/axe.min.js', 'utf8');
 const BOUTONS = '.menu-panneau .contenu-export button';
@@ -150,7 +150,7 @@ describe('exports : formats de fabrication et d\'impression', () => {
     await champ(page, 'Format de page du PDF').selectOption({ label: 'Personnalisée' });
     await page.getByLabel('Fond perdu et repères de coupe').check();
     await page.getByLabel('Couleurs en CMJN (PDF et EPS)').check();
-    await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined))).then(() => undefined));
+    await attendreAnimations(page);
     await page.addScriptTag({ content: AXE });
     const r = await page.evaluate(async () => {
       const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { id: string; help: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }> } };
@@ -181,7 +181,8 @@ describe('exports : au doigt (420 px)', () => {
     expect(panneau!.y + panneau!.height).toBeLessThanOrEqual(860 + 0.5);
     // Pas de defilement horizontal du menu ni de la page.
     expect(await page.locator('.menu-panneau').evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // `clientWidth` : sous `isMobile`, Chromium elargit `innerWidth` jusqu'au contenu qui deborde.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     const petites = await page.locator('.menu-panneau .contenu-export').evaluate(zone => {
       const cibles = [...zone.querySelectorAll<HTMLElement>('button:not([hidden]), select, input[type="text"], input[type="color"], label.case')];
       return cibles.map(e => { const r = e.getBoundingClientRect(); return { nom: (e.getAttribute('aria-label') ?? e.innerText ?? e.className).slice(0, 30), l: Math.round(r.width), h: Math.round(r.height) }; })

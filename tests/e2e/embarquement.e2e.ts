@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, BUNDLE_EMBARQUE, formesVisibles, modifications, NAVIGATEUR, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
+import { attend, BUNDLE_EMBARQUE, formesVisibles, modifications, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
 
 /** Ce que la page d'hote voit de l'API : le contrat de docs/integration.md. */
 interface PoigneeEditeur { fermer(): void }
@@ -30,13 +30,32 @@ describe('embarquement : exemples/integration.html', () => {
     if (!existsSync(BUNDLE_EMBARQUE)) throw new Error('dist/editeur-svg-embarque.js manque : lancer `npm run construire` avant `npm run e2e`.');
   });
 
-  /** La page d'hote, avec la liste des adresses qu'elle a demandees (pour savoir ce qui se charge, et quand). */
+  /**
+   * La page d'hote, avec la liste des adresses qu'elle a demandees (pour savoir ce qui se charge, et quand). Deux temoins : les
+   * requetes que Playwright voit, et chaque <script src> que la page pose, releve dans la page avant tout script. Sous Firefox,
+   * Playwright ne signale aucune requete file:// (lu en CI : la liste y restait vide, bundle compris) ; les annexes se chargent
+   * justement par une balise <script> (io/annexes.ts), que le second temoin voit dans les trois moteurs. Chromium et WebKit
+   * gardent le premier, qui verrait aussi un fetch.
+   */
   async function hote(options: Parameters<typeof navigateur.ouvrir>[0] = {}) {
     const session = await navigateur.ouvrir({ ...options, naviguer: false });
-    const requetes: string[] = [];
-    session.page.on('request', r => requetes.push(r.url()));
+    const vues: string[] = [];
+    session.page.on('request', r => vues.push(r.url()));
+    await session.page.addInitScript(() => {
+      const scripts: string[] = [];
+      Object.defineProperty(window, '__scriptsPoses', { value: scripts });
+      new MutationObserver(lot => {
+        for (const m of lot) for (const n of Array.from(m.addedNodes)) if (n instanceof HTMLScriptElement && n.src) scripts.push(n.src);
+      }).observe(document, { childList: true, subtree: true });
+    });
     await session.page.goto(URL_INTEGRATION);
-    return { page: session.page, requetes };
+    const page = session.page;
+    /** Chaque adresse demandee une fois, quel que soit le temoin qui l'a vue. */
+    const requetes = async (): Promise<string[]> => {
+      const posees = await page.evaluate(() => (window as unknown as { __scriptsPoses: string[] }).__scriptsPoses.slice());
+      return [...new Set([...vues, ...posees])];
+    };
+    return { page, requetes };
   }
 
   const journal = (page: Page) => page.locator('#journal').evaluate(e => (e.textContent ?? '').split('\n'));
@@ -141,8 +160,9 @@ describe('embarquement : exemples/integration.html', () => {
     expect(etat.racines).toBe(0);
     expect(etat.defile).toBe('');
     // Le bundle est la seule chose chargee : ni bibliotheque, ni polices, ni traceur.
-    expect(requetes.filter(u => /bibliotheque\.js|polices\.js|vtracer\.js/.test(u))).toEqual([]);
-    expect(requetes.some(u => u.endsWith('/dist/editeur-svg-embarque.js'))).toBe(true);
+    const demandees = await requetes();
+    expect(demandees.filter(u => /bibliotheque\.js|polices\.js|vtracer\.js/.test(u))).toEqual([]);
+    expect(demandees.some(u => u.endsWith('/dist/editeur-svg-embarque.js'))).toBe(true);
     expect(await page.locator('#journal').textContent()).toMatch(/^Éditeur SVG \d+\.\d+\.\d+ chargé\.$/);
   });
 
@@ -436,15 +456,15 @@ describe('embarquement : exemples/integration.html', () => {
   it('charge la bibliotheque et les polices depuis baseAnnexes, au premier besoin seulement', async () => {
     const { page, requetes } = await hote();
     await editer(page);
-    const annexes = () => requetes.filter(u => /\/(bibliotheque|polices)\.js$/.test(u));
+    const annexes = async () => (await requetes()).filter(u => /\/(bibliotheque|polices)\.js$/.test(u));
     // Ouvrir l'editeur ne charge rien : ni les 7 Mo de formes, ni les fontes.
-    expect(annexes()).toEqual([]);
+    expect(await annexes()).toEqual([]);
 
     const section = page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Bibliothèque de formes' }) });
     if (!(await section.evaluate(e => (e as HTMLDetailsElement).open))) await section.locator('summary').click();
     await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await attend(() => page.locator('.editeur-inspecteur .vignette').count()).toBeGreaterThan(0);
-    expect(annexes().map(u => u.slice(u.lastIndexOf('/dist/')))).toEqual(['/dist/bibliotheque.js']);
+    expect((await annexes()).map(u => u.slice(u.lastIndexOf('/dist/')))).toEqual(['/dist/bibliotheque.js']);
     expect(await page.evaluate(() => (window as unknown as { __bibliothequeSvg?: unknown }).__bibliothequeSvg !== undefined)).toBe(true);
     // Une forme de la bibliotheque s'insere dans le dessin de l'hote.
     const avant = await formesVisibles(page);
@@ -453,7 +473,7 @@ describe('embarquement : exemples/integration.html', () => {
 
     await page.locator('.editeur-barre button[title^="Texte en formes"]').click();
     await attend(() => page.evaluate(() => ((window as unknown as { __policesSvg?: unknown[] }).__policesSvg ?? []).length)).toBeGreaterThan(0);
-    expect(annexes().map(u => u.slice(u.lastIndexOf('/dist/'))).sort()).toEqual(['/dist/bibliotheque.js', '/dist/polices.js']);
+    expect((await annexes()).map(u => u.slice(u.lastIndexOf('/dist/'))).sort()).toEqual(['/dist/bibliotheque.js', '/dist/polices.js']);
     await attend(() => page.locator('.editeur-inspecteur legend', { hasText: 'Texte en formes' }).isVisible()).toBe(true);
   });
 
@@ -507,10 +527,12 @@ describe('embarquement : sur un telephone de 390 px', () => {
     const page = await telephone();
     const mesure = await page.evaluate(() => {
       const r = (document.querySelector('.editeur-svg') as HTMLElement).getBoundingClientRect();
-      return { largeur: r.width, hauteur: r.height, defile: document.documentElement.scrollWidth - innerWidth, grossier: matchMedia('(pointer: coarse)').matches };
+      // `clientWidth`, pas `innerWidth` : sous `isMobile`, Chromium elargit la fenetre jusqu'au contenu qui deborde, et
+      // `scrollWidth - innerWidth` y restait nul pour une page trop large (constate sur l'atelier a 420 px).
+      return { largeur: r.width, hauteur: r.height, defile: document.documentElement.scrollWidth - document.documentElement.clientWidth, grossier: matchMedia('(pointer: coarse)').matches };
     });
-    // Firefox n'a pas `isMobile` : son contexte tactile reste a pointeur fin (aide.ts), le reste de la mesure tient.
-    expect(mesure).toEqual({ largeur: 390, hauteur: 800, defile: 0, grossier: NAVIGATEUR !== 'firefox' });
+    // Les trois moteurs annoncent un pointeur grossier, Firefox par `hasTouch` seul (aide.ts).
+    expect(mesure).toEqual({ largeur: 390, hauteur: 800, defile: 0, grossier: true });
   });
 
   it('donne 40 px au moins aux boutons de la barre', async () => {
