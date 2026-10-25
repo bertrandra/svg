@@ -44,12 +44,13 @@ describe('ce qu un texte garde de sa police', () => {
 
 describe('le reseau ne vit que dans io', () => {
   // La regle « un seul fetch dans src/ » (ADR-0025) devient « le reseau passe par io/ » avec le site PHP (ADR-0030) : le
-  // telechargement d'une police, et le serveur du site (projets, donnees, polices servies par le site). Rien d'autre, nulle part.
-  it('le reseau ne passe que par io/ : le telechargement d une police et le serveur du site, rien d autre', () => {
+  // telechargement d'une police, et le serveur du site (projets, donnees, polices servies par le site). Ouvrir depuis une adresse
+  // (ADR-0036) y ajoute io/adresse.ts, au seul geste de la personne. Rien d'autre, nulle part.
+  it('le reseau ne passe que par io/ : une police, une adresse ouverte, le serveur du site, rien d autre', () => {
     const appels = fichiers(join(racine, 'src')).filter(f => /\bfetch\(|XMLHttpRequest|sendBeacon|new WebSocket|new EventSource/.test(readFileSync(f, 'utf8')));
     const chemins = appels.map(f => relative(racine, f).replace(/\\/g, '/'));
     expect(chemins.every(c => c.startsWith('src/io/')), chemins.join(', ')).toBe(true);
-    expect(chemins).toEqual(['src/io/policesEnLigne.ts', 'src/io/serveur.ts']);
+    expect(chemins).toEqual(['src/io/adresse.ts', 'src/io/policesEnLigne.ts', 'src/io/serveur.ts']);
   });
 
   it('crypto.subtle, Cache Storage et Local Font Access ne s emploient que dans io', () => {

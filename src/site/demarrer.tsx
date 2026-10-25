@@ -3,6 +3,7 @@
 // ceci : ses annexes restent des scripts voisins et ses polices viennent de leurs serveurs.
 
 import { createRoot } from 'react-dom/client';
+import { definirOuvertureAdresse } from '../io/adresse.js';
 import { definirBaseAnnexes, definirSourceDonnees } from '../io/annexes.js';
 import { sonderNavigateur } from '../io/capacites.js';
 import { definirServeurPolices } from '../io/policesEnLigne.js';
@@ -22,5 +23,10 @@ export function demarrerSite(conteneur: HTMLElement): void {
   definirSourceDonnees(serveur.donnees);
   // Une police du catalogue se demande au site, qui la sert de data/font ou la telecharge et la verifie la premiere fois.
   definirServeurPolices({ adresse: serveur.adressePolice, nom: 'le site' });
+  // Ouvrir depuis une adresse (ADR-0036) : le serveur va chercher le fichier, avec ses protections ; le navigateur ne contacte que
+  // le site. L'administrateur peut l'eteindre (`ADRESSE_OUVERTURE`) et permettre `http://` (`ADRESSE_HTTP`), que index.php annonce.
+  definirOuvertureAdresse(conteneur.dataset['adresse'] === '0' ? null : {
+    serveur: serveur.telechargerAdresse, http: conteneur.dataset['adresseHttp'] === '1', qui: 'Le site va chercher le fichier quand vous choisissez « Ouvrir ».'
+  });
   racine.render(<Site serveur={serveur} csrf={csrf} />);
 }

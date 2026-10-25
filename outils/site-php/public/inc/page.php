@@ -57,7 +57,7 @@ function page_installation(string $phrase, string $commande = ''): never
 function page_application(string $avertissement): never
 {
     $corps = ($avertissement !== '' ? '<p class="message site-avertissement" role="alert">' . h($avertissement) . '</p>' : '')
-        . '<div id="site" data-csrf="' . h(jeton_csrf()) . '" data-api="api.php" data-assets="assets/">'
+        . '<div id="site" data-csrf="' . h(jeton_csrf()) . '" data-api="api.php" data-assets="assets/" data-adresse="' . (ADRESSE_OUVERTURE ? '1' : '0') . '" data-adresse-http="' . (ADRESSE_HTTP ? '1' : '0') . '">'
         . '<main class="accueil"><p class="message">Chargement de l’éditeur… Si ce message reste affiché, JavaScript est désactivé ou ce navigateur est trop ancien : utilisez une version récente de Chrome, Edge, Firefox ou Safari.</p></main>'
         . '</div>';
     rendre_page('Mes projets · Éditeur SVG', $corps, 200, '<script src="assets/site.js" defer></script>' . "\n");

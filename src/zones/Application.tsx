@@ -32,6 +32,8 @@ import type { ChoixProduction } from '../model/contextes.js';
 import { au } from '../util/tableaux.js';
 import { uniteRetenue } from './actionsProduction.js';
 import { CircuitPublic, ID_TITRE_SUITE, PanneauIntegration, QuestionPublic, usePublic } from './AccueilPublic.js';
+import { adressesPermises, ChampAdresse, texteDuSvg, useAdresseDeVoie, useReception, type Dire, type Reception } from './OuvrirAdresse.js';
+import { estAdresseSeule } from '../model/adresse.js';
 import { circuitDu, DEMO_HOTE, ordreDesVoies, phraseRecu, phraseReglageMachine, productionDuPublic, type ChoixPublic, type Voie } from './publics.js';
 
 /** Le dessin ouvert ; `production` : le contexte de depart propose a l'editeur (le public « machine »), quand il y en a un. */
@@ -71,6 +73,8 @@ function Accueil() {
   const [publicChoisi, choisirPublic] = usePublic(STOCKAGE);
   const [question, poserQuestion] = useState(publicChoisi === null);
   const [voie, poserVoie] = useState<Voie>(() => au(ordreDesVoies(publicChoisi), 0));
+  // Un fichier ouvert depuis une adresse (ADR-0036) va a la voie de sa nature, decidee sur ses octets.
+  const reception = useReception(poserVoie);
   // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
   const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
@@ -173,8 +177,8 @@ function Accueil() {
 
       <Voies ordre={ordreDesVoies(publicChoisi)} voie={voie} poserVoie={poserVoie}>
         {{
-          svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} />,
-          image: <Vectoriser ouvrir={ouvrir} />,
+          svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} reception={reception} />,
+          image: <Vectoriser ouvrir={ouvrir} reception={reception} />,
           formes: <SectionBibliotheque active={voie === 'formes'} ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
         }}
       </Voies>
@@ -301,12 +305,17 @@ function Invitation({ essayer }: { essayer: () => void }) {
   );
 }
 
-/** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit. */
-export function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void; invitation: boolean }) {
+/**
+ * Deposer un fichier SVG ou PDF, en coller le code, l'ouvrir depuis une adresse (`reception`, ADR-0036), ou ouvrir l'exemple.
+ * L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit.
+ */
+export function OuvrirSvg({ ouvrir, dire, essayer, invitation, reception }: { ouvrir: OuvrirDessin; dire: Dire; essayer: () => void; invitation: boolean; reception?: Reception }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);
   const pdf = usePdf(ouvrir, dire);
+  // Un SVG ou un PDF recu d'une adresse (tapee ici, ou dans la voie « Convertir une image ») : la lecture d'un fichier depose.
+  const { t: adresse, lienDepose } = useAdresseDeVoie(reception, dire, reception?.documentRecu, r => { if (r.nature === 'pdf') pdf.ouvrirOctets(r.nom, r.octets); else ouvrir(r.nom, texteDuSvg(r.octets)); });
   const ouvrirFichier = (f: File | undefined) => {
     if (!f) return;
     if (fichierPdf(f)) { pdf.ouvrirFichier(f); return; }
@@ -317,6 +326,8 @@ export function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: Ouvri
     poserSurvol(false);
     const f = e.dataTransfer.files[0];
     if (f) { ouvrirFichier(f); return; }
+    // Un lien glisse depuis une autre page : le deposer est le geste qui demande le fichier.
+    if (lienDepose(e.dataTransfer)) return;
     const t = e.dataTransfer.getData('text/plain');
     if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
   };
@@ -332,10 +343,16 @@ export function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: Ouvri
         <input ref={entree} type="file" accept=".svg,image/svg+xml,.pdf,application/pdf" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
         {invitation ? <Invitation essayer={essayer} /> : null}
       </div>
+      {reception ? <ChampAdresse t={adresse} aide="Un SVG, un PDF ou une image PNG, JPEG, GIF, WebP ou BMP." /> : null}
       <ChoixPagePdf pdf={pdf} />
       <label className="champ">
         <span>Ou collez le code d’un SVG</span>
-        <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)} />
+        <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)}
+          onPaste={e => {
+            // Une adresse collee seule, a la place d'un code : coller est le geste qui demande le fichier, comme « Ouvrir ».
+            const texte = e.clipboardData.getData('text/plain');
+            if (reception && adressesPermises() && estAdresseSeule(texte)) { e.preventDefault(); adresse.lancer(texte.trim()); }
+          }} />
         <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>Ouvrir ce code</button>
       </label>
     </section>

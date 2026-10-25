@@ -1,6 +1,6 @@
 # Sécurité : le SVG d’un inconnu
 
-L’éditeur ouvre des SVG qu’il n’a pas écrits (fichier déposé, code collé, option `svg` d’un hôte, formes d’une
+L’éditeur ouvre des SVG qu’il n’a pas écrits (fichier déposé, code collé, adresse ouverte, option `svg` d’un hôte, formes d’une
 bibliothèque d’hôte, brouillon laissé dans le navigateur), et des PDF (fichier déposé ou choisi sur l’accueil, avec les
 programmes de fonte qu’ils embarquent), et en réécrit. Ce document dit ce qu’il protège, par où
 l’on peut l’atteindre, ce que chaque couche garantit, ce qui reste à l’hôte, et **comment chaque affirmation est
@@ -26,6 +26,9 @@ prouvée** (tests, corpus, fuzzing, navigateur). Une affirmation qu’aucun test
 | Programme de fonte embarqué dans un PDF (TrueType, OpenType) | `io/policesPdf.ts` | `opentype.js` (épinglé), dans un `try`, une glyphe à la fois ; sa table `cmap` est lue à part, bornée |
 | SVG qui porte du texte (fichier, code, option `svg`) | `io/texteSvg.ts` | `lireDessin` avec les fontes de `polices.js` : une forme par lettre, puis le SVG réécrit sans `<text>` |
 | Code collé | idem | idem |
+| Fichier ouvert depuis une adresse (tapée, collée seule dans la zone de code, lien glissé), page autonome | `zones/OuvrirAdresse.tsx` → `io/adresse.ts` | la nature se décide sur les octets (`engine/natureOctets.ts`) ; puis, selon elle, exactement la voie d’un fichier déposé : `nettoyerSvgNomme` et `lireDessin`, `lirePdf`, ou le décodeur d’images ; voir § 10 |
+| Fichier ouvert depuis une adresse, site PHP | `io/serveur.ts` → `api.php?r=adresse` (`inc/adresse.php`) | le serveur rend les octets bruts, lus ensuite comme ci-dessus ; ses protections anti-SSRF au § 10 |
+| Insérer depuis une adresse (menu Fichier de l’éditeur, page et site seulement) | `zones/InsererAdresse.tsx` | un SVG ou la première page d’un PDF : `nettoyerSvgNomme`, `lireDessin`, puis `insererForme` ; une image est refusée en le disant |
 | Image à vectoriser | `io/image.ts` | `nettoyerSvg` sur la sortie de vtracer (un texte que nous produisons, d’un contenu que nous ne contrôlons pas) |
 | Option `svg` de l’embarquement | `zones/embarque.tsx` → `EditeurSvg` | `lireDessin` **sans** nettoyage préalable (l’éditeur ne montre que le modèle à plat) |
 | Bibliothèque d’hôte (option `bibliotheque`) | `io/bibliotheque.ts` | `normaliserBibliotheque`, puis `lireDessin` à l’insertion ; les vignettes sont des `<img src="data:…">` |
@@ -178,7 +181,7 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
   256 tables, 32 Mo décompressés). L’index (`polices-catalogue.js`) est validé en entier (licence de la liste blanche, version
   épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Le réseau ne passe que par `io/` :
   le téléchargement d’une police (`io/policesEnLigne.ts`) et, pour le site PHP seulement, son serveur (`io/serveur.ts`, § 9) ; un
-  test le garde. Les aperçus (`polices-apercus.js`, ADR-0026) sont validés de même avant d’être crus (forme, cadre, clés, caractères et
+  test le garde (avec `io/adresse.ts` depuis l’ADR-0036, au seul geste « Ouvrir »). Les aperçus (`polices-apercus.js`, ADR-0026) sont validés de même avant d’être crus (forme, cadre, clés, caractères et
   longueur de chaque code, taille totale bornée) ; un code se décode par une fonction pure qui ne lève jamais, et une annexe refusée laisse
   les noms écrits.
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
@@ -256,7 +259,7 @@ quel pour l’éditeur qu’il monte ; voici ce qu’il protège de plus, et com
 | Les projets | écriture par un autre site, écrasement par un autre onglet, chemin hostile, fichier géant, JSON piégé | toute route exige la session ; toute écriture exige POST, du JSON, le jeton CSRF (`X-CSRF`, `hash_equals`) et pas un autre site (`Sec-Fetch-Site`) ; un identifiant de disque tiré au hasard (`[a-f0-9]{16}`), seul à fabriquer un chemin, le nom affiché à part et assaini ; la révision ouverte exigée pour écraser (409, 428) ; taille bornée avant lecture (413) ; JSON analysé à profondeur bornée, structure et format vérifiés (400) ; écriture sous verrou, d’un seul geste ; suppression vers une corbeille |
 | L’éditeur qui rouvre un projet | un projet altéré sur le disque ou en transit | `lireProjet` migre, valide chaque champ et chaque borne, refuse en le nommant sans lever, reconstruit le projet sans champ inconnu ni clé de prototype ; les peintures suivent la règle de l’écriture ; une fonte déposée relue doit redonner son identifiant (empreinte de ses octets) |
 | Le navigateur | un tiers qui voit l’adresse de la personne, un script injecté | aucune requête hors du site : la politique de sécurité n’autorise que `'self'` (`connect-src 'self'`, aucun domaine tiers) ; les polices du catalogue passent par le serveur ; la vignette d’un projet est le SVG de l’éditeur, refusée au moindre élément ou attribut actif, servie avec `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox` et `nosniff` |
-| Le serveur | une police détournée, une requête vers un hôte arbitraire, une fuite d’information | une police ne se demande que par une empreinte sha256 présente dans l’index (sinon 404, avant toute requête) ; les adresses sont recalculées de l’index et des préfixes de `POLICES_SOURCES`, sans redirection, HTTP(S) seulement, 8 Mo au plus ; une empreinte fausse n’est jamais rangée ; aucune erreur PHP affichée (journal dans `data/journal/`), pas de `X-Powered-By`, `config.php` et `inc/` muets demandés directement |
+| Le serveur | une police détournée, une requête vers un hôte arbitraire, une fuite d’information | une police ne se demande que par une empreinte sha256 présente dans l’index (sinon 404, avant toute requête) ; les adresses sont recalculées de l’index et des préfixes de `POLICES_SOURCES`, sans redirection, HTTP(S) seulement, 8 Mo au plus ; une empreinte fausse n’est jamais rangée ; une adresse ouverte par une personne connectée passe par les protections anti-SSRF du § 10 ; aucune erreur PHP affichée (journal dans `data/journal/`), pas de `X-Powered-By`, `config.php` et `inc/` muets demandés directement |
 | `data/` | lu depuis le Web | hors de la racine web par défaut ; sinon `data/.htaccess` (« Require all denied ») et `index.php` qui vérifie que `data/pwd` ne répond pas, et avertit sinon |
 
 En-têtes de chaque page et de l’API : `Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src
@@ -280,3 +283,69 @@ le journal des connexions garde une empreinte salée de l’adresse, pas l’adr
 | Fonctions du serveur | `tests/php/unitaires.php` | noms et identifiants hostiles, structure d’un projet, vignette piégée, écriture atomique, contrôle de version, corbeille, empreinte du mot de passe, délai des essais, police hors index, adresses d’un index altéré |
 | Le site par HTTP | `tests/php/http.php` (`npm run test:php`) | en-têtes, cookie, bon et mauvais mot de passe, CSRF de connexion, limitation, installation sans `data/pwd`, toute route sous session, écritures sous jeton, chemins hostiles, JSON invalide, profond ou géant, conflit de révision, police servie, empreinte fausse refusée, hors index refusé, déconnexion, expiration |
 | Navigateur | `tests/e2e/site-php.e2e.ts` | contre `php -S` sur `dist/php` : la page ne contacte que le site, la politique de sécurité appliquée, axe sans violation grave sur la connexion et l’écran Projets |
+
+## 10. Ouvrir depuis une adresse (ADR-0036)
+
+La personne peut ouvrir un SVG, un PDF ou une image à partir d’une adresse. C’est une porte d’entrée de plus, et sur le site PHP une
+requête que le serveur émet sur ordre d’un client : une falsification de requête côté serveur (SSRF) en puissance.
+
+**Ce qui est garanti dans les deux cibles** :
+
+- **Rien ne part sans un geste** (ADR-0025) : taper l’adresse n’envoie rien ; « Ouvrir » (ou Entrée), un lien glissé sur la zone de
+  dépôt, ou une adresse collée seule dans la zone de code la demandent. Le champ n’existe que chez un hôte qui l’a posé
+  (`definirOuvertureAdresse` : la page autonome et le site) ; l’embarquement n’en a pas.
+- **L’adresse est validée avant tout** (`model/adresse.ts`) : `https://` (sur le site, `http://` seulement si `ADRESSE_HTTP`),
+  aucun autre schéma (`javascript:`, `data:`, `file:`… nommés dans le refus), ni identifiant ni mot de passe, 2 048 caractères au plus,
+  le fragment retiré.
+- **La nature se décide sur les octets reçus** (`engine/natureOctets.ts`, pur) : signatures PNG, JPEG, GIF, WebP, BMP (avec un en-tête
+  DIB connu), `%PDF-`, ou un texte dont la racine est `<svg` ; une page HTML (même avec des icônes SVG dedans) est refusée en le
+  disant ; jamais l’extension ni le `Content-Type`. Un « logo.png » qui est un SVG à script suit la voie d’un SVG ; un polyglotte
+  GIF + SVG va au décodeur d’images, jamais au lecteur SVG.
+- **La lecture est celle d’un fichier d’inconnu** (ADR-0014, ADR-0020) : mêmes fonctions, mêmes bornes, aucune entité développée,
+  refus nommé sans lever. Un SVG venu d’une adresse n’a aucun droit de plus : ses `<use href="https://…">` et ses images distantes
+  restent refusés.
+- **La taille est bornée en lisant le flux** : 100 Mo (la borne d’un PDF ouvert ; un SVG est ensuite borné à 64 Mo par la lecture),
+  une taille annoncée trop grande refusée avant le premier octet ; le temps est borné (60 s dans le navigateur, `ADRESSE_DELAI` sur le
+  serveur) ; « Annuler » coupe la requête.
+- **Le nom du dessin** vient du dernier segment du chemin, décodé et nettoyé par `nomDeFichier` ; jamais des paramètres.
+
+**Page autonome** (`io/adresse.ts`) : le navigateur demande l’adresse lui-même, `credentials: 'omit'`, `referrerPolicy: 'no-referrer'`,
+`cache: 'no-store'`, `redirect: 'follow'` (le navigateur borne les redirections à 20, la norme Fetch, et refuse de lui-même toute
+redirection hors de http(s)). Un site qui refuse la lecture entre origines (CORS) : la page le dit (« Ce site ne permet pas à la
+page de lire le fichier… »), **sans mandataire tiers, jamais**. Pour distinguer ce refus d’un serveur injoignable, une seconde
+demande opaque (`HEAD`, `mode: 'no-cors'`, sans cookie ni référent, rien n’est lu) vise la même adresse, au titre du même geste.
+
+**Site PHP** (`inc/adresse.php`) : le serveur va chercher l’adresse ; la route exige la session, POST, du JSON, le jeton CSRF et le
+même site (`Sec-Fetch-Site`). Ses protections :
+
+| Menace | Protection |
+|---|---|
+| Atteindre un service interne (métadonnées d’hébergeur 169.254.169.254, base, administration) | le nom est résolu par le serveur (A et AAAA) et **toutes** ses adresses doivent être publiques : refus de 0/8, 10/8, 100.64/10, 127/8, 169.254/16, 172.16/12, 192.0.0/24, 192.0.2/24, 192.88.99/24, 192.168/16, 198.18/15, 198.51.100/24, 203.0.113/24, 224/4, 240/4 ; en IPv6, seule la plage mondiale 2000::/3 est admise, moins 2001::/23, 2001:db8::/32, 3fff::/20 ; une IPv4 mappée (::ffff:0:0/96), NAT64 (64:ff9b::/96) ou 6to4 (2002::/16) est jugée sur l’IPv4 qu’elle porte ; `ADRESSE_RESEAUX_PERMIS` ouvre un réseau choisi par l’administrateur, et lui seul |
+| Rebinding DNS (une réponse publique à la vérification, privée à la connexion) | cURL se connecte à l’adresse vérifiée (`CURLOPT_RESOLVE`) et ne résout jamais le nom lui-même ; aucun mandataire (`CURLOPT_PROXY` vide, `CURLOPT_NOPROXY` `*`) |
+| Une redirection vers l’intérieur, ou vers `file://`, `gopher://`… | redirections suivies **à la main**, 3 au plus, chacune revue comme la première (schéma, port, nom, résolution, adresses) ; `CURLOPT_PROTOCOLS` limité à HTTPS (et HTTP s’il est permis) |
+| Un nom qu’un résolveur lirait comme une IPv4 (`2130706433`, `0x7f.1`, `127.1`), une adresse que PHP et cURL découperaient différemment | le dernier label d’un nom doit porter une lettre ; l’adresse n’admet que l’ASCII visible, sans barre oblique inverse, sans identifiant ; elle est recomposée de ses morceaux vérifiés, port explicite |
+| Un port de service (22, 25, 6379…) | seulement les ports de `ADRESSE_PORTS` (443 ; 80 si http est permis) |
+| Un fichier sans fin, une réponse qui traîne | `CURLOPT_WRITEFUNCTION` coupe au-delà de `ADRESSE_OCTETS_MAX`, une taille annoncée trop grande est refusée à l’en-tête ; `CURLOPT_PROGRESSFUNCTION` et `CURLOPT_TIMEOUT_MS` coupent au-delà de `ADRESSE_DELAI` (le temps total, redirections comprises) ; le corps d’une redirection ou d’une erreur est jeté, borné à 64 Ko |
+| Fuite d’identité ou de session | aucun cookie (pas de fichier de cookies), aucun référent, un seul en-tête (`Accept`) et l’agent `editeur-svg-site` |
+| Un fichier rendu qui s’exécuterait sur l’origine du site | octets bruts : `Content-Type: application/octet-stream`, `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, sous la politique de sécurité de l’API |
+| Un journal qui garderait un secret | `data/journal/adresses.log` ne garde que l’hôte (et l’hôte final après redirection), la taille et le résultat : **jamais le chemin ni les paramètres**, où un lien signé porte son jeton |
+
+**Limites, honnêtement** : la page autonome ne voit pas les redirections que suit le navigateur (elle les lui laisse, bornées par la
+norme) et ne distingue un refus CORS d’une panne qu’au prix de la seconde demande opaque ; sur le site, la protection vise le réseau
+du serveur, pas la personne (une personne connectée peut faire télécharger au serveur n’importe quel fichier public, comme elle le
+ferait elle-même) ; aucune limite de fréquence propre à la route (la session et le jeton la réservent aux personnes connectées) ;
+« Annuler » coupe le navigateur, le serveur finit sa requête dans ses bornes ; un service interne publié sous un nom public et une
+adresse publique (un mandataire inverse de l’entreprise) reste joignable : `ADRESSE_OUVERTURE` faux éteint la fonction, et un
+pare-feu sortant reste la seconde ligne de défense.
+
+**Les preuves** :
+
+| Preuve | Où | Ce qu’elle établit |
+|---|---|---|
+| Validation et nom | `tests/unit/model/adresse.test.ts` | https seul (http sur option), schémas nommés, identifiant refusé, longueur, fragment retiré, nom tiré du dernier segment sans paramètre, rien ne lève |
+| Nature sur les octets | `tests/unit/engine/natureOctets.test.ts` | chaque signature, BMP sur en-tête DIB, PDF décalé, SVG avec BOM, déclaration, DOCTYPE ou préfixe, HTML avec icônes, racine en majuscules refusée, fenêtre bornée (64 Mo décidés en moins d’une seconde) |
+| Corpus de l’adresse | `tests/fixtures/hostile-adresse/` (11 fichiers) et `index.json`, `tests/unit/securite/corpus-adresse.test.ts` | « image » qui est un SVG à script, SVG à `<use>` distant, PDF tronqué, PDF à JavaScript nommé `.svg`, pages d’erreur HTML, texte brut, polyglotte GIF + SVG, entités et XXE : la nature attendue, puis la voie de la page, ses invariants, aucune exception |
+| Téléchargement par le navigateur | `tests/unit/io/adresse.test.ts` | options de la requête (sans cookie ni référent), CORS distingué d’une panne, statut, taille annoncée et flux coupés (un flux de 300 Mo lu jusqu’à 101 Mo, pas plus), délai, annulation, rien sans hôte qui l’a posé |
+| Client du site | `tests/unit/io/serveur.test.ts` | POST avec jeton, refus du serveur dits avec leur phrase, réponse bornée, jeton repris après une reconnexion, annulation |
+| Le serveur | `tests/php/adresse.php` (`npm run test:php`) | tables IPv4 et IPv6 (mappées, NAT64, 6to4), réseaux permis, noms numériques, découpage ; puis par HTTP contre une source locale et un DNS simulé : octets et en-têtes, session, POST, CSRF et même site exigés, adresses privées littérales et par le DNS, rebinding sans effet, redirection vers le privé, `file:`, `gopher:` ou un autre port refusée, trois redirections au plus, taille et délai bornés en flux, en-têtes minimaux sans cookie, journal sans chemin ni paramètre |
+| Navigateur | `tests/e2e/ouvrir-adresse.e2e.ts` et `tests/e2e/site-php.e2e.ts` | rien ne part avant « Ouvrir », SVG, PDF et PNG par adresse, type décidé sur les octets, refus CORS dit, fichiers hostiles refusés, annulation et clavier, lien glissé et adresse collée, insertion dans l’éditeur, axe sans violation ; sur le site, l’ouverture passe par le serveur et la page ne contacte que lui |

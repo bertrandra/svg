@@ -32,11 +32,11 @@ button.discret:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan)
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { button.discret:hover:not(:disabled) { background: var(--repli-cyan-10); color: var(--cyan-survol); } }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* Une cible fait 24 x 24 px au moins (WCAG 2.5.8) : un plancher pour tout ce qu'on clique, que les regles plus fines depassent. */
-button, summary, input[type="text"], input[type="search"], select { min-height: 24px; }
+button, summary, input[type="text"], input[type="search"], input[type="url"], select { min-height: 24px; }
 input[type="range"] { min-height: 24px; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-input[type="text"], select, textarea { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: var(--esp-s) var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: var(--table); color: var(--encre); }
+input[type="text"], input[type="url"], select, textarea { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: var(--esp-s) var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: var(--table); color: var(--encre); }
 /* La chasse fixe n'a que deux graisses embarquees (400 et 500, scripts/fontes-interface.mjs) : toute regle qui la pose dit l'une
    des deux, sinon un bouton (600) la ferait grossir par un gras artificiel. Un test le verifie dans les feuilles. */
 textarea { font-family: var(--mono); font-weight: 400; font-size: var(--texte-compact); resize: vertical; }

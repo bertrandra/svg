@@ -117,3 +117,52 @@ describe('le serveur du site', () => {
     expect(lireMeta('x')).toBeNull();
   });
 });
+
+describe('ouvrir depuis une adresse par le serveur du site (ADR-0036)', () => {
+  const SVG = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>');
+  const signal = () => new AbortController().signal;
+
+  it('demande l adresse au serveur par POST, avec le jeton CSRF, et rend les octets bruts', async () => {
+    const { serveur, appels } = faux(() => new Response(SVG, { headers: { 'Content-Type': 'application/octet-stream' } }));
+    expect(await serveur.telechargerAdresse('https://exemple.fr/a.svg', signal())).toEqual({ octets: SVG });
+    expect(appels[0]?.url).toBe('api.php?r=adresse');
+    expect(appels[0]?.init).toMatchObject({ method: 'POST', credentials: 'same-origin', cache: 'no-store' });
+    expect((appels[0]?.init.headers as Record<string, string>)['X-CSRF']).toBe('jeton');
+    expect(JSON.parse(String(appels[0]?.init.body))).toEqual({ adresse: 'https://exemple.fr/a.svg' });
+  });
+
+  it('dit le refus du serveur (adresse privee, schema, trop gros, delai) avec sa phrase, et ramene son code', async () => {
+    const prive = await faux(() => json(403, { erreur: 'adresse_interdite', message: 'Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.' })).serveur.telechargerAdresse('https://intranet/a.svg', signal());
+    expect(prive).toEqual({ erreur: 'Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.', code: 'refuse' });
+    expect(await faux(() => json(413, { erreur: 'trop_gros', message: 'Trop gros.' })).serveur.telechargerAdresse('https://e.fr/a', signal())).toEqual({ erreur: 'Trop gros.', code: 'trop_gros' });
+    expect(await faux(() => json(504, { erreur: 'delai', message: 'Trop long.' })).serveur.telechargerAdresse('https://e.fr/a', signal())).toEqual({ erreur: 'Trop long.', code: 'delai' });
+    expect(await faux(() => json(502, { erreur: 'injoignable', message: 'Ne répond pas.' })).serveur.telechargerAdresse('https://e.fr/a', signal())).toEqual({ erreur: 'Ne répond pas.', code: 'reseau' });
+    const session = await faux(() => json(401, { erreur: 'session', message: '…' })).serveur.telechargerAdresse('https://e.fr/a', signal());
+    expect(session).toMatchObject({ code: 'session' });
+    expect(await faux(() => { throw new TypeError('coupe'); }).serveur.telechargerAdresse('https://e.fr/a', signal())).toMatchObject({ code: 'reseau' });
+  });
+
+  it('borne la reponse du serveur comme un fichier : un corps annonce trop grand n est pas lu', async () => {
+    const r = await faux(() => new Response(SVG, { headers: { 'Content-Length': String(200 * 1024 * 1024) } })).serveur.telechargerAdresse('https://e.fr/a', signal());
+    expect(r).toMatchObject({ code: 'trop_gros' });
+  });
+
+  it('apres une reconnexion ailleurs, reprend le jeton de la session et reessaie une fois', async () => {
+    let n = 0;
+    const { serveur, appels } = faux(a => {
+      if (a.url === 'api.php?r=jeton') return json(200, { csrf: 'neuf' });
+      return n++ === 0 ? json(403, { erreur: 'csrf', message: 'x' }) : new Response(SVG);
+    });
+    expect(await serveur.telechargerAdresse('https://e.fr/a.svg', signal())).toEqual({ octets: SVG });
+    expect(appels.map(a => a.url)).toEqual(['api.php?r=adresse', 'api.php?r=jeton', 'api.php?r=adresse']);
+    expect((appels[2]?.init.headers as Record<string, string>)['X-CSRF']).toBe('neuf');
+  });
+
+  it('« Annuler » coupe la requete au serveur', async () => {
+    const ctl = new AbortController();
+    const { serveur } = faux(a => new Promise((_ok, ko) => a.init.signal?.addEventListener('abort', () => ko(new DOMException('abandon', 'AbortError')))));
+    const attente = serveur.telechargerAdresse('https://e.fr/a.svg', ctl.signal);
+    ctl.abort();
+    expect(await attente).toEqual({ erreur: 'Téléchargement annulé.', code: 'annule' });
+  });
+});
