@@ -31,6 +31,8 @@ import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/t
 import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
 import { svgDecoupe } from '../../../src/export/svgs.js';
+import { svgStylo } from '../../../src/export/stylo.js';
+import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
@@ -347,7 +349,11 @@ const CAS: readonly Cas[] = [
   { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },
-  { nom: 'vectoriser-parties', entree: 'texte-vivant', operation: vectoriser('lettres', false) }
+  { nom: 'vectoriser-parties', entree: 'texte-vivant', operation: vectoriser('lettres', false) },
+  // Le stylo (ADR-0021) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
+  // respectes ; et l'export du procede « Dessin au stylo » : des traits, aucun fond, une taille physique. Des cas NEUFS.
+  { nom: 'hachures', entree: 'stylo', operation: enchainer(d => hachurerFormes(d, ['f1', 'f4'], 1.512).dessin, d => hachurerFormes(d, ['f2'], 1.512, 0).dessin) },
+  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg }
 ];
 
 const produire = (cas: Cas): string => {

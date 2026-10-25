@@ -11,18 +11,19 @@ import { couchesDe, etendueVisible, formesPeintes, tientDans } from './mesures.j
 import { silhouetteDe } from './silhouette.js';
 import { texteMesure, texteTaille, unitesDePouces, type ProfilProduction } from './profil.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
+import { textesQuiSeChevauchent } from './stylo.js';
 
 export type Gravite = 'bloquant' | 'a-corriger' | 'conseil';
 export const GRAVITES: readonly Gravite[] = ['bloquant', 'a-corriger', 'conseil'];
 
 export type CodeConstat =
   | 'vide' | 'trait' | 'opacite' | 'piece-trop-grande' | 'ptc-trop-grand'
-  | 'depassement' | 'trace-ouvert' | 'nuances-proches' | 'detail-fin'
+  | 'depassement' | 'trace-ouvert' | 'lettres-chevauchent' | 'nuances-proches' | 'detail-fin'
   | 'trop-de-noeuds' | 'trou-superpose' | 'pair-impair' | 'analyse-limitee';
 
 export type CodeCorrection =
   | 'contour-en-forme' | 'rendre-opaque' | 'ajuster-zone' | 'fermer' | 'fusionner-nuances'
-  | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens';
+  | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder';
 
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'contour-en-forme': 'Contour en forme',
@@ -33,7 +34,8 @@ export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   epaissir: 'Épaissir',
   nettoyer: 'Nettoyer le tracé',
   percer: 'Percer la forme du dessous',
-  'trous-selon-sens': 'Réécrire les trous'
+  'trous-selon-sens': 'Réécrire les trous',
+  souder: 'Souder'
 };
 
 export interface Constat {
@@ -55,7 +57,7 @@ export interface Constat {
 /** Au-dela, les parties fines ne se mesurent que sur les premieres formes : le panneau juge en continu. */
 export const FORMES_MAX_FINESSE = 300;
 
-const ORDRE: readonly CodeConstat[] = ['vide', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'trace-ouvert', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee'];
+const ORDRE: readonly CodeConstat[] = ['vide', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee'];
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
 const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
@@ -118,6 +120,13 @@ function constatOuverts(peintes: readonly Forme[]): Constat | null {
     code: 'trace-ouvert', gravite: 'a-corriger', formes: ids(o), correction: 'fermer', aVerifier: true,
     message: (o.length > 1 ? o.length + ' formes ont un tracé ouvert' : 'Une forme a un tracé ouvert') + ' : fermez-' + accord(o.length, 'le', 'les') + ' pour que la lame revienne à son point de départ.'
   };
+}
+
+/** Un texte vivant dont des lettres se chevauchent (ADR-0021) : la lame couperait chacune a travers sa voisine. */
+function constatLettres(dessin: DessinSvg): Constat | null {
+  const t = textesQuiSeChevauchent(dessin);
+  if (!t.length) return null;
+  return { code: 'lettres-chevauchent', gravite: 'a-corriger', formes: ids(t), correction: 'souder', message: 'Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.' };
 }
 
 function constatNuances(dessin: DessinSvg, p: ProfilProduction): Constat | null {
@@ -207,7 +216,7 @@ export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Con
   const r: Array<Constat | null> = p.procede === 'imprimer-decouper'
     ? [...constatPrintThenCut(dessin, p), constatNoeuds(peintes, p)]
     : [
-      constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p), constatOuverts(peintes), constatNuances(dessin, p),
+      constatTrait(peintes), constatOpacite(peintes), ...constatsTaille(peintes, dessin, p), constatOuverts(peintes), constatLettres(dessin), constatNuances(dessin, p),
       ...constatsFinesse(peintes, dessin, p), constatNoeuds(peintes, p), constatTrous(dessin), constatPairImpair(peintes)
     ];
   return r.filter((c): c is Constat => c !== null).sort((a, b) => GRAVITES.indexOf(a.gravite) - GRAVITES.indexOf(b.gravite) || ORDRE.indexOf(a.code) - ORDRE.indexOf(b.code));

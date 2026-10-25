@@ -19,6 +19,7 @@ import { etendueVisible, formesPeintes } from './mesures.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { silhouetteDe } from './silhouette.js';
 import { texteMesure, texteTaille, type ProfilProduction } from './profil.js';
+import { corrigerTexte } from './stylo.js';
 
 export type ResultatCorrection = { readonly dessin: DessinSvg; readonly phrase: string } | { readonly erreur: string };
 
@@ -132,5 +133,7 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
     }
     case 'percer': return percer(dessin);
     case 'trous-selon-sens': return trous(dessin, formes);
+    // Souder un texte (ADR-0021) : le vectoriser en unissant les lettres qui se touchent, d'un seul tenant pour la lame.
+    case 'souder': return corrigerTexte(dessin, 'souder', formes, 0);
   }
 }
