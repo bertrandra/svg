@@ -56,6 +56,9 @@ empreintes.
 
 ### Modifié
 
+- « Dans la forme » (barre, menu de la sélection, barre resserrée) pose le texte déformé ; le remplissage en lignes se choisit dans
+  le panneau (« Remplir : En lignes ») et un texte déjà posé en lignes le garde, octet pour octet. Un champ chiffré inactif dit
+  pourquoi en infobulle.
 - Firefox est exigé en CI (ADR-0016, amendement) : la suite entière y a passé. Le contraste forcé est testé dans les trois
   moteurs, aucun test ne saute plus.
 - L'éditeur reçoit des propriétés facultatives pour un hôte qui garde des projets (`dessin`, `enregistrement`, `changement`,
@@ -183,6 +186,11 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Le texte déformé dans une forme** (ADR-0032) : « Dans la forme » étire et courbe tout le texte jusqu'au contour (un cœur, un
+  cercle, une étoile), lettres déformées, le bloc à la silhouette de la forme. Il reste modifiable : on le retape sur la toile, la
+  déformation suit, et il suit sa forme ; il marche aussi en tracé Médian et pour couper ou écrire. Le fichier ne porte que des
+  contours et `data-ed-disposition="enveloppe"` ; le projet garde `{ mode: 'enveloppe', forme, marge }`.
 
 - **Le site PHP** (ADR-0030), construit dans `dist/php/` à côté de la page autonome, qui ne change pas : connexion par un mot
   de passe unique, en empreinte dans `data/pwd` (`php outils/mot-de-passe.php`), session sûre, jeton CSRF, délai croissant après

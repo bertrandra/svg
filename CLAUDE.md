@@ -95,6 +95,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
   de son avance, tournée, jamais déformée ; `dansForme.ts` : largeur sur toute la bande de la ligne, dichotomie bornée), mémorisé
   par forme ; le texte se recompose quand sa forme change (même entrée d'historique), une forme disparue le rend libre ; le
   fichier écrit le rang de la forme, ou son tracé encodé si elle est masquée, seulement quand le lien existe.
+- **Le texte déformé prend la silhouette de sa forme** (ADR-0032) : `disposition.mode: 'enveloppe'` (`forme`, `marge` 0,05 par
+  défaut), calcul pur dans `engine/texte/enveloppe.ts` : une enveloppe verticale sur le contour extérieur (trous ignorés), exacte
+  quand chaque verticale ne croise le contour que deux fois, le morceau du milieu et des rampes de pente fixe sinon ; contours
+  rebâtis par `ajusterCubiques` ; curseurs et ligne médiane passent par la même enveloppe ; `dans` ne change pas d'un octet.
 - **Les polices libres se téléchargent au choix, vérifiées** (ADR-0025) : un registre en données (`model/sourcesPolices.ts`,
   liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
   main par `scripts/catalogue-polices.mjs`, jamais au build) ; le choix d'une police non livrée vaut demande, et rien ne part
