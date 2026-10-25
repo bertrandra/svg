@@ -120,16 +120,26 @@ redistribuée (`spdx`) et celle du paquet (`spdxPaquet`) ; `THIRD-PARTY-NOTICES.
 - **Découpe** : un constat nouveau, « Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant », correction
   « Souder » (`vectoriserTextes` en soudant, par parties : aucune fonte n’est nécessaire). Intégré au panneau « Prêt pour
   Cricut » (`constatsPreparation`, `corrigerPreparation`).
-- **Le moteur du stylo** est prêt (`engine/preparation/stylo.ts`, `engine/contour/hachures.ts`, `export/stylo.ts`) : constats
-  « Le stylo trace le pourtour des formes pleines » (Garder le contour, Hachurer, Police à trait unique), « Double trait »,
-  et en découpe « Un trait ouvert ne se découpe pas » ; des hachures parallèles à la largeur du stylo, dans la forme, trous
-  respectés, en va-et-vient ; un export en traits, sans fond, à taille physique. Le procédé « Dessin au stylo » lui-même
-  (`model/contextes.ts`, panneau, témoins 7 et 8 du protocole) attend la fin du parcours Cricut d’un autre chantier, qui
-  touche les mêmes fichiers ; il se branche ensuite sans changer ces modules.
+- **Le procédé « Dessin au stylo »** (`model/contextes.ts`, toutes les Cricut) entre dans le sélecteur de machine, avec une
+  ligne inactive « Bientôt : gravure, dorure (foil) » (`OUTILS_A_VENIR` : la même logique d’outil, ouverte une fois vérifiée).
+  Le panneau « Prêt pour le stylo » dit **« Le stylo trace le pourtour des formes pleines »** (corrections : « Garder le
+  contour », la forme devient son pourtour en trait ; « Hachurer », des lignes parallèles espacées de la largeur du stylo, à
+  45°, dans la forme, trous respectés, en va-et-vient, `engine/contour/hachures.ts` ; « Police à trait unique » pour un texte
+  vivant à contour, recomposé dans la police à trait la plus proche) et **« Double trait »** pour un texte à contour. Un
+  `Constat` porte désormais `autres` : les corrections après celle qu’on conseille.
+- **En découpe**, un tracé ouvert sans fond ou un texte à trait unique : **« Un trait ouvert ne se découpe pas »**, bloquant
+  comme le constat « trait » qu’il précise pour ces formes (rien ne bloque de plus ni de moins qu’avant), corrections
+  « Contour en forme » et « Passer au dessin au stylo ».
+- **« Exporter pour le stylo »** (`export/stylo.ts`) : des traits, aucun remplissage (une forme pleine sans trait s’écrit par son
+  pourtour, à la largeur du stylo), une taille physique, une couleur par stylo, la marque du contexte ; la carte « Dans Design
+  Space » dit les étapes (« Dessiner » pour chaque couche, lignes ouvertes : à vérifier). La largeur du stylo, **0,4 mm**, est
+  une valeur `aVerifier` nouvelle (`cricut.stylo.largeur`) ; les témoins **7** (trait unique : comment Design Space importe un
+  tracé ouvert et le passe en « Dessiner ») et **8** (hachures) entrent au protocole. Une forme se hachure aussi depuis
+  l’inspecteur, à l’angle voulu.
 
 ## Conséquences
 
-- **Octets** : aucune référence existante ne bouge ; dix cas neufs dans `ecriture-stable.test.ts` (`texte-vivant`,
+- **Octets** : aucune référence existante ne bouge (ni les 4 134 empreintes de la bibliothèque, ni les témoins 1 à 6) ; dix cas neufs dans `ecriture-stable.test.ts` (`texte-vivant`,
   `texte-vivant-transforme`, `texte-vivant-lecture`, `texte-vivant-trait`, `vectoriser-lettres`, `-souder`, `-tout`,
   `-parties`, `hachures`, `stylo-export`), avec des fontes factices. La relecture d’un texte vivant écrit est un point fixe.
 - **Sécurité** : deux vecteurs nouveaux au corpus hostile (`texte-vivant-attributs-pieges.svg` ; et
@@ -138,7 +148,7 @@ redistribuée (`spdx`) et celle du paquet (`spdxPaquet`) ; `THIRD-PARTY-NOTICES.
 - **Tests de navigateur existants modifiés**, parce que le comportement a changé et c’est voulu : un texte ajouté est une forme
   (`outils.e2e.ts`, `texte-ligatures.e2e.ts`, qui compte désormais les lettres en vectorisant), le sélecteur s’appelle
   « Police » et l’outil « Texte (T) » (`embarquement.e2e.ts`) ; l’identifiant d’une fonte déposée est son empreinte
-  (`tests/unit/io/polices.test.ts`). Nouveaux : `texte-vivant.e2e.ts`, des écrans de plus dans les audits axe et de cibles.
+  (`tests/unit/io/polices.test.ts`) ; toutes les Cricut dessinent au stylo, la Joy comprise (`tests/unit/model/contextes.test.ts`) ; le nombre de fontes créditées passe à onze (`tests/unit/model/credits.test.ts`). Nouveaux : `texte-vivant.e2e.ts`, des écrans de plus dans les audits axe et de cibles.
 - `hersheytext` tire `cheerio` 0.22 et ses dépendances en développement (signalées par `npm audit`) : elles ne sont ni
   exécutées (on ne lit que le fichier de police) ni livrées.
 - **Limites, honnêtement** : pas de retour automatique à la largeur d’une boîte (le texte est libre, retours à la ligne
