@@ -6,6 +6,7 @@
 // l'utilisateur (nuancier, palettes).
 
 import { contraste, lireHex, versHex } from '../util/couleur.js';
+import { declarationsTypographie, tableauTypographie } from './typographie.js';
 
 export type RoleJeton = 'surface' | 'texte' | 'trait' | 'action' | 'etat' | 'toile' | 'relief' | 'repli';
 export type Theme = 'clair' | 'sombre';
@@ -145,8 +146,7 @@ export function cssJetons(): string {
     '/* Généré depuis src/styles/jetons.ts : ne pas modifier ici. */',
     ':root {',
     declarations(JETONS, 'clair', '  '),
-    '  --sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;',
-    '  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;',
+    declarationsTypographie('  '),
     '}',
     '@media (prefers-color-scheme: dark) {',
     '  :root:not([data-theme="light"]) {',
@@ -177,6 +177,8 @@ export function tableauJetons(): string {
     '| Paire | Clair | Sombre | Usage |',
     '|---|---|---|---|',
     ...paires,
+    '',
+    tableauTypographie(),
     ''
   ].join('\n');
 }

@@ -378,3 +378,9 @@ empreintes.
   réouverture. Les menus acceptent des éléments `menuitemradio`.
 - `docs/cricut/protocole.md` et six SVG témoins pour figer sur une vraie machine les 19 valeurs encore
   « à vérifier » (zones utiles, détail minimal du papier cartonné, taille Print Then Cut, lecture des px nus).
+- **Typographie en cinq tailles nommées** (`src/styles/typographie.ts`, `--texte-petit`, `-compact`, `-corps`,
+  `-titre`, `-titre-page` : 12, 13, 14, 16 et 24 px) au lieu de dix-huit valeurs écrites en dur ; les textes les plus
+  petits passent de 11 à 12 px, la taille de base suit le réglage du navigateur (rem au lieu de px), les titres
+  coupent en lignes égales. Un test interdit toute taille écrite en dur, comme pour les couleurs.
+- `PRODUCT.md` et `DESIGN.md` (« le carnet d'atelier ») décrivent le produit et son système visuel pour les travaux
+  de design ; la skill de design impeccable est rangée dans `.claude/skills/`.

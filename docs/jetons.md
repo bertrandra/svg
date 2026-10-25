@@ -83,3 +83,13 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--alerte` sur `--alerte-fond` | 5.06 | 7.54 | message d’avertissement |
 | `--echec` sur `--echec-fond` | 5.28 | 6.40 | message d’échec, survol d’un geste destructif |
 | `--echec` sur `--panneau` | 6.26 | 6.95 | geste destructif au repos |
+
+### La typographie : cinq tailles nommées par leur rôle
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `--texte-petit` | `0.75rem` | Aides, légendes, raccourcis, mesures et codes dans les panneaux, barre d’état (12 px) |
+| `--texte-compact` | `0.8125rem` | Commandes denses : menus, onglets, titres de section, boutons de la barre et des panneaux (13 px) |
+| `--texte-corps` | `0.875rem` | Le texte courant, les boutons et les champs (14 px) |
+| `--texte-titre` | `1rem` | Titres de voie, de carte et de boîte (16 px) |
+| `--texte-titre-page` | `1.5rem` | Le titre de l’accueil, seul de son rang (24 px) |

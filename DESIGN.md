@@ -23,17 +23,21 @@ typography:
     letterSpacing: "-0.01em"
   title:
     fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
-    fontSize: "0.95rem"
+    fontSize: "1rem"
     fontWeight: 600
   body:
     fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
-    fontSize: "14px"
+    fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.45
   label:
     fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
-    fontSize: "0.85rem"
+    fontSize: "0.875rem"
     fontWeight: 600
+  compact:
+    fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 400
   aide:
     fontFamily: "Instrument Sans, Helvetica Neue, Arial, sans-serif"
     fontSize: "0.75rem"
@@ -178,15 +182,26 @@ mesure (codes couleur, niveau de zoom, tailles, noms de fichier), comme les anno
 Les deux fontes sont embarquées dans la page : aucune requête à l'ouverture.
 
 ### Hierarchy
-- **Display** (700, 1,5 rem, approche −0,01 em) : le titre de la page d'accueil, seul de son rang.
-- **Title** (600, 0,95 rem) : titres de voie et de carte, titres de section de l'inspecteur.
-- **Body** (400, 14 px, interligne 1,45) : le texte courant de la page et des panneaux.
-- **Label** (600, 0,85 rem) : les libellés de bouton ; 0,78 à 0,82 rem dans la barre et les menus.
-- **Aide** (400, 0,7 à 0,75 rem, encre douce) : aides, légendes, barre d'état.
-- **Mesure** (IBM Plex Mono 400 à 500, 0,72 à 0,78 rem) : codes `#1428A0`, zoom, tailles, code SVG collé.
+Cinq tailles seulement, chacune un jeton (`src/styles/typographie.ts`, `--texte-*`) ; un test interdit toute
+taille écrite en dur dans la page ou les composants.
+- **Display** (700, 1,5 rem soit 24 px, approche −0,01 em ; `--texte-titre-page`) : le titre de l'accueil, seul de
+  son rang.
+- **Title** (600, 1 rem soit 16 px ; `--texte-titre`) : titres de voie, de carte et de boîte.
+- **Body** (400, 0,875 rem soit 14 px, interligne 1,45 ; `--texte-corps`) : le texte courant ; les boutons et les
+  champs à la même taille, la graisse 600 fait le libellé.
+- **Compact** (400 à 600, 0,8125 rem soit 13 px ; `--texte-compact`) : menus, onglets, titres de section, boutons
+  de la barre et des panneaux.
+- **Aide** (400, 0,75 rem soit 12 px, encre douce ; `--texte-petit`) : aides, légendes, raccourcis, barre d'état.
+- **Mesure** (IBM Plex Mono, à la taille Aide ou Compact) : codes `#1428A0`, zoom, tailles, code SVG collé.
+
+Les titres et sommaires coupent en lignes égales (`text-wrap: balance`), le texte évite un mot seul en dernière
+ligne (`text-wrap: pretty`).
 
 ### Named Rules
 **La règle de la chasse fixe.** Ce qui se mesure ou se copie s'écrit en IBM Plex Mono ; ce qui se lit, jamais.
+
+**La règle des cinq tailles.** Une taille de texte est un jeton : on choisit un rôle, jamais une valeur. Une sixième
+taille se décide dans le registre, avec sa raison.
 
 ## Layout
 
