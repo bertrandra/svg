@@ -58,7 +58,8 @@ export interface OptionsEmbarquees {
    * Les polices libres telechargeables (ADR-0025) : « Toutes les polices » dans l'outil Texte, et le telechargement d'une police
    * apres l'accord de la personne (retenu dans `stockage`, cle `svg.polices.consentement`), aupres de cdn.jsdelivr.net,
    * fonts.bunny.net, gitlab.com ou cdn.fontshare.com. Faux par defaut : aucune requete, seules les dix fontes livrees. Vrai
-   * demande de servir aussi polices-catalogue.js sous `baseAnnexes`.
+   * demande de servir aussi polices-catalogue.js sous `baseAnnexes` (et, facultatif, polices-apercus.js : les noms dessines
+   * dans leur fonte, ADR-0026).
    */
   policesEnLigne?: boolean;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */

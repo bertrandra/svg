@@ -10,11 +10,18 @@
 // l'instantane commis data/catalogue-polices.json (scripts/catalogue-polices.mjs le produit a la main). Il ne contient aucune
 // fonte, seulement les noms, licences, versions epinglees et empreintes ; il est valide par la page avant d'etre ecrit.
 //
-//   npm run polices            -> dist/polices.js et dist/polices-catalogue.js
+// Et les apercus des familles de l'index (ADR-0026) : dist/polices-apercus.js, tire de l'instantane commis
+// data/apercus-polices.json (scripts/apercus-polices.mjs le produit a la main). Le nom de chaque famille en contours, dans un
+// codage compact : aucune fonte, aucune autre lettre ; valide par la page avant d'etre ecrit.
+//
+//   npm run polices            -> dist/polices.js, dist/polices-catalogue.js et dist/polices-apercus.js
 
 import { readFileSync } from 'node:fs';
-import { annoncer, base64DeFichier, depuisRacine, ecrireDansDist, enKo, estLance, refuserFinDeScript } from './aide.mjs';
+import { gzipSync } from 'node:zlib';
+import { annoncer, base64DeFichier, depuisRacine, ecrireDansDist, empaqueter, enKo, estLance, refuserFinDeScript } from './aide.mjs';
 import { FICHIER_CATALOGUE, lireRegistre } from './catalogue-polices.mjs';
+
+const FICHIER_APERCUS = depuisRacine('data/apercus-polices.json');
 
 export const POLICES = [
   ['inter', 'Inter', 'inter/400Regular/Inter_400Regular.ttf'],
@@ -76,9 +83,24 @@ export async function construireCatalogue() {
   return { familles: donnees.familles.length, octets: texte.length };
 }
 
+/** L'annexe des apercus : l'instantane commis, valide par la page (un apercu malforme arrete le build). */
+export async function construireApercus() {
+  const code = await empaqueter({ stdin: { contents: "export { validerApercus } from './src/model/apercusPolices.ts';", resolveDir: depuisRacine(), loader: 'ts' }, bundle: true, format: 'esm', platform: 'node' });
+  const { validerApercus } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
+  const donnees = JSON.parse(readFileSync(FICHIER_APERCUS, 'utf8'));
+  const v = validerApercus(donnees);
+  if ('erreur' in v) throw new Error('data/apercus-polices.json refusé : ' + v.erreur);
+  const texte = 'window.__apercusPolicesSvg=' + JSON.stringify(donnees) + ';';
+  refuserFinDeScript(texte, 'les aperçus des polices');
+  ecrireDansDist('polices-apercus.js', texte);
+  return { familles: v.apercus.size, octets: texte.length, compresses: gzipSync(texte).length };
+}
+
 if (estLance(import.meta.url)) {
   const r = construirePolices();
   annoncer('Polices construites', 'polices.js', r.polices + ' fontes, ' + enKo(r.octets) + ' Ko');
   const c = await construireCatalogue();
   annoncer('Index des polices construit', 'polices-catalogue.js', c.familles + ' familles, ' + enKo(c.octets) + ' Ko');
+  const a = await construireApercus();
+  annoncer('Aperçus des polices construits', 'polices-apercus.js', a.familles + ' familles, ' + enKo(a.octets) + ' Ko, ' + enKo(a.compresses) + ' Ko compressés');
 }

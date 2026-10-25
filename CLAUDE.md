@@ -84,6 +84,11 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   main par `scripts/catalogue-polices.mjs`, jamais au build) ; rien ne part sans accord par serveur (`svg.polices.consentement`,
   `policesEnLigne` faux chez un hôte) ; chaque fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit
   `c-…` avec sa version ; un seul `fetch` dans `src/`.
+- **Une police se voit avant de se télécharger, une ligne par famille** (ADR-0026) : le nom se dessine dans sa fonte, calculé
+  sur place pour une police disponible (`engine/texte/apercuNom.ts`), préparé pour le catalogue dans `data/apercus-polices.json`
+  (commis, refait à la main par `scripts/apercus-polices.mjs` après l'index, chaque fichier vérifié par sha256, jamais au
+  build), livré dans l'annexe facultative `polices-apercus.js` validée sans lever ; l'aperçu est décoratif (`aria-hidden`,
+  `currentColor`) ; une famille de plusieurs sources ne montre que la mieux placée de `PREFERENCE_SOURCES`, sauf filtre de source.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

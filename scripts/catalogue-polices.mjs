@@ -98,6 +98,8 @@ async function fontsource(R, journal) {
     if (!f.subsets.includes('latin')) { journal.exclues.push(f.id + ' (pas de latin)'); return false; }
     if (R.CATEGORIES_EXCLUES.includes(f.category)) { journal.exclues.push(f.id + ' (catégorie ' + f.category + ')'); return false; }
     if (!R.estLicenceAdmise(f.license)) { journal.exclues.push(f.id + ' (licence ' + f.license + ')'); return false; }
+    const illisible = R.FAMILLES_ILLISIBLES.find(x => x.id === f.id);
+    if (illisible) { journal.exclues.push(f.id + ' (illisible : ' + illisible.raison + ')'); return false; }
     return true;
   });
   const familles = await enParallele(admises, 12, async (f, k) => {

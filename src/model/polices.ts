@@ -25,6 +25,15 @@ export const NOMS_POLICES: Readonly<Record<IdPoliceLivree, string>> = {
 };
 
 /**
+ * La famille de chaque fonte embarquee, telle que l'index des polices la nomme : « Toutes les polices » ne montre qu'une ligne
+ * par nom de famille, et la fonte livree y passe avant la meme famille telechargeable (ADR-0026).
+ */
+export const FAMILLES_LIVREES: Readonly<Record<IdPoliceLivree, string>> = {
+  inter: 'Inter', 'inter-gras': 'Inter', oswald: 'Oswald', bebas: 'Bebas Neue', playfair: 'Playfair Display', lobster: 'Lobster',
+  pacifico: 'Pacifico', caveat: 'Caveat', fredoka: 'Fredoka', 'ems-readability': 'EMS Readability'
+};
+
+/**
  * La nature d'une police : `contour` dessine des lettres pleines (un fond, ou un double trait au stylo) ; `trait` dessine
  * des traces ouverts, ce que suit la pointe d'un stylo. Une donnee : le texte vivant et la vectorisation la gardent.
  */
@@ -43,6 +52,16 @@ export const VARIANTES_GRASSES: Readonly<Partial<Record<IdPoliceLivree, IdPolice
 /** La fonte de base d'une variante grasse (« inter-gras » : « inter »), ou null. */
 export const baseDeGrasse = (id: string): IdPoliceLivree | null =>
   (Object.entries(VARIANTES_GRASSES) as Array<[IdPoliceLivree, IdPoliceLivree]>).find(([, g]) => g === id)?.[0] ?? null;
+
+/**
+ * Les styles d'une famille livree qui en a plusieurs (Inter : normal et gras), pour le choix « Style » : une famille, une
+ * ligne ; la variante grasse reste une fonte a part (son identifiant s'ecrit dans le fichier), seul le choix la regroupe.
+ */
+export function stylesLivres(id: string): Array<{ readonly id: IdPoliceLivree; readonly nom: string }> {
+  const base = baseDeGrasse(id) ?? (estPoliceLivree(id) ? id : null);
+  const grasse = base ? VARIANTES_GRASSES[base] : undefined;
+  return base && grasse ? [{ id: base, nom: 'Normal' }, { id: grasse, nom: 'Gras' }] : [];
+}
 
 /**
  * La police a trait unique la plus proche d'une police a contour : celle que propose la correction « Police à trait

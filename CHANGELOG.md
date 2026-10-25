@@ -56,6 +56,12 @@ empreintes.
 
 ### Modifié
 
+- « Toutes les polices » ne montre qu'une ligne par nom de famille : la fonte livrée, sinon Google Fonts, sinon Fontshare
+  (ordre défini dans le registre) ; filtrer une source montre toutes les siennes ; le total compte les lignes montrées
+  (2 166). Un texte composé dans une police d'une source cachée se recompose à l'identique et reste nommé avec sa source.
+  Inter et Inter gras ne font qu'une ligne : le gras se choisit dans « Style », qui remplace la case « Gras » de l'inspecteur.
+- Cinq familles que l'éditeur ne sait pas lire (Pitagon Sans, Sans Mono, Sans Text, Serif ; Peace Sans) quittent l'index : elles
+  échouaient au téléchargement. Une règle du registre (`FAMILLES_ILLISIBLES`) les écarte avec leur raison ; 2 200 familles.
 - Le chapeau de l'accueil nomme la machine de découpe ; les audits axe de la bibliothèque se font sur toute la hauteur de
   la page.
 - **Les boutons masquer et verrouiller des calques sont de vraies icônes** (cadenas ouvert ajouté), comme le
@@ -153,6 +159,13 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **« Toutes les polices » montre l'allure de chaque police sans rien télécharger** (ADR-0026) : le nom d'une police déjà
+  disponible (livrée, déposée, téléchargée dans la session) se dessine dans sa propre fonte ; celui d'une famille du catalogue
+  vient d'un aperçu préparé (2 163 familles sur 2 200), dans l'annexe facultative `polices-apercus.js` (1,9 Mo, 0,64 Mo
+  compressé), chargée à l'ouverture de la liste ; sans elle, les noms s'écrivent dans la police de l'interface. Les aperçus
+  sont tirés de l'instantané commis `data/apercus-polices.json` par `scripts/apercus-polices.mjs`, lancé à la main. Aucune
+  requête réseau, aucun octet écrit ne change ; la page prend 7,8 Ko.
 
 - **Les polices libres à la demande** (ADR-0025) : « Toutes les polices » dans l'outil Texte ouvre plus de 2 000 familles
   libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Collletttivo, Velvetyne, Fontshare) : recherche,

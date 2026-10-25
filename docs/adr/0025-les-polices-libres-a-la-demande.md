@@ -38,7 +38,8 @@ recomposer demain avec les mêmes octets. Le cœur pur ne touche pas au réseau.
   | Velvetyne | API GitLab, au commit | commit de 40 chiffres dans l’adresse | 26 familles |
   | Fontshare | `cdn.fontshare.com` | version de l’API et empreinte, **`aVerifier`** | 100 familles |
 
-  Soit **2 205 familles, 9 441 variantes** (graisse × style) à l’instantané du 25 octobre 2026.
+  Soit **2 205 familles, 9 441 variantes** (graisse × style) à l’instantané du 25 octobre 2026 ; cinq familles que l’éditeur ne
+  sait pas lire (Pitagon, Peace Sans : `FAMILLES_ILLISIBLES`) en sont ensuite retirées : **2 200 familles, 9 386 variantes**.
 - **les exclusions**, dites : **Font Squirrel** (licences au cas par cas, parfois sans usage commercial, ni adresse versionnée ni
   API), **uncut.xyz** (répertoire aux licences mêlées, sans adresse versionnée ni empreinte publiée), les polices d’icônes
   (catégorie `icons`), les familles sans sous-ensemble latin.
@@ -138,8 +139,10 @@ filtres (genre, tracé — contour ou trait unique —, source), **polices du do
 d’historique, Ctrl+Z la défait), **favoris** et **récentes** (`svg.polices.favoris`, `svg.polices.recentes`, lus avec méfiance),
 **vos polices** (déposer un fichier ; « Polices de cet appareil » par Local Font Access seulement si `queryLocalFonts` existe,
 derrière sa garde, `docs/navigateurs.md`), et le pied qui dit l’accord et le retire. La longue liste **se fenêtre** au-delà de
-150 lignes (ADR-0008) : plus de deux mille polices, une vingtaine de lignes dans la page. Les noms s’écrivent dans la police de
-l’interface : **aucun aperçu ne télécharge rien**. Une police du catalogue choisie montre ses autres styles (« Style de la police »).
+150 lignes (ADR-0008) : plus de deux mille polices, une vingtaine de lignes dans la page. Les noms s’écrivaient dans la police de
+l’interface : **aucun aperçu ne télécharge rien** ; depuis l’ADR-0026, chaque nom se dessine dans sa propre fonte (la fonte quand
+on l’a, sinon un aperçu préparé dans une annexe voisine), toujours sans aucune requête, et la liste ne montre qu’**une ligne par
+nom de famille** (la livrée, sinon Google Fonts, sinon Fontshare ; filtrer une source montre toutes les siennes). Une police du catalogue choisie montre ses autres styles (« Style de la police »).
 Une police du catalogue absente d’un texte rouvert se propose au téléchargement (« Télécharger Roboto »), à sa version quand
 l’index la connaît encore, sinon à la version courante, et c’est dit.
 

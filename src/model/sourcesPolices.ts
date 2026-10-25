@@ -134,6 +134,21 @@ export const SOURCES_POLICES: readonly SourcePolices[] = [
   }
 ];
 
+/**
+ * L'ordre de preference quand une meme famille (meme nom, casse et accents ignores) existe dans plusieurs sources : la fonte
+ * livree d'abord (rien a telecharger), puis Google Fonts (versions recentes, latin et latin etendu, adresses versionnees), les
+ * autres catalogues servis par Fontsource, Velvetyne, et Fontshare en dernier (adresses non versionnees, ITF FFL). « Toutes les
+ * polices » ne montre qu'une ligne par nom de famille, celle de la source la mieux placee (ADR-0026) ; les autres restent dans
+ * l'index (un dessin qui les emploie se recompose a l'identique) et se montrent quand on filtre leur source.
+ */
+export const PREFERENCE_SOURCES: ReadonlyArray<IdSourcePolices | 'livree'> = ['livree', 'google', 'fontsource', 'league', 'sil', 'collletttivo', 'velvetyne', 'fontshare'];
+
+/** Le rang d'une source dans la preference ; une source inconnue passe apres toutes. */
+export function rangSource(source: string): number {
+  const i = (PREFERENCE_SOURCES as readonly string[]).indexOf(source);
+  return i < 0 ? PREFERENCE_SOURCES.length : i;
+}
+
 /** Les sources ecartees, et pourquoi : l'ADR-0025 les cite, l'interface ne les propose pas. */
 export const SOURCES_EXCLUES: ReadonlyArray<{ readonly nom: string; readonly raison: string }> = [
   { nom: 'Font Squirrel', raison: 'des licences au cas par cas, parfois sans redistribution ni usage commercial, et ni adresse versionnée ni API' },
@@ -142,6 +157,19 @@ export const SOURCES_EXCLUES: ReadonlyArray<{ readonly nom: string; readonly rai
 
 /** Les categories Fontsource exclues de l'index : des glyphes d'icones, pas des lettres. */
 export const CATEGORIES_EXCLUES: readonly string[] = ['icons'];
+
+/**
+ * Les familles que l'editeur ne sait pas lire, constatees en lisant leur fichier (scripts/apercus-polices.mjs, ADR-0026) :
+ * gardees dans l'index, elles echoueraient au telechargement. Ecartees par leur identifiant Fontsource, avec la raison ;
+ * elles reviennent quand leur fichier redevient lisible (retirer la ligne, relancer l'index).
+ */
+export const FAMILLES_ILLISIBLES: ReadonlyArray<{ readonly id: string; readonly raison: string }> = [
+  { id: 'pitagon-sans', raison: 'le fichier « .woff » est en réalité du WOFF2, que la lecture des fontes ne décode pas' },
+  { id: 'pitagon-sans-mono', raison: 'le fichier « .woff » est en réalité du WOFF2, que la lecture des fontes ne décode pas' },
+  { id: 'pitagon-sans-text', raison: 'le fichier « .woff » est en réalité du WOFF2, que la lecture des fontes ne décode pas' },
+  { id: 'pitagon-serif', raison: 'le fichier « .woff » est en réalité du WOFF2, que la lecture des fontes ne décode pas' },
+  { id: 'peace-sans', raison: 'le fichier WOFF est mal formé' }
+];
 
 export const sourcePolices = (id: string): SourcePolices | undefined => SOURCES_POLICES.find(s => s.id === id);
 
