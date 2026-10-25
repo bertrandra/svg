@@ -134,7 +134,7 @@ React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteu
 | `exemples/` | Une page d'intégration qui tourne depuis le disque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
-| `docs/adr/` | Les décisions, une par fichier ; `docs/jetons.md` : les jetons, générés |
+| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md)) ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur
