@@ -4,19 +4,44 @@
 @keyframes apparition { from { opacity: 0; transform: translateY(4px); } }
 .case { display: flex; gap: var(--esp-s); align-items: center; min-height: 24px; font-size: var(--texte-compact); }
 .bibliotheque { display: grid; gap: var(--esp-m); }
-/* La bibliotheque : une grille de vignettes, dans la page et dans l'editeur. */
-.recherche-formes { display: grid; gap: var(--esp-m); }
-.recherche-formes .filtres { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--esp-m); }
-.recherche-formes.compact .filtres { grid-template-columns: minmax(0, 1fr); }
+/* La bibliotheque : un champ, des pastilles d'evenements, une grille de vignettes, dans la page et dans l'editeur. */
+.recherche-formes { display: grid; gap: var(--esp-m); min-width: 0; }
 .recherche-formes input[type="search"] { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: var(--esp-s) var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: var(--table); color: var(--encre); }
 .recherche-formes > button { justify-self: start; }
+.recherche-formes > p { margin: 0; }
+/* Les pastilles : un groupe de boutons a etat, l'evenement choisi plein comme un onglet choisi. */
+.pastilles-evenements { display: grid; gap: var(--esp-s); justify-items: start; min-width: 0; }
+/* Repliees, sur un ecran large : « Plus d'evenements » suit les pastilles sur la meme ligne. */
+.pastilles-evenements:not(.depliees) { display: flex; flex-wrap: wrap; align-items: center; }
+.pastilles { display: flex; flex-wrap: wrap; gap: var(--esp-s); min-width: 0; max-width: 100%; }
+.pastille-evenement { padding: var(--esp-xs) var(--esp-m); font-size: var(--texte-compact); font-weight: 400; background: var(--table); color: var(--encre); border-color: var(--filet); white-space: nowrap; }
+.pastille-evenement[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); color: var(--sur-cyan); font-weight: 600; }
+button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled) { color: var(--sur-cyan); }
+.pastilles-famille { display: grid; gap: var(--esp-xs); min-width: 0; }
+.pastilles-titre { font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.pastilles-plus { justify-self: start; padding-left: var(--esp-xs); padding-right: var(--esp-xs); }
+/* Au telephone, les pastilles repliees tiennent sur une ligne qui defile : le reste de la page ne descend pas. La marge
+   interieure laisse au contour de focus la place de se dessiner. */
+@media (max-width: 640px) {
+  .pastilles-evenements:not(.depliees) { display: grid; }
+  .pastilles-evenements:not(.depliees) > .pastilles { flex-wrap: nowrap; overflow-x: auto; padding: var(--esp-xs); margin: calc(-1 * var(--esp-xs)); max-width: calc(100% + 2 * var(--esp-xs)); }
+}
+.voir-aussi { display: flex; flex-wrap: wrap; gap: var(--esp-xs) var(--esp-s); }
+.voir-aussi button { padding-left: var(--esp-xs); padding-right: var(--esp-xs); }
+/* Rien ne correspond : la phrase, des propositions qui trouvent quelque chose, de quoi effacer. */
+.aucun-resultat { display: grid; gap: var(--esp-m); justify-items: start; padding: var(--esp-xl); background: var(--table); border-radius: var(--rayon-carte); }
+.aucun-resultat-titre { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.suggestions-recherche { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2xs); justify-items: start; }
+.suggestions-recherche button { text-align: left; padding-left: var(--esp-xs); padding-right: var(--esp-xs); }
 .grille-formes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--esp-s); }
 .recherche-formes.compact .grille-formes { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--esp-xs); }
-.vignette { width: 100%; display: grid; justify-items: center; gap: var(--esp-xs); padding: var(--esp-s) var(--esp-xs); background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); font-weight: 400; font-size: var(--texte-petit); line-height: 1.2; text-align: center; }
+.vignette { width: 100%; height: 100%; display: grid; grid-template-rows: auto 1fr; justify-items: center; align-content: start; gap: var(--esp-xs); padding: var(--esp-s) var(--esp-xs); background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); font-weight: 400; font-size: var(--texte-petit); line-height: 1.2; text-align: center; }
 .vignette:hover { border-color: var(--cyan); }
 .vignette img { width: 64px; height: 64px; background: var(--toile-blanc); border-radius: var(--rayon-pastille); padding: var(--esp-xs); }
+/* Un libelle sur deux lignes au plus, coupe proprement : toutes les vignettes ont la meme hauteur. Le nom complet reste le
+   texte du bouton (nom accessible) et son infobulle ; sans line-clamp, la hauteur bornee coupe quand meme. */
+.vignette span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; width: 100%; min-height: 2.4em; max-height: 2.4em; }
 .recherche-formes.compact .vignette img { width: 44px; height: 44px; }
-.recherche-formes.compact .vignette span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 /* La vignette avant/apres de la voie « Convertir une image » : decorative, aux couleurs des jetons. */
 .avant-apres { margin: 0; display: grid; gap: var(--esp-s); justify-items: center; }
 .avant-apres-vignettes { display: flex; align-items: center; gap: var(--esp-l); }
