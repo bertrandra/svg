@@ -19,6 +19,7 @@ import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
 import { svgDeBibliotheque } from './provenanceBibliotheque.js';
+import { Message, type TonMessage } from './commun/Message.js';
 
 interface Fichier { nom: string; svg: string }
 
@@ -53,7 +54,10 @@ function Accueil() {
   const [edition, poserEdition] = useState(false);
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
   const [voie, poserVoie] = useState<Voie>('svg');
-  const [message, dire] = useState('');
+  // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
+  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
+  const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
+  const informer = useCallback((texte: string) => poserMessage({ texte, ton: 'info' }), []);
   const [credits, poserCredits] = useState(false);
   const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon(STOCKAGE));
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
@@ -86,7 +90,7 @@ function Accueil() {
         <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un SVG propre. Rien ne quitte votre navigateur.</p>
       </header>
 
-      {message ? <p className="message" role="alert">{message}</p> : null}
+      {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
 
       {brouillon && !fichier ? (
         <section className="reprise" aria-label="Reprendre">
@@ -106,7 +110,7 @@ function Accueil() {
             {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
             <div className="actions">
               <button type="button" className="primaire" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
-              <MenuExport svg={fichier.svg} nom={fichier.nom} dire={dire} />
+              <MenuExport svg={fichier.svg} nom={fichier.nom} dire={informer} />
               <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }}>Fermer</button>
             </div>
           </div>
@@ -155,7 +159,7 @@ function Accueil() {
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE}
           fermer={() => poserEdition(false)}
-          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
+          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.', 'info'); }} />
       ) : null}
     </main>
   );

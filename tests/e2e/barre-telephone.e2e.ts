@@ -57,7 +57,8 @@ describe('barre de l editeur sur un telephone', () => {
     await plus(page).focus();
     await page.keyboard.press('ArrowDown');
     const elements = page.locator('.menu-panneau [role^=menuitem]');
-    await attend(() => aLeFocus(elements.first())).toBe(true);
+    // Le menu commence par Édition, dont « Annuler » est grisé sans historique : la flèche va au premier élément ACTIF.
+    await attend(() => aLeFocus(elements.locator('xpath=self::*[not(@disabled)]').first())).toBe(true);
     // « Fin » va au dernier element ACTIF (« Supprimer », grise tant que rien n'est choisi, est saute).
     await page.keyboard.press('End');
     const dernierActif = elements.locator('xpath=self::*[not(@disabled)]').last();
@@ -89,15 +90,37 @@ describe('barre de l editeur sur un telephone', () => {
     expect(await bouton.getAttribute('aria-describedby')).toBeNull();
   });
 
-  it('montre un degrade au bord de la rangee de la selection qui defile, et y garde le bouton focalise en vue', async () => {
+  it('tient la rangee de la selection dans 390 px au doigt : les gestes rares sont dans son menu « Plus », aucun n est retire', async () => {
     const page = await telephone();
     await page.locator('.editeur-svg-toile path[data-id="f2"]').tap();
+    const rangee = page.locator('.editeur-barre-selection');
+    await rangee.waitFor();
+    expect(await rangee.evaluate(e => e.scrollWidth - e.clientWidth)).toBe(0);
+    for (const nom of ['Dupliquer (Ctrl+D)', 'Miroir horizontal', 'Tourner de 90° vers la droite', 'Supprimer (Suppr)']) {
+      const r = await rangee.getByRole('button', { name: nom, exact: true }).boundingBox();
+      expect(r && r.x >= 0 && r.x + r.width <= 390, nom).toBe(true);
+    }
+    await rangee.getByRole('button', { name: /^Plus de gestes/ }).tap();
+    for (const nom of ['Transformer', 'Aligner (sur le plan)', 'Empiler', 'Booléens', 'Formes']) await page.getByRole('menu', { name: nom }).waitFor();
+    for (const nom of ['Miroir vertical', 'Aligner à gauche', 'Premier plan', 'Union : réunir les formes en une seule', 'Combiner en une forme', 'Masquer', 'Verrouiller']) {
+      await page.getByRole('menuitem', { name: nom }).waitFor();
+    }
+    // Un geste du menu fait ce que faisait son bouton : il agit sur la selection et compte une modification.
+    await page.getByRole('menuitem', { name: 'Miroir vertical' }).tap();
+    await attend(() => modifications(page)).toBe(1);
+  });
+
+  it('montre un degrade au bord de la rangee de la selection qui defile (fenetre etroite a la souris), et y garde le bouton focalise en vue', async () => {
+    // A la souris, sous 900 px, la rangee garde tous ses gestes de 40 px sur une ligne qui defile : c'est la qu'elle a besoin du degrade.
+    const { page } = await navigateur.ouvrir({ largeur: 760, hauteur: 800 });
+    await ouvrirExemple(page);
+    await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
     const rangee = page.locator('.editeur-barre-selection');
     await rangee.waitFor();
     expect(await rangee.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true);
     expect(await rangee.evaluate(e => getComputedStyle(e).backgroundImage.split('linear-gradient').length - 1)).toBe(4);
     const dernier = rangee.locator('button').last();
     await dernier.focus();
-    await attend(async () => { const r = await dernier.boundingBox(); return !!r && r.x >= 0 && r.x + r.width <= 390; }).toBe(true);
+    await attend(async () => { const r = await dernier.boundingBox(); return !!r && r.x >= 0 && r.x + r.width <= 760; }).toBe(true);
   });
 });

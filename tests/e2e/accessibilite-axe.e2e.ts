@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -301,6 +301,39 @@ describe('axe-core : accessibilite automatique', () => {
         await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
         await page.getByRole('menu', { name: 'Fichier' }).waitFor();
         exigerSansViolationGrave(await auditer(page, `éditeur, 390 px tactile, menu Plus ouvert, ${schema}`));
+      });
+    }
+
+    for (const schema of ['light', 'dark'] as const) {
+      it(`sur un téléphone de 390 px, rangée de sélection resserrée et son menu « Plus » ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 390, hauteur: 800, tactile: true, schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').tap();
+        await page.locator('.editeur-barre-selection').getByRole('button', { name: /^Plus de gestes/ }).tap();
+        await page.getByRole('menu', { name: 'Empiler' }).waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, 390 px tactile, rangée de sélection et son menu, ${schema}`));
+      });
+
+      it(`avec « aucun » remplissage choisi, en contexte Cricut, « Enregistrer » posé en secondaire (${schema})`, async () => {
+        // Sans menu ouvert : un menu flottant recouvre l'inspecteur, dont axe ne saurait plus lire les fonds (le menu Fichier ouvert est
+        // audite ailleurs ; ici, ce qui compte est le contraste de l'action retiree et de « aucun » choisi). Un grand dessin : sur le
+        // petit exemple, le gabarit du tapis deborde de la toile en geometrie, et axe le croit par-dessus la barre d'etat (deja vrai avant).
+        const page = await accueil({ schema });
+        await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 700"><path d="M96 96H288V288H96Z" fill="#c81e28"/><path d="M384 96H576V288H384Z" fill="#1428a0"/></svg>');
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        await page.locator('.pastille-style button.aucun').first().click();
+        await page.locator('.selecteur-contexte .menu-bouton').click();
+        await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+        await page.locator('.panneau-cricut .constat, .panneau-cricut .pret').first().waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, aucun remplissage, Cricut, Enregistrer en secondaire, ${schema}`));
+      });
+
+      it(`sur l accueil après « Enregistrer », avec le message neutre (${schema})`, async () => {
+        const page = await editeur({ schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        await page.keyboard.press('Delete');
+        await page.keyboard.press('Control+s');
+        await page.locator('main.accueil > p.message.neutre[role="status"]').waitFor();
+        exigerSansViolationGrave(await auditer(page, `accueil, message neutre après enregistrement, ${schema}`));
       });
     }
 

@@ -34,6 +34,14 @@ export function useTelephone(): boolean {
   return useMedia('(max-width: ' + LARGEUR_TELEPHONE + 'px)');
 }
 
+/**
+ * Vrai quand la rangee de la selection doit se resserrer (BarreSelection.tsx) : sur un telephone, ou au doigt jusqu'a une tablette
+ * en paysage, ou ses vingt-cinq gestes de 40 px ne tiennent pas sur une ligne. A la souris dans une fenetre etroite, elle defile.
+ */
+export function useRangeeCompacte(): boolean {
+  return useMedia('(max-width: ' + LARGEUR_TELEPHONE + 'px), (pointer: coarse) and (max-width: 1200px)');
+}
+
 /** La vue sur le plan de travail : zoom, defilement, ajustement a l'ecran, molette. */
 export function useVue(toile: RefObject<HTMLDivElement | null>, svgRef: RefObject<SVGSVGElement | null>, vb: DessinSvg['vb']): Vues {
   const [vue, poserVue] = useState<Vue>({ zoom: 1, x: 0, y: 0 });

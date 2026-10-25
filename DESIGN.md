@@ -9,6 +9,8 @@ colors:
   encre: "#15181d"
   encre-douce: "#555c66"
   filet: "#cfd4da"
+  filet-fort: "#7d848d"
+  selection: "#c6dde6"
   alerte: "#8a5a00"
   alerte-fond: "#f8ecd2"
   echec: "#a8322a"
@@ -117,6 +119,11 @@ components:
     textColor: "{colors.alerte}"
     rounded: "{rounded.bouton}"
     padding: "10px 12px"
+  message-neutre:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    rounded: "{rounded.bouton}"
+    padding: "10px 12px"
 ---
 
 # Design System: Éditeur SVG
@@ -166,6 +173,11 @@ Une palette d'atelier : des gris de table et de papier, deux encres, et un seul 
 - **Encre douce** (#555c66 ; #9aa3ad en sombre) : aides, légendes, libellés de champ, barre d'état.
 - **Filet** (#cfd4da ; #2f353c en sombre) : bordures et séparations ; décoratif, il ne porte jamais seul une
   information.
+- **Filet fort** (#7d848d ; #69717b en sombre) : le bord qui doit se voir, 3:1 sur la table et sur un panneau
+  (`PAIRES_GRAPHIQUES`, WCAG 1.4.11) : le tour des pastilles de couleur (une pastille d'encre ne disparaît plus sur un
+  panneau sombre), la pastille vide d'une forme sans fond, la poignée des barres de défilement.
+- **Sélection** (#c6dde6 ; #2a4b5a en sombre) : le fond du texte choisi, la couleur d'outil adoucie sous l'encre (12,6:1
+  et 7,7:1).
 
 ### Tertiary
 - **Ambre d'alerte** (#8a5a00 sur #f8ecd2) : un avertissement, une partie trop fine sur la toile, un constat
@@ -176,6 +188,12 @@ Une palette d'atelier : des gris de table et de papier, deux encres, et un seul 
 ### Named Rules
 **La règle de l'encre unique.** Le cyan d'encre est la seule couleur d'interface qui ne soit ni grise ni un
 message. Une seule action pleine par panneau ; si deux boutons cyan se voient côte à côte, l'un des deux a tort.
+Seule l'action de l'instant est pleine : un menu ou une confirmation ouverts portent la seule qu'on voie (dans une
+confirmation, l'action sûre), et les autres se posent en secondaires tant qu'ils restent ouverts (classes `menu-ouvert`
+et `confirmation-ouverte` du cadre, sans rien changer à ce que font les boutons) ; en contexte de production, l'export
+du panneau est l'action du moment, « Enregistrer » de la barre se pose en secondaire. Un test de navigateur compte les
+actions pleines visibles (`tests/e2e/finition.e2e.ts`). Le cyan ne marque pas non plus un code ou un état « aucun » qui
+n'est pas une action : un code de couleur s'écrit à l'encre.
 
 **La règle du dessin roi.** Aucune couleur d'interface ne se pose sur le dessin ni ne le concurrence : le plan
 de travail est blanc, sombre ou en damier, et les repères (tapis, grille, zone utile) restent en filets.
@@ -207,10 +225,23 @@ taille écrite en dur dans la page ou les composants.
 - **Mesure** (IBM Plex Mono, à la taille Aide ou Compact) : codes `#1428A0`, zoom, tailles, code SVG collé.
 
 Les titres et sommaires coupent en lignes égales (`text-wrap: balance`), le texte évite un mot seul en dernière
-ligne (`text-wrap: pretty`).
+ligne (`text-wrap: pretty`). Un paragraphe de l'accueil (chapeau, pied, présentation d'une voie) ne dépasse pas
+**34 em**, environ 72 caractères : la mesure est en em, parce que le `ch` est la chasse du zéro, large dans Instrument
+Sans, et que 68 ch y laissaient encore 96 caractères.
+
+**Chiffres tabulaires.** Ce qui compte ou mesure et change sous les yeux (« 4 modifications », le niveau de zoom, « 1
+sélectionnée », la valeur d'un curseur, les compteurs des sections, des calques et de la bibliothèque, les champs
+chiffrés) porte `font-variant-numeric: tabular-nums` (Instrument Sans a la fonction `tnum`) ; la valeur d'un curseur a
+de plus une largeur fixe, alignée à droite : « 100 % » qui devient « 7 % » ne déplace plus rien.
+
+**La chasse fixe en 400 et 500.** Seules ces deux graisses d'IBM Plex Mono sont embarquées : toute règle qui pose la
+chasse fixe dit l'une des deux (un test le vérifie dans les feuilles), sans quoi un bouton (600) la grossissait d'un gras
+artificiel. Le sous-ensemble embarqué n'a pas de zéro barré : un raccourci « 0 » qui côtoie « O » s'écrit « 0 (zéro) ».
 
 ### Named Rules
-**La règle de la chasse fixe.** Ce qui se mesure ou se copie s'écrit en IBM Plex Mono ; ce qui se lit, jamais.
+**La règle de la chasse fixe.** Ce qui se mesure ou se copie s'écrit en IBM Plex Mono ; ce qui se lit, jamais. Un
+texte d'exemple fait de mots (« aucun », « celle du dessin ») est en grotesque même dans un champ chiffré ; une couleur
+du nuancier se dit par son nom en grotesque avant son code en chasse fixe (« Rouge #C81E28 · 1 »).
 
 **La règle des cinq tailles.** Une taille de texte est un jeton : on choisit un rôle, jamais une valeur. Une sixième
 taille se décide dans le registre, avec sa raison.
@@ -230,8 +261,16 @@ test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la
 
 - **Au-dessous de 900 px ou au doigt** : les panneaux deviennent des tiroirs sur voile, les cibles passent à
   40 px (44 px dans les menus).
-- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Vue, Fichier, Édition,
-  contexte) ; « Enregistrer » passe dans la barre d'état ; les voies de l'accueil s'empilent.
+- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Édition, Fichier, Vue avec le
+  zoom en dernier, puis le contexte : l'ordre de l'usage) ; « Enregistrer » passe dans la barre d'état ; les voies de
+  l'accueil s'empilent.
+- **Au doigt jusqu'à 1 200 px, et sous 640 px** : la rangée de la sélection se resserre : le compte, trois gestes
+  fréquents (dupliquer, miroir horizontal, tourner à droite), son menu « Plus » rubrique par rubrique (transformer,
+  aligner, empiler, booléens, formes), et « Supprimer » au bout ; rien n'est retiré, elle tient dans 390 px. À la souris
+  dans une fenêtre étroite, elle garde ses gestes sur une ligne qui défile, avec un dégradé au bord.
+- **Au doigt** (`pointer: coarse`) : les raccourcis clavier des menus se retirent ; les aides disent « Touchez »
+  là où la souris dit « Cliquez » (`selonSaisie`, `util/texte.ts`) ; un bouton qui n'apparaît qu'au survol reste visible
+  (`hover: none`).
 
 ### Named Rules
 **La règle de l'établi rangé.** La barre garde l'outil fréquent ; le reste vit dans un menu avec son raccourci.
@@ -255,9 +294,12 @@ une ombre.
 
 Des coins doucement arrondis, croissant avec la taille de la surface : champ (5 px), bouton (6 px), menu
 (8 px), carte et zone de dépôt (10 px). Les bords sont des filets de 1 px ; la zone de dépôt est en tirets
-(2 px), comme un gabarit à remplir. Les pastilles de couleur sont carrées à 4 px ; le bouton « aucun » d'une
-couleur est un rond. Le focus est un contour plein de
-2 px en cyan d'encre, décalé de 2 px.
+(2 px), comme un gabarit à remplir. Les pastilles de couleur sont carrées à 4 px, bordées du filet fort ; une forme
+sans fond a une pastille vide à filet dans les calques. Le bouton « aucun » d'une couleur est un rond (un carré de
+40 px au doigt) marqué d'une barre oblique : au repos, filet et encre douce ; choisi, un filet double et la barre en cyan
+d'encre, **jamais** le rouge d'échec, qui ne sert qu'aux messages et aux gestes destructifs ; en contraste forcé,
+`Highlight`. Le focus est un contour plein de 2 px en cyan d'encre, décalé de 2 px, sur les boutons, les champs, les
+sommaires **et les liens**.
 
 ## Components
 
@@ -290,7 +332,12 @@ Retenus au repos, francs à l'interaction.
 - **Carte de voie (accueil):** feuille de panneau, filet, coins de 10 px, 16 px ; voie choisie : filet cyan doublé
   et voile cyan à 7 %.
 - **Sections de l'inspecteur:** repliables (`details`), contenu dense, mémoire d'ouverture.
-- **Messages:** fond et texte d'alerte ou d'échec, coins de 6 px, 10 × 12 px.
+- **Messages:** coins de 6 px, 10 × 12 px. Un avertissement ou un échec : fond et texte d'alerte ou d'échec,
+  `role="alert"`. Un succès ou une information (« Dessin enregistré… », le résultat d'un export) : **message neutre**,
+  l'encre sur une feuille de panneau, un filet, `role="status"` (`commun/Message.tsx`) ; l'ambre n'annonce plus un
+  succès.
+- **Calques:** une ligne nomme la forme par son genre (« Cercle 2 », « Triangle 3 », « Tracé courbe 1 ») tant que le
+  modèle n'a pas de nom propre ; le nom accessible reste « Forme 3, triangle, fond… ». Rien ne s'écrit dans le SVG.
 
 ### Pastilles d'événements (bibliothèque)
 Le filtre de la bibliothèque, à la place d'une liste déroulante de 45 lignes.
@@ -323,6 +370,18 @@ Le carnet d'atelier le plus littéral : un profil en une ligne d'aide, la taille
 mesures, puis les constats classés Bloquant (rouge d'échec), À corriger (ambre d'alerte), Conseil (encre douce),
 chacun avec ses boutons secondaires de correction ; une seule action primaire, « Exporter pour Cricut ».
 
+## Surfaces du navigateur
+
+Ce que le navigateur dessine seul porte aussi le système (`base.css`), dans les deux thèmes :
+- **Couleur d'accent** : `accent-color: var(--cyan)` posé une fois sur la racine, hérité par les curseurs, cases,
+  radios et barres de progression, au bureau comme au doigt.
+- **Texte d'exemple** (`::placeholder`) : l'encre douce, opacité 1 (Firefox l'estompait), 4,5:1 sur le fond d'un champ
+  (la table) comme sur un panneau ; le gris du navigateur tenait 3,9:1.
+- **Texte choisi** (`::selection`) : le jeton `--selection` sous l'encre ; **curseur de saisie** (`caret-color`) en cyan.
+- **Barres de défilement** (`scrollbar-color`) : le filet fort sur un rail transparent ; Safari, qui ne le connaît pas,
+  garde les siennes.
+- **Liens** : cyan, soulignement détaché (`text-underline-offset: 0.2em`), anneau de focus cyan de 2 px comme les boutons.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -330,7 +389,8 @@ chacun avec ses boutons secondaires de correction ; une seule action primaire, �
   sombre et sa paire de contraste 4,5:1.
 - **Do** garder une seule action pleine en cyan d'encre par panneau ; tout autre bouton est secondaire ou discret.
 - **Do** écrire mesures, codes couleur et noms de fichier en IBM Plex Mono.
-- **Do** donner 24 × 24 px à toute cible à la souris et 40 px au doigt.
+- **Do** donner 24 × 24 px à toute cible à la souris et 40 px au doigt (pastilles du nuancier et curseurs compris).
+- **Do** écrire en chiffres tabulaires ce qui compte et change, et dire la graisse (400 ou 500) de la chasse fixe.
 - **Do** dessiner les repères de fabrication (tapis, grille, zone utile) en filets et pointillés, sous le dessin.
 
 ### Don't:

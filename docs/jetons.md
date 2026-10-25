@@ -8,6 +8,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--table` | `#e9ecef` | `#121518` | Le fond de la page, et du champ de travail autour du plan |
 | `--panneau` | `#f7f8f9` | `#1a1e22` | Les barres, panneaux, cartes et menus : ce qui se pose sur la table |
+| `--selection` | `#c6dde6` | `#2a4b5a` | Le fond du texte sélectionné : la couleur d’outil adoucie, sous l’encre |
 
 ### Les encres : le texte et ses nuances
 
@@ -21,6 +22,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | Jeton | Clair | Sombre | Rôle |
 |---|---|---|---|
 | `--filet` | `#cfd4da` | `#2f353c` | Les bordures et séparations ; décoratif, il ne porte jamais seul une information |
+| `--filet-fort` | `#7d848d` | `#69717b` | Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement |
 
 ### La couleur d’outil : une seule, pour l’action et l’état actif
 
@@ -75,14 +77,22 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--encre` sur `--table` | 15.00 | 15.03 | texte sur la page |
 | `--encre` sur `--panneau` | 16.73 | 13.76 | texte dans les panneaux et menus |
-| `--encre-douce` sur `--table` | 5.70 | 7.17 | aides sur la page |
+| `--encre-douce` sur `--table` | 5.70 | 7.17 | aides sur la page, texte d’exemple d’un champ (::placeholder) |
 | `--encre-douce` sur `--panneau` | 6.35 | 6.56 | aides dans les panneaux |
+| `--encre` sur `--selection` | 12.61 | 7.65 | texte sélectionné (::selection) |
 | `--cyan` sur `--table` | 4.61 | 7.69 | liens et boutons discrets sur la page |
 | `--cyan` sur `--panneau` | 5.14 | 7.04 | liens et boutons discrets dans les panneaux |
 | `--sur-cyan` sur `--cyan` | 5.47 | 7.04 | libellé de l’action primaire et de l’outil actif |
 | `--alerte` sur `--alerte-fond` | 5.06 | 7.54 | message d’avertissement |
 | `--echec` sur `--echec-fond` | 5.28 | 6.40 | message d’échec, survol d’un geste destructif |
 | `--echec` sur `--panneau` | 6.26 | 6.95 | geste destructif au repos |
+
+### Contrastes exigés hors texte (WCAG 2.x 1.4.11, au moins 3:1)
+
+| Paire | Clair | Sombre | Usage |
+|---|---|---|---|
+| `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
+| `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
 
 ### La typographie : cinq tailles nommées par leur rôle
 

@@ -62,7 +62,12 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `content-visibility` | 85 | 125 | 18 | Ignoré : seul le coût de rendu d’une très longue liste change, et elle est déjà fenêtrée (ADR-0008) |
 | `contain-intrinsic-size` | 83 | 107 | 17.4 | Ignoré avec `content-visibility` |
 | `scrollbar-width` | 121 | 64 | 18.2 | Ignoré : barres de défilement de largeur ordinaire dans les barres d’outils étroites |
-| `accent-color` | 93 | 92 | 15.4 | Ignoré : curseurs et cases aux couleurs du système |
+| `accent-color` | 93 | 92 | 15.4 | Ignoré : curseurs, cases, radios et barres de progression aux couleurs du système |
+| `scrollbar-color` | 121 | 64 | — | Ignoré : barres de défilement aux couleurs du système (Safari ne la connaît pas) |
+| `:is()` | 88 | 78 | 14 | Aucun, sous le plancher technique |
+| `text-underline-offset` | 87 | 70 | 12.1 | Aucun, sous le plancher technique |
+| `font-variant-numeric` | 52 | 34 | 9.1 | Aucun, sous le plancher technique |
+| `hover: none` | 41 | 64 | 9 | Aucun, sous le plancher technique |
 | `dvh` | 108 | 101 | 15.4 | La ligne `max-height` avec `vh` précède celle avec `dvh` : un navigateur qui ne connaît pas `dvh` garde `vh` (un menu peut passer sous la barre d’adresse d’un mobile) |
 | `inset` | 87 | 66 | 14.1 | Aucun, sous le plancher technique |
 | `overflow-wrap` | 80 | 65 | 15.4 | Ignoré (`anywhere` : un nom de fichier très long déborde au lieu de se couper) |
