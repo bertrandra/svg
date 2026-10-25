@@ -12,6 +12,7 @@ import { apercusTexte, type Apercu } from '../engine/texte/apercu.js';
 import { cheminDuTexte } from '../engine/texte/bloc.js';
 import { nouveauTexte } from '../engine/texte/vivant.js';
 import { estIdCatalogue, familleDe, variantesDe, type VariantePolice } from '../model/cataloguePolices.js';
+import { baseDeGrasse, stylesLivres } from '../model/polices.js';
 import type { Police } from '../io/polices.js';
 import { TEXTE_APERCU } from './actionsTexte.js';
 import { useActions } from './contexteEditeur.js';
@@ -40,7 +41,9 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
   const [erreurStyle, poserErreurStyle] = useState('');
   const idApercu = useId(), idExplorateur = useId();
   const police = polices?.find(p => p.id === valeur) ?? null;
-  const contour = polices?.filter(p => p.nature === 'contour' && !p.id.startsWith('u-') && !estIdCatalogue(p.id)) ?? [];
+  // Une famille livree, une ligne : la variante grasse se choisit dans « Style ».
+  const contour = polices?.filter(p => p.nature === 'contour' && !p.id.startsWith('u-') && !estIdCatalogue(p.id) && baseDeGrasse(p.id) === null) ?? [];
+  const famille = baseDeGrasse(valeur) ?? valeur;
   const trait = polices?.filter(p => p.nature === 'trait') ?? [];
   const deposees = polices?.filter(p => p.id.startsWith('u-')) ?? [];
   const telechargees = polices?.filter(p => estIdCatalogue(p.id)) ?? [];
@@ -51,7 +54,11 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
     const f = familleDe(tx.catalogue, valeur);
     return f && f.variantes.length > 1 ? variantesDe(f) : [];
   }, [valeur, tx.catalogue]);
+  const livres = stylesLivres(valeur);
+  const optionsStyle: ReadonlyArray<{ readonly id: string; readonly nom: string }> = livres.length ? livres : styles;
   const choisirStyle = async (id: string) => {
+    const livre = livres.find(s => s.id === id);
+    if (livre) { const p = polices?.find(x => x.id === livre.id); if (p) poser(p.id, p); return; }
     const v = styles.find(s => s.id === id);
     if (!v) return;
     const deja = polices?.find(p => p.id === v.id);
@@ -67,7 +74,7 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
       <label className="champ-ligne">
         <span>Police</span>
         {polices === null ? <span className="aide">Chargement des polices…</span> : (
-          <select value={valeur} disabled={desactive} onChange={e => poser(e.target.value)} aria-label="Police">
+          <select value={famille} disabled={desactive} onChange={e => poser(e.target.value)} aria-label="Police">
             {!police ? <option value={valeur} disabled>{absente ?? 'Police absente'}</option> : null}
             <optgroup label="Lettres pleines">{contour.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup>
             {trait.length ? <optgroup label="Trait unique (stylo)">{trait.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
@@ -76,11 +83,11 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
           </select>
         )}
       </label>
-      {styles.length ? (
+      {optionsStyle.length ? (
         <label className="champ-ligne">
           <span>Style</span>
           <select value={valeur} disabled={desactive} onChange={e => void choisirStyle(e.target.value)} aria-label="Style de la police">
-            {styles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+            {optionsStyle.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
           </select>
         </label>
       ) : null}

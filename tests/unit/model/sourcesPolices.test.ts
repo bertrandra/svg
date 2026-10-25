@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  CATEGORIES_EXCLUES, LICENCES_POLICES, SERVEURS_POLICES, SOURCES_EXCLUES, SOURCES_POLICES, estLicenceAdmise, fonderieFontsource, hotesDe, type IdLicencePolice
+  CATEGORIES_EXCLUES, FAMILLES_ILLISIBLES, LICENCES_POLICES, SERVEURS_POLICES, SOURCES_EXCLUES, SOURCES_POLICES, estLicenceAdmise, fonderieFontsource, hotesDe, type IdLicencePolice
 } from '../../../src/model/sourcesPolices.js';
 import { validerCatalogue, type CataloguePolices } from '../../../src/model/cataloguePolices.js';
 
@@ -54,6 +54,14 @@ describe('le registre des polices libres', () => {
 });
 
 describe('l index commis (data/catalogue-polices.json)', () => {
+  it('ne garde aucune famille que l editeur ne sait pas lire (chacune avec sa raison)', () => {
+    expect(FAMILLES_ILLISIBLES.length).toBeGreaterThan(0);
+    for (const x of FAMILLES_ILLISIBLES) {
+      expect(x.raison.length, x.id).toBeGreaterThan(10);
+      expect(INDEX.familles.some(f => f.depot === 'fontsource' && f.id === x.id), x.id).toBe(false);
+    }
+  });
+
   it('passe la validation de la page, telle que le build et l annexe l emploient', () => {
     const v = validerCatalogue(INDEX);
     expect('erreur' in v ? v.erreur : 'valide').toBe('valide');

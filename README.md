@@ -86,7 +86,7 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/editeur-svg-embarque.js
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js
 npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
 
@@ -101,8 +101,9 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` et une annexe par source libre, `dist/bibliotheque-<source>.js` |
-| `npm run polices` | Les dix fontes seules, `dist/polices.js`, et l'index des polices téléchargeables, `dist/polices-catalogue.js` (tiré de l'instantané commis `data/catalogue-polices.json`, sans réseau) |
+| `npm run polices` | Les dix fontes seules, `dist/polices.js`, et l'index des polices téléchargeables, `dist/polices-catalogue.js` (tiré de l'instantané commis `data/catalogue-polices.json`, sans réseau), et ses aperçus, `dist/polices-apercus.js` (tirés de `data/apercus-polices.json`) |
 | `node scripts/catalogue-polices.mjs` | À la main seulement : rafraîchit l'instantané `data/catalogue-polices.json` depuis Fontsource, jsDelivr, GitLab et Fontshare (`NODE_USE_ENV_PROXY=1` derrière un proxy) ; une version remplacée passe dans `anciennes`, pour qu'un dessin d'hier se recompose (ADR-0025) |
+| `node scripts/apercus-polices.mjs` | À la main seulement, après l'index : redessine `data/apercus-polices.json`, le nom de chaque famille dans sa propre fonte (chaque fichier vérifié par l'empreinte de l'index ; `APERCUS_CACHE=<dossier>` garde les fichiers téléchargés) (ADR-0026) |
 
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
 statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo), les `bibliotheque-<source>.js` (de 0,9 à 3,6 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
@@ -172,8 +173,8 @@ l'impose.
   `@expo-google-fonts/*` ; la police à trait unique EMS Readability (SIL OFL 1.1) vient du paquet `hersheytext`. L'interface est en [React](https://react.dev) (MIT), en *Instrument Sans* et *IBM Plex Mono* (SIL OFL 1.1,
   sous-ensemble latin, paquets `@fontsource/*`), incorporées à `dist/editeur-svg.html` : la page ne les demande à aucun serveur.
 - Les polices libres téléchargeables à la demande (ADR-0025) ne sont pas redistribuées : `dist/polices-catalogue.js` n'en est
-  que l'index (noms, licences, versions épinglées, empreintes sha256) ; la personne télécharge le fichier depuis sa source, et le
-  dessin n'en garde que les contours. La licence de chaque police employée est nommée dans « À propos et crédits ».
+  que l'index (noms, licences, versions épinglées, empreintes sha256), et `dist/polices-apercus.js` que le nom de chaque famille
+  dessiné dans sa fonte (ADR-0026) ; la personne télécharge le fichier depuis sa source, et le dessin n'en garde que les contours. La licence de chaque police employée est nommée dans « À propos et crédits ».
 - **Le copyright et la licence de chaque composant tiers sont dans [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**, généré par
   `npm run mentions` à partir de `src/model/credits.ts`, du `package-lock.json` et des fichiers de licence des paquets ; le même texte
   est construit dans `dist/MENTIONS.txt` et doit accompagner toute redistribution de `dist/`. Un test échoue si ce fichier est périmé

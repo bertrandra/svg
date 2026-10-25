@@ -5,7 +5,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Forme, TexteVivant } from '../engine/editionSvg.js';
 import { MODES_VECTORISATION, NOMS_MODES, type ModeVectorisation } from '../engine/texte/vectoriser.js';
-import { VARIANTES_GRASSES, baseDeGrasse, naturePolice } from '../model/polices.js';
+import { naturePolice } from '../model/polices.js';
 import { Section } from './commun/Section.js';
 import { ChoixPolice } from './ChoixPolice.js';
 import { Nombre } from './commun/Nombre.js';
@@ -40,7 +40,6 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
   };
   const quitterChamp = () => { cle.current = null; ac.finir(); poserBrouillon(t.texte); };
   const choisirPolice = (id: string, donnee?: Police) => { const p = donnee ?? polices?.find(x => x.id === id); if (p) changer({ police: p }); };
-  const base = baseDeGrasse(t.police.id) ?? t.police.id, grasse = VARIANTES_GRASSES[base as keyof typeof VARIANTES_GRASSES];
   const mode: ModeVectorisation = at.mode;
   const enTrait = naturePolice(t.police.id) === 'trait';
   return (
@@ -56,11 +55,6 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
       <ChoixPolice polices={polices} valeur={t.police.id} poser={choisirPolice} texte={brouillon} absente={'Police absente : ' + nom} />
       {absente ? <RetrouverPolice texte={t} poser={choisirPolice} /> : null}
       {absente ? <DeposerPolice deposer={deposer} poser={choisirPolice} /> : null}
-      {grasse ? (
-        <label className="case">
-          <input type="checkbox" checked={t.police.id === grasse} disabled={!polices} onChange={e => choisirPolice(e.target.checked ? grasse : base)} /> Gras
-        </label>
-      ) : null}
       <div className="grille-2">
         <Nombre libelle="Taille" valeur={t.taille} min={0.01} poser={v => changer({ taille: v })} />
         <Nombre libelle="Espace" valeur={t.interlettrage} poser={v => changer({ interlettrage: v })} />

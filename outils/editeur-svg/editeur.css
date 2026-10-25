@@ -413,7 +413,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .saisie-texte { position: absolute; z-index: var(--couche-saisie); display: grid; gap: var(--esp-2xs); margin-top: var(--esp-s); padding: var(--esp-s); max-width: min(360px, calc(100% - 16px)); background: var(--panneau); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); }
 .saisie-texte textarea { min-width: 220px; max-width: 100%; resize: vertical; font-size: var(--texte-corps); }
 /* Toutes les polices (ADR-0025) : une feuille dans le flux, comme l'apercu ; la longue liste defile seule et se fenetre (ADR-0008).
-   Les noms s'ecrivent dans la police de l'interface : aucun apercu ne telecharge rien. */
+   Un nom se dessine dans sa propre fonte quand on l'a, ou par l'apercu prepare de l'annexe (ADR-0026) ; aucun apercu ne
+   telecharge rien. */
 .choix-police > .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-xs) var(--esp-m); }
 .explorateur-polices { display: grid; gap: var(--esp-s); width: 100%; min-width: 0; padding: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: var(--table); }
 .explorateur-polices input[type="search"] { width: 100%; min-width: 0; }
@@ -432,6 +433,12 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .police-ligne { flex: 1; min-width: 0; min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: var(--esp-s); padding: var(--esp-2xs) var(--esp-s); border: 0; border-radius: 0; background: transparent; color: var(--encre); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
 .police-ligne[aria-pressed="true"] { box-shadow: inset 3px 0 0 var(--cyan); font-weight: 600; }
 .police-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* L'apercu : un dessin a la couleur du texte (contraste force compris), haut de 24 px (le cadre de 43 unites : 95 % des noms y tiennent) ; un nom plus long que
+   la ligne est coupe a son bord, jamais il n'elargit la liste. */
+.police-nom-apercu { flex: 0 1 auto; display: flex; align-items: center; min-width: 0; }
+.apercu-nom { flex: none; display: block; height: 1.5rem; width: auto; max-width: none; overflow: hidden; }
+.apercu-nom path { fill: currentColor; stroke: none; }
+.apercu-nom.au-trait path { fill: none; stroke: currentColor; stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .police-badges { flex: none; display: flex; gap: var(--esp-2xs); }
 .badge-source, .badge-licence { padding: 0 var(--esp-xs); border: 1px solid var(--filet-fort); border-radius: var(--rayon-pastille); color: var(--encre-douce); font-size: var(--texte-petit); font-weight: 400; white-space: nowrap; }
 .badge-licence { border-color: var(--alerte); color: var(--alerte); font-weight: 600; }

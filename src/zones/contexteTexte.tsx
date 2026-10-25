@@ -9,8 +9,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { policeDeposee, retenirDeposee, toutesLesPolices, type Police } from '../io/polices.js';
 import { chargerCatalogue as chargerIndex } from '../io/cataloguePolices.js';
+import { chargerApercus as chargerAnnexeApercus } from '../io/apercusPolices.js';
 import { accorderConsentement, cacheNavigateur, lireConsentement, retirerConsentement, serveursAAccepter, telechargerVariante } from '../io/policesEnLigne.js';
 import type { CataloguePolices, VariantePolice } from '../model/cataloguePolices.js';
+import type { AnnexeApercus } from '../model/apercusPolices.js';
 import type { IdServeur } from '../model/sourcesPolices.js';
 import type { ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { useStockage } from './contexteStockage.js';
@@ -51,6 +53,12 @@ export interface EtatTexte {
   readonly catalogue: CataloguePolices | null;
   readonly erreurCatalogue: string;
   readonly chargerCatalogue: () => void;
+  /**
+   * Les apercus prepares des familles de l'index (ADR-0026), ou null tant qu'ils ne sont pas charges (ou s'ils ne le sont
+   * jamais : la liste ecrit alors les noms dans la police de l'interface, et `erreurApercus` le dit).
+   */
+  readonly apercus: AnnexeApercus | null;
+  readonly erreurApercus: string;
   /** Les serveurs acceptes par la personne ; vide : aucune requete. */
   readonly acceptes: ReadonlySet<IdServeur>;
   /** Telecharge une variante : demande d'abord le consentement s'il manque pour ses serveurs. */
@@ -79,6 +87,8 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   const [catalogue, poserCatalogue] = useState<CataloguePolices | null>(null);
   const [erreurCatalogue, poserErreurCatalogue] = useState('');
   const [catalogueDemande, demanderCatalogue] = useState(false);
+  const [apercus, poserApercus] = useState<AnnexeApercus | null>(null);
+  const [erreurApercus, poserErreurApercus] = useState('');
   const [acceptes, poserAcceptes] = useState<ReadonlySet<IdServeur>>(() => (enLigne ? lireConsentement(stockage) : new Set()));
   const [demande, poserDemande] = useState<Demande | null>(null);
   const [favoris, poserFavoris] = useState<readonly string[]>(() => listeDeCles(stockage?.lire(CLE_FAVORIS), FAVORIS_MAX));
@@ -97,6 +107,8 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
     if (!catalogueDemande || !enLigne) return;
     let vivant = true;
     chargerIndex().then(c => { if (vivant) poserCatalogue(c); }).catch((e: unknown) => { if (vivant) poserErreurCatalogue(e instanceof Error ? e.message : String(e)); });
+    // Les apercus prepares, une annexe voisine a part (plus lourde que l'index) : leur absence ne retient pas la liste.
+    chargerAnnexeApercus().then(a => { if (vivant) poserApercus(a); }).catch((e: unknown) => { if (vivant) poserErreurApercus(e instanceof Error ? e.message : String(e)); });
     return () => { vivant = false; };
   }, [catalogueDemande, enLigne]);
   const rafraichir = useCallback(async () => poserPolices(await toutesLesPolices()), []);
@@ -145,9 +157,9 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   const valeur = useMemo<EtatTexte & { demander: () => void }>(() => ({
     saisie, ouvrirSaisie: id => { demander(true); poserSaisie(id); }, fermerSaisie: () => poserSaisie(null),
     mode, poserMode, polices, erreurPolices, deposer, retenir, demander: () => demander(true),
-    enLigne, catalogue, erreurCatalogue, chargerCatalogue: () => demanderCatalogue(true), acceptes, telecharger, revoquer,
+    enLigne, catalogue, erreurCatalogue, chargerCatalogue: () => demanderCatalogue(true), apercus, erreurApercus, acceptes, telecharger, revoquer,
     favoris, basculerFavori, recentes, noterRecente
-  }), [saisie, mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, acceptes, telecharger, revoquer, favoris, basculerFavori, recentes, noterRecente]);
+  }), [saisie, mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, apercus, erreurApercus, acceptes, telecharger, revoquer, favoris, basculerFavori, recentes, noterRecente]);
   return (
     <Contexte.Provider value={valeur}>
       {children}
@@ -159,7 +171,7 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
 const HORS: EtatTexte & { demander: () => void } = {
   saisie: null, ouvrirSaisie: () => undefined, fermerSaisie: () => undefined, mode: null, poserMode: () => undefined,
   polices: null, erreurPolices: '', deposer: () => Promise.resolve({ erreur: 'Aucun éditeur.' }), retenir: () => undefined, demander: () => undefined,
-  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, acceptes: new Set(), telecharger: () => Promise.resolve(null),
+  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', acceptes: new Set(), telecharger: () => Promise.resolve(null),
   revoquer: () => undefined, favoris: [], basculerFavori: () => undefined, recentes: [], noterRecente: () => undefined
 };
 
