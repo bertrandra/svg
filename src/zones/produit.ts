@@ -5,3 +5,8 @@
 declare const VERSION_PRODUIT: string | undefined;
 
 export const versionProduit = (): string => (typeof VERSION_PRODUIT === 'string' ? VERSION_PRODUIT : 'développement');
+
+declare const DEPOT_PRODUIT: string | undefined;
+
+/** Le depot declare par package.json (`repository.url`), tel que le build de la page le pose ; hors de ce build, rien. */
+export const depotProduit = (): string | undefined => (typeof DEPOT_PRODUIT === 'string' && DEPOT_PRODUIT ? DEPOT_PRODUIT : undefined);

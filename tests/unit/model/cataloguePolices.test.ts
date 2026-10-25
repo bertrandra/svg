@@ -25,10 +25,12 @@ describe('l identite d une variante', () => {
     expect(id).toMatch(/^c-[0-9a-f]{14}$/);
     expect(estIdCatalogue(id)).toBe(true);
     // La meme variante d'une autre version garde son identifiant ; sa version, elle, change.
-    expect(idVariante({ ...f, version: '5.4.0' }, [400, 0, SHA2, null])).toBe(id);
+    const suivante: FamilleCatalogue = { ...f, version: '5.4.0' };
+    expect(idVariante(suivante, [400, 0, SHA2, null])).toBe(id);
     expect(versionVariante([400, 0, SHA, SHA2])).not.toBe(versionVariante([400, 0, SHA2, null]));
     expect(idVariante(f, [400, 1, SHA, null])).not.toBe(id);
-    expect(idVariante({ ...f, depot: 'fontshare' }, [400, 0, SHA, null, 'X'])).not.toBe(id);
+    const ailleurs: FamilleCatalogue = { ...f, depot: 'fontshare' };
+    expect(idVariante(ailleurs, [400, 0, SHA, null, 'X'])).not.toBe(id);
     // Une valeur figee : changer la cle changerait l'identifiant de tous les textes deja ecrits.
     expect(idVariante({ depot: 'fontsource', id: 'roboto' }, [400, 0, SHA, null])).toBe('c-1b0c5ca30f8f68');
     expect(idVariante({ depot: 'fontsource', id: 'roboto' }, [700, 1, SHA, null])).toBe('c-0851166f6bdb0c');

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin, lireDessin, lireProduction, marquerProduction, type DessinSvg, type MarqueProduction } from '../../../src/engine/editionSvg.js';
-import { choixDeMarque, marqueDeChoix, normaliserChoix, resoudreProfil } from '../../../src/engine/preparation.js';
+import { choixDeDepart, choixDeMarque, marqueDeChoix, normaliserChoix, resoudreProfil } from '../../../src/engine/preparation.js';
 import { CHOIX_CRICUT_DEFAUT, CHOIX_GENERIQUE, type ChoixProduction } from '../../../src/model/contextes.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { violationsEcriture, violationsNettoyage } from '../securite/invariants.js';
@@ -85,6 +85,18 @@ describe('le choix et sa marque', () => {
     expect(m).toEqual(MARQUE);
     expect(choixDeMarque(m).choix).toEqual(CRICUT_MAKER);
     expect(choixDeMarque(null).choix).toEqual(CHOIX_GENERIQUE);
+  });
+
+  it('part du depart propose (le public « machine », ADR-0024) quand le SVG ne porte aucune marque ; une marque l emporte toujours', () => {
+    const depart: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT };
+    expect(choixDeDepart(undefined, depart)).toEqual({ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' });
+    expect(choixDeDepart(null, null)).toEqual(CHOIX_GENERIQUE);
+    expect(choixDeDepart(undefined, undefined)).toEqual(CHOIX_GENERIQUE);
+    // Le fichier a parle : sa marque, meme celle d'un contexte inconnu (Generique), passe avant le depart.
+    expect(choixDeDepart(MARQUE, depart)).toEqual(CRICUT_MAKER);
+    expect(choixDeDepart({ contexte: 'silhouette' }, depart)).toEqual(CHOIX_GENERIQUE);
+    // Un depart incoherent est ramene au plus proche choix valide, comme un choix de la barre.
+    expect(choixDeDepart(undefined, { ...depart, machine: 'joy' })).toEqual({ ...depart, machine: 'joy', tapis: 'joy-4x6' });
   });
 
   it('dit un contexte inconnu (un fichier d une version plus recente) et ouvre en Generique', () => {

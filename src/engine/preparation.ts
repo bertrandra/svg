@@ -4,7 +4,7 @@
 // horloge, ni hasard, ni reseau.
 
 export {
-  resoudreProfil, normaliserChoix, marqueDeChoix, marqueDeProfil, choixDeMarque, unitesDePouces, versUnite, depuisUnite, texteMesure, texteTaille,
+  resoudreProfil, normaliserChoix, marqueDeChoix, marqueDeProfil, choixDeMarque, choixDeDepart, unitesDePouces, versUnite, depuisUnite, texteMesure, texteTaille,
   cadreTapis, unionCadres, type CadreTapis, type ProfilProduction
 } from './preparation/profil.js';
 export {

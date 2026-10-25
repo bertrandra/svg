@@ -60,6 +60,68 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
   .voie { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--esp-l); padding: var(--esp-l) var(--esp-xl); }
   .voie .icone { grid-row: 1 / 3; align-self: center; margin: 0; }
 }
+/* Un accueil par public (ADR-0024). La question est une feuille de carnet, pas trois cartes : trois lignes d'un meme formulaire,
+   separees par un filet, de meme forme et de meme poids, toutes secondaires (choisir un public regle l'accueil, ce n'est pas
+   l'action du moment) ; « Passer » discret en bas a droite. Une fois repondue, une ligne la rappelle. */
+.public-question { display: grid; gap: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.public-question h2 { margin: 0; }
+.public-question > .aide { margin: 0; max-width: 34em; }
+.publics { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--filet); }
+.publics > li { border-bottom: 1px solid var(--filet); padding: var(--esp-xs) 0; }
+.public { width: 100%; display: grid; grid-template-columns: auto minmax(14em, 17em) minmax(0, 1fr); align-items: baseline; column-gap: var(--esp-l); padding: var(--esp-m) var(--esp-l); border-color: transparent; text-align: left; color: var(--encre); }
+.public .icone { color: var(--cyan); align-self: center; }
+.public-titre { font-size: var(--texte-corps); font-weight: 600; }
+.public-phrase { font-size: var(--texte-compact); font-weight: 400; color: var(--encre-douce); }
+.public.actuel { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .public.actuel { background: var(--repli-cyan-7-panneau); } }
+.public-passer { margin: 0; justify-self: end; }
+.public-rappel p { margin: 0; color: var(--encre-douce); display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--esp-s); }
+.public-rappel strong { color: var(--encre); font-weight: 600; }
+.public-rappel .discret { padding: 0 var(--esp-xs); }
+@media (max-width: 640px) {
+  .public { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--esp-2xs); }
+  .public-phrase { grid-column: 2; }
+}
+/* Le circuit « l'ensemble sur une plateforme » : trois etapes liees par un filet en tirets, comme le gabarit d'un carnet ; un
+   pictogramme sur une petite feuille (decoratif), un numero en chasse fixe, le texte reel a cote. Au-dessus des voies : l'etape 1
+   est ce que les voies proposent. Sous 640 px, le filet descend a gauche. */
+.circuit-public, .integration { display: grid; gap: var(--esp-l); }
+.circuit-public h2, .integration h2 { margin: 0; }
+.circuit-public h2:focus, .integration h2:focus { outline: none; }
+.circuit-public h2:focus-visible, .integration h2:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.circuit { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-xl); }
+.etape { position: relative; display: grid; grid-template-rows: auto auto; gap: var(--esp-m); align-content: start; justify-items: start; }
+/* Le filet va d'une feuille a la suivante, a mi-hauteur, sans toucher au texte qui est dessous. */
+.etape:not(:last-child)::after { content: ""; position: absolute; top: calc(var(--esp-2xl) - 1px); left: calc(var(--esp-3xl) + var(--esp-m)); right: calc(var(--esp-m) - var(--esp-xl)); border-top: 2px dashed var(--filet-fort); }
+.etape-picto { display: grid; place-items: center; width: var(--esp-3xl); height: var(--esp-3xl); border: 1px solid var(--filet); border-radius: var(--rayon-menu); background: var(--panneau); color: var(--encre); }
+.etape-texte { display: grid; gap: var(--esp-2xs); }
+.etape-titre { font-weight: 600; display: flex; gap: var(--esp-s); align-items: baseline; }
+.etape-numero { font-family: var(--mono); font-weight: 500; font-size: var(--texte-petit); color: var(--encre-douce); }
+.etape-aide { font-size: var(--texte-compact); color: var(--encre-douce); max-width: 22em; }
+.circuit-public > p { margin: 0; max-width: 46em; }
+/* Pour le public « retouche », l'invitation a la visite est la suite du circuit, en evidence : une note comme un repere (filet et voile
+   cyan), jamais une seconde action pleine (DESIGN.md, « le guide discret »). */
+.circuit-public .invitation { justify-content: flex-start; justify-self: start; border: 1px solid var(--cyan); border-radius: var(--rayon-bouton); padding: var(--esp-m) var(--esp-l); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .circuit-public .invitation { background: var(--repli-cyan-8-panneau); } }
+@media (max-width: 640px) {
+  .circuit { grid-template-columns: minmax(0, 1fr); gap: var(--esp-l); }
+  .etape { grid-template-rows: none; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--esp-l); }
+  .etape:not(:last-child)::after { top: calc(var(--esp-3xl) + var(--esp-xs)); bottom: calc(var(--esp-xs) - var(--esp-l)); left: calc(var(--esp-2xl) - 1px); right: auto; border-top: 0; border-left: 2px dashed var(--filet-fort); }
+}
+/* Le panneau des integrateurs : une feuille, les options en deux colonnes (le nom en chasse fixe, ce qu'il fait), l'extrait de code
+   sur la table, qui defile en largeur plutot que de couper une ligne de JavaScript. */
+.integration { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.integration p { margin: 0; }
+.integration > .aide { max-width: 46em; font-size: var(--texte-corps); }
+.integration h3 { font-size: var(--texte-corps); margin: var(--esp-xs) 0 0; }
+.integration code { font-family: var(--mono); font-weight: 400; font-size: var(--texte-compact); }
+.options-integration { margin: 0; display: grid; gap: var(--esp-s); }
+.options-integration > div { display: grid; grid-template-columns: minmax(10em, 13em) minmax(0, 1fr); gap: var(--esp-l); align-items: baseline; }
+.options-integration dt, .options-integration dd { margin: 0; }
+.options-integration dd { color: var(--encre-douce); font-size: var(--texte-compact); }
+.code-integration { margin: 0; padding: var(--esp-l); overflow-x: auto; background: var(--table); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); line-height: 1.6; }
+.code-integration:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+@media (max-width: 640px) { .options-integration > div { grid-template-columns: minmax(0, 1fr); gap: var(--esp-2xs); } }
 .depot.petit { padding: var(--esp-xl); }
 .reglages-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--esp-l); align-items: start; }
 .reglages-image .actions { grid-column: 1 / -1; align-items: center; }

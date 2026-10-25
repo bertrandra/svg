@@ -5,21 +5,24 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, ouvrirExemple, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, ouvrirExemple, pilote, RACINE_DEPOT, surToutLaHauteur, terminer, texteDe } from './aide.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const CHARGEMENT = 60_000;
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
+// L'audit se fait fenetre a la hauteur de la page (surToutLaHauteur, aide.ts) : un texte a cheval sur son bord est un doute, pas un contraste.
 async function auditer(page: Page): Promise<string[]> {
-  await attendreAnimations(page);
-  await page.addScriptTag({ content: AXE });
-  return page.evaluate(async () => {
-    const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
-    const r = await w.axe.run(document, { resultTypes: ['violations', 'incomplete'] });
-    const dire = (genre: string) => (v: { id: string; nodes: Array<{ target: unknown[] }> }) => genre + ' ' + v.id + ' ' + JSON.stringify(v.nodes.slice(0, 3).map(n => n.target));
-    return [...r.violations.map(dire('violation')), ...r.incomplete.map(dire('à relire'))];
+  return surToutLaHauteur(page, async () => {
+    await attendreAnimations(page);
+    await page.addScriptTag({ content: AXE });
+    return page.evaluate(async () => {
+      const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
+      const r = await w.axe.run(document, { resultTypes: ['violations', 'incomplete'] });
+      const dire = (genre: string) => (v: { id: string; nodes: Array<{ target: unknown[] }> }) => genre + ' ' + v.id + ' ' + JSON.stringify(v.nodes.slice(0, 3).map(n => n.target));
+      return [...r.violations.map(dire('violation')), ...r.incomplete.map(dire('à relire'))];
+    });
   });
 }
 
@@ -150,7 +153,8 @@ describe('bibliotheques libres', () => {
     await zone.getByRole('button', { name: 'cœur (Lucide, en ligne)', exact: true }).click();
     await attend(() => p.locator('.editeur-barre-selection').count()).toBe(1);
 
-    await p.keyboard.press('Control+s');
+    // Ctrl+S ne garde qu'un brouillon : le geste de fin de la page ramene a la fiche et a son apercu.
+    await terminer(p);
     await p.locator('img.apercu').waitFor();
     const svg = await apercu(p);
     expect(svg).toContain('data-origine="mdi:heart"');

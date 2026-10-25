@@ -120,6 +120,46 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
+    // Un accueil par public (ADR-0024) : chaque etat de la question et chaque suite adaptee, clair et sombre, bureau et telephone.
+    for (const [publicAccueil, nom] of [[undefined, 'question de la première visite'], ['machine', 'public machine'], ['retouche', 'public retouche'], ['integration', 'public intégration'], ['aucun', 'question passée']] as const) {
+      for (const schema of ['light', 'dark'] as const) {
+        it(`${nom}, thème ${schema === 'light' ? 'clair' : 'sombre'}`, async () => {
+          const page = await accueil({ largeur: 1200, hauteur: 900, schema, ...(publicAccueil ? { publicAccueil } : {}) });
+          await page.locator('#titre-suite').waitFor();
+          exigerSansViolationGrave(await auditer(page, `accueil, ${nom}, ${schema === 'light' ? 'clair' : 'sombre'}`));
+        });
+      }
+    }
+
+    it('question rouverte par « Changer de public », le choix du moment marqué', async () => {
+      const page = await accueil({ largeur: 1200, hauteur: 900, publicAccueil: 'machine' });
+      await page.getByRole('button', { name: 'Changer de public' }).click();
+      await page.locator('.publics .public.actuel').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, question rouverte'));
+    });
+
+    it('public intégration : code copié et SVG reçu de l’éditeur embarqué', async () => {
+      const { page, contexte } = await navigateur.ouvrir({ largeur: 1200, hauteur: 900, publicAccueil: 'integration' });
+      await contexte.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await page.getByRole('button', { name: 'Copier le code' }).click();
+      await page.getByRole('button', { name: 'Essayer l’éditeur embarqué' }).click();
+      await page.locator('.editeur-cadre').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, éditeur embarqué de la démonstration'));
+      await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+      await page.keyboard.press('Delete');
+      await page.getByRole('button', { name: 'Mettre à jour le logo', exact: true }).click();
+      await page.locator('section.integration .message.neutre').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'accueil, intégration, SVG reçu'));
+    });
+
+    for (const [publicAccueil, nom] of [[undefined, 'question'], ['machine', 'public machine'], ['integration', 'public intégration']] as const) {
+      it(`sur un téléphone de 390 px au doigt : ${nom}`, async () => {
+        const page = await accueil({ largeur: 390, hauteur: 800, tactile: true, ...(publicAccueil ? { publicAccueil } : {}) });
+        await page.locator('#titre-suite').waitFor();
+        exigerSansViolationGrave(await auditer(page, `accueil, 390 px tactile, ${nom}`));
+      });
+    }
+
     it('voie « bibliothèque » chargée, avec ses vignettes', async () => {
       const page = await accueil({ largeur: 1200, hauteur: 900 });
       await page.getByRole('tab', { name: /^Bibliothèque/ }).click();

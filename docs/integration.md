@@ -426,6 +426,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `fermerSansModification?` | `boolean` | Le geste de fin reste actif sans modification et appelle alors `fermer` (rien n’est réécrit) ; faux par défaut : il est grisé et dit pourquoi. La page le pose |
 | `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
 | `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
+| `production?` | `ChoixProduction` (`src/model/contextes.ts`) | Le contexte de production de départ (ADR-0013), quand le SVG ne porte aucune marque `data-ed-*` : par exemple `{ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' }`. Une marque du SVG l’emporte toujours ; rien ne s’écrit tant que la personne ne modifie pas le dessin. La page le pose pour le public « machine » de son accueil (ADR-0024) ; le bundle ne l’expose pas |
 
 À savoir, côté React :
 
