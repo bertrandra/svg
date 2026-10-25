@@ -76,6 +76,13 @@ export interface OptionsSession {
   naviguer?: boolean;
   /** JavaScript coupe : ce que voit un navigateur qui n'execute rien. */
   sansJavaScript?: boolean;
+  /**
+   * Un public de l'accueil deja retenu (ADR-0022), pose dans le stockage du contexte avant le premier chargement, comme si la personne
+   * avait repondu lors d'une visite precedente : de quoi auditer un accueil adapte sans rejouer la question. Pose seulement si le
+   * stockage n'a pas deja une reponse, pour qu'un choix fait pendant le test survive au rechargement. Sans l'option, l'accueil est
+   * celui d'une premiere visite (la question en tete, les trois voies dessous, dans l'ordre d'avant) : les tests d'avant y passent tels quels.
+   */
+  publicAccueil?: 'machine' | 'retouche' | 'integration' | 'aucun';
 }
 
 /**
@@ -132,6 +139,11 @@ export function pilote() {
       page.on('console', m => { if (m.type() === 'error') erreurs.push('console.error : ' + m.text()); });
       const session = { page, contexte, erreurs };
       ouvertes.push(session);
+      if (options.publicAccueil) {
+        await contexte.addInitScript(v => {
+          try { if (localStorage.getItem('svg.accueil') === null) localStorage.setItem('svg.accueil', JSON.stringify({ public: v })); } catch { /* sans stockage : rien a poser */ }
+        }, options.publicAccueil);
+      }
       if (options.naviguer !== false) await page.goto(URL_PAGE);
       return session;
     }

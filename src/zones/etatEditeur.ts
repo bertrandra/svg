@@ -3,9 +3,9 @@
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { aimanter, boiteDe, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type Style } from '../engine/editionSvg.js';
-import { choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
+import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
-import { svgDocument, usePreparation } from './actionsProduction.js';
+import { phraseProduction, svgDocument, usePreparation } from './actionsProduction.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
@@ -22,6 +22,8 @@ export interface ParametresEtat {
   enregistrer: (svg: string) => void; fermer: () => void; brouillon?: ((svg: string) => unknown) | undefined;
   /** La marque de contexte lue dans le SVG ouvert (ADR-0013) : le panneau revient a la reouverture. */
   production?: MarqueProduction | undefined;
+  /** Le contexte de depart quand le SVG ne porte aucune marque (la page, pour le public « machine » de l'accueil, ADR-0022). */
+  depart?: ChoixProduction | undefined;
   /** Le libelle du bouton de fin (« Terminer » dans la page ; « Enregistrer » par defaut, ou celui de l'hote). */
   libelleEnregistrer?: string | undefined;
   /** Le bouton de fin ferme l'editeur meme sans modification (la page) ; sinon il reste inactif et dit pourquoi. */
@@ -56,8 +58,9 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [curseur, poserCurseur] = useState<Point | null>(null);
   const [focale, poserFocale] = useState<Focale | null>(null);
   const [annonce, poserAnnonce] = useState<Annonce>({ texte: '', rang: 0 });
-  // Le contexte de production : un etat d'interface (il n'entre pas dans l'historique), relu de la marque du SVG ouvert.
-  const [productionInitiale] = useState<ChoixProduction>(() => choixDeMarque(p.production).choix);
+  // Le contexte de production : un etat d'interface (il n'entre pas dans l'historique), relu de la marque du SVG ouvert, ou le depart
+  // que la page propose quand le SVG n'en porte pas. Un depart est le contexte initial, pas une modification : rien ne se reecrit sans geste.
+  const [productionInitiale] = useState<ChoixProduction>(() => choixDeDepart(p.production, p.depart));
   const [production, poserProduction] = useState<ChoixProduction>(productionInitiale);
   const [suiteCricut, poserSuiteCricut] = useState<SuiteCricut>(null);
   // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
@@ -100,6 +103,16 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     const inconnu = choixDeMarque(marque).inconnu;
     if (inconnu) actions.dire('Ce fichier a été préparé pour le contexte « ' + inconnu + ' », que cette version ne connaît pas : il s’ouvre en contexte générique.');
   }, [actions, marque]);
+
+  // Un depart Cricut se voit comme un choix fait dans la barre : le tapis entier cadre (apres le rendu qui le pose) et la phrase du
+  // contexte, dite une fois. Seulement a l'ouverture, et seulement si le contexte vient du depart, pas d'une marque du fichier.
+  const departVisible = useRef(!p.production && productionInitiale.contexte === 'cricut');
+  useEffect(() => {
+    if (!departVisible.current) return;
+    departVisible.current = false;
+    const f = requestAnimationFrame(() => { actions.ajuster(); actions.dire(phraseProduction(productionInitiale)); });
+    return () => cancelAnimationFrame(f);
+  }, [actions, productionInitiale]);
 
   // Le brouillon : le SVG du moment, une seconde apres la derniere modification.
   const { brouillon } = p;

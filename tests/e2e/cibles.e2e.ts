@@ -109,6 +109,23 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await exiger(page);
     });
 
+    // Un accueil par public (ADR-0022) : la question, la ligne qui la rappelle, chaque suite adaptee (le panneau des integrateurs compris).
+    it('la question du public, puis chaque public et la question rouverte', async () => {
+      const page = await ouvrirPage();
+      await exiger(page);
+      for (const nom of ['Découper ou dessiner avec une machine', 'Retoucher un dessin ou une image', 'Intégrer l’éditeur à mon produit']) {
+        await cliquer(page.locator('.public-question').getByRole('button', { name: new RegExp('^' + nom) }));
+        await page.locator('.public-rappel').waitFor();
+        await exiger(page);
+        await cliquer(page.getByRole('button', { name: 'Changer de public' }));
+        await page.locator('.public-question').waitFor();
+        await exiger(page);
+      }
+      await cliquer(page.locator('.public-question').getByRole('button', { name: /^Passer/ }));
+      await page.getByRole('button', { name: 'Choisir un public' }).waitFor();
+      await exiger(page);
+    });
+
     it('nuancier ouvert, et boite « A propos et credits »', async () => {
       const page = await ouvrirPage();
       await cliquer(page.getByText('Nuancier proposé dans l’éditeur'));
