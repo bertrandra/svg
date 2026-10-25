@@ -14,6 +14,7 @@ export function ListeRaccourcis() {
       <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
       <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
       <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
+      <li>Alt+clic sur la toile : la forme du dessous (encore Alt+clic : la suivante, en boucle) · une forme se prend à quelques pixels de son trait</li>
       <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
       <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
       <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>

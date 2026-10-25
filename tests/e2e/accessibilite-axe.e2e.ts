@@ -235,6 +235,17 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, une forme choisie'));
     });
 
+    // Le lisere de survol d'une forme (ADR-0029), en clair et en sombre : le pointeur reste pose sur la forme pendant l'audit.
+    for (const schema of ['light', 'dark'] as const) {
+      it('avec le lisere de survol d une forme (' + schema + ')', async () => {
+        const page = await editeur({ schema });
+        const centre = await page.locator('.editeur-svg-toile path[data-id="f2"]').evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+        await page.mouse.move(centre.x, centre.y);
+        await attend(() => page.locator('.editeur-svg-toile .lisere-survol').count()).toBe(1);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, liseré de survol (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
+      });
+    }
+
     it('avec plusieurs formes choisies et l inspecteur ouvert sur ses sections', async () => {
       const page = await editeur();
       await page.keyboard.press('Control+a');

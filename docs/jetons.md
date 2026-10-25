@@ -98,6 +98,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
 | `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
+| `--cyan` sur `--panneau` | 5.14 | 7.04 | le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029) |
 
 ### La typographie : cinq tailles nommées par leur rôle
 

@@ -11,6 +11,7 @@ import { FORMES } from './aidesEditeur.js';
 import { styleLigne } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
+import { usePrise } from './PriseToile.js';
 import type { Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
@@ -41,7 +42,7 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
 export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), tx = useTexte(), { vues } = ui;
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), tx = useTexte(), { vues } = ui, prise = usePrise(svgRef);
   const geste = useRef<Geste | null>(null), espace = useRef(false);
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
   const pointeurs = useRef(new Map<number, { x: number; y: number }>());
@@ -95,7 +96,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       geste.current = { type: 'poignee', i: i ?? 0, k: k === 1 ? 1 : 0, base: mo.dessin, id: mo.formeSeule.id, cle: ac.nouvelleCle() };
       return;
     }
-    const id = t.getAttribute('data-id');
+    const id = prise.prendre(e);
     if (id) {
       const sel = mo.sel;
       const ids = e.shiftKey ? (sel.includes(id) ? sel.filter(s => s !== id) : [...sel, id]) : sel.includes(id) ? sel : [id];
@@ -183,8 +184,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
 
   const doubleClic = (e: ME<SVGSVGElement>) => {
     if (ui.outil === 'plume') { ac.finirTrace(true); return; }
-    // La capture du pointeur fait de la toile la cible du double-clic : on lit la forme sous le curseur.
-    const id = document.elementFromPoint(e.clientX, e.clientY)?.getAttribute('data-id');
+    // Le calcul du clic (PriseToile), pas la cible du DOM : la capture du pointeur fait de la toile celle du double-clic.
+    const id = prise.viser(e);
     // Un texte vivant se retape en place (ADR-0022) ; une autre forme passe en mode points.
     if (id && ui.outil === 'selection') { ac.choisir([id]); if (mo.dessin.formes.find(f => f.id === id)?.texte) tx.ouvrirSaisie(id); else ac.poserOutil('points'); }
   };

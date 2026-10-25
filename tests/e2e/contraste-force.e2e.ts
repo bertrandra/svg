@@ -116,4 +116,13 @@ describe.skipIf(SANS_EMULATION)('contraste forcé', () => {
     const actif = '.editeur-svg .editeur-barre .icone-bouton[aria-pressed="true"]';
     await attend(() => style(page, actif, 'background-color')).toBe(await systeme(page, 'Highlight'));
   });
+
+  it('redit le lisere de survol d une forme en Highlight sur un halo Canvas (ADR-0029)', async () => {
+    const page = await editeur();
+    const centre = await page.locator('.editeur-svg-toile path[data-id="f2"]').evaluate(e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.mouse.move(centre.x, centre.y);
+    await attend(() => page.locator('.editeur-svg-toile .lisere-survol').count()).toBe(1);
+    expect(await style(page, '.editeur-svg-toile .lisere-survol', 'stroke')).toBe(await systeme(page, 'Highlight'));
+    expect(await style(page, '.editeur-svg-toile .lisere-survol-fond', 'stroke')).toBe(await systeme(page, 'Canvas'));
+  });
 });

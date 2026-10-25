@@ -634,3 +634,21 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .visite-cible { border-color: Highlight; }
   .repere { border-color: CanvasText; }
 }
+
+/* Prendre une forme (ADR-0029). Avec l'outil de selection, la forme qu'un clic prendrait (au survol a la souris, au toucher
+   au doigt) recoit un lisere a deux tons : un filet cyan d'un pixel sur un halo de panneau, lisible sur tout dessin (la paire
+   tient 3:1 dans les deux themes, PAIRES_GRAPHIQUES). Le curseur devient « deplacer », celui des points et des poignees : ce
+   qui se deplace ; la main (`grab`) reste a la vue. Il est porte par la forme sous le pointeur, par le fond de prise pres d'une
+   forme, et par la toile le temps d'un glisser (elle capture le pointeur) ; jamais par la toile au survol, qui restylerait
+   chaque forme. Ni transition ni animation : rien a couper pour prefers-reduced-motion. */
+.editeur-svg-toile .fond-prise[data-prise="deplacer"], .outil-selection .editeur-svg-toile path[data-id], .editeur-svg-toile[data-prise="deplacer"] { cursor: move; }
+.editeur-svg-toile .lisere-survol-fond { fill: none; stroke: var(--panneau); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .lisere-survol { fill: none; stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+@media (pointer: coarse) {
+  .editeur-svg-toile .lisere-survol-fond { stroke-width: 5; }
+  .editeur-svg-toile .lisere-survol { stroke-width: 2; }
+}
+@media (forced-colors: active) {
+  .editeur-svg-toile .lisere-survol-fond { stroke: Canvas; }
+  .editeur-svg-toile .lisere-survol { stroke: Highlight; }
+}

@@ -401,6 +401,15 @@ Retenus au repos, francs à l'interaction.
 - **Style:** boutons d'icône carrés de 30 px, transparents ; survol : voile cyan à 12 % ; outil actif : plein cyan
   d'encre, icône blanche ; menu ouvert : voile à 14 %.
 
+### Prendre une forme sur la toile (ADR-0029)
+- **Curseur:** avec l'outil de sélection, `move` sur une forme qu'un clic prendrait (à 6 px de son trait à la souris, 12 au
+  doigt) et pendant qu'on la tire ; le curseur par défaut ailleurs et sur une forme verrouillée. `move` est ce qui se déplace
+  (formes, points, poignées), `grab` reste à la vue (outil main).
+- **Liseré de survol:** un filet cyan d'encre d'un pixel sur un halo de panneau de trois pixels (deux et cinq au doigt), qui ne
+  grossit pas avec la vue ; il suit le chemin de la forme, la boîte d'un texte ou la cible minimale d'une petite forme. Rien ne
+  s'anime. Au doigt, il vient au toucher. Pas sur une forme déjà choisie à la souris (elle a son tracé de sélection). En
+  contraste forcé, `Highlight` sur `Canvas`.
+
 ### Inputs / Fields
 - **Style:** fond de table sur une feuille (le champ « creuse » le panneau), filet, coins de 5 px, 6 × 8 px.
 - **Focus:** contour cyan plein de 2 px.
