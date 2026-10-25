@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, attendreAnimations, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { champPolice } from './polices.js';
 
 const MIN = 24;
 
@@ -172,7 +173,7 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       const outil = page.locator('.editeur-barre button[title^="Texte (T)"]');
       await cliquer(outil);
       await tiroir(page, 'Inspecteur');
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
       await cliquer(page.getByRole('button', { name: 'Ajouter le texte' }));
       await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
       await cliquer(page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first());

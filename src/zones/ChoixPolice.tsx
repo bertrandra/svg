@@ -1,11 +1,12 @@
-// Le choix d'une police, partout ou l'on en choisit une (creer un texte, le restyler) : le selecteur des fontes livrees
-// (lettres pleines, puis trait unique), celles deposees ou telechargees pendant la session, et l'apercu « forme / ligne »
-// (ADR-0022). L'apercu ne s'ouvre qu'au clic : rien n'est obligatoire ni bloquant, il montre seulement ce que la lame et le
-// stylo feront de ce texte avec cette police, rendu par le moteur.
+// Le choix d'une police, partout ou l'on en choisit une (creer un texte, le restyler) : la liste deroulante de toutes les
+// polices (ChoixPoliceListe.tsx, ADR-0034 : livrees, deposees, telechargees et tout le catalogue, celles a telecharger
+// marquees), son style, et l'apercu « forme / ligne » (ADR-0022). L'apercu ne s'ouvre qu'au clic : rien n'est obligatoire ni
+// bloquant, il montre seulement ce que la lame et le stylo feront de ce texte avec cette police, rendu par le moteur.
 //
-// Quand les polices en ligne sont permises (ADR-0025), « Toutes les polices » ouvre, dans le flux, la recherche parmi les
-// polices libres de l'index ; une police du catalogue choisie montre ses autres styles. Seul le choix d'une police (ou d'un
-// style) non livree la telecharge : le geste vaut demande, et rien ne part sans lui.
+// Quand les polices en ligne sont permises (ADR-0025), « Toutes les polices » ouvre, dans le flux, les filtres de l'explorateur
+// (genre, trace, source), les favoris et vos polices, comme le lien du pied de la liste ; une police du catalogue choisie montre
+// ses autres styles. Seul le choix d'une police (ou d'un style) non livree la telecharge : le geste vaut demande, et rien ne part
+// sans lui.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ecrireChemin } from '../engine/editionSvg.js';
@@ -19,6 +20,7 @@ import { TEXTE_APERCU } from './actionsTexte.js';
 import { useActions } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { ExplorateurPolices } from './ExplorateurPolices.js';
+import { ChoixPoliceListe } from './ChoixPoliceListe.js';
 
 /** La taille de composition de l'apercu, en unites de la fonte ramenees a 100 : la vue s'ajuste ensuite au trace. */
 const TAILLE_APERCU = 100;
@@ -35,30 +37,6 @@ export interface ProprietesChoixPolice {
   readonly desactive?: boolean;
   /** Le rang de la derniere demande de deplier l'explorateur des polices (« Toutes les polices » de la barre de texte) ; 0 : aucune. */
   readonly explorerDemande?: number;
-}
-
-/** Les fontes chargees, rangees comme le selecteur les montre : une famille livree par ligne (le gras se choisit dans « Style »). */
-export function groupesPolices(polices: readonly Police[] | null) {
-  return {
-    contour: polices?.filter(p => p.nature === 'contour' && !p.id.startsWith('u-') && !estIdCatalogue(p.id) && baseDeGrasse(p.id) === null) ?? [],
-    trait: polices?.filter(p => p.nature === 'trait') ?? [],
-    telechargees: polices?.filter(p => estIdCatalogue(p.id)) ?? [],
-    deposees: polices?.filter(p => p.id.startsWith('u-')) ?? []
-  };
-}
-
-/** Les options du selecteur de police, partagees par le panneau et la barre de texte (ADR-0027). */
-export function OptionsPolices({ polices, valeur, absente }: { polices: readonly Police[]; valeur: string; absente?: string | undefined }) {
-  const g = groupesPolices(polices), police = polices.find(p => p.id === valeur);
-  return (
-    <>
-      {!police ? <option value={valeur} disabled>{absente ?? 'Police absente'}</option> : null}
-      <optgroup label="Lettres pleines">{g.contour.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup>
-      {g.trait.length ? <optgroup label="Trait unique (stylo)">{g.trait.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
-      {g.telechargees.length ? <optgroup label="Téléchargées">{g.telechargees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
-      {g.deposees.length ? <optgroup label="Déposées">{g.deposees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
-    </>
-  );
 }
 
 /** La famille d'une police, la valeur du selecteur : la variante grasse d'une fonte livree se montre sous sa famille. */
@@ -112,16 +90,20 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
     chargerCatalogue();
     poserExplorer(true);
   }, [explorerDemande, chargerCatalogue]);
+  // Le lien du pied de la liste : l'explorateur se deplie, sa recherche prend le focus.
+  const montrerExplorateur = () => {
+    chargerCatalogue();
+    poserExplorer(true);
+    requestAnimationFrame(() => document.getElementById(idExplorateur)?.querySelector<HTMLElement>('input[type="search"]')?.focus());
+  };
   return (
     <div className="choix-police">
-      <label className="champ-ligne">
+      <div className="champ-ligne">
         <span>Police</span>
         {polices === null ? <span className="aide">Chargement des polices…</span> : (
-          <select value={familleDePolice(valeur)} disabled={desactive} onChange={e => poser(e.target.value)} aria-label="Police">
-            <OptionsPolices polices={polices} valeur={valeur} absente={absente} />
-          </select>
+          <ChoixPoliceListe polices={polices} valeur={valeur} poser={poser} absente={absente} desactive={desactive} explorer={tx.enLigne ? montrerExplorateur : undefined} />
         )}
-      </label>
+      </div>
       {styles.options.length ? (
         <label className="champ-ligne">
           <span>Style</span>

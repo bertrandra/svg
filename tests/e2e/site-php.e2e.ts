@@ -15,6 +15,7 @@ import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, attendreAnimations, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { champPolice, valeurPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
 
@@ -159,7 +160,7 @@ describe('le site PHP', () => {
     // Un texte vivant, dans une fonte livree servie par le site (data/font).
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('Control+s');
@@ -252,14 +253,14 @@ describe('le site PHP', () => {
     await page.locator('.editeur-cadre').waitFor();
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
-    const select = page.locator('.editeur-inspecteur select[aria-label="Police"]');
-    await select.waitFor({ timeout: 30_000 });
+    const zone = page.locator('.editeur-inspecteur');
+    await champPolice(zone).waitFor({ timeout: 30_000 });
     await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
     const ligne = page.locator('.liste-polices .police-ligne', { hasText: 'Police Essai' });
     await ligne.waitFor();
     expect(demandesSource).toEqual([]);
     await ligne.click();
-    await attend(() => select.inputValue()).toBe(ID_ESSAI);
+    await attend(() => valeurPolice(zone)).toBe(ID_ESSAI);
     expect(demandesSource).toEqual(['/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff']);
     expect(readdirSync(join(racine, 'data/font/catalogue')).length).toBe(1);
     expect(requetes.some(u => u.startsWith(site + '/api.php?r=police&sha='))).toBe(true);

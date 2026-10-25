@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
 import { aLeFocus, attend, boutonTelecharger, modifications, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+import { champPolice, choisirPolice, valeurPolice } from './polices.js';
 
 const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
 
@@ -19,9 +20,9 @@ describe('le texte vivant', () => {
     await ouvrirCode(page, PLAN, tactile);
     const bouton = page.locator('.editeur-barre button[title^="Texte (T)"]');
     if (await bouton.isVisible()) { if (tactile) await bouton.tap(); else await bouton.click(); } else await page.keyboard.press('t');
-    await inspecteur(page).locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
     await textePanneau(page).fill(texte);
-    await inspecteur(page).locator('select[aria-label="Police"]').selectOption(police);
+    await choisirPolice(inspecteur(page), police, tactile);
     const ajout = page.getByRole('button', { name: 'Ajouter le texte' });
     if (tactile) await ajout.tap(); else await ajout.click();
     await attend(() => nombreDeCalques(page)).toBe(2);
@@ -70,7 +71,7 @@ describe('le texte vivant', () => {
     await attend(() => aLeFocus(page.locator('.editeur-svg-toile'))).toBe(true);
 
     // Une autre police recompose le texte (une modification de plus).
-    await inspecteur(page).locator('select[aria-label="Police"]').selectOption('lobster');
+    await choisirPolice(inspecteur(page), 'lobster');
     await attend(() => modifications(page)).toBe(3);
 
     const svg = await enregistrerEtTelecharger(page);
@@ -82,7 +83,7 @@ describe('le texte vivant', () => {
     await ouvrirCode(autre, svg);
     await autre.locator('.editeur-svg-toile path[data-id="f2"]').click({ force: true });
     await attend(() => textePanneau(autre).inputValue()).toBe('Bonne fête Léa');
-    await expect(autre.locator('.editeur-inspecteur select[aria-label="Police"]').inputValue()).resolves.toBe('lobster');
+    await expect(valeurPolice(autre.locator('.editeur-inspecteur'))).resolves.toBe('lobster');
   });
 
   // Depuis l'ADR-0027, Echap termine la saisie en gardant le texte (comme un clic hors du texte) ; Ctrl+Z defait toute la frappe.
@@ -139,7 +140,7 @@ describe('le texte vivant', () => {
     await page.keyboard.press('Enter');
     const saisie = page.locator('textarea.saisie-champ');
     await attend(() => aLeFocus(saisie)).toBe(true);
-    await inspecteur(page).locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
     await page.keyboard.type('Atelier');
     await attend(() => nombreDeCalques(page)).toBe(2);
     await page.keyboard.press('Escape');
@@ -206,7 +207,7 @@ describe('le texte vivant', () => {
     await ouvrirExemple(page, true);
     await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
     await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
-    await inspecteur(page).locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
     await textePanneau(page).fill('Salut');
     const avant = await nombreDeCalques(page);
     await page.getByRole('button', { name: 'Ajouter le texte' }).tap();

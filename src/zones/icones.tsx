@@ -17,7 +17,8 @@ export type NomIcone =
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
-  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo';
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo'
+  | 'nuage-telecharger';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -112,7 +113,10 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Un stylo de machine, pointe en bas a gauche, et la ligne qu'il ecrit (ADR-0028) : l'outil qui suit le trait sans rien remplir.
   stylo: [t('M15.5 3.5l5 5L10 19l-5 1 1-5z'), t('M13.5 5.5l5 5'), t('M3 21c2-1 4-1 6 0')],
   // Du code : deux chevrons et la barre d'une balise fermante, ce qu'un integrateur ecrit pour embarquer l'editeur.
-  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')]
+  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')],
+  // Un nuage ouvert par le bas, et la fleche qui en descend : une police qui n'est pas encore sur cet appareil, et que la
+  // choisir fera venir de sa source (ADR-0034). La forme dit l'etat, pas la couleur.
+  'nuage-telecharger': [t('M8 17H6.5a4 4 0 0 1 0-8h.3A5.5 5.5 0 0 1 17.4 8.6 4.25 4.25 0 0 1 17.5 17H16'), t('M12 11v10'), t('M8.5 17.5L12 21l3.5-3.5')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

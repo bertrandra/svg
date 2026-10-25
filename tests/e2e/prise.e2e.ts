@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, nombreDeCalques, ouvrirCode, pilote, texteDe } from './aide.js';
+import { champPolice, choisirPolice } from './polices.js';
 
 /** Trait fin, contour sans remplissage, forme remplie, chacun seul sur le plan. */
 const SEULES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">'
@@ -151,9 +152,9 @@ describe('prendre une forme sur la toile', () => {
     await ouvrir(page, PLAN_TEXTE);
     await page.keyboard.press('t');
     const inspecteur = page.locator('.editeur-inspecteur');
-    await inspecteur.locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur).waitFor({ timeout: 30_000 });
     await inspecteur.locator('textarea[aria-label="Texte"]').fill('I      I');
-    await inspecteur.locator('select[aria-label="Police"]').selectOption('inter');
+    await choisirPolice(inspecteur, 'inter');
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await attend(() => nombreDeCalques(page)).toBe(2);
     // Sans selection d'abord : la rangee de la selection, en partant, deplace la toile a l'ecran.

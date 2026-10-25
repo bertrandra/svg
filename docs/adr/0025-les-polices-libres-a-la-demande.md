@@ -5,6 +5,8 @@
 écrit pour un dessin existant ne change** : les dix fontes livrées, `polices.js` et toutes les références d’écriture sont intactes
 **Amendée le 25 octobre 2026 :** l’accord par serveur est retiré (décision du propriétaire) ; le choix d’une police vaut demande, et
 rien ne part sans ce geste (§ 4)
+**Prolongée par l’ADR-0034 :** le `<select>` « Police » du § 6 devient une liste déroulante à recherche qui porte tout le catalogue
+(ce qui reste à télécharger marqué) ; « Toutes les polices » reste pour les filtres, les favoris et vos polices
 
 ## Contexte
 

@@ -196,6 +196,13 @@ components:
     typography: "{typography.compact}"
     rounded: "{rounded.bouton}"
     padding: "12px 16px"
+  liste-polices:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.menu}"
+    padding: "4px 0"
+    size: "32px"
 ---
 
 # Design System: Éditeur SVG
@@ -591,7 +598,7 @@ Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d
   pointeur de l'outil Texte est une barre d'insertion (`cursor: text`). En contraste forcé, cadre, curseur et sélection en `Highlight`.
 - **La barre de texte** prend la place de la rangée de la sélection, avec l'outil Texte, pendant une saisie ou quand un texte est
   choisi seul : même fond, mêmes groupes à filet. Dans l'ordre : l'état (« Saisie · Échap pour finir », « Texte », « Prochain
-  texte », Aide), la police (liste compacte, 13 em au plus) et son style, « Toutes les polices » (secondaire), la taille (champ
+  texte », Aide), la police (la liste des polices en champ compact de 13 em, ci-dessous) et son style, « Toutes les polices » (secondaire), la taille (champ
   chiffré en chasse fixe), le tracé « Plein | Médian » et l'alignement (boutons à état : filet et texte cyan quand ils sont choisis,
   jamais pleins), « Plus d'options » (secondaire), puis, pour un texte choisi, le menu des gestes de la sélection et « Supprimer ».
   **Aucune action pleine** : ce sont des réglages. Au doigt ou sous 640 px, elle se resserre : la police (9,5 em), la taille, un
@@ -609,6 +616,27 @@ Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d
   (`--toile-blanc`, filet, coins de 4 px), à l'encre `--encre-toile` (sombre dans les deux thèmes : on regarde du papier),
   plein ou en trait fin de 1,5 px qui ne grossit pas avec la vue ; dessous, son titre (Compact 600) et un verdict court et
   neutre (Aide), qui est aussi son texte alternatif. Rien n'y est obligatoire ni bloquant ; « Fermer l'aperçu » (discret).
+
+### La liste des polices (ADR-0034)
+Une seule liste, partout où l'on choisit une police (panneau Texte, inspecteur, barre de texte), comme le sélecteur de police d'un
+traitement de texte : toutes les polices y sont, et ce qui n'est pas encore sur l'appareil se voit.
+- **Le champ** a l'allure d'une liste déroulante (fond de table, filet, coins de 5 px, chevron à l'encre douce) et le nom de la
+  police écrit en Compact ; on y tape pour chercher (le nom tout entier se choisit au clic). 13 em dans la barre, 9,5 em resserrée.
+  Sous lui, en Aide, « Téléchargement de Roboto… » le temps d'un téléchargement, ou l'erreur en rouge d'échec (`role="alert"`).
+- **La liste** est une feuille flottante de menu (feuille de panneau, filet, coins de 8 px, ombre de menu flottant, couche des
+  menus, l'entrée des menus), sous le champ ou au-dessus s'il y a plus de place, au moins 340 px de large (plus large qu'un champ
+  compact, jamais hors de l'écran), 440 px de haut au plus. Des groupes titrés comme les rubriques d'un menu (Aide 600, encre douce),
+  séparés d'un filet : Police actuelle, Dans ce document, Favoris, Récentes, Livrées avec l'éditeur, Trait unique (stylo), Vos
+  polices, Toutes les polices. Sous 640 px, une **feuille de toute la largeur**, sans bords ni coins, du champ au bas de l'écran.
+- **Une ligne** fait 32 px (40 au doigt), en quatre colonnes : la coche de la police choisie (cyan d'encre, et le nom en 600), le nom
+  **dessiné dans sa police** (24 px de haut, coupé à son bord), les badges (source, « Trait unique », « ITF » en ambre), puis la
+  colonne de la marque. Survol : voile cyan à 10 % ; ligne active au clavier : voile à 14 % et contour intérieur cyan de 2 px (en
+  contraste forcé, `Highlight`). Aucune action pleine : ce sont des choix.
+- **La marque « à télécharger »** : l'icône `nuage-telecharger` (un nuage ouvert par le bas, une flèche qui en descend, au trait de
+  1,75, 16 px, à l'encre), alignée à droite, et « à télécharger » dans le nom de l'option ; « Téléchargement… » en Aide pendant le
+  téléchargement ; « absente » pour une police introuvable (ligne à l'encre douce). Jamais la seule couleur.
+- **Le pied**, sous un filet : le nombre de polices (ou « Aucune police ne répond à « … ». »), la légende de la marque (l'icône dans sa colonne, deux phrases courtes d'une ligne chacune,
+  en Aide), et « Filtrer par genre, tracé ou source… » (discret, souligné au survol) qui ouvre « Toutes les polices ».
 
 ### Texte sur et dans une forme (ADR-0031)
 Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un geste, rien ne s'ajoute au dessin.

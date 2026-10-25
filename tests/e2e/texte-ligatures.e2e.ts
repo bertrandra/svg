@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, nombreDeCalques, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { champPolice, choisirPolice } from './polices.js';
 
 describe('ligatures du texte', () => {
   const navigateur = pilote();
@@ -14,14 +15,14 @@ describe('ligatures du texte', () => {
     await ouvrirExemple(page);
     await page.keyboard.press('t');
     // Les fontes se chargent a la demande (polices.js).
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
     return page;
   }
   const case_ = (page: Page) => page.getByRole('checkbox', { name: 'Ligatures (fi, fl…)' });
   async function ajouter(page: Page, texte: string, fonte: string): Promise<number> {
     const avant = await nombreDeCalques(page);
     await page.locator('.editeur-inspecteur textarea[aria-label="Texte"]').fill(texte);
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption(fonte);
+    await choisirPolice(page.locator('.editeur-inspecteur'), fonte);
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await attend(() => nombreDeCalques(page)).toBe(avant + 1);
     await ouvrirMenu(page, 'Édition');
@@ -32,14 +33,14 @@ describe('ligatures du texte', () => {
 
   it('la case est cochee par defaut pour une fonte a ligatures : « fi » ne fait qu\'une forme', async () => {
     const page = await panneauTexte();
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption('playfair');
+    await choisirPolice(page.locator('.editeur-inspecteur'), 'playfair');
     await expect(case_(page).isChecked()).resolves.toBe(true);
     expect(await ajouter(page, 'fi', 'playfair')).toBe(1);
   });
 
   it('decochee, « fi » redonne une forme par lettre', async () => {
     const page = await panneauTexte();
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption('playfair');
+    await choisirPolice(page.locator('.editeur-inspecteur'), 'playfair');
     await case_(page).uncheck();
     expect(await ajouter(page, 'fi', 'playfair')).toBe(2);
   });
@@ -51,19 +52,19 @@ describe('ligatures du texte', () => {
 
   it('une fonte sans ligature « liga » (Inter, Bebas Neue) n\'offre pas la case, et garde une forme par lettre', async () => {
     const page = await panneauTexte();
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption('inter');
+    await choisirPolice(page.locator('.editeur-inspecteur'), 'inter');
     await expect(case_(page).count()).resolves.toBe(0);
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption('bebas');
+    await choisirPolice(page.locator('.editeur-inspecteur'), 'bebas');
     await expect(case_(page).count()).resolves.toBe(0);
     expect(await ajouter(page, 'fi', 'inter')).toBe(2);
   });
 
   it('la case revient avec une fonte qui en a, et se grise quand les lettres sont espacees', async () => {
     const page = await panneauTexte();
-    const fonte = page.locator('.editeur-inspecteur select[aria-label="Police"]');
-    await fonte.selectOption('inter');
+    const zone = page.locator('.editeur-inspecteur');
+    await choisirPolice(zone, 'inter');
     await expect(case_(page).count()).resolves.toBe(0);
-    await fonte.selectOption('lobster');
+    await choisirPolice(zone, 'lobster');
     await expect(case_(page).isChecked()).resolves.toBe(true);
     // Un champ chiffre du panneau s'applique a la validation (Entree), comme ceux de l'inspecteur (ADR-0027).
     const espace = page.locator('.editeur-inspecteur label', { hasText: /^Espace$/ }).locator('input');

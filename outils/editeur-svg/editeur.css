@@ -427,12 +427,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .outil-texte .editeur-svg-toile { cursor: text; }
 /* La barre de texte (ADR-0027) : la rangee de la selection, ses groupes, ses filets ; des listes et un champ chiffre a la taille de ses boutons. */
 .barre-texte select { width: auto; height: 28px; padding: 0 var(--esp-xs); font-size: var(--texte-compact); }
-.barre-texte select.police-barre { max-width: 13em; }
 .barre-texte .groupe { gap: var(--esp-xs); }
 .barre-texte .champ-ligne > span:first-child { min-width: 0; }
 .barre-texte .champ-ligne input[type="text"] { width: 5em; height: 28px; }
 .barre-texte > .groupe > button:not(.icone-bouton) { display: inline-flex; align-items: center; gap: var(--esp-xs); height: 28px; padding: 0 var(--esp-m); font-size: var(--texte-compact); }
-.barre-texte.compacte select.police-barre { max-width: 9.5em; }
 .barre-texte.compacte .champ-ligne input[type="text"] { width: 3.75em; }
 /* Toutes les polices (ADR-0025) : une feuille dans le flux, comme l'apercu ; la longue liste defile seule et se fenetre (ADR-0008).
    Un nom se dessine dans sa propre fonte quand on l'a, ou par l'apercu prepare de l'annexe (ADR-0026) ; aucun apercu ne
@@ -467,6 +465,51 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .liste-polices .police-favori { flex: none; width: 28px; height: 28px; }
 .liste-polices .police-favori[aria-pressed="true"] { color: var(--cyan); }
 .liste-polices .police-favori[aria-pressed="true"] svg path { fill: currentColor; }
+/* La liste deroulante des polices (ADR-0034) : un champ ou l'on tape, comme une liste deroulante (meme fond, meme filet, un
+   chevron), et une feuille flottante de menu qui porte toutes les polices. Des lignes de hauteur fixe (le fenetrage les compte),
+   le nom dessine dans sa police, ses badges, puis une colonne pour la marque « à télécharger ». La ligne active est celle du
+   clavier : le voile et le contour de l'element de menu atteint ; la ligne survolee, le voile seul. */
+.liste-polices-choix { display: inline-grid; gap: var(--esp-2xs); flex: 1 1 auto; min-width: 0; }
+.liste-polices-champ { position: relative; display: flex; min-width: 0; }
+.liste-polices-champ input[type="text"] { width: 100%; min-width: 0; padding-right: var(--esp-2xl); font-family: inherit; font-size: var(--texte-compact); font-weight: 400; text-overflow: ellipsis; cursor: pointer; }
+.liste-polices-champ input[type="text"][aria-expanded="true"] { cursor: text; }
+.liste-polices-chevron { position: absolute; right: var(--esp-m); top: 50%; display: flex; transform: translateY(-50%); color: var(--encre-douce); pointer-events: none; }
+.liste-polices-etat { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-polices-etat.erreur { color: var(--echec); }
+.barre-texte .liste-polices-choix { display: inline-flex; align-items: center; gap: var(--esp-xs); flex: 0 1 auto; }
+.barre-texte .liste-polices-champ { width: 13em; max-width: 13em; }
+.barre-texte .liste-polices-champ input[type="text"] { height: 28px; padding-top: 0; padding-bottom: 0; padding-left: var(--esp-xs); }
+.barre-texte .liste-polices-etat { max-width: 12em; }
+.barre-texte.compacte .liste-polices-champ { width: 9.5em; max-width: 9.5em; }
+.liste-polices-flottant { position: fixed; z-index: var(--couche-menu); display: flex; flex-direction: column; min-height: 0; background: var(--panneau); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); overflow: hidden; animation: menu-entree 0.12s ease-out; }
+.liste-polices-flottant.feuille { border-left: 0; border-right: 0; border-radius: 0; animation-name: feuille-entree; }
+@keyframes feuille-entree { from { opacity: 0; transform: translateY(8px); } }
+.liste-polices-options { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: var(--esp-xs) 0; outline: 0; }
+.liste-polices-groupe + .liste-polices-groupe { margin-top: var(--esp-xs); padding-top: var(--esp-xs); border-top: 1px solid var(--filet); }
+.liste-polices-titre { margin: var(--esp-xs) var(--esp-l) var(--esp-2xs); font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.police-option { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto minmax(20px, auto); align-items: center; column-gap: var(--esp-s); height: 32px; padding: 0 var(--esp-l) 0 var(--esp-m); color: var(--encre); font-size: var(--texte-compact); cursor: pointer; }
+.police-option:hover { background: color-mix(in srgb, var(--cyan) 10%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .police-option:hover { background: var(--repli-cyan-10); } }
+.police-option.active { background: color-mix(in srgb, var(--cyan) 14%, transparent); box-shadow: inset 0 0 0 2px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .police-option.active { background: var(--repli-cyan-14); } }
+.police-option[aria-selected="true"] .police-nom { font-weight: 600; }
+.police-option[aria-disabled="true"] { cursor: default; color: var(--encre-douce); }
+.police-coche { display: flex; color: var(--cyan); }
+.police-option .police-nom { min-width: 0; }
+.police-dispo { display: flex; justify-content: flex-end; align-items: center; color: var(--encre-douce); font-size: var(--texte-petit); white-space: nowrap; }
+.police-option[data-etat="a-telecharger"] .police-dispo { color: var(--encre); }
+.liste-polices-pied { flex: none; display: grid; gap: var(--esp-xs); padding: var(--esp-s) var(--esp-l) var(--esp-m); border-top: 1px solid var(--filet); }
+.liste-polices-pied p { margin: 0; }
+/* L'icone dans sa colonne, le paragraphe dans la sienne : une grille, ni une boite flexible ni une icone au fil du texte, avec
+   lesquelles WebKit ne laissait pas axe lire le fond du texte (« partially overlaps »). */
+.liste-polices-legende { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--esp-s); align-items: start; }
+.liste-polices-legende .icone { color: var(--encre); }
+.liste-polices-pied button.discret { justify-self: start; min-height: 24px; padding-left: 0; padding-right: 0; font-size: var(--texte-petit); }
+.liste-polices-pied button.discret:hover:not(:disabled) { background: transparent; text-decoration: underline; text-underline-offset: 0.2em; }
+@media (forced-colors: active) {
+  .police-option.active { outline: 2px solid Highlight; outline-offset: -2px; }
+  .police-coche { color: Highlight; }
+}
 @media (forced-colors: active) {
   .apercu-plein { fill: CanvasText; }
   .apercu-ligne { stroke: CanvasText; }
@@ -509,6 +552,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .barre-texte select, .barre-texte .champ-ligne input[type="text"], .barre-texte > .groupe > button:not(.icone-bouton) { height: 40px; }
   .police-ligne, .polices-courtes button.discret { min-height: 40px; }
   .liste-polices .police-favori { width: 40px; height: 40px; }
+  .police-option { height: 40px; }
+  .barre-texte .liste-polices-champ input[type="text"], .liste-polices-pied button.discret { min-height: 40px; height: 40px; }
 }
 /* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
 @media (pointer: coarse) { .menu-raccourci { display: none; } }
