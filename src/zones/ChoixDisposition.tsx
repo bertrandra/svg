@@ -12,6 +12,7 @@ import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu
 import type { NomIcone } from './icones.js';
 import { LIBELLES_DISPOSITION, PHRASE_AUCUNE_CANDIDATE, phraseChoixForme, type ModeDisposition } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
+import { usePolicesSi } from './contexteTexte.js';
 
 export type ChoixDispo = 'libre' | ModeDisposition;
 
@@ -80,6 +81,8 @@ export function useSectionDisposition(): SectionMenu | null {
   const mo = useDessin(), dz = useDisposition();
   const choisies = mo.dessin.formes.filter(f => mo.sel.includes(f.id));
   const texte = choisies.find(f => f.texte), base = choisies.find(f => !f.texte);
+  // Poser le texte le recompose : les fontes ne se demandent que si un texte est choisi, pas pour toute selection.
+  usePolicesSi(choisies.length === 2 && !!texte && !!base);
   if (choisies.length !== 2 || !texte || !base || texte.verrouille || !candidatesPour(mo.dessin, texte.id).some(f => f.id === base.id)) return null;
   return {
     id: 'disposition', titre: 'Texte et forme', elements: [

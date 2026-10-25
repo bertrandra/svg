@@ -8,7 +8,7 @@ import { peutPorter, texteDispose } from '../engine/texte/disposition.js';
 import type { Police } from '../io/polices.js';
 import { appliquerChangement, dispositionPour, formePorteuse, policeDe, type ChangementTexte } from './actionsTexte.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
-import { usePolices } from './contexteTexte.js';
+import { useTexte } from './contexteTexte.js';
 import { PHRASE_FORME_REFUSEE, PHRASE_LIBRE, PHRASE_TAILLE_AJUSTEE, phraseDepassement, phraseFormeVisible, phrasePose, phraseRienNeTient, type ModeDisposition } from './phrasesDisposition.js';
 
 /** Les formes qui peuvent porter ce texte, dans l'ordre du dessin : visibles, deverrouillees, pas des textes. */
@@ -25,7 +25,8 @@ export function depassementDe(d: DessinSvg, id: string, police: Police | null): 
 export type ReglageDisposition = Partial<Omit<DispositionSurForme, 'mode' | 'forme'>> | Partial<Omit<DispositionDansForme, 'mode' | 'forme'>>;
 
 export function useDisposition() {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), { polices } = usePolices();
+  // Les fontes deja chargees, sans les demander : qui monte ce crochet pour un texte les a demandees (barre, panneau, toile).
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), { polices } = useTexte();
   const { dessin } = mo;
 
   /** Applique un changement au texte et rend le dessin d'apres, ou null s'il ne se compose pas (police absente, rien ne se dessine). */

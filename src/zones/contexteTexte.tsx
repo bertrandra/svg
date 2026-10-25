@@ -152,8 +152,16 @@ export function useTexte(): EtatTexte {
 
 /** Les fontes, chargees au premier appel : un panneau qui en a besoin les demande en s'affichant. */
 export function usePolices(): EtatTexte {
+  return usePolicesSi(true);
+}
+
+/**
+ * Les fontes, demandees seulement quand `besoin` est vrai : un composant monte pour toute selection (la rangee de la
+ * selection) ne fait pas charger polices.js tant qu'aucun texte n'est en jeu.
+ */
+export function usePolicesSi(besoin: boolean): EtatTexte {
   const c = (useContext(Contexte) ?? HORS) as EtatTexte & { demander: () => void };
   const { demander } = c;
-  useEffect(() => { demander(); }, [demander]);
+  useEffect(() => { if (besoin) demander(); }, [besoin, demander]);
   return c;
 }
