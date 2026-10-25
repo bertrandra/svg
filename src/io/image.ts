@@ -199,7 +199,7 @@ export async function lireSource(fichier: Blob): Promise<SourceImage | { erreur:
 /** Ce que l'image est devenue, en une ligne. */
 export function resumeConversion(r: ImageConvertie): string {
   const fond = r.detourage ? 'fond ' + r.detourage.fond.toUpperCase() + ' retiré ' + (r.traitement.portee === 'partout' ? 'partout' : 'depuis le bord') + ' (' + Math.round(r.detourage.part * 100) + ' %)' : r.traitement.detourer ? 'aucun fond à retirer' : 'fond gardé';
-  const forme = r.traces !== null ? r.traces + ' tracé' + (r.traces > 1 ? 's' : '') + ' vectoriel' + (r.traces > 1 ? 's' : '') : 'image enveloppée';
+  const forme = r.traces !== null ? r.traces + ' tracé' + (r.traces > 1 ? 's' : '') + ' vectoriel' + (r.traces > 1 ? 's' : '') : 'image telle quelle';
   return fond + ' · ' + forme + ' · ' + Math.max(1, Math.round(r.svg.length / 1024)) + ' Ko';
 }
 

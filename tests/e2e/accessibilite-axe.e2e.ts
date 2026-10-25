@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -142,7 +142,7 @@ describe('axe-core : accessibilite automatique', () => {
       await page.locator('.fiche-resultat').waitFor({ timeout: 60_000 });
       await page.locator('details.section summary', { hasText: 'Prétraitement' }).click();
       await page.getByRole('button', { name: 'Logo net', exact: true }).click();
-      await page.getByRole('button', { name: 'Prétraitée', exact: true }).click();
+      await choisirVue(page, 'Prétraitée');
       await attend(() => page.locator('.bilan-pretraitement .aide').first().innerText(), 60_000).toContain('couleur');
       exigerSansViolationGrave(await auditer(page, 'accueil, section Prétraitement ouverte'));
     });

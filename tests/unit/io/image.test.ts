@@ -269,7 +269,7 @@ describe('resumeConversion', () => {
   it('met au singulier un seul trace, et dit l image enveloppee', () => {
     expect(resumeConversion({ ...base, traces: 1 })).toContain('1 tracé vectoriel ·');
     const enveloppee = resumeConversion({ ...base, traces: null, matriciel: true, svg: 'x'.repeat(10) });
-    expect(enveloppee).toContain('image enveloppée');
+    expect(enveloppee).toContain('image telle quelle');
     expect(enveloppee.endsWith('1 Ko')).toBe(true);
   });
 });

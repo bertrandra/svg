@@ -163,9 +163,20 @@ describe('les reglages fins', () => {
     for (const p of PARAMETRES_FINS) { expect(p.min).toBeLessThan(p.max); expect(p.pas).toBeGreaterThan(0); expect(p.aide.length).toBeGreaterThan(20); }
   });
 
+  it('se nomment en mots simples, le nom technique gardé dans l infobulle', () => {
+    const libelles = PARAMETRES_FINS.map(p => p.libelle);
+    expect(new Set(libelles).size).toBe(libelles.length);
+    // Le jargon du traceur ne nomme plus un champ ; il reste lisible, pour l'expert, dans l'aide.
+    expect(libelles.join(' ')).not.toMatch(/Poussières|Précision|Écart|Simplification|Angles vifs/);
+    for (const id of ['filterSpeckle', 'cornerThreshold', 'colorPrecision', 'layerDifference'] as const) {
+      const technique = id.replace(/[A-Z]/g, l => '_' + l.toLowerCase());
+      expect(PARAMETRES_FINS.find(p => p.id === id)?.aide, id).toContain(technique);
+    }
+  });
+
   it('se resument en une ligne, et se comparent par une cle independante de l ordre des champs', () => {
     expect(resumeReglages({ mode: 'aplats', finesse: 'normale' })).toBe('Aplats · normal');
-    expect(resumeReglages({ mode: 'trait', finesse: 'fine', fins: { filterSpeckle: 8, courbes: 'polygon', couleursMax: 3 } })).toBe('Trait · fin · poussières 8 · couleurs 3 · segments droits');
+    expect(resumeReglages({ mode: 'trait', finesse: 'fine', fins: { filterSpeckle: 8, courbes: 'polygon', couleursMax: 3 } })).toBe('Trait · fin · taches 8 · couleurs 3 · segments droits');
     const a = { ...TRAITEMENT_DEFAUT, vecteurs: { mode: 'aplats' as const, finesse: 'fine' as const, fins: { courbes: 'polygon' as const, filterSpeckle: 3 } } };
     const b = { vecteurs: { fins: { filterSpeckle: 3, courbes: 'polygon' as const }, finesse: 'fine' as const, mode: 'aplats' as const }, portee: 'bord' as const, tolerance: TRAITEMENT_DEFAUT.tolerance, detourer: true };
     expect(cleTraitement(a)).toBe(cleTraitement(b));

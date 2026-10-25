@@ -106,9 +106,9 @@ export interface ParametrePre {
 }
 
 export const PARAMETRES_PRETRAITEMENT: readonly ParametrePre[] = [
-  { id: 'debruitage', libelle: 'Débruitage', aide: 'Efface le grain d’un JPEG ou d’un scan en gardant les bords. 1 : médiane, 2 : bilatéral, 3 : les deux.', min: 0, max: 3, pas: 1, neutre: 0 },
+  { id: 'debruitage', libelle: 'Effacer le grain', aide: 'Débruitage : efface le grain d’un JPEG ou d’un scan en gardant les bords. 1 : médiane, 2 : bilatéral, 3 : les deux.', min: 0, max: 3, pas: 1, neutre: 0 },
   { id: 'nettete', libelle: 'Netteté', aide: 'Redonne de la tenue à des contours mous. 0 : aucune.', min: 0, max: 3, pas: 1, neutre: 0 },
-  { id: 'gamma', libelle: 'Gamma', aide: 'Plus haut : demi-teintes plus claires. Plus bas : plus sombres. 1 : inchangé.', min: GAMMA_MIN, max: GAMMA_MAX, pas: 0.05, neutre: 1 },
+  { id: 'gamma', libelle: 'Éclaircir les demi-teintes', aide: 'Gamma : plus haut, des demi-teintes plus claires ; plus bas, plus sombres. 1 : inchangé.', min: GAMMA_MIN, max: GAMMA_MAX, pas: 0.05, neutre: 1 },
   { id: 'couleurs', libelle: 'Couleurs', aide: 'Réduit l’image à N couleurs avant le tracé : des aplats francs, moins de formes.', min: COULEURS_MIN, max: COULEURS_MAX, pas: 1, neutre: 8 },
   { id: 'lissage', libelle: 'Lissage des bords', aide: 'Filtre de mode : retire les pixels parasites le long des contours. Nombre de passes.', min: 0, max: 3, pas: 1, neutre: 0 }
 ];

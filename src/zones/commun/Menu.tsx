@@ -91,9 +91,13 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   useLayoutEffect(() => {
     const el = panneau.current;
     if (!ouvert || !el) return;
-    const marge = 8, largeur = el.offsetWidth, ecran = window.innerWidth;
-    poserPosition(p => {
-      if (!p) return p;
+    const marge = 8, largeur = el.offsetWidth, ecran = window.innerWidth, hauteur = el.offsetHeight, bas = window.innerHeight;
+    poserPosition(p0 => {
+      if (!p0) return p0;
+      // Un bouton bas dans l'ecran (la visionneuse de la conversion) : le panneau s'ouvre au-dessus s'il y tient, sinon il
+      // remonte juste assez pour finir dans l'ecran. Les barres du haut ne sont jamais concernees.
+      const haut = origine.current?.top ?? p0.top;
+      const p = p0.top + hauteur <= bas - marge ? p0 : { ...p0, top: haut - 4 - hauteur >= marge ? haut - 4 - hauteur : Math.max(marge, bas - marge - hauteur) };
       if (p.right !== undefined) {
         const gauche = ecran - p.right - largeur;
         return gauche < marge ? { ...p, right: Math.max(marge, p.right - (marge - gauche)) } : p;

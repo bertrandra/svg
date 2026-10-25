@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { crc32 } from 'node:zlib';
 import type { Download, Page } from 'playwright';
-import { attend, encoderPng, pilote, texteDe } from './aide.js';
+import { attend, choisirVue, encoderPng, pilote, texteDe } from './aide.js';
 
 const TRACE = 60_000;
 
@@ -130,7 +130,7 @@ describe('pretraitement et lot', () => {
     const base = page.locator('.visionneuse .calque.base');
     await ouvrirSection(page);
     // Sans pretraitement : « Prétraitée » est l'image détourée.
-    await page.getByRole('button', { name: 'Prétraitée', exact: true }).click();
+    await choisirVue(page, 'Prétraitée');
     await attend(() => base.getAttribute('alt')).toBe('Image prétraitée');
     const detouree = await base.getAttribute('src');
 
@@ -139,7 +139,7 @@ describe('pretraitement et lot', () => {
     expect(await base.getAttribute('src')).toMatch(/^data:image\/png/);
 
     // Le rideau compare l'image prétraitée (choisie d'office) aux vecteurs, et le côté se choisit.
-    await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+    await choisirVue(page, 'Comparer');
     const cote = page.getByLabel('Image du côté gauche du rideau');
     await attend(() => cote.inputValue()).toBe('pretraitee');
     await attend(() => base.getAttribute('alt')).toBe('Image prétraitée');
@@ -152,7 +152,7 @@ describe('pretraitement et lot', () => {
   it('rejoue après une pause : deux gestes rapprochés ne font qu\'un essai', async () => {
     const page = await atelier();
     await ouvrirSection(page);
-    const debruitage = section(page).locator('input[aria-label="Débruitage"]');
+    const debruitage = section(page).locator('input[aria-label="Effacer le grain"]');
     const premier = await resume(page);
     await debruitage.fill('1');
     await debruitage.fill('3');
@@ -164,7 +164,7 @@ describe('pretraitement et lot', () => {
     expect(await note(page)).toContain('1 modifié');
     expect(await section(page).locator('output').first().innerText()).toBe('3');
     // Retirer le réglage d'un clic.
-    await section(page).getByRole('button', { name: 'Retirer le réglage Débruitage' }).click();
+    await section(page).getByRole('button', { name: 'Retirer le réglage « Effacer le grain »' }).click();
     await attend(() => note(page)).toBe('Prétraitement');
   });
 
@@ -231,7 +231,7 @@ describe('pretraitement et lot', () => {
       const page = await atelier(logoBruite('seule.png', 200, 150));
       // Des réglages lourds rendent chaque image assez lente pour qu'on ait le temps d'annuler.
       await ouvrirSection(page);
-      await section(page).locator('input[aria-label="Débruitage"]').fill('3');
+      await section(page).locator('input[aria-label="Effacer le grain"]').fill('3');
       await section(page).locator('input[aria-label="Lissage des bords"]').fill('3');
       await attend(() => note(page)).toContain('2 modifiés');
       await attend(() => essais(page), TRACE).toBeGreaterThanOrEqual(1);

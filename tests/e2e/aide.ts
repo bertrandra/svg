@@ -328,3 +328,28 @@ export function imageDeTest(): { name: string; mimeType: string; buffer: Buffer 
   });
   return { name: 'essai.png', mimeType: 'image/png', buffer: png };
 }
+
+/**
+ * Choisit une vue de la visionneuse de la voie « Convertir une image » : Comparer et Contours sont des boutons a etat, les autres
+ * vues, le zoom et le fond du plan des elements du menu « Plus de vues » (ADR-0006 : le rare dans un menu). Attend que le choix soit pris.
+ */
+export async function choisirVue(page: Page, nom: string): Promise<void> {
+  const bouton = page.locator('.barre-visionneuse .mini-onglets').getByRole('button', { name: nom, exact: true });
+  if (await bouton.count()) { await bouton.click(); await attend(() => bouton.getAttribute('aria-pressed')).toBe('true'); return; }
+  await page.locator('.barre-visionneuse .vue-plus .menu-bouton').click();
+  const element = page.getByRole('menuitemradio', { name: nom, exact: true });
+  await element.click();
+  await attend(() => element.count()).toBe(0);
+}
+
+/**
+ * Choisit un evenement parmi les pastilles de la bibliotheque de `zone` (« Tous » compris) ; deplie « Plus d'evenements » s'il
+ * le faut, puisque les pastilles repliees ne montrent que les evenements proches de la date. Attend que la pastille soit choisie.
+ */
+export async function choisirEvenement(zone: Locator, nom: string): Promise<void> {
+  const groupe = zone.getByRole('group', { name: 'Événement' });
+  const pastille = groupe.getByRole('button', { name: nom, exact: true }).first();
+  if (!(await pastille.count())) await groupe.getByRole('button', { name: /^Plus d’événements/ }).click();
+  await pastille.click();
+  await attend(() => pastille.getAttribute('aria-pressed')).toBe('true');
+}
