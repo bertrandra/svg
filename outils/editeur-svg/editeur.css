@@ -250,9 +250,12 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .nuancier-cible button { min-height: 24px; padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
 .nuancier-cible button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
 .nuancier-groupe { display: grid; gap: var(--esp-xs); min-width: 0; }
-.nuancier-tete { display: flex; align-items: center; gap: var(--esp-xs); min-width: 0; min-height: 24px; }
-.nuancier-titre { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+/* Le titre garde sa ligne entiere quand le panneau est etroit : les menus du groupe passent dessous, a droite, plutot que de le
+   couper en trois lignes. */
+.nuancier-tete { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2xs) var(--esp-xs); min-width: 0; min-height: 24px; }
+.nuancier-titre { flex: 1 1 12em; min-width: 0; margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
 .nuancier-titre .aide { font-weight: 400; font-variant-numeric: tabular-nums; }
+.nuancier-outils { display: inline-flex; align-items: center; gap: var(--esp-xs); margin-left: auto; }
 .nuancier-tete .menu-deroulant { flex: none; }
 .nuancier-tete .menu-bouton.texte { padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }

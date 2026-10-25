@@ -53,7 +53,7 @@ function GroupeTeintes({ titre, note, pastilles, pressee, poser, aide, outils, v
     <div className="nuancier-groupe" role="group" aria-labelledby={id}>
       <div className="nuancier-tete">
         <p className="nuancier-titre" id={id}>{titre} <span className="aide">{note}</span></p>
-        {outils}
+        {outils ? <span className="nuancier-outils">{outils}</span> : null}
       </div>
       {pastilles.length ? (
         <div className="nuancier" onKeyDown={parcourir}>
