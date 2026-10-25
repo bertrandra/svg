@@ -1,6 +1,9 @@
 /* Ce que la page partage avec l'editeur : un message, une case a cocher, la section de la bibliotheque,
    l'apparition d'un panneau. */
 .message { margin: 0; padding: var(--esp-m) var(--esp-l); border-radius: var(--rayon-bouton); background: var(--alerte-fond); color: var(--alerte); font-size: var(--texte-corps); }
+/* Un message neutre (un succes, une information) : l'encre sur une feuille, un filet ; l'ambre reste aux avertissements, le rouge aux
+   echecs (DESIGN.md, « les messages ne servent qu'aux messages »). Il se lit en role="status", poli, l'ambre en role="alert". */
+.message.neutre { background: var(--panneau); color: var(--encre); border: 1px solid var(--filet); }
 @keyframes apparition { from { opacity: 0; transform: translateY(4px); } }
 .case { display: flex; gap: var(--esp-s); align-items: center; min-height: 24px; font-size: var(--texte-compact); }
 .bibliotheque { display: grid; gap: var(--esp-m); }
@@ -50,7 +53,7 @@
 .icone { display: block; }
 /* Le petit bouton d'icone des reglages fins : 24 px au moins (la page le dit 22 ; la specificite d'un bouton l'emporte). */
 button.icone-bouton.petit { width: 24px; height: 24px; }
-.editeur-barre .zoom { height: 30px; min-width: 52px; padding: 0 var(--esp-xs); font-family: var(--mono); font-size: var(--texte-petit); font-weight: 500; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: var(--rayon-bouton); }
+.editeur-barre .zoom { height: 30px; min-width: 52px; padding: 0 var(--esp-xs); font-family: var(--mono); font-size: var(--texte-petit); font-weight: 500; font-variant-numeric: tabular-nums; background: transparent; color: var(--encre); border: 1px solid transparent; border-radius: var(--rayon-bouton); }
 .editeur-barre .zoom:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre .zoom:hover { background: var(--repli-cyan-12); } }
 .editeur-barre button.texte, .editeur-etat button.texte { display: inline-flex; align-items: center; gap: var(--esp-s); height: 30px; padding: 0 var(--esp-l); font-size: var(--texte-compact); margin-left: var(--esp-xs); }
@@ -63,16 +66,23 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .pastille-style { position: relative; display: inline-flex; align-items: center; }
 .pastille-style input[type="color"] { width: 30px; height: 30px; padding: var(--esp-2xs); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: transparent; cursor: pointer; }
 /* « Aucun » : 24 px de surface (WCAG 2.5.8), mais un disque de 16 px a l'oeil : la marge de 4 px est une bordure transparente que le fond ne peint pas
-   (background-clip), et le filet est une ombre interne. Au doigt (bloc plus bas), il redevient un bouton carre de 40 px a bordure. */
+   (background-clip), et le filet est une ombre interne. Au doigt (bloc plus bas), il redevient un bouton carre de 40 px a bordure.
+   Choisi, il prend la couleur d'outil, un filet double et la barre oblique en cyan : « aucune couleur » est un etat, pas une erreur ni
+   un geste destructif, il n'a rien a faire du rouge (DESIGN.md, l'encre unique). */
 .pastille-style button.aucun { position: absolute; right: -6px; top: -6px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border: 4px solid transparent; border-radius: 50%; background-color: var(--panneau); background-clip: padding-box; box-shadow: inset 0 0 0 1px var(--filet); color: var(--encre-douce); }
-.pastille-style button.aucun.actif { background-color: var(--echec); color: var(--panneau); box-shadow: inset 0 0 0 1px var(--echec); }
-.pastille-style button.aucun:hover { color: var(--echec); box-shadow: inset 0 0 0 1px var(--echec); }
+.pastille-style button.aucun:hover { color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.pastille-style button.aucun.actif { color: var(--cyan); box-shadow: inset 0 0 0 2px var(--cyan); }
 .editeur-inspecteur button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* La rangee de la selection, sous la barre : aligner, transformer, empiler, combiner, separer. */
 .editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs) 0; padding: var(--esp-2xs) var(--esp-m); border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background: var(--repli-cyan-6-panneau); } }
 .editeur-barre-selection > .aide { min-width: 96px; padding-right: var(--esp-s); }
 .editeur-barre-selection .icone-bouton { width: 28px; height: 28px; }
+/* La rangee resserree (au doigt, petit ecran) : le compte ne reserve plus sa largeur, les gestes frequents et « Plus » tiennent a 390 px. */
+.editeur-barre-selection.compacte > .aide { min-width: 0; }
+/* Elle ne defile plus : ni degrade de bord ni caches, un fond plein (la teinte de la rangee, deja calculee par son jeton de repli). */
+.editeur-barre-selection.compacte { background: var(--repli-cyan-6-panneau); }
+.editeur-barre-selection.compacte .groupe:last-child { margin-left: auto; }
 .editeur-svg-toile .grille { stroke: color-mix(in srgb, var(--cyan) 35%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .grille { stroke: var(--repli-cyan-35); } }
 .editeur-confirmer { grid-area: confirmer; display: flex; flex-wrap: wrap; gap: var(--esp-m); align-items: center; padding: var(--esp-m) var(--esp-l); background: var(--alerte-fond); color: var(--alerte); font-size: var(--texte-compact); }
@@ -90,9 +100,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* Une couleur toute masquee s'attenue par son echantillon et l'italique, pas par l'opacite du texte : a 50 % le code et le compte tombaient a 2,2:1 (axe). */
 .par-couleur li.attenue .couleur-choix code { font-style: italic; }
 .par-couleur .couleur-choix { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--esp-s); background: transparent; border: 0; padding: var(--esp-2xs) var(--esp-xs); font-weight: 400; font-size: var(--texte-petit); text-align: left; color: var(--encre); }
-.par-couleur .couleur-choix code { font-family: var(--mono); font-size: var(--texte-petit); }
+.par-couleur .couleur-choix code { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); }
 .par-couleur .couleur-choix .aide { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.par-couleur .couleur-choix .echantillon { flex: none; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet); }
+.par-couleur .couleur-choix .echantillon { flex: none; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet-fort); }
 .par-couleur .icone-bouton { width: 26px; height: 26px; }
 .par-couleur .menu-deroulant { flex: none; }
 .par-couleur input[type="color"].recolorer { flex: none; width: 24px; height: 24px; margin: 0 var(--esp-2xs); padding: 0; border: 1px solid var(--filet); border-radius: var(--rayon-pastille); background: transparent; cursor: pointer; }
@@ -107,22 +117,26 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .par-couleur .couleur-choix { justify-content: flex-start; overflow: hidden; }
 /* Une longue liste de couleurs se fenetre (ListeCouleurs.tsx) : des cales tiennent la place des lignes absentes. */
 .par-couleur li[data-cale] { display: block; padding: 0; }
-.menu-pastille { display: block; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet); }
+.menu-pastille { display: block; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet-fort); }
 .editeur-calques .isolement { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-s); margin: var(--esp-s) 0 var(--esp-2xs); }
 .editeur-calques .nuances-proches { display: grid; gap: var(--esp-s); margin-top: var(--esp-m); padding-top: var(--esp-m); border-top: 1px solid var(--filet); }
 .nuances-proches .boutons { display: grid; gap: var(--esp-xs); }
 .nuances-proches .boutons button { padding: var(--esp-xs) var(--esp-m); font-size: var(--texte-petit); }
-.nuances-proches output { min-width: 1.6em; text-align: right; font-family: var(--mono); font-size: var(--texte-petit); }
+.nuances-proches output { min-width: 1.6em; text-align: right; font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); }
 .nuances-proches .aide { margin: 0; }
 .calques-actions button { min-height: 28px; padding: var(--esp-xs) var(--esp-m); font-size: var(--texte-petit); }
 .editeur-calques ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
 .editeur-calques li { display: flex; align-items: center; gap: var(--esp-2xs); border-radius: var(--rayon-pastille); content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-calques li.choisi { background: var(--repli-cyan-18); } }
-.editeur-calques .calque-nom { flex: 1; display: flex; align-items: center; gap: var(--esp-s); background: transparent; color: var(--encre); border: 0; padding: var(--esp-2xs) var(--esp-xs); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
+.editeur-calques .calque-nom { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--esp-s); background: transparent; color: var(--encre); border: 0; padding: var(--esp-2xs) var(--esp-xs); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
+/* Le nom d'une forme est son genre (« Cercle », « Polygone à 7 sommets ») : il se tronque plutot que de pousser les bascules ; son
+   numero suit, a l'encre douce et en chiffres tabulaires, pour distinguer deux rectangles. */
+.calque-genre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calque-numero { flex: none; color: var(--encre-douce); font-variant-numeric: tabular-nums; }
 .editeur-calques .calque-bascule { width: 26px; height: 26px; color: var(--encre-douce); }
 .editeur-calques .calque-bascule[aria-pressed="true"] { color: var(--sur-cyan); }
-.editeur-calques .echantillon { width: 14px; height: 14px; border-radius: var(--rayon-pastille); }
+.editeur-calques .echantillon { flex: none; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet-fort); }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
 .editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
 .editeur-svg-toile:focus { outline: none; }
@@ -160,7 +174,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .section > summary::-webkit-details-marker { display: none; }
 .section > summary::before { content: ""; width: 6px; height: 6px; flex: none; margin: 0 var(--esp-2xs) 0 var(--esp-2xs); border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
 .section[open] > summary::before { transform: rotate(45deg); }
-.section > summary .aide { margin-left: auto; font-weight: 400; }
+.section > summary > span:first-child { flex: none; }
+.section > summary .aide { min-width: 0; margin-left: auto; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-corps { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--esp-m); padding: var(--esp-2xs) var(--esp-2xs) var(--esp-l); min-width: 0; animation: apparition 0.15s ease-out; }
 .peinture { display: grid; gap: var(--esp-s); min-width: 0; }
 .peinture-titre { font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
@@ -175,7 +190,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .champ-ligne > span:first-child { flex: none; white-space: nowrap; }
 .champ-ligne > input[type="text"], .champ-ligne > select { flex: 1 1 auto; min-width: 0; }
 .champ-ligne > span:first-child { min-width: 62px; color: var(--encre-douce); }
-.champ-ligne input[type="text"] { width: 84px; font-family: var(--mono); font-size: var(--texte-petit); padding: var(--esp-2xs) var(--esp-xs); }
+.champ-ligne input[type="text"] { width: 84px; font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); padding: var(--esp-2xs) var(--esp-xs); }
+/* Un texte d'exemple fait de mots (« aucun », « celle du dessin ») se lit, il ne se mesure pas : la grotesque, pas la chasse fixe. */
+.peinture input::placeholder, .options-export input::placeholder { font-family: var(--sans); }
 .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid var(--filet); border-radius: var(--rayon-pastille); background: transparent; flex: none; }
 .champ-ligne input[type="range"] { flex: 1; min-width: 0; }
 .champ-ligne button { padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
@@ -183,15 +200,34 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .grille-2 .champ-ligne > span:first-child { min-width: 14px; }
 .grille-2 .champ-ligne input { width: 100%; min-width: 0; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
-.nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet); cursor: pointer; }
+.nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet-fort); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
 .couleurs-dessin li { display: flex; gap: var(--esp-s); align-items: center; min-width: 0; }
 .couleurs-dessin.fenetree { max-height: 260px; overflow: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
 .couleurs-dessin li[data-cale] { display: block; padding: 0; }
-.couleurs-dessin button { font-family: var(--mono); font-size: var(--texte-petit); padding: var(--esp-2xs) var(--esp-s); }
+/* Le bouton d'une couleur choisit ses formes : il dit le nom du nuancier quand la couleur y est (« Rouge »), puis le code en chasse
+   fixe, a l'encre. Le cyan reste aux actions et aux liens : un code cyan se prenait pour un lien. */
+.couleurs-dessin button.couleur-code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: var(--esp-2xs) var(--esp-s); color: var(--encre); font-weight: 400; font-size: var(--texte-petit); font-variant-numeric: tabular-nums; }
+.couleur-code .couleur-nom { font-weight: 600; }
+.couleur-code code { font-family: var(--mono); font-weight: 500; font-size: var(--texte-petit); }
+.couleur-code .couleur-compte { color: var(--encre-douce); }
 .couleurs-dessin .menu-deroulant { margin-left: auto; flex: none; }
 .editeur-etat { grid-area: etat; display: flex; gap: var(--esp-m); padding: var(--esp-s) var(--esp-l); font-size: var(--texte-petit); color: var(--encre-douce); border-top: 1px solid var(--filet); background: var(--panneau); }
+/* Les chiffres qui changent sous les yeux (compteurs, zoom, mesures, valeur d'un curseur) gardent leur largeur : des chiffres tabulaires,
+   pour qu'un « 1 » qui devient « 4 » ne fasse pas bouger ce qui suit. La valeur d'un curseur a en plus une largeur fixe a droite. */
+.compte-modifications, .editeur-barre-selection > .aide, .editeur-calques h3 .aide, .section > summary .aide, .editeur-inspecteur > p.aide, .recherche-formes > .aide,
+.champ-ligne > .aide, .champ-ligne input[type="text"], .resume-cricut dd, .titre-gravite, .versions li, output { font-variant-numeric: tabular-nums; }
+.champ-ligne > .aide { flex: none; min-width: 4.5ch; text-align: right; }
+/* L'action de l'instant (DESIGN.md, l'encre unique) : un menu ou une confirmation ouverts portent la seule action pleine qu'on voit ; ailleurs,
+   les actions primaires se posent en secondaires le temps qu'ils restent ouverts, sans rien changer de ce qu'elles font. En contexte de
+   production, l'export du panneau est l'action du moment : « Enregistrer » de la barre (ou de la barre d'etat) se pose en secondaire. */
+.editeur-cadre.menu-ouvert button.primaire:not(.menu-panneau button),
+.editeur-cadre.confirmation-ouverte button.primaire:not(.editeur-confirmer button),
+.editeur-cadre.production :is(.editeur-barre, .editeur-etat) > * > button.primaire,
+.editeur-cadre.production .editeur-etat > button.primaire { border-color: var(--filet); background: transparent; color: var(--encre); }
+:is(.editeur-cadre.menu-ouvert button.primaire:not(.menu-panneau button), .editeur-cadre.confirmation-ouverte button.primaire:not(.editeur-confirmer button),
+  .editeur-cadre.production :is(.editeur-barre, .editeur-etat) > * > button.primaire, .editeur-cadre.production .editeur-etat > button.primaire):hover:not(:disabled):not([aria-disabled="true"]) { background: transparent; border-color: var(--cyan); color: var(--cyan); }
 .editeur-erreur { max-width: 520px; margin: 15vh auto; display: grid; gap: var(--esp-l); padding: var(--esp-xl); justify-items: start; }
 .raccourcis { margin: var(--esp-s) 0 0; padding-left: var(--esp-xl); font-size: var(--texte-petit); color: var(--encre-douce); display: grid; gap: var(--esp-2xs); }
 /* Guides, poignee de rotation, menus et panneaux nouveaux. */
@@ -216,7 +252,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-svg .menu-element.danger { border: 0; color: var(--echec); }
 .menu-coche { width: 16px; flex: none; display: inline-grid; place-items: center; color: var(--cyan); }
 .menu-libelle { flex: 1; min-width: 0; }
-.menu-raccourci { font-family: var(--mono); font-size: var(--texte-petit); color: var(--encre-douce); }
+.menu-raccourci { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); color: var(--encre-douce); }
 .menu-libre { padding: var(--esp-s) var(--esp-m) var(--esp-m); }
 .menu-titre { margin: var(--esp-xs) 0 var(--esp-s); font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
 /* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
@@ -243,6 +279,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .grille-formes li { position: relative; }
 .grille-formes .plus { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; background: var(--panneau); border-color: var(--filet); opacity: 0; }
 .grille-formes li:hover .plus, .grille-formes li:focus-within .plus, .grille-formes li.en-edition .plus { opacity: 1; }
+/* Sans survol (un doigt), un bouton qui n'apparait qu'au survol serait une cible invisible qu'on touche par megarde : il reste visible. */
+@media (hover: none) { .grille-formes .plus { opacity: 1; } }
 .grille-formes .plus + .plus { right: 28px; }
 .correcteur { grid-column: 1 / -1; display: grid; gap: var(--esp-m); padding: var(--esp-m); background: var(--table); border: 1px solid var(--cyan); border-radius: var(--rayon-menu); }
 .grille-formes li.en-edition { grid-column: 1 / -1; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--esp-m); }
@@ -313,9 +351,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .pastille-style input[type="color"] { width: 40px; height: 40px; }
   .pastille-style { gap: var(--esp-2xs); }
   .pastille-style button.aucun { position: static; width: 40px; height: 40px; border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background-clip: border-box; box-shadow: none; }
-  .pastille-style button.aucun.actif, .pastille-style button.aucun:hover { border-color: var(--echec); box-shadow: none; }
-  .nuancier .echantillon { width: 32px; height: 32px; }
-  input[type="range"] { min-height: 32px; accent-color: var(--cyan); }
+  .pastille-style button.aucun:hover { border-color: var(--cyan); box-shadow: none; }
+  .pastille-style button.aucun.actif { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+  .nuancier button.echantillon { width: 40px; height: 40px; }
+  input[type="range"] { min-height: 40px; }
   .reglages-pretraitement input[type="range"] { min-height: 40px; }
   .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
   .section > summary { padding: var(--esp-l) var(--esp-2xs); }
@@ -323,6 +362,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .options-export .case { min-height: 40px; }
   .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 }
+/* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
+@media (pointer: coarse) { .menu-raccourci { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
 }
@@ -344,6 +385,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .icone-bouton[aria-pressed="true"], button.primaire, .pastille-style button.aucun.actif { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: HighlightText; }
   .icone-bouton[aria-pressed="true"] .icone, button.primaire .icone { color: HighlightText; }
   .pastille-style button.aucun { border: 1px solid ButtonText; background-clip: border-box; box-shadow: none; }
+  .editeur-cadre.menu-ouvert button.primaire:not(.menu-panneau button),
+  .editeur-cadre.confirmation-ouverte button.primaire:not(.editeur-confirmer button),
+  .editeur-cadre.production :is(.editeur-barre, .editeur-etat) > * > button.primaire,
+  .editeur-cadre.production .editeur-etat > button.primaire { forced-color-adjust: auto; background: ButtonFace; color: ButtonText; border-color: ButtonText; }
   .icone-bouton[aria-expanded="true"], .menu-bouton.texte[aria-expanded="true"] { border: 2px solid Highlight; }
   .icone-bouton:hover:not(:disabled), .menu-bouton.texte:hover:not(:disabled) { border-color: Highlight; }
   .menu-panneau { border: 2px solid CanvasText; }
@@ -374,7 +419,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .credits-dialogue p { margin: 0 0 var(--esp-m); }
 .credits-dialogue ul { margin: 0; padding-left: var(--esp-xl); display: grid; gap: var(--esp-2xs); }
 .credits-dialogue a { color: var(--cyan); text-decoration: underline; }
-.credits-dialogue code { font-family: var(--mono); font-size: var(--texte-compact); }
+.credits-dialogue code { font-family: var(--mono); font-weight: 400; font-size: var(--texte-compact); }
 .credits-dialogue .actions { margin-top: var(--esp-xl); justify-content: flex-end; }
 @media (forced-colors: active) { .credits-dialogue { border: 2px solid CanvasText; } }
 

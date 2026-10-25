@@ -122,7 +122,11 @@ export function mesuresDites(f: Forme): string {
 /** Le numero d'une forme, tel que l'inspecteur et les calques le disent : f12 devient 12. */
 export const numeroDeForme = (f: Forme): string => f.id.slice(1);
 
-/** Le nom accessible d'une forme dans la liste des calques : « Forme 3, rectangle, fond rouge #c81e28 ». */
+/**
+ * Le nom accessible d'une forme dans la liste des calques : « Rectangle 3, fond rouge #c81e28 ». Il commence par ce que la ligne
+ * montre (le genre et le numero, WCAG 2.5.3 : le libelle visible est dans le nom), puis dit la peinture et l'etat.
+ */
 export function nomDeForme(f: Forme): string {
-  return 'Forme ' + numeroDeForme(f) + ', ' + genreDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', verrouillée' : '') + (f.visible ? '' : ', masquée');
+  const genre = genreDeForme(f);
+  return genre.charAt(0).toUpperCase() + genre.slice(1) + ' ' + numeroDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', verrouillée' : '') + (f.visible ? '' : ', masquée');
 }

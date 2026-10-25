@@ -7,8 +7,10 @@ import {
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
 import { NoeudsPoint, OutilsTrace } from './OutilsTrace.js';
-import { arrondi, estHex } from './aidesEditeur.js';
+import { arrondi, estHex, genreAffiche } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useTactile } from './Vue.js';
+import { selonSaisie } from '../util/texte.js';
 import type { Teinte } from './typesEditeur.js';
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
@@ -21,9 +23,10 @@ export function Inspecteur() {
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ac.appliquer(d => modifier(d, sel, r), cle === null ? ac.nouvelleCle() : cle + ':' + sel.join(','));
   const points = ui.outil === 'points' && mo.formeSeule;
+  const doigt = useTactile();
   return (
     <>
-      <h3>{sel.length > 1 ? sel.length + ' formes' : 'Forme ' + premiere.id.slice(1)}</h3>
+      <h3>{sel.length > 1 ? sel.length + ' formes' : genreAffiche(premiere) + ' ' + premiere.id.slice(1)}</h3>
       <Section titre="Apparence" ouverte>
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
@@ -50,12 +53,12 @@ export function Inspecteur() {
           </div>
         </Section>
       ) : null}
-      <Section titre="Transformer" note="angle, échelle, inclinaison, contour">
+      <Section titre="Transformer" note="angle, échelle, contour">
         <TransformationsNumeriques />
         <OutilsTrace />
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
-      <p className="aide">{sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : ''}Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.</p>
+      <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : '') + 'Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.', doigt)}</p>
     </>
   );
 }
@@ -100,7 +103,7 @@ function TransformationsNumeriques() {
 }
 
 function PanneauPoint({ forme }: { forme: Forme }) {
-  const ac = useActions(), ui = useInterface();
+  const ac = useActions(), ui = useInterface(), doigt = useTactile();
   const p = ui.point, c = p !== null ? forme.d[p] : undefined, suivante = p !== null ? forme.d[p + 1] : undefined;
   return (
     <Section titre={'Point' + (c && p !== null ? ' ' + (p + 1) + ' sur ' + forme.d.filter(x => x.c !== 'Z').length : '')} ouverte>
@@ -113,7 +116,7 @@ function PanneauPoint({ forme }: { forme: Forme }) {
           </div>
           <NoeudsPoint forme={forme} point={p} />
         </>
-      ) : <p className="aide">Cliquez un point pour le régler ; glissez-le, ou ses poignées. Flèches : au millième du plan.</p>}
+      ) : <p className="aide">{selonSaisie('Cliquez un point pour le régler ; glissez-le, ou ses poignées. Flèches : au millième du plan.', doigt)}</p>}
     </Section>
   );
 }

@@ -15,7 +15,7 @@
 /* La page d'accueil : ouvrir un SVG, puis le resultat. */
 .accueil { max-width: 960px; margin: 0 auto; padding: var(--esp-2xl) var(--esp-xl) var(--esp-3xl); display: grid; gap: var(--esp-xl); }
 .tete h1 { font-size: var(--texte-titre-page); font-weight: 700; letter-spacing: -0.01em; margin: 0 0 var(--esp-s); }
-.tete p { margin: 0; color: var(--encre-douce); max-width: 70ch; }
+.tete p { margin: 0; color: var(--encre-douce); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--esp-m); }
 .depot { border: 2px dashed var(--filet); border-radius: var(--rayon-carte); padding: var(--esp-2xl) var(--esp-xl); display: grid; gap: var(--esp-m); justify-items: center; text-align: center; background: var(--panneau); transition: border-color 0.15s, background 0.15s; }
 .depot p { margin: 0; color: var(--encre-douce); }
@@ -89,14 +89,14 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .reglages-fins .fin-libelle { color: var(--encre-douce); }
 .reglages-fins .fin.touche .fin-libelle, .reglages-fins .champ-ligne.touche > span:first-child { color: var(--cyan); font-weight: 600; }
 .reglages-fins .fin.touche .fin-libelle::before, .reglages-fins .champ-ligne.touche > span:first-child::before { content: "● "; }
-.reglages-fins output { font-family: var(--mono); font-size: var(--texte-petit); text-align: right; }
+.reglages-fins output { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); text-align: right; }
 .icone-bouton.petit { width: 22px; height: 22px; }
 .reglages-pretraitement { display: grid; gap: var(--esp-m); }
 .reglages-pretraitement .fin { display: grid; grid-template-columns: 112px minmax(0, 1fr) 36px 22px; align-items: center; gap: var(--esp-s); font-size: var(--texte-compact); }
 .reglages-pretraitement .fin-libelle { color: var(--encre-douce); }
 .reglages-pretraitement .fin.touche .fin-libelle { color: var(--cyan); font-weight: 600; }
 .reglages-pretraitement .fin.touche .fin-libelle::before { content: "● "; }
-.reglages-pretraitement output { font-family: var(--mono); font-size: var(--texte-petit); text-align: right; }
+.reglages-pretraitement output { font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); text-align: right; }
 .reglages-pretraitement .mini-onglets { flex-wrap: wrap; }
 .bilan-pretraitement { display: grid; gap: var(--esp-xs); }
 .bilan-pretraitement p { margin: 0; }
@@ -112,8 +112,13 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 @media (max-width: 900px) { .atelier-vecto { grid-template-columns: minmax(0, 1fr); } }
 .resultat-image { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: var(--esp-xl); align-items: start; border-top: 1px dashed var(--filet); padding-top: var(--esp-l); }
 @media (max-width: 640px) { .resultat-image { grid-template-columns: minmax(0, 1fr); } }
+/* Une ligne se lit d'un seul regard sous 75 caracteres : le chapeau, le pied et les presentations des voies ne s'etirent pas sur toute
+   la colonne (96 et 112 caracteres auparavant). La mesure est en em, pas en ch : le ch est la chasse du zero, large dans Instrument
+   Sans (deux tiers d'em), et 68ch y laissaient encore 96 caracteres ; 34em en donnent environ 72. Le bouton « À propos et crédits »
+   aligne son texte sur celui du paragraphe : sa marge interne et son filet transparent sortent a gauche de la colonne. */
+.tete p, .pied p, .bibliotheque > p.aide, .voie-panneau p.aide { max-width: 34em; }
 .pied p { margin: 0; }
-.pied a { color: var(--cyan); }
+.pied .discret { margin-left: calc(-1 * var(--esp-l) - 1px); }
 /*STYLE_EDITEUR*/
 </style>
 

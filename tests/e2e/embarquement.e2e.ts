@@ -62,7 +62,7 @@ describe('embarquement : exemples/integration.html', () => {
   const compte = async (page: Page, rappel: string) => (await journal(page)).filter(l => l.startsWith(rappel)).length;
   const racines = (page: Page) => page.locator('.editeur-svg').count();
   const forme = (page: Page, id: string) => page.locator(`.editeur-svg-toile path[data-id="${id}"]`);
-  const calque = (page: Page, numero: number) => page.locator('.editeur-calques ol > li button.calque-nom', { hasText: new RegExp('^\\s*Forme ' + numero + '$') });
+  const calque = (page: Page, numero: number) => page.locator('.editeur-calques ol > li button.calque-nom[data-forme="f' + numero + '"]');
 
   /** Clique « Éditer » et attend l'editeur. */
   async function editer(page: Page) {
@@ -326,7 +326,7 @@ describe('embarquement : exemples/integration.html', () => {
     await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
     const confirmation = page.getByRole('alertdialog', { name: 'Abandonner les modifications' });
     await attend(() => confirmation.count()).toBe(1);
-    expect(await texteDe(confirmation)).toContain('Abandonner les 1 modification non enregistrée ?');
+    expect(await texteDe(confirmation)).toContain('Abandonner la modification non enregistrée ?');
     expect(await racines(page)).toBe(1);
 
     // « Continuer l'edition » referme la question et garde le travail.

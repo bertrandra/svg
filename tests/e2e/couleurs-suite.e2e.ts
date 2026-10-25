@@ -52,10 +52,10 @@ describe('calques par couleur, suite', () => {
     const f = surToile(page, id);
     return { fond: await f.getAttribute('fill'), trait: await f.getAttribute('stroke') };
   };
-  const calque = (page: Page, id: string) => page.locator('.editeur-calques ol > li button.calque-nom', { hasText: new RegExp('^\\s*Forme ' + id.slice(1) + '$') });
+  const calque = (page: Page, id: string) => page.locator('.editeur-calques ol > li button.calque-nom[data-forme="' + id + '"]');
   // textContent, pas innerText : une ligne des calques hors de l'ecran (`content-visibility: auto`) n'est pas rendue, et Firefox
   // et WebKit lui donnent alors un innerText vide.
-  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi').evaluateAll(l => l.map(e => (e.querySelector('.calque-nom')?.textContent ?? '').trim()));
+  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi').evaluateAll(l => l.map(e => 'Forme ' + (e.querySelector('.calque-nom')?.getAttribute('data-forme') ?? '').slice(1)));
   const message = (page: Page) => texteDe(page.locator('.message-etat'));
   const autresActions = (page: Page, couleur: string) => page.locator(`[aria-label="Autres actions sur ${couleur}"]`);
   const apercu = (page: Page) => texteDe(page.locator('.nuances-proches [role=status]'));

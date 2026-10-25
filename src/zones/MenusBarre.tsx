@@ -16,22 +16,24 @@ import type { Fond } from './typesEditeur.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
-/** Les elements du menu Vue. `avecZoom` ajoute zoomer et dezoomer, que la barre des petits ecrans ne porte plus. */
+/** Les elements du menu Vue. `avecZoom` ajoute zoomer et dezoomer (en dernier), que la barre des petits ecrans ne porte plus. */
 function useElementsVue(avecZoom: boolean): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const { vues } = ui;
   return [
-    ...(avecZoom ? [
-      { id: 'zoomer', libelle: 'Zoomer', icone: 'zoom-plus', raccourci: '+', onClick: () => vues.zoomer(1.25) },
-      { id: 'dezoomer', libelle: 'Dézoomer', icone: 'zoom-moins', raccourci: '-', onClick: () => vues.zoomer(0.8) }
-    ] satisfies ElementMenu[] : []),
-    { id: 'ajuster', libelle: 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0', onClick: vues.ajuster },
+    // « 0 » (zero) et « O » (contours) se confondent en chasse fixe : le chiffre se dit en toutes lettres.
+    { id: 'ajuster', libelle: 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0 (zéro)', onClick: vues.ajuster },
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
     { id: 'selection', libelle: 'Zoomer sur la sélection', icone: 'zoom-selection', raccourci: 'Z', desactive: !mo.sel.length, onClick: ac.zoomerSelection },
     { id: 'grille', libelle: 'Grille magnétique (pas ' + ui.pas + ')', raccourci: 'G', coche: ui.grille, separateur: true, onClick: () => ac.poserGrille(!ui.grille) },
     { id: 'aimants', libelle: 'Aimants vers les autres formes', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
     { id: 'contours', libelle: 'Vue contours', raccourci: 'O', coche: ui.contours, onClick: () => ac.poserContours(c => !c) },
-    ...FONDS.map(([f, icone, libelle], i): ElementMenu => ({ id: 'fond-' + f, libelle, icone, coche: ui.fond === f, separateur: i === 0, onClick: () => ac.poserFond(f) }))
+    ...FONDS.map(([f, icone, libelle], i): ElementMenu => ({ id: 'fond-' + f, libelle, icone, coche: ui.fond === f, separateur: i === 0, onClick: () => ac.poserFond(f) })),
+    // Au telephone, le zoom vient en dernier : le pincement de deux doigts le fait deja, et le niveau reste dans la barre.
+    ...(avecZoom ? [
+      { id: 'zoomer', libelle: 'Zoomer', icone: 'zoom-plus', raccourci: '+', separateur: true, onClick: () => vues.zoomer(1.25) },
+      { id: 'dezoomer', libelle: 'Dézoomer', icone: 'zoom-moins', raccourci: '-', onClick: () => vues.zoomer(0.8) }
+    ] satisfies ElementMenu[] : [])
   ];
 }
 
@@ -106,15 +108,16 @@ export function MenuFichier({ nom }: { nom: string }) {
 
 /**
  * « Plus » : sous une largeur de telephone, la barre ne porte plus que les outils, les couleurs et l'historique ; Vue, Edition et
- * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique, chacune avec ses raccourcis. Le zoom y entre aussi.
+ * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique. L'ordre est celui de l'usage : Edition (ce qu'on fait
+ * de la selection), Fichier, puis Vue, le zoom en dernier, puis le contexte de production. Au doigt, les raccourcis se taisent (CSS).
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits), production = useRubriquesProduction();
   const sections: SectionMenu[] = [
-    { id: 'vue', titre: 'Vue', elements: vue },
-    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
     { id: 'edition', titre: 'Édition', elements: edition },
+    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
+    { id: 'vue', titre: 'Vue', elements: vue },
     // Le contexte de production (ADR-0013) : la barre du bureau le porte, le telephone le range ici, en dernier.
     ...production
   ];

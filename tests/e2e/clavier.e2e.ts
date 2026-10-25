@@ -25,7 +25,8 @@ describe('clavier et lecteur d ecran', () => {
   const dit = (page: Page) => annonces(page).evaluate(e => (e.textContent ?? '').trim());
   // textContent, pas innerText : une ligne des calques hors de l'ecran (`content-visibility: auto`) n'est pas rendue, et Firefox
   // et WebKit lui donnent alors un innerText vide.
-  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => (e.textContent ?? '').trim()));
+  // Le nom d'une ligne est le genre et le numero (« Triangle 3 ») : l'identite de la forme se lit dans `data-forme`.
+  const choisies = (page: Page) => page.locator('.editeur-calques ol > li.choisi .calque-nom').evaluateAll(l => l.map(e => 'Forme ' + (e.getAttribute('data-forme') ?? '').slice(1)));
   /** Le focus est-il sur la toile ? */
   const surLaToile = (page: Page) => aLeFocus(toile(page));
   async function choisirForme(page: Page, numero: number) {
@@ -119,12 +120,12 @@ describe('clavier et lecteur d ecran', () => {
 
     it('nomme chaque calque avec sa couleur, et garde le nombre de formes dans le nom de la toile', async () => {
       const page = await editeur();
-      await page.getByRole('button', { name: 'Forme 2, cercle, fond rouge #c81e28', exact: true }).waitFor();
-      expect(await page.getByRole('button', { name: /^Forme \d, .*(fond|sans fond)/ }).count()).toBe(4);
+      await page.getByRole('button', { name: 'Cercle 2, fond rouge #c81e28', exact: true }).waitFor();
+      expect(await page.getByRole('button', { name: /^[^,]+ \d, (fond|sans fond)/ }).count()).toBe(4);
       expect(await toile(page).getAttribute('aria-label')).toBe('Plan de travail de exemple.svg : 4 formes');
       // Le calque dit s'il est choisi.
       await choisirForme(page, 2);
-      await attend(() => page.getByRole('button', { name: /^Forme 2,/, pressed: true }).count()).toBe(1);
+      await attend(() => page.getByRole('button', { name: /^Cercle 2,/, pressed: true }).count()).toBe(1);
     });
 
     it('decrit la sortie de la toile a qui y arrive', async () => {

@@ -87,7 +87,7 @@ function PastilleStyle({ libelle, cible, valeur, onChange }: { libelle: string; 
     <span className="pastille-style" title={decrit}>
       <input type="color" aria-label={libelle} aria-describedby={idDescription} value={estHex(valeur) ? valeur : '#000000'} onChange={e => onChange(e.target.value)} onBlur={ac.finir} />
       <span id={idDescription} className="sr-only">{decrit}</span>
-      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { onChange(valeur === null ? '#000000' : null); ac.finir(); }}><Icone nom="fermer" taille={12} /></button>
+      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { onChange(valeur === null ? '#000000' : null); ac.finir(); }}><Icone nom="aucun" taille={14} /></button>
     </span>
   );
 }
@@ -102,10 +102,14 @@ function GroupeHistorique() {
   );
 }
 
-/** Le niveau de zoom, qui ajuste le dessin a l'ecran d'un appui : seul reste visible de tout le zoom sur un telephone. */
+/**
+ * Le niveau de zoom, qui ajuste le dessin a l'ecran d'un appui : seul reste visible de tout le zoom sur un telephone. Son nom dit
+ * ce qu'il fait apres ce qu'il montre (WCAG 2.5.3 : le libelle visible ouvre le nom), « 279 % » seul ne le disait pas.
+ */
 const BoutonNiveauZoom = memo(function BoutonNiveauZoom() {
   const { vues } = useInterface();
-  return <button type="button" className="zoom" title="Ajuster à l’écran (0)" onClick={vues.ajuster}>{Math.round(vues.vue.zoom * 100)} %</button>;
+  const niveau = Math.round(vues.vue.zoom * 100) + ' %';
+  return <button type="button" className="zoom" title={'Zoom à ' + niveau + ' : ajuster à l’écran (touche zéro)'} aria-label={niveau + ' : ajuster à l’écran'} onClick={vues.ajuster}>{niveau}</button>;
 });
 
 /** Le zoom : ne lit que la vue. */

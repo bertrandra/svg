@@ -1,11 +1,11 @@
 // Le cadre de l'editeur : la grille des zones (barre, calques, toile, inspecteur, etat) et les petits
 // panneaux qui s'y posent. Chaque zone lit seule ce qu'elle montre (contexteEditeur.tsx) ; le cadre ne
-// lit que l'outil et le tiroir, pour sa classe.
+// lit que ce qui fait sa classe : l'outil, le tiroir, et ce qui retire une action pleine (menu, confirmation, contexte).
 
-import { memo, useEffect, useId, useRef, type RefObject } from 'react';
+import { memo, useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { RegionVocale } from './RegionVocale.js';
 import { Barre, BoutonEnregistrer } from './BarreOutils.js';
-import { useTelephone } from './Vue.js';
+import { useTactile, useTelephone } from './Vue.js';
 import { BarreSelection } from './BarreSelection.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
@@ -15,8 +15,9 @@ import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
-import { FORMES } from './aidesEditeur.js';
-import { pluriel } from '../util/texte.js';
+import { FournisseurMenusOuverts } from './commun/Menu.js';
+import { FORMES, phraseAbandon } from './aidesEditeur.js';
+import { pluriel, selonSaisie } from '../util/texte.js';
 import type { Outil, Tiroir } from './typesEditeur.js';
 
 /** Les raccourcis clavier : un composant sans rendu, pour que le crochet vive sous les contextes. */
@@ -69,7 +70,7 @@ function ConfirmerAbandon() {
   const n = h.passe.length;
   return (
     <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications" aria-describedby={idMessage} ref={racine}>
-      <span id={idMessage}>Abandonner les {n} modification{n > 1 ? 's' : ''} non enregistrée{n > 1 ? 's' : ''} ?</span>
+      <span id={idMessage}>{phraseAbandon(n)}</span>
       <button type="button" onClick={ac.fermer}>Abandonner</button>
       <button type="button" className="primaire" onClick={ac.continuerEdition}>Continuer l’édition</button>
     </div>
@@ -91,14 +92,14 @@ function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
 
 function BarreEtat() {
   const { h, sel } = useDessin(), { tiroir, outil, trace, message } = useInterface(), ac = useActions();
-  const telephone = useTelephone();
+  const telephone = useTelephone(), doigt = useTactile();
   return (
     <footer className="editeur-etat">
       <span className="tiroirs">
         <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
         <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
       </span>
-      <span className="message-etat">{message || etatParDefaut(outil, trace.length, sel.length)}</span>
+      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
       {telephone ? <BoutonEnregistrer /> : null}
@@ -127,23 +128,38 @@ function useFocusTiroir(cadre: RefObject<HTMLDivElement | null>, tiroir: Tiroir)
   }, [cadre, tiroir]);
 }
 
+/**
+ * Les etats du cadre qui retirent une action pleine (DESIGN.md, l'encre unique) : un menu ouvert (compte, les menus se signalent),
+ * la confirmation d'abandon, un contexte de production dont le panneau porte l'export. Ce ne sont que des classes : le sens des
+ * boutons ne change pas.
+ */
+function useClassesInstant(): { classes: string; signaler: (ouvert: boolean) => void } {
+  const { quitter, profil } = useInterface();
+  const [menus, poserMenus] = useState(0);
+  const signaler = useCallback((ouvert: boolean) => poserMenus(n => Math.max(0, n + (ouvert ? 1 : -1))), []);
+  return { classes: (menus ? ' menu-ouvert' : '') + (quitter ? ' confirmation-ouverte' : '') + (profil ? ' production' : ''), signaler };
+}
+
 export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: ProprietesCadre) {
   const { outil, tiroir } = useInterface();
   const racine = useRef<HTMLDivElement>(null), idToile = useId();
+  const { classes, signaler } = useClassesInstant();
   useFocusTiroir(racine, tiroir);
   return (
-    <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '')} ref={racine}>
-      <Raccourcis toile={toile} />
-      <LienToile svgRef={svgRef} idToile={idToile} />
-      <RegionVocale />
-      <Barre titre={titre} nom={nom} />
-      <BarreSelection />
-      <ConfirmerAbandon />
-      <Calques />
-      <Voile />
-      <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} idToile={idToile} />
-      <PanneauLateral nom={nom} />
-      <BarreEtat />
-    </div>
+    <FournisseurMenusOuverts value={signaler}>
+      <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
+        <Raccourcis toile={toile} />
+        <LienToile svgRef={svgRef} idToile={idToile} />
+        <RegionVocale />
+        <Barre titre={titre} nom={nom} />
+        <BarreSelection />
+        <ConfirmerAbandon />
+        <Calques />
+        <Voile />
+        <ToileEditeur titre={titre} toile={toile} svgRef={svgRef} idToile={idToile} />
+        <PanneauLateral nom={nom} />
+        <BarreEtat />
+      </div>
+    </FournisseurMenusOuverts>
   );
 });

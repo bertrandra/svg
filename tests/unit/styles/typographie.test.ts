@@ -31,6 +31,16 @@ describe('la typographie de l interface', () => {
     }
   });
 
+  it('la chasse fixe ne se pose qu en 400 ou 500, les deux graisses embarquees (scripts/fontes-interface.mjs)', () => {
+    // Un bouton est en 600 : une regle qui y pose IBM Plex Mono sans dire sa graisse le faisait grossir par un gras artificiel.
+    for (const f of FEUILLES) {
+      const regles = [...lire(f).replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*font-family:\s*var\(--mono\)[^{}]*)\}/g)];
+      expect(regles.length, f).toBeGreaterThanOrEqual(f.endsWith('base.css') ? 1 : 2);
+      const sansGraisse = regles.filter(m => !/font-weight:\s*(400|500)\s*[;}]?/.test(m[2] ?? '')).map(m => (m[1] ?? '').trim());
+      expect(sansGraisse, f).toEqual([]);
+    }
+  });
+
   it('chaque taille du registre sert', () => {
     const tout = FEUILLES.map(lire).join('\n');
     for (const t of TAILLES) expect(tout, t.id).toContain('var(--' + t.id + ')');

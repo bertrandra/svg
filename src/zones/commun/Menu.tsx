@@ -3,7 +3,7 @@
 // position fixe sous le bouton : les barres d'outils defilent sur mobile et couperaient un panneau
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
 import { dernier, premier, suivant } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
 
@@ -57,12 +57,25 @@ interface Proprietes {
 
 interface Position { top: number; left?: number; right?: number }
 
+/**
+ * Ce qu'un menu ouvert dit au cadre qui le porte (l'editeur) : tant qu'un menu est ouvert, il porte l'action de l'instant, et le
+ * cadre pose les autres actions pleines en secondaires (DESIGN.md, l'encre unique). Hors de tout fournisseur (la page), rien.
+ */
+const ContexteMenusOuverts = createContext<((ouvert: boolean) => void) | null>(null);
+export const FournisseurMenusOuverts = ContexteMenusOuverts.Provider;
+
 export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className }: Proprietes) {
   const [ouvert, poserOuvert] = useState(false);
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
   const focusInitial = useRef<'premier' | 'dernier' | null>(null);
   const origine = useRef<{ top: number; left: number } | null>(null);
+  const signaler = useContext(ContexteMenusOuverts);
+  useEffect(() => {
+    if (!ouvert || !signaler) return;
+    signaler(true);
+    return () => signaler(false);
+  }, [ouvert, signaler]);
 
   const fermer = useCallback((rendreFocus: boolean) => {
     poserOuvert(false);
