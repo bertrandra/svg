@@ -51,7 +51,8 @@ export function lireCheminProjet(d: string): Chemin {
 function disposition<D extends DispositionTexte | DispositionProjet>(d: D): D {
   return (d.mode === 'sur'
     ? { mode: 'sur', forme: d.forme, depart: d.depart, cote: d.cote, repartir: d.repartir }
-    : { mode: 'dans', forme: d.forme, marge: d.marge, ajuster: d.ajuster, justifier: d.justifier }) as D;
+    : d.mode === 'dans' ? { mode: 'dans', forme: d.forme, marge: d.marge, ajuster: d.ajuster, justifier: d.justifier }
+      : { mode: 'enveloppe', forme: d.forme, marge: d.marge }) as D;
 }
 
 function texteProjet(t: TexteVivant): TexteProjet {

@@ -112,8 +112,11 @@ export interface TexteVivant {
   readonly disposition?: DispositionTexte;
 }
 
-/** Le texte sur le trace d'une forme ou dans son interieur (ADR-0031), et la forme qui le porte, par son identifiant. */
-export type DispositionTexte = DispositionSurForme | DispositionDansForme;
+/**
+ * Le texte sur le trace d'une forme ou dans son interieur (ADR-0031), ou deforme pour en prendre la silhouette (ADR-0032), et la
+ * forme qui le porte, par son identifiant.
+ */
+export type DispositionTexte = DispositionSurForme | DispositionDansForme | DispositionEnveloppe;
 
 /** Le cote d'un texte sur un trace : au-dessus d'un trace ouvert (a l'exterieur d'une forme fermee), ou dessous (a l'interieur). */
 export type CoteTexte = 'dessus' | 'dessous';
@@ -139,6 +142,18 @@ export interface DispositionDansForme {
   readonly ajuster: boolean;
   /** Justifier les lignes pleines ; faux par defaut. */
   readonly justifier: boolean;
+}
+
+/**
+ * Le texte deforme dans une forme (ADR-0032) : le bloc entier est etire et courbe pour en remplir le contour exterieur, ses lettres
+ * deformees (une enveloppe verticale). La taille du texte s'y calcule (la hauteur de la forme sur celle du bloc) : elle ne sert qu'a
+ * la marge et aux tolerances.
+ */
+export interface DispositionEnveloppe {
+  readonly mode: 'enveloppe';
+  readonly forme: string;
+  /** La marge interieure, en part de la taille du texte ; 0,05 par defaut. */
+  readonly marge: number;
 }
 
 export interface DessinSvg { readonly vb: readonly [number, number, number, number]; readonly formes: readonly Forme[] }

@@ -118,7 +118,7 @@ describe('l aller-retour d un projet', () => {
     pose.texte.disposition['depart'] = 0;
     pose.texte.disposition['mode'] = 'autour';
     const r2 = lireProjet(brut);
-    expect('erreur' in r2 ? r2.erreur : '').toMatch(/ni « sur » ni « dans »/);
+    expect('erreur' in r2 ? r2.erreur : '').toMatch(/ni « sur », ni « dans », ni « enveloppe »/);
   });
 
   it('nomme les fontes deposees qu emploient les textes, sans doublon', () => {

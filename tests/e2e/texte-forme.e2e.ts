@@ -1,5 +1,5 @@
 // Le texte pose sur ou dans une forme (ADR-0031), par la vraie page : depuis la barre de texte (« Sur la forme » puis un clic sur
-// le cercle, « Dans la forme » puis un clic sur le cœur) et depuis le menu de la selection ; la poignee de depart glissee a la souris
+// le cercle, « Dans la forme » puis un clic sur le cœur, puis « En lignes » dans le panneau, ADR-0032) et depuis le menu de la selection ; la poignee de depart glissee a la souris
 // et reglee au clavier ; la forme deplacee ou agrandie, le texte qui suit ; la forme supprimee, le texte libre ; la saisie sur la
 // toile d'un texte pose ; le trace Median ; le fichier (des contours seulement) ; tout au clavier ; axe-core en clair et en sombre ;
 // 390 px au doigt.
@@ -98,12 +98,16 @@ describe('le texte sur et dans une forme', () => {
     await capture(page, 'sur-cercle-1280-clair');
   });
 
-  it('pose un texte dans le cœur depuis la barre : il le remplit, coupe sur ses bords ; ce qui ne tient pas se dit', async () => {
+  it('remplit le cœur en lignes (« Dans la forme », puis « Remplir : En lignes » dans le panneau) : coupe sur ses bords ; ce qui ne tient pas se dit', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await avecTexte(page, 'Avec tout mon amour pour toi');
     await poser(page, 'Dans la forme', 300, 140);
-    // A la taille du texte (un sixieme du plan), aucun mot ne tient : la taille s'ajuste d'elle-meme, et c'est dit.
-    await attend(() => dit(page)).toMatch(/^Texte posé dans tracé courbe 2 : il remplit la forme\. Ctrl\+Z annule\. Aucun mot ne tenait à cette taille/);
+    // « Dans la forme » deforme le texte (ADR-0032) ; le remplissage en lignes est un choix du panneau.
+    await attend(() => dit(page)).toMatch(/^Texte déformé dans tracé courbe 2 : il en prend la silhouette\./);
+    await page.getByRole('button', { name: 'Plus d’options' }).click();
+    await page.locator('.editeur-inspecteur .disposition-texte').getByRole('group', { name: 'Remplir' }).getByRole('button', { name: 'En lignes' }).click();
+    // A la taille du texte deforme (toute la hauteur du cœur), aucun mot ne tient : la taille s'ajuste d'elle-meme, et c'est dit.
+    await attend(() => dit(page)).toMatch(/^Le texte remplit la forme en lignes, ses lettres droites\. Ctrl\+Z annule\. Aucun mot ne tenait à cette taille/);
     const t = await boite(page, 'f3'), c = await boite(page, 'f2');
     expect(t.x).toBeGreaterThanOrEqual(c.x - 1);
     expect(t.x + t.width).toBeLessThanOrEqual(c.x + c.width + 1);
@@ -111,7 +115,6 @@ describe('le texte sur et dans une forme', () => {
     expect(t.y + t.height).toBeLessThanOrEqual(c.y + c.height + 1);
     await capture(page, 'dans-coeur-1280-clair');
     // Sans « Ajuster la taille », une taille plus grande ne tient plus : le panneau et la region vocale le disent.
-    await page.getByRole('button', { name: 'Plus d’options' }).click();
     const panneau = page.locator('.editeur-inspecteur .disposition-texte');
     await panneau.waitFor();
     const ajuster = panneau.getByLabel('Ajuster la taille pour remplir la forme');
@@ -277,7 +280,7 @@ describe('le texte sur et dans une forme', () => {
     const menu = page.getByRole('button', { name: /^Texte et forme/ });
     await menu.click();
     await page.getByRole('menuitem', { name: 'Poser le texte dans la forme' }).click();
-    await attend(() => dit(page)).toMatch(/^Texte posé dans cercle 1/);
+    await attend(() => dit(page)).toMatch(/^Texte déformé dans cercle 1/);
   });
 
   for (const schema of ['light', 'dark'] as const) {

@@ -37,11 +37,12 @@ const memeTexte = (a: TexteVivant, b: TexteVivant): boolean =>
   && a.interlettrage === b.interlettrage && a.interligne === b.interligne && a.alignement === b.alignement && a.ligatures === b.ligatures && a.trace === b.trace
   && a.matrice.every((v, i) => v === b.matrice[i]) && memeDisposition(a.disposition, b.disposition);
 
-/** Deux dispositions egales (ADR-0031), champ par champ ; deux absences aussi. */
+/** Deux dispositions egales (ADR-0031, 0032), champ par champ ; deux absences aussi. */
 const memeDisposition = (a: TexteVivant['disposition'], b: TexteVivant['disposition']): boolean =>
   a === b || (!!a && !!b && a.mode === b.mode && a.forme === b.forme
     && (a.mode === 'sur' && b.mode === 'sur' ? a.depart === b.depart && a.cote === b.cote && a.repartir === b.repartir
-      : a.mode === 'dans' && b.mode === 'dans' && a.marge === b.marge && a.ajuster === b.ajuster && a.justifier === b.justifier));
+      : a.mode === 'dans' && b.mode === 'dans' ? a.marge === b.marge && a.ajuster === b.ajuster && a.justifier === b.justifier
+        : a.mode === 'enveloppe' && b.mode === 'enveloppe' && a.marge === b.marge));
 
 /**
  * La nouvelle peinture d'un texte dont la police change de nature : vers le trait, le fond devient la couleur du trait (a

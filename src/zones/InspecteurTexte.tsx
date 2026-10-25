@@ -10,8 +10,8 @@ import { MODES_VECTORISATION, NOMS_MODES, type ModeVectorisation } from '../engi
 import { Section } from './commun/Section.js';
 import { ChoixPolice } from './ChoixPolice.js';
 import { Nombre } from './commun/Nombre.js';
-import { appliquerChangement, nomDePolice, policeDe, rienNeSePose, traceDe, useActionsTexte, type ChangementTexte } from './actionsTexte.js';
-import { phraseRienNeTient } from './phrasesDisposition.js';
+import { appliquerChangement, nomDePolice, policeDe, poseApres, rienNeSePose, traceDe, useActionsTexte, type ChangementTexte } from './actionsTexte.js';
+import { phraseRienNeTient, RAISON_TAILLE_AJUSTEE, RAISON_TAILLE_ENVELOPPE } from './phrasesDisposition.js';
 import { ChoixTrace } from './ChoixTrace.js';
 import { ReglagesDisposition } from './InspecteurDisposition.js';
 import { natureDuTexte } from '../engine/texte/vivant.js';
@@ -41,7 +41,7 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
     const p = c.police ?? police;
     if (!p) return;
     // Un texte pose qui ne dessinerait plus rien (trop grand pour sa forme) ne change pas, et c'est dit (ADR-0031).
-    if (t.disposition && rienNeSePose(dessin, forme.id, c, p)) { ac.dire(phraseRienNeTient(t.disposition.mode)); return; }
+    if (t.disposition && rienNeSePose(dessin, forme.id, c, p)) { ac.dire(phraseRienNeTient(t.disposition.mode, poseApres(dessin, forme.id, c, p)?.refus)); return; }
     ac.appliquer(d => appliquerChangement(d, forme.id, c, p, ui.profil), cleGeste ?? ac.nouvelleCle());
   };
   const taper = (v: string) => {
@@ -69,7 +69,8 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
       {absente ? <RetrouverPolice texte={t} poser={choisirPolice} /> : null}
       {absente ? <DeposerPolice deposer={deposer} poser={choisirPolice} /> : null}
       <div className="grille-2">
-        <Nombre libelle="Taille" valeur={t.taille} min={0.01} desactive={dispo?.mode === 'dans' && dispo.ajuster} poser={v => changer({ taille: v })} />
+        <Nombre libelle="Taille" valeur={t.taille} min={0.01} desactive={(dispo?.mode === 'dans' && dispo.ajuster) || dispo?.mode === 'enveloppe'}
+          raison={dispo?.mode === 'enveloppe' ? RAISON_TAILLE_ENVELOPPE : RAISON_TAILLE_AJUSTEE} poser={v => changer({ taille: v })} />
         <Nombre libelle="Espace" valeur={t.interlettrage} poser={v => changer({ interlettrage: v })} />
         <Nombre libelle="Interligne" valeur={t.interligne} min={0.1} poser={v => changer({ interligne: v })} />
       </div>

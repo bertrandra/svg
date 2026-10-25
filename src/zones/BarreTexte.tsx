@@ -10,8 +10,8 @@
 import { memo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import type { TexteVivant } from '../engine/editionSvg.js';
 import type { Police } from '../io/polices.js';
-import { appliquerChangement, policeDe, rienNeSePose, traceDe, type ChangementTexte } from './actionsTexte.js';
-import { phraseRienNeTient } from './phrasesDisposition.js';
+import { appliquerChangement, policeDe, poseApres, rienNeSePose, traceDe, type ChangementTexte } from './actionsTexte.js';
+import { phraseRienNeTient, RAISON_TAILLE_AJUSTEE, RAISON_TAILLE_ENVELOPPE } from './phrasesDisposition.js';
 import { AIDES_TRACE, ChoixTrace, RAISON_PLEIN_TRAIT } from './ChoixTrace.js';
 import { familleDePolice, OptionsPolices, useStylesPolice } from './ChoixPolice.js';
 import { useSectionsSelection } from './BarreSelection.js';
@@ -67,7 +67,7 @@ function useBarreTexte() {
     }
     const p = c.police ?? policeForme;
     // Un texte pose qui ne dessinerait plus rien (trop grand pour sa forme) ne change pas, et c'est dit (ADR-0031).
-    if (forme && t && p && t.disposition && rienNeSePose(mo.dessin, forme.id, c, p)) ac.dire(phraseRienNeTient(t.disposition.mode));
+    if (forme && t && p && t.disposition && rienNeSePose(mo.dessin, forme.id, c, p)) ac.dire(phraseRienNeTient(t.disposition.mode, poseApres(mo.dessin, forme.id, c, p)?.refus));
     else if (forme && t && p) ac.appliquer(d => appliquerChangement(d, forme.id, c, p, ui.profil), ac.nouvelleCle());
     revenir();
   };
@@ -104,7 +104,9 @@ function useBarreTexte() {
   const aligner = (a: TexteVivant['alignement']) => changer(p?.mode === 'dans' && p.justifier ? { alignement: a, disposition: { ...p, justifier: false } } : { alignement: a });
   const justifier = () => { if (p?.mode === 'dans' && !p.justifier) changer({ alignement: 'gauche', disposition: { ...p, justifier: true } }); };
   return {
-    forme: t ? forme : undefined, aligner, justifier, justifie: !!justifie, dans: p?.mode === 'dans', alignements: alignementsDe(t), ajuste: p?.mode === 'dans' && p.ajuster,
+    forme: t ? forme : undefined, aligner, justifier, justifie: !!justifie, dans: p?.mode === 'dans', alignements: alignementsDe(t),
+    // La taille se calcule dans une forme a taille ajustee, et toujours pour un texte deforme (ADR-0032) : le champ la montre, inactif.
+    ajuste: (p?.mode === 'dans' && p.ajuster) || p?.mode === 'enveloppe', raisonTaille: p?.mode === 'enveloppe' ? RAISON_TAILLE_ENVELOPPE : RAISON_TAILLE_AJUSTEE,
     sx, ac, tx, polices, police, styles, verrou, inactif, racine, trait, trace, choisi: !sx.saisie && !!t,
     etiquette: sx.saisie ? 'Saisie · Échap pour finir' : t ? 'Texte' : 'Prochain texte', changer, poserPolice, versPanneau,
     taille: t ? t.taille : tailleNouveauTexte(sx.nouveau, mo.dessin.vb), alignement: t ? t.alignement : sx.nouveau.alignement,
@@ -123,8 +125,8 @@ function ChoixPoliceBarre({ b }: { b: Barre }) {
   );
 }
 
-// Dans une forme a taille ajustee (ADR-0031), la taille se calcule : le champ la montre, inactif.
-const TailleBarre = ({ b }: { b: Barre }) => <Nombre libelle="Taille" valeur={b.taille} min={0.01} desactive={!!b.ajuste} poser={v => b.changer({ taille: v })} />;
+// Dans une forme a taille ajustee (ADR-0031), ou deforme (ADR-0032), la taille se calcule : le champ la montre, inactif, et dit pourquoi.
+const TailleBarre = ({ b }: { b: Barre }) => <Nombre libelle="Taille" valeur={b.taille} min={0.01} desactive={!!b.ajuste} raison={b.raisonTaille} poser={v => b.changer({ taille: v })} />;
 
 export const BarreTexte = memo(function BarreTexte() {
   const b = useBarreTexte();

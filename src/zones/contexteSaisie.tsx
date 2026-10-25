@@ -4,6 +4,7 @@
 // dans l'historique ni dans le SVG ; seuls la toile, ses gestes, la barre de texte et les panneaux du texte le lisent.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
+import type { DispositionTexte } from '../engine/editionSvg.js';
 import type { PointTexte } from '../engine/texte/curseur.js';
 import { NOUVEAU_TEXTE, type ReglagesNouveauTexte } from './saisie.js';
 
@@ -32,8 +33,8 @@ export interface PoigneeSaisie {
 
 export interface DemandePanneau { readonly rang: number; readonly polices: boolean }
 
-/** Le choix de la forme qui portera un texte (ADR-0031) : le texte, et s'il se pose sur la forme ou dans la forme. */
-export interface ChoixForme { readonly id: string; readonly mode: 'sur' | 'dans' }
+/** Le choix de la forme qui portera un texte (ADR-0031) : le texte, et s'il se pose sur la forme, dans la forme en lignes, ou deforme (ADR-0032). */
+export interface ChoixForme { readonly id: string; readonly mode: DispositionTexte['mode'] }
 
 export interface EtatSaisie {
   readonly saisie: Saisie | null;

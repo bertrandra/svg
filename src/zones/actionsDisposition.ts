@@ -1,15 +1,16 @@
-// Les gestes d'un texte pose sur ou dans une forme (ADR-0031) : le poser, le rendre libre, regler sa disposition, montrer ou masquer
-// sa forme. Le moteur compose et garde le lien (engine/texte/disposition.ts) ; ici, on trouve la fonte, on passe par les verbes de
+// Les gestes d'un texte pose sur ou dans une forme (ADR-0031), ou deforme dans une forme (ADR-0032) : le poser, le rendre libre,
+// regler sa disposition, montrer ou masquer sa forme. Le moteur compose et garde le lien (engine/texte/disposition.ts) ; ici, on trouve la fonte, on passe par les verbes de
 // l'editeur (une entree d'historique par geste) et on dit ce qui s'est passe.
 
 import { useCallback } from 'react';
-import { modifier, type DessinSvg, type DispositionDansForme, type DispositionSurForme, type DispositionTexte, type Forme } from '../engine/editionSvg.js';
+import { modifier, type DessinSvg, type DispositionDansForme, type DispositionEnveloppe, type DispositionSurForme, type DispositionTexte, type Forme } from '../engine/editionSvg.js';
 import { peutPorter, texteDispose } from '../engine/texte/disposition.js';
+import type { RefusEnveloppe } from '../engine/texte/pose.js';
 import type { Police } from '../io/polices.js';
-import { appliquerChangement, dispositionPour, formePorteuse, policeDe, type ChangementTexte } from './actionsTexte.js';
+import { appliquerChangement, dispositionPour, formePorteuse, policeDe, poseApres, type ChangementTexte } from './actionsTexte.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
-import { PHRASE_FORME_REFUSEE, PHRASE_LIBRE, PHRASE_TAILLE_AJUSTEE, phraseDepassement, phraseFormeVisible, phrasePose, phraseRienNeTient, type ModeDisposition } from './phrasesDisposition.js';
+import { PHRASE_FORME_REFUSEE, PHRASE_LIBRE, PHRASE_TAILLE_AJUSTEE, phraseDepassement, phraseFormeVisible, phrasePose, phraseRemplir, phraseRienNeTient, remplit, type ModeDisposition } from './phrasesDisposition.js';
 
 /** Les formes qui peuvent porter ce texte, dans l'ordre du dessin : visibles, deverrouillees, pas des textes. */
 export const candidatesPour = (d: DessinSvg, idTexte: string): Forme[] => d.formes.filter(f => f.visible && !f.verrouille && peutPorter(f, idTexte));
@@ -21,8 +22,14 @@ export function depassementDe(d: DessinSvg, id: string, police: Police | null): 
   return { depasse: r?.pose.depasse ?? 0, nonPlaces: r?.pose.nonPlaces ?? 0 };
 }
 
-/** Un reglage de la disposition (ADR-0031) : un champ de « sur la forme » ou de « dans la forme ». */
-export type ReglageDisposition = Partial<Omit<DispositionSurForme, 'mode' | 'forme'>> | Partial<Omit<DispositionDansForme, 'mode' | 'forme'>>;
+/** Pourquoi un texte deforme ne se deforme plus (sa forme a perdu son interieur, ADR-0032) ; undefined s'il se deforme. */
+export function refusDe(d: DessinSvg, id: string, police: Police | null): RefusEnveloppe | undefined {
+  const f = d.formes.find(x => x.id === id);
+  return f?.texte?.disposition?.mode === 'enveloppe' && police ? texteDispose(d, f, police.glyphes)?.pose.refus : undefined;
+}
+
+/** Un reglage de la disposition (ADR-0031, 0032) : un champ de « sur la forme », de « dans la forme » ou du texte deforme. */
+export type ReglageDisposition = Partial<Omit<DispositionSurForme, 'mode' | 'forme'>> | Partial<Omit<DispositionDansForme, 'mode' | 'forme'>> | Partial<Omit<DispositionEnveloppe, 'mode' | 'forme'>>;
 
 export function useDisposition() {
   // Les fontes deja chargees, sans les demander : qui monte ce crochet pour un texte les a demandees (barre, panneau, toile).
@@ -46,16 +53,19 @@ export function useDisposition() {
     if (f.verrouille) { ac.dire('Ce texte est verrouillé : déverrouillez-le pour le poser sur une forme.'); return false; }
     if (!base) { ac.dire(PHRASE_FORME_REFUSEE); return false; }
     if (!policeDe(f, polices)) { ac.dire(polices ? 'Police absente : choisissez-en une pour poser le texte.' : 'Les polices se chargent encore : recommencez dans un instant.'); return false; }
-    const avant = f.texte.disposition, dispo = dispositionPour(mode, base, avant?.forme === base.id ? avant : undefined);
-    const c: ChangementTexte = { disposition: dispo, ...(avant?.mode === mode ? {} : { alignement: 'centre' as const }) };
+    const avant = f.texte.disposition, memeForme = avant?.forme === base.id, dispo = dispositionPour(mode, base, memeForme ? avant : undefined);
+    // Passer de deforme a en lignes (ou l'inverse) dans la meme forme garde l'alignement : c'est toujours « dans la forme ».
+    const bascule = memeForme && remplit(avant?.mode) && remplit(mode);
+    const c: ChangementTexte = { disposition: dispo, ...(avant?.mode === mode || bascule ? {} : { alignement: 'centre' as const }) };
     // Dans une forme ou aucun mot ne tient a la taille du texte, la taille s'ajuste d'elle-meme (et c'est dit) : poser ne se refuse pas.
     const ajuste = dispo.mode === 'dans' && !dispo.ajuster ? { ...c, disposition: { ...dispo, ajuster: true } } : null;
     let r = changer(idTexte, c), ajustee = false;
     if (!r && ajuste) { r = changer(idTexte, ajuste); ajustee = !!r; }
-    if (!r) { ac.dire(phraseRienNeTient(mode)); return false; }
+    const police = policeDe(f, polices);
+    if (!r) { ac.dire(phraseRienNeTient(mode, mode === 'enveloppe' && police ? poseApres(dessin, idTexte, c, police)?.refus : undefined)); return false; }
     ac.choisir([idTexte]);
     const { depasse, nonPlaces } = depassementDe(r.dessin, idTexte, r.police);
-    ac.dire(phrasePose(mode, base, depasse, nonPlaces) + (ajustee ? ' ' + PHRASE_TAILLE_AJUSTEE : ''));
+    ac.dire((bascule && remplit(mode) ? phraseRemplir(mode) : phrasePose(mode, base, depasse, nonPlaces)) + (ajustee ? ' ' + PHRASE_TAILLE_AJUSTEE : ''));
     return true;
   }, [ac, changer, dessin, polices]);
 
@@ -74,7 +84,11 @@ export function useDisposition() {
     if (!t || !p) return null;
     const neuve = { ...p, ...r } as DispositionTexte;
     const fait = changer(idTexte, { disposition: neuve, ...(neuve.mode === 'dans' && neuve.justifier ? { alignement: 'gauche' as const } : {}) }, cle);
-    if (!fait) { if (!taire) ac.dire(phraseRienNeTient(p.mode)); return null; }
+    if (!fait) {
+      const police = policeDe(dessin.formes.find(x => x.id === idTexte), polices);
+      if (!taire) ac.dire(phraseRienNeTient(p.mode, p.mode === 'enveloppe' && police ? poseApres(dessin, idTexte, { disposition: neuve }, police)?.refus : undefined));
+      return null;
+    }
     if (!taire) {
       const { depasse, nonPlaces } = depassementDe(fait.dessin, idTexte, fait.police);
       const avant = depassementDe(dessin, idTexte, fait.police);
@@ -83,7 +97,7 @@ export function useDisposition() {
       else if (!dit && (avant.depasse || avant.nonPlaces)) ac.dire(p.mode === 'sur' ? 'Tout le texte tient sur le tracé.' : 'Tout le texte tient dans la forme.');
     }
     return fait;
-  }, [ac, changer, dessin]);
+  }, [ac, changer, dessin, polices]);
 
   /** Montre ou masque la forme qui porte le texte (masquee, elle ne s'ecrit pas ; le lien reste). */
   const montrerForme = useCallback((idTexte: string, visible: boolean) => {

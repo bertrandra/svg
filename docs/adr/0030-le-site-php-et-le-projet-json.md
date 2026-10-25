@@ -75,7 +75,7 @@ deux dispositions sont décrites dans `docs/deploiement-php.md`.
 - **Tout l’état utile** : chaque forme champ pour champ (styles, opacités, pointillés, bouts et jonctions, origines et mentions,
   texte vivant complet — chaîne, police `id`/version/famille, taille, interlettrage, interligne, alignement, ligatures, tracé
   Médian, matrice, et sa disposition sur ou dans une forme (ADR-0031 : `{ mode: 'sur', forme, depart, cote, repartir }` ou
-  `{ mode: 'dans', forme, marge, ajuster, justifier }`, absente d’un texte libre ; la forme de base reste une forme du dessin,
+  `{ mode: 'dans', forme, marge, ajuster, justifier }`, ou, depuis l’ADR-0032, `{ mode: 'enveloppe', forme, marge }`, absente d’un texte libre ; la forme de base reste une forme du dessin,
   masquée ou non, liée par son identifiant, que le projet ne renumérote pas) —, opération Cricut, verrouillage, visibilité, ordre), le plan de travail, le contexte de production et son choix,
   le nuancier, le nom, les dates. Une **fonte déposée** employée par un texte est incluse en base64 (son identifiant `u-…` est
   l’empreinte de ses octets : relue, elle est revérifiée) ; une police du catalogue ou livrée se désigne par son identifiant et sa

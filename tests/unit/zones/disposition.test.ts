@@ -9,13 +9,14 @@ import { cheminDuTexte } from '../../../src/engine/texte/bloc.js';
 import type { Police } from '../../../src/io/polices.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { au } from '../../../src/util/tableaux.js';
-import { appliquerChangement, dispositionPour, rienNeSePose } from '../../../src/zones/actionsTexte.js';
+import { appliquerChangement, dispositionPour, poseApres, rienNeSePose } from '../../../src/zones/actionsTexte.js';
 import { candidatesPour, depassementDe } from '../../../src/zones/actionsDisposition.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
 import { frapper } from '../../../src/zones/saisie.js';
 import { operationProposee } from '../../../src/engine/preparation/operations.js';
 import {
-  nomCourt, phraseCandidate, phraseChoixForme, phraseDepart, phraseDepassement, phraseFormePerdue, phraseFormeVisible, phrasePose, phraseRienNeTient
+  LIBELLES_REMPLIR, nomCourt, phraseCandidate, phraseChoixForme, phraseDepart, phraseDepassement, phraseFormePerdue, phraseFormeVisible, phrasePose, phraseRemplir,
+  phraseRienNeTient, remplit
 } from '../../../src/zones/phrasesDisposition.js';
 import { glyphesCarres } from '../engine/glyphesFactices.js';
 
@@ -109,6 +110,53 @@ function monter(depart: DessinSvg) {
   return { actions: creerActions(() => etat, setters), etat, historique: () => h };
 }
 
+describe('changer un texte deforme (ADR-0032)', () => {
+  it('le deforme dans une forme fermee, a la marge par defaut, sa taille calculee ; puis en lignes et retour, sur la meme forme', () => {
+    const d = dessin('AMOUR');
+    const env = { mode: 'enveloppe', forme: 'f1', marge: 0.05 } as const;
+    expect(dispositionPour('enveloppe', trouver(d, 'f1'))).toEqual(env);
+    const pose = appliquerChangement(d, 'f3', { disposition: env, alignement: 'centre' }, police, null);
+    const t = trouver(pose, 'f3').texte;
+    expect(t?.disposition).toEqual(env);
+    // La taille se calcule : la hauteur du cercle (200) sur celle des lettres carrees (0,7 de la taille).
+    expect(t?.taille).toBe(Math.floor((200 / 0.7) * 100) / 100);
+    // En lignes, puis deforme a nouveau : la meme forme, la marge par defaut de chaque mode.
+    const lignes = dispositionPour('dans', trouver(pose, 'f1'), env);
+    expect(lignes).toMatchObject({ mode: 'dans', forme: 'f1', marge: 0.25 });
+    expect(dispositionPour('enveloppe', trouver(pose, 'f1'), { ...env, marge: 0.2 })).toEqual({ ...env, marge: 0.2 });
+  });
+
+  it('ne se deforme pas dans une forme sans interieur, et dit pourquoi', () => {
+    const d = appliquerChangement(dessin('AMOUR'), 'f3', { disposition: dispositionPour('enveloppe', trouver(dessin(), 'f1')) }, police, null);
+    const vers = { disposition: { mode: 'enveloppe' as const, forme: 'f2', marge: 0.05 } };
+    expect(rienNeSePose(d, 'f3', vers, police)).toBe(true);
+    expect(poseApres(d, 'f3', vers, police)?.refus).toBe('forme-sans-aire');
+    expect(appliquerChangement(d, 'f3', vers, police, null)).toBe(d);
+    expect(phraseRienNeTient('enveloppe', 'forme-sans-aire')).toMatch(/^Cette forme n’a pas d’intérieur/);
+    expect(phraseRienNeTient('enveloppe', 'marge')).toMatch(/^La marge ne laisse rien de la forme/);
+    expect(poseApres(d, 'f3', { disposition: { mode: 'enveloppe', forme: 'f1', marge: 50 } }, police)?.refus).toBe('marge');
+  });
+
+  it('se coupe plein, s ecrit en trace median (ADR-0028)', () => {
+    const d = appliquerChangement(dessin('AMOUR'), 'f3', { disposition: dispositionPour('enveloppe', trouver(dessin(), 'f1')) }, police, null);
+    expect(operationProposee(trouver(d, 'f3'), 'decoupe')).toBe('decoupe');
+    const median = appliquerChangement(d, 'f3', { trace: 'median' }, police, null);
+    expect(trouver(median, 'f3').texte?.disposition?.mode).toBe('enveloppe');
+    expect(operationProposee(trouver(median, 'f3'), 'decoupe')).toBe('ecriture');
+  });
+
+  it('dit la pose deformee, la bascule, et ne dit jamais de depassement', () => {
+    const cercle = forme('f1', ellipse(0, 0, 10, 10));
+    expect(phrasePose('enveloppe', cercle, 0, 0)).toBe('Texte déformé dans cercle 1 : il en prend la silhouette. « Plus d’options » le remplit en lignes ; Ctrl+Z annule.');
+    expect(phraseDepassement('enveloppe', 3, 2)).toBe('');
+    expect(phraseRemplir('dans')).toBe('Le texte remplit la forme en lignes, ses lettres droites. Ctrl+Z annule.');
+    expect(phraseRemplir('enveloppe')).toBe('Le texte se déforme pour prendre la silhouette de la forme. Ctrl+Z annule.');
+    expect(phraseChoixForme('enveloppe')).toMatch(/^Cliquez la forme dans laquelle poser le texte\./);
+    expect([remplit('dans'), remplit('enveloppe'), remplit('sur'), remplit(undefined)]).toEqual([true, true, false, false]);
+    expect(LIBELLES_REMPLIR).toEqual({ enveloppe: 'En déformant les lettres', dans: 'En lignes' });
+  });
+});
+
 describe('le lien dans l historique', () => {
   const pose = () => appliquerChangement(dessin(), 'f3', { disposition: dispositionPour('sur', trouver(dessin(), 'f1')), alignement: 'centre' }, police, null);
 
@@ -139,7 +187,7 @@ describe('les phrases', () => {
   it('disent la pose, le depassement (au singulier et au pluriel), et la forme perdue', () => {
     expect(nomCourt(cercle)).toBe('cercle 1');
     expect(phrasePose('sur', cercle, 0, 0)).toBe('Texte posé sur cercle 1 : il suit son tracé. La poignée de départ le fait glisser ; Ctrl+Z annule.');
-    expect(phrasePose('dans', cercle, 0, 2)).toBe('Texte posé dans cercle 1 : il remplit la forme. Ctrl+Z annule. 2 mots ne tiennent pas dans la forme.');
+    expect(phrasePose('dans', cercle, 0, 2)).toBe('Texte posé dans cercle 1 : il remplit la forme en lignes. Ctrl+Z annule. 2 mots ne tiennent pas dans la forme.');
     expect(phraseDepassement('sur', 1, 0)).toBe('Le texte dépasse le tracé de 1 lettre.');
     expect(phraseDepassement('sur', 3, 0)).toBe('Le texte dépasse le tracé de 3 lettres.');
     expect(phraseDepassement('dans', 0, 1)).toBe('1 mot ne tient pas dans la forme.');

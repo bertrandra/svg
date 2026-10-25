@@ -1,7 +1,8 @@
 // Le choix de la disposition d'un texte (ADR-0031) : « Libre », « Sur la forme », « Dans la forme ». Trois boutons a etat (un etat,
 // pas une action : jamais pleins) dans la barre de texte (des icones nommees) et dans le panneau Texte (des libelles), et trois
 // choix radio dans le menu de la barre resserree. « Sur la forme » ou « Dans la forme » demande la forme : un clic sur la toile (ou
-// Tab puis Entree) ; un texte deja pose change de mode sur la meme forme.
+// Tab puis Entree) ; un texte deja pose change de mode sur la meme forme. « Dans la forme » deforme le texte pour qu'il prenne la
+// silhouette de la forme (ADR-0032) ; le remplissage en lignes reste un choix du panneau, et un texte deja en lignes le garde.
 
 import type { Forme } from '../engine/editionSvg.js';
 import { useActions, useDessin } from './contexteEditeur.js';
@@ -10,11 +11,16 @@ import { candidatesPour, useDisposition } from './actionsDisposition.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
-import { LIBELLES_DISPOSITION, PHRASE_AUCUNE_CANDIDATE, phraseChoixForme, type ModeDisposition } from './phrasesDisposition.js';
+import { LIBELLES_DISPOSITION, PHRASE_AUCUNE_CANDIDATE, phraseChoixForme, remplit, type ModeDisposition } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
 import { usePolicesSi } from './contexteTexte.js';
 
-export type ChoixDispo = 'libre' | ModeDisposition;
+/** Le choix de la barre : libre, sur la forme, ou dans la forme (deforme, ou en lignes : le panneau dit lequel). */
+export type ChoixDispo = 'libre' | 'sur' | 'dans';
+
+/** Le choix de la barre qui montre un mode, et le mode qu'un choix pose : « Dans la forme » deforme (ADR-0032). */
+const choixDe = (mode: ModeDisposition): ChoixDispo => (remplit(mode) ? 'dans' : mode);
+const modeDe = (c: Exclude<ChoixDispo, 'libre'>): ModeDisposition => (c === 'dans' ? 'enveloppe' : c);
 
 const CHOIX: ReadonlyArray<readonly [ChoixDispo, NomIcone]> = [['libre', 'texte-libre'], ['sur', 'texte-sur'], ['dans', 'texte-dans']];
 
@@ -22,27 +28,28 @@ const CHOIX: ReadonlyArray<readonly [ChoixDispo, NomIcone]> = [['libre', 'texte-
 const AIDES: Readonly<Record<ChoixDispo, string>> = {
   libre: 'Libre : le texte sur sa ligne droite',
   sur: 'Sur la forme : le texte suit le tracé d’une forme',
-  dans: 'Dans la forme : le texte remplit une forme fermée'
+  dans: 'Dans la forme : le texte se déforme pour prendre la silhouette d’une forme fermée'
 };
 
 /** La disposition d'un texte, et le geste qui la change (le choix de la forme d'abord, s'il le faut). */
 export function useChoixDisposition(forme: Forme | null | undefined) {
   const mo = useDessin(), ac = useActions(), sx = useSaisie(), dz = useDisposition(), tactile = useTactile();
   const p = forme?.texte?.disposition;
-  const actuel: ChoixDispo = p ? p.mode : 'libre';
+  const actuel: ChoixDispo = p ? choixDe(p.mode) : 'libre';
   const choisir = (c: ChoixDispo) => {
     if (!forme?.texte) return;
     if (sx.choixForme) sx.poserChoixForme(null);
     if (c === 'libre') { dz.liberer(forme.id); return; }
-    // Un texte deja pose change de mode sur sa forme ; sinon, on demande la forme.
-    if (p) { if (p.mode !== c) dz.poser(forme.id, p.forme, c); return; }
+    // Un texte deja pose change de mode sur sa forme (un texte deja dans la forme, deforme ou en lignes, y reste tel quel) ; sinon,
+    // on demande la forme.
+    if (p) { if (choixDe(p.mode) !== c) dz.poser(forme.id, p.forme, modeDe(c)); return; }
     if (!candidatesPour(mo.dessin, forme.id).length) { ac.dire(PHRASE_AUCUNE_CANDIDATE); return; }
     // La saisie se termine (le texte reste) : le clic suivant sur la toile donne la forme.
     sx.poignee.current?.terminer(false);
-    sx.poserChoixForme({ id: forme.id, mode: c });
-    ac.dire(phraseChoixForme(c, tactile));
+    sx.poserChoixForme({ id: forme.id, mode: modeDe(c) });
+    ac.dire(phraseChoixForme(modeDe(c), tactile));
   };
-  const enChoix = sx.choixForme?.id === forme?.id ? sx.choixForme?.mode ?? null : null;
+  const enChoix = sx.choixForme?.id === forme?.id && sx.choixForme ? choixDe(sx.choixForme.mode) : null;
   const menu: ElementMenu[] = CHOIX.map(([c, icone]) => ({
     id: 'disposition-' + c, libelle: LIBELLES_DISPOSITION[c], icone, radio: true, coche: actuel === c, desactive: !!forme?.verrouille, onClick: () => choisir(c)
   }));
@@ -87,7 +94,7 @@ export function useSectionDisposition(): SectionMenu | null {
   return {
     id: 'disposition', titre: 'Texte et forme', elements: [
       { id: 'poser-sur', libelle: 'Poser le texte sur la forme', icone: 'texte-sur', onClick: () => dz.poser(texte.id, base.id, 'sur') },
-      { id: 'poser-dans', libelle: 'Poser le texte dans la forme', icone: 'texte-dans', onClick: () => dz.poser(texte.id, base.id, 'dans') }
+      { id: 'poser-dans', libelle: 'Poser le texte dans la forme', icone: 'texte-dans', onClick: () => dz.poser(texte.id, base.id, 'enveloppe') }
     ]
   };
 }

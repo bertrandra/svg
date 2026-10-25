@@ -25,7 +25,12 @@ export interface Pose {
   readonly depasse: number;
   /** Combien de mots ne tiennent pas dans la forme (dans une forme) ; 0 sinon. */
   readonly nonPlaces: number;
+  /** Un texte deforme (ADR-0032) qui ne se deforme pas, et pourquoi ; absent sinon. */
+  readonly refus?: RefusEnveloppe;
 }
+
+/** Pourquoi un texte ne se deforme pas dans une forme (ADR-0032) : il ne dessine rien, la forme n'a pas d'aire, ou la marge la mange. */
+export type RefusEnveloppe = 'texte-vide' | 'forme-sans-aire' | 'marge';
 
 /** L'index UTF-16 de chaque point de code d'une chaine, et sa longueur en unites a la fin. */
 export function unitesDe(texte: string): number[] {

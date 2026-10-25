@@ -64,6 +64,11 @@ export const ATTRIBUTS_LIEN = ['data-ed-forme', 'data-ed-forme-d', 'data-ed-form
 
 /** La marge interieure par defaut d'un texte dans une forme, en part de la taille. */
 export const MARGE_DEFAUT = 0.25;
+/**
+ * La marge interieure par defaut d'un texte deforme dans une forme (ADR-0032), en part de sa taille : plus petite que celle des
+ * lignes, parce que la taille d'un texte deforme est celle de tout le bloc dans la forme (une ligne seule : toute sa hauteur).
+ */
+export const MARGE_ENVELOPPE_DEFAUT = 0.05;
 /** Au-dela, le trace d'une forme masquee n'est pas repris (en caracteres encodes). */
 const TRACE_LIEN_MAX = 400_000;
 
@@ -92,11 +97,11 @@ export function attributsTexte(f: Forme): string {
       if (p.depart !== 0) a.push(['data-ed-depart', nb(p.depart, 4)]);
       if (p.cote !== 'dessus') a.push(['data-ed-cote', p.cote]);
       if (p.repartir) a.push(['data-ed-repartir', '1']);
-    } else {
+    } else if (p.mode === 'dans') {
       if (p.marge !== MARGE_DEFAUT) a.push(['data-ed-marge', nb(p.marge, 4)]);
       if (p.ajuster) a.push(['data-ed-ajuster', '1']);
       if (p.justifier) a.push(['data-ed-justifier', '1']);
-    }
+    } else if (p.marge !== MARGE_ENVELOPPE_DEFAUT) a.push(['data-ed-marge', nb(p.marge, 4)]);
   }
   return a.map(([k, v]) => ' ' + k + '="' + v + '"').join('');
 }
@@ -156,6 +161,12 @@ function lireDisposition(a: Readonly<Record<string, string>>): DispositionTexte 
     const marge = nombre(a['data-ed-marge'], MARGE_DEFAUT), ajuster = drapeau('data-ed-ajuster'), justifier = drapeau('data-ed-justifier');
     if (marge === null || !(marge >= 0 && marge <= COEFFICIENT_MAX) || ajuster === null || justifier === null) return null;
     return { mode, forme: '', marge, ajuster, justifier };
+  }
+  if (mode === 'enveloppe') {
+    // Le texte deforme (ADR-0032) n'a que sa marge ; ses autres reglages sont ceux de tout texte.
+    const marge = nombre(a['data-ed-marge'], MARGE_ENVELOPPE_DEFAUT);
+    if (marge === null || !(marge >= 0 && marge <= COEFFICIENT_MAX)) return null;
+    return { mode, forme: '', marge };
   }
   return null;
 }

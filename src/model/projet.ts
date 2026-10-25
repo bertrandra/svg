@@ -64,7 +64,9 @@ export interface TexteProjet {
  */
 export type DispositionProjet =
   | { readonly mode: 'sur'; readonly forme: string; readonly depart: number; readonly cote: 'dessus' | 'dessous'; readonly repartir: boolean }
-  | { readonly mode: 'dans'; readonly forme: string; readonly marge: number; readonly ajuster: boolean; readonly justifier: boolean };
+  | { readonly mode: 'dans'; readonly forme: string; readonly marge: number; readonly ajuster: boolean; readonly justifier: boolean }
+  /** Le texte deforme dans la forme (ADR-0032) : seulement sa marge. */
+  | { readonly mode: 'enveloppe'; readonly forme: string; readonly marge: number };
 
 /**
  * Une forme du dessin, champ pour champ celle du modele (engine/edition/types.ts), sauf `d` : le chemin en texte, chaque nombre a
@@ -285,7 +287,8 @@ function lireDisposition(v: unknown): DispositionProjet {
       ajuster: booleen(o['ajuster'], 'l’ajustement d’un texte dans une forme'), justifier: booleen(o['justifier'], 'la justification d’un texte dans une forme')
     };
   }
-  return refuser('la disposition d’un texte n’est ni « sur » ni « dans » une forme');
+  if (o['mode'] === 'enveloppe') return { mode: 'enveloppe', forme, marge: nombre(o['marge'], 'la marge d’un texte déformé dans une forme', 0, 100) };
+  return refuser('la disposition d’un texte n’est ni « sur », ni « dans », ni « enveloppe » d’une forme');
 }
 
 function lirePointilles(v: unknown): readonly number[] {

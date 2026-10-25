@@ -1,7 +1,8 @@
 // La disposition d'un texte dans le panneau Texte (ADR-0031) : libre, sur la forme ou dans la forme, et tous ses reglages. La barre
 // de texte porte le frequent (la disposition, l'alignement) ; ici, le reste : la forme qui porte le texte (la montrer ou la masquer,
-// en changer), le depart et le cote sur un trace, la repartition des lettres ; la marge et la taille ajustee dans une forme. Chaque
-// reglage est une entree d'historique ; ce qui ne tient pas se dit ici et dans la region vocale.
+// en changer), le depart et le cote sur un trace, la repartition des lettres ; dans une forme, la facon de la remplir (en deformant
+// les lettres, ADR-0032, ou en lignes), la marge, et la taille ajustee des lignes. Chaque reglage est une entree d'historique ; ce qui
+// ne tient pas se dit ici et dans la region vocale.
 
 import { useId } from 'react';
 import type { Forme, TexteVivant } from '../engine/editionSvg.js';
@@ -12,12 +13,12 @@ import { useDisposition } from './actionsDisposition.js';
 import { ChoixDispositionPanneau } from './ChoixDisposition.js';
 import { useDepassement } from './DispositionToile.js';
 import { Nombre } from './commun/Nombre.js';
-import { nomCourt, phraseChoixForme } from './phrasesDisposition.js';
+import { LIBELLES_REMPLIR, nomCourt, phraseChoixForme, type ModeRemplir } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
 
 export function ReglagesDisposition({ forme }: { forme: Forme & { texte: TexteVivant } }) {
   const mo = useDessin(), ac = useActions(), sx = useSaisie(), dz = useDisposition(), tactile = useTactile();
-  const depassement = useDepassement(forme), idDepassement = useId();
+  const depassement = useDepassement(forme), idDepassement = useId(), idRemplir = useId();
   const p = forme.texte.disposition;
   const base = p ? mo.dessin.formes.find(f => f.id === p.forme) : undefined;
   const changerDeForme = () => {
@@ -31,7 +32,7 @@ export function ReglagesDisposition({ forme }: { forme: Forme & { texte: TexteVi
       <legend>Disposition</legend>
       <ChoixDispositionPanneau forme={forme} />
       {!p || !base ? (
-        <p className="aide">Le texte suit sa ligne droite. « Sur la forme » le pose le long d’un tracé, « Dans la forme » le fait remplir une forme fermée : cliquez ensuite la forme, ou choisissez-la au clavier (Tab, puis Entrée).</p>
+        <p className="aide">Le texte suit sa ligne droite. « Sur la forme » le pose le long d’un tracé, « Dans la forme » le déforme pour qu’il prenne la silhouette d’une forme fermée : cliquez ensuite la forme, ou choisissez-la au clavier (Tab, puis Entrée).</p>
       ) : (
         <>
           <p className="aide">{p.mode === 'sur' ? 'Sur ' : 'Dans '}{nomCourt(base)}{base.visible ? '' : ' (masquée)'}. Modifier la forme recompose le texte ; la supprimer le rend libre.</p>
@@ -56,11 +57,22 @@ export function ReglagesDisposition({ forme }: { forme: Forme & { texte: TexteVi
             </>
           ) : (
             <>
+              {/* Remplir la forme (ADR-0032) : deux boutons a etat, jamais pleins ; un texte deja en lignes le reste. */}
+              <div className="alignement-texte choix-remplir" role="group" aria-labelledby={idRemplir}>
+                <span id={idRemplir} className="choix-remplir-titre">Remplir</span>
+                {(['enveloppe', 'dans'] as const satisfies readonly ModeRemplir[]).map(m => (
+                  <button key={m} type="button" aria-pressed={p.mode === m} disabled={forme.verrouille} onClick={() => { if (p.mode !== m) dz.poser(forme.id, base.id, m); }}>{LIBELLES_REMPLIR[m]}</button>
+                ))}
+              </div>
               <div className="grille-2">
                 <Nombre libelle="Marge" valeur={Math.round(p.marge * forme.texte.taille * 100) / 100} min={0} desactive={forme.verrouille}
                   poser={v => dz.regler(forme.id, { marge: Math.round((v / forme.texte.taille) * 10000) / 10000 })} />
               </div>
-              <label className="case"><input type="checkbox" checked={p.ajuster} disabled={forme.verrouille} onChange={e => dz.regler(forme.id, { ajuster: e.target.checked })} /> Ajuster la taille pour remplir la forme</label>
+              {p.mode === 'dans' ? (
+                <label className="case"><input type="checkbox" checked={p.ajuster} disabled={forme.verrouille} onChange={e => dz.regler(forme.id, { ajuster: e.target.checked })} /> Ajuster la taille pour remplir la forme</label>
+              ) : (
+                <p className="aide">Les lettres s’étirent et se courbent jusqu’au bord de la forme ; la taille se calcule d’après elle.</p>
+              )}
             </>
           )}
           {depassement ? <p id={idDepassement} className="message">{depassement}</p> : null}
