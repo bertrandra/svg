@@ -125,6 +125,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
   d'inconnu ; sur le site, `api.php?r=adresse` sous session et CSRF, anti-SSRF dans `inc/adresse.php` (toutes les adresses
   publiques, `CURLOPT_RESOLVE`, redirections à la main, journal limité à l'hôte) ; un vecteur nouveau entre dans
   `tests/fixtures/hostile-adresse/`.
+- **Le nuancier se tire du dessin** (ADR-0037) : `DessinSvg.nuancier` (provenance, teintes, opacité à part) est posé à l'ouverture
+  dans l'état initial (ce n'est pas une modification), vit dans l'historique, est gardé par le projet JSON, jamais écrit dans le
+  SVG ; calcul pur dans `engine/nuancier.ts` (surface peinte, fusion OKLab ≤ 0,02 vers la couleur la plus large, plafond 24) ; le
+  nuancier de la page ou de l'hôte reste un groupe à part ; Maj+N et Alt+Maj+N sont pris.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

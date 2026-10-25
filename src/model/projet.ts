@@ -11,6 +11,7 @@
 
 import type { ChoixProduction } from './contextes.js';
 import { normaliserOrigines } from './credits.js';
+import { PROVENANCES_NUANCIER, TEINTES_NUANCIER_MAX, type NuancierDessin, type TeinteDessin } from './nuancier.js';
 
 /** Le nom du format : ce qui distingue un projet de l'editeur de tout autre JSON. */
 export const FORMAT_PROJET = 'editeur-svg/projet';
@@ -94,7 +95,11 @@ export interface FormeProjet {
   readonly verrouille: boolean;
 }
 
-export interface DessinProjet { readonly vb: readonly [number, number, number, number]; readonly formes: readonly FormeProjet[] }
+/**
+ * Le dessin du projet : le plan, les formes, et le nuancier du dessin (ADR-0037 : les couleurs tirees du fichier ou d'une
+ * selection, et leur provenance), absent d'un projet d'avant lui ; l'editeur le tire alors des couleurs du dessin a l'ouverture.
+ */
+export interface DessinProjet { readonly vb: readonly [number, number, number, number]; readonly formes: readonly FormeProjet[]; readonly nuancier?: NuancierDessin }
 
 /** Une fonte deposee par la personne, incluse : son identifiant est l'empreinte de ses octets (`u-…`, ADR-0022). */
 export interface PoliceProjet { readonly id: string; readonly famille: string; readonly donnees: string }
@@ -351,7 +356,22 @@ function lireDessinProjet(v: unknown): DessinProjet {
     vus.add(forme.id);
     return forme;
   });
-  return { vb: plan, formes };
+  return { vb: plan, formes, ...facultatif(o, 'nuancier', lireNuancierDessin) };
+}
+
+/** Le nuancier du dessin (ADR-0037) : une provenance admise, des teintes `#rrggbb` et leur opacite si elle n'est pas pleine. */
+function lireNuancierDessin(v: unknown): NuancierDessin {
+  const o = objet(v, 'le nuancier du dessin');
+  const provenance = choix(o['provenance'], 'la provenance du nuancier', PROVENANCES_NUANCIER);
+  const teintes = tableau(o['teintes'], 'les teintes du nuancier du dessin', TEINTES_NUANCIER_MAX).map((x): TeinteDessin => {
+    const t = objet(x, 'une teinte du nuancier du dessin');
+    const hex = texte(t['hex'], 'une teinte du nuancier du dessin', 7);
+    if (!HEX.test(hex)) refuser('une teinte du nuancier du dessin n’est pas un code #rrggbb');
+    const opacite = t['opacite'] === undefined ? undefined : nombre(t['opacite'], 'l’opacité d’une teinte', 0, 1);
+    if (opacite === 1) refuser('l’opacité pleine d’une teinte ne s’écrit pas');
+    return opacite === undefined ? { hex } : { hex, opacite };
+  });
+  return { provenance, teintes };
 }
 
 /** Le contexte de production tel que le projet le garde : Generique, ou les choix d'une Cricut en identifiants. */

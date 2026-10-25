@@ -23,6 +23,7 @@ import type { Fond } from './typesEditeur.js';
 import { aEnregistrer } from './enregistrement.js';
 import { BoiteInsererAdresse } from './InsererAdresse.js';
 import { adressesPermises } from './OuvrirAdresse.js';
+import { useElementsNuancier } from './actionsNuancier.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -63,6 +64,7 @@ export function MenuVue() {
 function useElementsEdition(): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
+  const nuancier = useElementsNuancier();
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
   const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
     id: 'vectoriser-' + m, libelle: 'Vectoriser le texte : ' + NOMS_MODES[m].toLowerCase(), separateur: i === 0, desactive: sansTexte,
@@ -78,6 +80,8 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
+    // Le nuancier du dessin depuis la selection (ADR-0037) : le remplacer ou le completer.
+    ...nuancier,
     // Couper ou ecrire (ADR-0028), en contexte Cricut qui coupe ou ecrit : la selection passe d'un groupe a l'autre.
     ...(ui.profil && operationsApplicables(ui.profil.procede) ? [
       { id: 'operation-decoupe', libelle: 'Sélection à couper', icone: 'couper', raccourci: 'Maj+X', separateur: true, desactive: rien, onClick: () => ac.poserOperation('decoupe') },

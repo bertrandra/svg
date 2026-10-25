@@ -641,6 +641,20 @@ Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un
   lettres » et « En lignes » (filet et texte cyan quand il est choisi, jamais pleins, 40 px au doigt). Déformé, la taille se
   calcule : le champ est inactif et dit pourquoi en infobulle ; la marge reste réglable. Rien ne s'anime.
 
+### Nuancier (ADR-0037)
+Les couleurs du fichier ouvert, à portée d'un clic ; on les voit, on les pose, on ne les cherche pas.
+- **La section « Nuancier »** de l'inspecteur, ouverte, avec ou sans sélection : « Appliquer au » (Remplissage | Contour, boutons à
+  état : filet et texte cyan quand ils sont choisis, jamais pleins), puis deux groupes titrés comme les sous-titres des calques (Aide
+  600, encre douce), leur nombre et leur provenance à la suite en Aide 400 : « Couleurs du dessin » (« 5 · tirées du dessin », « de
+  la sélection »), avec « Depuis la sélection » (secondaire, compact, seulement quand quelque chose est choisi) et son menu d'icône
+  (reprendre, exporter) ; « Nuancier proposé », celui de la page ou de l'hôte. Une phrase d'aide en dernier dit le geste du moment.
+- **Les pastilles** sont celles de tous les nuanciers : 24 px (40 au doigt), carrées à 4 px, bordées du filet fort, le fond est la
+  couleur du dessin (une donnée, pas un jeton) ; enfoncée, un anneau cyan de 2 px. Nom accessible : le nom donné, ou un nom approché
+  en français, puis le code et l'opacité. Clic : la cible ; Maj+clic ou Maj+Entrée : l'autre ; flèches, Début et Fin dans un groupe.
+  **Aucune action pleine.**
+- **Dans l'atelier de conversion**, sous le résultat : « Nuancier de l'image » et « Couleurs du tracé », deux rangées de pastilles de
+  20 px à regarder (`role="img"`, nommées), titrées comme les groupes de l'éditeur.
+
 ## Surfaces du navigateur
 
 Ce que le navigateur dessine seul porte aussi le système (`base.css`), dans les deux thèmes :

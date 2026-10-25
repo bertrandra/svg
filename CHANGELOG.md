@@ -192,6 +192,14 @@ empreintes.
 
 ### Ajouté
 
+- **Le nuancier se tire du dessin, et de la sélection** (ADR-0037) : à l'ouverture d'un SVG, d'un PDF ou d'une image convertie,
+  la section « Nuancier » de l'inspecteur propose « Couleurs du dessin » : les couleurs réellement employées, rangées par surface
+  couverte, les presque identiques fondues (écart OKLab ≤ 0,02), 24 au plus, noir et blanc gardés. « Créer le nuancier depuis la
+  sélection » (menu Édition, rangée de la sélection, Maj+N pour remplacer, Alt+Maj+N pour ajouter) le remplace ou le complète, et
+  Ctrl+Z le défait ; le nuancier de la page ou de l'hôte reste à côté (« Nuancier proposé »). Un clic pose la couleur sur le
+  remplissage, Maj+clic sur le contour ; chaque pastille a un nom approché en français. L'atelier de conversion montre le nuancier
+  de l'image et celui du tracé. Export `.gpl` et `.ase` ; le projet JSON le garde (`dessin.nuancier`). Aucun octet SVG ne change.
+
 - **Ouvrir depuis une adresse** (ADR-0036) : un champ « Ouvrir depuis une adresse » dans les voies « Ouvrir un SVG ou un PDF » et
   « Convertir une image », et « Insérer depuis une adresse… » dans le menu Fichier de l'éditeur (un SVG ou la première page d'un
   PDF). Un lien glissé, ou une adresse collée seule dans la zone de code, l'ouvre aussi ; rien ne part avant ce geste. Le type se

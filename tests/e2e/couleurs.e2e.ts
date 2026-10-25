@@ -151,7 +151,7 @@ describe('calques par couleur', () => {
       expect(await texteDe(section(session.page).locator('> summary'))).toContain('4');
       // Ce qui sert au premier geste reste a sa place : la liste des formes, et les couleurs du dessin a droite.
       expect(await nombreDeCalques(session.page)).toBe(4);
-      expect(await session.page.locator('.editeur-inspecteur details.section', { hasText: 'Couleurs du dessin' }).evaluate(e => (e as HTMLDetailsElement).open)).toBe(true);
+      expect(await session.page.locator('.editeur-inspecteur details.section:not(.section-nuancier)', { hasText: 'Couleurs du dessin' }).evaluate(e => (e as HTMLDetailsElement).open)).toBe(true);
     });
 
     it('replie aussi un dessin de moins de 3 couleurs, meme avec beaucoup de formes', async () => {

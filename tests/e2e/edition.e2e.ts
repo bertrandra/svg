@@ -24,7 +24,7 @@ describe('edition', () => {
   it('n\'affiche la rangee de selection qu\'avec une selection, et l\'inspecteur du dessin sans', async () => {
     const page = await editeur();
     expect(await page.locator('.editeur-barre-selection').count()).toBe(0);
-    expect(await sections(page)).toEqual(['Couleurs du dessin', 'Recolorer', 'Bibliothèque de formes', 'Nettoyer le tracé', 'Versions nommées', 'Raccourcis']);
+    expect(await sections(page)).toEqual(['Nuancier', 'Couleurs du dessin', 'Recolorer', 'Bibliothèque de formes', 'Nettoyer le tracé', 'Versions nommées', 'Raccourcis']);
     expect(await page.locator('.editeur-cadre button.primaire:visible').count()).toBeLessThanOrEqual(1);
 
     await forme(page, 'f2').click();
@@ -34,11 +34,11 @@ describe('edition', () => {
     expect(await page.locator('.editeur-inspecteur').getByRole('button', { name: /Aligner|Miroir|Union/ }).count()).toBe(0);
   });
 
-  it('range l\'inspecteur en sections sans cadre, deux ouvertes et le chiffre ferme', async () => {
+  it('range l\'inspecteur en sections sans cadre, trois ouvertes (le nuancier, ADR-0037) et le chiffre ferme', async () => {
     const page = await editeur();
     await forme(page, 'f2').click();
-    await attend(() => sections(page)).toEqual(['Apparence', 'Position et taille', 'Transformer']);
-    expect(await sectionsOuvertes(page)).toEqual(['Apparence', 'Position et taille']);
+    await attend(() => sections(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille', 'Transformer']);
+    expect(await sectionsOuvertes(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille']);
     expect(await page.locator('.editeur-inspecteur fieldset').count()).toBe(0);
     // Une seule action pleine par panneau (ADR-0006) : ici aucune, tout est secondaire.
     expect(await page.locator('.editeur-cadre button.primaire:visible').count()).toBeLessThanOrEqual(1);
@@ -53,13 +53,13 @@ describe('edition', () => {
     const page = await editeur();
     await forme(page, 'f2').click();
     await page.locator('.editeur-inspecteur .section > summary', { hasText: 'Apparence' }).click();
-    await attend(() => sectionsOuvertes(page)).toEqual(['Position et taille']);
+    await attend(() => sectionsOuvertes(page)).toEqual(['Nuancier', 'Position et taille']);
 
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(0);
     await forme(page, 'f3').click();
-    await attend(() => sections(page)).toEqual(['Apparence', 'Position et taille', 'Transformer']);
-    expect(await sectionsOuvertes(page)).toEqual(['Position et taille']);
+    await attend(() => sections(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille', 'Transformer']);
+    expect(await sectionsOuvertes(page)).toEqual(['Nuancier', 'Position et taille']);
   });
 
   it('donne a la toile un nom, et un anneau de focus visible au clavier', async () => {
