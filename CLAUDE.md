@@ -147,7 +147,8 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
 - **Les navigateurs promis sont un texte qu'un test relit** (ADR-0016) : `docs/navigateurs.md` liste chaque fonctionnalité
   et son repli ; une garde de démarrage nomme ce qui manque ; ni `:has()` ni lookbehind, `color-mix()` doublé d'un jeton
-  `repli-*` ; la CI joue chromium, firefox et webkit, ces deux derniers non bloquants jusqu'à leurs premiers passages verts.
+  `repli-*` ; la CI joue chromium, firefox et webkit ; chromium et firefox bloquent, webkit pas avant son premier passage vert en CI ;
+  aucun test ne saute (le contraste forcé s'émule dans les trois) ; un focus déplacé par une touche passe par `focusAuClavier`.
 - **Un contexte de production configure et juge, il n'invente pas d'outil** (ADR-0013) : un profil en données
   (`model/contextes.ts`, valeurs incertaines marquées `aVerifier`) règle les outils existants et rend des constats
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,

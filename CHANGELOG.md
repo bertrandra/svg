@@ -56,6 +56,8 @@ empreintes.
 
 ### Modifié
 
+- Firefox est exigé en CI (ADR-0016, amendement) : la suite entière y a passé. Le contraste forcé est testé dans les trois
+  moteurs, aucun test ne saute plus.
 - L'éditeur reçoit des propriétés facultatives pour un hôte qui garde des projets (`dessin`, `enregistrement`, `changement`,
   `ctrlSEnregistre`, `actionsHote`), et `enregistrer` reçoit l'état du modèle en second argument ; aucun effet pour la page ni
   pour l'embarquement. « Un seul `fetch` dans `src/` » devient « le réseau passe par `io/` » (`io/policesEnLigne.ts`,
@@ -139,6 +141,10 @@ empreintes.
 
 ### Corrigé
 
+- Sous Safari et WebKit, un menu ouvert à la souris puis parcouru aux flèches montre de nouveau l'élément atteint, de même que
+  les pastilles de la bibliothèque et les onglets de l'accueil (`focus({ focusVisible: true })`).
+- Tests de navigateur sous WebKit : le dépôt de fichier attend l'accueil, les textes de menu sont ramenés, le texte d'exemple est
+  mesuré pour de bon, la molette avance cran par cran ; sous Firefox, le bouton « aucun » est lu après ses transitions.
 - Refermer un repère par « Compris » au clavier donne le focus à ce qui suit avant que la note ne disparaisse : il ne
   passe plus un instant par le corps de la page (un test de navigateur l'observait parfois en CI).
 - Un bouton discret survolé passait sous 4,5:1 en thème clair (4,49 sur un panneau, 4,05 sur la page) : son texte prend

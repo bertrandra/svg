@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, sauteSauf, texteDe } from './aide.js';
+import { attend, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 /** Un anneau plein en pair-impair (le trou ne se decoupe pas), un disque plein, une courbe et une ligne en trait seul. */
@@ -18,7 +18,6 @@ const DESSIN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288">'
   + '<circle cx="320" cy="110" r="60" fill="#1f4e8c"/>'
   + '<path d="M40 240C100 210 160 270 220 240S340 210 400 240" fill="none" stroke="#15181d" stroke-width="2"/>'
   + '<path d="M260 200H420" fill="none" stroke="#2a7f3f" stroke-width="2"/></svg>';
-const SANS_EMULATION = sauteSauf(['chromium'], 'emulateMedia({ forcedColors }) : emulation verifiee sur Chromium seulement');
 
 interface Lu { nom: string; octets: Buffer }
 
@@ -251,7 +250,7 @@ describe('couper ou ecrire, forme par forme', () => {
     });
   }
 
-  it.skipIf(SANS_EMULATION)('en contraste force : l apercu garde ses couleurs, lisibles sur le plan, et la ligne choisie se voit ; axe-core passe', async () => {
+  it('en contraste force : l apercu garde ses couleurs, lisibles sur le plan, et la ligne choisie se voit ; puis axe-core passe sur l ecran', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await page.emulateMedia({ forcedColors: 'active' });
     await ouvrirCode(page, DESSIN);
@@ -266,6 +265,10 @@ describe('couper ou ecrire, forme par forme', () => {
     await ligne(page, 'f2').locator('button.calque-nom').click();
     const fond = await ligne(page, 'f2').evaluate(e => getComputedStyle(e).backgroundColor);
     expect(fond).not.toBe(await ligne(page, 'f1').evaluate(e => getComputedStyle(e).backgroundColor));
+    // L'audit axe se fait hors du mode : en contraste force, le contraste d'un bouton plein est celui de la paire du systeme
+    // (Highlight sur HighlightText), que la page ne choisit pas ; l'emulation de firefox et webkit la donne a 2,94:1 et axe la
+    // jugerait comme une couleur de la page. Les couleurs du mode sont verifiees ci-dessus, l'ecran entier l'est par axe ici.
+    await page.emulateMedia({ forcedColors: 'none' });
     expect(await auditAxe(page)).toEqual([]);
   });
 
