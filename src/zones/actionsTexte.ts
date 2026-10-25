@@ -5,10 +5,10 @@
 import { useCallback } from 'react';
 import { boiteChemin, transformerTexte, translation, type Chemin, type DessinSvg, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
 import { cheminDuTexte, lettresDuTexte } from '../engine/texte/bloc.js';
-import { basculerPeinture, creerTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
+import { avecTrace, basculerPeinture, creerTexte, natureDuTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
 import { NOMS_MODES, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { toleranceBooleen } from '../engine/booleens.js';
-import { NOMS_POLICES, estPoliceLivree, naturePolice } from '../model/polices.js';
+import { NOMS_POLICES, estPoliceLivree } from '../model/polices.js';
 import { estIdCatalogue } from '../model/cataloguePolices.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { toutesLesPolices, type Police } from '../io/polices.js';
@@ -39,11 +39,16 @@ export function nomDePolice(id: string, polices: readonly Police[] | null, famil
   return polices?.find(p => p.id === id)?.nom ?? famille ?? id;
 }
 
-/** Les contours d'un texte avec cette fonte ; vides si rien ne se dessine. */
+/** Les contours d'un texte avec cette fonte (sa ligne au milieu du trait, en trace median) ; vides si rien ne se dessine. */
 export const contoursDe = (t: TexteVivant, police: Police): Chemin => cheminDuTexte(t, police.glyphes);
 
-/** Ce qui change d'un texte : les reglages, et eventuellement la police (et donc sa version). */
-export type ChangementTexte = Partial<Pick<TexteVivant, 'texte' | 'taille' | 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> & { police?: Police };
+/** Ce qui change d'un texte : les reglages, eventuellement la police (et donc sa version), et le trace (ADR-0027). */
+export type ChangementTexte = Partial<Pick<TexteVivant, 'texte' | 'taille' | 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> & { police?: Police; trace?: TraceTexte };
+
+/** Le trace des lettres, tel que la barre le propose : pleines (celui de la police), ou une ligne au milieu du trait. */
+export type TraceTexte = 'plein' | 'median';
+/** Le trace d'un texte : median s'il le porte ou si sa police est a trait unique (sa ligne native), plein sinon. */
+export const traceDe = (t: Pick<TexteVivant, 'police' | 'trace'>): TraceTexte => (natureDuTexte(t) === 'trait' ? 'median' : 'plein');
 
 /**
  * Ce qu'un texte vivant garde de sa police : l'identifiant, la version, et le nom de famille pour une fonte deposee ou une
@@ -57,8 +62,9 @@ export function policeDuTexte(police: Police): PoliceTexte {
 
 /** Le texte vivant modifie : les reglages, la police (avec sa version, et sa famille si elle est deposee ou telechargee). */
 export function texteModifie(t: TexteVivant, c: ChangementTexte): TexteVivant {
-  const { police, ...reglages } = c;
-  return { ...t, ...reglages, police: police ? policeDuTexte(police) : t.police };
+  const { police, trace, ...reglages } = c;
+  const m: TexteVivant = { ...t, ...reglages, police: police ? policeDuTexte(police) : t.police };
+  return avecTrace(m, (trace ?? (t.trace === 'median' ? 'median' : 'plein')) === 'median');
 }
 
 /** Le dessin ou le texte `id` prend ces changements, recompose avec sa fonte ; le meme dessin s'il ne se compose pas. */
@@ -66,8 +72,9 @@ export function appliquerChangement(d: DessinSvg, id: string, c: ChangementTexte
   const f = d.formes.find(x => x.id === id);
   if (!f?.texte) return d;
   const t = texteModifie(f.texte, c), chemin = contoursDe(t, police);
-  // Une police qui change de nature (contour vers trait unique, ou l'inverse) change aussi la peinture : un fond ou un trait.
-  const peinture = c.police && naturePolice(c.police.id) !== naturePolice(f.texte.police.id) ? basculerPeinture(f, naturePolice(c.police.id), largeurTrait(t.taille * Math.sqrt(Math.abs(t.matrice[0] * t.matrice[3] - t.matrice[1] * t.matrice[2])), profil)) : undefined;
+  // Un texte qui change de nature (une police a trait unique, ou le trace median, ou l'inverse) change aussi la peinture : un fond ou un trait.
+  const avant = natureDuTexte(f.texte), apres = natureDuTexte(t);
+  const peinture = avant !== apres ? basculerPeinture(f, apres, largeurTrait(t.taille * Math.sqrt(Math.abs(t.matrice[0] * t.matrice[3] - t.matrice[1] * t.matrice[2])), profil)) : undefined;
   return poserTexte(d, id, t, chemin, peinture);
 }
 
@@ -81,19 +88,19 @@ export function useActionsTexte() {
   const { dessin } = mo, { profil, production, style, lisserBooleens } = ui;
 
   /** Ajoute un texte vivant centre sur le plan, le choisit, et le dit. */
-  const creer = useCallback((texte: string, police: Police, taille: number, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'ligatures'>>) => {
-    const t0 = nouveauTexte(texte, policeDuTexte(police), taille, [1, 0, 0, 1, 0, 0], reglages);
+  const creer = useCallback((texte: string, police: Police, taille: number, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>>, trace: TraceTexte = 'plein') => {
+    const t0 = avecTrace(nouveauTexte(texte, policeDuTexte(police), taille, [1, 0, 0, 1, 0, 0], reglages), trace === 'median');
     const b = boiteChemin(contoursDe(t0, police));
     if (!b) { ac.dire('Ce texte ne donne aucune forme avec cette police.'); return null; }
     const [vx, vy, vl, vh] = dessin.vb;
     const t = transformerTexte(t0, translation(vx + (vl - b.l) / 2 - b.x, vy + (vh - b.h) / 2 - b.y));
-    const r = creerTexte(dessin, t, contoursDe(t, police), peintureDuTexte(police.nature, style, largeurTrait(taille, profil)));
+    const r = creerTexte(dessin, t, contoursDe(t, police), peintureDuTexte(natureDuTexte(t), style, largeurTrait(taille, profil)));
     if (!r.id) return null;
     const id = r.id;
     ac.appliquer(() => r.dessin);
     ac.choisir([id]);
     ac.poserOutil('selection');
-    ac.dire('Texte ajouté en ' + police.nom + (police.nature === 'trait' ? ', en traits ouverts pour le stylo' : '') + ' : il reste modifiable, un double-clic ou Entrée le retape.');
+    ac.dire('Texte ajouté en ' + police.nom + (natureDuTexte(t) === 'trait' ? ', en traits ouverts pour le stylo' : '') + ' : il reste modifiable, un double-clic ou Entrée le retape.');
     return id;
   }, [ac, dessin.vb, profil, style]);
 

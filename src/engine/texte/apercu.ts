@@ -1,7 +1,8 @@
 // L'apercu « forme / ligne » d'une police (ADR-0022) : le meme texte, rendu deux fois par le moteur, tel que la lame le
 // decouperait (des lettres pleines) et tel que le stylo le tracerait (des lignes, sans aucun remplissage). Une police a
-// contour donne au stylo un double trait (le pourtour de chaque lettre) ; une police a trait donne a la lame des traits
-// epaissis par l'outil « contour en forme » existant. Le verdict est un constat neutre, jamais un refus. Pur.
+// contour donne au stylo la ligne au milieu de chaque lettre, celle du trace « Médian » (ADR-0027, texte/mediane.ts : une
+// seule source de calcul) ; une police a trait donne a la lame des traits epaissis par l'outil « contour en forme » existant.
+// Le verdict est un constat neutre, jamais un refus. Pur.
 
 import { boiteChemin, type Boite, type Chemin, type DessinSvg } from '../editionSvg.js';
 import { etendreTraits } from '../contours.js';
@@ -22,16 +23,18 @@ export interface Apercus { readonly forme: Apercu; readonly ligne: Apercu; reado
 export function verdictsApercu(nature: NaturePolice): { forme: string; ligne: string } {
   return nature === 'trait'
     ? { forme: 'Police à trait : épaissie pour la découpe.', ligne: 'Une seule ligne : idéale au stylo.' }
-    : { forme: 'Lettres pleines : la lame suit leur pourtour.', ligne: 'Au stylo : lettres creuses, double trait.' };
+    : { forme: 'Lettres pleines : la lame suit leur pourtour.', ligne: 'Au stylo : une ligne au milieu du trait (tracé Médian).' };
 }
 
 /**
  * Les deux apercus d'un texte compose (`d`, ses contours ou ses traces) d'une nature donnee. `epaisseur` est celle du trait
  * (la largeur du stylo, ou le trait d'une police a trait) : c'est elle que la forme de decoupe d'une police a trait epaissit.
+ * `mediane` est, pour une police a contour, le meme texte en trace « Médian » (sa ligne au milieu du trait) ; sans elle, le
+ * stylo suit le pourtour des lettres.
  */
-export function apercusTexte(d: Chemin, nature: NaturePolice, epaisseur: number): Apercus {
+export function apercusTexte(d: Chemin, nature: NaturePolice, epaisseur: number, mediane?: Chemin): Apercus {
   const v = verdictsApercu(nature), boite = boiteChemin(d);
-  if (nature === 'contour') return { forme: { d, plein: true, verdict: v.forme }, ligne: { d, plein: false, verdict: v.ligne }, boite };
+  if (nature === 'contour') return { forme: { d, plein: true, verdict: v.forme }, ligne: { d: mediane ?? d, plein: false, verdict: mediane ? v.ligne : 'Au stylo : lettres creuses, double trait.' }, boite };
   // La forme de decoupe d'une police a trait : ses traits epaissis, comme le ferait « Contour en forme » sur la toile.
   const vb: DessinSvg['vb'] = boite ? [boite.x, boite.y, Math.max(boite.l, 1), Math.max(boite.h, 1)] : [0, 0, 1, 1];
   const seul: DessinSvg = { vb, formes: [{ id: 'f1', d, remplissage: null, contour: '#000000', epaisseur, opacite: 1, regle: 'nonzero', visible: true, verrouille: false, bout: 'round' }] };

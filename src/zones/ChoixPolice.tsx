@@ -7,7 +7,7 @@
 // polices libres de l'index ; une police du catalogue choisie montre ses autres styles. Seul le choix d'une police (ou d'un
 // style) non livree la telecharge : le geste vaut demande, et rien ne part sans lui.
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ecrireChemin } from '../engine/editionSvg.js';
 import { apercusTexte, type Apercu } from '../engine/texte/apercu.js';
 import { cheminDuTexte } from '../engine/texte/bloc.js';
@@ -33,68 +33,104 @@ export interface ProprietesChoixPolice {
   /** Ce que dit l'option d'une police que la page n'a pas (une fonte deposee sur une autre machine). */
   readonly absente?: string;
   readonly desactive?: boolean;
+  /** Le rang de la derniere demande de deplier l'explorateur des polices (« Toutes les polices » de la barre de texte) ; 0 : aucune. */
+  readonly explorerDemande?: number;
 }
 
-export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente, desactive = false }: ProprietesChoixPolice) {
+/** Les fontes chargees, rangees comme le selecteur les montre : une famille livree par ligne (le gras se choisit dans « Style »). */
+export function groupesPolices(polices: readonly Police[] | null) {
+  return {
+    contour: polices?.filter(p => p.nature === 'contour' && !p.id.startsWith('u-') && !estIdCatalogue(p.id) && baseDeGrasse(p.id) === null) ?? [],
+    trait: polices?.filter(p => p.nature === 'trait') ?? [],
+    telechargees: polices?.filter(p => estIdCatalogue(p.id)) ?? [],
+    deposees: polices?.filter(p => p.id.startsWith('u-')) ?? []
+  };
+}
+
+/** Les options du selecteur de police, partagees par le panneau et la barre de texte (ADR-0027). */
+export function OptionsPolices({ polices, valeur, absente }: { polices: readonly Police[]; valeur: string; absente?: string | undefined }) {
+  const g = groupesPolices(polices), police = polices.find(p => p.id === valeur);
+  return (
+    <>
+      {!police ? <option value={valeur} disabled>{absente ?? 'Police absente'}</option> : null}
+      <optgroup label="Lettres pleines">{g.contour.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup>
+      {g.trait.length ? <optgroup label="Trait unique (stylo)">{g.trait.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
+      {g.telechargees.length ? <optgroup label="Téléchargées">{g.telechargees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
+      {g.deposees.length ? <optgroup label="Déposées">{g.deposees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
+    </>
+  );
+}
+
+/** La famille d'une police, la valeur du selecteur : la variante grasse d'une fonte livree se montre sous sa famille. */
+export const familleDePolice = (id: string): string => baseDeGrasse(id) ?? id;
+
+/**
+ * Les styles d'une police (Normal, Gras… pour une famille livree ; les autres variantes d'une police du catalogue) et le geste
+ * qui en choisit un : une variante du catalogue absente se telecharge quand on la choisit (ADR-0025).
+ */
+export function useStylesPolice(valeur: string, polices: readonly Police[] | null, poser: (id: string, police?: Police) => void) {
   const tx = useTexte(), ac = useActions();
-  const [ouvert, ouvrir] = useState(false);
-  const [explorer, poserExplorer] = useState(false);
-  const [erreurStyle, poserErreurStyle] = useState('');
-  const [styleEnCours, poserStyleEnCours] = useState('');
-  const idApercu = useId(), idExplorateur = useId();
-  const police = polices?.find(p => p.id === valeur) ?? null;
-  // Une famille livree, une ligne : la variante grasse se choisit dans « Style ».
-  const contour = polices?.filter(p => p.nature === 'contour' && !p.id.startsWith('u-') && !estIdCatalogue(p.id) && baseDeGrasse(p.id) === null) ?? [];
-  const famille = baseDeGrasse(valeur) ?? valeur;
-  const trait = polices?.filter(p => p.nature === 'trait') ?? [];
-  const deposees = polices?.filter(p => p.id.startsWith('u-')) ?? [];
-  const telechargees = polices?.filter(p => estIdCatalogue(p.id)) ?? [];
-  const poser = (id: string, p?: Police) => { tx.noterRecente(id); poserBrut(id, p); };
-  // Les autres styles d'une police du catalogue : chacun se telecharge quand on le choisit.
+  const [erreur, poserErreur] = useState('');
+  const [enCours, poserEnCours] = useState('');
   const styles = useMemo<VariantePolice[]>(() => {
     if (!estIdCatalogue(valeur) || !tx.catalogue) return [];
     const f = familleDe(tx.catalogue, valeur);
     return f && f.variantes.length > 1 ? variantesDe(f) : [];
   }, [valeur, tx.catalogue]);
   const livres = stylesLivres(valeur);
-  const optionsStyle: ReadonlyArray<{ readonly id: string; readonly nom: string }> = livres.length ? livres : styles;
-  const choisirStyle = async (id: string) => {
+  const options: ReadonlyArray<{ readonly id: string; readonly nom: string }> = livres.length ? livres : styles;
+  const choisir = async (id: string) => {
     const livre = livres.find(s => s.id === id);
     if (livre) { const p = polices?.find(x => x.id === livre.id); if (p) poser(p.id, p); return; }
     const v = styles.find(s => s.id === id);
     if (!v) return;
     const deja = polices?.find(p => p.id === v.id);
     if (deja) { poser(deja.id, deja); return; }
-    poserStyleEnCours(v.nom);
+    poserEnCours(v.nom);
     const r = await tx.telecharger(v);
-    poserStyleEnCours('');
-    if ('erreur' in r) { poserErreurStyle(r.erreur); ac.dire(r.erreur); return; }
-    poserErreurStyle('');
+    poserEnCours('');
+    if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
+    poserErreur('');
     poser(r.id, r.police);
   };
+  return { options, choisir, erreur, enCours };
+}
+
+export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente, desactive = false, explorerDemande = 0 }: ProprietesChoixPolice) {
+  const tx = useTexte();
+  const [ouvert, ouvrir] = useState(false);
+  const [explorer, poserExplorer] = useState(false);
+  const idApercu = useId(), idExplorateur = useId();
+  const police = polices?.find(p => p.id === valeur) ?? null;
+  const poser = (id: string, p?: Police) => { tx.noterRecente(id); poserBrut(id, p); };
+  const styles = useStylesPolice(valeur, polices, poser);
+  // « Toutes les polices » de la barre de texte ouvre ce choix-ci, l'explorateur deja deplie (ADR-0027).
+  const { chargerCatalogue } = tx, traitee = useRef(0);
+  useEffect(() => {
+    if (!explorerDemande || explorerDemande === traitee.current) return;
+    traitee.current = explorerDemande;
+    chargerCatalogue();
+    poserExplorer(true);
+  }, [explorerDemande, chargerCatalogue]);
   return (
     <div className="choix-police">
       <label className="champ-ligne">
         <span>Police</span>
         {polices === null ? <span className="aide">Chargement des polices…</span> : (
-          <select value={famille} disabled={desactive} onChange={e => poser(e.target.value)} aria-label="Police">
-            {!police ? <option value={valeur} disabled>{absente ?? 'Police absente'}</option> : null}
-            <optgroup label="Lettres pleines">{contour.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup>
-            {trait.length ? <optgroup label="Trait unique (stylo)">{trait.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
-            {telechargees.length ? <optgroup label="Téléchargées">{telechargees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
-            {deposees.length ? <optgroup label="Déposées">{deposees.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}</optgroup> : null}
+          <select value={familleDePolice(valeur)} disabled={desactive} onChange={e => poser(e.target.value)} aria-label="Police">
+            <OptionsPolices polices={polices} valeur={valeur} absente={absente} />
           </select>
         )}
       </label>
-      {optionsStyle.length ? (
+      {styles.options.length ? (
         <label className="champ-ligne">
           <span>Style</span>
-          <select value={valeur} disabled={desactive} onChange={e => void choisirStyle(e.target.value)} aria-label="Style de la police">
-            {optionsStyle.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+          <select value={valeur} disabled={desactive} onChange={e => void styles.choisir(e.target.value)} aria-label="Style de la police">
+            {styles.options.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
           </select>
         </label>
       ) : null}
-      {styleEnCours ? <p className="aide">Téléchargement de {styleEnCours}…</p> : erreurStyle ? <p className="aide" role="alert">{erreurStyle}</p> : null}
+      {styles.enCours ? <p className="aide">Téléchargement de {styles.enCours}…</p> : styles.erreur ? <p className="aide" role="alert">{styles.erreur}</p> : null}
       <div className="boutons">
         <button type="button" className="discret apercu-bascule" aria-expanded={ouvert} aria-controls={idApercu} disabled={!police} onClick={() => ouvrir(o => !o)}>
           Aperçu forme / ligne
@@ -118,7 +154,8 @@ function ApercuPolice({ id, police, texte, fermer }: { id: string; police: Polic
   const apercus = useMemo(() => {
     const t = nouveauTexte(montre, { id: police.id }, TAILLE_APERCU, [1, 0, 0, 1, 0, 0]);
     // Le trait d'une police a trait unique, pour la forme de decoupe : celui d'un stylo fin a cette taille.
-    return apercusTexte(cheminDuTexte(t, police.glyphes), police.nature, TAILLE_APERCU / 20);
+    // La ligne du stylo d'une police a contour est celle du trace « Médian » : le meme calcul que la toile (ADR-0027).
+    return apercusTexte(cheminDuTexte(t, police.glyphes), police.nature, TAILLE_APERCU / 20, police.nature === 'contour' ? cheminDuTexte({ ...t, trace: 'median' }, police.glyphes) : undefined);
   }, [montre, police]);
   const b = apercus.boite, marge = TAILLE_APERCU / 10;
   const vue = b ? [b.x - marge, b.y - marge, b.l + 2 * marge, b.h + 2 * marge].map(v => Math.round(v * 100) / 100).join(' ') : '0 0 1 1';

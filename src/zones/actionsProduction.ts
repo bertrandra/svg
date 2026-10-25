@@ -11,7 +11,8 @@ import {
 import { svgCricut } from '../export/cricut.js';
 import { svgPourStylo } from '../export/stylo.js';
 import { toutesLesPolices } from '../io/polices.js';
-import { naturePolice, policeTraitProche } from '../model/polices.js';
+import { policeTraitProche } from '../model/polices.js';
+import { natureDuTexte } from '../engine/texte/vivant.js';
 import { appliquerChangement } from './actionsTexte.js';
 import { avecDpiPng } from '../export/png.js';
 import { archivePrintThenCut, printThenCut } from '../export/printThenCut.js';
@@ -127,7 +128,7 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
   /** « Police à trait unique » : chaque texte vivant a contour du constat, recompose dans la police a trait la plus proche. */
   const policeTrait = async (formes: readonly string[], p: ProfilProduction): Promise<void> => {
     const polices = await toutesLesPolices().catch(() => []);
-    const textes = lire().dessin.formes.filter(f => formes.includes(f.id) && f.texte && naturePolice(f.texte.police.id) === 'contour');
+    const textes = lire().dessin.formes.filter(f => formes.includes(f.id) && f.texte && natureDuTexte(f.texte) === 'contour');
     appliquer(d => textes.reduce((x, f) => {
       const police = polices.find(q => q.id === policeTraitProche(f.texte?.police.id ?? ''));
       return police ? appliquerChangement(x, f.id, { police }, police, p) : x;

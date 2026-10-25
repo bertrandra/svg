@@ -1,5 +1,6 @@
 // Les gestes a la souris, au stylet ou au doigt sur la toile : deplacer, redimensionner, tourner,
-// tracer, pincer. Le calcul est dans le coeur pur ; ici, le fil des evenements de pointeur.
+// tracer, pincer, et poser ou deplacer le curseur d'un texte en saisie (ADR-0027). Le calcul est dans le
+// coeur pur ; ici, le fil des evenements de pointeur.
 
 import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
@@ -10,7 +11,7 @@ import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAut
 import { FORMES } from './aidesEditeur.js';
 import { styleLigne } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
-import { useTexte } from './contexteTexte.js';
+import { useSaisie } from './contexteSaisie.js';
 import { usePrise } from './PriseToile.js';
 import type { Coin, OutilForme, Vue } from './typesEditeur.js';
 
@@ -23,7 +24,8 @@ type Geste =
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
   | { type: 'rotation'; centre: readonly [number, number]; angle0: number; base: DessinSvg; ids: string[]; cle: string }
-  | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue };
+  | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue }
+  | { type: 'saisie' };
 
 /** La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions. */
 export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean): Commande[] {
@@ -42,8 +44,9 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
 export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), tx = useTexte(), { vues } = ui, prise = usePrise(svgRef);
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui, prise = usePrise(svgRef);
   const geste = useRef<Geste | null>(null), espace = useRef(false);
+  const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
   const pointeurs = useRef(new Map<number, { x: number; y: number }>());
   const [cadre, poserCadre] = useState<Boite | null>(null);
@@ -67,6 +70,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
 
   const appuyer = (e: PE<SVGSVGElement>) => {
     const t = e.target as Element;
+    garderFocus.current = false;
     // Un pointeur deja parti (ou synthetique) refuse la capture : le geste se fait sans elle.
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* sans capture, la toile suit quand meme le pointeur tant qu'il la survole */ }
     pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -79,7 +83,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       return;
     }
     const [x, y] = versDoc(e);
-    if (e.button === 1 || ui.outil === 'main' || espace.current) { geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
+    if (e.button === 1 || ui.outil === 'main' || espace.current) { garderFocus.current = !!sx.saisie; geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
+    if (sx.saisie || ui.outil === 'texte') { geste.current = gt.appuyer(x, y, t, e.shiftKey); return; }
     const rot = t.getAttribute('data-rotation');
     if (rot !== null && mo.boite) { geste.current = { type: 'rotation', centre: centre(mo.boite), angle0: angleVers(centre(mo.boite), [x, y]), base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle() }; return; }
     if (ui.outil === 'plume') { ac.poserTrace([...ui.trace, versGrille(e)]); return; }
@@ -114,6 +119,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     const g = geste.current;
     if (pointeurs.current.has(e.pointerId)) pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!g) return;
+    if (g.type === 'saisie') { sx.poignee.current?.bouger(versDoc(e)); return; }
     if (g.type === 'pincer') {
       const [a, b] = [...pointeurs.current.values()];
       if (!a || !b) return;
@@ -161,6 +167,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     geste.current = null;
     if (ui.guides.length) ac.poserGuides([]);
     if (!g) return;
+    if (g.type === 'saisie') { sx.poignee.current?.lacher(); return; }
     if (g.type === 'tracer') {
       const [x, y] = versGrille(e);
       const r = ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style);
@@ -182,14 +189,55 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     ac.choisir(g.ajout ? [...new Set([...mo.sel, ...pris])] : pris);
   };
 
-  const doubleClic = (e: ME<SVGSVGElement>) => {
-    if (ui.outil === 'plume') { ac.finirTrace(true); return; }
-    // Le calcul du clic (PriseToile), pas la cible du DOM : la capture du pointeur fait de la toile celle du double-clic.
-    const id = prise.viser(e);
-    // Un texte vivant se retape en place (ADR-0022) ; une autre forme passe en mode points.
-    if (id && ui.outil === 'selection') { ac.choisir([id]); if (mo.dessin.formes.find(f => f.id === id)?.texte) tx.ouvrirSaisie(id); else ac.poserOutil('points'); }
+  const doubleClic = (e: ME<SVGSVGElement>) => { if (ui.outil === 'plume') ac.finirTrace(true); else gt.doubleClic(e, versDoc(e)); };
+  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, cadre };
+}
+
+/**
+ * Les gestes du texte sur la toile (ADR-0027). Pendant la saisie, un appui dans le texte y pose le curseur (Maj etend la
+ * selection, glisser choisit) ; un appui ailleurs termine la saisie, et ne fait rien d'autre. Sans saisie, l'outil Texte rouvre
+ * le texte sous le pointeur, curseur a l'endroit du clic, ou commence un texte neuf a ce point.
+ */
+function useGestesTexte(prise: ReturnType<typeof usePrise>) {
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), sx = useSaisie();
+  // Un appui qui sert la saisie : le focus doit rester dans son champ, la toile ne le prend pas (souris enfoncee).
+  const garderFocus = useRef(false);
+  /** Le texte vivant sous le pointeur : la forme touchee, sinon le plus haut dont la boite contient le point (entre deux lettres). */
+  const texteSous = (cible: Element, x: number, y: number): string | null => {
+    const id = cible.getAttribute('data-id'), touchee = id ? mo.dessin.formes.find(f => f.id === id) : undefined;
+    if (touchee?.texte && !touchee.verrouille) return touchee.id;
+    const dedans = mo.dessin.formes.filter(f => { const b = f.texte && f.visible && !f.verrouille ? boiteForme(f) : null; return !!b && x >= b.x && x <= b.x + b.l && y >= b.y && y <= b.y + b.h; });
+    return dedans[dedans.length - 1]?.id ?? null;
   };
-  return { appuyer, bouger, lacher, doubleClic, cadre };
+  /** L'appui : le geste qui suit (glisser pour choisir des caracteres), ou aucun. */
+  const appuyer = (x: number, y: number, cible: Element, etendre: boolean): Geste | null => {
+    const p = sx.poignee.current;
+    if (sx.saisie) {
+      if (p?.appuyer([x, y], etendre)) { garderFocus.current = true; return { type: 'saisie' }; }
+      p?.terminer(true);
+      return null;
+    }
+    garderFocus.current = true;
+    const sous = texteSous(cible, x, y);
+    if (sous) sx.ouvrir(sous, [x, y]); else sx.commencer([x, y]);
+    return null;
+  };
+  /**
+   * Le double-clic : dans une saisie, il choisit le mot. A l'outil selection, un texte vivant se retape sur la toile, le curseur
+   * au point du clic ; une autre forme passe en mode points. Le calcul du clic (PriseToile), pas la cible du DOM : la capture
+   * du pointeur fait de la toile celle du double-clic.
+   */
+  const doubleClic = (e: ME<SVGSVGElement>, p: readonly [number, number]) => {
+    if (sx.saisie) { sx.poignee.current?.doubleClic(p); return; }
+    const id = prise.viser(e);
+    if (!id || ui.outil !== 'selection') return;
+    ac.choisir([id]);
+    const f = mo.dessin.formes.find(x => x.id === id);
+    if (f?.texte && !f.verrouille) sx.ouvrir(id, p); else ac.poserOutil('points');
+  };
+  /** La souris enfoncee donnerait le focus a la toile : pendant la saisie, il reste dans son champ. */
+  const sourisBas = (e: ME<SVGSVGElement>) => { if (garderFocus.current) { e.preventDefault(); garderFocus.current = false; } };
+  return { sx, garderFocus, appuyer, doubleClic, sourisBas };
 }
 
 /** Tirer un coin : le coin oppose reste fixe ; passer de l'autre cote d'un bord retourne la selection. */

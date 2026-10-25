@@ -8,7 +8,7 @@ import { sansTexte, sousChemins, type Chemin, type DessinSvg, type Forme } from 
 import { toleranceBooleen } from '../booleens.js';
 import { groupesQuiSeTouchent, partiesDe, vectoriserTextes } from '../texte/vectoriser.js';
 import { hachurerFormes } from '../contour/hachures.js';
-import { naturePolice } from '../../model/polices.js';
+import { natureDuTexte } from '../texte/vivant.js';
 import { pluriel } from '../../util/texte.js';
 import type { Gravite } from './constats.js';
 
@@ -38,7 +38,7 @@ const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
 const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
 const visibles = (d: DessinSvg): Forme[] => d.formes.filter(f => f.visible);
 /** Un texte vivant compose dans une police a contour : au stylo, chaque lettre sera son pourtour. */
-const texteAContour = (f: Forme): boolean => !!f.texte && naturePolice(f.texte.police.id) === 'contour';
+const texteAContour = (f: Forme): boolean => !!f.texte && natureDuTexte(f.texte) === 'contour';
 
 /**
  * Le procede « Dessin au stylo » : une forme pleine se dessine par son pourtour (le stylo ne remplit pas) ; un texte a contour
@@ -67,7 +67,7 @@ export function constatsStylo(dessin: DessinSvg): ConstatTexte[] {
 
 /** Vrai si la forme porte un trace ouvert sans fond : une ligne, que la lame ne sait pas decouper. */
 export const traitOuvert = (f: Forme): boolean => f.remplissage === null && f.contour !== null
-  && ((!!f.texte && naturePolice(f.texte.police.id) === 'trait') || sousChemins(f.d).some(s => !s.some(c => c.c === 'Z')));
+  && ((!!f.texte && natureDuTexte(f.texte) === 'trait') || sousChemins(f.d).some(s => !s.some(c => c.c === 'Z')));
 
 /** Les textes vivants a contour dont des lettres (des parties) se chevauchent : la lame couperait l'une a travers l'autre. */
 export function textesQuiSeChevauchent(dessin: DessinSvg, tolerance = toleranceBooleen(dessin)): Forme[] {

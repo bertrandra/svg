@@ -340,24 +340,32 @@ describe('clavier et lecteur d ecran : la suite', () => {
   });
 
   describe('l outil texte, au clavier', () => {
-    it('Entree met le focus dans le champ Texte du panneau', async () => {
+    // Depuis l'ADR-0027, on tape sur la toile : Entree ouvre la saisie au reticule (le centre de la vue), le panneau reste a Tab.
+    it('Entree ouvre la saisie sur la toile, et la region vocale le dit une fois', async () => {
       const page = await editeur();
       await page.keyboard.press('t');
-      await attend(() => dit(page)).toBe('Outil texte : Entrée ouvre le champ de saisie du panneau, puis Tab mène à « Ajouter le texte ».');
+      await attend(() => dit(page)).toBe('Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.');
       await page.keyboard.press('Enter');
-      await attend(() => aLeFocus(page.locator('.editeur-inspecteur textarea[aria-label="Texte"]'))).toBe(true);
-      await attend(() => dit(page)).toBe('Champ Texte : saisissez le texte, puis Tab mène à « Ajouter le texte ».');
+      await attend(() => aLeFocus(page.locator('textarea.saisie-champ'))).toBe(true);
+      await attend(() => dit(page)).toBe('Saisie du texte sur la toile : tapez votre texte. Entrée va à la ligne, Échap termine, Alt+F10 mène à la barre de texte.');
+      await page.keyboard.press('Escape');
+      await attend(() => aLeFocus(page.locator('.editeur-svg-toile'))).toBe(true);
+      await attend(() => dit(page)).toBe('Texte vide : rien n’est ajouté.');
     });
 
-    it('sur un petit ecran, Entree ouvre le tiroir de l inspecteur, et Tab atteint le champ', async () => {
+    it('sur un petit ecran, Entree ouvre aussi la saisie sur la toile, sans tiroir ; Tab en sort vers la suite', async () => {
       const page = await editeur({ largeur: 420, hauteur: 860, tactile: true });
       await page.keyboard.press('t');
       await page.keyboard.press('Enter');
-      await attend(() => page.locator('.voile').count()).toBe(1);
-      await attend(() => dit(page)).toBe('Panneau de l’inspecteur ouvert : Tab mène au champ Texte, puis à « Ajouter le texte ».');
-      await attend(() => aLeFocus(page.locator('.editeur-inspecteur'))).toBe(true);
+      await attend(() => aLeFocus(page.locator('textarea.saisie-champ'))).toBe(true);
+      expect(await page.locator('.voile').count()).toBe(0);
+      const avant = await page.locator('.editeur-svg-toile path[data-id]').count();
+      await page.keyboard.type('Oui');
+      // Les fontes se chargent au premier besoin : le texte se compose des qu'elles sont la.
+      await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBe(avant + 1);
       await page.keyboard.press('Tab');
-      await attend(() => aLeFocus(page.locator('.editeur-inspecteur textarea[aria-label="Texte"]'))).toBe(true);
+      await attend(() => page.locator('textarea.saisie-champ').count()).toBe(0);
+      await attend(() => dit(page)).toMatch(/^Texte ajouté en Inter : « Oui »/);
     });
   });
 

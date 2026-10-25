@@ -6,6 +6,9 @@
 // l'autre coin (un apercu pointille suit), Espace ou Entree le pose, Echap annule le premier coin. Entree seule,
 // sans coin pose, garde son sens d'avant : une forme de taille par defaut au reticule.
 //
+// L'outil Texte (ADR-0027) : les fleches deplacent le reticule, Entree y ouvre la saisie d'un texte neuf, sur la toile.
+// Entree sur un texte vivant choisi rouvre sa saisie, le curseur a la fin.
+//
 // Regle de sortie (WCAG 2.1.2) : Tab ne tourne jamais dans la toile. Il parcourt les formes tant qu'une
 // est choisie, et au-dela de la derniere (ou avant la premiere) il laisse le navigateur faire : le
 // focus quitte la toile. Sans forme choisie, Tab quitte la toile tout de suite. Echap desselectionne.
@@ -18,12 +21,12 @@ import {
 import { au } from '../util/tableaux.js';
 import { styleLigne, FORMES } from './aidesEditeur.js';
 import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, PHRASE_COIN_ANNULE, PHRASE_COINS_TROP_PROCHES } from './annonces.js';
-import { basculerCurseur, etendreSelection, ouvrirChampTexte } from './ClavierSelection.js';
+import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { formeTracee } from './Gestes.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
-import type { EtatTexte } from './contexteTexte.js';
+import type { EtatSaisie } from './contexteSaisie.js';
 
-export interface ContexteToile { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur; toile: RefObject<HTMLDivElement | null>; tx?: EtatTexte }
+export interface ContexteToile { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur; toile: RefObject<HTMLDivElement | null>; sx?: EtatSaisie }
 
 /** Tab et Maj+Tab : la forme (ou le point, en mode points) suivante. Faux quand le focus doit quitter la toile. */
 function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
@@ -113,6 +116,12 @@ function plume(c: ContexteToile, e: KeyboardEvent): boolean {
   return true;
 }
 
+/** L'outil Texte au clavier : les fleches deplacent le reticule, Entree y ouvre la saisie d'un texte neuf. */
+function texte(c: ContexteToile, e: KeyboardEvent): boolean {
+  if (e.key === 'Enter' && c.sx) { c.sx.commencer(c.u.curseur ?? departReticule(c)); return true; }
+  return directionDe(e.key) ? reticule(c, e) : false;
+}
+
 /** Le reticule d'un outil de trace : les fleches le deplacent, Entree y pose, Espace pose un coin (formes). */
 function reticule(c: ContexteToile, e: KeyboardEvent): boolean {
   const { m, u, ac } = c, direction = directionDe(e.key), premier = premierCoin(u);
@@ -144,10 +153,10 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (outil === 'selection' && e.shiftKey && page) return etendreSelection(c, page);
   if (outil === 'selection' && e.key === ' ') return basculerCurseur(c);
   if (parcourt && page) return changerForme(c, page);
-  if (outil === 'texte' && e.key === 'Enter') return ouvrirChampTexte(c, c.toile.current?.closest('.editeur-cadre') ?? null);
+  if (outil === 'texte') return texte(c, e);
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
-  // Entree sur un texte vivant ouvre sa saisie en place (ADR-0022) ; sur une autre forme, le mode points.
-  if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && c.tx) { c.tx.ouvrirSaisie(c.m.formeSeule.id); return true; }
+  // Entree sur un texte vivant le rouvre sur la toile (ADR-0027) ; sur une autre forme, le mode points.
+  if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && !c.m.formeSeule.verrouille && c.sx) { c.sx.ouvrir(c.m.formeSeule.id); return true; }
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule) { c.ac.poserOutil('points'); return true; }
   return false;
 }

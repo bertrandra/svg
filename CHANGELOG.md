@@ -56,6 +56,9 @@ empreintes.
 
 ### Modifié
 
+- Échap termine la saisie d'un texte en le gardant (Ctrl+Z le rend). Entrée avec l'outil Texte ouvre la saisie sur la toile au
+  lieu du champ du panneau. L'aperçu « Ligne (stylo) » d'une police à contour montre la ligne médiane au lieu du double trait.
+  Les champs chiffrés du panneau Texte s'appliquent à la validation.
 - Plus d'accord à donner pour les polices ni pour la bibliothèque de formes (décision du 25 octobre 2026, ADR-0025 amendée) :
   choisir une police du catalogue la télécharge aussitôt (la ligne dit « Téléchargement… »), toujours vérifiée par son
   empreinte sha256, avec Bunny Fonts en repli ; ouvrir la liste, chercher et voir les aperçus ne font partir aucune requête.
@@ -165,6 +168,18 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Le texte se tape sur la toile** (ADR-0027) : un clic de l'outil Texte (ou Entrée au clavier) pose un point d'insertion et
+  l'on tape directement sur la toile ; Entrée va à la ligne, Échap ou un clic hors du texte termine la saisie, et un texte vide
+  n'est pas créé. Un double-clic ou Entrée rouvre un texte au bon endroit : sélection à la souris et au clavier, copier-coller du
+  texte brut, Ctrl+Z qui défait toute une frappe d'un geste.
+- **Une barre de texte « comme Word »**, à la place de la rangée de la sélection : police et « Toutes les polices », style,
+  taille, tracé, alignement, et « Plus d'options » qui ouvre le panneau Texte ; Alt+F10 y mène depuis le texte. Resserrée au
+  doigt et sous 640 px.
+- **Le tracé « Plein | Médian » d'un texte vivant** : en Médian, chaque lettre d'une police à contour devient une seule ligne au
+  milieu du trait, pour le stylo, calculée dans le moteur pur par la chaîne de la ligne médiane et mémorisée par glyphe ; écrite
+  `data-ed-trace="median"`, rendue à l'identique par la vectorisation, l'export et l'aperçu. Une référence neuve
+  (`texte-vivant-median`) ; aucune existante ne change.
 
 - **Une forme se prend facilement sur la toile** (ADR-0029) : tolérance de 6 px autour du tracé à la souris, 12 px au doigt,
   à tout zoom ; un texte se prend entre ses lettres ; une petite forme a une cible minimale ; un trait fin posé sur un fond se

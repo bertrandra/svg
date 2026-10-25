@@ -11,6 +11,7 @@ export type NomIcone =
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
   | 'telecharger' | 'fermer' | 'enregistrer'
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
+  | 'texte-gauche' | 'texte-centre' | 'texte-droite'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
@@ -56,6 +57,10 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   'aligner-haut': [t('M3 4h18'), t('M7 8h4v11H7z'), t('M13 8h4v7h-4z')],
   'aligner-centre-v': [t('M3 12h18'), t('M7 6h4v12H7z'), t('M13 8h4v8h-4z')],
   'aligner-bas': [t('M3 20h18'), t('M7 5h4v11H7z'), t('M13 9h4v7h-4z')],
+  // L'alignement des lignes d'un texte : des lignes de longueurs inegales, calees a gauche, au centre ou a droite.
+  'texte-gauche': [t('M4 6h16'), t('M4 10h10'), t('M4 14h16'), t('M4 18h10')],
+  'texte-centre': [t('M4 6h16'), t('M7 10h10'), t('M4 14h16'), t('M7 18h10')],
+  'texte-droite': [t('M4 6h16'), t('M10 10h10'), t('M4 14h16'), t('M10 18h10')],
   'miroir-h': [t('M12 3v18'), t('M9 7L4 12l5 5z'), t('M15 7l5 5-5 5z', true)],
   'miroir-v': [t('M3 12h18'), t('M7 9l5-5 5 5z'), t('M7 15l5 5 5-5z', true)],
   'rotation-gauche': [t('M3 12a9 9 0 1 0 3.2-6.9'), t('M3 4v5h5')],

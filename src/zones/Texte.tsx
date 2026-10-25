@@ -1,56 +1,67 @@
-// L'outil Texte (ADR-0022) : un texte tape, une police livree ou deposee, une taille, un interlettrage ; il devient un
-// texte VIVANT au centre du plan, une seule forme qu'on retape ensuite (double-clic, Entree ou l'inspecteur) et qu'on
-// vectorise apres le design. Une police a trait unique se compose en traits ouverts, pour le stylo. Le SVG ecrit ne
-// contient jamais de <text> : des contours, et de quoi les recomposer.
+// Le panneau de l'outil Texte (ADR-0022, ADR-0027) : on tape d'abord sur la toile (un clic, ou Entree au clavier) ; ce
+// panneau regle le prochain texte (police, taille, espace, interligne, alignement, ligatures), les memes reglages que la barre
+// de texte, et garde un champ pour qui prefere ecrire ici (ou un lecteur d'ecran) : « Ajouter le texte » le pose au centre du
+// plan. Le texte reste VIVANT, une seule forme qu'on retape ensuite et qu'on vectorise apres le design. Une police a trait
+// unique se compose en traits ouverts, pour le stylo. Le SVG ecrit ne contient jamais de <text>.
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import type { TexteVivant } from '../engine/editionSvg.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
+import { useDemandePanneau, useSaisie } from './contexteSaisie.js';
 import { usePolices } from './contexteTexte.js';
 import { ChoixPolice } from './ChoixPolice.js';
+import { ChoixTrace } from './ChoixTrace.js';
 import { useActionsTexte } from './actionsTexte.js';
+import { Nombre } from './commun/Nombre.js';
+import { policeNouveauTexte, tailleNouveauTexte } from './saisie.js';
+import { selonSaisie } from '../util/texte.js';
+import { useTactile } from './Vue.js';
+
+const ALIGNEMENTS: ReadonlyArray<readonly [TexteVivant['alignement'], string]> = [['gauche', 'À gauche'], ['centre', 'Au centre'], ['droite', 'À droite']];
 
 export function PanneauTexte() {
-  const mo = useDessin(), ui = useInterface(), { polices, erreurPolices, deposer } = usePolices(), at = useActionsTexte();
+  const mo = useDessin(), ui = useInterface(), sx = useSaisie(), { polices, erreurPolices, deposer } = usePolices(), at = useActionsTexte();
+  const doigt = useTactile();
   const [erreur, poserErreur] = useState('');
   const [texte, poserTexte] = useState('Joyeux anniversaire');
-  const [policeId, poserPoliceId] = useState('');
-  const [taille, poserTaille] = useState(() => Math.round(Math.min(mo.dessin.vb[2], mo.dessin.vb[3]) / 6));
-  const [interlettrage, poserInterlettrage] = useState(0);
-  // Les ligatures (fi, fl…) sont ouvertes par defaut quand la fonte en a : un navigateur ou un logiciel de mise en page les
-  // applique toujours, et « fi » mal lie fait toucher le crochet du f au point du i. On les retire d'une case a cocher.
-  const [ligatures, poserLigatures] = useState(true);
   const entree = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (polices?.length && !policeId) poserPoliceId(polices[0]?.id ?? ''); }, [polices, policeId]);
-  const police = polices?.find(p => p.id === policeId) ?? polices?.[0] ?? null;
+  const explorerDemande = useDemandePanneau();
+  const n = sx.nouveau, police = policeNouveauTexte(n, polices), taille = tailleNouveauTexte(n, mo.dessin.vb);
   const aDesLigatures = police?.glyphes.ligature !== undefined;
 
   const deposerFichier = (f: File | undefined) => {
     if (!f) return;
     void deposer(f).then(r => {
       if ('erreur' in r) { poserErreur(r.erreur); return; }
-      poserPoliceId(r.id);
+      sx.poserNouveau({ police: r.id });
       poserErreur('');
     });
   };
   const ajouter = () => {
     if (!police || !texte.trim()) return;
-    at.creer(texte, police, taille, { interlettrage, ligatures: ligatures && aDesLigatures && interlettrage === 0 });
+    at.creer(texte, police, taille, { interlettrage: n.interlettrage, interligne: n.interligne, alignement: n.alignement, ligatures: n.ligatures && aDesLigatures && n.interlettrage === 0 }, n.trace);
   };
   const message = erreur || erreurPolices;
 
   return (
-    <fieldset className="editeur-groupe">
+    <fieldset className="editeur-groupe panneau-texte">
       <legend>Texte</legend>
+      <p className="aide">{selonSaisie('Cliquez sur la toile là où écrire, puis tapez : les lettres s’y posent. Ou écrivez ici et ajoutez le texte au centre du plan.', doigt)}</p>
       <textarea rows={2} value={texte} onChange={e => poserTexte(e.target.value)} aria-label="Texte" placeholder="Votre texte" />
-      <ChoixPolice polices={polices} valeur={police?.id ?? ''} poser={id => poserPoliceId(id)} texte={texte} />
+      <ChoixPolice polices={polices} valeur={police?.id ?? ''} poser={id => sx.poserNouveau({ police: id })} texte={texte} explorerDemande={explorerDemande} />
       <div className="grille-2">
-        <label className="champ-ligne"><span>Taille</span><input type="text" inputMode="decimal" value={String(taille)} onChange={e => poserTaille(Math.max(1, Number(e.target.value.replace(',', '.')) || 1))} /></label>
-        <label className="champ-ligne"><span>Espace</span><input type="text" inputMode="decimal" value={String(interlettrage)} onChange={e => poserInterlettrage(Number(e.target.value.replace(',', '.')) || 0)} title="Interlettrage, en part de la taille" /></label>
+        <Nombre libelle="Taille" valeur={taille} min={0.01} poser={v => sx.poserNouveau({ taille: v })} />
+        <Nombre libelle="Espace" valeur={n.interlettrage} poser={v => sx.poserNouveau({ interlettrage: v })} />
+        <Nombre libelle="Interligne" valeur={n.interligne} min={0.1} poser={v => sx.poserNouveau({ interligne: v })} />
       </div>
+      <div className="alignement-texte" role="group" aria-label="Alignement des lignes">
+        {ALIGNEMENTS.map(([a, libelle]) => <button key={a} type="button" aria-pressed={n.alignement === a} onClick={() => sx.poserNouveau({ alignement: a })}>{libelle}</button>)}
+      </div>
+      <ChoixTrace trace={police?.nature === 'trait' ? 'median' : n.trace} trait={police?.nature === 'trait'} poser={v => sx.poserNouveau({ trace: v })} />
       {aDesLigatures ? (
         <label className="case">
-          <input type="checkbox" checked={ligatures} disabled={interlettrage !== 0} onChange={e => poserLigatures(e.target.checked)} /> Ligatures (fi, fl…)
-          {interlettrage !== 0 ? <span className="aide"> Sans effet avec un espace entre les lettres.</span> : null}
+          <input type="checkbox" checked={n.ligatures} disabled={n.interlettrage !== 0} onChange={e => sx.poserNouveau({ ligatures: e.target.checked })} /> Ligatures (fi, fl…)
+          {n.interlettrage !== 0 ? <span className="aide"> Sans effet avec un espace entre les lettres.</span> : null}
         </label>
       ) : null}
       <div className="boutons">

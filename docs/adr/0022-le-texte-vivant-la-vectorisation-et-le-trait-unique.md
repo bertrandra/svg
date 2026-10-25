@@ -2,7 +2,8 @@
 
 **Date :** 25 octobre 2026
 **Statut :** acceptée (réalise l’étape « texte vivant » de l’ADR-0012 en en précisant le §4 et l’annexe 4, prolonge les
-ADR-0004 §2, 0009, 0013, 0014, 0015 et 0020) ; **aucune référence d’écriture existante ne change**
+ADR-0004 §2, 0009, 0013, 0014, 0015 et 0020) ; **aucune référence d’écriture existante ne change** ; la « saisie en place » du §6
+est remplacée par la saisie sur la toile de l’ADR-0027
 
 ## Contexte
 

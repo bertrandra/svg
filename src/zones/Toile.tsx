@@ -17,8 +17,9 @@ export function cheminDe(f: Forme): string {
 const traitReact = (f: Forme): Record<string, string> =>
   Object.fromEntries(attributsTrait(f).map(([k, v]) => [k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()), v]));
 
-export const Calque = memo(function Calque({ f, contours }: { f: Forme; contours: boolean }) {
-  if (!f.visible) return null;
+export const Calque = memo(function Calque({ f, contours, masquee = false }: { f: Forme; contours: boolean; masquee?: boolean }) {
+  // Masquee : le texte en saisie ne dessine rien pour l'instant (vide, ou fait de blancs), ses contours d'avant ne se montrent pas.
+  if (!f.visible || masquee) return null;
   const pe = f.verrouille ? 'none' : contours ? 'all' : f.remplissage ? 'visiblePainted' : 'stroke';
   return contours
     ? <path data-id={f.id} className="trace-contour" d={cheminDe(f)} fill="none" fillRule={f.regle} pointerEvents={pe} />
@@ -41,9 +42,13 @@ export function Grille({ vb, pas }: { vb: DessinSvg['vb']; pas: number }) {
   );
 }
 
-/** Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, cadre, trace en cours. */
-export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, cadre: Boite | null, tactile: boolean): ReactNode[] {
+/**
+ * Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, cadre, trace en cours. Pendant la saisie d'un
+ * texte (`saisie`), ni selection ni poignees : la saisie dessine son cadre et son curseur (SaisieTexte.tsx).
+ */
+export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, cadre: Boite | null, tactile: boolean, saisie = false): ReactNode[] {
   const r: ReactNode[] = [];
+  if (saisie) return r;
   // Au doigt, les poignees grossissent : une cible de 8 px ne se touche pas.
   const px = unite * (tactile ? 1.8 : 1);
   // Une forme par identifiant, une fois : `find` pour chaque forme choisie coute n x m (5000 x 5000 = 60 ms).
@@ -102,7 +107,7 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
     r.push(<polyline key="trace" className="trace-en-cours" points={ui.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);
     ui.trace.forEach((q, i) => r.push(<rect key={'t' + i} className={'ancre' + (i === 0 ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} pointerEvents="none" />));
   }
-  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume')) {
+  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume' || ui.outil === 'texte')) {
     // Le reticule du clavier : deux traits et un point, de taille fixe a l'ecran quel que soit le zoom.
     const [cx, cy] = ui.curseur, t = 12 * px;
     r.push(

@@ -11,7 +11,7 @@ import { toucheToile } from './ClavierToile.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useVisite } from './contexteGuide.js';
 import { empiler } from './empilement.js';
-import { useTexte } from './contexteTexte.js';
+import { useSaisie } from './contexteSaisie.js';
 import { useActionsTexte } from './actionsTexte.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
 
@@ -22,13 +22,13 @@ const CRAN_ROTATION = 15;
 
 /** Les raccourcis, ecoutes sur la fenetre tant que l'editeur est ouvert ; jamais dans un champ. */
 export function useClavier(toile: RefObject<HTMLDivElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), vi = useVisite(), tx = useTexte(), at = useActionsTexte();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), vi = useVisite(), sx = useSaisie(), at = useActionsTexte();
   // L'ecouteur est pose une fois ; il lit le dessin et l'interface du dernier rendu (les actions, elles, sont stables).
-  const courant = useRef({ mo, ui, vi, tx, at });
-  courant.current = { mo, ui, vi, tx, at };
+  const courant = useRef({ mo, ui, vi, sx, at });
+  courant.current = { mo, ui, vi, sx, at };
   useEffect(() => {
     const touche = (e: KeyboardEvent) => {
-      const { mo: m, ui: u, vi: v, tx: x, at: a } = courant.current;
+      const { mo: m, ui: u, vi: v, sx: x, at: a } = courant.current;
       // Une touche qu'un controle a deja prise (une fleche qui ouvre un menu) n'est plus celle de la toile.
       if (e.defaultPrevented) return;
       const cible = e.target as HTMLElement | null;
@@ -52,7 +52,7 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (mod && e.shiftKey && t === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
       if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) ac.separerSelection(); else ac.combinerSelection(); return; }
       if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }
-      if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, tx: x })) { e.preventDefault(); return; }
+      if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, sx: x })) { e.preventDefault(); return; }
       if (u.outil === 'plume' && u.trace.length) {
         if (e.key === 'Enter') { e.preventDefault(); ac.finirTrace(true); return; }
         if (e.key === 'Backspace') { e.preventDefault(); ac.poserTrace(u.trace.slice(0, -1)); return; }

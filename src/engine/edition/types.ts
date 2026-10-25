@@ -89,6 +89,11 @@ export interface TexteVivant {
   readonly interligne: number;
   readonly alignement: AlignementTexte;
   readonly ligatures: boolean;
+  /**
+   * Le trace des lettres (ADR-0027) : absent, celui de la police (des lettres pleines pour une police a contour, sa ligne pour
+   * une police a trait unique) ; `median`, une police a contour se dessine en une seule ligne au milieu du trait, pour le stylo.
+   */
+  readonly trace?: 'median';
   readonly matrice: Matrice;
 }
 

@@ -50,7 +50,7 @@ export function decoderTexte(v: string): string | null {
 /** Les noms des attributs, dans leur ordre d'ecriture. */
 export const ATTRIBUTS_TEXTE = [
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
-  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice'
 ] as const;
 
 const estIdentite = (m: Matrice): boolean => m.every((v, i) => v === IDENTITE[i]);
@@ -69,6 +69,7 @@ export function attributsTexte(f: Forme): string {
   if (t.interligne !== INTERLIGNE_DEFAUT) a.push(['data-ed-interligne', nb(t.interligne, 4)]);
   if (t.alignement !== 'gauche') a.push(['data-ed-alignement', t.alignement]);
   if (t.ligatures) a.push(['data-ed-ligatures', '1']);
+  if (t.trace === 'median') a.push(['data-ed-trace', 'median']);
   if (!estIdentite(t.matrice)) a.push(['data-ed-matrice', ecrireMatrice(t.matrice)]);
   return a.map(([k, v]) => ' ' + k + '="' + v + '"').join('');
 }
@@ -113,13 +114,13 @@ export function lireTexteVivant(a: Readonly<Record<string, string>>, m: Matrice)
   if (a['data-ed-texte'] === undefined) return null;
   const texte = decoderTexte(a['data-ed-texte']), police = lirePolice(a);
   const taille = nombre(a['data-ed-taille'], NaN), interlettrage = nombre(a['data-ed-interlettrage'], 0), interligne = nombre(a['data-ed-interligne'], INTERLIGNE_DEFAUT);
-  const alignement = a['data-ed-alignement'] ?? 'gauche', ligatures = a['data-ed-ligatures'];
+  const alignement = a['data-ed-alignement'] ?? 'gauche', ligatures = a['data-ed-ligatures'], trace = a['data-ed-trace'];
   const matrice = lireMatrice(a['data-ed-matrice']);
   if (texte === null || texte.length > TEXTE_MAX || /^\s*$/.test(texte) || !police || taille === null || !(taille > 0 && taille <= TAILLE_MAX)
     || interlettrage === null || Math.abs(interlettrage) > COEFFICIENT_MAX || interligne === null || !(interligne > 0 && interligne <= COEFFICIENT_MAX)
-    || (alignement !== 'gauche' && alignement !== 'centre' && alignement !== 'droite') || (ligatures !== undefined && ligatures !== '1') || !matrice) return { illisible: true };
+    || (alignement !== 'gauche' && alignement !== 'centre' && alignement !== 'droite') || (ligatures !== undefined && ligatures !== '1') || (trace !== undefined && trace !== 'median') || !matrice) return { illisible: true };
   const vivant: TexteVivant = {
-    texte, police: police.police, taille, interlettrage, interligne, alignement: alignement as AlignementTexte, ligatures: ligatures === '1',
+    texte, police: police.police, taille, interlettrage, interligne, alignement: alignement as AlignementTexte, ligatures: ligatures === '1', ...(trace === 'median' ? { trace: 'median' as const } : {}),
     matrice: estIdentite(m) ? matrice : multiplier(m, matrice)
   };
   return { texte: vivant, ...(police.remplacement ? { remplacement: police.remplacement } : {}) };
