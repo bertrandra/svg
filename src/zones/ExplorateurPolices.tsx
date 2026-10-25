@@ -12,6 +12,7 @@ import { SEUIL_FENETRE, segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
 import { pluriel } from '../util/texte.js';
 import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
+import { Bouton } from './commun/Bouton.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { nomDePolice, useActionsTexte } from './actionsTexte.js';
@@ -249,7 +250,7 @@ function ListePolices({ entrees, valeur, enCours, choisir, favoris, basculerFavo
           </span>
         </button>
         {e.famille || estPoliceLivree(e.cle) ? (
-          <button type="button" className="discret police-favori" aria-pressed={favori} aria-label={'Favori : ' + e.nom} onClick={() => basculerFavori(e.cle)}>{favori ? '★' : '☆'}</button>
+          <Bouton icone="etoile" className="police-favori" aide={'Favori : ' + e.nom} pressed={favori} onClick={() => basculerFavori(e.cle)} />
         ) : null}
       </li>
     );

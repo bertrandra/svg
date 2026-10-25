@@ -1,0 +1,199 @@
+// Les polices libres telechargeables (ADR-0025), par la vraie page, sans vrai reseau : l'index est pose avant la page (un
+// petit index d'essai, a la place de l'annexe), et chaque requete vers un serveur de polices est interceptee (`route`) et servie
+// d'un fichier d'essai (Inter, mise en WOFF). On verifie : rien ne part sans accord ; l'accord se donne serveur par serveur et
+// se retient ; le fichier est verifie par son empreinte puis compose ; une empreinte fausse est refusee en le disant ; l'accord se
+// retire ; un hote ne voit le catalogue que s'il l'a demande.
+
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import type { Download, Page, Request } from 'playwright';
+import { attend, boutonTelecharger, nombreDeCalques, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION, URL_PAGE, type Session } from './aide.js';
+import { enWoff } from '../unit/io/woffFactice.js';
+import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
+
+const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
+const lire = (p: string): Uint8Array => new Uint8Array(readFileSync(resolve(RACINE_DEPOT, 'node_modules/@expo-google-fonts', p)));
+const WOFF = enWoff(lire('inter/400Regular/Inter_400Regular.ttf'));
+const AUTRE = enWoff(lire('oswald/500Medium/Oswald_500Medium.ttf'));
+const sha = (o: Uint8Array): string => createHash('sha256').update(o).digest('base64');
+const CHEMIN_ITF = 'A'.repeat(32) + '/' + 'B'.repeat(32) + '/' + 'C'.repeat(32) + '.woff';
+
+const base = { depot: 'fontsource', source: 'google', categorie: 'lineale', licence: 'OFL-1.1', version: '1.0.0', ecritures: ['latin'] } as const;
+const ESSAI: FamilleCatalogue = { ...base, id: 'police-essai', nom: 'Police Essai', variantes: [[400, 0, sha(WOFF), null]] };
+const FAUX: FamilleCatalogue = { ...base, id: 'essai-faux', nom: 'Essai Faux', variantes: [[400, 0, sha(WOFF), null]] };
+const ITF: FamilleCatalogue = { id: 'essai-itf', nom: 'Essai ITF', depot: 'fontshare', source: 'fontshare', categorie: 'affiche', licence: 'ITF-FFL', version: '1.0', ecritures: ['latin'], variantes: [[400, 0, sha(WOFF), null, CHEMIN_ITF]] };
+const INDEX: CataloguePolices = { format: 1, instantane: '2026-10-25', familles: [ESSAI, FAUX, ITF], anciennes: [] };
+const ID_ESSAI = idVariante(ESSAI, [400, 0, sha(WOFF), null]);
+const URL_ESSAI = 'https://cdn.jsdelivr.net/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff';
+
+const SERVEURS = /^https:\/\/(cdn\.jsdelivr\.net|fonts\.bunny\.net|gitlab\.com|cdn\.fontshare\.com)\//;
+
+interface Reseau { requetes: Request[] }
+
+/** Une page dont l'index est celui d'essai et dont chaque requete vers un serveur de polices est servie ici, et notee. */
+async function preparer(s: Session): Promise<Reseau> {
+  const r: Reseau = { requetes: [] };
+  await s.contexte.addInitScript(index => { (window as unknown as Record<string, unknown>)['__cataloguePolicesSvg'] = index; }, INDEX);
+  await s.contexte.route(url => SERVEURS.test(url.href), route => {
+    const req = route.request();
+    r.requetes.push(req);
+    // Le faux et le fichier de Fontshare : un autre fichier que celui que l'index annonce.
+    const corps = req.url().includes('essai-faux') ? AUTRE : WOFF;
+    return route.fulfill({ status: 200, body: Buffer.from(corps), headers: { 'access-control-allow-origin': '*', 'content-type': 'font/woff' } });
+  });
+  return r;
+}
+
+const inspecteur = (page: Page) => page.locator('.editeur-inspecteur');
+const selectPolice = (page: Page) => inspecteur(page).locator('select[aria-label="Police"]');
+
+/** Ouvre un plan, l'outil Texte, puis « Toutes les polices » ; attend la liste. */
+async function explorer(page: Page): Promise<void> {
+  await ouvrirCode(page, PLAN);
+  await page.keyboard.press('t');
+  await selectPolice(page).waitFor({ timeout: 30_000 });
+  await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
+  await page.locator('.liste-polices .police-ligne', { hasText: 'Police Essai' }).waitFor();
+}
+
+const ligne = (page: Page, nom: string) => page.locator('.liste-polices .police-ligne', { hasText: nom });
+const dialogue = (page: Page) => page.getByRole('dialog', { name: /Télécharger la police/ });
+
+describe('les polices libres en ligne', () => {
+  const navigateur = pilote();
+
+  it('ne fait aucune requete sans accord : le dialogue dit le serveur et ce qui part, « Pas maintenant » ne telecharge rien', async () => {
+    const s = await navigateur.ouvrir({ naviguer: false });
+    const reseau = await preparer(s);
+    await s.page.goto(URL_PAGE);
+    await explorer(s.page);
+    expect(reseau.requetes).toEqual([]);
+    await ligne(s.page, 'Police Essai').click();
+    await dialogue(s.page).waitFor();
+    const texte = await texteDe(dialogue(s.page));
+    for (const attendu of ['jsDelivr (cdn.jsdelivr.net)', 'Bunny Fonts (fonts.bunny.net)', 'aucune donnée personnelle', 'SIL Open Font License 1.1', 'Accepter et retenir']) expect(texte, attendu).toContain(attendu);
+    expect(reseau.requetes).toEqual([]);
+    await s.page.getByRole('button', { name: 'Pas maintenant' }).click();
+    await attend(() => dialogue(s.page).count()).toBe(0);
+    expect(await selectPolice(s.page).inputValue()).not.toBe(ID_ESSAI);
+    expect(reseau.requetes).toEqual([]);
+    expect(await s.page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
+  });
+
+  it('telecharge apres accord, verifie l empreinte, compose un texte qui garde sa police, et retient l accord', async () => {
+    const s = await navigateur.ouvrir({ naviguer: false });
+    const reseau = await preparer(s);
+    await s.page.goto(URL_PAGE);
+    const page = s.page;
+    await explorer(page);
+    await ligne(page, 'Police Essai').click();
+    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
+    await attend(() => selectPolice(page).inputValue()).toBe(ID_ESSAI);
+    // Une seule requete, sans cookie ni page d'origine.
+    expect(reseau.requetes.map(r => r.url())).toEqual([URL_ESSAI]);
+    const entetes = await reseau.requetes[0]?.allHeaders();
+    expect(Object.keys(entetes ?? {}).filter(k => /^(cookie|referer)$/i.test(k))).toEqual([]);
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('svg.polices.consentement'))) ?? 'null')).toEqual({ serveurs: ['jsdelivr', 'bunny'] });
+
+    await page.getByRole('button', { name: 'Ajouter le texte' }).click();
+    await attend(() => nombreDeCalques(page)).toBe(2);
+    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const svg = readFileSync(await telechargement.path(), 'utf8');
+    expect(svg).toContain('data-ed-police="' + ID_ESSAI + '"');
+    expect(svg).toContain('data-ed-famille="Police%20Essai"');
+    expect(svg).not.toMatch(/<text\b|@font-face|woff/i);
+
+    // Le texte ajoute est choisi : l'inspecteur montre sa section Texte, avec son propre « Toutes les polices ».
+    await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
+    // Une police d'un autre serveur redemande l'accord, en nommant ce serveur ; l'ITF FFL a son badge.
+    await page.locator('.explorateur-polices input[type="search"]').fill('itf');
+    expect(await texteDe(ligne(page, 'Essai ITF'))).toContain('ITF');
+    await ligne(page, 'Essai ITF').click();
+    await dialogue(page).waitFor();
+    expect(await texteDe(dialogue(page))).toContain('Fontshare (cdn.fontshare.com)');
+    expect(await texteDe(dialogue(page))).toContain('ITF Free Font License');
+    await page.getByRole('button', { name: 'Pas maintenant' }).click();
+    expect(reseau.requetes).toHaveLength(1);
+
+    // Un second texte, en Inter : « Remplacer partout » recompose en Inter le texte en Police Essai, en un seul geste.
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('t');
+    await selectPolice(page).selectOption('inter');
+    await page.getByRole('button', { name: 'Ajouter le texte' }).click();
+    await attend(() => nombreDeCalques(page)).toBe(3);
+    await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
+    const documentPolices = page.locator('.explorateur-polices section[aria-label="Polices du document"]');
+    expect(await texteDe(documentPolices)).toContain('Police Essai 1 texte');
+    await documentPolices.getByRole('button', { name: 'Remplacer partout par Inter' }).click();
+    await attend(() => texteDe(documentPolices)).toContain('Inter 2 textes');
+
+    // Les credits nomment la licence de la police employee (Ctrl+Z ramene le texte en Police Essai).
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('Control+z');
+    await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+    await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
+    const credits = await texteDe(page.getByRole('dialog', { name: 'À propos et crédits' }));
+    expect(credits).toContain('Polices téléchargées employées dans ce dessin');
+    expect(credits).toContain('Police Essai · Google Fonts · SIL Open Font License 1.1');
+  });
+
+  it('refuse un fichier a l empreinte fausse, en le disant, et ne lit rien', async () => {
+    const s = await navigateur.ouvrir({ naviguer: false });
+    const reseau = await preparer(s);
+    await s.page.goto(URL_PAGE);
+    const page = s.page;
+    await explorer(page);
+    const avant = await selectPolice(page).inputValue();
+    await ligne(page, 'Essai Faux').click();
+    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
+    const alerte = page.locator('.explorateur-polices [role="alert"]');
+    await alerte.waitFor();
+    expect(await texteDe(alerte)).toBe('Essai Faux : le fichier servi par cdn.jsdelivr.net n’a pas l’empreinte attendue : refusé ; le fichier servi par fonts.bunny.net n’a pas l’empreinte attendue : refusé.');
+    expect(reseau.requetes.map(r => new URL(r.url()).hostname)).toEqual(['cdn.jsdelivr.net', 'fonts.bunny.net']);
+    expect(await selectPolice(page).inputValue()).toBe(avant);
+    expect(await selectPolice(page).locator('optgroup[label="Téléchargées"]').count()).toBe(0);
+  });
+
+  it('retire l accord dans le meme panneau : plus rien ne part sans le redemander', async () => {
+    const s = await navigateur.ouvrir({ naviguer: false });
+    const reseau = await preparer(s);
+    await s.page.addInitScript(() => localStorage.setItem('svg.polices.consentement', JSON.stringify({ serveurs: ['jsdelivr', 'bunny'] })));
+    await s.page.goto(URL_PAGE);
+    const page = s.page;
+    await explorer(page);
+    expect(await texteDe(page.locator('.pied-consentement'))).toContain('Téléchargement autorisé auprès de jsDelivr, Bunny Fonts.');
+    await page.getByRole('button', { name: 'Retirer l’autorisation' }).click();
+    expect(await page.evaluate(() => localStorage.getItem('svg.polices.consentement'))).toBeNull();
+    expect(await texteDe(page.locator('.pied-consentement'))).toContain('Aucun téléchargement n’est autorisé');
+    await ligne(page, 'Police Essai').click();
+    await dialogue(page).waitFor();
+    await page.getByRole('button', { name: 'Pas maintenant' }).click();
+    expect(reseau.requetes).toEqual([]);
+  });
+
+  it('chez un hote : rien du catalogue par defaut, « Toutes les polices » seulement avec policesEnLigne: true', async () => {
+    const s = await navigateur.ouvrir({ naviguer: false });
+    const reseau = await preparer(s);
+    await s.page.goto(URL_INTEGRATION);
+    const page = s.page;
+    const ouvrir = (enLigne: boolean | undefined) => page.evaluate(([svg, e]) => {
+      const api = (window as unknown as { EditeurSvg: { ouvrir: (o: Record<string, unknown>) => { fermer: () => void } } }).EditeurSvg;
+      const p = api.ouvrir({ svg, baseAnnexes: '../dist', onEnregistrer: () => undefined, ...(e === undefined ? {} : { policesEnLigne: e }) });
+      (window as unknown as { __p: { fermer: () => void } }).__p = p;
+    }, [PLAN, enLigne] as const);
+    await ouvrir(undefined);
+    await page.locator('.editeur-svg .editeur-cadre').waitFor();
+    await page.keyboard.press('t');
+    await selectPolice(page).waitFor({ timeout: 30_000 });
+    expect(await page.getByRole('button', { name: 'Toutes les polices' }).count()).toBe(0);
+    await page.evaluate(() => (window as unknown as { __p: { fermer: () => void } }).__p.fermer());
+    await ouvrir(true);
+    await page.locator('.editeur-svg .editeur-cadre').waitFor();
+    await page.keyboard.press('t');
+    await selectPolice(page).waitFor({ timeout: 30_000 });
+    expect(await page.getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
+    expect(reseau.requetes).toEqual([]);
+  });
+});

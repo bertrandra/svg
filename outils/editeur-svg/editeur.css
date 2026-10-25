@@ -435,7 +435,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .police-badges { flex: none; display: flex; gap: var(--esp-2xs); }
 .badge-source, .badge-licence { padding: 0 var(--esp-xs); border: 1px solid var(--filet-fort); border-radius: var(--rayon-pastille); color: var(--encre-douce); font-size: var(--texte-petit); font-weight: 400; white-space: nowrap; }
 .badge-licence { border-color: var(--alerte); color: var(--alerte); font-weight: 600; }
-.police-favori { flex: none; width: 28px; min-height: 28px; padding: 0; }
+.liste-polices .police-favori { flex: none; width: 28px; height: 28px; }
+.liste-polices .police-favori[aria-pressed="true"] { color: var(--cyan); }
+.liste-polices .police-favori[aria-pressed="true"] svg path { fill: currentColor; }
 .pied-consentement button.discret { min-height: 24px; padding-left: 0; padding-right: 0; }
 .consentement-polices .actions { display: flex; flex-wrap: wrap; gap: var(--esp-s); }
 @media (forced-colors: active) {
@@ -476,7 +478,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .vectoriser-texte .case, .section-corps > .case { min-height: 40px; }
   .alignement-texte button, .choix-police .apercu-bascule, .apercu-police .apercu-fermer { min-height: 40px; }
   .police-ligne, .polices-courtes button.discret, .pied-consentement button.discret { min-height: 40px; }
-  .police-favori { width: 40px; min-height: 40px; }
+  .liste-polices .police-favori { width: 40px; height: 40px; }
 }
 /* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
 @media (pointer: coarse) { .menu-raccourci { display: none; } }
