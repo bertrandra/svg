@@ -210,10 +210,13 @@ describe('la finition transversale', () => {
         expect(noms).toEqual(['Courbe 4', 'Triangle 3', 'Cercle 2', 'Tracé courbe 1']);
         // Le nom accessible commence par le libelle visible (WCAG 2.5.3), puis dit la peinture.
         expect(await page.locator('.editeur-calques ol > li .calque-nom').first().getAttribute('aria-label')).toMatch(/^Courbe 4, sans fond, contour/);
-        const vide = await page.locator('.editeur-calques ol > li .echantillon').first().evaluate(e => { const c = getComputedStyle(e); return { largeur: c.borderTopWidth, couleur: c.borderTopColor, style: c.borderTopStyle }; });
+        // La courbe n'a pas de fond : sa pastille est vide, bordee du filet fort, son contour (#15181d) en anneau interieur.
+        const vide = await page.locator('.editeur-calques ol > li .echantillon').first().evaluate(e => { const c = getComputedStyle(e); return { largeur: c.borderTopWidth, couleur: c.borderTopColor, style: c.borderTopStyle, fond: c.backgroundColor, anneau: c.boxShadow }; });
         expect(vide.largeur).toBe('1px');
         expect(vide.style).toBe('solid');
-        expect(vide.couleur).not.toBe('rgba(0, 0, 0, 0)');
+        expect(vide.couleur).toBe(await jeton(page, '--filet-fort'));
+        expect(vide.fond).toBe('rgba(0, 0, 0, 0)');
+        expect(vide.anneau).toContain('rgb(21, 24, 29)');
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         const encre = page.locator('.editeur-inspecteur .nuancier button.echantillon[aria-label="Encre"]').first();
         expect(await encre.evaluate(e => getComputedStyle(e).borderTopColor)).toBe(await jeton(page, '--filet-fort'));

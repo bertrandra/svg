@@ -70,7 +70,8 @@ function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; chois
         ac.choisir(e.shiftKey ? (choisie ? sel.filter(s => s !== f.id) : [...sel, f.id]) : [f.id]);
         ac.poserPoint(null);
       }}>
-        <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', borderColor: f.contour ?? undefined }} />
+        {/* Le contour se dit par un anneau interieur : en bordure, une encre sombre disparaissait sur le panneau sombre (le filet fort reste autour). */}
+        <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', boxShadow: f.contour ? 'inset 0 0 0 2px ' + f.contour : undefined }} />
         <span className="calque-genre">{genreAffiche(f)}</span> <span className="calque-numero">{numeroDeForme(f)}</span>
       </button>
       <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + f.id.slice(1)}
