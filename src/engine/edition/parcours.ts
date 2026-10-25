@@ -15,6 +15,7 @@ import { ATTRIBUT_ORIGINE, lireOrigines } from './provenance.js';
 import { cheminDeForme } from './elements.js';
 import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
+import { lireTexte, type ContexteTexte } from './texteSvg.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
 import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_MAX } from './limites.js';
@@ -42,6 +43,8 @@ export interface Parcours {
   trop: boolean;
   /** Caracteres de trace lus jusqu'ici, clones compris (bornes par `DONNEES_TRACE_MAX`). */
   donnees: number;
+  /** De quoi lire le texte en lettres ; absent (null), un <text> est refuse en le nommant, comme avant. */
+  readonly texte?: ContexteTexte | null;
 }
 
 /** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
@@ -54,7 +57,7 @@ interface Pret extends Contexte { readonly pr: Proprietes }
 function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   const pr = proprietesDe(p.analyse, n);
   if ((pr.display ?? '').trim() === 'none') return null;
-  const nonPris = NON_PRIS.get(n.nom);
+  const nonPris = n.nom === 'text' && p.texte ? undefined : NON_PRIS.get(n.nom);
   if (nonPris) { p.refus.add(nonPris); return null; }
   const refusNoeud = refusDe(pr);
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
@@ -195,5 +198,6 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (!b) return;
   if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
+  else if (n.nom === 'text' && p.texte) lireTexte(p.texte, n, b.heritees, b.m, b.opacite);
   else poserForme(p, n, b);
 }

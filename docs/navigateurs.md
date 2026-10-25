@@ -96,6 +96,8 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `URL.createObjectURL` | 23 | 19 | 7 | Garde de démarrage. Sur iOS, un téléchargement s’ouvre dans l’aperçu ou la feuille de partage plutôt que dans un dossier |
 | `localStorage` | 4 | 3.5 | 4 | Dans un `try` (accès refusé, navigation privée, `file://`) : brouillon et versions nommées disparaissent, l’éditeur marche |
 | `TextEncoder` | 38 | 18 | 10.1 | Aucun, toujours présent |
+| `DecompressionStream` | 80 | 113 | 16.4 | Testé avant emploi, à l’ouverture d’un PDF : sans lui, un PDF dont les flux sont compressés est refusé en le disant (« ce navigateur ne sait pas décompresser… ») ; un PDF sans flux compressé s’ouvre |
+| `Blob.arrayBuffer` | 76 | 69 | 14 | Aucun, sous le plancher technique : lire les octets d’un PDF ou d’une fonte déposés |
 | `canvas` | 4 | 3 | 3.1 | Garde avant de lire une image. iOS Safari borne un canvas à environ 16,7 millions de pixels : une très grande image ne se lit pas (voir la liste manuelle) |
 | `requestAnimationFrame` | 24 | 23 | 6.1 | Aucun, toujours présent |
 | `toLocaleDateString` | 24 | 29 | 10 | Date du brouillon sur l’accueil : le séparateur peut différer d’un moteur à l’autre, sans effet sur un SVG |

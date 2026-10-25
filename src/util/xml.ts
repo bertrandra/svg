@@ -9,7 +9,14 @@
 // reference inconnue reste telle quelle, ce qui rend inertes les bombes d'entites et les entites externes.
 // Les limites ci-dessous bornent le temps et la memoire, avec un refus nomme au-dela.
 
-export interface Noeud { nom: string; attributs: Record<string, string>; enfants: Noeud[]; texte: string }
+export interface Noeud {
+  nom: string;
+  attributs: Record<string, string>;
+  enfants: Noeud[];
+  texte: string;
+  /** Le contenu dans l'ordre du document, textes et elements meles (le texte d'un <text> entoure ses <tspan>). */
+  suite?: Array<string | Noeud>;
+}
 
 /** Ce qu'on accepte de lire. Hautes, pour qu'aucun SVG reel n'y touche ; basses, pour qu'un SVG hostile ne coute pas plus de quelques secondes. */
 export interface LimitesXml {
@@ -201,14 +208,15 @@ export function analyserXml(texte: string, lim: LimitesXml = LIMITES_XML): { rac
   try {
     parcourirXml(texte, j => {
       const courant = pile[pile.length - 1] ?? racine;
-      if (j.t === 'texte') courant.texte += decoderEntites(j.brut);
-      else if (j.t === 'cdata') courant.texte += j.contenu;
+      if (j.t === 'texte') { const t = decoderEntites(j.brut); courant.texte += t; (courant.suite ??= []).push(t); }
+      else if (j.t === 'cdata') { courant.texte += j.contenu; (courant.suite ??= []).push(j.contenu); }
       else if (j.t === 'fin') pile.pop();
       else if (j.t === 'debut') {
         const attributs: Record<string, string> = {};
         for (const a of j.attributs) attributs[a.nom] = decoderEntites(a.valeur);
         const noeud: Noeud = { nom: j.nom, attributs, enfants: [], texte: '' };
         courant.enfants.push(noeud);
+        (courant.suite ??= []).push(noeud);
         if (!j.autoFermant) pile.push(noeud);
       }
     }, lim);

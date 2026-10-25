@@ -55,6 +55,8 @@ export interface ProprietesEditeur {
    * l'autre, l'editeur se tait (un hote qui ne l'a pas demande). La page le donne toujours ; l'embarquement sur `visite: true`.
    */
   guide?: OptionsGuide | null;
+  /** Ce que la lecture du document d'origine n'a pas repris (un PDF, le texte d'un SVG mis en lettres) : dit avec ce que perd la lecture du SVG. */
+  ignores?: readonly string[] | undefined;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -90,8 +92,8 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide }: ProprietesEditeur) {
-  const lu = useMemo(() => lireDessinMemo(svg), [svg]);
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant }: ProprietesEditeur) {
+  const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
   useFocusEditeur(racine);

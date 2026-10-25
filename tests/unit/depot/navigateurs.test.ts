@@ -100,6 +100,8 @@ const SONDES: ReadonlyArray<{ nom: string; motif: RegExp; dans: 'ts' | 'css' }> 
   { nom: 'URL.createObjectURL', motif: /URL\.createObjectURL/, dans: 'ts' },
   { nom: 'localStorage', motif: /localStorage/, dans: 'ts' },
   { nom: 'TextEncoder', motif: /TextEncoder/, dans: 'ts' },
+  { nom: 'DecompressionStream', motif: /DecompressionStream/, dans: 'ts' },
+  { nom: 'Blob.arrayBuffer', motif: /\.arrayBuffer\(\)/, dans: 'ts' },
   { nom: 'canvas', motif: /createElement\('canvas'\)/, dans: 'ts' },
   { nom: 'requestAnimationFrame', motif: /requestAnimationFrame/, dans: 'ts' },
   { nom: 'toLocaleDateString', motif: /toLocaleDateString/, dans: 'ts' },

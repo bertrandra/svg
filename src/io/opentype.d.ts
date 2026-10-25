@@ -6,6 +6,8 @@ declare module 'opentype.js' {
   export interface Glyph { index: number; advanceWidth?: number; getPath(x: number, y: number, fontSize: number): { commands: CommandeOpentype[] } }
   export interface Font {
     unitsPerEm: number;
+    numGlyphs?: number;
+    glyphNames?: { nameToGlyphIndex(name: string): number };
     ascender: number;
     descender: number;
     charToGlyph(c: string): Glyph;

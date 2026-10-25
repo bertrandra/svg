@@ -14,6 +14,8 @@ import { manquantes } from '../util/capacites.js';
 import { porterCss, remEnPixels } from '../util/cssPortee.js';
 import { LIMITES_XML } from '../util/xml.js';
 import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
+import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
+import { policesPosees } from '../io/polices.js';
 import { FenetreIncompatible } from './Incompatible.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
@@ -179,13 +181,21 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
       return ouvert;
     }
     const bibliotheque = options.bibliotheque === 'a-charger' ? options.bibliotheque : options.bibliotheque === undefined ? undefined : normaliserBibliotheque(options.bibliotheque) ?? undefined;
-    racine.render(
-      <EditeurSvg svg={options.svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []}
-        {...(bibliotheque === undefined ? {} : { bibliotheque })}
-        {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
-        stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null}
-        enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
-    );
+    const monter = (svg: string, ignores: readonly string[]): void => {
+      if (ferme) return;
+      racine.render(
+        <EditeurSvg svg={svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []} ignores={ignores}
+          {...(bibliotheque === undefined ? {} : { bibliotheque })}
+          {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
+          stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null}
+          enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
+      );
+    };
+    // Du texte : ses lettres deviennent des formes avec les fontes de polices.js, chargees a la demande, quand l'hote dit ou les
+    // trouver (baseAnnexes) ou les a deja posees. Sinon, ou si le fichier manque, l'editeur recoit le SVG tel quel et dit, comme
+    // avant, que le texte ne s'edite pas : un hote qui ne sert pas polices.js n'a pas une requete en echec a chaque ouverture (ADR-0020).
+    if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
+    else monter(options.svg, []);
     ouvert = { fermer };
     return ouvert;
   };

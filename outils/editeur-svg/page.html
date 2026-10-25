@@ -36,6 +36,9 @@
 @media (max-width: 640px) { .resultat { grid-template-columns: minmax(0, 1fr); } }
 section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .ouvrir, .vectoriser { display: grid; gap: var(--esp-m); }
+/* Le choix de page d'un PDF de plusieurs pages (ADR-0020) : la carte d'une reprise, la phrase a gauche, le choix et l'action ensemble a droite. */
+.choix-page p { flex: 1 1 auto; }
+.choix-page .champ-ligne > span:first-child { min-width: 0; }
 .nuancier-page { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: 0 var(--esp-xl); }
 .nuancier-page > summary { display: flex; gap: var(--esp-m); align-items: baseline; padding: var(--esp-l) 0; cursor: pointer; font-size: var(--texte-corps); font-weight: 600; }
 .nuancier-page[open] > summary { border-bottom: 1px solid var(--filet); margin-bottom: var(--esp-l); }

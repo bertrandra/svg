@@ -139,7 +139,7 @@ describe('securite : le corpus hostile entre par la page', () => {
    * qui en portent s'y ouvraient au lieu d'etre refuses), si bien que ces octets-la ne peuvent pas entrer par cette porte.
    */
   async function coller(page: Page, texte: string): Promise<{ issue: 'ouvre' | 'refus'; recu: string }> {
-    const zone = page.locator('section[aria-label="Ouvrir un SVG"] textarea');
+    const zone = page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea');
     await zone.fill(texte);
     const recu = await zone.inputValue();
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
@@ -260,7 +260,7 @@ describe('securite : le corpus hostile entre par la page', () => {
   it('un fichier choisi par le selecteur de fichiers passe par la meme porte (octets exacts, UTF-16 compris)', async () => {
     for (const nom of ['encodage-utf16.svg', 'encodage-utf8-invalide.svg', 'script-balise.svg']) {
       const s = await session();
-      await s.page.locator('section[aria-label="Ouvrir un SVG"] input[type=file]').setInputFiles({ name: nom, mimeType: 'image/svg+xml', buffer: octetsDe(nom) });
+      await s.page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] input[type=file]').setInputFiles({ name: nom, mimeType: 'image/svg+xml', buffer: octetsDe(nom) });
       const sortie = await issue(s.page);
       if (!DECODAGE_DU_NAVIGATEUR.has(nom)) expect(sortie, nom).toBe(index.fichiers.find(f => f.fichier === nom)?.attendu);
       await s.garde.verifier(nom);
