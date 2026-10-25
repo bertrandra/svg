@@ -406,3 +406,26 @@ empreintes.
 - **Corrigé** : dans l'inspecteur, les étiquettes « Rotation ° », « Échelle % », « Incl. X ° », « Incl. Y ° » et « Angles du
   décalage » passaient sur deux lignes (« Rotation » était rogné) : une étiquette courte tient sur une ligne, le champ cède
   la place. Les crédits précisent que les fontes de l'interface ne sont pas dans l'éditeur embarqué.
+- **Bibliothèque : une recherche qui trouve ce qu'elle promet.** Elle porte aussi sur les noms d'événements et de
+  catégories, sans accents, au singulier près, et sur des synonymes en données (« sapin » : 0 → 20 résultats,
+  « anniversaire » : 0 → 97, « Noël » : 1 → 43) ; un classement par pertinence ; un état « aucun résultat » qui propose
+  un événement, une faute de frappe corrigée ou d'effacer. Les 45 événements se choisissent par pastilles (ceux qui
+  arrivent d'abord) ; un événement s'ouvre sur ses formes les plus représentatives ; les vignettes ont une hauteur
+  régulière.
+- **Convertir une image : l'essentiel au premier résultat.** Résultat, fond, mode, grain et « Ouvrir dans l'éditeur » ;
+  réglages fins et prétraitement repliés, les autres vues, le zoom et le fond du plan dans « Plus de vues » ; les réglages
+  en mots simples (« Ignorer les taches de moins de… », « Garder l'image telle quelle »), le nom technique en infobulle.
+  Aucune sortie du traceur ne change. Un menu ouvert bas dans l'écran s'ouvre au-dessus de son bouton.
+- **Finition du système** : couleur d'accent, texte d'exemple (5,70:1 au lieu de 3,89:1), texte sélectionné, curseur et
+  barres de défilement aux jetons (`--selection`, `--filet-fort`, contrastes hors texte vérifiés) ; un message neutre
+  (`role="status"`) pour les succès, l'ambre réservé aux avertissements ; seule l'action de l'instant est pleine (menu,
+  confirmation, contexte de production) ; « aucune couleur » en barre oblique et filet cyan au lieu du rouge ; chiffres
+  tabulaires ; chasse fixe en 400/500 seulement ; codes de couleur à l'encre, précédés de leur nom ; anneau de focus
+  sur les liens ; paragraphes bornés à 34em.
+- **Au doigt** : la rangée de sélection tient dans 390 px (menu « Plus »), les raccourcis des menus se masquent, les aides
+  disent « Touchez », le nuancier et le curseur du tiroir font 40 px, les boutons « Corriger » restent visibles ; le menu
+  « Plus » est rangé Édition, Fichier, Vue.
+- Les calques se nomment par leur genre (« Cercle 2 ») ; une forme sans fond a une pastille à filet.
+- **Corrigé** : « Abandonner la modification non enregistrée ? », « 2 tapis », « 3 petites formes » ; « 0 (zéro) »
+  distinct de « O » ; le zoom dit qu'il ajuste la vue ; une vraie violation axe `label-content-name-mismatch` sur les
+  noms des formes. L'audit axe Cricut juge chaque texte entier (son doute intermittent venait du défilement).

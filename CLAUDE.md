@@ -80,7 +80,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
   par défaut, seul `.primaire` est plein ; la barre garde l'outil fréquent, les menus (`Menu.tsx`) le
   reste avec son raccourci ; un panneau se range en `Section` ; au doigt, 40 px et `prefers-reduced-motion`
-  respecté.
+  respecté. Seule l'action de l'instant est pleine : un menu ou une confirmation ouverts, ou un contexte de
+  production, rendent les autres secondaires (classes du cadre, sens inchangé).
 - **Une couleur d'interface est un jeton** (ADR-0007) : `src/styles/jetons.ts` est la seule source (rôle, valeur
   claire et sombre, description) ; le CSS des variables se génère au build, la page n'écrit aucune couleur,
   un test confronte registre, page et code, et chaque texte sur son fond tient 4,5:1 dans les deux thèmes.
