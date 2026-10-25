@@ -3,7 +3,9 @@
 **Date :** 25 octobre 2026
 **Statut :** acceptée (prolonge les ADR-0022 et 0027, s’appuie sur les ADR-0006, 0008, 0011, 0021, 0028 et 0029) ; **aucune
 référence d’écriture existante ne change** (`ecriture-stable` vert sans `ACTUALISER_REFERENCES`), deux références neuves,
-`texte-sur-forme` et `texte-dans-forme`. (0030 est le site PHP, mené à part.)
+`texte-sur-forme` et `texte-dans-forme`. (0030 est le site PHP, mené à part.) **Amendée par l’ADR-0032** : « Dans la forme », dans
+la barre, déforme désormais le texte à la silhouette de la forme ; le remplissage en lignes décrit ici reste, au choix du panneau
+(« Remplir : En lignes »), octet pour octet.
 
 ## Contexte
 

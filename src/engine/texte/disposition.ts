@@ -14,6 +14,7 @@ import type { Glyphes } from '../texte.js';
 import { cheminDuTexte, glyphesDuTexte } from './bloc.js';
 import { poserSurTrace } from './surTrace.js';
 import { poserDansForme, tailleQuiTient } from './dansForme.js';
+import { poserEnveloppe, tailleEnveloppe } from './enveloppe.js';
 import type { Pose } from './pose.js';
 
 /** Le texte pose : ses contours, le texte vivant mis a jour (taille ajustee, matrice ancree), et sa pose (curseurs, depassement). */
@@ -44,11 +45,15 @@ export function composerDispose(t: TexteVivant, base: Forme, glyphes: Glyphes): 
   const cle = cleDe(t), deja = cache.get(cle);
   if (deja) return { ...deja, texte: { ...deja.texte, matrice: ancrer(t.matrice, deja.pose) } };
   const echelle = facteur(t.matrice) || 1;
-  const taille = p?.mode === 'dans' && p.ajuster ? tailleQuiTient({ ...t, marge: p.marge, justifier: p.justifier }, base, g, echelle) : t.taille;
+  // Dans une forme a taille ajustee, la plus grande taille qui tient ; deforme (ADR-0032), la hauteur de la forme sur celle du bloc,
+  // mesuree sur les lettres pleines (le trace median se deforme dans la meme boite).
+  const taille = p?.mode === 'dans' && p.ajuster ? tailleQuiTient({ ...t, marge: p.marge, justifier: p.justifier }, base, g, echelle)
+    : p?.mode === 'enveloppe' ? tailleEnveloppe({ ...t, marge: p.marge }, base, glyphes, echelle) : t.taille;
   const plan = taille * echelle;
   const pose: Pose = !p ? { lettres: [], carets: [], lignes: [], taille: plan, ancre: [t.matrice[4], t.matrice[5]], depasse: 0, nonPlaces: 0 }
     : p.mode === 'sur' ? poserSurTrace({ ...t, depart: p.depart, cote: p.cote, repartir: p.repartir }, base, g, plan)
-      : poserDansForme({ ...t, marge: p.marge, justifier: p.justifier }, base, g, plan);
+      : p.mode === 'dans' ? poserDansForme({ ...t, marge: p.marge, justifier: p.justifier }, base, g, plan)
+        : poserEnveloppe({ ...t, marge: p.marge }, base, glyphes, g, plan);
   const r: TexteDispose = { texte: { ...t, taille, matrice: ancrer(t.matrice, pose) }, d: pose.lettres.flatMap(l => l.d), pose };
   if (cache.size >= MEMOIRE_MAX) cache.clear();
   cache.set(cle, r);

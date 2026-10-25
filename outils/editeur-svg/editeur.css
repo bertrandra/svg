@@ -717,6 +717,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .disposition-texte .boutons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs) var(--esp-m); }
 .disposition-texte .discret { min-height: 24px; padding-left: 0; padding-right: 0; }
 .disposition-texte .message { margin: 0; }
+/* Remplir la forme (ADR-0032) : le titre du choix, a l'encre douce comme l'etiquette d'un champ, sur sa ligne au-dessus des deux
+   boutons (« En déformant les lettres » est long : cote a cote, le second passait seul a la ligne, sous le titre). */
+.choix-remplir-titre { flex-basis: 100%; font-size: var(--texte-compact); color: var(--encre-douce); }
 @media (pointer: coarse), (max-width: 900px) {
   .disposition-texte .case { min-height: 40px; }
 }

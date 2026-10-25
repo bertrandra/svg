@@ -345,8 +345,8 @@ Pour un hôte, l’essentiel :
   `data-ed-texte`, `data-ed-police`… qui permettent de le rouvrir comme texte. Le texte y est **encodé en pourcentage** (lettres
   ASCII et chiffres seuls en clair) : votre nettoyage peut garder ces attributs tels quels, ou les retirer (le dessin ne change
   pas, le texte n’est plus modifiable). Aucun fichier de police n’est écrit : une fonte déposée n’y laisse que son empreinte.
-- **Le texte posé sur ou dans une forme** (ADR-0031) : un texte vivant peut porter en plus `data-ed-disposition` (`sur` ou
-  `dans`), ses réglages (`data-ed-depart`, `data-ed-cote`, `data-ed-repartir`, `data-ed-marge`, `data-ed-ajuster`,
+- **Le texte posé sur ou dans une forme** (ADR-0031, ADR-0032) : un texte vivant peut porter en plus `data-ed-disposition` (`sur`,
+  `dans`, ou `enveloppe` pour un texte déformé à la silhouette de sa forme), ses réglages (`data-ed-depart`, `data-ed-cote`, `data-ed-repartir`, `data-ed-marge`, `data-ed-ajuster`,
   `data-ed-justifier`) et le lien vers sa forme : `data-ed-forme`, le rang de la forme parmi les chemins du fichier, ou, pour une
   forme masquée, son tracé encodé en pourcentage (`data-ed-forme-d`, et `data-ed-forme-regle="evenodd"`). Ce ne sont que des
   nombres, des mots fixes et du texte encodé ; les contours du `<path>` restent la vérité du dessin. Votre nettoyage peut les

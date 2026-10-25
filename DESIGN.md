@@ -625,6 +625,10 @@ Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un
   contraste forcé, `Highlight` sur `Canvas`. Rien ne s'anime.
 - **Ce qui ne tient pas** : dans le panneau, un message d'alerte (ambre, coins de 6 px) sous les réglages, qui dit le nombre de
   lettres hors du tracé ou de mots hors de la forme ; la région vocale le dit quand il change. Jamais un bloquant.
+- **Le texte déformé** (ADR-0032) : « Dans la forme » étire et courbe le texte jusqu'au bord ; dans le panneau, sous « Changer de
+  forme », le choix « Remplir » : son titre à l'encre douce (Compact), sur sa ligne, puis deux boutons à état, « En déformant les
+  lettres » et « En lignes » (filet et texte cyan quand il est choisi, jamais pleins, 40 px au doigt). Déformé, la taille se
+  calcule : le champ est inactif et dit pourquoi en infobulle ; la marge reste réglable. Rien ne s'anime.
 
 ## Surfaces du navigateur
 

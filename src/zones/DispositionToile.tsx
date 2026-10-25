@@ -11,9 +11,9 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie, type ChoixForme } from './contexteSaisie.js';
 import { usePolices, useTexte } from './contexteTexte.js';
 import { usePrise } from './PriseToile.js';
-import { candidatesPour, depassementDe, useDisposition } from './actionsDisposition.js';
+import { candidatesPour, depassementDe, refusDe, useDisposition } from './actionsDisposition.js';
 import { policeDe } from './actionsTexte.js';
-import { PHRASE_CHOIX_ANNULE, phraseCandidate, phraseDepart, phraseDepassement, phraseFormePerdue } from './phrasesDisposition.js';
+import { PHRASE_CHOIX_ANNULE, PHRASES_REFUS_ENVELOPPE, phraseCandidate, phraseDepart, phraseDepassement, phraseFormePerdue } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
 
 /**
@@ -221,11 +221,16 @@ function PoigneeDepart({ texte, base, depart, cote, svgRef }: { texte: Forme; ba
   );
 }
 
-/** Le depassement d'un texte pose, en une phrase (lettres hors du trace, mots hors de la forme) ; vide si tout tient. */
+/**
+ * Le depassement d'un texte pose, en une phrase (lettres hors du trace, mots hors de la forme) ; pour un texte deforme (ADR-0032),
+ * ce qui l'empeche de se deformer (une forme sans interieur) ; vide si tout tient.
+ */
 export function useDepassement(texte: Forme | null | undefined): string {
   const mo = useDessin(), { polices } = useTexte();
   const p = texte?.texte?.disposition;
   if (!texte || !p) return '';
-  const { depasse, nonPlaces } = depassementDe(mo.dessin, texte.id, policeDe(texte, polices));
+  const police = policeDe(texte, polices);
+  if (p.mode === 'enveloppe') { const refus = refusDe(mo.dessin, texte.id, police); return refus ? PHRASES_REFUS_ENVELOPPE[refus] : ''; }
+  const { depasse, nonPlaces } = depassementDe(mo.dessin, texte.id, police);
   return phraseDepassement(p.mode, depasse, nonPlaces);
 }

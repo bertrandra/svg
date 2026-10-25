@@ -50,7 +50,7 @@ const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
   'data-ed-trace': /^median$/,
   'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i'),
   'data-ed-operation': /^(?:decoupe|ecriture)$/,
-  'data-ed-disposition': /^(?:sur|dans)$/,
+  'data-ed-disposition': /^(?:sur|dans|enveloppe)$/,
   'data-ed-depart': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
   'data-ed-cote': /^dessous$/,
   'data-ed-repartir': /^1$/,

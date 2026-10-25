@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, ajouterForme, ellipse, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, ajouterForme, ellipse, polygone, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { exportParOperation } from '../../../src/export/operations.js';
@@ -152,14 +152,14 @@ const vectoriser = (mode: ModeVectorisation, avecLettres: boolean) => (d: Dessin
 // Le texte pose sur ou dans une forme (ADR-0031) : une forme, puis des textes poses sur elle (composes sur elle avec la fonte
 // factice), la forme masquee au besoin (le texte porte alors son trace encode).
 type DispositionSansForme = DispositionTexte extends infer D ? D extends DispositionTexte ? Omit<D, 'forme'> : never : never;
-const posesSur = (d: Chemin, textes: ReadonlyArray<readonly [TexteVivant, DispositionSansForme]>, masquer = false) => (dessin: DessinSvg): DessinSvg => {
+const posesSur = (d: Chemin, textes: ReadonlyArray<readonly [TexteVivant, DispositionSansForme]>, masquer = false, peinture: Parameters<typeof creerTexte>[3] = FOND) => (dessin: DessinSvg): DessinSvg => {
   const b = ajouterForme(dessin, d, { remplissage: '#e0b84a', contour: null, epaisseur: 1 });
   const base = b.id ? b.dessin.formes.find(f => f.id === b.id) : undefined;
   if (!base) throw new Error('forme de base');
   let r = b.dessin;
   for (const [t, p] of textes) {
     const c = composerDispose({ ...t, disposition: { ...p, forme: base.id } as DispositionTexte }, base, glyphesFactices);
-    r = creerTexte(r, c.texte, c.d, FOND).dessin;
+    r = creerTexte(r, c.texte, c.d, peinture).dessin;
   }
   return masquer ? modifier(r, [base.id], { visible: false }) : r;
 };
@@ -179,6 +179,16 @@ const SUR_FORME = enchainerTot(
 const DANS_FORME = enchainerTot(
   posesSur(COEUR, [[texteFactice('Avec tout mon amour pour toi', [1, 0, 0, 1, 0, 0], { taille: 7, alignement: 'gauche' }), { mode: 'dans', marge: 0.25, ajuster: false, justifier: true }]]),
   posesSur(ellipse(10, 10, 80, 60), [[texteFactice('Bonne\nannée', [1, 0, 0, 1, 0, 0], { alignement: 'centre' }), { mode: 'dans', marge: 0.5, ajuster: true, justifier: false }]], true)
+);
+
+// Le texte deforme dans une forme (ADR-0032) : un cas NEUF. Un cœur portant deux lignes deformees a la marge par defaut, une ellipse
+// masquee portant un texte en trace median a une marge plus grande (sa forme voyage encodee), une etoile portant un mot.
+const ENVELOPPE = enchainerTot(
+  posesSur(COEUR, [[texteFactice('Avec tout\nmon amour', [1, 0, 0, 1, 0, 0], { taille: 7, alignement: 'centre' }), { mode: 'enveloppe', marge: 0.1 }]]),
+  posesSur(ellipse(10, 5, 80, 40), [[texteFactice('Bonne année', [1, 0, 0, 1, 0, 0], { alignement: 'centre', trace: 'median' }), { mode: 'enveloppe', marge: 0.2 }]], true,
+    peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.8)),
+  posesSur(polygone([[50, 49], [55.9, 65.9], [73.8, 66.3], [59.5, 77.1], [64.7, 94.2], [50, 84], [35.3, 94.2], [40.5, 77.1], [26.2, 66.3], [44.1, 65.9]], true),
+    [[texteFactice('ÉTOILE', [1, 0, 0, 1, 0, 0], { alignement: 'centre' }), { mode: 'enveloppe', marge: 0.1 }]])
 );
 
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
@@ -410,6 +420,8 @@ const CAS: readonly Cas[] = [
   // sa forme (son rang parmi les chemins ecrits, ou son trace encode quand elle est masquee), et se relit tel quel.
   { nom: 'texte-sur-forme', entree: 'texte-vivant', operation: SUR_FORME },
   { nom: 'texte-dans-forme', entree: 'texte-vivant', operation: DANS_FORME },
+  // Le texte deforme dans une forme (ADR-0032) : un cas NEUF ; « dans » (en lignes) ne change pas d'un octet (la reference ci-dessus).
+  { nom: 'texte-enveloppe', entree: 'texte-vivant', operation: ENVELOPPE },
   { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },

@@ -70,7 +70,8 @@ s'embarque aussi comme composant React dans un autre produit.
   à couper, un fichier à écrire et les deux ensemble (ADR-0028).
 - **Le texte épouse une forme** : posé **sur** une forme, il suit son tracé (le cercle d’un badge, un arc, une vague), ses
   lettres tournées sans être déformées, son point de départ glissé à la souris ou réglé au clavier ; posé **dans** une forme
-  fermée, il la remplit, ligne à ligne coupée sur ses bords, trous respectés, à la taille voulue ou ajustée pour la remplir.
+  fermée, il en prend la silhouette, lettres étirées et courbées jusqu’au bord (un cœur, un cercle, une étoile, ADR-0032), ou,
+  au choix du panneau, la remplit ligne à ligne, coupée sur ses bords, trous respectés, à la taille voulue ou ajustée.
   Le texte reste modifiable et suit sa forme quand elle change ; le fichier ne porte que des contours (ADR-0031).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.

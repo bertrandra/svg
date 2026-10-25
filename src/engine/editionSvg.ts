@@ -12,7 +12,7 @@
 // Ce fichier n'est plus que la facade : le travail vit dans `edition/`, un module par sujet. Les
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
 
-export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde, TexteVivant, PoliceTexte, AlignementTexte, Operation, DispositionTexte, DispositionSurForme, DispositionDansForme, CoteTexte } from './edition/types.js';
+export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde, TexteVivant, PoliceTexte, AlignementTexte, Operation, DispositionTexte, DispositionSurForme, DispositionDansForme, DispositionEnveloppe, CoteTexte } from './edition/types.js';
 export { IDENTITE } from './edition/types.js';
 
 export { lireChemin, ecrireChemin, ancre, depart } from './edition/chemins.js';
@@ -38,7 +38,7 @@ export { ATTRIBUT_ORIGINE, avecOrigines, marquerOrigine, originesDe, lireOrigine
 export {
   encoderTexte, decoderTexte, attributsTexte, lireTexteVivant, transformerTexte, sansTexte, dessinSansTextes, garderTextes,
   ATTRIBUTS_TEXTE, TEXTE_MAX, INTERLIGNE_DEFAUT, MSG_TEXTE_ILLISIBLE, type TexteLu,
-  ATTRIBUTS_LIEN, MARGE_DEFAUT, attributsLien, sansDisposition, avecFormesPorteuses, suitUneFormeChoisie, relierCopie, relierCopies, resoudreLiens, type LienLu
+  ATTRIBUTS_LIEN, MARGE_DEFAUT, MARGE_ENVELOPPE_DEFAUT, attributsLien, sansDisposition, avecFormesPorteuses, suitUneFormeChoisie, relierCopie, relierCopies, resoudreLiens, type LienLu
 } from './edition/texteVivant.js';
 
 export {

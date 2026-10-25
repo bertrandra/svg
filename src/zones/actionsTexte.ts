@@ -3,10 +3,11 @@
 // par les verbes de l'editeur (une entree d'historique par geste, une saisie fondue par sa cle).
 
 import { useCallback } from 'react';
-import { boiteChemin, MARGE_DEFAUT, sansDisposition, transformerTexte, translation, type Chemin, type DessinSvg, type DispositionTexte, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
+import { boiteChemin, MARGE_DEFAUT, MARGE_ENVELOPPE_DEFAUT, sansDisposition, transformerTexte, translation, type Chemin, type DessinSvg, type DispositionTexte, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
 import { cheminDuTexte, lettresDuTexte } from '../engine/texte/bloc.js';
 import { composerDansDessin, peutPorter, texteDispose } from '../engine/texte/disposition.js';
 import { traceFerme } from '../engine/texte/surTrace.js';
+import type { Pose } from '../engine/texte/pose.js';
 import { avecTrace, basculerPeinture, creerTexte, natureDuTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
 import { NOMS_MODES, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { toleranceBooleen } from '../engine/booleens.js';
@@ -78,11 +79,13 @@ const DEPART_OUVERT = { gauche: 0, centre: 0.5, droite: 1 } as const;
 
 /**
  * La disposition d'un texte qu'on pose sur ou dans une forme : centre, au point le plus haut d'une forme fermee (a l'exterieur), au
- * milieu d'un trace ouvert ; dans une forme, la marge par defaut. Une disposition deja la sur la meme forme garde ses reglages.
+ * milieu d'un trace ouvert ; dans une forme, en lignes ou deforme (ADR-0032), la marge par defaut. Une disposition deja la sur la
+ * meme forme garde ses reglages.
  */
 export function dispositionPour(mode: DispositionTexte['mode'], base: Forme, avant?: DispositionTexte): DispositionTexte {
   if (avant?.mode === mode) return { ...avant, forme: base.id };
-  return mode === 'sur' ? { mode, forme: base.id, depart: traceFerme(base) ? 0 : 0.5, cote: 'dessus', repartir: false } : { mode, forme: base.id, marge: MARGE_DEFAUT, ajuster: false, justifier: false };
+  if (mode === 'sur') return { mode, forme: base.id, depart: traceFerme(base) ? 0 : 0.5, cote: 'dessus', repartir: false };
+  return mode === 'dans' ? { mode, forme: base.id, marge: MARGE_DEFAUT, ajuster: false, justifier: false } : { mode, forme: base.id, marge: MARGE_ENVELOPPE_DEFAUT };
 }
 
 /** Le dessin ou le texte `id` prend ces changements, recompose avec sa fonte ; le meme dessin s'il ne se compose pas. */
@@ -108,6 +111,12 @@ export function rienNeSePose(d: DessinSvg, id: string, c: ChangementTexte, polic
   if (!f?.texte?.disposition || c.disposition === null) return false;
   const r = composerDansDessin(d, id, texteModifie(f.texte, c), police.glyphes);
   return !!r.texte.disposition && !r.d.some(x => x.c !== 'M' && x.c !== 'Z');
+}
+
+/** La pose qu'aurait le texte avec ce changement (null s'il serait libre) : de quoi dire pourquoi un texte ne se deforme pas (ADR-0032). */
+export function poseApres(d: DessinSvg, id: string, c: ChangementTexte, police: Police): Pose | null {
+  const f = d.formes.find(x => x.id === id);
+  return f?.texte ? composerDansDessin(d, id, texteModifie(f.texte, c), police.glyphes).pose : null;
 }
 
 /** Les lettres d'un texte vivant dans ce dessin : posees sur ou dans sa forme s'il en a une (ADR-0031), en ligne droite sinon. */
