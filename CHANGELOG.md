@@ -429,3 +429,14 @@ empreintes.
 - **Corrigé** : « Abandonner la modification non enregistrée ? », « 2 tapis », « 3 petites formes » ; « 0 (zéro) »
   distinct de « O » ; le zoom dit qu'il ajuste la vue ; une vraie violation axe `label-content-name-mismatch` sur les
   noms des formes. L'audit axe Cricut juge chaque texte entier (son doute intermittent venait du défilement).
+- **Une visite guidée de l'éditeur** (ADR-0019), en cinq étapes sur le vrai éditeur, jusqu'à la première retouche
+  récupérée : choisir une forme, changer sa couleur, savoir revenir en arrière, récupérer le fichier, puis trois suites
+  (convertir une image, la bibliothèque, la Cricut). Elle avance sur le geste réel, sans voile ; elle se passe, se quitte
+  par Échap, s'atteint par F6 ou un lien d'évitement, se rejoue du nouveau menu **Aide** (en tête de « Plus » au
+  téléphone) et se retient (`svg.guide`, stockage injecté). Elle ne s'ouvre que demandée : « Essayer avec la visite
+  guidée » sur l'accueil, le menu Aide, ou l'option d'hôte `visite: true` de l'éditeur embarqué (prop `guide`).
+- **Quatre repères de première rencontre** (modifier les points, premier assemblage de formes, contexte Cricut, première
+  conversion), refermables et jamais répétés, et **des états vides qui disent quoi faire** partout (inspecteur, calques,
+  toile, couleurs, versions, panier, lot, nuancier, bibliothèque, panneau Cricut).
+- Sur téléphone, un tiroir ouvert masque le dessin qu'il recouvre ; l'aide de l'inspecteur dit « assembler des formes »
+  au lieu de « booléens » ; la typographie française pose ses espaces insécables dans les bulles et les états vides.

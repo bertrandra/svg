@@ -88,6 +88,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   `docs/jetons.md` se régénère par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/styles`.
   Une taille de texte aussi : cinq rôles en rem (`src/styles/typographie.ts`, `--texte-*`), et un espacement, un
   rayon ou une couche (`src/styles/espaces.ts`) : rien d'écrit en dur ; le système visuel est décrit dans `DESIGN.md`, le produit dans `PRODUCT.md`.
+- **L'accueil guidé mène à la première retouche** (ADR-0019) : une visite de cinq étapes sur le vrai éditeur, qui avance sur le
+  geste réel, sans voile, bulle sur la toile ; elle ne s'ouvre que demandée (accueil, menu Aide, `visite: true` chez un hôte) et
+  se retient par `svg.guide` dans le stockage injecté ; un repère est une note dans le flux, jamais répétée ; un état vide dit ce
+  qui viendra et propose un geste discret (`commun/EtatVide.tsx`).
 - **La lecture est fidèle, ou dit ce qu'elle perd** (ADR-0009) : l'alpha, les noms de couleur et une épaisseur
   de trait nulle sont gardés ; `lireDessin` rend `ignores` et la page le dit à l'ouverture. Les octets
   changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.
