@@ -56,6 +56,12 @@ empreintes.
 
 ### Modifié
 
+- Plus d'accord à donner pour les polices ni pour la bibliothèque de formes (décision du 25 octobre 2026, ADR-0025 amendée) :
+  choisir une police du catalogue la télécharge aussitôt (la ligne dit « Téléchargement… »), toujours vérifiée par son
+  empreinte sha256, avec Bunny Fonts en repli ; ouvrir la liste, chercher et voir les aperçus ne font partir aucune requête.
+  Le dialogue de consentement, « Retirer l'autorisation » et la clé `svg.polices.consentement` (ignorée et effacée si elle
+  reste) disparaissent. La bibliothèque de formes se charge d'elle-même à l'ouverture de sa voie ou de sa section, sans bouton
+  « Charger la bibliothèque (environ 7 Mo) » ; les sources libres gardent leur chargement par pastille.
 - « Toutes les polices » ne montre qu'une ligne par nom de famille : la fonte livrée, sinon Google Fonts, sinon Fontshare
   (ordre défini dans le registre) ; filtrer une source montre toutes les siennes ; le total compte les lignes montrées
   (2 166). Un texte composé dans une police d'une source cachée se recompose à l'identique et reste nommé avec sa source.
