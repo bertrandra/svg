@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  type PolicesTexte, type Matrice, type TexteVivant, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, ajouterForme, ellipse, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { exportParOperation } from '../../../src/export/operations.js';
@@ -30,6 +30,7 @@ import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.
 import { cheminDuTexte, lettresDuTexte } from '../../../src/engine/texte/bloc.js';
 import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
 import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
+import { composerDispose } from '../../../src/engine/texte/disposition.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
 import { svgDecoupe } from '../../../src/export/svgs.js';
 import { svgStylo } from '../../../src/export/stylo.js';
@@ -147,6 +148,38 @@ const vectoriser = (mode: ModeVectorisation, avecLettres: boolean) => (d: Dessin
   const id = au(avec.formes, avec.formes.length - 1).id;
   return vectoriserTextes(avec, [id], mode, { lisser: true, ...(avecLettres ? { lettres: new Map([[id, lettresDuTexte(MOT_SERRE, glyphesFactices).map(l => l.d)]]) } : {}) }).dessin;
 };
+
+// Le texte pose sur ou dans une forme (ADR-0031) : une forme, puis des textes poses sur elle (composes sur elle avec la fonte
+// factice), la forme masquee au besoin (le texte porte alors son trace encode).
+type DispositionSansForme = DispositionTexte extends infer D ? D extends DispositionTexte ? Omit<D, 'forme'> : never : never;
+const posesSur = (d: Chemin, textes: ReadonlyArray<readonly [TexteVivant, DispositionSansForme]>, masquer = false) => (dessin: DessinSvg): DessinSvg => {
+  const b = ajouterForme(dessin, d, { remplissage: '#e0b84a', contour: null, epaisseur: 1 });
+  const base = b.id ? b.dessin.formes.find(f => f.id === b.id) : undefined;
+  if (!base) throw new Error('forme de base');
+  let r = b.dessin;
+  for (const [t, p] of textes) {
+    const c = composerDispose({ ...t, disposition: { ...p, forme: base.id } as DispositionTexte }, base, glyphesFactices);
+    r = creerTexte(r, c.texte, c.d, FOND).dessin;
+  }
+  return masquer ? modifier(r, [base.id], { visible: false }) : r;
+};
+const COEUR: Chemin = [
+  { c: 'M', p: [150, 35] }, { c: 'C', p: [150, 15, 120, 5, 110, 25] }, { c: 'C', p: [100, 45, 130, 70, 150, 90] },
+  { c: 'C', p: [170, 70, 200, 45, 190, 25] }, { c: 'C', p: [180, 5, 150, 15, 150, 35] }, { c: 'Z', p: [] }
+];
+const SUR_FORME = enchainerTot(
+  posesSur(ellipse(10, 10, 80, 80), [
+    [texteFactice('Joyeux anniversaire', [1, 0, 0, 1, 0, 0], { taille: 9, alignement: 'centre' }), { mode: 'sur', depart: 0, cote: 'dessus', repartir: false }],
+    [texteFactice('Lucie 2026', [1, 0, 0, 1, 0, 0], { taille: 8, alignement: 'centre', interlettrage: 0.05 }), { mode: 'sur', depart: 0, cote: 'dessous', repartir: false }]
+  ]),
+  posesSur([{ c: 'M', p: [110, 80] }, { c: 'Q', p: [150, 40, 195, 80] }], [
+    [texteFactice('vague', [1, 0, 0, 1, 0, 0], { taille: 10, alignement: 'gauche' }), { mode: 'sur', depart: 0.125, cote: 'dessous', repartir: true }]
+  ])
+);
+const DANS_FORME = enchainerTot(
+  posesSur(COEUR, [[texteFactice('Avec tout mon amour pour toi', [1, 0, 0, 1, 0, 0], { taille: 7, alignement: 'gauche' }), { mode: 'dans', marge: 0.25, ajuster: false, justifier: true }]]),
+  posesSur(ellipse(10, 10, 80, 60), [[texteFactice('Bonne\nannée', [1, 0, 0, 1, 0, 0], { alignement: 'centre' }), { mode: 'dans', marge: 0.5, ajuster: true, justifier: false }]], true)
+);
 
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
@@ -372,6 +405,11 @@ const CAS: readonly Cas[] = [
   // Le trace « Median » (ADR-0027) : un cas NEUF. Une police a contour (la fonte factice courbe) se dessine en lignes au milieu
   // du trait, sans fond, et porte `data-ed-trace="median"` ; aucun texte sans ce trace n'ecrit un octet de plus.
   { nom: 'texte-vivant-median', entree: 'texte-vivant', operation: vivant(texteFactice('Bonjour', [1, 0, 0, 1, 15, 55], { taille: 30, trace: 'median' }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 1.5)) },
+  // Le texte pose sur ou dans une forme (ADR-0031) : des cas NEUFS, un par mode. Un texte libre n'ecrit aucun attribut de plus (toutes
+  // les references ci-dessus le prouvent) ; un texte pose s'ecrit en contours, ses lettres posees, plus sa disposition et le lien a
+  // sa forme (son rang parmi les chemins ecrits, ou son trace encode quand elle est masquee), et se relit tel quel.
+  { nom: 'texte-sur-forme', entree: 'texte-vivant', operation: SUR_FORME },
+  { nom: 'texte-dans-forme', entree: 'texte-vivant', operation: DANS_FORME },
   { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },

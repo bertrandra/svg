@@ -5,7 +5,7 @@
 import type { Boite, DessinSvg, Forme, Matrice } from './types.js';
 import { echellerTrait, reglerTrait, type ReglageTrait } from './trait.js';
 import { boiteDe, echelle, facteur, multiplier, rotation, transformerChemin, translation } from './geometrie.js';
-import { avecTexteTransforme } from './texteVivant.js';
+import { avecFormesPorteuses, avecTexteTransforme, relierCopie, suitUneFormeChoisie } from './texteVivant.js';
 
 export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: Forme) => Forme): DessinSvg {
   const voulus = new Set(ids);
@@ -21,8 +21,9 @@ export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: 
 
 export function transformer(dessin: DessinSvg, ids: readonly string[], m: Matrice): DessinSvg {
   const k = facteur(m);
-  // Un texte vivant suit sa forme : sa matrice de composition prend la transformation (texteVivant.ts).
-  return surFormes(dessin, ids, f => avecTexteTransforme({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }, f, m));
+  // Un texte vivant suit sa forme : sa matrice de composition prend la transformation (texteVivant.ts). Un texte pose sur une
+  // forme (ADR-0031) l'emmene : la forme qui le porte prend la meme transformation, le texte se recompose ensuite sur elle.
+  return surFormes(dessin, avecFormesPorteuses(dessin, ids), f => avecTexteTransforme({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }, f, m));
 }
 
 export const deplacer = (dessin: DessinSvg, ids: readonly string[], dx: number, dy: number): DessinSvg =>
@@ -58,6 +59,8 @@ export function aligner(dessin: DessinSvg, ids: readonly string[], a: Alignement
   if (!ref) return dessin;
   let r = dessin;
   for (const id of ids) {
+    // Un texte pose sur une forme choisie aussi la suit : l'aligner pour lui-meme deplacerait sa forme une seconde fois.
+    if (suitUneFormeChoisie(dessin, id, ids)) continue;
     const b = boiteDe(r, [id]);
     if (!b) continue;
     const dx = a === 'gauche' ? ref.x - b.x : a === 'droite' ? ref.x + ref.l - b.x - b.l : a === 'centreH' ? ref.x + ref.l / 2 - b.x - b.l / 2 : 0;
@@ -98,14 +101,18 @@ export function dupliquer(dessin: DessinSvg, ids: readonly string[], dx = 0, dy 
   let n = prochainId(dessin);
   const nouveaux: string[] = [];
   const formes: Forme[] = [];
+  const copies = new Map<string, string>();
   for (const f of dessin.formes) {
     formes.push(f);
     if (!voulus.has(f.id)) continue;
     const id = 'f' + n++;
     nouveaux.push(id);
+    copies.set(f.id, id);
     formes.push(dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false });
   }
-  return { dessin: nouveaux.length ? { ...dessin, formes } : dessin, ids: nouveaux };
+  // Un texte pose copie avec sa forme se pose sur la copie de la forme (ADR-0031) ; copie seul, il redevient libre.
+  const neuves = new Set(nouveaux);
+  return { dessin: nouveaux.length ? { ...dessin, formes: formes.map(f => (neuves.has(f.id) ? relierCopie(f, copies) : f)) } : dessin, ids: nouveaux };
 }
 
 export type Ordre = 'premier' | 'avant' | 'arriere' | 'dernier';

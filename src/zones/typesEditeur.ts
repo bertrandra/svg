@@ -1,7 +1,8 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, Operation, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, Operation, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Glyphes } from '../engine/texte.js';
 import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
@@ -116,6 +117,8 @@ export interface EtatInterface {
  */
 export interface ActionsEditeur {
   appliquer: (f: (d: DessinSvg) => DessinSvg, cle?: string | null) => void;
+  /** Donne aux verbes les glyphes des polices chargees (ADR-0031) : un texte pose se recompose quand sa forme change. */
+  poserGlyphes: (g: ((p: PoliceTexte) => Glyphes | null) | null) => void;
   faire: (f: (d: DessinSvg) => DessinSvg, texte?: string) => void;
   finir: () => void;
   annulerGeste: (cle: string) => void;

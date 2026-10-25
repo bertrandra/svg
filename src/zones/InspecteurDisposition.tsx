@@ -1,0 +1,71 @@
+// La disposition d'un texte dans le panneau Texte (ADR-0031) : libre, sur la forme ou dans la forme, et tous ses reglages. La barre
+// de texte porte le frequent (la disposition, l'alignement) ; ici, le reste : la forme qui porte le texte (la montrer ou la masquer,
+// en changer), le depart et le cote sur un trace, la repartition des lettres ; la marge et la taille ajustee dans une forme. Chaque
+// reglage est une entree d'historique ; ce qui ne tient pas se dit ici et dans la region vocale.
+
+import { useId } from 'react';
+import type { Forme, TexteVivant } from '../engine/editionSvg.js';
+import { traceFerme } from '../engine/texte/surTrace.js';
+import { useActions, useDessin } from './contexteEditeur.js';
+import { useSaisie } from './contexteSaisie.js';
+import { useDisposition } from './actionsDisposition.js';
+import { ChoixDispositionPanneau } from './ChoixDisposition.js';
+import { useDepassement } from './DispositionToile.js';
+import { Nombre } from './commun/Nombre.js';
+import { nomCourt, phraseChoixForme } from './phrasesDisposition.js';
+import { useTactile } from './Vue.js';
+
+export function ReglagesDisposition({ forme }: { forme: Forme & { texte: TexteVivant } }) {
+  const mo = useDessin(), ac = useActions(), sx = useSaisie(), dz = useDisposition(), tactile = useTactile();
+  const depassement = useDepassement(forme), idDepassement = useId();
+  const p = forme.texte.disposition;
+  const base = p ? mo.dessin.formes.find(f => f.id === p.forme) : undefined;
+  const changerDeForme = () => {
+    if (!p) return;
+    sx.poserChoixForme({ id: forme.id, mode: p.mode });
+    ac.dire(phraseChoixForme(p.mode, tactile));
+  };
+  const ferme = base ? traceFerme(base) : true;
+  return (
+    <fieldset className="editeur-groupe disposition-texte">
+      <legend>Disposition</legend>
+      <ChoixDispositionPanneau forme={forme} />
+      {!p || !base ? (
+        <p className="aide">Le texte suit sa ligne droite. « Sur la forme » le pose le long d’un tracé, « Dans la forme » le fait remplir une forme fermée : cliquez ensuite la forme, ou choisissez-la au clavier (Tab, puis Entrée).</p>
+      ) : (
+        <>
+          <p className="aide">{p.mode === 'sur' ? 'Sur ' : 'Dans '}{nomCourt(base)}{base.visible ? '' : ' (masquée)'}. Modifier la forme recompose le texte ; la supprimer le rend libre.</p>
+          <div className="boutons">
+            <label className="case"><input type="checkbox" checked={base.visible} disabled={base.verrouille} onChange={e => dz.montrerForme(forme.id, e.target.checked)} /> Montrer la forme de base</label>
+            <button type="button" className="discret" disabled={forme.verrouille} onClick={changerDeForme}>Changer de forme</button>
+          </div>
+          {p.mode === 'sur' ? (
+            <>
+              <div className="grille-2">
+                <Nombre libelle="Départ (%)" valeur={Math.round(p.depart * 1000) / 10} min={0} max={100} desactive={forme.verrouille || p.repartir && !ferme}
+                  poser={v => dz.regler(forme.id, { depart: ferme ? (v >= 100 ? 0 : v / 100) : Math.min(1, v / 100) })} />
+              </div>
+              <div className="alignement-texte" role="group" aria-label={ferme ? 'Côté de la forme' : 'Côté du tracé'}>
+                {(['dessus', 'dessous'] as const).map(c => (
+                  <button key={c} type="button" aria-pressed={p.cote === c} disabled={forme.verrouille} onClick={() => dz.regler(forme.id, { cote: c })}>
+                    {ferme ? (c === 'dessus' ? 'Extérieur' : 'Intérieur') : c === 'dessus' ? 'Dessus' : 'Dessous'}
+                  </button>
+                ))}
+              </div>
+              <label className="case"><input type="checkbox" checked={p.repartir} disabled={forme.verrouille} onChange={e => dz.regler(forme.id, { repartir: e.target.checked })} /> Répartir les lettres sur tout le tracé</label>
+            </>
+          ) : (
+            <>
+              <div className="grille-2">
+                <Nombre libelle="Marge" valeur={Math.round(p.marge * forme.texte.taille * 100) / 100} min={0} desactive={forme.verrouille}
+                  poser={v => dz.regler(forme.id, { marge: Math.round((v / forme.texte.taille) * 10000) / 10000 })} />
+              </div>
+              <label className="case"><input type="checkbox" checked={p.ajuster} disabled={forme.verrouille} onChange={e => dz.regler(forme.id, { ajuster: e.target.checked })} /> Ajuster la taille pour remplir la forme</label>
+            </>
+          )}
+          {depassement ? <p id={idDepassement} className="message">{depassement}</p> : null}
+        </>
+      )}
+    </fieldset>
+  );
+}

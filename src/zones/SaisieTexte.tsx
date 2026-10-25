@@ -16,6 +16,8 @@ import {
   type MiseEnPage, type PointTexte
 } from '../engine/texte/curseur.js';
 import { natureDuTexte, peintureDuTexte } from '../engine/texte/vivant.js';
+import { composerDispose, peutPorter } from '../engine/texte/disposition.js';
+import { boitePose, indexAuPointPose, indexVerticalPose, presDuTexte, selectionPose, type Pose } from '../engine/texte/pose.js';
 import { largeurTrait, policeDe } from './actionsTexte.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie, type Saisie } from './contexteSaisie.js';
@@ -37,10 +39,13 @@ function useTexteSaisi(saisie: Saisie, id: string | null, valeur: string) {
   const taille = tailleNouveauTexte(sx.nouveau, mo.dessin.vb);
   const t: TexteVivant | null = forme?.texte ? { ...forme.texte, texte: valeur } : saisie.point && police ? texteNeuf(valeur, saisie.point, sx.nouveau, taille, police) : null;
   // La mise en page ne depend que de ce qui compose : on ne la refait pas a chaque rendu de l'editeur.
-  const cle = t ? JSON.stringify([t.texte, t.taille, t.interlettrage, t.interligne, t.alignement, t.ligatures, t.matrice]) : '';
+  const cle = t ? JSON.stringify([t.texte, t.taille, t.interlettrage, t.interligne, t.alignement, t.ligatures, t.matrice, t.trace ?? '', t.disposition ?? null]) : '';
   const mep = useMemo(() => (t && police ? miseEnPage(t, police.glyphes) : null), [cle, police]);
+  // Un texte pose sur ou dans une forme (ADR-0031) : le curseur suit les lettres posees, lu sur la pose (les memes calculs que ses contours).
+  const p = t?.disposition, base = p ? mo.dessin.formes.find(f => f.id === p.forme) : undefined;
+  const pose = useMemo<Pose | null>(() => (t && p && police && id && peutPorter(base, id) ? composerDispose(t, base, police.glyphes).pose : null), [cle, police, base, id]);
   const absente = !!forme && polices !== null && !police;
-  return { forme, police, polices, t, mep, taille, absente };
+  return { forme, police, polices, t, mep, pose, taille, absente };
 }
 
 /** Ce que la saisie garde d'un rendu a l'autre sans redessiner : la frappe en cours, la selection a la souris, la fin. */
@@ -130,6 +135,14 @@ function useFrappe(saisie: Saisie, svgRef: RefObject<SVGSVGElement | null>) {
 
 const points = (q: readonly PointTexte[]): string => q.map(p => p[0] + ',' + p[1]).join(' ');
 
+/** Ce que la toile dessine d'un texte pose en saisie (ADR-0031) : la boite de ses curseurs, la selection lettre a lettre, le curseur tourne. */
+function geometriePose(p: Pose, plage: Plage) {
+  const b = boitePose(p, 0.12), [s, e, sens] = plage;
+  const cadre: PointTexte[] = [[b.x, b.y], [b.x + b.l, b.y], [b.x + b.l, b.y + b.h], [b.x, b.y + b.h]];
+  const c = s === e ? p.carets[Math.min(p.carets.length - 1, sens === 'backward' ? s : e)] ?? null : null;
+  return { cadre, selection: selectionPose(p, s, e), curseur: c ? [c[0], c[1]] as const : null };
+}
+
 /** Ce que la toile dessine de la saisie, dans le plan : le cadre du texte, la selection, le curseur. */
 function geometrie(m: MiseEnPage, mat: Matrice, plage: Plage) {
   const b = boiteMiseEnPage(m), marge = 0.12 * m.taille, large = Math.max(0, 0.5 * m.taille - b.l) / 2;
@@ -153,14 +166,20 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
     c.setSelectionRange(Math.min(a, b), Math.max(a, b), b < a ? 'backward' : 'forward');
     lirePlage();
   };
-  const versTexte = (p: PointTexte): number | null => { const q = ts.mep && ts.t ? depuisPlan(ts.t.matrice, p) : null; return q && ts.mep ? indexAuPoint(ts.mep, q) : null; };
+  const versTexte = (p: PointTexte): number | null => {
+    if (ts.pose) return indexAuPointPose(ts.pose, p);
+    const q = ts.mep && ts.t ? depuisPlan(ts.t.matrice, p) : null;
+    return q && ts.mep ? indexAuPoint(ts.mep, q) : null;
+  };
+  /** Le point tombe-t-il dans le texte (sa boite, ou pres de ses lettres posees) ? */
+  const dedans = (p: PointTexte): boolean => (ts.pose ? presDuTexte(ts.pose, p) : !!ts.mep && !!ts.t && dansLeTexte(ts.mep, ts.t.matrice, p));
   const ancreActuelle = () => { const c = champ.current; return c ? (c.selectionDirection === 'backward' ? c.selectionEnd : c.selectionStart) : 0; };
 
   // La toile passe ses gestes a la saisie tant qu'elle est ouverte.
   useLayoutEffect(() => {
     sx.poignee.current = {
       appuyer: (p, etendre) => {
-        const i = ts.mep && ts.t && dansLeTexte(ts.mep, ts.t.matrice, p) ? versTexte(p) : null;
+        const i = dedans(p) ? versTexte(p) : null;
         if (i === null) return false;
         const R = r.current;
         R.ancre = etendre ? ancreActuelle() : i;
@@ -172,7 +191,7 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
       bouger: p => { const i = r.current.glisse ? versTexte(p) : null; if (i !== null) choisirPlage(r.current.ancre, i); },
       lacher: () => { r.current.glisse = false; },
       doubleClic: p => {
-        const i = ts.mep && ts.t && dansLeTexte(ts.mep, ts.t.matrice, p) ? versTexte(p) : null;
+        const i = dedans(p) ? versTexte(p) : null;
         if (i === null) return false;
         const [a, b] = motAutour(r.current.valeur, i);
         choisirPlage(a, b);
@@ -196,7 +215,7 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
   useEffect(() => {
     const clic = r.current.clic, i = clic ? versTexte(clic) : null;
     if (i !== null) { r.current.clic = null; choisirPlage(i, i); }
-  }, [ts.mep]);
+  }, [ts.mep, ts.pose]);
   useFinParLeFocus(champ, () => terminer(false));
   useEffect(() => {
     const suivre = () => { if (document.activeElement === champ.current) lirePlage(); };
@@ -214,6 +233,14 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
     }
     if (mod && (k === 'z' || k === 'y')) { e.preventDefault(); historique(k === 'y' || e.shiftKey); return; }
     const m = ts.mep, c = champ.current;
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !mod && !e.altKey && ts.pose && c) {
+      // Un texte pose : la fleche mene a la ligne voisine des lettres posees (sur un trace, au debut ou a la fin).
+      e.preventDefault();
+      const arriere = c.selectionDirection === 'backward', focus = arriere ? c.selectionStart : c.selectionEnd, ancre = arriere ? c.selectionEnd : c.selectionStart;
+      const i = indexVerticalPose(ts.pose, focus, e.key === 'ArrowUp' ? -1 : 1);
+      if (e.shiftKey) choisirPlage(ancre, i); else choisirPlage(i, i);
+      return;
+    }
     if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !mod && !e.altKey && m && c) {
       // Une ligne de la toile n'a pas la largeur d'une ligne du champ : la fleche suit l'abscisse des lettres dessinees.
       e.preventDefault();
@@ -227,7 +254,7 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
   };
 
   const { zoom, x: vx, y: vy } = ui.vues.vue;
-  const geo = ts.mep && ts.t ? geometrie(ts.mep, ts.t.matrice, plage) : null;
+  const geo = ts.pose ? geometriePose(ts.pose, plage) : ts.mep && ts.t ? geometrie(ts.mep, ts.t.matrice, plage) : null;
   const position = positionChamp(geo?.cadre ?? null, saisie.point ?? ts.forme?.texte?.matrice ?? null, ui.vues.vue, svgRef.current);
   const texteAide = ts.absente ? 'Police absente : choisissez-en une dans l’inspecteur.' : !ts.police ? 'Chargement des polices…'
     : 'Entrée : à la ligne. Échap ou Ctrl+Entrée : terminer. Alt+F10 : la barre de texte. Ctrl+Z annule la frappe.';

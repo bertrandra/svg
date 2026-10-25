@@ -12,6 +12,7 @@ import { SaisieTexte } from './SaisieTexte.js';
 import { FondPrise, SurvolToile } from './PriseToile.js';
 import { useSaisie } from './contexteSaisie.js';
 import { ApercuMachine } from './ApercuMachine.js';
+import { ChoixFormeToile, GuideDisposition } from './DispositionToile.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
@@ -44,6 +45,9 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, gestes.cadre, tactile, !!sx.saisie)}</g>
+          {/* Le texte pose sur ou dans une forme (ADR-0031) : le guide de sa forme, la poignee de depart, le choix de la forme. */}
+          <GuideDisposition svgRef={svgRef} chemin={cheminDe} />
+          <ChoixFormeToile svgRef={svgRef} chemin={cheminDe} />
         </g>
       </svg>
       <SaisieTexte svgRef={svgRef} />

@@ -1016,6 +1016,12 @@
       "famille": "encodage",
       "vecteur": "L'operation de production (data-ed-operation, ADR-0028) piegee : schema actif, guillemet qui ferme l'attribut et ouvre un gestionnaire, url(), casse et blancs, operation posee sur un groupe pour etre heritee",
       "attendu": "ouvre"
+    },
+    {
+      "fichier": "texte-pose-lien-piege.svg",
+      "famille": "encodage",
+      "vecteur": "Le lien d'un texte pose vers sa forme (ADR-0031) piege : un texte qui se designe lui-meme, deux textes qui se designent l'un l'autre, un rang demesure, un trace encode qui decode en schema actif ou en nombre demesure, une regle qui porte url(), un rang et un trace a la fois, un guillemet qui ferme l'attribut, une marge negative dans un groupe transforme, un reglage sans disposition",
+      "attendu": "ouvre"
     }
   ]
 }

@@ -32,6 +32,9 @@ export interface PoigneeSaisie {
 
 export interface DemandePanneau { readonly rang: number; readonly polices: boolean }
 
+/** Le choix de la forme qui portera un texte (ADR-0031) : le texte, et s'il se pose sur la forme ou dans la forme. */
+export interface ChoixForme { readonly id: string; readonly mode: 'sur' | 'dans' }
+
 export interface EtatSaisie {
   readonly saisie: Saisie | null;
   /** Le texte saisi ne dessine rien pour l'instant (vide, ou fait de blancs) : la toile cache sa forme. */
@@ -54,6 +57,11 @@ export interface EtatSaisie {
   readonly demandePanneau: DemandePanneau | null;
   readonly demanderPanneau: (polices: boolean) => void;
   readonly traiterPanneau: () => void;
+  /** Le choix de la forme en cours (ADR-0031) : un clic sur la toile (ou Tab puis Entree) donne la forme ; null hors de ce choix. */
+  readonly choixForme: ChoixForme | null;
+  readonly poserChoixForme: (c: ChoixForme | null) => void;
+  /** Ce que fait un clic de la toile pendant le choix : pose sur la forme visee (ou abandonne sur le vide), par la toile (DispositionToile). */
+  readonly viserForme: MutableRefObject<((ids: readonly string[]) => void) | null>;
 }
 
 const Contexte = createContext<EtatSaisie | null>(null);
@@ -63,7 +71,9 @@ export function FournisseurSaisie({ children }: { children: ReactNode }) {
   const [vide, poserVide] = useState(false);
   const [nouveau, poserNouveauBrut] = useState<ReglagesNouveauTexte>(NOUVEAU_TEXTE);
   const [demandePanneau, poserDemande] = useState<DemandePanneau | null>(null);
+  const [choixForme, poserChoixForme] = useState<ChoixForme | null>(null);
   const poignee = useRef<PoigneeSaisie | null>(null);
+  const viserForme = useRef<((ids: readonly string[]) => void) | null>(null);
   const rang = useRef(0);
   // Une saisie qui s'ouvre termine celle d'avant (son texte reste, sa frappe est close).
   const remplacer = useCallback((s: Omit<Saisie, 'rang'>) => {
@@ -73,7 +83,7 @@ export function FournisseurSaisie({ children }: { children: ReactNode }) {
     poserSaisie({ ...s, rang: rang.current });
   }, []);
   const valeur = useMemo<EtatSaisie>(() => ({
-    saisie, vide, nouveau, demandePanneau, poignee, poserVide,
+    saisie, vide, nouveau, demandePanneau, poignee, poserVide, choixForme, poserChoixForme, viserForme,
     poserNouveau: r => poserNouveauBrut(n => ({ ...n, ...r })),
     commencer: p => remplacer({ id: null, point: p, clic: null }),
     ouvrir: (id, clic = null) => remplacer({ id, point: null, clic }),
@@ -81,13 +91,14 @@ export function FournisseurSaisie({ children }: { children: ReactNode }) {
     fermer: () => { poserSaisie(null); poserVide(false); },
     demanderPanneau: polices => { rang.current += 1; poserDemande({ rang: rang.current, polices }); },
     traiterPanneau: () => poserDemande(null)
-  }), [saisie, vide, nouveau, demandePanneau, remplacer]);
+  }), [saisie, vide, nouveau, demandePanneau, remplacer, choixForme]);
   return <Contexte.Provider value={valeur}>{children}</Contexte.Provider>;
 }
 
 const HORS: EtatSaisie = {
   saisie: null, vide: false, nouveau: NOUVEAU_TEXTE, poserNouveau: () => undefined, commencer: () => undefined, ouvrir: () => undefined,
-  lier: () => undefined, poserVide: () => undefined, fermer: () => undefined, poignee: { current: null }, demandePanneau: null, demanderPanneau: () => undefined, traiterPanneau: () => undefined
+  lier: () => undefined, poserVide: () => undefined, fermer: () => undefined, poignee: { current: null }, demandePanneau: null, demanderPanneau: () => undefined, traiterPanneau: () => undefined,
+  choixForme: null, poserChoixForme: () => undefined, viserForme: { current: null }
 };
 
 /** La saisie du texte ; hors d'un editeur, un etat inerte (un panneau rendu seul dans un test). */
