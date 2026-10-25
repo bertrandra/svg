@@ -54,6 +54,13 @@ export interface OptionsEmbarquees {
    * qu'il n'a pas demandee.
    */
   visite?: boolean;
+  /**
+   * Les polices libres telechargeables (ADR-0025) : « Toutes les polices » dans l'outil Texte, et le telechargement d'une police
+   * apres l'accord de la personne (retenu dans `stockage`, cle `svg.polices.consentement`), aupres de cdn.jsdelivr.net,
+   * fonts.bunny.net, gitlab.com ou cdn.fontshare.com. Faux par defaut : aucune requete, seules les dix fontes livrees. Vrai
+   * demande de servir aussi polices-catalogue.js sous `baseAnnexes`.
+   */
+  policesEnLigne?: boolean;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
   onEnregistrer: (svg: string) => void;
   /** Appelee une fois, quand l'editeur se ferme, quelle qu'en soit la cause. */
@@ -104,7 +111,7 @@ export function verifierOptions(options: unknown): string | null {
   if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
     return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
   }
-  for (const cle of ['fermerApresEnregistrer', 'visite'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
+  for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
   return verifierLibelle(o.libelleEnregistrer);
 }
 
@@ -207,7 +214,7 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
         <EditeurSvg svg={svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []} ignores={ignores}
           {...(bibliotheque === undefined ? {} : { bibliotheque })}
           {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
-          stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null}
+          stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null} policesEnLigne={options.policesEnLigne === true}
           {...(options.libelleEnregistrer === undefined ? {} : { libelleEnregistrer: options.libelleEnregistrer.trim() })}
           enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
       );

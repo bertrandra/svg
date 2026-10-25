@@ -10,6 +10,7 @@
 // ASCII en clair ; tout encoder rend l'attribut verifiable par une seule expression, au prix de quelques octets.
 
 import { estPoliceLivree, phraseRemplacement, remplacerPolice } from '../../model/polices.js';
+import { estIdCatalogue } from '../../model/cataloguePolices.js';
 import type { AlignementTexte, Chemin, DessinSvg, Forme, Matrice, PoliceTexte, TexteVivant } from './types.js';
 import { IDENTITE } from './types.js';
 import { nb } from './chemins.js';
@@ -95,7 +96,9 @@ function lirePolice(a: Readonly<Record<string, string>>): { police: PoliceTexte;
   const famille = a['data-ed-famille'] === undefined ? undefined : decoderTexte(a['data-ed-famille']);
   if (!ID_POLICE.test(id) || (version !== undefined && !VERSION.test(version)) || famille === null) return null;
   const base: PoliceTexte = { id, ...(version !== undefined ? { version } : {}), ...(famille !== undefined ? { famille: famille.slice(0, 60) } : {}) };
-  if (id.startsWith('u-') || estPoliceLivree(id)) return { police: base };
+  // Une fonte deposee (`u-`) ou une police du catalogue telechargeable (`c-`, ADR-0025) se garde telle quelle : l'interface la
+  // retrouve (fichier depose, ou telechargement verifie par son empreinte) ; les contours ecrits restent la verite du dessin.
+  if (id.startsWith('u-') || estIdCatalogue(id) || estPoliceLivree(id)) return { police: base };
   // Une police que ce programme ne livre pas (un fichier d'une autre version, ou retouche a la main) : remplacee, et dit.
   const r = remplacerPolice({ nom: famille ?? id });
   return { police: { id: r.id }, remplacement: phraseRemplacement(1, r) };

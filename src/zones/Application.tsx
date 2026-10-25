@@ -183,7 +183,7 @@ function Accueil() {
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores}
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores} policesEnLigne
           libelleEnregistrer="Terminer" fermerSansModification
           fermer={() => { poserEdition(false); demanderVisite(false); }}
           enregistrer={s => {

@@ -412,6 +412,32 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .vectoriser-texte button { justify-self: start; }
 .saisie-texte { position: absolute; z-index: var(--couche-saisie); display: grid; gap: var(--esp-2xs); margin-top: var(--esp-s); padding: var(--esp-s); max-width: min(360px, calc(100% - 16px)); background: var(--panneau); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); }
 .saisie-texte textarea { min-width: 220px; max-width: 100%; resize: vertical; font-size: var(--texte-corps); }
+/* Toutes les polices (ADR-0025) : une feuille dans le flux, comme l'apercu ; la longue liste defile seule et se fenetre (ADR-0008).
+   Les noms s'ecrivent dans la police de l'interface : aucun apercu ne telecharge rien. */
+.choix-police > .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-xs) var(--esp-m); }
+.explorateur-polices { display: grid; gap: var(--esp-s); width: 100%; min-width: 0; padding: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: var(--table); }
+.explorateur-polices input[type="search"] { width: 100%; min-width: 0; }
+.explorateur-polices h4 { margin: var(--esp-xs) 0 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.explorateur-polices p { margin: 0; }
+.grille-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--esp-xs) var(--esp-m); }
+.grille-3 .champ-ligne { display: grid; gap: var(--esp-2xs); }
+.grille-3 select { width: 100%; min-width: 0; }
+.polices-groupe { display: grid; gap: var(--esp-2xs); min-width: 0; }
+.polices-courtes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2xs); }
+.polices-courtes li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2xs) var(--esp-s); font-size: var(--texte-petit); }
+.polices-courtes button.discret { min-height: 24px; padding-left: 0; padding-right: 0; }
+.liste-polices { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; grid-template-columns: minmax(0, 1fr); max-height: 260px; overflow: auto; overflow-x: hidden; border: 1px solid var(--filet); border-radius: var(--rayon-pastille); background: var(--panneau); }
+.liste-polices li { display: flex; align-items: center; gap: 1px; min-width: 0; content-visibility: visible; }
+.liste-polices li[data-cale] { display: block; padding: 0; }
+.police-ligne { flex: 1; min-width: 0; min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: var(--esp-s); padding: var(--esp-2xs) var(--esp-s); border: 0; border-radius: 0; background: transparent; color: var(--encre); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
+.police-ligne[aria-pressed="true"] { box-shadow: inset 3px 0 0 var(--cyan); font-weight: 600; }
+.police-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.police-badges { flex: none; display: flex; gap: var(--esp-2xs); }
+.badge-source, .badge-licence { padding: 0 var(--esp-xs); border: 1px solid var(--filet-fort); border-radius: var(--rayon-pastille); color: var(--encre-douce); font-size: var(--texte-petit); font-weight: 400; white-space: nowrap; }
+.badge-licence { border-color: var(--alerte); color: var(--alerte); font-weight: 600; }
+.police-favori { flex: none; width: 28px; min-height: 28px; padding: 0; }
+.pied-consentement button.discret { min-height: 24px; padding-left: 0; padding-right: 0; }
+.consentement-polices .actions { display: flex; flex-wrap: wrap; gap: var(--esp-s); }
 @media (forced-colors: active) {
   .apercu-plein { fill: CanvasText; }
   .apercu-ligne { stroke: CanvasText; }
@@ -449,6 +475,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
   .vectoriser-texte .case, .section-corps > .case { min-height: 40px; }
   .alignement-texte button, .choix-police .apercu-bascule, .apercu-police .apercu-fermer { min-height: 40px; }
+  .police-ligne, .polices-courtes button.discret, .pied-consentement button.discret { min-height: 40px; }
+  .police-favori { width: 40px; min-height: 40px; }
 }
 /* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
 @media (pointer: coarse) { .menu-raccourci { display: none; } }

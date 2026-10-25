@@ -108,8 +108,43 @@ export async function policeDeposee(fichier: File): Promise<Police | { erreur: s
   return p ?? { erreur: 'Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.' };
 }
 
-// Les fontes deposees pendant la session : une fois lue, une fonte sert a tous les panneaux (creer un texte, le retaper,
-// l'apercu) tant que la page est ouverte. Rien ne se garde au-dela : le fichier n'est jamais ecrit (ADR-0022).
+/** Une police de cet appareil, telle que le navigateur la decrit (Local Font Access) ; ses octets ne se lisent qu'au choix. */
+export interface PoliceAppareil { readonly nom: string; readonly lire: () => Promise<ArrayBuffer> }
+
+interface DonneesFonteAppareil { readonly fullName: string; readonly blob: () => Promise<Blob> }
+
+/** Vrai quand le navigateur sait lister les polices de l'appareil (Local Font Access : Chromium seul, docs/navigateurs.md). */
+export function policesAppareilDisponibles(): boolean {
+  return typeof window !== 'undefined' && typeof (window as unknown as { queryLocalFonts?: unknown }).queryLocalFonts === 'function';
+}
+
+/**
+ * Les polices de l'appareil, sur un geste de la personne (le navigateur demande sa permission). Rien ne quitte l'appareil :
+ * le fichier est lu sur place, comme une fonte deposee, et n'est jamais ecrit (ADR-0022, ADR-0025).
+ */
+export async function policesDeLAppareil(): Promise<PoliceAppareil[] | { erreur: string }> {
+  if (!policesAppareilDisponibles()) return { erreur: 'Ce navigateur ne donne pas accès aux polices de l’appareil : déposez plutôt un fichier TTF ou OTF.' };
+  try {
+    const liste = await (window as unknown as { queryLocalFonts: () => Promise<DonneesFonteAppareil[]> }).queryLocalFonts();
+    return liste.slice(0, 5000).map(f => ({ nom: String(f.fullName).slice(0, 60), lire: async () => (await f.blob()).arrayBuffer() }));
+  } catch {
+    return { erreur: 'Le navigateur a refusé l’accès aux polices de l’appareil.' };
+  }
+}
+
+/** Une police de l'appareil, lue comme une fonte deposee (son identifiant est son empreinte). */
+export async function lirePoliceAppareil(p: PoliceAppareil): Promise<Police | { erreur: string }> {
+  try {
+    const octets = await p.lire();
+    return lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), p.nom, octets) ?? { erreur: 'Cette police de l’appareil ne se lit pas (format non pris en charge).' };
+  } catch {
+    return { erreur: 'Cette police de l’appareil ne se lit pas.' };
+  }
+}
+
+// Les fontes deposees pendant la session (et celles du catalogue telechargees, ADR-0025) : une fois lue, une fonte sert a tous
+// les panneaux (creer un texte, le retaper, l'apercu) tant que la page est ouverte. Rien ne se garde au-dela : le fichier n'est
+// jamais ecrit (ADR-0022).
 const deposees: Police[] = [];
 
 /** Retient une fonte deposee pour la session ; une fonte deja retenue (meme empreinte) ne se double pas. */
@@ -117,7 +152,7 @@ export function retenirDeposee(p: Police): void {
   if (!deposees.some(d => d.id === p.id)) deposees.push(p);
 }
 
-/** Les fontes embarquees, puis celles deposees pendant la session. */
+/** Les fontes embarquees, puis celles deposees ou telechargees pendant la session. */
 export async function toutesLesPolices(): Promise<Police[]> {
   return [...(await chargerPolices()), ...deposees];
 }

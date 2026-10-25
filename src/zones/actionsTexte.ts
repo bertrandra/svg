@@ -3,12 +3,13 @@
 // par les verbes de l'editeur (une entree d'historique par geste, une saisie fondue par sa cle).
 
 import { useCallback } from 'react';
-import { boiteChemin, transformerTexte, translation, type Chemin, type DessinSvg, type Forme, type TexteVivant } from '../engine/editionSvg.js';
+import { boiteChemin, transformerTexte, translation, type Chemin, type DessinSvg, type Forme, type PoliceTexte, type TexteVivant } from '../engine/editionSvg.js';
 import { cheminDuTexte, lettresDuTexte } from '../engine/texte/bloc.js';
 import { basculerPeinture, creerTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
 import { NOMS_MODES, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { toleranceBooleen } from '../engine/booleens.js';
 import { NOMS_POLICES, estPoliceLivree, naturePolice } from '../model/polices.js';
+import { estIdCatalogue } from '../model/cataloguePolices.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { toutesLesPolices, type Police } from '../io/polices.js';
 import { pluriel } from '../util/texte.js';
@@ -44,11 +45,20 @@ export const contoursDe = (t: TexteVivant, police: Police): Chemin => cheminDuTe
 /** Ce qui change d'un texte : les reglages, et eventuellement la police (et donc sa version). */
 export type ChangementTexte = Partial<Pick<TexteVivant, 'texte' | 'taille' | 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> & { police?: Police };
 
-/** Le texte vivant modifie : les reglages, la police (avec sa version, et sa famille si elle est deposee). */
+/**
+ * Ce qu'un texte vivant garde de sa police : l'identifiant, la version, et le nom de famille pour une fonte deposee ou une
+ * police du catalogue (ADR-0025), de quoi dire « Police absente : … » sans le fichier ni l'index. Le nom est borne a 60
+ * caracteres, la borne de la relecture : un texte relu reste un point fixe.
+ */
+export function policeDuTexte(police: Police): PoliceTexte {
+  const nommee = police.id.startsWith('u-') || estIdCatalogue(police.id);
+  return { id: police.id, version: police.version, ...(nommee ? { famille: police.nom.slice(0, 60) } : {}) };
+}
+
+/** Le texte vivant modifie : les reglages, la police (avec sa version, et sa famille si elle est deposee ou telechargee). */
 export function texteModifie(t: TexteVivant, c: ChangementTexte): TexteVivant {
   const { police, ...reglages } = c;
-  const p = police ? { id: police.id, version: police.version, ...(police.id.startsWith('u-') ? { famille: police.nom } : {}) } : t.police;
-  return { ...t, ...reglages, police: p };
+  return { ...t, ...reglages, police: police ? policeDuTexte(police) : t.police };
 }
 
 /** Le dessin ou le texte `id` prend ces changements, recompose avec sa fonte ; le meme dessin s'il ne se compose pas. */
@@ -72,7 +82,7 @@ export function useActionsTexte() {
 
   /** Ajoute un texte vivant centre sur le plan, le choisit, et le dit. */
   const creer = useCallback((texte: string, police: Police, taille: number, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'ligatures'>>) => {
-    const t0 = nouveauTexte(texte, { id: police.id, version: police.version, ...(police.id.startsWith('u-') ? { famille: police.nom } : {}) }, taille, [1, 0, 0, 1, 0, 0], reglages);
+    const t0 = nouveauTexte(texte, policeDuTexte(police), taille, [1, 0, 0, 1, 0, 0], reglages);
     const b = boiteChemin(contoursDe(t0, police));
     if (!b) { ac.dire('Ce texte ne donne aucune forme avec cette police.'); return null; }
     const [vx, vy, vl, vh] = dessin.vb;
@@ -105,5 +115,16 @@ export function useActionsTexte() {
       + (r.parParties ? ', coupée' + (r.ids.length > 1 ? 's' : '') + ' par parties de lettres faute de la police' : '') + '. Ctrl+Z rend le texte modifiable.');
   }, [ac, dessin, lisserBooleens, mo.choisies, tx.polices]);
 
-  return { creer, vectoriser, mode: tx.mode ?? modeParDefaut(production) };
+  /**
+   * Remplace une police partout dans le dessin (ADR-0025) : chaque texte vivant qui la porte se recompose avec `police`, en une
+   * seule entree d'historique. Un texte verrouille n'est pas touche.
+   */
+  const remplacerPartout = useCallback((de: string, police: Police) => {
+    const ids = dessin.formes.filter(f => f.texte?.police.id === de && !f.verrouille).map(f => f.id);
+    if (!ids.length) { ac.dire('Aucun texte modifiable n’emploie cette police.'); return; }
+    ac.appliquer(d => ids.reduce((acc, id) => appliquerChangement(acc, id, { police }, police, profil), d));
+    ac.dire(pluriel(ids.length, 'texte') + ' recomposé' + (ids.length > 1 ? 's' : '') + ' en ' + police.nom + '. Ctrl+Z annule.');
+  }, [ac, dessin.formes, profil]);
+
+  return { creer, vectoriser, remplacerPartout, mode: tx.mode ?? modeParDefaut(production) };
 }

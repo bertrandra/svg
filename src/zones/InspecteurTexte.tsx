@@ -12,6 +12,8 @@ import { Nombre } from './commun/Nombre.js';
 import { appliquerChangement, nomDePolice, policeDe, useActionsTexte, type ChangementTexte } from './actionsTexte.js';
 import { useActions, useInterface } from './contexteEditeur.js';
 import { usePolices, useTexte } from './contexteTexte.js';
+import { estIdCatalogue, trouverVariante } from '../model/cataloguePolices.js';
+import type { Police } from '../io/polices.js';
 
 const ALIGNEMENTS: ReadonlyArray<readonly [TexteVivant['alignement'], string]> = [['gauche', 'À gauche'], ['centre', 'Au centre'], ['droite', 'À droite']];
 
@@ -37,7 +39,7 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
     changer({ texte: v }, cle.current);
   };
   const quitterChamp = () => { cle.current = null; ac.finir(); poserBrouillon(t.texte); };
-  const choisirPolice = (id: string) => { const p = polices?.find(x => x.id === id); if (p) changer({ police: p }); };
+  const choisirPolice = (id: string, donnee?: Police) => { const p = donnee ?? polices?.find(x => x.id === id); if (p) changer({ police: p }); };
   const base = baseDeGrasse(t.police.id) ?? t.police.id, grasse = VARIANTES_GRASSES[base as keyof typeof VARIANTES_GRASSES];
   const mode: ModeVectorisation = at.mode;
   const enTrait = naturePolice(t.police.id) === 'trait';
@@ -52,6 +54,7 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
         <p className="aide">La police {police.nom} a changé depuis l’écriture de ce texte : le modifier le recomposera avec la version actuelle.</p>
       ) : null}
       <ChoixPolice polices={polices} valeur={t.police.id} poser={choisirPolice} texte={brouillon} absente={'Police absente : ' + nom} />
+      {absente ? <RetrouverPolice texte={t} poser={choisirPolice} /> : null}
       {absente ? <DeposerPolice deposer={deposer} poser={choisirPolice} /> : null}
       {grasse ? (
         <label className="case">
@@ -82,6 +85,36 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
         <p className="aide">Le texte devient des formes ordinaires : il ne se retape plus. Ctrl+Maj+O ; Ctrl+Z annule.</p>
       </fieldset>
     </Section>
+  );
+}
+
+/**
+ * Une police du catalogue absente (un dessin rouvert, ADR-0025) : la telecharger, a la version qu'il porte quand l'index la
+ * connait encore, sinon a la version courante (et c'est dit : le texte se recomposera avec elle).
+ */
+function RetrouverPolice({ texte, poser }: { texte: TexteVivant; poser: (id: string, p?: Police) => void }) {
+  const tx = useTexte(), ac = useActions();
+  const [erreur, poserErreur] = useState('');
+  const id = texte.police.id, catalogue = tx.catalogue;
+  useEffect(() => { if (estIdCatalogue(id) && tx.enLigne) tx.chargerCatalogue(); }, [id, tx]);
+  if (!estIdCatalogue(id) || !tx.enLigne || !catalogue) return null;
+  const exacte = trouverVariante(catalogue, id, texte.police.version), v = exacte ?? trouverVariante(catalogue, id);
+  if (!v) return null;
+  const telecharger = async () => {
+    const r = await tx.telecharger(v);
+    if (r === null) return;
+    if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
+    poserErreur('');
+    // A la meme version, rien ne change : la police revient, le texte n'est pas recompose. A une autre, il l'est au prochain reglage.
+    if (exacte) ac.dire('Police ' + v.nom + ' téléchargée et vérifiée : le texte est de nouveau modifiable.');
+    else poser(r.id, r.police);
+  };
+  return (
+    <div className="boutons">
+      <button type="button" className="discret" onClick={() => void telecharger()}>Télécharger {v.nom}</button>
+      {exacte ? null : <p className="aide">L’index ne connaît plus la version de ce texte : il sera recomposé avec la version actuelle.</p>}
+      {erreur ? <p className="aide" role="alert">{erreur}</p> : null}
+    </div>
   );
 }
 
