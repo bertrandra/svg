@@ -53,6 +53,10 @@ export function usePdf(ouvrir: OuvrirDessin, dire: (message: string) => void) {
         .then(b => lirePage({ nom: f.name, octets: new Uint8Array(b) }, 1, true))
         .catch(() => { poserLecture(false); dire('Ce fichier ne se lit pas : le navigateur n’a pas pu l’ouvrir.'); });
     },
+    /** Lit les octets d'un PDF deja recus (ouvert depuis une adresse, ADR-0036) : la meme lecture qu'un fichier. */
+    ouvrirOctets(nom: string, octets: Uint8Array): void {
+      void lirePage({ nom, octets }, 1, true).catch(() => { poserLecture(false); dire('Ce PDF ne se lit pas.'); });
+    },
     choisir(page: number): void { if (choix) poserChoix({ ...choix, page }); },
     ouvrirChoix(): void { if (choix) void lirePage(choix, choix.page, false); },
     annuler(): void { poserChoix(null); dire(''); }

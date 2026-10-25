@@ -6,7 +6,8 @@
 //   1. la syntaxe de chaque fichier PHP livre ;
 //   2. l'outil du mot de passe (ligne de commande) ;
 //   3. les fonctions du site sur un dossier de donnees temporaire (tests/php/unitaires.php) ;
-//   4. le site par HTTP, sous `php -S` (tests/php/http.php).
+//   4. le site par HTTP, sous `php -S` (tests/php/http.php) ;
+//   5. ouvrir depuis une adresse et ses protections anti-SSRF, fonctions puis HTTP (tests/php/adresse.php).
 
 declare(strict_types=1);
 
@@ -68,7 +69,7 @@ foreach ($attendus as [$ok, $nom]) {
 }
 effacer($t);
 
-foreach (['unitaires.php', 'http.php'] as $groupe) {
+foreach (['unitaires.php', 'http.php', 'adresse.php'] as $groupe) {
     [$code, $sortie] = executer([PHP_BINARY, __DIR__ . '/' . $groupe]);
     echo $sortie;
     $echecs += $code === 0 ? 0 : 1;

@@ -36,6 +36,13 @@
 @media (max-width: 640px) { .resultat { grid-template-columns: minmax(0, 1fr); } }
 section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .ouvrir, .vectoriser { display: grid; gap: var(--esp-m); }
+/* Ouvrir depuis une adresse (ADR-0036) : l'etiquette, puis le champ et « Ouvrir » sur une ligne ; l'aide et l'etat du telechargement dessous. */
+.adresse { display: grid; gap: var(--esp-xs); min-width: 0; margin: 0; }
+.adresse > label { font-size: var(--texte-compact); font-weight: 600; }
+.adresse-ligne { display: flex; gap: var(--esp-s); min-width: 0; }
+.adresse-ligne > input { flex: 1 1 auto; }
+.adresse-ligne > button { flex: none; }
+.adresse p { margin: 0; }
 /* Le choix de page d'un PDF de plusieurs pages (ADR-0020) : la carte d'une reprise, la phrase a gauche, le choix et l'action ensemble a droite. */
 .choix-page p { flex: 1 1 auto; }
 .choix-page .champ-ligne > span:first-child { min-width: 0; }

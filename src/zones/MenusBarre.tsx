@@ -21,6 +21,8 @@ import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
 import { aEnregistrer } from './enregistrement.js';
+import { BoiteInsererAdresse } from './InsererAdresse.js';
+import { adressesPermises } from './OuvrirAdresse.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -103,7 +105,7 @@ export function MenuEdition() {
  * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
  * tete de cette rubrique sur un telephone (`recuperer`).
  */
-function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null): ElementMenu[] {
+function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
@@ -115,6 +117,8 @@ function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: 
     { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
     ...hote,
     ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
+    // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
+    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: true, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
@@ -143,11 +147,13 @@ function usePolicesDuDessin(): PoliceCreditee[] {
 /** Fichier : le geste de fin, le brouillon, les credits, fermer. */
 export function MenuFichier() {
   const [credits, poserCredits] = useState(false);
-  const elements = useElementsFichier(poserCredits, null);
+  const [adresse, poserAdresse] = useState(false);
+  const elements = useElementsFichier(poserCredits, null, poserAdresse);
   return (
     <>
       <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+      {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
     </>
   );
 }
@@ -159,8 +165,9 @@ export function MenuFichier() {
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
+  const [adresse, poserAdresse] = useState(false);
   const raccourcis = useBoiteRaccourcis();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom)), production = useRubriquesProduction();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom), poserAdresse), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
@@ -175,6 +182,7 @@ export function MenuPlus({ nom }: { nom: string }) {
     <>
       <MenuDeroulant etiquette="Plus d’actions : vue, édition, fichier" icone="options" chevron={false} alignement="droite" sections={sections} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+      {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
       {raccourcis.boite}
     </>
   );
