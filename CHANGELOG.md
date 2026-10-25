@@ -172,6 +172,16 @@ empreintes.
 
 ### Ajouté
 
+- **Le texte épouse une forme** (ADR-0031). Posé sur une forme, il suit son tracé : le cercle d'un badge, un arc, une vague ;
+  ses lettres sont tournées sans être déformées ; on choisit le point de départ (poignée sur la toile, clavier ou panneau), le
+  côté (dessus ou dessous, extérieur ou intérieur), l'alignement, et on peut répartir les lettres sur tout le tracé. Posé dans une
+  forme fermée, il la remplit ligne à ligne, coupé sur ses bords, trous respectés, avec une marge, l'alignement, la justification
+  et une taille ajustée pour remplir. Un texte qui dépasse ou ne tient pas le dit. Le texte reste modifiable et suit sa forme
+  quand elle change ; supprimer la forme le rend libre ; la forme peut être masquée. Gestes : « Disposition : Libre | Sur la
+  forme | Dans la forme » dans la barre de texte, puis un clic sur la forme (ou Tab puis Entrée) ; « Texte et forme » dans le
+  menu de la sélection. Le fichier ne porte que des contours ; la disposition et le lien s'écrivent seulement quand ils existent
+  (`data-ed-disposition`, `data-ed-forme`…). Aucune référence d'écriture existante ne change ; deux références neuves.
+
 - **Couper ou écrire, forme par forme** (ADR-0028) : en contexte Cricut, chaque forme est « À couper » ou « À écrire ». Une forme
   pleine se propose à la découpe ; un trait seul, une ligne médiane ou un texte à trait unique à l'écriture ; tout au stylo par
   défaut. Le panneau de gauche range les formes en deux groupes (vignette, sélection Maj/Ctrl, bouton pour changer de groupe,

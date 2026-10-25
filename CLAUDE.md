@@ -88,6 +88,11 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   un texte vide n'est pas créé, Échap termine ; la barre de texte (`zones/BarreTexte.tsx`) porte le fréquent, le panneau garde
   tout ; le tracé « Médian » (`data-ed-trace`, seulement quand il vaut Médian) passe par la ligne médiane de l'ADR-0021 sur la
   glyphe rasterisée en pur, mémorisé par glyphe et par police.
+- **Le texte épouse une forme, pur et lié par identifiant** (ADR-0031) : `TexteVivant.disposition` (sur ou dans, avec l'id de la
+  forme) est absente d'un texte libre ; le calcul est pur dans `engine/texte/` (`trace.ts`, `surTrace.ts` : chaque lettre au milieu
+  de son avance, tournée, jamais déformée ; `dansForme.ts` : largeur sur toute la bande de la ligne, dichotomie bornée), mémorisé
+  par forme ; le texte se recompose quand sa forme change (même entrée d'historique), une forme disparue le rend libre ; le
+  fichier écrit le rang de la forme, ou son tracé encodé si elle est masquée, seulement quand le lien existe.
 - **Les polices libres se téléchargent au choix, vérifiées** (ADR-0025) : un registre en données (`model/sourcesPolices.ts`,
   liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
   main par `scripts/catalogue-polices.mjs`, jamais au build) ; le choix d'une police non livrée vaut demande, et rien ne part
