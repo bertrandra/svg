@@ -192,6 +192,12 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 0 (ADR-0012) : des coutures sans effet visible. Types du modèle v2 en champs facultatifs ; arbre dérivé et
+  invariants ; points d'extension de la lecture, de l'écriture et des transformations (catalogue vide) ; écriture riche en
+  squelette et définitions nommées par empreinte ; descente vers un dessin plat (`aplatirPour`) ; garde-fous (références v1 gelées
+  par manifeste, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`). Aucun octet écrit ne change.
+  L'ADR-0012 et son plan sont révisés après les ADR-0022 à 0037.
+
 - **Le nuancier se tire du dessin, et de la sélection** (ADR-0037) : à l'ouverture d'un SVG, d'un PDF ou d'une image convertie,
   la section « Nuancier » de l'inspecteur propose « Couleurs du dessin » : les couleurs réellement employées, rangées par surface
   couverte, les presque identiques fondues (écart OKLab ≤ 0,02), 24 au plus, noir et blanc gardés. « Créer le nuancier depuis la

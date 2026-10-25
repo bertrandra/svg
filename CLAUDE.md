@@ -129,6 +129,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   dans l'état initial (ce n'est pas une modification), vit dans l'historique, est gardé par le projet JSON, jamais écrit dans le
   SVG ; calcul pur dans `engine/nuancier.ts` (surface peinte, fusion OKLab ≤ 0,02 vers la couleur la plus large, plafond 24) ; le
   nuancier de la page ou de l'hôte reste un groupe à part ; Maj+N et Alt+Maj+N sont pris.
+- **Le modèle v2 entre par des crochets, un dessin plat ne bouge pas** (ADR-0012, étape 0) : `estPlat` garde l'écriture d'avant,
+  sans ligne commune avec `ecritureRiche.ts` ; une fonctionnalité est un fichier `engine/edition/fonctions/<nom>.ts` et une ligne de
+  `catalogue.ts`, sa descente `engine/descente/<nom>.ts` ; la lecture `plat` (défaut) ne consulte aucune fonctionnalité ; un
+  exporteur reçoit un `DessinPlat` par `aplatirPour` ; les références v1 sont gelées par `references-v1.sha256` ; le plan et les
+  consignes des vagues sont dans `docs/adr/0012-annexes/08-plan-de-livraison.md`.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

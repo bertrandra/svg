@@ -3,6 +3,7 @@
 // une gravure laser ou un gabarit. Pur.
 
 import { ecrireChemin, ecrireDessin, lireChemin, originesDe, regrouper, type Chemin, type DessinSvg } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { mentionOrigines } from '../model/credits.js';
 import { hauteurPour, tailleValide, type Taille } from './dimensions.js';
 
@@ -17,7 +18,7 @@ const longueur = (v: number, t: Taille) => { const r = Number(v.toFixed(t.unite 
  * Le fichier ne garde que des contours, pas la marque des formes : si l'une d'elles vient d'une source creditee,
  * la mention passe en commentaire.
  */
-export function svgDecoupe(dessin: DessinSvg, couleur = '#ff0000', epaisseur = 0.25, precision = 3, taille?: Taille | null): string {
+export function svgDecoupe(dessin: DessinPlat, couleur = '#ff0000', epaisseur = 0.25, precision = 3, taille?: Taille | null): string {
   const [x, y, l, h] = dessin.vb, t = tailleValide(taille);
   const corps = dessin.formes.filter(f => f.visible)
     .map(f => '<path d="' + ecrireChemin(f.d, precision) + '" fill="none" stroke="' + couleur + '" stroke-width="' + nb(epaisseur) + '" stroke-linejoin="round"/>')

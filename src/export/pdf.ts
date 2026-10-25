@@ -4,6 +4,7 @@
 // meme dessin donne toujours les memes octets.
 
 import { LIMITE_MITRE_DEFAUT, depart, opaciteDuContour, opaciteDuRemplissage, originesDe, pointillesEcrits, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { mentionOrigines } from '../model/credits.js';
 import { versCmjnNaif } from '../util/couleur.js';
 import { fluxMisEnPage, infoPdf, miseEnPage, tableau, type OptionsPdf } from './pdfPage.js';
@@ -97,7 +98,7 @@ function contenuForme(f: Forme, vb: DessinSvg['vb'], etat: string | null, cmjn =
  * des options qui ne changent ni la page ni les couleurs, ce sont les octets d'avant ; la page, le fond perdu,
  * les reperes, le CMJN et les metadonnees sont des options (voir `OptionsPdf`), jamais un effet de bord.
  */
-export function ecrirePdf(dessin: DessinSvg, options: OptionsPdf = {}): Uint8Array {
+export function ecrirePdf(dessin: DessinPlat, options: OptionsPdf = {}): Uint8Array {
   const [, , l, h] = dessin.vb;
   const cmjn = options.cmjn === true, mise = miseEnPage(dessin.vb, options);
   const visibles = dessin.formes.filter(f => f.visible);

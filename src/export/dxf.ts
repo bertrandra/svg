@@ -6,6 +6,7 @@
 // [0, largeur] x [0, hauteur]. Pur et deterministe : memes entrees, memes octets.
 
 import type { DessinSvg, Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { lireHex } from '../util/couleur.js';
 import { polylignes } from './aplatissement.js';
 import { MM_PAR_POUCE, poucesParUnite, type Taille, type Unite } from './dimensions.js';
@@ -95,7 +96,7 @@ function ecrireEntite(e: Entite): string {
 }
 
 /** Le DXF du dessin. Les formes masquees ne s'ecrivent pas ; le calque `0` existe toujours, vide. */
-export function ecrireDxf(dessin: DessinSvg, options: OptionsDxf = {}): string {
+export function ecrireDxf(dessin: DessinPlat, options: OptionsDxf = {}): string {
   const pouces = poucesParUnite(dessin.vb, options.taille);
   const enPouce = options.unite === 'in';
   const k = enPouce ? pouces : pouces * MM_PAR_POUCE;

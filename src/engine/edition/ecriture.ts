@@ -9,6 +9,8 @@ import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 import { attributOrigine, metadonnees } from './provenance.js';
 import { attributsLien, attributsTexte } from './texteVivant.js';
 import { attributOperation } from './operation.js';
+import { estPlat } from './arbre.js';
+import { ecrireDessinRiche, type EcrivainFeuilles } from './ecritureRiche.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
 // operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
@@ -68,12 +70,20 @@ const avecOperation = (f: Forme, ecrite: string): string => (f.operation ? ecrit
  * modele : c'est l'appelant qui decide, apres avoir retire ce qui vaut le defaut (`operationsAEcrire`).
  */
 export function ecrireDessin(dessin: DessinSvg, precision = 2, operations = false): string {
+  // Le modele v2 (ADR-0012, annexe 2 §3) : un dessin qui n'est pas plat s'ecrit a part, sans une ligne commune avec ce qui suit.
+  if (!estPlat(dessin)) return ecrireDessinRiche(dessin, precision, ecrivainRiche(precision, operations));
   const [x, y, l, h] = dessin.vb;
   const visibles = dessin.formes.filter(f => f.visible);
   const lien = lienDesTextes(dessin, visibles, precision);
   const corps = visibles.map(f => { const e = lien(f); return operations ? avecOperation(f, e) : e; }).join('');
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '">' + metadonnees(visibles) + corps + '</svg>';
 }
+
+/** Ce que l'ecriture riche emprunte a celle-ci : une feuille ecrite comme ici (cache, lien des textes poses, operation). */
+const ecrivainRiche = (precision: number, operations: boolean): EcrivainFeuilles => (dessin, ecrites) => {
+  const lien = lienDesTextes(dessin, ecrites, precision);
+  return f => { const e = lien(f); return operations ? avecOperation(f, e) : e; };
+};
 
 export interface Statistiques { formes: number; points: number; octets: number }
 

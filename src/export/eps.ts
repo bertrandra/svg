@@ -12,7 +12,8 @@
 // Le cadre (`%%BoundingBox`) est celui de l'encre : l'union des etendues des formes peintes, trait compris
 // (`boiteAvecTrait`), et non celui du plan. Le dessin est translate pour que ce cadre commence en (0, 0).
 
-import { LIMITE_MITRE_DEFAUT, boiteAvecTrait, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, unir, type Boite, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { LIMITE_MITRE_DEFAUT, boiteAvecTrait, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, unir, type Boite, type Chemin, type Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { lireHex, superposer, versCmjnNaif, type Rgb } from '../util/couleur.js';
 import { PT_PAR_POUCE, poucesParUnite, type Taille } from './dimensions.js';
 
@@ -107,7 +108,7 @@ function ecrireForme(f: Forme, ctx: Contexte, X: (x: number) => string, Y: (y: n
 const plafond = (v: number) => Math.ceil(v * 1000 - 1e-6) / 1000;
 
 /** Le fichier EPS et ce qu'il ne dit pas fidelement. */
-export function ecrireEps(dessin: DessinSvg, options: OptionsEps = {}): ResultatEps {
+export function ecrireEps(dessin: DessinPlat, options: OptionsEps = {}): ResultatEps {
   const peintes = dessin.formes.filter(peint);
   const k = poucesParUnite(dessin.vb, options.taille) * PT_PAR_POUCE;
   const boite = encre(peintes) ?? { x: dessin.vb[0], y: dessin.vb[1], l: dessin.vb[2], h: dessin.vb[3] };

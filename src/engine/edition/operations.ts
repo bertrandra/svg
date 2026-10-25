@@ -3,9 +3,10 @@
 // rend un nouveau dessin, ou le meme objet quand rien ne change (l'historique s'en sert).
 
 import type { Boite, DessinSvg, Forme, Matrice } from './types.js';
-import { echellerTrait, reglerTrait, type ReglageTrait } from './trait.js';
-import { boiteDe, echelle, facteur, multiplier, rotation, transformerChemin, translation } from './geometrie.js';
-import { avecFormesPorteuses, avecTexteTransforme, relierCopie, suitUneFormeChoisie } from './texteVivant.js';
+import { reglerTrait, type ReglageTrait } from './trait.js';
+import { boiteDe, echelle, facteur, multiplier, rotation, translation } from './geometrie.js';
+import { avecFormesPorteuses, relierCopie, suitUneFormeChoisie } from './texteVivant.js';
+import { transformerFeuille } from './transformation.js';
 
 export function surFormes(dessin: DessinSvg, ids: readonly string[], f: (forme: Forme) => Forme): DessinSvg {
   const voulus = new Set(ids);
@@ -23,7 +24,7 @@ export function transformer(dessin: DessinSvg, ids: readonly string[], m: Matric
   const k = facteur(m);
   // Un texte vivant suit sa forme : sa matrice de composition prend la transformation (texteVivant.ts). Un texte pose sur une
   // forme (ADR-0031) l'emmene : la forme qui le porte prend la meme transformation, le texte se recompose ensuite sur elle.
-  return surFormes(dessin, avecFormesPorteuses(dessin, ids), f => avecTexteTransforme({ ...echellerTrait(f, k), d: transformerChemin(f.d, m) }, f, m));
+  return surFormes(dessin, avecFormesPorteuses(dessin, ids), f => transformerFeuille(f, m, k));
 }
 
 export const deplacer = (dessin: DessinSvg, ids: readonly string[], dx: number, dy: number): DessinSvg =>
@@ -75,11 +76,24 @@ export type Reglage = Partial<Pick<Forme, 'remplissage' | 'contour' | 'epaisseur
 export function modifier(dessin: DessinSvg, ids: readonly string[], r: Reglage): DessinSvg {
   return surFormes(dessin, ids, f => {
     const champs = Object.keys(r) as (keyof Reglage)[];
-    if (champs.every(k => f[k] === r[k])) return f;
-    const g = { ...f, ...r } as Forme;
+    // Choisir une couleur unie remplace la peinture non unie du meme cote (ADR-0012, annexe 3 §2) ; une forme plate n'en a pas.
+    const retireFond = r.remplissage !== undefined && f.peintureRemplissage !== undefined, retireTrait = r.contour !== undefined && f.peintureContour !== undefined;
+    if (!retireFond && !retireTrait && champs.every(k => f[k] === r[k])) return f;
+    const g = sansPeintures({ ...f, ...r } as Forme, retireFond, retireTrait);
     // Un trait qui apparait prend une epaisseur visible ; un trait deja la garde, zero compris (un trait invisible reste a l'utilisateur).
     return g.contour && !f.contour && !(g.epaisseur > 0) ? { ...g, epaisseur: 1 } : g;
   });
+}
+
+/** La forme sans sa peinture non unie de fond et/ou de contour. */
+function sansPeintures(f: Forme, fond: boolean, trait: boolean): Forme {
+  if (!fond && !trait) return f;
+  const { peintureRemplissage, peintureContour, ...reste } = f;
+  return {
+    ...reste,
+    ...(peintureRemplissage && !fond ? { peintureRemplissage } : {}),
+    ...(peintureContour && !trait ? { peintureContour } : {})
+  };
 }
 
 /** Regler le style du trait (pointilles, bout, jonction, limite de pointe) des formes choisies ; le meme dessin si rien ne change. */
@@ -108,7 +122,7 @@ export function dupliquer(dessin: DessinSvg, ids: readonly string[], dx = 0, dy 
     const id = 'f' + n++;
     nouveaux.push(id);
     copies.set(f.id, id);
-    formes.push(dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false });
+    formes.push(dx || dy ? { ...transformerFeuille(f, translation(dx, dy), 1), id, verrouille: false } : { ...f, id, verrouille: false });
   }
   // Un texte pose copie avec sa forme se pose sur la copie de la forme (ADR-0031) ; copie seul, il redevient libre.
   const neuves = new Set(nouveaux);
