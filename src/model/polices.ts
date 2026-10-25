@@ -25,6 +25,15 @@ export const NOMS_POLICES: Readonly<Record<IdPoliceLivree, string>> = {
 };
 
 /**
+ * La famille de chaque fonte embarquee, telle que l'index des polices la nomme : « Toutes les polices » ne montre qu'une ligne
+ * par nom de famille, et la fonte livree y passe avant la meme famille telechargeable (ADR-0026).
+ */
+export const FAMILLES_LIVREES: Readonly<Record<IdPoliceLivree, string>> = {
+  inter: 'Inter', 'inter-gras': 'Inter', oswald: 'Oswald', bebas: 'Bebas Neue', playfair: 'Playfair Display', lobster: 'Lobster',
+  pacifico: 'Pacifico', caveat: 'Caveat', fredoka: 'Fredoka', 'ems-readability': 'EMS Readability'
+};
+
+/**
  * La nature d'une police : `contour` dessine des lettres pleines (un fond, ou un double trait au stylo) ; `trait` dessine
  * des traces ouverts, ce que suit la pointe d'un stylo. Une donnee : le texte vivant et la vectorisation la gardent.
  */

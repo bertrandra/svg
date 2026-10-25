@@ -10,7 +10,7 @@
 // d'hier retrouve ses fichiers.
 
 import { empreinteTexte } from '../util/empreinte.js';
-import { SERVEURS_POLICES, estLicenceAdmise, sourcePolices, type IdDepot, type IdLicencePolice, type IdServeur, type IdSourcePolices } from './sourcesPolices.js';
+import { SERVEURS_POLICES, estLicenceAdmise, rangSource, sourcePolices, type IdDepot, type IdLicencePolice, type IdServeur, type IdSourcePolices } from './sourcesPolices.js';
 
 export type CategoriePolice = 'lineale' | 'empattements' | 'affiche' | 'manuscrite' | 'chasse-fixe' | 'autre';
 
@@ -261,6 +261,49 @@ export function filtrerFamilles(familles: readonly FamilleCatalogue[], filtre: F
   if (!mots.length) return r;
   const debut = (f: FamilleCatalogue) => (normaliser(f.nom).startsWith(mots.join(' ')) ? 0 : 1);
   return r.map((f, i) => [f, i] as const).sort((a, b) => debut(a[0]) - debut(b[0]) || a[1] - b[1]).map(([f]) => f);
+}
+
+// --- Une ligne par nom de famille (ADR-0026) ---
+
+/** La cle de regroupement d'un nom de famille : casse, accents et ponctuation ignores (« Bebas Neue » = « bebas-neue »). */
+export const cleDeNom = (nom: string): string => normaliser(nom);
+
+/**
+ * Pour chaque nom de famille, le meilleur rang de source (PREFERENCE_SOURCES) parmi les elements donnes. Un element dont
+ * `nom` rend null ne concourt pas (une fonte deposee : son nom vient d'un fichier, il ne cache rien).
+ */
+export function rangsParNom<T>(elements: readonly T[], nom: (e: T) => string | null, source: (e: T) => string): ReadonlyMap<string, number> {
+  const rangs = new Map<string, number>();
+  for (const e of elements) {
+    const n = nom(e);
+    if (n === null) continue;
+    const k = cleDeNom(n), r = rangSource(source(e));
+    const avant = rangs.get(k);
+    if (avant === undefined || r < avant) rangs.set(k, r);
+  }
+  return rangs;
+}
+
+/**
+ * Une ligne par nom de famille : pour chaque nom, seuls restent les elements de la source la mieux placee (la fonte livree,
+ * puis Google Fonts, puis… Fontshare en dernier), dans l'ordre d'origine. Deux elements de la meme source gardent leur ligne
+ * (Inter et Inter gras, livrees toutes deux). Un element sans nom (`null`) reste toujours.
+ */
+export function uneParNom<T>(elements: readonly T[], nom: (e: T) => string | null, source: (e: T) => string): T[] {
+  const rangs = rangsParNom(elements, nom, source);
+  return elements.filter(e => { const n = nom(e); return n === null || rangSource(source(e)) === rangs.get(cleDeNom(n)); });
+}
+
+/**
+ * Les familles de l'index qu'on montre : sans filtre de source, une par nom, et aucune dont une fonte livree porte le nom
+ * (`livrees` : les noms de famille des fontes livrees) ; une source choisie explicitement montre toutes ses familles, meme
+ * celles qu'une source mieux placee cache d'ordinaire.
+ */
+export function famillesMontrees(familles: readonly FamilleCatalogue[], options: { readonly livrees?: readonly string[]; readonly source?: IdSourcePolices | '' } = {}): FamilleCatalogue[] {
+  if (options.source) return familles.filter(f => f.source === options.source);
+  type Element = { readonly nom: string; readonly source: string; readonly famille?: FamilleCatalogue };
+  const elements: Element[] = [...(options.livrees ?? []).map(nom => ({ nom, source: 'livree' })), ...familles.map(f => ({ nom: f.nom, source: f.source, famille: f }))];
+  return uneParNom(elements, e => e.nom, e => e.source).flatMap(e => (e.famille ? [e.famille] : []));
 }
 
 /** Les serveurs qu'une liste de variantes ferait contacter, sans doublon : ce que le dialogue de consentement nomme. */

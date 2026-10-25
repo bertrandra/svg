@@ -174,7 +174,9 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
   version ne fait lire aucun octet inattendu, et le refus est dit. Le fichier est borné (8 Mo, puis les bornes du WOFF :
   256 tables, 32 Mo décompressés). L’index (`polices-catalogue.js`) est validé en entier (licence de la liste blanche, version
   épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Un seul `fetch` existe dans
-  `src/`, et un test le garde.
+  `src/`, et un test le garde. Les aperçus (`polices-apercus.js`, ADR-0026) sont validés de même avant d’être crus (forme, cadre, clés, caractères et
+  longueur de chaque code, taille totale bornée) ; un code se décode par une fonction pure qui ne lève jamais, et une annexe refusée laisse
+  les noms écrits.
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
   valide ce qu’il y lit (types, longueurs, clés de prototype retirées), il ne le chiffre pas.
 
