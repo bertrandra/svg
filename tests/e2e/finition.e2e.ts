@@ -275,8 +275,8 @@ describe('la finition transversale', () => {
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
     await page.getByRole('menu', { name: 'Vue' }).waitFor();
     expect(await page.locator('.menu-panneau .menu-raccourci').evaluateAll(l => l.filter(e => e.getBoundingClientRect().width > 0).length)).toBe(0);
-    expect(await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).toEqual(expect.arrayContaining(['Édition', 'Fichier', 'Vue']));
-    expect((await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).slice(0, 3)).toEqual(['Édition', 'Fichier', 'Vue']);
+    expect(await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).toEqual(expect.arrayContaining(['Aide', 'Édition', 'Fichier', 'Vue']));
+    expect((await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).slice(0, 4)).toEqual(['Aide', 'Édition', 'Fichier', 'Vue']);
     expect((await page.getByRole('menu', { name: 'Vue' }).getByRole('menuitem').allInnerTexts()).map(t => t.trim()).slice(-2)).toEqual(['Zoomer', 'Dézoomer']);
   });
 

@@ -43,6 +43,21 @@ let dernierIncertains: Violation[] = [];
 
 async function auditer(page: Page, ecran: string): Promise<Violation[]> {
   // Une section qui se deplie fond en 150 ms : mesuree en route, un texte a demi transparent n'a pas son contraste.
+  // Un texte coupe par le bas de la fenetre ou par le defilement d'un panneau est un « doute » pour axe (fond
+  // indeterminable), pas un contraste : la fenetre prend la hauteur du contenu, page et panneaux, avant l'audit.
+  // Agrandir la fenetre peut remettre en page (la visionneuse suit la largeur et la hauteur) : on recommence tant que la
+  // hauteur du contenu bouge, trois fois au plus.
+  for (let essai = 0; essai < 3; essai++) {
+    const vue = page.viewportSize();
+    if (!vue) break;
+    await attendreAnimations(page);
+    const hauteur = await page.evaluate(() => {
+      const panneaux = [...document.querySelectorAll<HTMLElement>('.editeur-inspecteur, .editeur-calques')].map(e => e.scrollHeight - e.clientHeight);
+      return Math.max(document.documentElement.scrollHeight, innerHeight + Math.max(0, ...panneaux));
+    });
+    if (hauteur <= vue.height) break;
+    await page.setViewportSize({ width: vue.width, height: Math.min(4000, hauteur + 40) });
+  }
   await attendreAnimations(page);
   await page.addScriptTag({ content: AXE });
   const resultat = await page.evaluate(async ecartees => {

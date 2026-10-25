@@ -277,6 +277,9 @@ describe('pretraitement et lot', () => {
     await page.locator('.vectoriser input[type=file]').setInputFiles([logoBruite('a.png', 120, 90), logoBruite('b.png', 120, 90)]);
     await page.locator('.lot').waitFor();
     await attend(async () => (await page.locator('.lot li .lot-etat').allInnerTexts()).filter(e => e.startsWith('Terminée')).length, TRACE).toBe(2);
+    // Le lot est fini quand « Annuler le lot » s'en va : la derniere ligne « Terminée » le precede d'un rendu, et le mesurer
+    // pendant qu'il se retire donnait une cible fantome.
+    await page.getByRole('button', { name: 'Annuler le lot' }).waitFor({ state: 'detached' });
     expect(await petites('.lot')).toEqual([]);
     // `clientWidth`, pas `innerWidth` : sous `isMobile`, Chromium elargit la fenetre jusqu'au contenu qui deborde, et la mesure
     // y restait nulle alors que les six onglets de la visionneuse (« Prétraitée » en plus) poussaient la page de 20 px, ce que
