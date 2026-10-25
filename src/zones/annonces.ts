@@ -2,7 +2,7 @@
 // Pures : le dessin et ce qui a change en entree, une phrase en sortie. Courtes, parce qu'on les entend
 // a chaque Tab ; le detail est dans l'inspecteur.
 
-import { ancre, boiteDe, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { ancre, boiteDe, FICHES_FORMES, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { genreDeForme, mesuresDites, nombreFr, numeroDeForme, peintureDite } from '../engine/description.js';
 import { boiteDeDeuxCoins, indicesDePoints, type PointPlan } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
@@ -29,7 +29,7 @@ export function phraseOutil(outil: Outil): string {
     case 'main': return 'Outil main : déplacer la vue à la souris ou au doigt.';
     case 'texte': return 'Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.';
     case 'plume': return 'Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.';
-    default: return 'Outil ' + outil + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
+    default: return 'Outil ' + FICHES_FORMES[outil].nom + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
   }
 }
 

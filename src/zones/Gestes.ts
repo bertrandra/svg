@@ -4,16 +4,16 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
-  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, ellipse, etoile, polygone, rectangle, redimensionner, retourner, seCroisent,
-  type Boite, type Commande, type DessinSvg
+  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, formeDeBase, PARAMETRES_FORMES_DEFAUT, polygone, redimensionner, regleDeForme, retourner, seCroisent,
+  type Boite, type Commande, type DessinSvg, type ParametresFormes, type Style
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
-import { FORMES } from './aidesEditeur.js';
-import { styleLigne } from './aidesEditeur.js';
+import { FORMES, styleDeForme } from './aidesEditeur.js';
+import { phraseSelection } from './annonces.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import { usePrise } from './PriseToile.js';
-import type { Coin, OutilForme, Vue } from './typesEditeur.js';
+import type { ActionsEditeur, Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
@@ -27,8 +27,11 @@ type Geste =
   | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue }
   | { type: 'saisie' };
 
-/** La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions. */
-export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean): Commande[] {
+/**
+ * La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions (une boite carree, une ligne a
+ * 45 degres pres), que le carre et le cercle imposent toujours. Les reglages sont ceux des formes de base (ADR-0033).
+ */
+export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean, reglages: ParametresFormes = PARAMETRES_FORMES_DEFAUT): Commande[] {
   if (outil === 'ligne') {
     if (proportions) {
       const dx = x - x0, dy = y - y0, a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), r = Math.hypot(dx, dy);
@@ -37,9 +40,24 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
     return polygone([[x0, y0], [x, y]], false);
   }
   let l = Math.abs(x - x0), h = Math.abs(y - y0);
-  if (proportions) { l = h = Math.max(l, h); }
+  if (proportions || outil === 'carre' || outil === 'cercle') { l = h = Math.max(l, h); }
   const bx = x < x0 ? x0 - l : x0, by = y < y0 ? y0 - h : y0;
-  return outil === 'rectangle' ? rectangle(bx, by, l, h) : outil === 'ellipse' ? ellipse(bx, by, l, h) : etoile(bx, by, l, h);
+  return formeDeBase(outil, bx, by, l, h, reglages);
+}
+
+/** Ajoute la forme tracee par un outil, au style de l'outil (une ligne pour un trait) et a sa regle (l'anneau perce). */
+export const ajouterTracee = (base: DessinSvg, outil: OutilForme, d: Commande[], style: Style) => ajouterForme(base, d, styleDeForme(outil, style), regleDeForme(outil));
+
+/**
+ * La forme tracee au glisser entre dans l'historique, choisie, et l'outil revient a la selection. Le glisser l'a ajoutee avant de
+ * la choisir : on dit qu'elle est posee, son genre et sa taille, comme au clavier (ADR-0033).
+ */
+function poserFormeTracee(ac: ActionsEditeur, dessin: DessinSvg, id: string, cle: string): void {
+  ac.appliquer(() => dessin, cle);
+  ac.finir();
+  ac.choisir([id]);
+  ac.poserOutil('selection');
+  ac.annoncer(phraseSelection(dessin, [id], true));
 }
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
@@ -158,7 +176,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
     // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
     else if (g.type === 'poignee') ac.appliquer(() => deplacerPoigneeLiee(g.base, g.id, g.i, g.k, gx, gy, e.altKey), g.cle);
-    else ac.appliquer(() => ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style).dessin, g.cle);
+    else ac.appliquer(() => ajouterTracee(g.base, g.outil, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey, ui.parametres), ui.style).dessin, g.cle);
   };
 
   const lacher = (e: PE<SVGSVGElement>) => {
@@ -171,14 +189,11 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (g.type === 'saisie') { sx.poignee.current?.lacher(); return; }
     if (g.type === 'tracer') {
       const [x, y] = versGrille(e);
-      const r = ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style);
+      const r = ajouterTracee(g.base, g.outil, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey, ui.parametres), ui.style);
       const b = r.id ? boiteDe(r.dessin, [r.id]) : null;
       // Un trace sans surface a l'ecran n'est pas une forme : rien ne reste dans l'historique.
       if (!r.id || !b || (b.l * vue.zoom < 3 && b.h * vue.zoom < 3)) { ac.annulerGeste(g.cle); return; }
-      ac.appliquer(() => r.dessin, g.cle);
-      ac.finir();
-      ac.choisir([r.id]);
-      ac.poserOutil('selection');
+      poserFormeTracee(ac, r.dessin, r.id, g.cle);
       return;
     }
     if (g.type !== 'cadre') { if (g.type !== 'pan') ac.finir(); return; }

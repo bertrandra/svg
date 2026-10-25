@@ -12,7 +12,8 @@ export function ListeRaccourcis() {
   return (
     <ul className="raccourcis">
       <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
-      <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
+      <li>R rectangle · E ellipse · S étoile · L ligne · F palette des formes (flèches, puis Entrée choisit) · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
+      <li>Formes : Maj en traçant garde les proportions (un carré, un cercle, une forme non étirée) ; le carré et le cercle les gardent toujours ; leurs réglages (côtés, branches, rayon des coins…) sont dans le panneau quand l’outil est choisi</li>
       <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
       <li>Alt+clic sur la toile : la forme du dessous (encore Alt+clic : la suivante, en boucle) · une forme se prend à quelques pixels de son trait</li>
       <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>

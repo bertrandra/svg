@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, ajouterForme, ellipse, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, type FormeDeBase, type ParametresFormes, ajouterForme, ellipse, formeDeBase, FORMES_DE_BASE, FICHES_FORMES, PARAMETRES_FORMES_DEFAUT, regleDeForme, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { exportParOperation } from '../../../src/export/operations.js';
@@ -231,6 +231,21 @@ const couperEcrire = (t: string, fichier: 'a-couper' | 'a-ecrire' | 'combine'): 
 };
 
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
+
+// Les formes de base (ADR-0033) : une de chaque sorte aux reglages par defaut, puis quelques reglages, en grille de cases de
+// 100 x 80, comme l'outil les pose (un trait au style d'une ligne, l'anneau en evenodd). Un cas NEUF : les rectangle, ellipse,
+// etoile et ligne d'avant y passent par formeDeBase, qui rend les memes commandes que leurs fonctions (formesDeBase.test.ts).
+const VARIANTES_FORMES: ReadonlyArray<readonly [FormeDeBase, Partial<ParametresFormes>]> = [
+  ...FORMES_DE_BASE.map(f => [f, {}] as const),
+  ['rectangle-arrondi', { rayonCoins: 40 }], ['triangle', { triangle: 'rectangle' }], ['polygone', { cotes: 8 }], ['etoile', { branches: 8, creux: 0.6 }],
+  ['fleche', { pointe: 'double', sens: 'haut' }], ['croix', { bras: 0.2 }], ['anneau', { epaisseurAnneau: 0.6 }], ['demi-cercle', { portion: 'quart' }],
+  ['badge', { festons: 16 }], ['spirale', { tours: 5 }]
+];
+const formesDeBase = (d: DessinSvg): DessinSvg => VARIANTES_FORMES.reduce((x, [forme, reglages], i) => {
+  const cx = 10 + (i % 6) * 100, cy = 10 + Math.floor(i / 6) * 80;
+  const style = FICHES_FORMES[forme].trait ? { remplissage: null, contour: '#15181d', epaisseur: 2 } : { remplissage: ['#c81e28', '#1428a0', '#2e7d32', '#f2a900'][i % 4] ?? null, contour: null, epaisseur: 1 };
+  return ajouterForme(x, formeDeBase(forme, cx, cy, 80, 60, { ...PARAMETRES_FORMES_DEFAUT, ...reglages }), style, regleDeForme(forme)).dessin;
+}, d);
 function enchainerTot(...ops: Array<(d: DessinSvg) => DessinSvg>): (d: DessinSvg) => DessinSvg { return d => ops.reduce((x, op) => op(x), d); }
 
 interface Cas {
@@ -274,6 +289,7 @@ const CAS: readonly Cas[] = [
   { nom: 'lecture-use-symbole' },
   { nom: 'lecture-use-introuvable' },
   { nom: 'lecture-css-selecteurs' },
+  { nom: 'formes-de-base', operation: formesDeBase },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.

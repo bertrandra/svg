@@ -39,7 +39,7 @@ describe('barre de l editeur sur un telephone', () => {
   it('range Vue, Fichier (le SVG en tete, les autres formats replies) et Edition dans « Plus », au zoom pres', async () => {
     const page = await telephone();
     expect(await page.locator('.editeur-barre .menu-bouton[aria-haspopup=menu]').evaluateAll(l => l.map(e => e.getAttribute('aria-label')))).toEqual(
-      ['Choisir une forme', 'Plus d’actions : vue, édition, fichier']
+      ['Formes (F)', 'Plus d’actions : vue, édition, fichier']
     );
     await plus(page).tap();
     for (const nom of ['Vue', 'Fichier', 'Édition']) await page.getByRole('menu', { name: nom }).waitFor();

@@ -1,7 +1,7 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, Operation, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, FormeDeBase, Operation, ParametresFormes, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
 import type { Glyphes } from '../engine/texte.js';
 import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
@@ -17,7 +17,8 @@ import type { Version } from './session.js';
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
 
-export type OutilForme = 'rectangle' | 'ellipse' | 'etoile' | 'ligne';
+/** Les outils qui tracent une forme d'un glisser ou au reticule : les formes de base de la palette (ADR-0033). */
+export type OutilForme = FormeDeBase;
 export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme;
 export type Coin = 'nw' | 'ne' | 'sw' | 'se';
 export type Point = readonly [number, number];
@@ -89,6 +90,10 @@ export interface EtatInterface {
   outil: Outil;
   point: number | null;
   style: Style;
+  /** Les reglages des formes a tracer (cotes, branches, rayon des coins…) : une donnee de la session, jamais ecrite (ADR-0033). */
+  parametres: ParametresFormes;
+  /** Croit a chaque demande d'ouvrir la palette des formes au clavier (F) : le bouton « Formes » l'ouvre alors. */
+  demandeFormes: number;
   trace: readonly Point[];
   grille: boolean;
   aimants: boolean;
@@ -150,6 +155,10 @@ export interface ActionsEditeur {
   poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void;
   poserStyle: (s: Style) => void;
+  /** Change des reglages des formes a tracer, ramenes dans leurs bornes. */
+  poserParametres: (p: Partial<ParametresFormes>) => void;
+  /** Ouvre la palette des formes de la barre (le raccourci F), le focus sur la forme courante. */
+  ouvrirFormes: () => void;
   poserTrace: (t: readonly Point[]) => void;
   poserGrille: (g: boolean) => void;
   poserAimants: (a: boolean) => void;

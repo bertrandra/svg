@@ -3,7 +3,7 @@
 // (« Forme 3 sélectionnée : … ») sont composees dans zones/annonces.ts avec ces briques.
 
 import { lireHex, type Rgb } from '../util/couleur.js';
-import { ancre, boiteForme, type Chemin, type Forme } from './editionSvg.js';
+import { ancre, boiteForme, estEllipseChemin, reconnaitreFormeDeBase, type Chemin, type Forme } from './editionSvg.js';
 
 /**
  * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
@@ -34,15 +34,7 @@ function estRectangle(d: Chemin, tol: number): boolean {
 }
 
 /** Quatre cubiques dont les extremites sont les milieux des quatre bords de la boite : ce que trace l'outil ellipse. */
-function estEllipse(f: Forme, tol: number): boolean {
-  const d = f.d, b = boiteForme(f);
-  if (!b || d.filter(c => c.c === 'C').length !== 4 || d.some(c => c.c !== 'M' && c.c !== 'C' && c.c !== 'Z')) return false;
-  const cx = b.x + b.l / 2, cy = b.y + b.h / 2;
-  const p = points(d).slice(0, 4);
-  const surAxe = p.filter(a => proche(a[0], cx, tol) || proche(a[1], cy, tol)).length;
-  const aMilieuX = p.filter(a => proche(a[0], cx, tol)).length, aMilieuY = p.filter(a => proche(a[1], cy, tol)).length;
-  return surAxe === 4 && aMilieuX === 2 && aMilieuY === 2;
-}
+const estEllipse = (f: Forme, tol: number): boolean => estEllipseChemin(f.d, tol);
 
 /** Dix sommets dont les rayons alternent : ce que trace l'outil etoile. */
 function estEtoile(d: Chemin): boolean {
@@ -58,7 +50,11 @@ function estEtoile(d: Chemin): boolean {
     && pairs.every(v => proche(v, mp, 0.1 * mp)) && impairs.every(v => proche(v, mi, 0.1 * mi));
 }
 
-/** Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace. */
+/**
+ * Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace, et les
+ * formes de base de la palette (ADR-0033 : cœur, hexagone, flèche, anneau…), reconnues sur leur geometrie comme les autres : une
+ * forme ne porte pas de nom, elle garde le sien tant qu'on ne fait que la deplacer, l'etirer ou la recolorer.
+ */
 export function genreDeForme(f: Forme): string {
   // Un texte vivant se nomme par ce qu'il dit (ADR-0022) : « texte « Joyeux Noël » », coupe a trente caracteres.
   if (f.texte) { const t = f.texte.texte.replace(/\s+/g, ' ').trim(); return 'texte « ' + (t.length > 30 ? t.slice(0, 29) + '…' : t) + ' »'; }
@@ -72,10 +68,11 @@ export function genreDeForme(f: Forme): string {
     if (!ferme) return n === 2 ? 'ligne' : 'ligne brisée';
     if (estRectangle(d, tol)) return proche(b.l, b.h, tol) ? 'carré' : 'rectangle';
     if (estEtoile(d)) return 'étoile';
-    return n === 3 ? 'triangle' : 'polygone à ' + n + ' sommets';
+    if (n === 3) return 'triangle';
+    return reconnaitreFormeDeBase(d) ?? 'polygone à ' + n + ' sommets';
   }
   if (ferme && estEllipse(f, tol)) return proche(b.l, b.h, tol) ? 'cercle' : 'ellipse';
-  return ferme ? 'tracé courbe' : 'courbe';
+  return reconnaitreFormeDeBase(d) ?? (ferme ? 'tracé courbe' : 'courbe');
 }
 
 // Les noms de couleur : assez pour que « rouge #c81e28 » dise quelque chose a qui n'a que l'oreille.
