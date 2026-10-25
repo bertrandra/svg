@@ -52,11 +52,12 @@ function usePose(bulle: RefObject<HTMLDivElement | null>, selecteur: string, eta
     const el = bulle.current, cadre = el?.closest('.editeur-cadre');
     if (!el || !cadre) return;
     let image = 0, observee: Element | null = null;
-    const ro = new ResizeObserver(() => { cancelAnimationFrame(image); image = requestAnimationFrame(mesurer); });
+    // Sans ResizeObserver (docs/navigateurs.md), la bulle se replace au redimensionnement de la fenetre et au relacher d'un pointeur.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => { cancelAnimationFrame(image); image = requestAnimationFrame(mesurer); });
     function mesurer() {
       if (!el || !cadre) return;
       const c = cadre.querySelector(selecteur);
-      if (c !== observee) { if (observee) ro.unobserve(observee); if (c) ro.observe(c); observee = c; }
+      if (c !== observee) { if (observee) ro?.unobserve(observee); if (c) ro?.observe(c); observee = c; }
       // La bulle vit sur la toile : jamais sur la barre, la rangee de la selection ou un panneau, qu'elle cacherait.
       const cible = rectDe(c), zone = rectDe(cadre.querySelector('.editeur-toile'));
       const ecran = { l: document.documentElement.clientWidth, h: window.innerHeight };
@@ -64,13 +65,13 @@ function usePose(bulle: RefObject<HTMLDivElement | null>, selecteur: string, eta
       poserPose(avant => (memePose(avant, p) ? avant : p));
     }
     mesurer();
-    ro.observe(el);
-    ro.observe(cadre);
+    ro?.observe(el);
+    ro?.observe(cadre);
     const reposer = () => { cancelAnimationFrame(image); image = requestAnimationFrame(mesurer); };
     window.addEventListener('resize', reposer);
     // Un tiroir qui s'ouvre ou un menu qui se ferme ne retaillent rien : un clic quelque part redemande la mesure, a peu de frais.
     window.addEventListener('pointerup', reposer);
-    return () => { cancelAnimationFrame(image); ro.disconnect(); window.removeEventListener('resize', reposer); window.removeEventListener('pointerup', reposer); };
+    return () => { cancelAnimationFrame(image); ro?.disconnect(); window.removeEventListener('resize', reposer); window.removeEventListener('pointerup', reposer); };
   }, [bulle, selecteur, etape]);
   return pose;
 }

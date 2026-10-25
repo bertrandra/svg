@@ -192,6 +192,19 @@ describe('la visite guidee', () => {
     await attend(() => page.locator('.editeur-cadre').count()).toBe(0);
   });
 
+  it('offre « Aller à la visite guidée » juste apres « Aller à la toile », pendant la visite seulement', async () => {
+    const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
+    await essayer(page);
+    await page.getByRole('link', { name: 'Aller à la toile' }).focus();
+    await page.keyboard.press('Tab');
+    const lien = page.getByRole('link', { name: 'Aller à la visite guidée' });
+    await attend(() => aLeFocus(lien)).toBe(true);
+    await page.keyboard.press('Enter');
+    await attend(() => aLeFocus(bulle(page))).toBe(true);
+    await bulle(page).getByRole('button', { name: 'Passer la visite' }).click();
+    expect(await lien.count()).toBe(0);
+  });
+
   it('se rejoue du menu Aide et se retient : elle ne se repropose plus, meme apres rechargement', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await essayer(page);
