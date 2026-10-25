@@ -16,8 +16,9 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
   const messages: string[] = [], annonces: string[] = [];
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
-    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer: vi.fn(), production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage
+    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() },
+    enregistrer: vi.fn(), production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage,
+    productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
   };
   const poserQuitter = vi.fn();
   const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; etat.refaisable = h.futur.length > 0; };
@@ -29,6 +30,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
+    poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
@@ -137,6 +139,86 @@ describe('creerActions : des verbes qui lisent l etat du moment', () => {
     change.actions.demanderFermeture();
     expect(change.etat.fermer).not.toHaveBeenCalled();
     expect(change.poserQuitter).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('creerActions : le geste de fin et Ctrl+S', () => {
+  const deplacer = (m: ReturnType<typeof monter>) => m.actions.appliquer(d => modifier(d, ['f1'], { remplissage: '#1f8a3a' }));
+
+  it('Ctrl+S garde le brouillon du moment et le dit, sans jamais fermer ni rendre le dessin', () => {
+    const m = monter();
+    const brouillon = vi.fn((svg: string) => svg.length > 0);
+    m.etat.brouillon = brouillon;
+    m.etat.fin = { ...m.etat.fin, brouillon: true };
+    m.actions.garderBrouillon();
+    expect(brouillon).not.toHaveBeenCalled();
+    expect(m.messages.at(-1)).toBe('Aucune modification : rien à garder.');
+    deplacer(m);
+    m.actions.garderBrouillon();
+    expect(brouillon).toHaveBeenCalledTimes(1);
+    expect(brouillon.mock.calls[0]?.[0]).toContain('#1f8a3a');
+    expect(m.messages.at(-1)).toBe('Brouillon gardé.');
+    expect(m.etat.fermer).not.toHaveBeenCalled();
+    expect(m.etat.enregistrer).not.toHaveBeenCalled();
+  });
+
+  it('Ctrl+S ne pretend pas avoir garde un brouillon refuse, et dit ou va le dessin sans brouillon', () => {
+    const refuse = monter();
+    refuse.etat.brouillon = () => false;
+    deplacer(refuse);
+    refuse.actions.garderBrouillon();
+    expect(refuse.messages.at(-1)).toBe('Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.');
+    const sans = monter();
+    sans.etat.fin = { libelle: 'Valider', fermerSansModification: false, brouillon: false };
+    deplacer(sans);
+    sans.actions.garderBrouillon();
+    expect(sans.messages.at(-1)).toBe('Ctrl+S ne garde rien ici : « Valider » rend votre dessin.');
+    expect(sans.etat.fermer).not.toHaveBeenCalled();
+  });
+
+  it('« Terminer » rend le dessin s il a change, ferme sans rien reecrire dans la page, et le dit ailleurs', () => {
+    const page = monter();
+    page.etat.fin = { libelle: 'Terminer', fermerSansModification: true, brouillon: true };
+    page.actions.terminer();
+    expect(page.etat.fermer).toHaveBeenCalledTimes(1);
+    expect(page.etat.enregistrer).not.toHaveBeenCalled();
+    deplacer(page);
+    page.actions.terminer();
+    expect(page.etat.enregistrer).toHaveBeenCalledTimes(1);
+
+    const hote = monter();
+    hote.actions.terminer();
+    expect(hote.etat.fermer).not.toHaveBeenCalled();
+    expect(hote.messages.at(-1)).toBe('Aucune modification à enregistrer.');
+    // Un contexte de production change suffit a rendre le dessin (il s'ecrit dans le fichier).
+    hote.etat.productionModifiee = true;
+    hote.actions.terminer();
+    expect(hote.etat.enregistrer).toHaveBeenCalledTimes(1);
+  });
+
+  it('« garder et fermer » de la confirmation rend puis ferme, mais ne ferme jamais un dessin qui n a pas pu etre rendu', () => {
+    const ok = monter();
+    deplacer(ok);
+    ok.actions.enregistrerEtFermer();
+    expect(ok.etat.enregistrer).toHaveBeenCalledTimes(1);
+    expect(ok.etat.fermer).toHaveBeenCalledTimes(1);
+    const vide = monter();
+    vide.actions.appliquer(d => modifier(d, d.formes.map(f => f.id), { visible: false }));
+    vide.actions.enregistrerEtFermer();
+    expect(vide.etat.enregistrer).not.toHaveBeenCalled();
+    expect(vide.etat.fermer).not.toHaveBeenCalled();
+  });
+
+  it('« Ajuster » cadre le dessin en Generique, le tapis en decoupe Cricut ; « Ajuster au dessin » le dessin toujours', () => {
+    const m = monter();
+    m.actions.ajuster();
+    expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(1);
+    m.etat.production = { contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' };
+    m.actions.ajuster();
+    // Le tapis de 12 po (1 152 unites) cale sa zone utile de 11,5 po sur le coin du dessin : 24 unites de marge.
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[0]?.[0]).toMatchObject({ l: 1152, h: 1152 });
+    m.actions.ajusterAuDessin();
+    expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(2);
   });
 });
 

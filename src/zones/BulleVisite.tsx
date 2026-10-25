@@ -7,8 +7,10 @@
 // vers le navigateur comme ailleurs : rien ne piege.
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as KE, type RefObject } from 'react';
-import { CHOIX_CRICUT, useVisite } from './contexteGuide.js';
+import { useVisite } from './contexteGuide.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useStockage } from './contexteStockage.js';
+import { choixCricut } from './actionsProduction.js';
 import { cadrage, cibleEtape, placerBulle, progression, texteEtape, type EtapeVisite, type Placement, type Rect } from './visite.js';
 
 type Visite = NonNullable<ReturnType<typeof useVisite>>;
@@ -146,7 +148,8 @@ function Bulle({ v, etape }: { v: Visite; etape: EtapeVisite }) {
           <span className="espace" />
           {etape !== 'choisir' && etape !== 'fin' ? <button type="button" onClick={v.precedent}>Précédent</button> : null}
           {/* Une seule cle pour « Suivant » et « Terminer » : le meme bouton change de nom, le focus reste dessus. */}
-          <button key="avancer" type="button" onClick={etape === 'fin' ? () => v.quitter(true) : v.suivant}>{etape === 'fin' ? 'Terminer' : 'Suivant'}</button>
+          {/* « Terminer la visite » : la barre a son propre « Terminer » (le geste de fin de la page), qui ferme l'editeur. */}
+          <button key="avancer" type="button" onClick={etape === 'fin' ? () => v.quitter(true) : v.suivant}>{etape === 'fin' ? 'Terminer la visite' : 'Suivant'}</button>
         </div>
       </div>
     </>
@@ -161,7 +164,7 @@ function RepereCible({ cible, dedans }: { cible: Rect; dedans: boolean }) {
 
 /** Les trois suites de la fin, selon ce que ce contexte permet : convertir (la page), la bibliotheque (si l'editeur l'a), la Cricut. */
 function Suites({ v }: { v: Visite }) {
-  const ac = useActions(), mo = useDessin();
+  const ac = useActions(), mo = useDessin(), stockage = useStockage();
   const ouvrirPanneau = (titre: string) => {
     if (avecTiroirs()) ac.poserTiroir('inspecteur');
     // Apres le rendu (et le focus que prend un tiroir qui s'ouvre) : la section voulue s'ouvre et prend le focus.
@@ -182,7 +185,7 @@ function Suites({ v }: { v: Visite }) {
       {mo.bibliotheque ? (
         <li><button type="button" onClick={() => { v.quitter(true); ac.choisir([]); ac.poserOutil('selection'); ouvrirPanneau('Bibliothèque de formes'); }}>Prendre une forme dans la bibliothèque</button></li>
       ) : null}
-      <li><button type="button" onClick={() => { v.quitter(true); ac.poserProduction(CHOIX_CRICUT); ouvrirPanneau('Prêt pour'); }}>Préparer pour une Cricut</button></li>
+      <li><button type="button" onClick={() => { v.quitter(true); ac.poserProduction(choixCricut(stockage)); ouvrirPanneau('Prêt pour'); }}>Préparer pour une Cricut</button></li>
     </ul>
   );
 }

@@ -248,10 +248,32 @@ export function nombreDeCalques(page: Page): Promise<number> {
  * menus ne sont plus que des rubriques du menu « Plus » : c'est lui qu'on ouvre, et le menu demande (`role=menu` du meme nom) y est.
  */
 export async function ouvrirMenu(page: Page, nom: string) {
-  const direct = page.locator('.menu-bouton', { hasText: nom });
-  const bouton = (await direct.count()) ? direct : page.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
+  // L'editeur ouvert, on ne cherche que dans l'editeur : la fiche du dessin, dessous, a aussi son menu « Autres formats ».
+  const racine = (await page.locator('.editeur-svg .editeur-cadre').count()) ? page.locator('.editeur-svg') : page;
+  // « Autres formats » est, dans la barre de l'editeur, le chevron accole a « Télécharger le SVG » (nomme par aria-label).
+  const direct = nom === 'Autres formats' && racine !== page
+    ? racine.locator('.editeur-barre .autres-formats .menu-bouton')
+    : racine.locator('.menu-bouton', { hasText: nom });
+  const bouton = (await direct.count()) ? direct : racine.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
   await bouton.click();
+  // Sur un telephone, les autres formats sont repliees en fin de la rubrique Fichier de « Plus » : on les deplie.
+  if (nom === 'Autres formats' && !(await direct.count())) {
+    const repli = page.locator('.menu-panneau details.autres-formats-repli');
+    if (!(await repli.evaluate(d => (d as HTMLDetailsElement).open))) await repli.locator('> summary').click();
+  }
   return bouton;
+}
+
+/** Le bouton « Télécharger le SVG » de la barre de l'editeur (au bureau) : le geste unique pour recuperer le dessin. */
+export function boutonTelecharger(page: Page): Locator {
+  return page.locator('.editeur-barre .recuperer-principal');
+}
+
+/** « Terminer » : le geste de fin de la page, qui ramene a la fiche du dessin. Attend la fiche. */
+export async function terminer(page: Page): Promise<void> {
+  await page.locator('.editeur-barre .groupe.fin button.primaire, .editeur-etat button.primaire').first().click();
+  await page.locator('.editeur-cadre').waitFor({ state: 'detached' });
+  await page.locator('.resultat').waitFor();
 }
 
 // ---------------------------------------------------------------------------------------------

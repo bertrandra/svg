@@ -21,6 +21,8 @@ export interface Leviers {
   appliquer: (f: (d: DessinSvg) => DessinSvg, cle?: string | null) => void; choisir: (ids: string[]) => void; poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void; poserOutilBrut: (o: Outil) => void; poserTrace: (t: readonly Point[]) => void; poserPresse: (p: readonly Forme[]) => void;
   dire: (t: string) => void; toile: RefObject<HTMLDivElement | null>;
+  /** Dire seulement a la region vocale (sans la barre d'etat) : une phrase longue qu'une ligne d'etat ne tiendrait pas. */
+  annoncer?: (t: string) => void;
 }
 
 export type ActionsMetier = Pick<ActionsEditeur, 'finirTrace' | 'supprimerSelection' | 'dupliquerSelection' | 'copierSelection' | 'couperSelection' | 'collerPresse' | 'combinerSelection' | 'separerSelection' | 'masquerSelection' | 'verrouillerSelection' | 'choisirMemeCouleur' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;

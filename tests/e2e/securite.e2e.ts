@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, URL_INTEGRATION } from './aide.js';
+import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, terminer, URL_INTEGRATION } from './aide.js';
 import { violationsEcriture, violationsNettoyage } from '../unit/securite/invariants.js';
 import { passer } from '../unit/securite/passage.js';
 
@@ -200,20 +200,23 @@ describe('securite : le corpus hostile entre par la page', () => {
     await ouvrirMenu(page, 'Fichier');
     await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
     await page.locator('.resultat').waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const brut = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click());
+    // « Télécharger le SVG » de la fiche : le bouton « SVG » d'hier, devenu l'action primaire (memes octets).
+    const brut = await telecharger(page, () => page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click());
     expect(violationsNettoyage(brut.toString('utf8')), nom + ' : SVG telecharge sans edition').toEqual([]);
     await rouvrir(s, brut, nom);
     if (!complet) return;
-    // Apres « Enregistrer » : l'ecriture, regeneree depuis le modele a plat, et ses trois formats.
+    // Apres « Terminer » : l'ecriture, regeneree depuis le modele a plat, et ses trois formats. Sans modification, « Terminer » ne
+    // reecrit rien (la fiche garde le fichier tel qu'il est venu ; Ctrl+S ne garde qu'un brouillon) : un changement de machine, qui ne
+    // touche pas au dessin, suffit a ce que le dessin soit rendu, reecrit et nettoye, comme le faisait Ctrl+S.
     await page.getByRole('button', { name: 'Reprendre l’édition' }).click();
     await page.locator('.editeur-cadre').waitFor();
-    await page.keyboard.press('Control+s');
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const svg = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click());
+    await page.locator('.selecteur-contexte .menu-bouton').click();
+    await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+    await terminer(page);
+    const svg = await telecharger(page, () => page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click());
     expect(violationsEcriture(svg.toString('utf8')), nom + ' : SVG enregistre').toEqual([]);
     await rouvrir(s, svg, nom);
+    await ouvrirMenu(page, 'Autres formats');
     const png = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^PNG$/ }).click());
     const dims = dimensionsPng(png);
     expect(dims, nom + ' : PNG').not.toBeNull();
@@ -312,7 +315,11 @@ describe('securite : l\'option svg de l\'embarquement', () => {
       // Un refus de l'embarquement lit le texte brut (sans le nettoyage de la page) : il peut refuser ce que la page ouvre, jamais l'inverse en danger.
       expect(['ouvre', 'refus'], l.vecteur).toContain(issue);
       if (issue === 'ouvre') {
-        await s.page.keyboard.press('Control+s');
+        // « Enregistrer » ne rend qu'un dessin qui a change (Ctrl+S ne garde qu'un brouillon) : un changement de machine, qui ne touche
+        // pas au dessin, le permet ; le SVG rendu porte alors la marque du contexte, admise par les invariants sur la racine seule.
+        await s.page.locator('.selecteur-contexte .menu-bouton').click();
+        await s.page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+        await s.page.locator('.editeur-barre .groupe.fin button.primaire').click();
         await attend(() => s.page.evaluate(() => (window as unknown as { __recu: string[] }).__recu.length)).toBe(1);
         const recu = await s.page.evaluate(() => (window as unknown as { __recu: string[] }).__recu[0] ?? '');
         expect(violationsEcriture(recu), l.fichier).toEqual([]);

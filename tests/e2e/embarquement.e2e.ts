@@ -14,7 +14,7 @@ import { attend, BUNDLE_EMBARQUE, formesVisibles, modifications, ouvrirMenu, pil
 /** Ce que la page d'hote voit de l'API : le contrat de docs/integration.md. */
 interface PoigneeEditeur { fermer(): void }
 interface OptionsOuvrir {
-  svg: string; titre?: string; nom?: string; bibliotheque?: 'a-charger'; baseAnnexes?: string; fermerApresEnregistrer?: boolean;
+  svg: string; titre?: string; nom?: string; bibliotheque?: 'a-charger'; baseAnnexes?: string; fermerApresEnregistrer?: boolean; libelleEnregistrer?: string;
   onEnregistrer: (svg: string) => void; onFermer?: () => void; onBrouillon?: (svg: string) => void;
 }
 interface ApiEditeur { version: string; ouvrir(o: OptionsOuvrir): PoigneeEditeur; estEditable(svg: unknown): boolean }
@@ -71,7 +71,7 @@ describe('embarquement : exemples/integration.html', () => {
   }
 
   /** Ouvre l'editeur directement par l'API, avec des rappels qui laissent leur trace dans `window.__trace`. */
-  async function ouvrirParApi(page: Page, options: Partial<Pick<OptionsOuvrir, 'fermerApresEnregistrer' | 'nom' | 'titre'>> = {}) {
+  async function ouvrirParApi(page: Page, options: Partial<Pick<OptionsOuvrir, 'fermerApresEnregistrer' | 'nom' | 'titre' | 'libelleEnregistrer'>> = {}) {
     await page.evaluate(([svg, opts]) => {
       const w = window as unknown as FenetreHote;
       w.__trace = [];
@@ -402,12 +402,14 @@ describe('embarquement : exemples/integration.html', () => {
     await page.keyboard.press('Delete');
     await attend(() => formesVisibles(page)).toBe(1);
 
-    await page.keyboard.press('Control+s');
-    await attend(() => trace(page)).toEqual(['enregistre']);
+    // « Enregistrer » rend le dessin (Ctrl+S, lui, ne garde qu'un brouillon : voir plus bas).
+    const enregistrer = page.locator('.editeur-barre .groupe.fin button.primaire');
+    await enregistrer.click();
+    await attend(async () => (await trace(page)).filter(t => t !== 'brouillon')).toEqual(['enregistre']);
     expect(await racines(page)).toBe(1);
     // On peut enregistrer plusieurs fois, et le SVG rendu est celui du moment.
-    await page.keyboard.press('Control+s');
-    await attend(() => trace(page)).toEqual(['enregistre', 'enregistre']);
+    await enregistrer.click();
+    await attend(async () => (await trace(page)).filter(t => t !== 'brouillon')).toEqual(['enregistre', 'enregistre']);
     expect((await page.evaluate(() => (window as unknown as FenetreHote).__dernier)).match(/<path /g)?.length).toBe(1);
 
     // Le fermer par l'editeur redemande confirmation (il ne sait pas que le dessin est garde) ; la poignee, non.
@@ -417,7 +419,45 @@ describe('embarquement : exemples/integration.html', () => {
     await page.getByRole('button', { name: 'Continuer l’édition' }).click();
     await page.evaluate(() => (window as unknown as FenetreHote).__poignee?.fermer());
     await attend(() => racines(page)).toBe(0);
-    expect(await trace(page)).toEqual(['enregistre', 'enregistre', 'ferme']);
+    expect((await trace(page)).filter(t => t !== 'brouillon')).toEqual(['enregistre', 'enregistre', 'ferme']);
+  });
+
+  it('Ctrl+S garde un brouillon par onBrouillon et le dit, sans jamais rendre le dessin ni fermer l editeur', async () => {
+    const { page } = await hote();
+    await ouvrirParApi(page);
+    await calque(page, 1).click();
+    await page.keyboard.press('Delete');
+    await attend(() => formesVisibles(page)).toBe(1);
+    await page.evaluate(() => { (window as unknown as FenetreHote).__trace = []; });
+    await page.keyboard.press('Control+s');
+    await attend(() => trace(page)).toContain('brouillon');
+    await attend(() => texteDe(page.locator('.message-etat'))).toBe('Brouillon gardé.');
+    expect(await trace(page)).not.toContain('enregistre');
+    expect(await trace(page)).not.toContain('ferme');
+    expect(await racines(page)).toBe(1);
+    // Une seconde fois : toujours ouvert, toujours rien de rendu.
+    await page.keyboard.press('Control+s');
+    expect(await racines(page)).toBe(1);
+    expect(await trace(page)).not.toContain('enregistre');
+  });
+
+  it('prend le libelle demande par l hote (libelleEnregistrer) : le bouton, la confirmation d abandon, puis rend le dessin', async () => {
+    const { page } = await hote();
+    await ouvrirParApi(page, { libelleEnregistrer: '  Mettre à jour le logo ', fermerApresEnregistrer: false });
+    const bouton = page.locator('.editeur-barre .groupe.fin button.primaire');
+    expect(await texteDe(bouton)).toBe('Mettre à jour le logo');
+    await calque(page, 1).click();
+    await page.keyboard.press('Delete');
+    await attend(() => formesVisibles(page)).toBe(1);
+    // La confirmation d'abandon propose le meme geste, qui rend le dessin puis ferme.
+    await ouvrirMenu(page, 'Fichier');
+    expect(await page.getByRole('menuitem', { name: 'Mettre à jour le logo' }).count()).toBe(1);
+    await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
+    const confirmation = page.getByRole('alertdialog', { name: 'Abandonner les modifications' });
+    await confirmation.getByRole('button', { name: 'Mettre à jour le logo' }).click();
+    await attend(() => racines(page)).toBe(0);
+    expect((await trace(page)).filter(t => t !== 'brouillon')).toEqual(['enregistre', 'ferme']);
+    expect((await page.evaluate(() => (window as unknown as FenetreHote).__dernier)).match(/<path /g)?.length).toBe(1);
   });
 
   // Un dessin sans forme visible ne s'enregistre pas (docs/integration.md) : nettoyerSvg rendrait un <svg> vide,
@@ -428,7 +468,7 @@ describe('embarquement : exemples/integration.html', () => {
     await page.keyboard.press('Control+a');
     await page.keyboard.press('Delete');
     await attend(() => formesVisibles(page)).toBe(0);
-    await page.keyboard.press('Control+s');
+    await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     // Delai court : tant que le bug est la, l'attente echoue, et il ne faut pas lui laisser dix secondes.
     await attend(() => texteDe(page.locator('.message-etat')), 2000).toBe('Le dessin n’a plus de forme visible : rien à enregistrer.');
     expect(await trace(page)).toEqual([]);

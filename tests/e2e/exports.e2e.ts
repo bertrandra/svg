@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { attend, boutonTelecharger, ouvrirExemple, ouvrirMenu, pilote, terminer } from './aide.js';
 
 describe('exports', () => {
   const navigateur = pilote();
@@ -21,10 +21,9 @@ describe('exports', () => {
     return { nom: telechargement.suggestedFilename(), octets: readFileSync(chemin) };
   }
 
-  it('telecharge le SVG propre depuis le menu Fichier', async () => {
+  it('telecharge le SVG propre d un geste, par « Télécharger le SVG » de la barre', async () => {
     const page = await editeur();
-    await ouvrirMenu(page, 'Fichier');
-    const { nom, octets } = await telecharger(page, () => page.getByRole('menuitem', { name: /Télécharger le SVG/ }).click());
+    const { nom, octets } = await telecharger(page, () => boutonTelecharger(page).click());
     expect(nom).toBe('exemple.svg');
     const svg = octets.toString('utf8');
     expect(svg).toMatch(/^<svg[\s>]/);
@@ -35,16 +34,14 @@ describe('exports', () => {
 
   it('ecrit le meme SVG deux fois de suite, a l\'octet pres', async () => {
     const page = await editeur();
-    await ouvrirMenu(page, 'Fichier');
-    const un = await telecharger(page, () => page.getByRole('menuitem', { name: /Télécharger le SVG/ }).click());
-    await ouvrirMenu(page, 'Fichier');
-    const deux = await telecharger(page, () => page.getByRole('menuitem', { name: /Télécharger le SVG/ }).click());
+    const un = await telecharger(page, () => boutonTelecharger(page).click());
+    const deux = await telecharger(page, () => boutonTelecharger(page).click());
     expect(deux.octets.equals(un.octets)).toBe(true);
   });
 
   it('exporte un PNG a la largeur choisie', async () => {
     const page = await editeur();
-    await ouvrirMenu(page, 'Fichier');
+    await ouvrirMenu(page, 'Autres formats');
     await page.locator('.menu-panneau select[aria-label="Largeur du PNG"]').selectOption('512');
     const { nom, octets } = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^PNG$/ }).click());
     expect(nom).toBe('exemple-512.png');
@@ -56,7 +53,7 @@ describe('exports', () => {
 
   it('exporte un PDF vectoriel et un SVG de decoupe', async () => {
     const page = await editeur();
-    await ouvrirMenu(page, 'Fichier');
+    await ouvrirMenu(page, 'Autres formats');
     const pdf = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: 'PDF vectoriel' }).click());
     expect(pdf.nom).toBe('exemple.pdf');
     expect(pdf.octets.subarray(0, 5).toString('latin1')).toBe('%PDF-');
@@ -70,12 +67,10 @@ describe('exports', () => {
     expect(svg).toMatch(/fill="none"/);
   });
 
-  it('enregistre, puis exporte depuis l\'accueil', async () => {
+  it('termine, puis telecharge depuis l\'accueil', async () => {
     const page = await editeur();
-    await page.keyboard.press('Control+s');
-    await page.locator('.resultat').waitFor();
-    await page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }).click();
-    const { nom, octets } = await telecharger(page, () => page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click());
+    await terminer(page);
+    const { nom, octets } = await telecharger(page, () => page.locator('.resultat').getByRole('button', { name: 'Télécharger le SVG' }).click());
     expect(nom).toBe('exemple.svg');
     expect(octets.toString('utf8')).toMatch(/^<svg[\s>]/);
     await attend(() => page.locator('.resultat .aide').first().innerText()).toMatch(/4 formes/);

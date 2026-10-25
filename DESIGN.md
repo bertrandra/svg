@@ -141,6 +141,23 @@ components:
     textColor: "{colors.encre-douce}"
     typography: "{typography.aide}"
     padding: "4px 0 8px"
+  ligne-format:
+    backgroundColor: "transparent"
+    textColor: "{colors.encre-douce}"
+    typography: "{typography.aide}"
+    padding: "0"
+  confirmation-export:
+    backgroundColor: "{colors.alerte-fond}"
+    textColor: "{colors.alerte}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "12px"
+  carte-design-space:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "12px 16px"
 ---
 
 # Design System: Éditeur SVG
@@ -208,7 +225,7 @@ message. Une seule action pleine par panneau ; si deux boutons cyan se voient c�
 Seule l'action de l'instant est pleine : un menu ou une confirmation ouverts portent la seule qu'on voie (dans une
 confirmation, l'action sûre), et les autres se posent en secondaires tant qu'ils restent ouverts (classes `menu-ouvert`
 et `confirmation-ouverte` du cadre, sans rien changer à ce que font les boutons) ; en contexte de production, l'export
-du panneau est l'action du moment, « Enregistrer » de la barre se pose en secondaire. Un test de navigateur compte les
+du panneau est l'action du moment, le geste de fin de la barre (« Terminer » ou « Enregistrer ») se pose en secondaire. Un test de navigateur compte les
 actions pleines visibles (`tests/e2e/finition.e2e.ts`). Le cyan ne marque pas non plus un code ou un état « aucun » qui
 n'est pas une action : un code de couleur s'écrit à l'encre.
 
@@ -266,7 +283,8 @@ taille se décide dans le registre, avec sa raison.
 ## Layout
 
 L'éditeur est une grille d'application plein écran : une barre en haut (outils, couleurs, historique, zoom,
-menus Vue, Édition, Aide, Fichier et contexte de production, « Enregistrer »), les calques à gauche, la toile au centre
+menus Vue, Édition, Aide, la machine, puis le groupe du fichier : « Télécharger le SVG » et son chevron « Autres formats »,
+le menu Fichier, le geste de fin), les calques à gauche, la toile au centre
 sur la table, l'inspecteur à droite (sections repliables), une barre d'état en bas qui dit l'aide du moment et le
 nombre de modifications. L'accueil est une colonne centrée de trois voies côte à côte (Ouvrir, Convertir,
 Bibliothèque), une seule visible à la fois.
@@ -276,10 +294,13 @@ Le rythme est serré, sur une base de 4 avec un pas de 6 : 2, 4, 6, 8, 12, 16, 2
 test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la barre, 6 px dans les listes,
 12 px entre cartes, 16 px à l'intérieur d'une carte.
 
+- **Au-dessous de 1 440 px** : les groupes et les menus de la barre se resserrent ; vers 1 280 px, le groupe du fichier passe
+  à la ligne, entier et rangé à droite, plutôt que de couper un geste de son menu.
 - **Au-dessous de 900 px ou au doigt** : les panneaux deviennent des tiroirs sur voile, les cibles passent à
   40 px (44 px dans les menus).
 - **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Aide en tête, puis Édition, Fichier, Vue avec
-  le zoom en dernier, puis le contexte : l'ordre de l'usage) ; « Enregistrer » passe dans la barre d'état ; les voies de
+  le zoom en dernier, puis la machine : l'ordre de l'usage ; la rubrique Fichier commence par « Télécharger le SVG » et finit
+  par « Autres formats », replié) ; le geste de fin passe dans la barre d'état ; les voies de
   l'accueil s'empilent ; un tiroir ouvert masque le dessin qu'il recouvre (le voile reçoit les touchers).
 - **Au doigt jusqu'à 1 200 px, et sous 640 px** : la rangée de la sélection se resserre : le compte, trois gestes
   fréquents (dupliquer, miroir horizontal, tourner à droite), son menu « Plus » rubrique par rubrique (transformer,
@@ -353,7 +374,7 @@ Retenus au repos, francs à l'interaction.
   et voile cyan à 7 %.
 - **Sections de l'inspecteur:** repliables (`details`), contenu dense, mémoire d'ouverture.
 - **Messages:** coins de 6 px, 10 × 12 px. Un avertissement ou un échec : fond et texte d'alerte ou d'échec,
-  `role="alert"`. Un succès ou une information (« Dessin enregistré… », le résultat d'un export) : **message neutre**,
+  `role="alert"`. Un succès ou une information (« Dessin prêt… », le résultat d'un export) : **message neutre**,
   l'encre sur une feuille de panneau, un filet, `role="status"` (`commun/Message.tsx`) ; l'ambre n'annonce plus un
   succès.
 - **Calques:** une ligne nomme la forme par son genre (« Cercle 2 », « Triangle 3 », « Tracé courbe 1 ») tant que le
@@ -390,7 +411,8 @@ Une feuille de panneau qui flotte : filet, coins de 8 px, ombre de menu flottant
 moins 16 px sur un téléphone). Dans l'ordre : la progression (« Étape 2 sur 5 », Aide, encre douce), le titre (Title),
 une ou deux phrases (Body), puis « Passer la visite » (discret, à gauche), « Précédent » et « Suivant » (secondaires,
 à droite). **Aucune action pleine** : l'action de l'étape est le vrai geste dans l'éditeur, pas un bouton de la bulle.
-La fin remplace la ligne par trois suites (secondaires, pleine largeur) et « Terminer ».
+La fin remplace la ligne par trois suites (secondaires, pleine largeur) et « Terminer la visite » (la barre de la page a son
+propre « Terminer », qui ferme l'éditeur : deux noms pour deux gestes).
 - **Où :** toujours sur la toile, jamais sur la barre, la rangée de la sélection ou un panneau ; en haut sous une cible de
   la barre, en bas pour la toile ou la barre d'état ; la vue se recadre pour que le dessin tienne à côté. Une flèche
   (un carré tourné, même feuille, même filet) pointe la cible quand elle est au-dessus ou au-dessous.
@@ -410,10 +432,33 @@ Le texte dit le genre : la première fois (à quoi sert la zone), vidé (le reto
 changer). Sur la toile vide, la phrase est une étiquette de feuille (filet, coins de 8 px) centrée en haut, que les clics
 traversent.
 
+### Récupérer le fichier (la fin du parcours)
+- **Le geste du moment, seul et nommé** : « Télécharger le SVG » (secondaire, icône de téléchargement) ouvre le groupe du
+  fichier ; en contexte Cricut il devient « Exporter pour Cricut » (ou « Exporter pour Print Then Cut »). Un chevron accolé,
+  nommé « Autres formats », ouvre la liste des formats, comme celui de l'outil des formes.
+- **Les autres formats** : une ligne par format, en deux colonnes alignées : le bouton (et son réglage : largeur du PNG,
+  couleur de découpe), puis à quoi il sert, en Aide à l'encre douce (« PNG : une image pour un site ou un message »), qui est
+  aussi sa description pour un lecteur d'écran. Puis « Options d'export », replié. Aucune action pleine : ce sont des choix.
+- **Le geste de fin** porte le libellé que la page ou l'hôte donne : « Terminer » dans la page (une coche ; il ramène à la
+  fiche, même sans modification), « Enregistrer » par défaut (une disquette ; grisé tant que rien n'a changé). `Ctrl+S` garde
+  un brouillon, il ne ferme jamais.
+- **La fiche du dessin**, après « Terminer » : « Télécharger le SVG » est la seule action pleine et prend le focus,
+  « Reprendre l'édition » secondaire, « Autres formats » en menu, « Fermer » discret ; au-dessus, un message neutre.
+
 ### Panneau « Prêt pour Cricut » (signature)
 Le carnet d'atelier le plus littéral : un profil en une ligne d'aide, la taille finale et les couches comme des
-mesures, puis les constats classés Bloquant (rouge d'échec), À corriger (ambre d'alerte), Conseil (encre douce),
-chacun avec ses boutons secondaires de correction ; une seule action primaire, « Exporter pour Cricut ».
+mesures (en millimètres par défaut, le pouce au choix et retenu), puis les constats classés Bloquant (rouge d'échec),
+À corriger (ambre d'alerte), Conseil (encre douce), chacun avec ses boutons secondaires de correction ; une seule action
+primaire, « Exporter pour Cricut », qui dit « Exporter quand même (2 points à corriger) » tant qu'un point reste.
+- **La confirmation** : un message ambre dans le panneau (pas une fenêtre), qui liste les points ; « Revoir », l'action sûre,
+  est la seule pleine et prend le focus, « Exporter quand même » secondaire. Un conseil ne demande rien.
+- **La carte « Dans Design Space »**, après l'export : une note dans le flux, filet et voile cyan comme un repère, une liste
+  numérotée d'étapes ; ce qui n'est pas vérifié sur une machine reste marqué « (à vérifier) » en italique ; « Fermer ces
+  étapes » (discret).
+- **Le sélecteur de machine** de la barre dit ce qu'il fait, avec une icône de machine : « Machine : Générique », « Cricut
+  Maker · 12 × 12 » ; son menu commence par la machine ; les matériaux annoncés tiennent sur une ligne inactive (« Bientôt :
+  vinyle, thermocollant, feutre »). Au choix d'une Cricut, et par « Ajuster » (0), la vue cadre le tapis entier ;
+  « Ajuster au dessin » (D) garde l'ancien cadrage.
 
 ## Surfaces du navigateur
 

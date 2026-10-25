@@ -1,10 +1,11 @@
 // La barre de l'editeur sur un telephone (390 px) : rien d'utile n'est hors ecran ni derriere un defilement horizontal. Les outils,
-// les couleurs, l'historique et le niveau de zoom sont dans la barre ; Vue, Edition, Fichier (avec ses exports) et le zoom
-// sont dans « Plus » ; Enregistrer est dans la barre d'etat, et dit pourquoi il est grise.
+// les couleurs, l'historique et le niveau de zoom sont dans la barre ; Vue, Edition, Fichier (« Télécharger le SVG » en tete, les
+// autres formats replies) et le zoom sont dans « Plus » ; le geste de fin est dans la barre d'etat (« Terminer » dans la page ;
+// « Enregistrer » chez un hote, qui dit pourquoi il est grise).
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, modifications, ouvrirExemple, pilote } from './aide.js';
+import { aLeFocus, attend, modifications, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
 
 describe('barre de l editeur sur un telephone', () => {
   const navigateur = pilote();
@@ -15,7 +16,7 @@ describe('barre de l editeur sur un telephone', () => {
     return page;
   }
   const plus = (page: Page) => page.getByRole('button', { name: /^Plus d’actions/ });
-  const enregistrer = (page: Page) => page.locator('.editeur-etat').getByRole('button', { name: 'Enregistrer' });
+  const enregistrer = (page: Page, nom = 'Terminer') => page.locator('.editeur-etat').getByRole('button', { name: nom });
 
   for (const largeur of [320, 360, 390, 414, 600]) {
     it(`ne defile pas a ${largeur} px : tout ce que la barre porte est dans l'ecran`, async () => {
@@ -29,13 +30,13 @@ describe('barre de l editeur sur un telephone', () => {
       });
       expect(mesure).toMatchObject({ defile: 0, page: 0, hors: 0 });
       expect(mesure.nombre).toBeGreaterThan(8);
-      // Enregistrer aussi est dans l'ecran, dans la barre d'etat.
+      // Le geste de fin aussi est dans l'ecran, dans la barre d'etat.
       const r = await enregistrer(page).boundingBox();
       expect(r && r.x >= 0 && r.x + r.width <= largeur).toBe(true);
     });
   }
 
-  it('range Vue, Fichier (avec ses exports) et Edition dans « Plus », au zoom pres', async () => {
+  it('range Vue, Fichier (le SVG en tete, les autres formats replies) et Edition dans « Plus », au zoom pres', async () => {
     const page = await telephone();
     expect(await page.locator('.editeur-barre .menu-bouton[aria-haspopup=menu]').evaluateAll(l => l.map(e => e.getAttribute('aria-label')))).toEqual(
       ['Choisir une forme', 'Plus d’actions : vue, édition, fichier']
@@ -43,9 +44,12 @@ describe('barre de l editeur sur un telephone', () => {
     await plus(page).tap();
     for (const nom of ['Vue', 'Fichier', 'Édition']) await page.getByRole('menu', { name: nom }).waitFor();
     await page.getByRole('menuitem', { name: /^Dézoomer/ }).waitFor();
-    await page.getByRole('menuitem', { name: /^Télécharger le SVG/ }).waitFor();
+    // Recuperer le fichier ouvre la rubrique Fichier : un geste, le premier.
+    expect(await page.getByRole('menu', { name: 'Fichier' }).getByRole('menuitem').first().innerText()).toContain('Télécharger le SVG');
     await page.getByRole('menuitem', { name: /^Annuler/ }).waitFor();
-    // Le panneau d'export du menu Fichier est la, sous ses elements.
+    // Les autres formats sont la, sous les elements de Fichier, replies : ils ne s'ouvrent que si on les demande.
+    expect(await page.locator('.menu-panneau .contenu-export').isVisible()).toBe(false);
+    await page.locator('.menu-panneau details.autres-formats-repli > summary').tap();
     await page.locator('.menu-panneau .contenu-export').waitFor();
     const avant = await page.locator('.editeur-barre .zoom').innerText();
     await page.getByRole('menuitem', { name: /^Dézoomer/ }).tap();
@@ -68,9 +72,26 @@ describe('barre de l editeur sur un telephone', () => {
     expect(await page.locator('.editeur-cadre').count()).toBe(1);
   });
 
-  it('dit pourquoi Enregistrer est grise, reste dans l\'ordre de Tab, puis s\'active a la premiere modification', async () => {
+  it('ferme d un appui par « Terminer » dans la page, meme sans modification, sans rien reecrire', async () => {
     const page = await telephone();
     const bouton = enregistrer(page);
+    expect(await bouton.getAttribute('aria-disabled')).toBeNull();
+    await bouton.tap();
+    await page.locator('.resultat').waitFor();
+    expect(await page.locator('.editeur-cadre').count()).toBe(0);
+    // Rien n'a change : pas de message « Dessin prêt », la fiche montre le fichier tel qu'il est venu.
+    expect(await page.locator('.accueil .message.neutre').count()).toBe(0);
+  });
+
+  it('chez un hote, dit pourquoi « Enregistrer » est grise, reste dans l\'ordre de Tab, puis s\'active a la premiere modification', async () => {
+    const { page } = await navigateur.ouvrir({ largeur: 390, hauteur: 800, tactile: true, naviguer: false });
+    await page.goto(URL_INTEGRATION);
+    await page.evaluate(() => {
+      const w = window as unknown as { EditeurSvg: { ouvrir(o: Record<string, unknown>): unknown } };
+      w.EditeurSvg.ouvrir({ svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 10H45V45H10Z" fill="#c81e28"/><path d="M55 55H90V90H55Z" fill="#1428a0"/></svg>', onEnregistrer: () => undefined });
+    });
+    await page.locator('.editeur-svg .editeur-cadre').waitFor();
+    const bouton = enregistrer(page, 'Enregistrer');
     expect(await bouton.getAttribute('aria-disabled')).toBe('true');
     expect(await bouton.isDisabled()).toBe(true);
     expect(await bouton.getAttribute('title')).toBe('Aucune modification à enregistrer');

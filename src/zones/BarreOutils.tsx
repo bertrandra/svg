@@ -16,6 +16,7 @@ import { MenuAide } from './AideEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { useTelephone } from './Vue.js';
 import { SelecteurContexte } from './Production.js';
+import { RecupererBarre } from './Recuperer.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
@@ -109,9 +110,9 @@ function GroupeHistorique() {
  * ce qu'il fait apres ce qu'il montre (WCAG 2.5.3 : le libelle visible ouvre le nom), « 279 % » seul ne le disait pas.
  */
 const BoutonNiveauZoom = memo(function BoutonNiveauZoom() {
-  const { vues } = useInterface();
+  const { vues } = useInterface(), ac = useActions();
   const niveau = Math.round(vues.vue.zoom * 100) + ' %';
-  return <button type="button" className="zoom" title={'Zoom à ' + niveau + ' : ajuster à l’écran (touche zéro)'} aria-label={niveau + ' : ajuster à l’écran'} onClick={vues.ajuster}>{niveau}</button>;
+  return <button type="button" className="zoom" title={'Zoom à ' + niveau + ' : ajuster à l’écran (touche zéro)'} aria-label={niveau + ' : ajuster à l’écran'} onClick={ac.ajuster}>{niveau}</button>;
 });
 
 /** Le zoom : ne lit que la vue. */
@@ -126,12 +127,18 @@ const GroupeZoom = memo(function GroupeZoom() {
   );
 });
 
-/** Enregistrer, grise tant que rien n'a change : il en dit la raison (BoutonRaison) et reste dans l'ordre de Tab. */
+/**
+ * Le geste de fin, sous le libelle que la page ou l'hote a donne : « Terminer » dans la page (il ramene a la fiche du dessin, meme
+ * sans modification), « Enregistrer » par defaut (il rend le dessin ; grise tant que rien n'a change, il en dit la raison et reste
+ * dans l'ordre de Tab). Plus de Ctrl+S ici : Ctrl+S garde un brouillon, il ne ferme jamais.
+ */
 export function BoutonEnregistrer() {
-  const { h } = useDessin(), ac = useActions(), { productionModifiee } = useInterface(), signaler = useSignalVisite();
+  const { h } = useDessin(), ac = useActions(), { productionModifiee, fin } = useInterface(), signaler = useSignalVisite();
+  const change = h.passe.length > 0 || productionModifiee;
   return (
-    <BoutonRaison className="primaire texte" aide="Enregistrer (Ctrl+S)" raison={h.passe.length || productionModifiee ? null : 'Aucune modification à enregistrer'} onClick={() => { signaler('recupere'); ac.enregistrerTout(); }}>
-      <Icone nom="enregistrer" /> Enregistrer
+    <BoutonRaison className="primaire texte" aide={fin.fermerSansModification ? 'Revenir à la page, le dessin prêt à télécharger' : fin.libelle}
+      raison={change || fin.fermerSansModification ? null : 'Aucune modification à enregistrer'} onClick={() => { if (change) signaler('recupere'); ac.terminer(); }}>
+      <Icone nom={fin.fermerSansModification ? 'coche' : 'enregistrer'} /> {fin.libelle}
     </BoutonRaison>
   );
 }
@@ -168,8 +175,10 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       </div>
       <SelecteurContexte />
       <span className="espace" />
+      {/* Le fichier, d'un seul tenant : le recuperer, le menu Fichier, et le geste de fin. Sous 1 440 px, il passe a la ligne entier, a droite. */}
       <div className="groupe fin" role="group" aria-label="Fichier">
-        <MenuFichier nom={nom} />
+        <RecupererBarre nom={nom} />
+        <MenuFichier />
         <BoutonEnregistrer />
       </div>
     </header>

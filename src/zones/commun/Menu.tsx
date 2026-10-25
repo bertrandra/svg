@@ -3,7 +3,7 @@
 // position fixe sous le bouton : les barres d'outils defilent sur mobile et couperaient un panneau
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as KE, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent as KE, type ReactNode } from 'react';
 import { dernier, premier, suivant } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
 
@@ -145,7 +145,13 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     else if (e.key === 'Home') { e.preventDefault(); aller(premier(d)); }
     else if (e.key === 'End') { e.preventDefault(); aller(dernier(d)); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(true); }
-    else if (e.key === 'Tab') fermer(false);
+    // Tab sort d'un menu d'elements ; dans un contenu libre (les autres formats, leurs options), il va d'un controle a l'autre, et le
+    // menu ne se ferme que quand le focus le quitte (ci-dessous). Avant, Tab fermait tout : ce contenu ne s'atteignait pas au clavier.
+    else if (e.key === 'Tab' && (e.target as HTMLElement).closest('[role="menu"]')) fermer(false);
+  };
+  const quitte = (e: FocusEvent<HTMLDivElement>) => {
+    const vers = e.relatedTarget as Node | null;
+    if (vers && !panneau.current?.contains(vers) && !bouton.current?.contains(vers)) fermer(false);
   };
   const clavierBouton = (e: KE<HTMLButtonElement>) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); ouvrir('premier'); }
@@ -165,7 +171,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
-        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau}>
+        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau} onBlur={quitte}>
           {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
           {sections ? sections.map(sc => (
             <div key={sc.id} className="menu-rubrique">

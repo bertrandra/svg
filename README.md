@@ -21,7 +21,8 @@ s'embarque aussi comme composant React dans un autre produit.
     proportions) ; une rangée contextuelle avec alignements, miroirs, rotations, empilement,
     combiner, séparer, dupliquer, masquer, verrouiller, supprimer ;
   - copier, couper, coller ; les couleurs courantes dans la barre ; une grille magnétique ; le zoom
-    sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+S, Ctrl+C/X/V, Ctrl+G, G, Z…) ;
+    sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+C/X/V, Ctrl+G, G, Z…) ; Ctrl+S garde un
+    brouillon sans jamais fermer l'éditeur ;
   - outils de tracé : rectangle, ellipse, étoile, ligne, plume ; texte en formes (neuf fontes libres
     ou la vôtre), une forme par lettre ;
   - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
@@ -41,14 +42,16 @@ s'embarque aussi comme composant React dans un autre produit.
     scène prête par événement ;
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
-- **Récupérer le résultat** : SVG, SVG de découpe (contours seuls), PNG à la largeur voulue, PDF
-  vectoriel, copie du code. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
+- **Récupérer le résultat** : « Télécharger le SVG », d'un geste, dans la barre de l'éditeur ; « Autres formats » à côté
+  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. « Terminer » ramène à la
+  fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur (un test en navigateur, réseau coupé, le vérifie).
-- **Préparer pour une Cricut** : un contexte de production se choisit dans la barre (Joy, Explore, Maker ; tapis ;
-  papier cartonné ; découpe ou Print Then Cut ; pouces ou millimètres). Le tapis et sa zone utile s’affichent sur la toile,
-  le panneau « Prêt pour Cricut » juge le dessin en continu (traits, transparences, dépassement, tracés ouverts, nuances
-  proches, parties trop fines…) et propose pour chaque constat une correction annulable ; « Exporter pour Cricut » écrit un
-  SVG à taille physique, ou une archive Print Then Cut. Les valeurs encore à vérifier sur une machine sont dans
+- **Préparer pour une Cricut** : la machine se choisit dans la barre (« Machine : Générique », puis Joy, Explore, Maker ;
+  tapis ; papier cartonné ; découpe ou Print Then Cut ; millimètres, ou pouces, retenus). Le tapis entier s’affiche et se
+  cadre sur la toile (« Ajuster », touche 0 ; « Ajuster au dessin », D), le panneau « Prêt pour Cricut » juge le dessin en
+  continu (traits, transparences, dépassement, tracés ouverts, nuances proches, parties trop fines…) et propose pour chaque
+  constat une correction annulable ; « Exporter pour Cricut » écrit un SVG à taille physique, ou une archive Print Then Cut,
+  demande confirmation tant qu’un point reste « à corriger », puis dit les étapes dans Design Space. Les valeurs encore à vérifier sur une machine sont dans
   [`docs/cricut/protocole.md`](docs/cricut/protocole.md) (ADR-0013).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.

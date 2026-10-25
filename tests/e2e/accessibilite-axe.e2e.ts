@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -328,7 +328,7 @@ describe('axe-core : accessibilite automatique', () => {
         exigerSansViolationGrave(await auditer(page, `éditeur, 390 px tactile, rangée de sélection et son menu, ${schema}`));
       });
 
-      it(`avec « aucun » remplissage choisi, en contexte Cricut, « Enregistrer » posé en secondaire (${schema})`, async () => {
+      it(`avec « aucun » remplissage choisi, en contexte Cricut, « Terminer » posé en secondaire (${schema})`, async () => {
         // Sans menu ouvert : un menu flottant recouvre l'inspecteur, dont axe ne saurait plus lire les fonds (le menu Fichier ouvert est
         // audite ailleurs ; ici, ce qui compte est le contraste de l'action retiree et de « aucun » choisi). Un grand dessin : sur le
         // petit exemple, le gabarit du tapis deborde de la toile en geometrie, et axe le croit par-dessus la barre d'etat (deja vrai avant).
@@ -337,18 +337,51 @@ describe('axe-core : accessibilite automatique', () => {
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         await page.locator('.pastille-style button.aucun').first().click();
         await page.locator('.selecteur-contexte .menu-bouton').click();
-        await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+        await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
         await page.locator('.panneau-cricut .constat, .panneau-cricut .pret').first().waitFor();
-        exigerSansViolationGrave(await auditer(page, `éditeur, aucun remplissage, Cricut, Enregistrer en secondaire, ${schema}`));
+        exigerSansViolationGrave(await auditer(page, `éditeur, aucun remplissage, Cricut, Terminer en secondaire, ${schema}`));
       });
 
-      it(`sur l accueil après « Enregistrer », avec le message neutre (${schema})`, async () => {
+      it(`sur l accueil après « Terminer », avec le message neutre et la fiche (${schema})`, async () => {
         const page = await editeur({ schema });
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         await page.keyboard.press('Delete');
-        await page.keyboard.press('Control+s');
+        await page.locator('.editeur-barre .groupe.fin button.primaire').click();
         await page.locator('main.accueil > p.message.neutre[role="status"]').waitFor();
         exigerSansViolationGrave(await auditer(page, `accueil, message neutre après enregistrement, ${schema}`));
+        // Le menu « Autres formats » de la fiche est le meme contenu que celui de l'editeur, audite plus bas. Ouvert sur l'accueil, son
+        // panneau fixe chevauche les voies de la page, et axe ne sait plus lire le fond de chaque ligne (« partially overlaps ») : un doute
+        // de mesure, pas de contraste, qu'on ne contourne pas en l'admettant.
+      });
+
+      it(`avec « Autres formats » ouvert dans l éditeur (${schema})`, async () => {
+        const page = await editeur({ schema });
+        await ouvrirMenu(page, 'Autres formats');
+        await page.locator('.menu-panneau .contenu-export').waitFor();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Autres formats ouvert, ${schema}`));
+      });
+
+      it(`en contexte Cricut, la confirmation d un export à corriger puis la carte « Dans Design Space » (${schema})`, async () => {
+        // Un grand dessin, comme plus haut ; la fenetre prend la hauteur de l'inspecteur, pour qu'axe juge chaque texte entier et non une
+        // position de defilement (un texte a demi cache est un doute pour lui).
+        const page = await accueil({ schema });
+        await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 700"><path d="M96 96H288V288H96Z" fill="#c81e28"/><path d="M384 96L576 96L480 288" fill="#1428a0"/></svg>');
+        await page.locator('.selecteur-contexte .menu-bouton').click();
+        await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
+        const exporter = page.locator('.panneau-cricut .export-cricut button.primaire');
+        await attend(() => exporter.innerText()).toMatch(/^Exporter quand même/);
+        await exporter.click();
+        await page.locator('.panneau-cricut .confirmation-export').waitFor();
+        const grandir = async () => {
+          const h = await page.evaluate(() => { const i = document.querySelector('.editeur-inspecteur'); return i ? Math.ceil(i.scrollHeight - i.clientHeight + innerHeight) : innerHeight; });
+          await page.setViewportSize({ width: 1400, height: Math.min(4000, Math.max(900, h + 40)) });
+        };
+        await grandir();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Cricut, confirmation d’export, ${schema}`));
+        await Promise.all([page.waitForEvent('download'), page.locator('.panneau-cricut .confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click()]);
+        await page.locator('.panneau-cricut .carte-design-space').waitFor();
+        await grandir();
+        exigerSansViolationGrave(await auditer(page, `éditeur, Cricut, carte Dans Design Space, ${schema}`));
       });
     }
 
@@ -404,8 +437,7 @@ describe('axe-core : accessibilite automatique', () => {
       await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
       await etape(4);
       exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 4'));
-      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
-      await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: 'Télécharger le SVG' }).click()]);
+      await Promise.all([page.waitForEvent('download'), page.locator('.editeur-barre .recuperer-principal').click()]);
       await etape(5);
       exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 5'));
     });
@@ -443,7 +475,7 @@ describe('axe-core : accessibilite automatique', () => {
     it('sur un téléphone de 390 px, le repère du contexte Cricut dans le tiroir de l’inspecteur', async () => {
       const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
       await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
       await cricut.scrollIntoViewIfNeeded();
       await cricut.tap();
       await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
