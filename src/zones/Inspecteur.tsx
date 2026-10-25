@@ -11,6 +11,8 @@ import { arrondi, estHex, genreAffiche } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTactile } from './Vue.js';
 import { selonSaisie } from '../util/texte.js';
+import { useReperes } from './contexteGuide.js';
+import { Repere } from './Repere.js';
 import type { Teinte } from './typesEditeur.js';
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
@@ -27,6 +29,7 @@ export function Inspecteur() {
   return (
     <>
       <h3>{sel.length > 1 ? sel.length + ' formes' : genreAffiche(premiere) + ' ' + premiere.id.slice(1)}</h3>
+      <ReperesSelection points={!!points} />
       <Section titre="Apparence" ouverte>
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
@@ -58,9 +61,23 @@ export function Inspecteur() {
         <OutilsTrace />
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
-      <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour éditer ses points. ' : '') + 'Aligner, empiler, booléens, miroirs : la barre au-dessus de la toile.', doigt)}</p>
+      <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour modifier son contour point par point. ' : '') + 'Aligner, empiler, assembler des formes (les unir, découper l’une dans l’autre), miroirs : la rangée au-dessus de la toile.', doigt)}</p>
     </>
   );
+}
+
+/**
+ * Le repere du premier assemblage de formes (ADR-0019) : apres un booleen, il n'y a plus qu'une forme, a la couleur de celle du
+ * dessous. Celui des points vit dans la section du point (PanneauPoint).
+ */
+function ReperesSelection({ points }: { points: boolean }) {
+  const { rencontres } = useReperes();
+  if (points) return null;
+  return rencontres.has('booleen') ? (
+    <Repere id="booleen" titre="Les formes n’en font plus qu’une">
+      Le résultat est une seule forme, à la couleur de celle du dessous. Annuler (Ctrl+Z) rend les formes séparées.
+    </Repere>
+  ) : null;
 }
 
 /** Un curseur d'opacite, de 0 a 100 %. */
@@ -107,6 +124,10 @@ function PanneauPoint({ forme }: { forme: Forme }) {
   const p = ui.point, c = p !== null ? forme.d[p] : undefined, suivante = p !== null ? forme.d[p + 1] : undefined;
   return (
     <Section titre={'Point' + (c && p !== null ? ' ' + (p + 1) + ' sur ' + forme.d.filter(x => x.c !== 'Z').length : '')} ouverte>
+      {/* Le repere des points vit ici, avec les reglages du point : il ne pousse pas le reste de l'inspecteur. */}
+      <Repere id="points" titre="Modifier le contour point par point">
+        Les petits carrés sont les points du contour : glissez-en un pour changer la forme. Un point de courbe a des poignées rondes, qui règlent l’arrondi. L’outil sélection (V) rend la forme entière.
+      </Repere>
       {c && p !== null ? (
         <>
           <div className="boutons">

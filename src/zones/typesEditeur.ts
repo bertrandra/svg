@@ -146,7 +146,8 @@ export interface ActionsEditeur {
   /** Insere une forme au centre ; `origine` (`game-icons:<id>`) la credite : elle fera ecrire la mention CC BY 3.0 (engine/edition/provenance.ts). */
   insererForme: (svgForme: string, origine?: string) => void;
   insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number; origine?: string }[]) => void;
-  booleen: (op: Booleen) => void;
+  /** Unit, soustrait, croise ou exclut les formes choisies ; vrai quand le resultat a remplace les formes. */
+  booleen: (op: Booleen) => boolean;
   transformerNumerique: (t: { rotation?: number; inclinaisonX?: number; inclinaisonY?: number; echelle?: number }) => void;
   /** Le contour des formes choisies devient une forme pleine (couleur du trait en fond). */
   contourEnForme: () => void;

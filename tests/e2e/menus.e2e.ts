@@ -13,12 +13,14 @@ describe('menus de la barre', () => {
     return session.page;
   }
 
-  it('annonce ses cinq menus comme des menus, dont le contexte de production (ADR-0013)', async () => {
+  // Six menus depuis l'ADR-0019 : « Aide » (visite guidee, raccourcis) a rejoint Vue et Edition, pour qu'un debutant trouve
+  // l'aide par son nom en haut de l'editeur. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
+  it('annonce ses six menus comme des menus, dont le contexte de production (ADR-0013) et l aide (ADR-0019)', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Générique', 'Fichier']);
+    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Générique', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {

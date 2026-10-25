@@ -135,5 +135,6 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--couche-tiroir` | `15` | Les panneaux en tiroir sur tablette et téléphone |
 | `--couche-saut` | `40` | Le lien d’évitement vers la toile |
 | `--couche-editeur` | `1000` | L’éditeur en plein écran au-dessus de la page |
+| `--couche-visite` | `1050` | La bulle de la visite guidée et son repère : au-dessus de l’éditeur et de ses tiroirs, sous les menus |
 | `--couche-menu` | `1100` | Les menus déroulants, au-dessus de l’éditeur |
 | `--couche-dialogue` | `1200` | Le voile et la boîte « À propos et crédits » |

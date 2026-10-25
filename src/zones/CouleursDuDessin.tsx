@@ -10,6 +10,7 @@ import { memo, useRef, type ReactElement } from 'react';
 import { lireCouleursDuDessin, type CouleurDuDessin, type LectureCouleursDuDessin } from '../engine/editionSvg.js';
 import { segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { useDessin } from './contexteEditeur.js';
 import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
@@ -32,7 +33,10 @@ export function CouleursDuDessin() {
   const { actions, suivi } = useActionsCouleursDessin();
   return (
     <Section titre="Couleurs du dessin" ouverte note={courante.couleurs.length}>
-      <ListeCouleursDessin couleurs={courante.couleurs} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
+      {courante.couleurs.length ? <ListeCouleursDessin couleurs={courante.couleurs} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
+        : mo.dessin.formes.length
+          ? <EtatVide genre="aucun-resultat" titre="Aucune couleur à changer.">Les formes n’ont ni remplissage ni contour : donnez-leur une couleur dans l’inspecteur, elle apparaîtra ici.</EtatVide>
+          : <EtatVide genre="premiere-fois" icone="palette" titre="Aucune couleur pour l’instant.">Chaque couleur du dessin aura sa ligne ici, pour la changer partout d’un coup.</EtatVide>}
     </Section>
   );
 }

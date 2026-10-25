@@ -12,6 +12,7 @@ import { proposer, texteOctets } from '../io/fichiers.js';
 import { useStockage } from './contexteStockage.js';
 import { Icone } from './icones.js';
 import { PastillesEvenements } from './PastillesEvenements.js';
+import { insecables } from '../util/texte.js';
 
 // Les corrections ne se gardent que si la page donne un stockage ; sans lui, elles vivent le temps de la page.
 const CLE_CORRECTIONS = 'svg.corrections';
@@ -52,8 +53,9 @@ function libelleSuggestion(s: Suggestion): string {
 function AucunResultat({ texte, evenement, propositions, appliquer, effacer }: { texte: string; evenement: Evenement | undefined; propositions: readonly Suggestion[]; appliquer: (s: Suggestion) => void; effacer: () => void }) {
   const ou = evenement ? ' dans l’événement ' + evenement.nom : '';
   return (
-    <div className="aucun-resultat">
-      <p className="aucun-resultat-titre">{texte.trim() ? 'Aucune forme ne correspond à « ' + texte.trim() + ' »' + ou + '.' : 'Aucune forme' + ou + '.'}</p>
+    // Un etat vide « aucun resultat » (ADR-0019) : ce qui ne repond pas, ce qui repondra, et le geste qui efface.
+    <div className="aucun-resultat etat-vide" data-vide="aucun-resultat">
+      <p className="aucun-resultat-titre etat-vide-titre">{insecables(texte.trim() ? 'Aucune forme ne correspond à « ' + texte.trim() + ' »' + ou + '.' : 'Aucune forme' + ou + '.')}</p>
       {propositions.length ? (
         <ul className="suggestions-recherche" aria-label="Suggestions">
           {propositions.map(s => <li key={s.type + (s.type === 'evenement' ? s.id : s.type === 'texte' ? s.texte : '')}><button type="button" className="discret" onClick={() => appliquer(s)}>{libelleSuggestion(s)}</button></li>)}

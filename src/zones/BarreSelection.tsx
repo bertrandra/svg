@@ -6,6 +6,7 @@ import { memo } from 'react';
 import { aligner, retourner, sousChemins, tourner, type Alignement, type Ordre } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
 import { useActions, useDessin } from './contexteEditeur.js';
+import { useReperes } from './contexteGuide.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import { empiler } from './empilement.js';
@@ -29,7 +30,7 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 
 /** Les gestes de la rangee, une fois pour ses deux mises en page : chacun a son nom, son icone et ce qu'il fait. */
 function useGestes() {
-  const { sel, formeSeule, dessin } = useDessin(), ac = useActions();
+  const { sel, formeSeule, dessin } = useDessin(), ac = useActions(), { rencontrer } = useReperes();
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
   const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
   return {
@@ -38,6 +39,8 @@ function useGestes() {
     miroir: (sens: 'h' | 'v') => ac.faire(d => retourner(d, sel, sens), phraseMiroir(sens)),
     tourner: (angle: number) => ac.faire(d => tourner(d, sel, angle), phraseRotation(angle)),
     empiler: (o: Ordre) => empiler(ac, dessin, sel, o),
+    // Le repere du premier booleen ne se montre que si l'operation a reussi (ADR-0019).
+    booleen: (op: Booleen) => { if (ac.booleen(op)) rencontrer('booleen'); },
     separable
   };
 }
@@ -70,7 +73,7 @@ function RangeeEntiere() {
         {ORDRES_ICONES.map(([o, icone, nom, raccourci]) => <Bouton key={o} icone={icone} aide={nom + ' (' + raccourci + ')'} onClick={() => g.empiler(o)} />)}
       </div>
       <div className="groupe" role="group" aria-label="Booléens">
-        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => ac.booleen(op)} />)}
+        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => g.booleen(op)} />)}
       </div>
       <div className="groupe" role="group" aria-label="Formes">
         <Bouton icone="combiner" aide="Combiner en une forme (Ctrl+G)" disabled={sel.length < 2} onClick={ac.combinerSelection} />
@@ -97,7 +100,7 @@ function RangeeCompacte() {
     ] },
     { id: 'aligner', titre: 'Aligner' + surPlan, elements: ALIGNEMENTS_ICONES.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
     { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
-    { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => ac.booleen(op) })) },
+    { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },
     { id: 'formes', titre: 'Formes', elements: [
       { id: 'combiner', libelle: 'Combiner en une forme', icone: 'combiner', raccourci: 'Ctrl+G', desactive: sel.length < 2, onClick: ac.combinerSelection },
       { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !g.separable, onClick: ac.separerSelection },

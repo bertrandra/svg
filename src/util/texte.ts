@@ -56,3 +56,9 @@ export function distanceEdition(a: string, b: string, plafond = 2): number {
   }
   return Math.min(courante[b.length] ?? plafond + 1, plafond + 1);
 }
+
+/**
+ * La typographie francaise : une espace insecable avant « ; : ? ! » et le guillemet fermant, apres le guillemet ouvrant. Sans elle,
+ * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne.
+ */
+export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/« /g, '« ');

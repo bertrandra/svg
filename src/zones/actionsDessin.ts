@@ -83,13 +83,14 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       const { dessin, sel, lisserBooleens } = lire();
       // Le moteur garde `lisser` faux par defaut (ses appelants et ses references ne bougent pas) ; l'editeur le propose actif.
       const r = appliquerBooleen(dessin, sel, op, undefined, { lisser: lisserBooleens });
-      if (r.erreur) { dire(r.erreur); return; }
+      if (r.erreur) { dire(r.erreur); return false; }
       appliquer(() => r.dessin);
       choisir(r.id ? [r.id] : []);
       const resultat = r.id ? r.dessin.formes.find(f => f.id === r.id) : undefined;
-      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return; }
+      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return false; }
       const reunies = dessin.formes.filter(f => sel.includes(f.id) && f.visible && !f.verrouille).length;
       dire(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')));
+      return true;
     },
     transformerNumerique: t => {
       const { dessin, sel } = lire();

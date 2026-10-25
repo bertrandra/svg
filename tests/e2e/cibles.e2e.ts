@@ -186,6 +186,43 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await exiger(page);
     });
 
+    it('la visite guidee : la bulle a chaque etape, ses suites, et la boite des raccourcis', async () => {
+      const page = await ouvrirPage();
+      await cliquer(page.getByRole('button', { name: 'Essayer avec la visite guidée' }));
+      await page.locator('.bulle-visite').waitFor();
+      await exiger(page);
+      for (const n of [2, 3, 4, 5]) {
+        await cliquer(page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }));
+        await page.locator('.bulle-progression', { hasText: 'Étape ' + n + ' sur 5' }).waitFor();
+        await exiger(page);
+      }
+      await cliquer(page.locator('.bulle-visite').getByRole('button', { name: 'Terminer' }));
+      await ouvrirMenu(page, 'Aide');
+      await cliquer(page.getByRole('menuitem', { name: 'Raccourcis clavier' }));
+      await page.getByRole('dialog', { name: 'Raccourcis clavier' }).waitFor();
+      await exiger(page);
+    });
+
+    it('les reperes de premiere rencontre et les etats vides', async () => {
+      const page = await editeur();
+      const bouton = tactile ? page.getByRole('button', { name: /^Plus d’actions/ }) : page.locator('.selecteur-contexte .menu-bouton');
+      await cliquer(bouton);
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      await cricut.scrollIntoViewIfNeeded();
+      await cliquer(cricut);
+      await tiroir(page, 'Inspecteur');
+      await page.locator('.repere[data-repere="cricut"]').waitFor();
+      await exiger(page);
+      // Le tiroir de l'inspecteur est a droite : le voile se touche a gauche.
+      if (tactile) await page.locator('.voile').tap({ position: { x: 20, y: 300 } });
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Delete');
+      await tiroir(page, 'Inspecteur');
+      await page.locator('.editeur-inspecteur [data-vide="vide"]').waitFor();
+      await exiger(page);
+    });
+
     it('avec le menu des formes, la boite des credits et le menu d export de l accueil', async () => {
       const page = await editeur();
       await cliquer(page.getByRole('button', { name: 'Choisir une forme' }));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { auPluriel, distanceEdition, pluriel, selonSaisie } from '../../../src/util/texte.js';
+import { auPluriel, distanceEdition, insecables, pluriel, selonSaisie } from '../../../src/util/texte.js';
 
 describe('pluriel', () => {
   it('laisse au singulier zero et un', () => {
@@ -61,5 +61,13 @@ describe('distanceEdition', () => {
     expect(distanceEdition('xyzzy', 'lapin')).toBe(3);
     expect(distanceEdition('a', 'abcdef')).toBe(3);
     expect(distanceEdition('abcdef', 'ghijkl', 1)).toBe(2);
+  });
+});
+
+describe('insecables', () => {
+  it('pose une espace insecable avant ; : ? ! et », apres «, et nulle part ailleurs', () => {
+    expect(insecables('Première fois ? Essayez : « Plus » ; voilà !')).toBe('Première fois\u00a0? Essayez\u00a0: «\u00a0Plus\u00a0»\u00a0; voilà\u00a0!');
+    expect(insecables('Ctrl+Z, puis Tab.')).toBe('Ctrl+Z, puis Tab.');
+    expect(insecables('déjà\u00a0: rien')).toBe('déjà\u00a0: rien');
   });
 });

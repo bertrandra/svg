@@ -109,6 +109,7 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `onFermer` | `() => void` | | Appelée **une fois**, quand l’éditeur se ferme, quelle qu’en soit la cause |
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
+| `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
@@ -328,7 +329,8 @@ Pour un hôte, l’essentiel :
   ```
 
   Un stockage d’hôte a trois verbes : `lire(cle)` rend la valeur (du JSON déjà décodé) ou `null`, `ecrire(cle,
-  valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. La seule clé écrite est `svg.versions`. Si l’un
+  valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. Les clés écrites sont `svg.versions`, et `svg.guide`
+  avec `visite: true` (la visite vue, les repères refermés). Si l’un
   des verbes lève une exception, l’éditeur la rattrape et lit le stockage comme refusé. Le stockage est un
   confort : refusé, absent ou plein, tout marche sans lui, les versions vivant alors le temps de l’éditeur.
 - **Aucun réseau** : l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>` des
@@ -399,6 +401,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `enregistrer` | `(svg: string) => void` | Reçoit le SVG retouché, déjà nettoyé. Le composant ne se ferme pas de lui-même : c’est à vous |
 | `brouillon?` | `(svg: string) => void` | Reçoit le SVG du moment, une seconde après la dernière modification |
 | `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
+| `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
 
 À savoir, côté React :
 

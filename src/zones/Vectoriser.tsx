@@ -62,7 +62,7 @@ function ApercuConversion() {
           <span className="aide">SVG</span>
         </div>
       </div>
-      <figcaption className="aide">Une image en pixels devient des formes vectorielles, nettes à toute taille.</figcaption>
+      <figcaption className="aide">Une image en pixels devient des formes vectorielles, nettes à toute taille. Un logo ou un dessin aux couleurs franches s’y prête le mieux ; plusieurs images déposées d’un coup se convertissent en lot, avec les mêmes réglages.</figcaption>
     </figure>
   );
 }

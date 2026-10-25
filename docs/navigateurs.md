@@ -85,7 +85,7 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `Object.hasOwn` | 93 | 92 | 15.4 | Garde de démarrage : le navigateur qui ne l’a pas voit une page en français qui le dit |
 | lookbehind `(?<!` | 62 | 78 | 16.4 | Évité : deux regex de `util/cssPortee.ts` s’en servaient, et une regex que Safari ne sait pas lire tue tout le bundle d’embarquement à l’analyse |
 | `\p{…}` | 64 | 78 | 11.1 | Aucun, toujours présent |
-| `ResizeObserver` | 64 | 69 | 13.1 | Testé avant emploi ; sans lui, les longues listes se remesurent moins vite |
+| `ResizeObserver` | 64 | 69 | 13.1 | Testé avant emploi ; sans lui, les longues listes se remesurent moins vite, et la bulle de la visite guidée ne se replace qu’au redimensionnement de la fenêtre et au relâcher d’un pointeur |
 | `matchMedia` | 45 | 55 | 14 | Testé avant emploi ; sans lui, le pointeur est tenu pour fin. L’écoute `addEventListener('change')` demande Safari 14 |
 | `PointerEvent` | 55 | 59 | 13 | Garde de démarrage |
 | `setPointerCapture` | 55 | 59 | 13 | Dans un `try` : sans capture, la toile suit le pointeur tant qu’il la survole |

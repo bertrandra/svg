@@ -10,7 +10,9 @@ import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
 import { FORMES } from './aidesEditeur.js';
+import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
+import { ListeRaccourcis } from './AideEditeur.js';
 import { CouleursDuDessin } from './CouleursDuDessin.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
@@ -34,7 +36,7 @@ export function PanneauDessin() {
     <>
       <h3>{ui.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
       {ui.outil === 'texte' ? <PanneauTexte /> : null}
-      {trace ? <StyleNouvelleForme /> : null}
+      {trace ? <StyleNouvelleForme /> : <SansSelection />}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
       <CouleursDuDessin />
@@ -56,25 +58,31 @@ export function PanneauDessin() {
       </Section>
       <PanneauVersions />
       <Section titre="Raccourcis">
-        <ul className="raccourcis">
-          <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
-          <li>R rectangle · E ellipse · S étoile · L ligne · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
-          <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
-          <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
-          <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
-          <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
-          <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
-          <li>G grille magnétique · Z zoom sur la sélection · C choisir les formes de même couleur · Ctrl+S enregistrer</li>
-          <li>Flèches : déplacer (Maj : ×10) · Alt+flèches : redimensionner, coin haut gauche fixe (Maj : ×10) · Ctrl+flèche gauche ou droite : tourner de 15° (Maj : 1°) · Maj en glissant : contraindre</li>
-          <li>Au clavier, sur la toile : Tab et Maj+Tab passent à la forme suivante ou précédente (en mode points, au point suivant ou précédent) ; après la dernière, Tab quitte la toile · Page suivante et Page précédente : forme suivante ou précédente, en boucle · Entrée sur une forme : ses points</li>
-          <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme à sa taille par défaut au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
-          <li>Une forme à deux coins au clavier : Espace (ou Maj+Entrée) pose le premier coin au réticule, les flèches déplacent l’autre coin (un aperçu en pointillés suit), Espace ou Entrée le pose ; Échap annule le premier coin</li>
-          <li>Sélection additive au clavier (outil sélection) : Maj+Page suivante ou Maj+Page précédente ajoute la forme voisine à la sélection et y place le curseur ; Espace ajoute ou retire la forme au curseur. Il n’y a pas de cadre de sélection au clavier : Ctrl+A, « Tout », « Inverser » et C (même couleur) en tiennent lieu</li>
-          <li>Outil texte : Entrée met le focus dans le champ Texte du panneau ; « Ajouter le texte » pose les lettres au centre du plan</li>
-          <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
-        </ul>
+        <ListeRaccourcis />
       </Section>
     </>
+  );
+}
+
+/**
+ * Rien n'est choisi (ADR-0019, etats vides) : dire ce que ce panneau regle alors, et le geste qui donne une forme a regler. Un
+ * dessin sans forme ne s'ouvre pas (la lecture le refuse) : s'il est vide, c'est qu'on a tout retire, et le retour est a un clic.
+ */
+function SansSelection() {
+  const mo = useDessin(), ac = useActions();
+  const choisissables = mo.dessin.formes.filter(f => f.visible && !f.verrouille);
+  if (!mo.dessin.formes.length) {
+    return (
+      <EtatVide genre="vide" icone="annuler" titre="Vous avez retiré toutes les formes." action={{ libelle: 'Faire revenir les formes', onClick: ac.defaire }}>
+        Annuler (Ctrl+Z) défait le dernier geste : rien n’est perdu. Ou tracez une forme neuve avec les outils de la barre.
+      </EtatVide>
+    );
+  }
+  const premiere = choisissables[0];
+  return (
+    <EtatVide genre="premiere-fois" titre="Aucune forme choisie." action={premiere ? { libelle: 'Choisir la forme ' + premiere.id.slice(1), onClick: () => ac.choisir([premiere.id]) } : undefined}>
+      Cliquez une forme sur la toile pour régler sa couleur, sa taille et sa place. En attendant, ce panneau règle le dessin entier.
+    </EtatVide>
   );
 }
 
@@ -140,7 +148,7 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
             <button type="button" className="discret" onClick={() => poserPanier([])}>Vider</button>
           </div>
         </div>
-      ) : <p className="aide">Un clic insère au centre ; « + » met dans le panier pour insérer plusieurs formes en grille.</p>}
+      ) : <p className="aide">Panier vide. Un clic sur une forme l’insère au centre du dessin ; « + » la met dans le panier, pour en insérer plusieurs d’un coup, rangées en grille.</p>}
     </>
   );
 });

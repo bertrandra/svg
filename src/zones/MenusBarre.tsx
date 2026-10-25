@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { sousChemins } from '../engine/editionSvg.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useSignalVisite } from './contexteGuide.js';
+import { useBoiteRaccourcis, useElementsAide } from './AideEditeur.js';
 import { DialogueCredits } from './Credits.js';
 import { ContenuExport } from './Exporter.js';
 import { allerAuChamp } from './OutilsTrace.js';
@@ -72,12 +74,13 @@ export function MenuEdition() {
 
 /** Les elements du menu Fichier : enregistrer, telecharger, copier, credits, fermer. */
 function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const svg = () => svgDocument(mo.dessin, ui.production);
+  // Chaque facon de recuperer le dessin acheve l'etape « Récupérez votre dessin » de la visite (sans visite, rien).
   return [
-    { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length && !ui.productionModifiee, onClick: ac.enregistrerTout },
-    { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(svg())).then(ac.dire); } },
-    { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(svg()).then(ok => ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.')); } },
+    { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length && !ui.productionModifiee, onClick: () => { signaler('recupere'); ac.enregistrerTout(); } },
+    { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(svg())).then(m => { ac.dire(m); signaler('recupere'); }); } },
+    { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(svg()).then(ok => { ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.'); if (ok) signaler('recupere'); }); } },
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
@@ -85,8 +88,10 @@ function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void
 
 /** Le panneau d'export, sous les elements du menu Fichier. */
 function PanneauExport({ nom }: { nom: string }) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
-  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={ac.dire} {...(ui.profil ? { pourCricut: () => ac.exporterPourCricut(nom) } : {})} /></>;
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
+  // Un export dit son issue par `dire` : c'est aussi le signal qu'un fichier a ete recupere (visite guidee).
+  const dire = (t: string) => { ac.dire(t); signaler('recupere'); };
+  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={dire} {...(ui.profil ? { pourCricut: () => { ac.exporterPourCricut(nom); signaler('recupere'); } } : {})} /></>;
 }
 
 /** La boite des credits : posee dans la racine de l'editeur, ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */
@@ -108,13 +113,17 @@ export function MenuFichier({ nom }: { nom: string }) {
 
 /**
  * « Plus » : sous une largeur de telephone, la barre ne porte plus que les outils, les couleurs et l'historique ; Vue, Edition et
- * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique. L'ordre est celui de l'usage : Edition (ce qu'on fait
+ * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique. L'ordre est celui de l'usage : Aide d'abord, puis Edition (ce qu'on fait
  * de la selection), Fichier, puis Vue, le zoom en dernier, puis le contexte de production. Au doigt, les raccourcis se taisent (CSS).
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
+  const raccourcis = useBoiteRaccourcis();
   const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits), production = useRubriquesProduction();
+  const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
+    // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
+    { id: 'aide', titre: 'Aide', elements: aide },
     { id: 'edition', titre: 'Édition', elements: edition },
     { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
     { id: 'vue', titre: 'Vue', elements: vue },
@@ -125,6 +134,7 @@ export function MenuPlus({ nom }: { nom: string }) {
     <>
       <MenuDeroulant etiquette="Plus d’actions : vue, édition, fichier" icone="options" chevron={false} alignement="droite" sections={sections} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+      {raccourcis.boite}
     </>
   );
 }

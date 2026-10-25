@@ -357,6 +357,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-etat .compte-modifications { order: 3; }
   .editeur-etat button.texte { order: 4; }
   .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
+  /* Un tiroir ouvert couvre presque toute la toile d'un telephone, sous un voile qui recoit les touchers : le dessin y est
+     masque (la toile reste focalisable). Le tiroir ne se lit plus par-dessus des formes qu'on ne voit ni ne touche : un audit
+     (axe) jugeait le contraste d'un texte du tiroir d'apres les formes dessinees dessous, selon ou tombait chaque ligne. */
+  .tiroir-calques .editeur-svg-toile > g, .tiroir-inspecteur .editeur-svg-toile > g { visibility: hidden; }
 }
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
@@ -485,4 +489,38 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 @media (forced-colors: active) {
   .panneau-cricut .constat { border-color: CanvasText; }
   .editeur-svg-toile .gabarit-zone, .editeur-svg-toile .forme-debordante, .editeur-svg-toile .zone-fine { stroke: Highlight; }
+}
+
+/* L'accueil guide (ADR-0019) : la bulle de la visite, le filet autour de ce qu'elle montre, les reperes de premiere rencontre,
+   les etats vides. La bulle flotte au-dessus du travail (elle a l'ombre des menus) ; le reste est pose dans le flux, a plat. */
+.bulle-visite { position: fixed; z-index: var(--couche-visite); width: min(340px, calc(100vw - 16px)); display: grid; gap: var(--esp-s); padding: var(--esp-l) var(--esp-xl) var(--esp-l); background: var(--panneau); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); font-size: var(--texte-corps); animation: apparition 0.18s ease-out; outline: 0; }
+.bulle-visite:focus-visible { box-shadow: 0 8px 24px var(--ombre-menu), 0 0 0 2px var(--cyan); }
+.bulle-progression { margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.bulle-titre { margin: 0; font-size: var(--texte-titre); font-weight: 600; }
+.bulle-corps { margin: 0; }
+.bulle-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-s); margin-top: var(--esp-xs); }
+.bulle-actions .espace { flex: 1; }
+.bulle-actions .discret { padding-left: 0; padding-right: 0; }
+.bulle-suites { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
+.bulle-suites button { width: 100%; text-align: left; }
+.bulle-fleche { position: absolute; width: 12px; height: 12px; background: var(--panneau); border: 1px solid var(--filet); transform: translateX(-50%) rotate(45deg); pointer-events: none; }
+.bulle-visite.dessous .bulle-fleche { top: -7px; border-right: 0; border-bottom: 0; }
+.bulle-visite.dessus .bulle-fleche { bottom: -7px; border-left: 0; border-top: 0; }
+.visite-cible { position: fixed; z-index: var(--couche-visite); pointer-events: none; border: 2px solid var(--cyan); border-radius: var(--rayon-bouton); animation: apparition 0.18s ease-out; }
+.visite-cible.dedans { border-radius: var(--rayon-pastille); }
+.repere { display: grid; gap: var(--esp-xs); justify-items: start; margin: 0 0 var(--esp-m); padding: var(--esp-m) var(--esp-l); border: 1px solid var(--cyan); border-radius: var(--rayon-bouton); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); color: var(--encre); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .repere { background: var(--repli-cyan-8-panneau); } }
+.repere-titre { margin: 0; font-size: var(--texte-compact); font-weight: 600; }
+.repere-texte { margin: 0; font-size: var(--texte-compact); }
+.repere .discret { padding-left: 0; padding-right: 0; }
+.etat-vide { display: grid; gap: var(--esp-2xs); justify-items: start; padding: var(--esp-xs) 0 var(--esp-s); color: var(--encre-douce); }
+.etat-vide .icone { color: var(--encre-douce); margin-bottom: var(--esp-2xs); }
+.etat-vide-titre { margin: 0; font-size: var(--texte-compact); font-weight: 600; color: var(--encre); }
+.etat-vide-texte { margin: 0; font-size: var(--texte-petit); color: var(--encre-douce); }
+.etat-vide .discret { padding-left: 0; padding-right: 0; }
+.toile-vide { position: absolute; left: 50%; top: var(--esp-2xl); transform: translateX(-50%); max-width: min(34ch, calc(100% - 32px)); margin: 0; padding: var(--esp-m) var(--esp-l); background: var(--panneau); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-menu); font-size: var(--texte-corps); text-align: center; pointer-events: none; }
+@media (forced-colors: active) {
+  .bulle-visite { border: 2px solid CanvasText; }
+  .visite-cible { border-color: Highlight; }
+  .repere { border-color: CanvasText; }
 }

@@ -367,6 +367,85 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, boîte À propos et crédits'));
     });
 
+    // L'accueil guide (ADR-0019) : la bulle de la visite a chaque moment qui compte, les reperes et les etats vides.
+    async function visite(options: Parameters<typeof navigateur.ouvrir>[0] = {}) {
+      const page = await accueil(options);
+      const essayer = page.getByRole('button', { name: 'Essayer avec la visite guidée' });
+      if (options.tactile) await essayer.tap(); else await essayer.click();
+      await page.locator('.bulle-visite').waitFor();
+      return page;
+    }
+
+    it('à chaque étape de la visite guidée, menée par les vrais gestes (bulle et filet de la cible)', async () => {
+      const page = await visite();
+      const etape = (n: number) => page.locator('.bulle-progression', { hasText: 'Étape ' + n + ' sur 5' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 1'));
+      await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+      await etape(2);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 2'));
+      await page.locator('.editeur-barre input[type=color][aria-label="Remplissage"]').fill('#1f8a3a');
+      await etape(3);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 3'));
+      await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
+      await etape(4);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 4'));
+      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: 'Télécharger le SVG' }).click()]);
+      await etape(5);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 5'));
+    });
+
+    it('à la fin de la visite guidée, ses trois suites, dans le thème sombre', async () => {
+      const page = await visite({ schema: 'dark' });
+      for (let i = 0; i < 4; i++) await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
+      await page.locator('.bulle-progression', { hasText: 'Étape 5 sur 5' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, fin, sombre'));
+    });
+
+    it('sur un téléphone de 390 px, la bulle de la visite ouverte', async () => {
+      const page = await visite({ largeur: 390, hauteur: 800, tactile: true });
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px tactile, visite guidée'));
+    });
+
+    it('avec la boîte « Raccourcis clavier » du menu Aide', async () => {
+      const page = await editeur();
+      await page.locator('.menu-bouton', { hasText: 'Aide' }).click();
+      await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
+      await page.getByRole('dialog', { name: 'Raccourcis clavier' }).waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, boîte Raccourcis clavier'));
+    });
+
+    it('avec le repère des points, au premier double-clic sur une forme', async () => {
+      const page = await editeur();
+      await page.locator('.editeur-svg-toile path[data-id="f3"]').dblclick();
+      await page.locator('.repere[data-repere="points"]').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, repère des points'));
+    });
+
+    // Au bureau, le gabarit du tapis Cricut deborde de la toile (il est plus grand que le dessin) et axe, qui lit les boites des
+    // formes SVG sans leur rognure, le croit sur la barre d'etat : un doute qui ne tient pas au repere. Le repere Cricut est audite
+    // dans le tiroir d'un telephone, ou le dessin (gabarit compris) est masque sous le tiroir ouvert.
+    it('sur un téléphone de 390 px, le repère du contexte Cricut dans le tiroir de l’inspecteur', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      await cricut.scrollIntoViewIfNeeded();
+      await cricut.tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.repere[data-repere="cricut"]').waitFor();
+      await attend(() => page.locator('.editeur-inspecteur').evaluate(e => getComputedStyle(e).transform)).toBe('none');
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px tactile, repère Cricut'));
+    });
+
+    it('avec un dessin vidé : les états vides des calques, de l’inspecteur et de la toile', async () => {
+      const page = await editeur();
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Delete');
+      await page.locator('.toile-vide').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, dessin vidé, états vides'));
+    });
+
     it('dans le thème sombre, sur l accueil', async () => {
       const page = await accueil({ schema: 'dark', largeur: 1200, hauteur: 900 });
       exigerSansViolationGrave(await auditer(page, 'accueil, thème sombre'));

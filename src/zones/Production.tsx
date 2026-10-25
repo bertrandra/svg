@@ -12,6 +12,7 @@ import { BoutonRaison } from './commun/BoutonRaison.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import { Section } from './commun/Section.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { Repere } from './Repere.js';
 
 const NOMS_GRAVITE: Readonly<Record<Gravite, string>> = { bloquant: 'Bloquant', 'a-corriger': 'À corriger', conseil: 'Conseil' };
 const UNITES: ReadonlyArray<readonly [UniteLongueur, string]> = [['in', 'Pouces'], ['mm', 'Millimètres']];
@@ -89,6 +90,9 @@ export function PanneauCricut({ nom }: { nom: string }) {
     <div className="panneau-cricut">
       <Section titre={ptc ? 'Prêt pour Print Then Cut' : 'Prêt pour Cricut'} ouverte note={statut}>
         <p className="aide">{profil.machine.nom} · {profil.tapis.nom} · {profil.materiau.nom}{ptc ? ' · Print Then Cut' : ''}</p>
+        <Repere id="cricut" titre="Ce panneau prépare la découpe">
+          Il vérifie le dessin pour votre machine : chaque constat dit ce qui se découperait mal et propose une correction, que Ctrl+Z annule. Le tapis s’affiche sous le dessin ; la machine découpe ce qui tient dans les pointillés.
+        </Repere>
         {preparation ? (
           <dl className="resume-cricut">
             <dt>Taille finale</dt>
@@ -100,7 +104,12 @@ export function PanneauCricut({ nom }: { nom: string }) {
             </dd>
           </dl>
         ) : <p className="aide" role="status">Analyse du dessin…</p>}
-        {preparation && !constats.length ? <p className="pret">{phraseReste(0, profil.procede)}</p> : null}
+        {preparation && !constats.length ? (
+          <>
+            <p className="pret">{phraseReste(0, profil.procede)}</p>
+            <p className="aide">Rien à corriger. « Exporter pour Cricut » écrit {ptc ? 'l’image à imprimer et sa ligne de coupe' : 'le fichier à importer dans Design Space'}.</p>
+          </>
+        ) : null}
         {GRAVITES.map(g => {
           const liste = constats.filter(c => c.gravite === g);
           return liste.length ? (
