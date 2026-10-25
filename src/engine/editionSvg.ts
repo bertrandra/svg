@@ -12,7 +12,7 @@
 // Ce fichier n'est plus que la facade : le travail vit dans `edition/`, un module par sujet. Les
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
 
-export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde } from './edition/types.js';
+export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde, TexteVivant, PoliceTexte, AlignementTexte } from './edition/types.js';
 export { IDENTITE } from './edition/types.js';
 
 export { lireChemin, ecrireChemin, ancre, depart } from './edition/chemins.js';
@@ -34,6 +34,10 @@ export {
 export { ecrireForme, ecrireDessin, statistiques, type Statistiques } from './edition/ecriture.js';
 export { marquerProduction, lireProduction, identifiantValide, CHAMPS_PRODUCTION, PREFIXE_PRODUCTION, type MarqueProduction } from './edition/production.js';
 export { ATTRIBUT_ORIGINE, avecOrigines, marquerOrigine, originesDe, lireOrigines } from './edition/provenance.js';
+export {
+  encoderTexte, decoderTexte, attributsTexte, lireTexteVivant, transformerTexte, sansTexte, dessinSansTextes, garderTextes,
+  ATTRIBUTS_TEXTE, TEXTE_MAX, INTERLIGNE_DEFAUT, MSG_TEXTE_ILLISIBLE, type TexteLu
+} from './edition/texteVivant.js';
 
 export {
   transformer, deplacer, retourner, tourner, redimensionner, aligner, modifier, supprimer,

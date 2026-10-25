@@ -17,7 +17,9 @@ s'embarque aussi comme composant React dans un autre produit.
   seule ligne au milieu du trait, sans remplissage, pour le stylo d'une Cricut (moteur pur, sans vtracer ; ADR-0021).
 - **Choisir une forme** dans la bibliothèque : 4 134 silhouettes nommées en français, cherchées par
   nom et par événement du calendrier (Noël, Pâques, Halloween, 14 Juillet…), de la vie
-  (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…).
+  (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…) ; et cinq
+  bibliothèques libres chargées à la demande (Material, Phosphor, Tabler, Healthicons, Lucide : 19 000 formes de plus,
+  pleines pour la découpe ou en ligne pour le stylo, ADR-0023).
 - **Éditer en plein écran** comme dans un logiciel de dessin :
   - sélection au clic ou au cadre, Tout et Aucun, déplacement, coins pour redimensionner (Maj :
     proportions) ; une rangée contextuelle avec alignements, miroirs, rotations, empilement,
@@ -25,8 +27,11 @@ s'embarque aussi comme composant React dans un autre produit.
   - copier, couper, coller ; les couleurs courantes dans la barre ; une grille magnétique ; le zoom
     sur la sélection ; les raccourcis d'un logiciel de dessin (Ctrl+C/X/V, Ctrl+G, G, Z…) ; Ctrl+S garde un
     brouillon sans jamais fermer l'éditeur ;
-  - outils de tracé : rectangle, ellipse, étoile, ligne, plume ; texte en formes (neuf fontes libres
-    ou la vôtre), une forme par lettre ;
+  - outils de tracé : rectangle, ellipse, étoile, ligne, plume ; **texte vivant** (dix fontes libres, dont une à
+    trait unique pour le stylo, ou la vôtre) : il reste modifiable (double-clic ou Entrée le retape en place,
+    l'inspecteur « Texte » le restyle), s'écrit en contours exacts et se rouvre comme texte ; « Vectoriser le
+    texte » (Ctrl+Maj+O) le rend en formes ordinaires, lettres séparées, lettres qui se touchent soudées, ou tout
+    soudé ; l'aperçu « forme / ligne » montre ce qu'en feraient la lame et le stylo (ADR-0022) ;
   - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
     menu Édition) ;
   - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
@@ -91,11 +96,11 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
-| `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` |
+| `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` et une annexe par source libre, `dist/bibliotheque-<source>.js` |
 | `npm run polices` | Les neuf fontes seules : `dist/polices.js` |
 
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
-statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
+statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo), les `bibliotheque-<source>.js` (de 0,9 à 3,6 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
 d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la bibliothèque, au premier texte).
 
 ## Embarquer l'éditeur
@@ -139,7 +144,7 @@ React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteu
 | `exemples/` | Une page d'intégration qui tourne depuis le disque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
-| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md)) ; `docs/jetons.md` : les jetons, générés |
+| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md) ; le texte vivant, la vectorisation et le trait unique, [ADR-0022](docs/adr/0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md) ; les bibliothèques libres, [ADR-0023](docs/adr/0023-plusieurs-bibliotheques-libres.md)) ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur
@@ -159,7 +164,7 @@ l'impose.
 - Les booléens emploient [polygon-clipping](https://github.com/mfogel/polygon-clipping) (MIT) ; le
   texte, [opentype.js](https://opentype.js.org) (MIT) et neuf fontes (huit familles : Inter, Oswald, Bebas Neue,
   Playfair Display, Lobster, Pacifico, Caveat, Fredoka) sous licence SIL OFL 1.1, par les paquets
-  `@expo-google-fonts/*`. L'interface est en [React](https://react.dev) (MIT), en *Instrument Sans* et *IBM Plex Mono* (SIL OFL 1.1,
+  `@expo-google-fonts/*` ; la police à trait unique EMS Readability (SIL OFL 1.1) vient du paquet `hersheytext`. L'interface est en [React](https://react.dev) (MIT), en *Instrument Sans* et *IBM Plex Mono* (SIL OFL 1.1,
   sous-ensemble latin, paquets `@fontsource/*`), incorporées à `dist/editeur-svg.html` : la page ne les demande à aucun serveur.
 - **Le copyright et la licence de chaque composant tiers sont dans [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**, généré par
   `npm run mentions` à partir de `src/model/credits.ts`, du `package-lock.json` et des fichiers de licence des paquets ; le même texte

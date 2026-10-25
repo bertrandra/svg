@@ -108,6 +108,12 @@ components:
     typography: "{typography.compact}"
     rounded: "{rounded.bouton}"
     padding: "4px 8px"
+  pastille-filtre:
+    backgroundColor: "{colors.table-atelier}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "4px 8px"
   pastille-evenement-choisie:
     backgroundColor: "{colors.cyan-encre}"
     textColor: "{colors.sur-cyan}"
@@ -141,6 +147,18 @@ components:
     textColor: "{colors.encre-douce}"
     typography: "{typography.aide}"
     padding: "4px 0 8px"
+  apercu-forme-ligne:
+    backgroundColor: "{colors.table-atelier}"
+    textColor: "{colors.encre}"
+    typography: "{typography.aide}"
+    rounded: "{rounded.bouton}"
+    padding: "8px"
+  saisie-texte:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.body}"
+    rounded: "{rounded.menu}"
+    padding: "6px"
   ligne-format:
     backgroundColor: "transparent"
     textColor: "{colors.encre-douce}"
@@ -440,9 +458,24 @@ Le filtre de la bibliothèque, à la place d'une liste déroulante de 45 lignes.
   Début et Fin aux bouts.
 - **Téléphone:** sous 640 px, les pastilles repliées tiennent sur une seule ligne qui défile ; 40 px au doigt.
 
+### Pastilles de source et de nature (bibliothèque)
+Six bibliothèques (game-icons par défaut, puis Material, Phosphor, Tabler, Healthicons, Lucide), chargées à la demande.
+- **Style:** les pastilles des événements (`.pastille-filtre`), en deux groupes titrés « Source » et « Nature » sur une ligne
+  qui passe à la suivante ; le titre visible (`.pastilles-titre`) distingue les deux « Toutes ». Un état, pas une action.
+- **Source:** « Toutes », puis chaque source par son nom court ; game-icons est choisie à l'ouverture, les autres ne se
+  chargent qu'à la demande. L'infobulle dit le nom complet, la licence, les natures et le poids à charger.
+- **Nature:** « Toutes », « Pleines (découpe) », « En ligne (stylo) » ; au stylo d'un contexte de production, « En ligne »
+  vient d'abord. Un filtre ne mène jamais à une grille vide par construction : une nature que la source n'a pas élargit à
+  toutes les sources qui l'ont, une source sans la nature choisie remet la nature à « Toutes ».
+- **Chargement:** dit à la fin du décompte (« 234 formes · chargement de Tabler (environ 3 Mo)… »), dans la région polie du
+  décompte ; la grille porte `aria-busy` ; un fichier absent se dit en message d'alerte.
+- **Clavier et doigt:** comme les événements (Tab, flèches, Début, Fin) ; sous 640 px et dans le panneau de l'éditeur, chaque
+  groupe tient sur une ligne qui défile ; 40 px au doigt.
+
 ### Vignettes et état vide (bibliothèque)
-- **Vignette:** une hauteur régulière ; le libellé tient sur deux lignes au plus, coupé proprement ; le nom complet reste
-  le nom accessible et l'infobulle.
+- **Vignette:** une hauteur régulière ; le libellé tient sur deux lignes au plus, coupé proprement ; le nom complet suivi de
+  sa source (« cœur (Lucide, en ligne) ») est le nom accessible et l'infobulle : deux formes de même nom viennent de deux
+  sources, la source les distingue. Une forme en ligne se montre en trait noir sur la vignette blanche.
 - **Aucun résultat:** une phrase qui dit ce qui ne correspond pas, des propositions qui trouvent chacune quelque chose
   (« Essayez l'événement Noël (43) », une faute de frappe corrigée, la même recherche dans tous les événements), en
   boutons discrets, puis « Effacer la recherche » ; le focus revient au champ.
@@ -510,7 +543,28 @@ primaire, « Exporter pour Cricut », qui dit « Exporter quand même (2 points 
 - **Le sélecteur de machine** de la barre dit ce qu'il fait, avec une icône de machine : « Machine : Générique », « Cricut
   Maker · 12 × 12 » ; son menu commence par la machine ; les matériaux annoncés tiennent sur une ligne inactive (« Bientôt :
   vinyle, thermocollant, feutre »). Au choix d'une Cricut, et par « Ajuster » (0), la vue cadre le tapis entier ;
-  « Ajuster au dessin » (D) garde l'ancien cadrage.
+  « Ajuster au dessin » (D) garde l'ancien cadrage. Le procédé « Dessin au stylo » s'y choisit comme les autres (le bouton
+  dit alors « · Stylo »), les outils à venir sur une ligne inactive (« Bientôt : gravure, dorure (foil) ») ; le panneau
+  devient « Prêt pour le stylo », ses couches des stylos (une couleur, un stylo), son action « Exporter pour le stylo ». Un
+  constat qui propose plusieurs corrections les aligne en boutons secondaires, la conseillée d'abord.
+
+### Texte vivant (ADR-0022)
+Un texte se retape là où il est, et se règle comme un formulaire.
+- **La saisie en place** : une feuille de panneau posée sur la toile, juste sous le texte (filet, coins de 8 px, ombre de menu
+  flottant : elle recouvre un instant le travail), un vrai champ de texte nommé et une ligne d'aide (Aide, encre douce :
+  « Entrée valide · Maj+Entrée : à la ligne · Échap annule »). Le curseur se pose à la fin ; le texte se recompose sous les
+  yeux ; la couche `--couche-saisie` la tient au-dessus du dessin, sous les tiroirs.
+- **La section « Texte »** de l'inspecteur, en tête quand un texte est choisi : le champ, le choix de police, « Gras » si la
+  famille en a un, trois champs chiffrés, l'alignement en trois boutons à état (un état, pas une action : filet et texte cyan
+  quand il est choisi, jamais plein), puis « Vectoriser le texte » dans un groupe à filet : trois radios et un bouton
+  **secondaire** (une action rare et destructrice ne prend pas l'encre unique).
+- **L'aperçu « forme / ligne »** (composant `ChoixPolice`, partout où l'on choisit une police) : un bouton discret
+  `aria-expanded`, souligné au survol plutôt que voilé (le cyan d'encre tomberait à 4,45:1 sous le voile à 10 %), qui ouvre
+  **au clic seulement**, dans le flux et refermable, une feuille de table (filet, coins de 6 px) portant deux rendus côte à
+  côte : « Forme (découpe) » et « Ligne (stylo) ». Chaque rendu est le texte composé par le moteur, posé sur le plan blanc
+  (`--toile-blanc`, filet, coins de 4 px), à l'encre `--encre-toile` (sombre dans les deux thèmes : on regarde du papier),
+  plein ou en trait fin de 1,5 px qui ne grossit pas avec la vue ; dessous, son titre (Compact 600) et un verdict court et
+  neutre (Aide), qui est aussi son texte alternatif. Rien n'y est obligatoire ni bloquant ; « Fermer l'aperçu » (discret).
 
 ## Surfaces du navigateur
 

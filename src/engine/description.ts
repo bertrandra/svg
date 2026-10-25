@@ -60,6 +60,8 @@ function estEtoile(d: Chemin): boolean {
 
 /** Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace. */
 export function genreDeForme(f: Forme): string {
+  // Un texte vivant se nomme par ce qu'il dit (ADR-0022) : « texte « Joyeux Noël » », coupe a trente caracteres.
+  if (f.texte) { const t = f.texte.texte.replace(/\s+/g, ' ').trim(); return 'texte « ' + (t.length > 30 ? t.slice(0, 29) + '…' : t) + ' »'; }
   const b = boiteForme(f);
   if (!b) return 'tracé vide';
   const tol = Math.max(b.l, b.h) * 0.002 + 1e-9;

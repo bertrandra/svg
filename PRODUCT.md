@@ -57,12 +57,13 @@ couvrent chacun qu'une part :
 ## Capabilities and Constraints
 
 - Interface en français, avec accents, au vouvoiement ; l'anglais n'existe pas encore (décision ouverte).
-- Modèle de dessin à plat (chemins M, L, C, Q, Z) ; groupes, masques, dégradés, texte vivant et effets sont proposés
-  par l'ADR-0012, non implémentés.
+- Modèle de dessin à plat (chemins M, L, C, Q, Z) ; le texte vivant est implémenté sur ce modèle (ADR-0022) ; groupes,
+  masques, dégradés et effets sont proposés par l'ADR-0012, non implémentés.
 - Une couleur d'interface est un jeton (`src/styles/jetons.ts`), contraste 4,5:1 dans les deux thèmes.
 - Une action primaire par panneau, le rare dans les menus (ADR-0006).
 - Licence du projet : propriétaire, tous droits réservés. Formes de la bibliothèque sous CC BY 3.0 (attribution
-  écrite dans le fichier), fontes sous SIL OFL 1.1.
+  écrite dans le fichier), cinq bibliothèques libres à la demande sous MIT, ISC ou Apache 2.0 (notice dans MENTIONS.txt,
+  origine gardée par la forme), fontes sous SIL OFL 1.1.
 - Valeurs Cricut marquées « à vérifier » tant que `docs/cricut/protocole.md` n'est pas rempli sur une machine.
 
 ## Brand Commitments

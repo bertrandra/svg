@@ -288,6 +288,46 @@ describe('axe-core : accessibilite automatique', () => {
       exigerSansViolationGrave(await auditer(page, 'éditeur, outil texte'));
     });
 
+    // Le texte vivant (ADR-0022) : la section « Texte » de l'inspecteur, l'apercu « forme / ligne » ouvert, la saisie en place.
+    async function texteVivant(page: Page, police = 'inter') {
+      await page.keyboard.press('t');
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption(police);
+      await page.getByRole('button', { name: 'Ajouter le texte' }).click();
+      await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().click();
+      await page.locator('.apercu-police').waitFor();
+      // On audite l'etat au repos : le pointeur laisse le bouton (le survol d'un bouton discret est un voile cyan, juge ailleurs).
+      await page.mouse.move(0, 0);
+    }
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec un texte vivant, sa section Texte et l apercu forme / ligne ouvert (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await texteVivant(page, schema === 'dark' ? 'ems-readability' : 'inter');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, texte vivant et aperçu (' + schema + ')'));
+      });
+    }
+
+    it('avec la saisie en place d un texte vivant', async () => {
+      const page = await editeur({ largeur: 1200, hauteur: 900 });
+      await texteVivant(page);
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('Enter');
+      await page.locator('.saisie-texte textarea').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, saisie en place'));
+    });
+
+    it('sur un téléphone de 390 px, l inspecteur d un texte vivant et son apercu', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Ajouter le texte' }).tap();
+      await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().tap();
+      await page.locator('.apercu-police').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, texte vivant et aperçu'));
+    });
+
     it('avec la confirmation d abandon', async () => {
       const page = await editeur();
       await page.keyboard.press('PageDown');

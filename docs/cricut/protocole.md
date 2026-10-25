@@ -3,7 +3,7 @@
 Le contexte de production Cricut (ADR-0013) repose sur des valeurs et des comportements de Design Space que nous
 connaissons **de mémoire ou par la documentation**, pas par un essai. Chacune porte `aVerifier: true` et une note
 dans `src/model/contextes.ts`, et le panneau « Prêt pour Cricut » les marque « à vérifier ». Ce protocole dit
-comment les vérifier sur une vraie machine, avec six SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
+comment les vérifier sur une vraie machine, avec huit SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
 qu’on observe. Une fois rempli, il suffit de reporter les valeurs mesurées dans `src/model/contextes.ts`, de
 retirer `aVerifier` de celles qui sont confirmées, et d’annoncer le changement dans `CHANGELOG.md`.
 
@@ -152,6 +152,51 @@ que nous n’avons pas pu essayer.
 >
 >
 
+## Témoin 7 — le trait unique, au stylo
+
+Fichier : `temoin-7-trait-unique.svg` (6,5 × 3,25 po), écrit par « Exporter pour le stylo » (procédé « Dessin au
+stylo », ADR-0022) : le mot « Merci » dans la police à trait unique EMS Readability (un corps de 1 po, chaque lettre en
+tracés **ouverts**), une ligne droite de 4 po, un zigzag de quatre segments, et un carré de 1 po en trait seul. Aucun
+remplissage nulle part ; deux couleurs (bleu pour les lignes, encre pour le mot et le carré) : deux stylos.
+
+Ce qu’on vérifie : **comment Design Space importe un tracé ouvert**, et s’il le passe en « Dessiner » sans le refermer.
+
+À observer :
+
+1. À l’import, Design Space montre-t-il le mot, la ligne et le zigzag **ouverts** (pas de segment de retour) ? Les
+   remplit-il (un aplat entre le début et la fin d’une ligne) ?
+2. Le type de ligne des calques : « Couper » d’office ? Passez chaque couche en **« Dessiner »** : la ligne garde-t-elle
+   sa forme, le stylo suit-il une seule fois chaque trait (le « M » ne repasse pas sur lui-même) ?
+3. Les deux couleurs font-elles deux couches, donc deux stylos demandés au moment de tracer ?
+4. Les tailles : la ligne mesure 4 po, le carré 1 po, la hauteur d’une capitale environ 0,5 po.
+5. Après le tracé : le trait du stylo (pointe fine) mesure-t-il bien environ 0,4 mm de large (`cricut.stylo.largeur`) ?
+
+> Résultat observé (lignes ouvertes ou refermées ; type de ligne proposé ; couches ; tailles ; largeur du trait) :
+>
+>
+
+## Témoin 8 — les hachures
+
+Fichier : `temoin-8-hachures.svg` (5,5 × 3 po), écrit par « Exporter pour le stylo » après la correction « Hachurer » :
+deux carrés de 1 po hachurés à la largeur supposée du stylo (0,4 mm), l’un à 45°, l’autre à l’horizontale, et un anneau
+de 2 po (trou de 1 po) hachuré à 45°, le trou respecté. Chaque forme garde son pourtour, tracé au même stylo.
+
+Ce qu’on vérifie : `cricut.stylo.largeur` (les lignes se touchent-elles bord à bord, sans blanc ni surépaisseur ?), et
+le comportement du stylo sur des lignes très serrées.
+
+À observer :
+
+1. Au tracé, le carré paraît-il **plein** ? Restent-ils des blancs entre les lignes (la pointe est plus fine que 0,4 mm)
+   ou le papier gondole-t-il sous l’encre (plus large) ? Noter la largeur réelle du trait.
+2. Le trou de l’anneau reste-t-il blanc, les lignes s’arrêtent-elles net sur son bord ?
+3. Combien de temps dure le tracé des trois formes ? Le stylo fait-il bien l’aller-retour (une ligne sur deux dans
+   l’autre sens) ?
+4. Design Space accepte-t-il ce nombre de lignes sans ralentir (environ 60 lignes par carré) ?
+
+> Résultat observé (blancs ou surépaisseur ; largeur du trait mesurée ; trou ; durée ; réactivité de Design Space) :
+>
+>
+
 ---
 
 ## Les valeurs à vérifier
@@ -180,6 +225,7 @@ Chaque ligne est une valeur `aVerifier: true` de `src/model/contextes.ts` ; le t
 | `cricut.printThenCut.largeurMax` | 6,75 po | 6 | |
 | `cricut.printThenCut.hauteurMax` | 9,25 po | 6 | |
 | `cricut.printThenCut.fondPerdu` | 1/16 po | 6 | |
+| `cricut.stylo.largeur` | 0,4 mm (environ 0,0157 po) | 7 et 8 | |
 
 ## Les comportements à vérifier
 
@@ -195,3 +241,6 @@ Ils ne sont pas des nombres, mais le panneau s’appuie sur eux ; chacun est dit
 | Une forme blanche posée sur une autre est découpée dans du papier blanc, pas comme un trou | « trou superposé » | — | |
 | Les attributs `data-ed-*` de la racine sont ignorés sans gêne | — | tous | |
 | Le type de ligne (couper, dessiner, rainer) ne se lit pas dans le SVG : il se règle après l’import | aide du panneau | — | |
+| Un tracé ouvert s’importe ouvert, et passe en « Dessiner » sans être refermé ni rempli | « trait ouvert » (découpe), étapes du stylo | 7 | |
+| Le stylo ne remplit pas : une forme pleine est dessinée par son pourtour | « Le stylo trace le pourtour des formes pleines » | 7 | |
+| Des hachures espacées de la largeur du stylo paraissent pleines | correction « Hachurer » | 8 | |

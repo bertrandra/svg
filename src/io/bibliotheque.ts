@@ -3,7 +3,8 @@
 // que quand on l'ouvre. Une balise <script> plutot qu'un fetch : cela marche aussi depuis le disque.
 
 import type { EntreeBibliotheque, Evenement } from '../model/bibliotheque.js';
-import { annexePosee, fabriquerChargeurAnnexe, navigateur, type Annexe } from './annexes.js';
+import { SOURCES_FORMES, sourceFormes, type NatureForme, type SourceFormes } from '../model/sourcesFormes.js';
+import { annexePosee, fabriquerChargeurAnnexe, navigateur, type Annexe, type Chargeur } from './annexes.js';
 
 export interface Bibliotheque {
   source: string;
@@ -59,3 +60,62 @@ const annexe: Annexe<Bibliotheque> = {
 export const bibliothequeChargee = (): boolean => annexePosee(annexe);
 
 export const chargerBibliotheque: () => Promise<Bibliotheque> = fabriquerChargeurAnnexe(annexe, navigateur).charger;
+
+// ---------------------------------------------------------------- les sources libres
+
+/** Une source libre chargee : son identifiant de registre et ses entrees, chacune portant sa source et sa nature. */
+export interface SourceChargee {
+  readonly source: string;
+  readonly entrees: readonly EntreeBibliotheque[];
+}
+
+const NATURES: ReadonlySet<string> = new Set<NatureForme>(['plein', 'ligne']);
+
+/**
+ * L'annexe d'une source libre remise a la forme attendue : la source doit etre celle qu'on a demandee (une annexe d'une autre
+ * source, ou d'un fichier etranger, est refusee) ; chaque entree garde son id, son nom, ses evenements, son SVG et une nature
+ * connue, et recoit la source. Undefined quand ce n'est pas une annexe de cette source.
+ */
+export function normaliserSource(attendue: SourceFormes, v: unknown): SourceChargee | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const b = v as Record<string, unknown>;
+  if (b.source !== attendue.id || !Array.isArray(b.entrees)) return undefined;
+  const entrees: EntreeBibliotheque[] = [];
+  for (const e of b.entrees as unknown[]) {
+    if (typeof e !== 'object' || e === null) continue;
+    const { id, nom, svg, evenements, nature } = e as Record<string, unknown>;
+    if (!estTexte(id) || !estTexte(nom) || !estTexte(svg) || !estListeDeTextes(evenements)) continue;
+    entrees.push({ id, nom, svg, evenements: [...evenements], source: attendue.id, nature: estTexte(nature) && NATURES.has(nature) ? nature as NatureForme : 'plein' });
+  }
+  return { source: attendue.id, entrees };
+}
+
+/** L'annexe d'une source libre, decrite pour le chargeur commun (annexes.ts). */
+export const annexeSource = (s: SourceFormes): Annexe<SourceChargee> => ({
+  fichier: s.fichier,
+  globale: s.globale,
+  contenu: 'les formes de ' + s.nomCourt,
+  consigne: 'lancez « npm run bibliotheque »',
+  valider: v => normaliserSource(s, v)
+});
+
+// Un chargeur par source, cree au premier besoin : une source qu'on ne demande jamais ne coute rien.
+const chargeurs = new Map<string, Chargeur<SourceChargee>>();
+
+/** Charge l'annexe d'une source libre du registre ; une source inconnue est refusee en la nommant. */
+export function chargerSource(id: string): Promise<SourceChargee> {
+  const s = sourceFormes(id);
+  if (!s) return Promise.reject(new Error('Source de formes inconnue : ' + id + '.'));
+  let c = chargeurs.get(id);
+  if (!c) { c = fabriquerChargeurAnnexe(annexeSource(s), navigateur); chargeurs.set(id, c); }
+  return c.charger();
+}
+
+/** Vrai quand l'annexe de cette source est deja arrivee. */
+export const sourceChargee = (id: string): boolean => {
+  const s = sourceFormes(id);
+  return s !== undefined && annexePosee(annexeSource(s));
+};
+
+/** Les sources libres du registre (toutes sauf celle par defaut, que `chargerBibliotheque` amene). */
+export const sourcesLibres = (): readonly SourceFormes[] => SOURCES_FORMES.filter(s => s.fichier !== FICHIER_BIBLIOTHEQUE);

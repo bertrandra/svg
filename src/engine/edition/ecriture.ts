@@ -7,6 +7,7 @@ import { ecrireChemin, nb } from './chemins.js';
 import { attributsTrait } from './trait.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 import { attributOrigine, metadonnees } from './provenance.js';
+import { attributsTexte } from './texteVivant.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
 // operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
@@ -36,8 +37,8 @@ function composerForme(f: Forme, precision: number): string {
     if (opaciteDuContour(f) < 1) s += ' stroke-opacity="' + nb(opaciteDuContour(f), 3) + '"';
   } else if (f.remplissage) opacite = Math.round(opacite * opaciteDuRemplissage(f) * 1000) / 1000;
   if (opacite < 1) s += ' opacity="' + nb(opacite, 3) + '"';
-  // En dernier, et seulement pour une forme creditee : toute autre s'ecrit comme avant (provenance.ts).
-  return s + attributOrigine(f) + '/>';
+  // En dernier, et seulement pour une forme creditee ou un texte vivant : toute autre s'ecrit comme avant (provenance.ts, texteVivant.ts).
+  return s + attributOrigine(f) + attributsTexte(f) + '/>';
 }
 
 /**

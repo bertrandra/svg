@@ -7,13 +7,18 @@ import {
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
 import { NoeudsPoint, OutilsTrace } from './OutilsTrace.js';
-import { arrondi, estHex, genreAffiche } from './aidesEditeur.js';
+import { estHex, genreAffiche } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTactile } from './Vue.js';
 import { selonSaisie } from '../util/texte.js';
 import { useReperes } from './contexteGuide.js';
 import { Repere } from './Repere.js';
 import type { Teinte } from './typesEditeur.js';
+import { Nombre } from './commun/Nombre.js';
+import { SectionTexte } from './InspecteurTexte.js';
+
+// Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
+export { Nombre };
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
 export function Inspecteur() {
@@ -30,6 +35,8 @@ export function Inspecteur() {
     <>
       <h3>{sel.length > 1 ? sel.length + ' formes' : genreAffiche(premiere) + ' ' + premiere.id.slice(1)}</h3>
       <ReperesSelection points={!!points} />
+      {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
+      {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
       <Section titre="Apparence" ouverte>
         <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
         <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
@@ -166,22 +173,6 @@ export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { l
         </div>
       ) : null}
     </div>
-  );
-}
-
-export function Nombre({ libelle, valeur, poser, min }: { libelle: string; valeur: number; poser: (v: number) => void; min?: number }) {
-  const [t, poserT] = useState(String(arrondi(valeur)));
-  useEffect(() => { poserT(String(arrondi(valeur))); }, [valeur]);
-  const valider = () => {
-    const v = Number(t.replace(',', '.'));
-    if (Number.isFinite(v) && v !== arrondi(valeur) && (min === undefined || v >= min)) poser(v);
-    else poserT(String(arrondi(valeur)));
-  };
-  return (
-    <label className="champ-ligne nombre">
-      <span>{libelle}</span>
-      <input type="text" inputMode="decimal" value={t} onChange={e => poserT(e.target.value)} onBlur={valider} onKeyDown={e => { if (e.key === 'Enter') valider(); }} />
-    </label>
   );
 }
 

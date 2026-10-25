@@ -6,6 +6,10 @@
 import { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { SOURCES_ORIGINE, composantsDe, type Composant } from '../model/credits.js';
+import { SOURCE_PAR_DEFAUT, sourceFormes } from '../model/sourcesFormes.js';
+
+/** Le paquet de la source par defaut : celle dont la mention est ecrite dans le fichier, presentee a part. */
+const PAQUET_PAR_DEFAUT = sourceFormes(SOURCE_PAR_DEFAUT)?.paquet;
 import { useFocusDialogue } from './focusEditeur.js';
 import { versionProduit } from './produit.js';
 
@@ -34,7 +38,7 @@ export function ContenuCredits() {
         <section className="credits-section">
           <h3>Formes de la bibliothèque</h3>
           <p>
-            Les formes de la bibliothèque viennent de <Lien href={source.url}>{source.nom}</Lien>, sous licence{' '}
+            Les formes de la bibliothèque par défaut viennent de <Lien href={source.url}>{source.nom}</Lien>, sous licence{' '}
             <Lien href={source.urlLicence}>{source.licence}</Lien> : vous pouvez les utiliser, y compris dans un
             produit commercial, à condition d’en créditer la source. Vous les recolorez, les redimensionnez et les assemblez
             librement ; ces changements sont des modifications au sens de la licence.
@@ -45,6 +49,12 @@ export function ContenuCredits() {
           </p>
         </section>
       ) : null}
+      <Liste titre="Autres bibliothèques de formes (chargées à la demande)" composants={composantsDe('forme').filter(c => c.paquet !== PAQUET_PAR_DEFAUT)} />
+      <p className="aide">
+        Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention dans chaque dessin : un SVG qui contient une de leurs formes
+        garde seulement son origine (par exemple <code>mdi:heart</code>), sans élément <code>&lt;metadata&gt;</code>. Leur notice et le texte
+        de leur licence accompagnent l’éditeur dans MENTIONS.txt.
+      </p>
       <Liste titre="Fontes" composants={composantsDe('fonte')} />
       <Liste titre="Logiciels" composants={composantsDe('logiciel')} />
       <p className="aide">Le texte complet de chaque licence est dans le fichier MENTIONS.txt, livré avec l’éditeur.</p>

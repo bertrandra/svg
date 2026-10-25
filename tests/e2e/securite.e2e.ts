@@ -16,7 +16,12 @@ import { violationsEcriture, violationsNettoyage } from '../unit/securite/invari
 import { passer } from '../unit/securite/passage.js';
 
 const DOSSIER = resolve(RACINE_DEPOT, 'tests/fixtures/hostile');
-interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus' }
+/**
+ * `attendu` est l'issue de la lecture pure (et de l'embarquement sans polices) ; `attenduPage`, quand il differe, celle de la
+ * page, qui met le texte en lettres avec ses fontes (ADR-0020) : un fichier hostile qui porte du texte s'y ouvre, et ses
+ * invariants (aucun script, aucune requete, exports inertes) sont alors verifies comme pour tout fichier ouvert.
+ */
+interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus'; attenduPage?: 'ouvre' | 'refus' }
 const index = JSON.parse(readFileSync(resolve(DOSSIER, 'index.json'), 'utf8')) as { fichiers: Ligne[] };
 const octetsDe = (nom: string): Buffer => readFileSync(resolve(DOSSIER, nom));
 /** Le texte comme la page le lit : `File.text()` decode en UTF-8 et retire la marque d'ordre des octets. */
@@ -238,7 +243,7 @@ describe('securite : le corpus hostile entre par la page', () => {
       // HTML ramene les fins de ligne d'un <textarea> a LF ; Chromium garde pourtant CR dans la valeur lue (constate). Ni l'un ni
       // l'autre n'est un changement du texte.
       const ramene = texte.replace(/\r\n?/g, '\n');
-      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(l.attendu);
+      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(l.attenduPage ?? l.attendu);
       else {
         // Le navigateur a change le texte avant la page : seul le retrait de caracteres de controle est admis, et la page doit
         // faire du texte recu exactement ce qu'en fait le moteur, sans rompre un invariant. Le vecteur d'origine, octets exacts,
@@ -255,7 +260,7 @@ describe('securite : le corpus hostile entre par la page', () => {
     it(l.fichier + ' : fichier depose', async () => {
       const s = await session();
       const issueDepot = await deposer(s.page, octetsDe(l.fichier), l.fichier);
-      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(l.attendu);
+      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(l.attenduPage ?? l.attendu);
       await s.garde.verifier('apres depot');
     }, 120_000);
   }

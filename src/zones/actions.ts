@@ -9,6 +9,7 @@ import { pluriel } from '../util/texte.js';
 import { actionsDessin } from './actionsDessin.js';
 import { phraseCombinaison, phraseDuplication, phraseMasquage, phraseVerrouillage } from './phrasesSelection.js';
 import type { ActionsEditeur, Outil, Point, Vues } from './typesEditeur.js';
+import { avecVectorisation } from './phrasesTexte.js';
 
 /** L'etat du moment : ce que les actions lisent, jamais ce qu'elles posent. */
 export interface EtatLu {
@@ -95,7 +96,7 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       appliquer(() => r.dessin);
       choisir([r.id]);
       // Le moteur laisse de cote les formes verrouillees : la phrase compte ce qui a vraiment ete reuni.
-      dire(phraseCombinaison(dessin.formes.filter(f => sel.includes(f.id) && !f.verrouille).length));
+      dire(avecVectorisation(phraseCombinaison(dessin.formes.filter(f => sel.includes(f.id) && !f.verrouille).length), dessin, sel));
     },
     separerSelection: () => {
       const { dessin, formeSeule } = lire();
@@ -104,7 +105,7 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       if (r.ids.length < 2) { dire('Cette forme n’a qu’un seul tracé : rien à séparer.'); return; }
       appliquer(() => r.dessin);
       choisir(r.ids);
-      dire('Forme séparée en ' + pluriel(r.ids.length, 'tracé') + '.');
+      dire(avecVectorisation('Forme séparée en ' + pluriel(r.ids.length, 'tracé') + '.', dessin, [formeSeule.id]));
     },
     masquerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); dire(phraseMasquage(sel.length)); } },
     verrouillerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire(phraseVerrouillage(sel.length)); } },

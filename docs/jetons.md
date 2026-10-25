@@ -29,6 +29,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | Jeton | Clair | Sombre | Rôle |
 |---|---|---|---|
 | `--cyan` | `#00719c` | `#4fb3dc` | La couleur d’outil : action primaire, état actif, focus, liens |
+| `--cyan-survol` | `#006186` | `#4fb3dc` | Le texte d’un bouton discret survolé : le cyan s’assombrit en clair, où le voile du survol le ferait passer sous 4,5:1 |
 | `--sur-cyan` | `#ffffff` | `#08202b` | Le texte posé sur la couleur d’outil |
 
 ### Les messages : avertissement et échec, chacun avec son fond
@@ -48,6 +49,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--damier-b` | `#e6e6e6` | `#e6e6e6` | Le damier de transparence : les cases grises |
 | `--toile-blanc` | `#ffffff` | `#ffffff` | Le plan de travail en fond blanc |
 | `--toile-sombre` | `#1b1d20` | `#1b1d20` | Le plan de travail en fond sombre |
+| `--encre-toile` | `#15181d` | `#15181d` | L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe) |
 
 ### Les ombres et voiles, translucides
 
@@ -82,6 +84,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--encre` sur `--selection` | 12.61 | 7.65 | texte sélectionné (::selection) |
 | `--cyan` sur `--table` | 4.61 | 7.69 | liens et boutons discrets sur la page |
 | `--cyan` sur `--panneau` | 5.14 | 7.04 | liens et boutons discrets dans les panneaux |
+| `--cyan-survol` sur `--panneau` | 6.47 | 7.04 | bouton discret survolé dans un panneau (le voile de survol à 10 % est vérifié par un test de rendu) |
+| `--cyan-survol` sur `--table` | 5.80 | 7.69 | bouton discret survolé sur la page |
 | `--sur-cyan` sur `--cyan` | 5.47 | 7.04 | libellé de l’action primaire et de l’outil actif |
 | `--alerte` sur `--alerte-fond` | 5.06 | 7.54 | message d’avertissement |
 | `--echec` sur `--echec-fond` | 5.28 | 6.40 | message d’échec, survol d’un geste destructif |
@@ -93,6 +97,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
+| `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
 
 ### La typographie : cinq tailles nommées par leur rôle
 
@@ -131,6 +136,7 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 
 | Jeton | Valeur | Rôle |
 |---|---|---|
+| `--couche-saisie` | `5` | La saisie en place d’un texte vivant, sur la toile : au-dessus du dessin, sous les tiroirs |
 | `--couche-voile` | `14` | Le voile sous un tiroir ouvert |
 | `--couche-tiroir` | `15` | Les panneaux en tiroir sur tablette et téléphone |
 | `--couche-saut` | `40` | Le lien d’évitement vers la toile |

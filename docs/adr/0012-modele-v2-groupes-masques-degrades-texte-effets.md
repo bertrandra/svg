@@ -4,6 +4,12 @@
 **Statut :** proposée (remplace en partie l'ADR-0001, « un dessin à plat, pas un DOM » ; précise l'ADR-0004 §2 et
 la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de version majeure**
 
+**Avancement (25 octobre 2026) :** les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à
+plat d'aujourd'hui, sans attendre les groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md),
+qui précise le §4 et l'annexe 4 (texte entièrement encodé en pourcentage ; pas de `<title>` ; « Vectoriser le texte » en trois
+modes plutôt qu'un groupe d'une forme par lettre ; une matrice de composition qui suit chaque transformation ; une garde qui
+vectorise le texte quand un outil change son tracé sans le connaître). Les autres étapes restent proposées.
+
 Les annexes, dans [`0012-annexes/`](0012-annexes/), portent les types, les tables et le plan ; cette page porte
 les décisions et leurs raisons.
 

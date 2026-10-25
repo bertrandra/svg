@@ -21,13 +21,13 @@ const apresTiroir = (f: () => void): void => { setTimeout(f, 60); };
 export function ExportCricut({ nom }: { nom: string }) {
   const { preparation } = useDessin(), { profil, suiteCricut } = useInterface(), ac = useActions();
   if (!profil) return null;
-  const e = etatExport(preparation?.constats ?? null);
-  const ptc = profil.procede === 'imprimer-decouper';
+  const e = etatExport(preparation?.constats ?? null, profil.procede);
+  const ptc = profil.procede === 'imprimer-decouper', stylo = profil.procede === 'dessin-stylo';
   if (suiteCricut === 'confirmer' && e.raison === null && e.aCorriger.length) return <Confirmation nom={nom} aCorriger={e.aCorriger} />;
   return (
     <>
       <div className="boutons export-cricut">
-        <BoutonRaison className="primaire" aide={ptc ? 'L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP' : 'Un SVG à taille physique, fonds pleins, une couleur par tapis'}
+        <BoutonRaison className="primaire" aide={ptc ? 'L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP' : stylo ? 'Un SVG à taille physique, des traits sans remplissage, une couleur par stylo' : 'Un SVG à taille physique, fonds pleins, une couleur par tapis'}
           raison={e.raison} onClick={() => ac.exporterPourCricut(nom)}>{e.libelle}</BoutonRaison>
       </div>
       {suiteCricut === 'design-space' ? <CarteDesignSpace nom={nom} /> : null}

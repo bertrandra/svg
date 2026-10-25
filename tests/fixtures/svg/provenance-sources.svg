@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M10 10h40v40h-40z" fill="#000000" data-origine="mdi:heart"/>
+  <path d="M60 20L90 20L75 50" fill="none" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" data-origine="lucide:heart"/>
+  <path d="M60 60h30v30h-30z" fill="#228b22" data-origine="tabler:heart-filled ph:heart-fill"/>
+</svg>

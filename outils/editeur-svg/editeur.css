@@ -17,9 +17,12 @@
 /* Repliees, sur un ecran large : « Plus d'evenements » suit les pastilles sur la meme ligne. */
 .pastilles-evenements:not(.depliees) { display: flex; flex-wrap: wrap; align-items: center; }
 .pastilles { display: flex; flex-wrap: wrap; gap: var(--esp-s); min-width: 0; max-width: 100%; }
-.pastille-evenement { padding: var(--esp-xs) var(--esp-m); font-size: var(--texte-compact); font-weight: 400; background: var(--table); color: var(--encre); border-color: var(--filet); white-space: nowrap; }
-.pastille-evenement[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); color: var(--sur-cyan); font-weight: 600; }
-button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled) { color: var(--sur-cyan); }
+.pastille-evenement, .pastille-filtre { padding: var(--esp-xs) var(--esp-m); font-size: var(--texte-compact); font-weight: 400; background: var(--table); color: var(--encre); border-color: var(--filet); white-space: nowrap; }
+.pastille-evenement[aria-pressed="true"], .pastille-filtre[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); color: var(--sur-cyan); font-weight: 600; }
+button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled), button.pastille-filtre[aria-pressed="true"]:hover:not(:disabled) { color: var(--sur-cyan); }
+/* Source et nature : deux groupes titres sur une ligne qui passe a la suivante ; le titre visible distingue les deux « Toutes ». */
+.filtres-source { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-s) var(--esp-l); min-width: 0; }
+.pastilles-filtres { display: flex; align-items: center; gap: var(--esp-s); min-width: 0; max-width: 100%; }
 .pastilles-famille { display: grid; gap: var(--esp-xs); min-width: 0; }
 .pastilles-titre { font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
 .pastilles-plus { justify-self: start; padding-left: var(--esp-xs); padding-right: var(--esp-xs); }
@@ -27,8 +30,14 @@ button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled) { color: var
    interieure laisse au contour de focus la place de se dessiner. */
 @media (max-width: 640px) {
   .pastilles-evenements:not(.depliees) { display: grid; }
-  .pastilles-evenements:not(.depliees) > .pastilles { flex-wrap: nowrap; overflow-x: auto; padding: var(--esp-xs); margin: calc(-1 * var(--esp-xs)); max-width: calc(100% + 2 * var(--esp-xs)); }
+  .pastilles-evenements:not(.depliees) > .pastilles, .pastilles-filtres > .pastilles { flex-wrap: nowrap; overflow-x: auto; padding: var(--esp-xs); margin: calc(-1 * var(--esp-xs)); max-width: calc(100% + 2 * var(--esp-xs)); }
+  .filtres-source { display: grid; gap: var(--esp-xs); }
+  .pastilles-filtres { display: grid; gap: var(--esp-2xs); }
 }
+/* Dans le panneau de l'editeur, etroit, les sources defilent sur une ligne plutot que de pousser la grille trois lignes plus bas. */
+.recherche-formes.compact .filtres-source { display: grid; gap: var(--esp-xs); }
+.recherche-formes.compact .pastilles-filtres { display: grid; gap: var(--esp-2xs); }
+.recherche-formes.compact .pastilles-filtres > .pastilles { flex-wrap: nowrap; overflow-x: auto; padding: var(--esp-xs); margin: calc(-1 * var(--esp-xs)); max-width: calc(100% + 2 * var(--esp-xs)); }
 .voir-aussi { display: flex; flex-wrap: wrap; gap: var(--esp-xs) var(--esp-s); }
 .voir-aussi button { padding-left: var(--esp-xs); padding-right: var(--esp-xs); }
 /* Rien ne correspond : la phrase, des propositions qui trouvent quelque chose, de quoi effacer. */
@@ -379,6 +388,36 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
      (axe) jugeait le contraste d'un texte du tiroir d'apres les formes dessinees dessous, selon ou tombait chaque ligne. */
   .tiroir-calques .editeur-svg-toile > g, .tiroir-inspecteur .editeur-svg-toile > g { visibility: hidden; }
 }
+/* Le texte vivant (ADR-0022) : le choix de police et son apercu « forme / ligne », l'alignement, les modes de vectorisation, la
+   saisie en place sur la toile. L'apercu est une feuille dans le flux du panneau, deux rendus cote a cote a l'encre. */
+.choix-police { display: grid; gap: var(--esp-xs); justify-items: start; }
+.choix-police .champ-ligne { width: 100%; }
+.choix-police select { flex: 1; min-width: 0; }
+.choix-police .apercu-bascule { padding-left: 0; padding-right: 0; min-height: 24px; }
+.apercu-police { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-m); width: 100%; padding: var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: var(--table); }
+.apercu-rendu { margin: 0; display: grid; gap: var(--esp-xs); min-width: 0; }
+.apercu-rendu svg { width: 100%; height: 64px; background: var(--toile-blanc); border: 1px solid var(--filet); border-radius: var(--rayon-pastille); }
+.apercu-plein { fill: var(--encre-toile); stroke: none; }
+.apercu-ligne { fill: none; stroke: var(--encre-toile); stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.apercu-rendu figcaption { display: grid; gap: var(--esp-2xs); }
+.apercu-titre { font-size: var(--texte-compact); font-weight: 600; color: var(--encre); }
+.apercu-police .apercu-fermer { grid-column: 1 / -1; justify-self: start; padding-left: 0; padding-right: 0; min-height: 24px; }
+/* Ces deux boutons se lisent comme des liens au fil du panneau : au survol (qui reste pose apres un toucher), un soulignement
+   plutot que le voile cyan des boutons discrets, sous lequel le cyan d'encre tombe a 4,45:1. */
+.choix-police .apercu-bascule:hover:not(:disabled), .apercu-police .apercu-fermer:hover:not(:disabled) { background: transparent; text-decoration: underline; text-underline-offset: 0.2em; }
+.alignement-texte { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
+.alignement-texte button { min-height: 24px; }
+.alignement-texte button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.vectoriser-texte .case { min-height: 24px; }
+.vectoriser-texte button { justify-self: start; }
+.saisie-texte { position: absolute; z-index: var(--couche-saisie); display: grid; gap: var(--esp-2xs); margin-top: var(--esp-s); padding: var(--esp-s); max-width: min(360px, calc(100% - 16px)); background: var(--panneau); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); }
+.saisie-texte textarea { min-width: 220px; max-width: 100%; resize: vertical; font-size: var(--texte-corps); }
+@media (forced-colors: active) {
+  .apercu-plein { fill: CanvasText; }
+  .apercu-ligne { stroke: CanvasText; }
+  .apercu-rendu svg { background: Canvas; }
+  .alignement-texte button[aria-pressed="true"] { border-color: Highlight; }
+}
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
   .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
@@ -408,6 +447,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .autres-formats-repli > summary { min-height: 40px; }
   .options-export .case { min-height: 40px; }
   .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
+  .vectoriser-texte .case, .section-corps > .case { min-height: 40px; }
+  .alignement-texte button, .choix-police .apercu-bascule, .apercu-police .apercu-fermer { min-height: 40px; }
 }
 /* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
 @media (pointer: coarse) { .menu-raccourci { display: none; } }

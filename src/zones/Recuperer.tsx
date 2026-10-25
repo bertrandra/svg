@@ -29,12 +29,12 @@ export function useRecuperation(nom: string): Recuperation {
   const mo = useDessin(), ui = useInterface(), ac = useActions(), signaler = useSignalVisite();
   const telecharger = useTelechargerSvg(nom);
   if (!ui.profil) return { libelle: 'Télécharger le SVG', raison: null, aide: 'Le dessin en SVG, dans vos téléchargements', faire: telecharger };
-  const ptc = ui.profil.procede === 'imprimer-decouper';
-  const e = etatExport(mo.preparation?.constats ?? null);
+  const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo';
+  const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede);
   return {
-    libelle: ptc ? 'Exporter pour Print Then Cut' : 'Exporter pour Cricut',
+    libelle: ptc ? 'Exporter pour Print Then Cut' : stylo ? 'Exporter pour le stylo' : 'Exporter pour Cricut',
     raison: e.raison,
-    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : 'Le fichier à importer dans Design Space',
+    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : stylo ? 'Des traits sans remplissage, à taille physique, une couleur par stylo' : 'Le fichier à importer dans Design Space',
     faire: () => { ac.exporterPourCricut(nom); signaler('recupere'); }
   };
 }

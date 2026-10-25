@@ -115,6 +115,8 @@ empreintes.
 
 ### Corrigé
 
+- Un bouton discret survolé passait sous 4,5:1 en thème clair (4,49 sur un panneau, 4,05 sur la page) : son texte prend
+  le jeton `cyan-survol`.
 - Sur un téléphone (420 px), l'atelier de conversion débordait de 20 px dès que le prétraitement ajoutait
   l'onglet « Prétraitée » : les six onglets de la visionneuse passent maintenant à la ligne. Firefox et WebKit le
   montraient ; Chromium, qui élargit la fenêtre émulée jusqu'au contenu, le cachait aux tests, qui lisent
@@ -147,6 +149,24 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Cinq bibliothèques libres de plus** (ADR-0023) : Material Design Icons (Apache 2.0), Phosphor, Tabler, Healthicons (MIT)
+  et Lucide (ISC), soit 19 000 formes nommées en français par le lexique et rangées par les mêmes règles d'événement,
+  chacune chargée à la demande depuis sa pastille « Source ». Une pastille « Nature » sépare les formes pleines (découpe) des
+  formes en ligne (stylo) ; au stylo du contexte Cricut, « En ligne » vient d'abord. Les marques et logos sont écartés par
+  règle. Une forme garde son origine (`data-origine`) ; seule une forme CC BY fait écrire une mention dans le fichier. Aucun
+  octet existant ne change (l'annexe de game-icons et ses 4 134 empreintes sont intactes ; chaque source a les siennes).
+
+- **Le texte reste modifiable** (ADR-0022) : un texte créé dans l'éditeur garde sa chaîne, sa police, sa taille, son
+  interlettrage, son interligne et son alignement à côté de ses contours exacts ; un double-clic le rouvre dans le panneau
+  Texte. Le fichier écrit ne porte que les contours (jamais de `<text>`, jamais de fichier de police) ; la recomposition se
+  garde en `data-ed-*`. Aucune référence d'écriture existante ne change.
+- **Vectoriser le texte** (Ctrl+Maj+O) : trois façons, lettres séparées, souder les lettres qui se touchent, tout souder ;
+  l'export vectorise de lui-même. Le contexte Cricut signale des lettres qui se chevauchent (la lame couperait à travers).
+- **Dessin au stylo** : un procédé du contexte Cricut pour la machine qui écrit au lieu de couper ; il ne remplit jamais une
+  forme, propose des hachures, une police à trait unique (une lettre est une ligne, pas un contour) et la ligne médiane.
+- **« Aperçu forme / ligne »** à côté de chaque police, au clic seulement : la lettre telle que la machine la coupera ou
+  l'écrira.
 
 - **Ligatures du texte** : `composer(…, { ligatures })` (éteint par défaut dans le moteur, aucun octet existant
   ne bouge), lecture GSUB pure dans `io/ligaturesGsub.ts`, case « Ligatures (fi, fl…) » du panneau Texte,
@@ -472,3 +492,6 @@ empreintes.
   du mode ; seuil, taches, barbules, coupures et couleur sont dans les réglages fins. Le lot fonctionne dans ce mode.
 - Tests de sécurité : un dépassement du budget de temps se remesure une fois avant d'échouer (une machine chargée ne fait
   plus échouer un fichier ordinaire ; une lenteur qui se répète reste un défaut).
+- **Corrigé** : « Lecture du texte… » s'annonçait comme une alerte pendant le chargement des polices (un test de sécurité
+  prenait ce message pour un refus, selon la vitesse de chargement) : c'est un message neutre. Le corpus hostile distingue
+  l'issue de la lecture pure et celle de la page, qui ouvre en lettres un fichier portant du texte (`attenduPage`).

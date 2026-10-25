@@ -33,8 +33,12 @@ export const DESIGN_SPACE_PX_NU_PAR_POUCE: Valeur = {
 export type IdContexte = 'generique' | 'cricut';
 /** Les familles de machines. Seule Cricut est decrite ; les autres ont leur place sans refonte. */
 export type Famille = 'cricut' | 'silhouette' | 'laser';
-/** Ce qu'on fait du dessin : le decouper en couches de matiere, ou l'imprimer puis le decouper autour. */
-export type Procede = 'decoupe' | 'imprimer-decouper';
+/**
+ * Ce qu'on fait du dessin : le decouper en couches de matiere, l'imprimer puis le decouper autour, ou le dessiner au stylo
+ * (ADR-0022 : le stylo trace des lignes, il ne remplit pas). La gravure et la dorure (foil) suivent la meme logique d'outil
+ * (OUTILS_A_VENIR) et ne s'ouvriront qu'une fois verifiees sur une machine.
+ */
+export type Procede = 'decoupe' | 'imprimer-decouper' | 'dessin-stylo';
 export type UniteLongueur = 'in' | 'mm';
 
 export interface Tapis {
@@ -96,6 +100,14 @@ export interface PrintThenCut {
   readonly resolution: Valeur;
 }
 
+/**
+ * Un outil qui suit les lignes du dessin sans le decouper (stylo, et plus tard pointe de gravure, outil de dorure) : la largeur du
+ * trait qu'il laisse, en pouces. C'est elle qui espace les hachures (des lignes bord a bord) et epaissit le pourtour d'une forme.
+ */
+export interface Outil {
+  readonly largeur: Valeur;
+}
+
 export interface FamilleProduction {
   readonly id: Famille;
   readonly nom: string;
@@ -103,6 +115,8 @@ export interface FamilleProduction {
   readonly tapis: readonly Tapis[];
   readonly materiaux: readonly Materiau[];
   readonly printThenCut: PrintThenCut | null;
+  /** Le stylo du procede « Dessin au stylo » ; null pour une famille qui ne dessine pas. */
+  readonly stylo: Outil | null;
   /** Ce que le SVG ne porte pas et que le logiciel de la machine regle apres l'import (aide du panneau). */
   readonly typesDeLigne: readonly string[];
 }
@@ -145,9 +159,9 @@ const TAPIS_CRICUT: readonly Tapis[] = [
 ];
 
 const MACHINES_CRICUT: readonly Machine[] = [
-  { id: 'joy', famille: 'cricut', nom: 'Joy', modeles: ['Cricut Joy'], tapis: ['joy-4x6', 'joy-4x12'], procedes: ['decoupe'], note: 'La Joy ne fait pas Print Then Cut (la Joy Xtra, si : elle n’est pas décrite ici).' },
-  { id: 'explore', famille: 'cricut', nom: 'Explore (Air 2 / 3)', modeles: ['Cricut Explore Air 2', 'Cricut Explore 3'], tapis: ['12x12', '12x24', 'smart'], procedes: ['decoupe', 'imprimer-decouper'] },
-  { id: 'maker', famille: 'cricut', nom: 'Maker (Maker / Maker 3)', modeles: ['Cricut Maker', 'Cricut Maker 3'], tapis: ['12x12', '12x24', 'smart'], procedes: ['decoupe', 'imprimer-decouper'] }
+  { id: 'joy', famille: 'cricut', nom: 'Joy', modeles: ['Cricut Joy'], tapis: ['joy-4x6', 'joy-4x12'], procedes: ['decoupe', 'dessin-stylo'], note: 'La Joy ne fait pas Print Then Cut (la Joy Xtra, si : elle n’est pas décrite ici).' },
+  { id: 'explore', famille: 'cricut', nom: 'Explore (Air 2 / 3)', modeles: ['Cricut Explore Air 2', 'Cricut Explore 3'], tapis: ['12x12', '12x24', 'smart'], procedes: ['decoupe', 'imprimer-decouper', 'dessin-stylo'] },
+  { id: 'maker', famille: 'cricut', nom: 'Maker (Maker / Maker 3)', modeles: ['Cricut Maker', 'Cricut Maker 3'], tapis: ['12x12', '12x24', 'smart'], procedes: ['decoupe', 'imprimer-decouper', 'dessin-stylo'] }
 ];
 
 const SEUILS_PAPIER_CARTONNE: SeuilsMateriau = {
@@ -176,6 +190,9 @@ export const CRICUT: FamilleProduction = {
     hauteurMax: { valeur: 9.25, aVerifier: true, note: 'De mémoire : 6,75 × 9,25 po sur une feuille Lettre. Une image couchée (9,25 de large) est-elle acceptée ? Témoin 6.' },
     fondPerdu: { valeur: 1 / 16, aVerifier: true, note: 'Environ 1,6 mm de couleur prolongée au-delà de la coupe ; Design Space sait aussi ajouter le sien (réglage « Fond perdu »). Témoin 6.' },
     resolution: { valeur: 300 }
+  },
+  stylo: {
+    largeur: { valeur: 0.4 / 25.4, aVerifier: true, note: 'De mémoire : la pointe fine des stylos Cricut laisse un trait d’environ 0,4 mm ; elle espace les hachures. À mesurer sur une feuille tracée (témoin 8).' }
   },
   typesDeLigne: [
     'Le SVG ne dit pas si une ligne se coupe, se dessine ou se raine : Design Space le règle après l’import, couche par couche.',
@@ -216,5 +233,15 @@ export const CHOIX_GENERIQUE: ChoixProduction = { contexte: 'generique' };
  */
 export const CHOIX_CRICUT_DEFAUT: ChoixMachine = { machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' };
 
-export const NOMS_PROCEDE: Readonly<Record<Procede, string>> = { decoupe: 'Découpe', 'imprimer-decouper': 'Print Then Cut (imprimer puis découper)' };
+export const NOMS_PROCEDE: Readonly<Record<Procede, string>> = { decoupe: 'Découpe', 'imprimer-decouper': 'Print Then Cut (imprimer puis découper)', 'dessin-stylo': 'Dessin au stylo' };
+
+/**
+ * Les procedes d'outil a venir (ADR-0022) : la meme logique que le stylo (l'outil suit les lignes, il ne remplit pas), une largeur
+ * d'outil a mesurer et des comportements de Design Space a verifier. Ils ne se choisissent pas tant que le protocole ne les a pas
+ * vus sur une machine : le selecteur les dit sur une ligne inactive, comme les materiaux annonces.
+ */
+export const OUTILS_A_VENIR: ReadonlyArray<{ readonly id: string; readonly nom: string; readonly note: string }> = [
+  { id: 'gravure', nom: 'gravure', note: 'Pointe de gravure (Maker) : des lignes comme le stylo ; profondeur et matières à vérifier.' },
+  { id: 'dorure', nom: 'dorure (foil)', note: 'Outil de dorure (Explore 3, Maker 3) : des lignes et des hachures ; largeur des pointes à vérifier.' }
+];
 export const NOMS_UNITE: Readonly<Record<UniteLongueur, string>> = { in: 'po', mm: 'mm' };

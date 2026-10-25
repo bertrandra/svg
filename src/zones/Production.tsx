@@ -5,7 +5,7 @@
 import { memo, useMemo } from 'react';
 import { ecrireChemin, type Forme } from '../engine/editionSvg.js';
 import { cadreTapis, etendueVisible, GRAVITES, LIBELLES_CORRECTION, texteTaille, unitesDePouces, type Constat, type Gravite } from '../engine/preparation.js';
-import { CHOIX_GENERIQUE, CRICUT, NOMS_PROCEDE, type ChoixProduction, type Procede, type UniteLongueur } from '../model/contextes.js';
+import { CHOIX_GENERIQUE, CRICUT, NOMS_PROCEDE, OUTILS_A_VENIR, type ChoixProduction, type Procede, type UniteLongueur } from '../model/contextes.js';
 import { pluriel } from '../util/texte.js';
 import { choixCricut, nomTapis, phraseReste } from './actionsProduction.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
@@ -19,7 +19,7 @@ import { Repere } from './Repere.js';
 const NOMS_GRAVITE: Readonly<Record<Gravite, string>> = { bloquant: 'Bloquant', 'a-corriger': 'À corriger', conseil: 'Conseil' };
 // Le millimetre d'abord : c'est l'unite par defaut d'une interface francaise ; le pouce (celle de Design Space) reste au choix.
 const UNITES: ReadonlyArray<readonly [UniteLongueur, string]> = [['mm', 'Millimètres'], ['in', 'Pouces']];
-const PROCEDES: readonly Procede[] = ['decoupe', 'imprimer-decouper'];
+const PROCEDES: readonly Procede[] = ['decoupe', 'imprimer-decouper', 'dessin-stylo'];
 
 /**
  * Les rubriques du choix de machine : la machine d'abord (« Générique » ou une Cricut : c'est le choix qui compte), puis, en Cricut,
@@ -51,7 +51,14 @@ export function useRubriquesProduction(): SectionMenu[] {
         ...(bientot.length ? [{ id: 'materiau-bientot', libelle: 'Bientôt : ' + bientot.join(', '), desactive: true } satisfies ElementMenu] : [])
       ]
     },
-    { id: 'procede', titre: 'Procédé', elements: PROCEDES.map(p => radio('procede-' + p, NOMS_PROCEDE[p], cricut.procede === p, { ...cricut, procede: p }, !machine?.procedes.includes(p))) },
+    {
+      id: 'procede', titre: 'Procédé',
+      elements: [
+        ...PROCEDES.map(p => radio('procede-' + p, NOMS_PROCEDE[p], cricut.procede === p, { ...cricut, procede: p }, !machine?.procedes.includes(p))),
+        // Les outils a venir (gravure, dorure) suivent la logique du stylo : annonces sur une ligne inactive, comme les materiaux.
+        { id: 'procede-bientot', libelle: 'Bientôt : ' + OUTILS_A_VENIR.map(o => o.nom).join(', '), desactive: true } satisfies ElementMenu
+      ]
+    },
     { id: 'unite', titre: 'Unité', elements: UNITES.map(([u, nom]) => radio('unite-' + u, nom, cricut.unite === u, { ...cricut, unite: u })) }
   ];
 }
@@ -82,6 +89,7 @@ function LigneConstat({ c }: { c: Constat }) {
       {c.correction || c.formes.length || c.tapis ? (
         <div className="boutons">
           {c.correction ? <button type="button" onClick={() => ac.corrigerConstat(c.code)}>{LIBELLES_CORRECTION[c.correction]}</button> : null}
+          {(c.autres ?? []).map(k => <button key={k} type="button" onClick={() => ac.corrigerConstat(c.code, k)}>{LIBELLES_CORRECTION[k]}</button>)}
           {c.tapis && production.contexte === 'cricut' ? <button type="button" onClick={() => ac.poserProduction({ ...production, tapis: c.tapis ?? production.tapis })}>Passer au {nomTapis(c.tapis)}</button> : null}
           {c.formes.length ? <button type="button" className="discret" aria-label={'Choisir les formes en cause (' + pluriel(c.formes.length, 'forme') + ')'} onClick={() => { ac.choisir([...c.formes]); ac.dire(pluriel(c.formes.length, 'forme') + ' choisie' + (c.formes.length > 1 ? 's' : '') + '.'); }}>Choisir les formes</button> : null}
         </div>
@@ -98,12 +106,12 @@ export function PanneauCricut({ nom }: { nom: string }) {
   const { preparation } = useDessin(), { profil } = useInterface();
   if (!profil) return null;
   const constats = preparation?.constats ?? [];
-  const ptc = profil.procede === 'imprimer-decouper';
+  const ptc = profil.procede === 'imprimer-decouper', stylo = profil.procede === 'dessin-stylo';
   const statut = !preparation ? 'analyse…' : constats.length ? pluriel(constats.length, 'constat') : 'prêt';
   return (
     <div className="panneau-cricut">
-      <Section titre={ptc ? 'Prêt pour Print Then Cut' : 'Prêt pour Cricut'} ouverte note={statut}>
-        <p className="aide">{profil.machine.nom} · {profil.tapis.nom} · {profil.materiau.nom}{ptc ? ' · Print Then Cut' : ''}</p>
+      <Section titre={ptc ? 'Prêt pour Print Then Cut' : stylo ? 'Prêt pour le stylo' : 'Prêt pour Cricut'} ouverte note={statut}>
+        <p className="aide">{profil.machine.nom} · {profil.tapis.nom} · {profil.materiau.nom}{ptc ? ' · Print Then Cut' : stylo ? ' · Dessin au stylo' : ''}</p>
         <Repere id="cricut" titre="Ce panneau prépare la découpe">
           Il vérifie le dessin pour votre machine : chaque constat dit ce qui se découperait mal et propose une correction, que Ctrl+Z annule. Le tapis s’affiche sous le dessin ; la machine découpe ce qui tient dans les pointillés.
         </Repere>
@@ -111,9 +119,9 @@ export function PanneauCricut({ nom }: { nom: string }) {
           <dl className="resume-cricut">
             <dt>Taille finale</dt>
             <dd>{preparation.taille ? texteTaille(preparation.taille.l, preparation.taille.h, profil.unite) : 'aucune forme'}</dd>
-            <dt>{ptc ? 'Couleurs' : 'Couches'}</dt>
+            <dt>{ptc ? 'Couleurs' : stylo ? 'Stylos' : 'Couches'}</dt>
             <dd>
-              {ptc ? pluriel(preparation.couches.length, 'couleur') + ', imprimées ensemble' : phraseCouches(preparation.couches.length)}
+              {ptc ? pluriel(preparation.couches.length, 'couleur') + ', imprimées ensemble' : stylo ? pluriel(preparation.couches.length, 'couleur') + ' : ' + pluriel(preparation.couches.length, 'stylo') : phraseCouches(preparation.couches.length)}
               <span className="pastilles" aria-hidden="true">{preparation.couches.slice(0, 12).map(x => <span key={x.couleur} className="pastille" style={{ background: x.couleur }} />)}</span>
             </dd>
           </dl>
@@ -121,7 +129,7 @@ export function PanneauCricut({ nom }: { nom: string }) {
         {preparation && !constats.length ? (
           <>
             <p className="pret">{phraseReste(0, profil.procede)}</p>
-            <p className="aide">Rien à corriger. « Exporter pour Cricut » écrit {ptc ? 'l’image à imprimer et sa ligne de coupe' : 'le fichier à importer dans Design Space'}.</p>
+            <p className="aide">Rien à corriger. {stylo ? '« Exporter pour le stylo » écrit les traits à dessiner, sans remplissage' : '« Exporter pour Cricut » écrit ' + (ptc ? 'l’image à imprimer et sa ligne de coupe' : 'le fichier à importer dans Design Space')}.</p>
           </>
         ) : null}
         {GRAVITES.map(g => {
@@ -158,7 +166,7 @@ const cheminDeZones = (c: Constat): string => {
  */
 export const GabaritTapis = memo(function GabaritTapis() {
   const { preparation } = useDessin(), { profil } = useInterface();
-  if (!profil || profil.procede !== 'decoupe' || !preparation) return null;
+  if (!profil || profil.procede === 'imprimer-decouper' || !preparation) return null;
   const z = profil.zoneUtile;
   const etendue = etendueVisible(preparation.dessin);
   const origine = etendue ?? { x: preparation.dessin.vb[0], y: preparation.dessin.vb[1] };

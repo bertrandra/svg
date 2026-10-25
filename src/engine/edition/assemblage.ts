@@ -6,6 +6,7 @@ import { boiteForme, echelle, multiplier, transformerChemin, translation, unir }
 import { prochainId } from './operations.js';
 import { echellerTrait } from './trait.js';
 import { avecOrigines, originesDe } from './provenance.js';
+import { avecTexteTransforme } from './texteVivant.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -22,7 +23,7 @@ export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { de
   const formes = visibles.map(f => {
     const id = 'f' + n++;
     ids.push(id);
-    return { ...echellerTrait(f, k), id, verrouille: false, d: transformerChemin(f.d, m) };
+    return avecTexteTransforme({ ...echellerTrait(f, k), id, verrouille: false, d: transformerChemin(f.d, m) }, f, m);
   });
   return { dessin: { ...dessin, formes: [...dessin.formes, ...formes] }, ids };
 }
@@ -70,7 +71,7 @@ export function coller(dessin: DessinSvg, formes: readonly Forme[], dx = 0, dy =
   const nouvelles = formes.map(f => {
     const id = 'f' + n++;
     ids.push(id);
-    return { ...f, id, verrouille: false, visible: true, d: dx || dy ? transformerChemin(f.d, translation(dx, dy)) : f.d };
+    return dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, visible: true, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false, visible: true };
   });
   return { dessin: nouvelles.length ? { ...dessin, formes: [...dessin.formes, ...nouvelles] } : dessin, ids };
 }
