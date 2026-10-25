@@ -94,7 +94,9 @@ function passeCss(s: string): string {
   return neutraliserUrl(s)
     .replace(/@import[^;]*;?/gi, '')
     .replace(/expression\s*\(/gi, 'none(')
-    .replace(/(?:-moz-binding|behavior)\s*:[^;}]*/gi, '')
+    // -moz-binding part meme sans « : » : un nom de propriete seul est inerte, mais rien ne doit pouvoir le recomposer.
+    .replace(/-moz-binding(?:\s*:[^;}]*)?/gi, '')
+    .replace(/behavior\s*:[^;}]*/gi, '')
     .replace(/(?:-webkit-)?(?:image-set|cross-fade)\s*\(/gi, 'none(')
     .replace(/(^|[^\w-])src\s*\(/gi, '$1none(')
     .replace(SCHEMAS, '');

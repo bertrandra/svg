@@ -147,6 +147,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
+  corpus a changé) ; rien ne peut plus le recomposer.
 - Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
   bouton, est la poignée du glisser (Firefox ne commence jamais un glisser sur un bouton).
 - Sous Safari et WebKit, un menu ouvert à la souris puis parcouru aux flèches montre de nouveau l'élément atteint, de même que

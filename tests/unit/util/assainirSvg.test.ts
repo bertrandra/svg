@@ -57,6 +57,11 @@ describe('assainirSvg : ce que le nettoyage par remplacements laissait passer', 
     expect(nettoyerCss('.a{fill:url(/**/https://x.invalid/)}')).not.toMatch(/https/);
     expect(nettoyerCss('.a{fill:url(https://x.invalid/a')).not.toMatch(/url\(/);
     expect(nettoyerCss('.a{cursor:image-set("https://x.invalid/a.png" 1x)}')).not.toMatch(/image-set/);
+    // Trouve par le fuzzing : -moz-binding seul, sans « : », restait dans la feuille.
+    expect(nettoyerCss('-moz-binding')).not.toMatch(/binding/i);
+    expect(nettoyerCss('.a{-moz-binding}')).not.toMatch(/binding/i);
+    const pris = nettoyerSvg('<svg x=0 viewBox="0 0 1 1"><style>-moz-binding</style></svg>');
+    expect(pris === null ? [] : violationsNettoyage(pris.svg)).toEqual([]);
   });
 
   it('garde les references locales url(#id), guillemets compris, et un CSS sans danger tel quel', () => {
