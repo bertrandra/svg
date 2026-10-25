@@ -1,0 +1,209 @@
+{
+  "commentaire": "Corpus de PDF hostiles (ADR-0020, docs/securite.md) : un fichier par vecteur, fabrique par tests/unit/securite/hostilesPdf.ts. attendu = ouvre (le dessin s ouvre sans le danger) ou refus (refus nomme).",
+  "fichiers": [
+    {
+      "fichier": "bombe-decompression.pdf",
+      "famille": "bombe",
+      "vecteur": "Contenu de page FlateDecode de 130 Ko qui se decompresse en 129 Mo de zeros",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "bombe-flux-objets.pdf",
+      "famille": "bombe",
+      "vecteur": "Flux d objets (ObjStm) qui porte le catalogue et se decompresse en 129 Mo",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "bombe-runlength.pdf",
+      "famille": "bombe",
+      "vecteur": "FlateDecode puis RunLengthDecode : 2 Ko qui font 2,1 Mo, puis 135 Mo (deux octets pour 128 repetitions)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "chiffre-rc4.pdf",
+      "famille": "chiffrement",
+      "vecteur": "Trailer /Encrypt (Standard, RC4 128 bits, mot de passe utilisateur vide)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "chiffre-filtre-crypt.pdf",
+      "famille": "chiffrement",
+      "vecteur": "Flux de contenu au filtre /Crypt sans dictionnaire de chiffrement",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "prev-circulaire.pdf",
+      "famille": "structure",
+      "vecteur": "Chaine /Prev qui revient sur sa propre table (boucle infinie naive)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xref-compte-demesure.pdf",
+      "famille": "structure",
+      "vecteur": "Section de table « 0 999999999 » pour cinq entrees (allocation naive)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "xref-flux-largeurs.pdf",
+      "famille": "structure",
+      "vecteur": "Table en flux aux largeurs /W [9 9 9] et /Index demesure, reindexee par balayage",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "objstm-n-demesure.pdf",
+      "famille": "structure",
+      "vecteur": "Flux d objets qui annonce /N 1000000000 objets",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "renvois-en-chaine.pdf",
+      "famille": "structure",
+      "vecteur": "Catalogue atteint par une chaine de 100 renvois (objet qui ne contient qu un renvoi)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "objet-auto-reference.pdf",
+      "famille": "structure",
+      "vecteur": "Objet qui vaut un renvoi a lui-meme, longueur de flux qui renvoie a son propre objet",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "longueur-demesuree.pdf",
+      "famille": "structure",
+      "vecteur": "Flux a /Length 99999999999, lu jusqu a « endstream »",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "fichier-tronque.pdf",
+      "famille": "structure",
+      "vecteur": "Fichier coupe au milieu de son contenu, sans table ni fin",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "entete-decale.pdf",
+      "famille": "structure",
+      "vecteur": "Huit cents octets de dechets avant « %PDF- » (tolere dans le premier kilo-octet)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "pages-boucle.pdf",
+      "famille": "arbre",
+      "vecteur": "Arbre des pages dont un noeud est son propre enfant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "pages-profondes.pdf",
+      "famille": "arbre",
+      "vecteur": "Arbre des pages de 200 niveaux",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "page-demesuree.pdf",
+      "famille": "arbre",
+      "vecteur": "MediaBox de 10^12 points",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "formulaire-recursif.pdf",
+      "famille": "formulaire",
+      "vecteur": "XObject Form qui se dessine lui-meme (recursion infinie naive)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "formulaires-croises.pdf",
+      "famille": "formulaire",
+      "vecteur": "Deux formulaires qui se dessinent l un l autre",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "formulaires-exponentiels.pdf",
+      "famille": "formulaire",
+      "vecteur": "Dix niveaux de formulaires qui en dessinent chacun quatre (4^10 appels, une forme chacun)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "pile-etats.pdf",
+      "famille": "contenu",
+      "vecteur": "Cinq mille « q » sans « Q »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "imbrication-tableaux.pdf",
+      "famille": "contenu",
+      "vecteur": "Dictionnaire de page imbrique sur 5 000 niveaux de tableaux",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "coordonnees-demesurees.pdf",
+      "famille": "contenu",
+      "vecteur": "Matrice cm de facteur 10^30 : coordonnees au-dela du milliard, qui deborderaient en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "nombres-extremes.pdf",
+      "famille": "contenu",
+      "vecteur": "Nombres de 400 chiffres, signes doubles, points seuls et matrice nulle",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "image-en-ligne-sans-fin.pdf",
+      "famille": "contenu",
+      "vecteur": "Image en ligne BI … ID dont le EI manque",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "operandes-sans-fin.pdf",
+      "famille": "contenu",
+      "vecteur": "Cinquante mille operandes sans operateur",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "filtre-lzw.pdf",
+      "famille": "filtre",
+      "vecteur": "Contenu de page en LZWDecode, non pris en charge",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "filtre-inconnu.pdf",
+      "famille": "filtre",
+      "vecteur": "Filtre au nom inconnu, et chaine de neuf filtres",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "predicteur-demesure.pdf",
+      "famille": "filtre",
+      "vecteur": "Predicteur PNG a 10^9 colonnes sur un flux de contenu",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "fonction-postscript-profonde.pdf",
+      "famille": "fonction",
+      "vecteur": "Ton direct a fonction PostScript imbriquee sur 2 000 niveaux, et pile qui deborde",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "espaces-couleur-circulaires.pdf",
+      "famille": "couleur",
+      "vecteur": "Espaces de couleur nommes qui se renvoient l un a l autre, Indexed a table vide et indice demesure",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "actions-javascript.pdf",
+      "famille": "actif",
+      "vecteur": "OpenAction JavaScript, actions de page, liens Launch et URI, fichier joint, formulaire XFA : rien ne s execute ni ne sort",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "calques-bizarres.pdf",
+      "famille": "calque",
+      "vecteur": "Proprietes de calque circulaires, OCMD sans OCG, EMC orphelins et BDC jamais fermes",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "chaine-geante.pdf",
+      "famille": "contenu",
+      "vecteur": "Chaine de texte de 300 Ko a cent mille parentheses imbriquees",
+      "attendu": "ouvre"
+    }
+  ]
+}

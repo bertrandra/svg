@@ -1,0 +1,40 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 240 160] /Contents 4 0 R /Resources << >> >>
+endobj
+4 0 obj
+<< /Length 384 >>
+stream
+% Le dessin d exemple de l accueil, en PDF ecrit a la main
+0.914 0.925 0.937 rg 16 16 208 128 re f
+0.784 0.118 0.157 rg
+120 80 m
+120 102.092 102.092 120 80 120 c
+57.908 120 40 102.092 40 80 c
+40 57.908 57.908 40 80 40 c
+102.092 40 120 57.908 120 80 c
+h
+f
+0.078 0.157 0.627 rg 130 40 m 170 120 l 210 40 l h f
+0.082 0.094 0.114 RG 4 w 1 j 40 30 m 93.333 56.667 146.667 56.667 200 30 c S
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000225 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+660
+%%EOF
