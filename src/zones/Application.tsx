@@ -1,4 +1,4 @@
-// La page autonome : ouvrir un SVG (fichier, glisser-deposer, code colle ou exemple), convertir une
+// La page autonome : ouvrir un SVG ou un PDF (fichier, glisser-deposer, code colle ou exemple), convertir une
 // image en SVG, choisir une forme de la bibliotheque, editer en plein ecran, puis reprendre le
 // resultat (apercu, telechargement, copie du code). L'editeur lui-meme ne sait rien de cette page :
 // il recoit un SVG et en rend un.
@@ -19,8 +19,10 @@ import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
 import { svgDeBibliotheque } from './provenanceBibliotheque.js';
+import { ChoixPagePdf, fichierPdf, usePdf, type OuvrirDessin } from './OuvrirPdf.js';
+import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 
-interface Fichier { nom: string; svg: string }
+interface Fichier { nom: string; svg: string; ignores?: readonly string[] }
 
 const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
   + '<rect x="16" y="16" width="208" height="128" rx="14" fill="#e9ecef"/>'
@@ -33,7 +35,7 @@ const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #fff
 
 type Voie = 'svg' | 'image' | 'formes';
 const VOIES: ReadonlyArray<readonly [Voie, NomIcone, string, string]> = [
-  ['svg', 'ouvrir', 'Ouvrir un SVG', 'Un fichier, du code collé, ou l’exemple'],
+  ['svg', 'ouvrir', 'Ouvrir un SVG ou un PDF', 'Un fichier SVG ou PDF, du code collé, ou l’exemple'],
   ['image', 'image', 'Convertir une image', 'PNG, JPG… en vecteurs, fond détouré'],
   ['formes', 'scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
 ];
@@ -41,7 +43,7 @@ const VOIES: ReadonlyArray<readonly [Voie, NomIcone, string, string]> = [
 // La page est ce qui connait le magasin : le brouillon et les versions de l'editeur vont dans le navigateur.
 const STOCKAGE = stockageNavigateur();
 
-const sansExtension = (nom: string) => nom.replace(/\.svg$/i, '').trim() || 'dessin';
+const sansExtension = (nom: string) => nom.replace(/\.(svg|pdf)$/i, '').trim() || 'dessin';
 
 /** La page : l'accueil, avec le stockage du navigateur pour ce qu'elle garde (brouillon, corrections) et pour l'editeur. */
 export function Application() {
@@ -60,17 +62,22 @@ function Accueil() {
   // Chaque modification dans l'editeur laisse un brouillon : un rechargement ne perd rien.
   const garder = useCallback((svg: string) => { if (fichier) garderBrouillon(STOCKAGE, fichier.nom, svg, Date.now()); }, [fichier]);
 
-  /** Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. */
-  const ouvrir = (nom: string, texte: string) => {
+  /**
+   * Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. `ignores` : ce que la lecture du document d'origine (un
+   * PDF, ou le texte du SVG mis en lettres) n'a pas repris, dit avec ce que la lecture du SVG laisse tomber.
+   */
+  const ouvrir = (nom: string, texte: string, ignores: readonly string[] = []) => {
     const propre = nettoyerSvgNomme(texte);
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
+    // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
+    if (contientTexte(propre.svg)) { dire('Lecture du texte…'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores]))); return; }
     const lu = lireDessinMemo(propre.svg);
     if ('erreur' in lu) { dire(lu.erreur); return; }
-    poserFichier({ nom: sansExtension(nom), svg: propre.svg });
+    poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores });
     poserEdition(true);
     // Une seule fois, ici : ce que la lecture a laisse tomber, pour qu'un rendu qui change ne passe pas inapercu.
-    dire(phraseIgnores(lu.ignores));
+    dire(phraseIgnores([...ignores, ...lu.ignores]));
     window.scrollTo(0, 0);
   };
   const stats = useMemo(() => {
@@ -132,7 +139,7 @@ function Accueil() {
           ))}
         </div>
         {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
-        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} dire={dire} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg))} /></div>
       </section>
@@ -153,7 +160,7 @@ function Accueil() {
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE}
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} ignores={fichier.ignores}
           fermer={() => poserEdition(false)}
           enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.'); }} />
       ) : null}
@@ -161,13 +168,15 @@ function Accueil() {
   );
 }
 
-/** Deposer un fichier SVG, en coller le code, ou ouvrir l'exemple. */
-function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void }) {
+/** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. */
+function OuvrirSvg({ ouvrir, dire }: { ouvrir: OuvrirDessin; dire: (message: string) => void }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);
+  const pdf = usePdf(ouvrir, dire);
   const ouvrirFichier = (f: File | undefined) => {
     if (!f) return;
+    if (fichierPdf(f)) { pdf.ouvrirFichier(f); return; }
     void f.text().then(t => ouvrir(f.name, t)).catch(() => ouvrir(f.name, ''));
   };
   const deposer = (e: DragEvent<HTMLElement>) => {
@@ -179,16 +188,17 @@ function OuvrirSvg({ ouvrir }: { ouvrir: (nom: string, texte: string) => void })
     if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
   };
   return (
-    <section className="ouvrir" aria-label="Ouvrir un SVG">
-      <h2 className="sr-only">Ouvrir un SVG</h2>
+    <section className="ouvrir" aria-label="Ouvrir un SVG ou un PDF">
+      <h2 className="sr-only">Ouvrir un SVG ou un PDF</h2>
       <div className={'depot' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={deposer}>
-        <p>Déposez un fichier SVG ici, ou</p>
+        <p>Déposez un fichier SVG ou PDF ici, ou</p>
         <div className="actions">
-          <button type="button" className="primaire" onClick={() => entree.current?.click()}>Choisir un fichier…</button>
+          <button type="button" className={pdf.choix ? undefined : 'primaire'} onClick={() => entree.current?.click()}>Choisir un fichier…</button>
           <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
         </div>
-        <input ref={entree} type="file" accept=".svg,image/svg+xml" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
+        <input ref={entree} type="file" accept=".svg,image/svg+xml,.pdf,application/pdf" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
       </div>
+      <ChoixPagePdf pdf={pdf} />
       <label className="champ">
         <span>Ou collez le code d’un SVG</span>
         <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)} />

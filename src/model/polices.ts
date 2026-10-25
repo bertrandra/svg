@@ -5,7 +5,7 @@
 //
 // Les choix, et pourquoi :
 //   - une fonte embarquee demandee par son nom (« Lobster », « Bebas Neue ») est elle-meme : rien a dire ;
-//   - les linéales courantes (Helvetica, Arial, Roboto…) vont a Inter, linéale neutre de proportions voisines ; grasses, a Inter gras ;
+//   - les lineales courantes (Helvetica, Arial, Roboto…) vont a Inter, lineale neutre de proportions voisines ; grasses, a Inter gras ;
 //   - les familles a empattements (Times, Georgia, Garamond…) vont a Playfair Display gras, la seule a empattements embarquee : le
 //     caractere de la lettre se garde, la graisse non (c'est dit) ;
 //   - les etroites et d'affiche (Impact, Oswald, League Gothic…) a Oswald ; les arrondies (Nunito, Quicksand…) a Fredoka ;
@@ -110,7 +110,7 @@ export function remplacerFamilles(familles: string, d: Omit<DemandePolice, 'nom'
   return GENERIQUES[premier.toLowerCase()] && noms.length === 1 && !r.penchee ? { ...r, exacte: true } : r;
 }
 
-/** La phrase d'un remplacement pour `ignores` : « 3 textes en Arial, police remplacée par Inter ». */
+/** La phrase d'un remplacement pour `ignores` : « 3 textes en Arial, police remplacee par Inter ». */
 export function phraseRemplacement(textes: number, r: Remplacement): string {
   return textes.toLocaleString('fr-FR') + ' texte' + (textes > 1 ? 's' : '') + ' en ' + r.demandee + ', police remplacée par ' + NOMS_POLICES[r.id] + (r.penchee ? ' penchée (italique synthétique)' : '');
 }

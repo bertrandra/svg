@@ -212,7 +212,7 @@ export async function ouvrirExemple(page: Page, tactile = false): Promise<void> 
  * fichier a ranger, et le dessin d'un test se lit dans le test. Attend l'editeur.
  */
 export async function ouvrirCode(page: Page, svg: string, tactile = false): Promise<void> {
-  await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(svg);
+  await page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(svg);
   const bouton = page.getByRole('button', { name: 'Ouvrir ce code' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();

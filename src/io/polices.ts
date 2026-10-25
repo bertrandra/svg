@@ -5,7 +5,7 @@
 
 import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
-import { fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
+import { annexePosee, fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
 import { lireCrenageGpos } from './crenageGpos.js';
 import { lireLigaturesGsub } from './ligaturesGsub.js';
 
@@ -22,6 +22,9 @@ const annexe: Annexe<PoliceEmbarquee[]> = {
   valider: v => (Array.isArray(v) ? v as PoliceEmbarquee[] : undefined)
 };
 const embarquees = fabriquerChargeurAnnexe(annexe, navigateur);
+
+/** Vrai quand polices.js est deja pose dans la page (l'outil Texte l'a charge, ou l'hote l'a inclus lui-meme). */
+export const policesPosees = (): boolean => annexePosee(annexe);
 
 function decoderBase64(b64: string): ArrayBuffer {
   const bin = atob(b64), out = new Uint8Array(bin.length);

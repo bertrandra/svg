@@ -63,7 +63,7 @@ describe('lecture des <use> et des feuilles de style', () => {
 
   it('refuse un <use> vers un fichier externe, en le nommant, sans ouvrir l\'editeur', async () => {
     const { page } = await navigateur.ouvrir();
-    await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(readFileSync(resolve(RACINE_DEPOT, 'tests/fixtures/refuses/use-externe.svg'), 'utf8'));
+    await page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(readFileSync(resolve(RACINE_DEPOT, 'tests/fixtures/refuses/use-externe.svg'), 'utf8'));
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
     const alerte = page.locator('main.accueil > p.message[role="alert"]');
     await alerte.waitFor();
@@ -73,7 +73,7 @@ describe('lecture des <use> et des feuilles de style', () => {
 
   it('refuse un cycle de <use>, en le nommant', async () => {
     const { page } = await navigateur.ouvrir();
-    await page.locator('section[aria-label="Ouvrir un SVG"] textarea').fill(readFileSync(resolve(RACINE_DEPOT, 'tests/fixtures/refuses/use-cycle.svg'), 'utf8'));
+    await page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(readFileSync(resolve(RACINE_DEPOT, 'tests/fixtures/refuses/use-cycle.svg'), 'utf8'));
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
     const alerte = page.locator('main.accueil > p.message[role="alert"]');
     await alerte.waitFor();
