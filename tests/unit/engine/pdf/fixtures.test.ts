@@ -31,7 +31,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { lireDessin } from '../../../../src/engine/editionSvg.js';
 import { ecrirePdf } from '../../../../src/export/pdf.js';
-import { enTexte, flux, lire, lu, octets, pdfClassique, pdfModerne, refus } from './fabrique.js';
+import { enTexte, flux, lire, lu, luTexte, octets, pdfClassique, pdfModerne, refus } from './fabrique.js';
 
 const DOSSIER = resolve(__dirname, '../../../fixtures/pdf');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
@@ -94,6 +94,29 @@ const texteImage = (): Buffer => pdfClassique([
   flux('<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceGray /BitsPerComponent 8 >>', '\x00\x80\x80\xff')
 ]);
 
+/** Du texte en Helvetica non embarquee : Tf, Td, TJ et ses ajustements, un trait (Tr 1), une ligne invisible de reconnaissance (Tr 3). */
+const texteHelvetica = (): Buffer => pdfClassique([
+  CATALOGUE,
+  '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 120] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>',
+  flux('<< >>', ['0.784 0.118 0.157 rg BT /F1 28 Tf 20 70 Td [(Joyeux) -250 (anniversaire)] TJ ET',
+    '0.078 0.157 0.627 RG 1 w BT /F2 20 Tf 1 Tr 20 30 Td (Contour) Tj ET',
+    'BT /F1 10 Tf 3 Tr 20 10 Td (texte invisible) Tj ET'].join('\n')),
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>'
+]);
+
+/** Une police Type 3 : deux glyphes dessinees par des flux de contenu (un triangle, un carre). */
+const texteType3 = (): Buffer => pdfClassique([
+  CATALOGUE,
+  '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R /Resources << /Font << /T3 5 0 R >> >> >>',
+  flux('<< >>', '0.2 0.6 0.2 rg BT /T3 40 Tf 20 30 Td (abab) Tj ET'),
+  '<< /Type /Font /Subtype /Type3 /FontBBox [0 0 1000 1000] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 97 /LastChar 98 /Widths [1000 800] /Encoding << /Type /Encoding /Differences [97 /tri /car] >> /CharProcs << /tri 6 0 R /car 7 0 R >> /Resources << >> >>',
+  flux('<< >>', '1000 0 0 0 1000 1000 d1 50 0 m 950 0 l 500 900 l h f'),
+  flux('<< >>', '800 0 0 0 700 700 d1 50 0 600 600 re f')
+]);
+
 const chiffre = (): Buffer => pdfClassique([CATALOGUE, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R >>', flux('<< >>', '0 0 10 10 re f'),
   '<< /Filter /Standard /V 2 /R 3 /Length 128 /O <28BF4E5E4E758A4164004E56FFFA01082E2E00B6D0683E802F0CA9FE6453697A> /U <28BF4E5E4E758A4164004E56FFFA01082E2E00B6D0683E802F0CA9FE6453697A> /P -3904 >>'],
 '/Root 1 0 R /Encrypt 5 0 R /ID [<0123456789ABCDEF0123456789ABCDEF> <0123456789ABCDEF0123456789ABCDEF>]');
@@ -104,6 +127,7 @@ const ELEMENTS = (() => { const r = lireDessin(readFileSync(resolve(__dirname, '
 
 const FABRIQUES: ReadonlyArray<readonly [string, () => Uint8Array]> = [
   ['minimal.pdf', minimal], ['compresse.pdf', compresse], ['pages.pdf', pages], ['texte-image.pdf', texteImage], ['chiffre.pdf', chiffre], ['malforme.pdf', malforme],
+  ['texte-helvetica.pdf', texteHelvetica], ['texte-type3.pdf', texteType3],
   ['export-elements.pdf', () => ecrirePdf(ELEMENTS, { titre: 'Éléments' })],
   ['export-elements-a4-cmjn.pdf', () => ecrirePdf(ELEMENTS, { page: 'A4', marge: 10, fondPerdu: 3, reperes: true, cmjn: true })]
 ];
@@ -163,6 +187,41 @@ describe('ce que la lecture tire de chaque fixture', () => {
     const a4 = lu(fixture('export-elements-a4-cmjn.pdf'));
     expect(a4.dessin.formes.length).toBe(peintes + 8);
     expect(a4.dessin.vb.map(Math.round)).toEqual([0, 0, 893, 646]);
+  });
+});
+
+describe('le texte des fixtures, en lettres (avec les polices)', () => {
+  it('texte-truetype.pdf (reportlab, Fredoka embarquee) : les lettres exactes, Helvetica remplacee et dite', () => {
+    const r = luTexte(fixture('texte-truetype.pdf'));
+    expect(r.dessin.formes.length).toBe(9 + 21);
+    expect(r.dessin.formes.slice(0, 9).every(f => f.remplissage === '#c81e28')).toBe(true);
+    expect(r.ignores).toEqual(['1 texte en Helvetica, police remplacée par Inter']);
+  });
+
+  it('texte-helvetica.pdf : TJ, un trait en Times remplacee, une ligne invisible jamais reprise', () => {
+    const r = luTexte(fixture('texte-helvetica.pdf'));
+    expect(r.dessin.formes.filter(f => f.remplissage === '#c81e28').length).toBe(18);
+    expect(r.dessin.formes.filter(f => f.contour === '#1428a0' && f.remplissage === null).length).toBe(7);
+    expect(r.ignores).toEqual([
+      '1 texte invisible (couche de reconnaissance de caractères, ou texte qui ne sert qu’à découper)',
+      '1 texte en Helvetica, police remplacée par Inter',
+      '1 texte en Times, police remplacée par Playfair Display gras'
+    ]);
+  });
+
+  it('texte-type3.pdf : quatre glyphes Type 3, dessinees exactement', () => {
+    const r = luTexte(fixture('texte-type3.pdf'));
+    expect(r.dessin.formes.map(f => enTexte(f.d))).toEqual([
+      'M22,70 L58,70 L40,34 Z', 'M62,70 L86,70 L86,46 L62,46 Z', 'M94,70 L130,70 L112,34 Z', 'M134,70 L158,70 L158,46 L134,46 Z'
+    ]);
+    expect(r.ignores).toEqual([]);
+  });
+
+  it('texte-image.pdf, skia.pdf et cairo.pdf : le texte en lettres (Helvetica remplacee ; Liberation Sans embarquee, exacte)', () => {
+    expect(luTexte(fixture('texte-image.pdf')).ignores).toEqual(['2 images (une image se vectorise par « Convertir une image »)', '2 textes en Helvetica, police remplacée par Inter']);
+    expect(luTexte(fixture('skia.pdf')).dessin.formes.length).toBe(5 + 5);
+    expect(luTexte(fixture('skia.pdf')).ignores).toEqual([]);
+    expect(luTexte(fixture('cairo.pdf')).ignores).toEqual(['les dégradés et motifs de 1 forme, remplacés par une couleur unie']);
   });
 });
 

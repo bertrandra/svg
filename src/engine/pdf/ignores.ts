@@ -11,6 +11,11 @@ const compte = (n: number, mot: string, pluriel = mot + 's'): string => enFranca
 export function phrasesPertes(p: Pertes): string[] {
   const r: string[] = [];
   if (p.textes) r.push(compte(p.textes, 'texte') + ' (convertissez le texte en contours dans votre logiciel avant d’exporter le PDF)');
+  if (p.textesSansPolice) r.push(compte(p.textesSansPolice, 'texte') + ' (les polices de remplacement ne sont pas chargées : le fichier polices.js manque à côté de la page)');
+  if (p.textesInvisibles) r.push(compte(p.textesInvisibles, 'texte invisible', 'textes invisibles') + ' (couche de reconnaissance de caractères, ou texte qui ne sert qu’à découper)');
+  if (p.textesDecoupe) r.push('la découpe par le texte de ' + compte(p.textesDecoupe, 'texte') + ' (le texte est repris, pas ce qu’il découpait)');
+  if (p.caracteresInconnus) r.push(compte(p.caracteresInconnus, 'caractère') + ' sans glyphe connue');
+  if (p.codageInconnu) r.push('le codage des caractères d’une police composite (lu comme Identity, le texte peut être faux)');
   if (p.images) r.push(compte(p.images, 'image') + ' (une image se vectorise par « Convertir une image »)');
   if (p.decoupes) r.push('les découpes (masques d’écrêtage) de ' + compte(p.decoupes, 'forme') + ' : ce qu’elles cachaient se voit');
   if (p.motifs) r.push('les dégradés et motifs de ' + compte(p.motifs, 'forme') + ', remplacés par une couleur unie');

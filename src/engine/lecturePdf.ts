@@ -7,3 +7,4 @@
 
 export { lirePdf, matricePage, type LecturePdf, type PdfLu, type OptionsLecturePdf } from './pdf/lecture.js';
 export { FluxEnAttente, LIMITES_PDF, type Decompression, type DemandeFlux, type ResultatDecompression } from './pdf/limites.js';
+export type { FonteEmbarquee, PolicesPdf } from './pdf/polices.js';

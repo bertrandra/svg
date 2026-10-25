@@ -9,7 +9,8 @@ import type { Proprietes } from './ignores.js';
 // Les proprietes que CSS transmet d'un element a ses enfants (`opacity`, `display`, le masque ne le sont pas).
 const HERITEES = [
   'color', 'fill', 'stroke', 'stroke-width', 'fill-rule', 'visibility', 'fill-opacity', 'stroke-opacity',
-  'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'marker-start', 'marker-mid', 'marker-end', 'marker'
+  'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'marker-start', 'marker-mid', 'marker-end', 'marker',
+  'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing', 'word-spacing', 'text-anchor', 'writing-mode'
 ];
 
 /**
@@ -35,9 +36,32 @@ export function heriter(parent: Proprietes, pr: Proprietes): Proprietes {
     // Une valeur vide est invalide en CSS : elle ne recouvre rien, comme `inherit`.
     if (v === undefined || v.trim() === '' || v.trim().toLowerCase() === 'inherit') continue;
     if (p === 'color' && ['currentcolor', 'none'].includes(v.trim().toLowerCase())) continue;
-    heritees[p] = v;
+    // Une taille de police relative (em, %, smaller…) se calcule sur celle du parent : les enfants recoivent des pixels.
+    heritees[p] = p === 'font-size' ? String(lireTaillePolice(v, lireTaillePolice(parent['font-size'], TAILLE_POLICE_DEFAUT))) : v;
   }
   return heritees;
+}
+
+/** La taille de police d'un navigateur sans rien de pose (« medium »). */
+export const TAILLE_POLICE_DEFAUT = 16;
+
+const MOTS_TAILLE: Readonly<Record<string, number>> = { 'xx-small': 9, 'x-small': 10, small: 13, medium: 16, large: 18, 'x-large': 24, 'xx-large': 32, 'xxx-large': 48 };
+const UNITES_PX: Readonly<Record<string, number>> = { '': 1, px: 1, pt: 4 / 3, pc: 16, in: 96, cm: 96 / 2.54, mm: 96 / 25.4, q: 96 / 101.6 };
+
+/** Une taille de police CSS en pixels ; relative (em, %, smaller, larger) a celle du parent ; illisible ou negative : celle du parent. */
+export function lireTaillePolice(v: string | undefined, parent: number): number {
+  const t = (v ?? '').trim().toLowerCase();
+  if (t === '') return parent;
+  const mot = MOTS_TAILLE[t];
+  if (mot !== undefined) return mot;
+  if (t === 'smaller') return parent / 1.2;
+  if (t === 'larger') return parent * 1.2;
+  const m = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*(px|pt|pc|in|cm|mm|q|em|rem|ex|%)?$/.exec(t);
+  const x = Number(m?.[1]);
+  if (!m || !Number.isFinite(x) || x < 0) return parent;
+  const u = m[2] ?? '';
+  const px = u === 'em' ? x * parent : u === 'rem' ? x * TAILLE_POLICE_DEFAUT : u === 'ex' ? x * parent * 0.5 : u === '%' ? (x / 100) * parent : x * (UNITES_PX[u] ?? 1);
+  return Math.min(px, 1e6);
 }
 
 /** Ce qui change le rendu au point de ne pas s'editer (masque, decoupe, filtre) sur un element, ou null. */

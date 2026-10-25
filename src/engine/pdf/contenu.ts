@@ -1,13 +1,13 @@
 // L'interprete d'un flux de contenu (ISO 32000-1, 8 et 9) : les operateurs de trace (m l c v y h re), de peinture
 // (f F f* S s B B* b b* n), de decoupe (W W*), d'etat (q Q cm w J j M d gs), de couleur (g G rg RG k K cs CS sc SC scn SCN),
-// les formulaires (Do d'un XObject Form, deplie avec sa matrice) et le contenu marque (calques). Le texte (BT…ET) et les images
-// (Do d'une image, BI…ID…EI) ne sont pas repris : ils sont comptes, pour le dire. Un degrade peint par `sh` dans une decoupe
+// les formulaires (Do d'un XObject Form, deplie avec sa matrice), le contenu marque (calques) et le texte (BT…ET, en lettres par
+// texte.ts quand la lecture a ses polices). Les images (Do d'une image, BI…ID…EI) ne sont pas reprises : elles sont comptees. Un degrade peint par `sh` dans une decoupe
 // devient la forme de cette decoupe, d'une couleur unie approchee.
 //
 // Chaque point est porte dans le repere du dessin des sa construction (matrice courante, puis celle de la page) : la forme
 // rendue n'a plus rien a transformer. Les bornes (operateurs, formes, segments, pile, formulaires) sont des refus nommes.
 
-import { multiplier, type Commande, type Matrice } from '../editionSvg.js';
+import { IDENTITE, multiplier, translation, type Commande, type Forme, type Matrice } from '../editionSvg.js';
 import { couleurInitiale, composantes, hexDe, lireEspace, versRvb, GRIS, RVB, CMJN, type Espace } from './couleurs.js';
 import { copier, type Contexte, type Etat, type Peinture } from './etat.js';
 import { lireFonction } from './fonctions.js';
@@ -16,6 +16,8 @@ import { LIMITES_PDF, RefusPdf, SyntaxePdf, enFrancais } from './limites.js';
 import { Mot, dictDe, estDict, estFlux, estNom, estNombre, estRef, estTableau, type Dict, type Flux, type ObjetPdf } from './objets.js';
 import { boite } from './pages.js';
 import { couleurDe, dessine, formeDe, intersecter } from './trace.js';
+import { dictPolice, lettres, policeDe, poser } from './texte.js';
+import type { PolicePdf } from './polices.js';
 
 type Point = readonly [number, number];
 
@@ -33,6 +35,8 @@ export class Interprete {
   private decoupeEnAttente = false;
   private texte = false;
   private texteMontre = false;
+  private tm: Matrice = IDENTITE;
+  private tlm: Matrice = IDENTITE;
   private readonly marques: boolean[] = [];
 
   constructor(private readonly ctx: Contexte, private readonly ressources: Dict | null, etat: Etat, private readonly profondeur: number, private readonly masque: boolean) {
@@ -80,8 +84,84 @@ export class Interprete {
   }
 
   private operateur(op: string): void {
-    if (this.trace(op) || this.peinture(op) || this.etat(op) || this.couleur(op)) return;
+    if (this.trace(op) || this.peinture(op) || this.etat(op) || this.couleur(op) || this.etatTexte(op)) return;
     this.autre(op);
+  }
+
+  /** Les operateurs d'etat et de position du texte (9.3, 9.4.2). */
+  private etatTexte(op: string): boolean {
+    const t = this.e.texte, v1 = () => this.nombres(1)?.[0];
+    switch (op) {
+      case 'Tc': { const v = v1(); if (v !== undefined) t.tc = v; return true; }
+      case 'Tw': { const v = v1(); if (v !== undefined) t.tw = v; return true; }
+      case 'Tz': { const v = v1(); if (v !== undefined) t.th = v / 100; return true; }
+      case 'TL': { const v = v1(); if (v !== undefined) t.tl = v; return true; }
+      case 'Tr': { const v = v1(); if (v !== undefined) t.tr = v; return true; }
+      case 'Ts': { const v = v1(); if (v !== undefined) t.ts = v; return true; }
+      case 'Tf': {
+        const nom = this.ops[this.ops.length - 2], taille = this.ops[this.ops.length - 1];
+        if (estNom(nom) && estNombre(taille)) { t.police = dictPolice(this.ctx, this.ressources, nom); t.taille = taille; }
+        return true;
+      }
+      case 'Td': case 'TD': {
+        const v = this.nombres(2);
+        if (v) { if (op === 'TD') t.tl = -(v[1] ?? 0); this.ligne(v[0] ?? 0, v[1] ?? 0); }
+        return true;
+      }
+      case 'T*': this.ligne(0, -t.tl); return true;
+      case 'Tm': { const v = this.nombres(6); if (v) this.tm = this.tlm = v as unknown as Matrice; return true; }
+      default: return false;
+    }
+  }
+
+  private ligne(tx: number, ty: number): void { this.tm = this.tlm = multiplier(this.tlm, translation(tx, ty)); }
+
+  /** Tj, TJ, ' et " : une chaine montree, en lettres si la lecture a ses polices, comptee sinon. */
+  private montrer(op: string): void {
+    const t = this.e.texte;
+    if (op === '\'' || op === '"') {
+      if (op === '"') { const v = this.ops.slice(-3); if (estNombre(v[0])) t.tw = v[0]; if (estNombre(v[1])) t.tc = v[1]; }
+      this.ligne(0, -t.tl);
+    }
+    const dernier = this.ops[this.ops.length - 1];
+    const elements = op === 'TJ' ? (estTableau(dernier) ? dernier : []) : [dernier ?? null];
+    if (!this.ctx.polices) { if (this.texte) this.texteMontre = true; else this.ctx.pertes.textes++; return; }
+    const d = t.police, police = d ? policeDe(this.ctx, d) : null;
+    if (!police) { this.ctx.pertes.caracteresInconnus++; return; }
+    const remplacante = police.fonte || police.type3 ? null : this.ctx.polices.remplacement(police.remplacement.id);
+    const pose = poser(this.ctx, this.e, this.tm, police, remplacante, elements);
+    this.tm = pose.tm;
+    if (t.tr === 3 || t.tr === 7) { this.ctx.pertes.textesInvisibles++; return; }
+    if (this.cache) { this.ctx.pertes.masquees++; return; }
+    if (t.tr >= 4) this.ctx.pertes.textesDecoupe++;
+    if (police.codageInconnu) this.ctx.pertes.codageInconnu = true;
+    this.ctx.pertes.caracteresInconnus += pose.inconnus;
+    if (police.type3) { for (const g of pose.type3) this.glypheType3(police.type3, g.nom, g.ctm); return; }
+    if (!police.fonte && !remplacante) { this.ctx.pertes.textesSansPolice++; return; }
+    const remplir = t.tr === 0 || t.tr === 2 || t.tr === 4 || t.tr === 6, tracer = t.tr === 1 || t.tr === 2 || t.tr === 5 || t.tr === 6;
+    const motif = (p: Peinture) => this.couleurMotif(p);
+    const fond = remplir ? couleurDe(this.e.remplissage, this.ctx.pertes, motif) : null, trait = tracer ? couleurDe(this.e.contour, this.ctx.pertes, motif) : null;
+    const formes = lettres(this.ctx, this.e, police, remplacante, pose.poses, fond, trait);
+    for (const f of formes) this.ajouterForme(f);
+    if (!police.fonte && !police.remplacement.exacte && pose.poses.length) {
+      const cle = police.remplacement.demandee + '>' + police.remplacement.id + (police.remplacement.penchee ? '/' : '');
+      const r = this.ctx.remplacements.get(cle);
+      if (r) r.textes++; else this.ctx.remplacements.set(cle, { r: police.remplacement, textes: 1 });
+    }
+  }
+
+  /** Une glyphe Type 3 : son flux se dessine comme un formulaire, dans le repere de la glyphe (FontMatrix comprise). */
+  private glypheType3(t3: NonNullable<PolicePdf['type3']>, nom: string, ctm: Matrice): void {
+    const proc = this.ctx.doc.valeur(t3.procs, nom);
+    if (!estFlux(proc)) { this.ctx.pertes.caracteresInconnus++; return; }
+    if (this.ctx.formulairesActifs.has(proc.debut)) throw new RefusPdf('Ce PDF contient une glyphe qui se dessine elle-même : il ne se lit pas ici.');
+    if (this.profondeur + 1 > LIMITES_PDF.profondeurFormulaires) throw refus('imbrique des formulaires sur plus de ' + LIMITES_PDF.profondeurFormulaires + ' niveaux');
+    if (++this.ctx.formulaires > LIMITES_PDF.formulaires) throw refus('dessine plus de ' + enFrancais(LIMITES_PDF.formulaires) + ' formulaires');
+    const etat = copier(this.e);
+    etat.ctm = ctm;
+    etat.texte.tr = 0;
+    this.ctx.formulairesActifs.add(proc.debut);
+    try { new Interprete(this.ctx, t3.ressources ?? this.ressources, etat, this.profondeur + 1, this.cache).executer(donneesOuRien(this.ctx, proc)); } finally { this.ctx.formulairesActifs.delete(proc.debut); }
   }
 
   /** Un segment peut suivre une fermeture sans « m » : il repart du debut du sous-trace, qu'il faut alors rouvrir. */
@@ -168,10 +248,14 @@ export class Interprete {
 
   private ajouter(d: Commande[], fond: string | null, trait: string | null, regle: 'nonzero' | 'evenodd'): void {
     const f = formeDe('f' + (this.ctx.formes.length + 1), d, this.e, fond, trait, regle, this.ctx.pertes);
-    if (!f) return;
+    if (f) this.ajouterForme(f);
+  }
+
+  private ajouterForme(f: Forme): void {
     if (this.ctx.formes.length >= LIMITES_PDF.formes) throw refus('dessine plus de ' + enFrancais(LIMITES_PDF.formes) + ' formes sur cette page');
-    this.ctx.segments += d.length;
+    this.ctx.segments += f.d.length;
     if (this.ctx.segments > LIMITES_PDF.segments) throw refus('compte plus de ' + enFrancais(LIMITES_PDF.segments) + ' segments de tracé sur cette page');
+    for (const c of f.d) for (const v of c.p) if (!(Math.abs(v) <= LIMITES_PDF.coordonnee)) throw refus('a des coordonnées démesurées (au-delà de ± ' + enFrancais(LIMITES_PDF.coordonnee) + ')');
     this.ctx.formes.push(f);
   }
 
@@ -250,9 +334,9 @@ export class Interprete {
 
   private autre(op: string): void {
     switch (op) {
-      case 'BT': this.texte = true; this.texteMontre = false; return;
+      case 'BT': this.texte = true; this.texteMontre = false; this.tm = this.tlm = IDENTITE; return;
       case 'ET': if (this.texteMontre) this.ctx.pertes.textes++; this.texte = false; this.texteMontre = false; return;
-      case 'Tj': case 'TJ': case '\'': case '"': if (this.texte) this.texteMontre = true; else this.ctx.pertes.textes++; return;
+      case 'Tj': case 'TJ': case '\'': case '"': this.montrer(op); return;
       case 'Do': this.dessinerObjet(); return;
       case 'sh': this.degrade(); return;
       case 'BMC': this.marques.push(this.cache); return;

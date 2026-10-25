@@ -1,7 +1,7 @@
 // D'un trace peint a une forme du dessin a plat : couleurs, opacites, style du trait, et ce que la decoupe aurait cache. Le
 // trace arrive deja dans le repere du dessin (contenu.ts applique la matrice courante et celle de la page a chaque point).
 
-import { boiteChemin, normaliserPointilles, type Chemin, type Commande, type Forme } from '../editionSvg.js';
+import { boiteChemin, normaliserPointilles, type Chemin, type Commande, type Forme, type StyleGlyphes } from '../editionSvg.js';
 import { hexDe, versRvb, type Espace } from './couleurs.js';
 import type { Decoupe, Etat, Peinture, Pertes, Rect } from './etat.js';
 
@@ -100,19 +100,28 @@ function styleTrait(e: Etat, k: number): Partial<Forme> {
   return s;
 }
 
-/** La forme d'un trace peint, ou null s'il n'y a rien a peindre. `pertes` recoit ce qui n'est qu'approche ou cache. */
-export function formeDe(id: string, d: Commande[], e: Etat, remplissage: string | null, contour: string | null, regle: 'nonzero' | 'evenodd', pertes: Pertes): Forme | null {
-  if (!remplissage && !contour) return null;
+/**
+ * Le style d'une forme peinte avec cet etat : epaisseur (a l'echelle de la matrice, un filet nul devenant 0,25 pt), opacites,
+ * style du trait. Partage par les traces et les lettres d'un texte.
+ */
+export function styleDe(e: Etat, remplissage: string | null, contour: string | null, pertes: Pertes): StyleGlyphes {
   const k = facteur(e.ctm);
   let epaisseur = contour ? e.epaisseur * k : 0;
   if (contour && !(epaisseur > 0)) { epaisseur = EPAISSEUR_FILET; pertes.filets++; }
-  if (coupe(e.decoupe, d, contour ? epaisseur / 2 : 0)) pertes.decoupes++;
+  return { remplissage, contour, epaisseur, ...opacites(remplissage, contour, e.ca * e.groupe, e.CA * e.groupe), ...(contour ? styleTrait(e, k) : {}) };
+}
+
+/** Ce que l'etat cache ou perd d'une forme deja faite : sa decoupe, son masque de transparence, son mode de fusion. */
+export function noterPertes(e: Etat, f: Forme, pertes: Pertes): void {
+  if (coupe(e.decoupe, f.d, f.contour ? f.epaisseur / 2 : 0)) pertes.decoupes++;
   if (e.masqueDoux) pertes.masquesDoux++;
   if (e.fusion) pertes.fusions++;
-  return {
-    id, d, remplissage, contour, epaisseur,
-    ...opacites(remplissage, contour, e.ca * e.groupe, e.CA * e.groupe),
-    ...(contour ? styleTrait(e, k) : {}),
-    regle, visible: true, verrouille: false
-  };
+}
+
+/** La forme d'un trace peint, ou null s'il n'y a rien a peindre. `pertes` recoit ce qui n'est qu'approche ou cache. */
+export function formeDe(id: string, d: Commande[], e: Etat, remplissage: string | null, contour: string | null, regle: 'nonzero' | 'evenodd', pertes: Pertes): Forme | null {
+  if (!remplissage && !contour) return null;
+  const f: Forme = { id, d, ...styleDe(e, remplissage, contour, pertes), regle, visible: true, verrouille: false };
+  noterPertes(e, f, pertes);
+  return f;
 }

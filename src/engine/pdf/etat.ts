@@ -2,8 +2,12 @@
 // depile, ce que la page entiere partage (les formes rendues, les compteurs des bornes, les pertes a dire). Aucun calcul ici.
 
 import type { Chemin, Forme, Matrice } from '../editionSvg.js';
+import type { Remplacement } from '../../model/polices.js';
 import { GRIS, type Espace } from './couleurs.js';
+import type { Dict } from './objets.js';
+import type { PolicePdf, PolicesPdf } from './polices.js';
 import type { DocumentPdf } from './structure.js';
+import { texteInitial, type EtatTexte } from './texte.js';
 
 /** Une peinture : son espace, ses composantes, et le nom du motif quand l'espace en est un. */
 export interface Peinture { readonly espace: Espace; readonly valeurs: readonly number[]; readonly motif: string | null }
@@ -36,6 +40,7 @@ export interface Etat {
   cheminDecoupe: Chemin | null;
   masqueDoux: boolean;
   fusion: boolean;
+  texte: EtatTexte;
 }
 
 export const PEINTURE_NOIRE: Peinture = { espace: GRIS, valeurs: [0], motif: null };
@@ -43,14 +48,25 @@ export const PEINTURE_NOIRE: Peinture = { espace: GRIS, valeurs: [0], motif: nul
 /** L'etat initial d'une page (8.4.1, tableau 52). */
 export const etatInitial = (ctm: Matrice): Etat => ({
   ctm, remplissage: PEINTURE_NOIRE, contour: PEINTURE_NOIRE, epaisseur: 1, bout: 0, jonction: 0, limite: 10, tirets: [], phase: 0,
-  ca: 1, CA: 1, groupe: 1, decoupe: null, cheminDecoupe: null, masqueDoux: false, fusion: false
+  ca: 1, CA: 1, groupe: 1, decoupe: null, cheminDecoupe: null, masqueDoux: false, fusion: false, texte: texteInitial()
 });
 
-export const copier = (e: Etat): Etat => ({ ...e });
+export const copier = (e: Etat): Etat => ({ ...e, texte: { ...e.texte } });
 
 /** Ce que la lecture n'a pas repris, ou seulement approche : de quoi le dire (ignores.ts). */
 export interface Pertes {
+  /** Les textes non repris faute de polices donnees a la lecture (l'ancien comportement, sans `polices`). */
   textes: number;
+  /** Les textes invisibles (Tr 3, couche de reconnaissance de caracteres) et de pure decoupe (Tr 7) : jamais repris. */
+  textesInvisibles: number;
+  /** Les textes qui decoupent aussi (Tr 4 a 6) : peints, la decoupe n'est pas reprise. */
+  textesDecoupe: number;
+  /** Les textes non repris parce que la fonte de remplacement n'est pas chargee. */
+  textesSansPolice: number;
+  /** Les caracteres sans glyphe ni texte connus. */
+  caracteresInconnus: number;
+  /** Une police composite au codage non lu (CMap predefinie autre qu'Identity). */
+  codageInconnu: boolean;
   images: number;
   decoupes: number;
   motifs: number;
@@ -66,7 +82,7 @@ export interface Pertes {
 }
 
 export const pertesVides = (): Pertes => ({
-  textes: 0, images: 0, decoupes: 0, motifs: 0, degrades: 0, masquees: 0, annotations: 0, masquesDoux: 0, fusions: 0, filets: 0,
+  textes: 0, textesInvisibles: 0, textesDecoupe: 0, textesSansPolice: 0, caracteresInconnus: 0, codageInconnu: false, images: 0, decoupes: 0, motifs: 0, degrades: 0, masquees: 0, annotations: 0, masquesDoux: 0, fusions: 0, filets: 0,
   cmjn: false, approchees: false, illisible: false
 });
 
@@ -80,6 +96,11 @@ export interface Contexte {
   /** Les calques eteints a l'ouverture (numeros d'objet des OCG). */
   readonly calquesEteints: (n: number) => boolean;
   readonly formulairesActifs: Set<number>;
+  /** De quoi lire les polices ; absent, le texte n'est pas repris (il est compte et dit). */
+  readonly polices: PolicesPdf | null;
+  readonly policesLues: Map<Dict, PolicePdf>;
+  /** Les polices remplacees, par nom et remplacante, et le nombre de textes de chacune. */
+  readonly remplacements: Map<string, { readonly r: Remplacement; textes: number }>;
   operateurs: number;
   segments: number;
   formulaires: number;

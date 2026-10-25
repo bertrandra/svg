@@ -1,5 +1,5 @@
 // Le corpus de PDF hostiles (tests/fixtures/hostile-pdf, ADR-0020) : chaque fichier passe par la lecture pure (decompression de
-// Node) et par la voie de la page (io/pdf.ts, DecompressionStream) : aucune exception, un temps borne, le refus ou l'ouverture
+// Node, polices de la page) et par la voie de la page (io/pdf.ts, DecompressionStream) : aucune exception, un temps borne, le refus ou l'ouverture
 // attendus, et, quand il s'ouvre, un SVG ecrit qui satisfait les invariants de sortie des SVG (passage.ts). Un fichier sans ligne
 // dans index.json, une ligne sans fichier, ou une entree de hostilesPdf.ts qui ne s'y retrouve pas, font echouer le test.
 //
@@ -10,7 +10,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin } from '../../../src/engine/editionSvg.js';
 import { ouvrirPdf } from '../../../src/io/pdf.js';
-import { lire } from '../engine/pdf/fabrique.js';
+import { lireTexte as lire, remplacantesTest } from '../engine/pdf/fabrique.js';
 import { HOSTILES } from './hostilesPdf.js';
 import { passer } from './passage.js';
 
@@ -58,7 +58,7 @@ describe('le corpus de PDF hostiles', () => {
         expect(p.ouvre).toBe(true);
       }
       // La voie de la page, avec la decompression du navigateur, rend le meme verdict sans jamais lever.
-      const page = await ouvrirPdf(o);
+      const page = await ouvrirPdf(o, 1, { remplacantes: async () => remplacantesTest() });
       expect('erreur' in page, 'voie de la page').toBe(h.attendu === 'refus');
       if ('erreur' in r && 'erreur' in page) expect(page.erreur).toBe(r.erreur);
     }, 60_000);

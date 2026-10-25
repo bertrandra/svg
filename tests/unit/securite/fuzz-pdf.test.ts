@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin } from '../../../src/engine/editionSvg.js';
-import { flux, lire, octets, pdfUnePage } from '../engine/pdf/fabrique.js';
+import { flux, lireTexte as lire, octets, pdfUnePage } from '../engine/pdf/fabrique.js';
 import { aleatoire, type Alea } from './mutateur.js';
 import { passer } from './passage.js';
 
@@ -34,14 +34,18 @@ const OPERATEURS: readonly string[] = [
   '{n} {n} m', '{n} {n} l', '{n} {n} {n} {n} {n} {n} c', '{n} {n} {n} {n} v', '{n} {n} {n} {n} y', 'h', '{n} {n} {n} {n} re', 'f', 'F', 'f*', 'S', 's', 'B', 'B*', 'b', 'b*', 'n', 'W n', 'W* n',
   'q', 'Q', '{n} {n} {n} {n} {n} {n} cm', '{n} w', '{e} J', '{e} j', '{n} M', '[{n} {n}] {n} d', '{c} g', '{c} G', '{c} {c} {c} rg', '{c} {c} {c} RG', '{c} {c} {c} {c} k', '{c} {c} {c} {c} K',
   '/DeviceRGB cs', '/P cs /D scn', '/S cs {c} sc', '/I cs {e} sc', '/L cs {n} {n} {n} sc', '/A gs', '/F Do', '/Im Do', '/Sh sh', 'BT (a) Tj ET', 'BT [(a) 3 (b)] TJ ET', '/OC /MC0 BDC', 'EMC', 'BMC',
-  'BI /W 1 /H 1 /CS /G /BPC 8 ID x EI', 'BX inconnu EX', 'd0', '1 2 3', '(chaine', '<<', '[', ']'
+  'BI /W 1 /H 1 /CS /G /BPC 8 ID x EI', 'BX inconnu EX', 'd0', '1 2 3', '(chaine', '<<', '[', ']',
+  'BT', 'ET', '/H {n} Tf', '/T3 {n} Tf', '/C {n} Tf', '{n} {n} Td', '{n} {n} TD', 'T*', '{n} {n} {n} {n} {n} {n} Tm', '(Abc) Tj', '[(A) {n} (b)] TJ', '<00410042> Tj', '(x) \'', '{n} {n} (y) "',
+  '{n} Tc', '{n} Tw', '{n} Tz', '{n} TL', '{e} Tr', '{n} Ts'
 ];
 const NOMBRES: readonly string[] = ['0', '1', '-1', '10', '50', '0.5', '1000000', '-999999', '1e5', '.', '-', '9'.repeat(30), '0.000001', '360'];
 
 const RESSOURCES = '/ExtGState << /A << /ca 0.5 /CA 0.2 /SMask /None /BM /Multiply /D [[2 1] 0] >> >> /XObject << /F 5 0 R /Im 6 0 R >> '
   + '/Pattern << /D << /PatternType 2 /Shading << /ShadingType 2 /ColorSpace /DeviceRGB /Function << /FunctionType 2 /C0 [1 0 0] /C1 [0 0 1] /N 1 >> >> >> >> '
   + '/ColorSpace << /S [/Separation /X /DeviceCMYK << /FunctionType 2 /C0 [0 0 0 0] /C1 [0 1 1 0] /N 1 >>] /I [/Indexed /DeviceRGB 1 <ff000000ff00>] /L [/Lab << /WhitePoint [0.95 1 1.09] >>] >> '
-  + '/Shading << /Sh << /ShadingType 2 /ColorSpace /DeviceGray /Function << /FunctionType 2 /C0 [0] /C1 [1] /N 1 >> >> >> /Properties << /MC0 << /Type /OCG >> >>';
+  + '/Shading << /Sh << /ShadingType 2 /ColorSpace /DeviceGray /Function << /FunctionType 2 /C0 [0] /C1 [1] /N 1 >> >> >> /Properties << /MC0 << /Type /OCG >> >> '
+  + '/Font << /H << /Subtype /Type1 /BaseFont /Helvetica-BoldOblique >> /C << /Subtype /Type0 /BaseFont /X /Encoding /Identity-H /DescendantFonts [<< /Subtype /CIDFontType2 /W [65 [600 700]] >>] >> '
+  + '/T3 << /Subtype /Type3 /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 65 /LastChar 66 /Widths [800 900] /Encoding << /Differences [65 /a /b] >> /CharProcs << /a << >> >> >> >>';
 
 /** Une page engendree : des operateurs tires au hasard, avec des ressources qui leur repondent (formulaire, image, motif…). */
 function engendrer(r: Alea): Buffer {

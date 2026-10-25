@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { svgCricut } from '../../../src/export/cricut.js';
@@ -92,6 +92,26 @@ const glyphesLiees: Glyphes = {
   avance: c => (c === 'fi' ? 950 : glyphesFactices.avance(c)),
   crenage: (a, b) => (a === 'fi' && b === 'A' ? -40 : glyphesFactices.crenage(a, b)),
   ligature: (cars, i) => (cars[i] === 'f' && cars[i + 1] === 'i' ? 2 : 0)
+};
+
+// Le texte d'un SVG lu en lettres (ADR-0020) : neuf fontes factices, une par fonte embarquee, que la hauteur et l'avance de leurs
+// glyphes distinguent. Un remplacement qui changerait de fonte changerait donc les octets ecrits.
+const IDS_POLICES = ['inter', 'inter-gras', 'oswald', 'bebas', 'playfair', 'lobster', 'pacifico', 'caveat', 'fredoka'];
+const policesFactices: PolicesTexte = {
+  glyphes: id => {
+    const rang = IDS_POLICES.indexOf(id);
+    if (rang < 0) return null;
+    return {
+      ...glyphesFactices,
+      contour: (c, x, y, t) => (c === ' ' ? [] : glyphesFactices.contour(c, x, y, t * (1 + rang / 10))),
+      avance: c => glyphesFactices.avance(c) + rang * 20
+    };
+  }
+};
+const lireTexteSvg = (svg: string): DessinSvg => {
+  const r = lireDessin(svg, { polices: policesFactices });
+  if ('erreur' in r) throw new Error(r.erreur);
+  return r.dessin;
 };
 
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
@@ -203,6 +223,11 @@ const CAS: readonly Cas[] = [
     entree: 'texte-par-lettre',
     operation: d => ajouterTexte(d, composer('fi AfiA fifi.', glyphesLiees, { taille: 30, x: 10, y: 60, ligatures: true }), { remplissage: '#15181d', contour: null, epaisseur: 1 }).dessin
   },
+  // Le texte d'un SVG lu en lettres (ADR-0020, version majeure pour un SVG AVEC texte) : <text> et <tspan>, listes de positions,
+  // rotate, text-anchor, familles remplacees, gras, italique synthetique, interlettrage, blancs ramenes, <a> en ligne, <textPath>
+  // ignore. Des cas NEUFS : un SVG sans texte se lit comme avant, et sans polices un <text> reste refuse.
+  { nom: 'texte-svg', produire: t => ecrireEnregistre(lireTexteSvg(t)) },
+  { nom: 'texte-svg-blancs', produire: t => ecrireEnregistre(lireTexteSvg(t)) },
   { nom: 'palette-evenement', entree: 'palette', operation: d => appliquerPalette(d, palette('noel')) },
   { nom: 'palette-une-couleur', entree: 'palette', operation: d => uneCouleur(d, '#7b2d8e') },
   {

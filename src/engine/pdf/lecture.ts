@@ -11,18 +11,32 @@ import { phrasesPertes } from './ignores.js';
 import { FluxEnAttente, LIMITES_PDF, RefusPdf, SyntaxePdf, enFrancais, type Decompression, type DemandeFlux } from './limites.js';
 import { estDict, estFlux, estRef, estTableau, type Dict, type Flux } from './objets.js';
 import { listerPages, type PagePdf } from './pages.js';
+import { fluxDePolice, type PolicesPdf } from './polices.js';
+import { phraseRemplacement } from '../../model/polices.js';
+
+/** Les polices lues d'avance au plus pour une page : au-dela, une police se lit a son premier usage. */
+const POLICES_MAX = 500;
 import { ouvrirDocument, type DocumentPdf } from './structure.js';
 
 export interface OptionsLecturePdf {
   /** La page a lire, a partir de 1 ; la premiere par defaut. */
   readonly page?: number;
   readonly decompresser: Decompression;
+  /** De quoi lire les polices et les remplacer ; absent, le texte n'est pas repris (il est compte et dit). */
+  readonly polices?: PolicesPdf;
 }
 
 /** Une page lue : son dessin, ce qui n'a pas ete repris, le nombre de pages du document et celle qui a ete lue. */
-export interface PdfLu { readonly dessin: DessinSvg; readonly ignores: readonly string[]; readonly pages: number; readonly page: number }
+export interface PdfLu {
+  readonly dessin: DessinSvg;
+  readonly ignores: readonly string[];
+  readonly pages: number;
+  readonly page: number;
+  /** Vrai quand du texte attendait une fonte de remplacement que `polices` n'avait pas encore : la relire avec elles. */
+  readonly policesManquantes?: boolean;
+}
 /** Un refus nomme ; `pages` quand le document s'est ouvert (une autre page peut se lire). */
-export type LecturePdf = PdfLu | { readonly erreur: string; readonly pages?: number };
+export type LecturePdf = PdfLu | { readonly erreur: string; readonly pages?: number; readonly policesManquantes?: boolean };
 
 /** Lit une page d'un PDF. */
 export function lirePdf(octets: Uint8Array, options: OptionsLecturePdf): LecturePdf {
@@ -35,8 +49,9 @@ export function lirePdf(octets: Uint8Array, options: OptionsLecturePdf): Lecture
     pages = liste.length;
     const n = options.page ?? 1;
     if (!Number.isInteger(n) || n < 1 || n > liste.length) return avecPages('Ce PDF n’a pas de page ' + n + ' : il en compte ' + enFrancais(liste.length) + '.');
-    const lu = lirePage(doc, au(liste, n - 1));
-    return 'erreur' in lu ? avecPages(lu.erreur) : { ...lu, pages: liste.length, page: n };
+    const lu = lirePage(doc, au(liste, n - 1), options.polices ?? null);
+    if ('erreur' in lu) return { ...avecPages(lu.erreur), ...(lu.policesManquantes ? { policesManquantes: true } : {}) };
+    return { ...lu, pages: liste.length, page: n };
   } catch (e) {
     if (e instanceof FluxEnAttente) throw e;
     if (e instanceof RefusPdf) return avecPages(e.message);
@@ -54,25 +69,26 @@ export function matricePage(boite: readonly [number, number, number, number], ro
   return multiplier(r, translation(-boite[0], -boite[1]));
 }
 
-function lirePage(doc: DocumentPdf, page: PagePdf): { dessin: DessinSvg; ignores: string[] } | { erreur: string } {
+function lirePage(doc: DocumentPdf, page: PagePdf, polices: PolicesPdf | null): { dessin: DessinSvg; ignores: string[]; policesManquantes?: boolean } | { erreur: string; policesManquantes?: boolean } {
   const [x0, y0, x1, y1] = page.boite, l = x1 - x0, h = y1 - y0;
   if (!(l >= 0.001 && h >= 0.001)) return { erreur: 'Cette page du PDF a une taille nulle.' };
   if (Math.max(Math.abs(x0), Math.abs(y0), Math.abs(x1), Math.abs(y1)) > LIMITES_PDF.coordonnee) return { erreur: 'Cette page du PDF a une taille démesurée.' };
   const contenus = fluxDeContenu(doc, page.dict);
   // Les flux de la page et de ses formulaires sont demandes d'un coup : une seule reprise pour tous (voir io/pdf.ts).
-  exiger(doc, [...contenus, ...formulaires(doc, page.ressources)]);
+  exiger(doc, [...contenus, ...formulaires(doc, page.ressources, polices !== null)]);
   const ctx: Contexte = {
     doc, page: matricePage(page.boite, page.rotation), formes: [], pertes: pertesVides(),
-    calquesEteints: calques(doc), formulairesActifs: new Set(), operateurs: 0, segments: 0, formulaires: 0
+    calquesEteints: calques(doc), formulairesActifs: new Set(), polices, policesLues: new Map(), remplacements: new Map(), operateurs: 0, segments: 0, formulaires: 0
   };
   new Interprete(ctx, page.ressources, etatInitial(IDENTITE), 0, false).executer(concatener(contenus.map(f => donneesOuRien(ctx, f))));
   ctx.pertes.annotations = annotations(doc, page.dict);
-  const ignores = phrasesPertes(ctx.pertes);
+  const ignores = [...phrasesPertes(ctx.pertes), ...[...ctx.remplacements.values()].map(x => phraseRemplacement(x.textes, x.r))];
+  const manquantes = ctx.pertes.textesSansPolice > 0;
   if (!ctx.formes.length) {
-    return { erreur: 'Cette page du PDF ne contient aucun tracé vectoriel à éditer' + (ignores.length ? ' (non repris : ' + ignores.join(' ; ') + ')' : '') + '.' };
+    return { erreur: 'Cette page du PDF ne contient aucun tracé vectoriel à éditer' + (ignores.length ? ' (non repris : ' + ignores.join(' ; ') + ')' : '') + '.', ...(manquantes ? { policesManquantes: true } : {}) };
   }
   const vb: DessinSvg['vb'] = page.rotation === 90 || page.rotation === 270 ? [0, 0, h, l] : [0, 0, l, h];
-  return { dessin: { vb, formes: ctx.formes }, ignores };
+  return { dessin: { vb, formes: ctx.formes }, ignores, ...(manquantes ? { policesManquantes: true } : {}) };
 }
 
 /** Les flux de contenu d'une page (un flux, ou un tableau de flux qui se lisent bout a bout). */
@@ -82,11 +98,19 @@ function fluxDeContenu(doc: DocumentPdf, page: Dict): Flux[] {
   return estTableau(c) ? c.map(x => doc.resoudre(x)).filter(estFlux) : [];
 }
 
-/** Les formulaires que la page peut dessiner, sous-formulaires compris (bornes en nombre et en profondeur). */
-function formulaires(doc: DocumentPdf, ressources: Dict | null): Flux[] {
-  const vus = new Set<number>(), acc: Flux[] = [];
+/** Les formulaires que la page peut dessiner, sous-formulaires compris (bornes en nombre et en profondeur), et les flux de leurs polices. */
+function formulaires(doc: DocumentPdf, ressources: Dict | null, avecPolices: boolean): Flux[] {
+  const vus = new Set<number>(), acc: Flux[] = [], polices = new Set<Dict>();
   const visiter = (r: Dict | null, profondeur: number): void => {
     if (profondeur > LIMITES_PDF.profondeurFormulaires) return;
+    for (const p of avecPolices ? doc.dict(r, 'Font')?.values() ?? [] : []) {
+      const d = doc.resoudre(p);
+      if (!estDict(d) || polices.has(d) || polices.size >= POLICES_MAX) continue;
+      polices.add(d);
+      acc.push(...fluxDePolice(doc, d));
+      // Les glyphes Type 3 ont leurs propres ressources (des formulaires, rarement).
+      visiter(doc.dict(d, 'Resources'), profondeur + 1);
+    }
     const xo = doc.dict(r, 'XObject');
     if (!xo) return;
     for (const v of xo.values()) {

@@ -51,7 +51,7 @@ describe('l ouverture d un PDF', () => {
 
   it('relance la lecture jusqu a avoir tous les flux (table en flux, flux d objets, page et formulaire)', async () => {
     const appels: number[] = [];
-    const r = await ouvrirPdf(fixture('compresse.pdf'), 1, async (brut, max) => { appels.push(brut.length); return decompresserZlib(brut, max); });
+    const r = await ouvrirPdf(fixture('compresse.pdf'), 1, { decompresser: async (brut, max) => { appels.push(brut.length); return decompresserZlib(brut, max); } });
     expect('svg' in r && r.pages).toBe(1);
     // Quatre flux compresses : la table, le flux d'objets, le contenu de la page et celui du formulaire (le profil ICC n'est jamais lu).
     expect(appels.length).toBe(4);
@@ -79,7 +79,7 @@ describe('l ouverture d un PDF', () => {
   });
 
   it('ne laisse jamais passer une exception, meme d une decompression qui leve', async () => {
-    const r = await ouvrirPdf(fixture('compresse.pdf'), 1, () => Promise.reject(new Error('panne')));
+    const r = await ouvrirPdf(fixture('compresse.pdf'), 1, { decompresser: () => Promise.reject(new Error('panne')) });
     expect('erreur' in r).toBe(true);
   });
 });

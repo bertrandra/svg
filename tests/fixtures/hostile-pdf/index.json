@@ -204,6 +204,36 @@
       "famille": "contenu",
       "vecteur": "Chaine de texte de 300 Ko a cent mille parentheses imbriquees",
       "attendu": "ouvre"
+    },
+    {
+      "fichier": "police-tronquee.pdf",
+      "famille": "police",
+      "vecteur": "Programme TrueType embarque coupe a 2 000 octets : illisible, la police est remplacee",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "police-repertoire-demesure.pdf",
+      "famille": "police",
+      "vecteur": "Programme de fonte qui annonce 65 535 tables",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "cmap-plage-demesuree.pdf",
+      "famille": "police",
+      "vecteur": "ToUnicode a plage de 4 milliards de codes et largeurs /W de 4 milliards de CID",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "type3-recursif.pdf",
+      "famille": "police",
+      "vecteur": "Glyphe Type 3 dont le flux montre la meme glyphe de la meme police",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "texte-taille-demesuree.pdf",
+      "famille": "police",
+      "vecteur": "Corps de police de 10^15 et echelle horizontale de 10^9 %",
+      "attendu": "refus"
     }
   ]
 }

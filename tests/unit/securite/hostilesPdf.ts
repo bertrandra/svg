@@ -2,8 +2,11 @@
 // d'ici (ACTUALISER_REFERENCES=1 npx vitest run tests/unit/securite/corpus-pdf.test.ts). Un vecteur nouveau, c'est une entree de
 // HOSTILES ; sa ligne d'index.json se deduit d'elle (le test confronte les deux).
 
+import { readFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
-import { flux, octets, pdfClassique, pdfModerne, pdfUnePage } from '../engine/pdf/fabrique.js';
+import { cheminPolice, flux, octets, pdfClassique, pdfModerne, pdfUnePage } from '../engine/pdf/fabrique.js';
+
+const POLICE = (dict: string) => '/Font << /F << /Type /Font ' + dict + ' >> >>';
 
 export interface Hostile {
   readonly fichier: string;
@@ -227,8 +230,36 @@ export const HOSTILES: readonly Hostile[] = [
     ])
   },
   {
-    fichier: 'chaine-geante.pdf', famille: 'contenu', attendu: 'ouvre', dit: '1 texte',
+    fichier: 'chaine-geante.pdf', famille: 'contenu', attendu: 'ouvre', dit: 'sans glyphe connue',
     vecteur: 'Chaine de texte de 300 Ko a cent mille parentheses imbriquees',
     fabriquer: () => pdfUnePage('1 0 0 rg 0 0 5 5 re f BT (' + 'a('.repeat(100_000) + ')'.repeat(100_000) + ') Tj ET')
+  },
+  {
+    fichier: 'police-tronquee.pdf', famille: 'police', attendu: 'ouvre', dit: '1 texte en Arial, police remplacée par Inter',
+    vecteur: 'Programme TrueType embarque coupe a 2 000 octets : illisible, la police est remplacee',
+    fabriquer: () => pdfUnePage('BT /F 20 Tf 10 50 Td (Abc) Tj ET', { ressources: POLICE('/Subtype /TrueType /BaseFont /ABCDEF+Arial-Light /FontDescriptor << /FontFile2 5 0 R >>'), autres: [flux('<< >>', readFileSync(cheminPolice('fredoka')).subarray(0, 2000), true)] })
+  },
+  {
+    fichier: 'police-repertoire-demesure.pdf', famille: 'police', attendu: 'ouvre', dit: 'police remplacée par Inter',
+    vecteur: 'Programme de fonte qui annonce 65 535 tables',
+    fabriquer: () => pdfUnePage('BT /F 20 Tf (A) Tj ET', { ressources: POLICE('/Subtype /TrueType /BaseFont /Arial /FontDescriptor << /FontFile2 5 0 R >>'), autres: [flux('<< >>', Buffer.concat([Buffer.from([0, 1, 0, 0, 0xff, 0xff]), Buffer.alloc(200, 0x41)]), true)] })
+  },
+  {
+    fichier: 'cmap-plage-demesuree.pdf', famille: 'police', attendu: 'ouvre',
+    vecteur: 'ToUnicode a plage de 4 milliards de codes et largeurs /W de 4 milliards de CID',
+    fabriquer: () => pdfUnePage('0 0 1 1 re f BT /F 20 Tf <00410042> Tj ET', {
+      ressources: POLICE('/Subtype /Type0 /BaseFont /X /Encoding /Identity-H /ToUnicode 5 0 R /DescendantFonts [<< /Subtype /CIDFontType2 /W [0 4294967295 500] >>]'),
+      autres: [flux('<< >>', '1 begincodespacerange <0000> <FFFF> endcodespacerange 1 beginbfrange <00000000> <FFFFFFFF> <0041> endbfrange')]
+    })
+  },
+  {
+    fichier: 'type3-recursif.pdf', famille: 'police', attendu: 'refus', dit: 'Ce PDF contient une glyphe qui se dessine elle-même',
+    vecteur: 'Glyphe Type 3 dont le flux montre la meme glyphe de la meme police',
+    fabriquer: () => pdfUnePage('BT /F 20 Tf (a) Tj ET', { ressources: POLICE('/Subtype /Type3 /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 97 /LastChar 97 /Widths [500] /Encoding << /Differences [97 /a] >> /CharProcs << /a 5 0 R >> /Resources << /Font << /F 6 0 R >> >>'), autres: [flux('<< >>', '0 0 100 100 re f BT /F 1000 Tf (a) Tj ET'), '<< /Type /Font /Subtype /Type3 /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 97 /LastChar 97 /Widths [500] /Encoding << /Differences [97 /a] >> /CharProcs << /a 5 0 R >> >>'] })
+  },
+  {
+    fichier: 'texte-taille-demesuree.pdf', famille: 'police', attendu: 'refus', dit: 'Ce PDF a des coordonnées démesurées',
+    vecteur: 'Corps de police de 10^15 et echelle horizontale de 10^9 %',
+    fabriquer: () => pdfUnePage('BT /F 1000000000000000 Tf 1000000000 Tz (AB) Tj ET', { ressources: POLICE('/Subtype /Type1 /BaseFont /Helvetica') })
   }
 ];

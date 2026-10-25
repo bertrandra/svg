@@ -61,6 +61,7 @@ export function glyphesDe(fonte: Font, octets?: ArrayBuffer): Glyphes {
     contour: (c, x, y, taille) => glyphe(c).getPath(x, y, taille).commands,
     avance: c => glyphe(c).advanceWidth ?? fonte.unitsPerEm / 2,
     crenage: (a, b) => (gpos ? gpos(glyphe(a).index, glyphe(b).index) : bibliotheque(a, b)),
+    possede: c => glyphe(c).index > 0,
     ...(liga ? { ligature } : {})
   };
 }
@@ -73,6 +74,11 @@ export function lirePolice(id: string, nom: string, octets: ArrayBuffer): Police
 /** Les fontes embarquees, chargees une fois, a la demande. */
 export const chargerPolices: () => Promise<Police[]> = memoiserSucces(async () =>
   (await embarquees.charger()).map(p => lirePolice(p.id, p.nom, decoderBase64(p.base64))).filter((p): p is Police => p !== null)).charger;
+
+/** Les fontes embarquees par identifiant : de quoi remplacer la police d'un texte lu (model/polices.ts). */
+export async function fontesDeRemplacement(): Promise<ReadonlyMap<string, Glyphes>> {
+  return new Map((await chargerPolices()).map(p => [p.id, p.glyphes]));
+}
 
 /** Une fonte deposee par la personne (TTF ou OTF). */
 export async function policeDeposee(fichier: File): Promise<Police | { erreur: string }> {

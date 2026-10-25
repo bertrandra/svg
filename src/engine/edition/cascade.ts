@@ -15,7 +15,9 @@ import { MSG_FEUILLE_MEDIA, MSG_TRANSFORM_CSS, MSG_VARIABLES, textePeint, type P
 // Les attributs de presentation que la lecture sait porter ; `overflow` ne sert qu'au cadre d'un <symbol>.
 const PROPRIETES = [
   'fill', 'stroke', 'stroke-width', 'opacity', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'display', 'visibility', 'clip-path', 'mask', 'filter',
-  'color', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'marker-start', 'marker-mid', 'marker-end', 'overflow'
+  'color', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'marker-start', 'marker-mid', 'marker-end', 'overflow',
+  // Le texte (lu en lettres quand la lecture a des polices, texteSvg.ts).
+  'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing', 'word-spacing', 'text-anchor', 'writing-mode'
 ];
 
 export interface Analyse {

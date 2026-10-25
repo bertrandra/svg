@@ -4,8 +4,10 @@
 // on les garde, et on la relance ; elle reprend du debut avec ce qu'elle a deja (quelques tours : la table en flux, les flux
 // d'objets, puis tous les flux de la page d'un coup). Rien ne leve : un fichier hostile rend un refus nomme.
 
-import { ecrireDessin } from '../engine/editionSvg.js';
-import { FluxEnAttente, LIMITES_PDF, lirePdf, type Decompression, type ResultatDecompression } from '../engine/lecturePdf.js';
+import { ecrireDessin, type Glyphes } from '../engine/editionSvg.js';
+import { FluxEnAttente, LIMITES_PDF, lirePdf, type Decompression, type LecturePdf, type PolicesPdf, type ResultatDecompression } from '../engine/lecturePdf.js';
+import { fontesDeRemplacement } from './polices.js';
+import { lireFontePdf } from './policesPdf.js';
 
 /** Une page lue, en SVG ; ou un refus, avec le nombre de pages quand le document s'est ouvert. */
 export type PdfOuvert =
@@ -59,10 +61,25 @@ export async function decompresserZlib(brut: Uint8Array, max: number): Promise<R
   return out;
 }
 
-/** Lit la page `page` (1 par defaut) d'un PDF et la rend en SVG. `decompresser` se remplace dans les tests. */
-export async function ouvrirPdf(octets: Uint8Array, page = 1, decompresser: (brut: Uint8Array, max: number) => Promise<ResultatDecompression> = decompresserZlib): Promise<PdfOuvert> {
+/** Ce que `ouvrirPdf` emploie du navigateur : la decompression et les fontes de remplacement (dist/polices.js), remplacables en test. */
+export interface OutilsPdf {
+  readonly decompresser: (brut: Uint8Array, max: number) => Promise<ResultatDecompression>;
+  readonly remplacantes: () => Promise<ReadonlyMap<string, Glyphes>>;
+}
+
+const OUTILS: OutilsPdf = { decompresser: decompresserZlib, remplacantes: fontesDeRemplacement };
+
+/**
+ * Lit la page `page` (1 par defaut) d'un PDF et la rend en SVG. Le texte se dessine en lettres : un programme de fonte embarque se
+ * lit tout de suite (opentype.js est dans la page) ; une police a remplacer demande les fontes de dist/polices.js, chargees
+ * seulement si la page en a besoin, puis la lecture reprend avec elles.
+ */
+export async function ouvrirPdf(octets: Uint8Array, page = 1, outils: Partial<OutilsPdf> = {}): Promise<PdfOuvert> {
+  const o = { ...OUTILS, ...outils };
   if (octets.length > LIMITES_PDF.octets) return { erreur: 'Ce PDF pèse plus de ' + LIMITES_PDF.octets / 1048576 + ' Mo : il est trop gros pour être lu ici.' };
   const faits = new Map<number, ResultatDecompression>();
+  let remplacantes: ReadonlyMap<string, Glyphes> | null = null;
+  const polices: PolicesPdf = { lire: lireFontePdf, remplacement: id => remplacantes?.get(id) ?? null };
   const donne: Decompression = (brut, max, cle) => {
     const r = faits.get(cle);
     if (r !== undefined) return r;
@@ -70,13 +87,18 @@ export async function ouvrirPdf(octets: Uint8Array, page = 1, decompresser: (bru
   };
   try {
     for (let reprise = 0; reprise < REPRISES_MAX; reprise++) {
-      try {
-        const lu = lirePdf(octets, { page, decompresser: donne });
-        return 'erreur' in lu ? lu : { svg: ecrireDessin(lu.dessin, 3), ignores: lu.ignores, pages: lu.pages, page: lu.page };
-      } catch (e) {
+      let lu: LecturePdf;
+      try { lu = lirePdf(octets, { page, decompresser: donne, polices }); } catch (e) {
         if (!(e instanceof FluxEnAttente)) throw e;
-        for (const d of e.demandes) if (!faits.has(d.cle)) faits.set(d.cle, await decompresser(d.brut, d.max));
+        for (const d of e.demandes) if (!faits.has(d.cle)) faits.set(d.cle, await o.decompresser(d.brut, d.max));
+        continue;
       }
+      if (lu.policesManquantes && remplacantes === null) {
+        // Les fontes manquent seulement si le fichier polices.js manque : la lecture le dira, elle n'echoue pas.
+        try { remplacantes = await o.remplacantes(); } catch { remplacantes = new Map(); }
+        continue;
+      }
+      return 'erreur' in lu ? { erreur: lu.erreur, ...(lu.pages ? { pages: lu.pages } : {}) } : { svg: ecrireDessin(lu.dessin, 3), ignores: lu.ignores, pages: lu.pages, page: lu.page };
     }
     return { erreur: 'Ce PDF demande trop de décompressions pour être lu ici.' };
   } catch {

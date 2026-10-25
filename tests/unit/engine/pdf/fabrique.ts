@@ -2,8 +2,14 @@
 // ou en flux avec un flux d'objets, comme les PDF 1.5 d'Illustrator, d'Inkscape ou de Cairo), et la decompression de Node pour
 // remplacer celle du navigateur. Rien ici n'est du code livre : c'est l'outillage des tests et des fixtures (tests/fixtures/pdf).
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { constants, deflateSync, inflateSync } from 'node:zlib';
-import { lirePdf, type Decompression, type LecturePdf, type PdfLu } from '../../../../src/engine/lecturePdf.js';
+import { parse } from 'opentype.js';
+import type { Glyphes } from '../../../../src/engine/editionSvg.js';
+import { lirePdf, type Decompression, type LecturePdf, type PdfLu, type PolicesPdf } from '../../../../src/engine/lecturePdf.js';
+import { glyphesDe } from '../../../../src/io/polices.js';
+import { lireFontePdf } from '../../../../src/io/policesPdf.js';
 
 export const octets = (t: string): Buffer => Buffer.from(t, 'latin1');
 
@@ -116,3 +122,35 @@ export function refus(o: Uint8Array, page?: number): string {
 /** Les commandes d'une forme en texte court (« M0,0 L10,0 Z »), arrondies au millieme, pour comparer d'un coup d'oeil. */
 export const enTexte = (d: ReadonlyArray<{ c: string; p: readonly number[] }>): string =>
   d.map(c => c.c + c.p.map(v => { const r = Math.round(v * 1000) / 1000; return Object.is(r, -0) ? 0 : r; }).join(',')).join(' ');
+
+/** Les fichiers des neuf fontes embarquees (scripts/polices.mjs), dans node_modules. */
+export const FICHIERS_POLICES: Readonly<Record<string, string>> = {
+  inter: 'inter/400Regular/Inter_400Regular.ttf', 'inter-gras': 'inter/700Bold/Inter_700Bold.ttf', oswald: 'oswald/500Medium/Oswald_500Medium.ttf',
+  bebas: 'bebas-neue/400Regular/BebasNeue_400Regular.ttf', playfair: 'playfair-display/700Bold/PlayfairDisplay_700Bold.ttf', lobster: 'lobster/400Regular/Lobster_400Regular.ttf',
+  pacifico: 'pacifico/400Regular/Pacifico_400Regular.ttf', caveat: 'caveat/700Bold/Caveat_700Bold.ttf', fredoka: 'fredoka/600SemiBold/Fredoka_600SemiBold.ttf'
+};
+
+export const cheminPolice = (id: string): string => resolve(__dirname, '../../../../node_modules/@expo-google-fonts', FICHIERS_POLICES[id] ?? '');
+
+let fontes: Map<string, Glyphes> | null = null;
+/** Les fontes de remplacement, lues comme la page les lit (io/polices.ts), depuis node_modules. */
+export function remplacantesTest(): Map<string, Glyphes> {
+  fontes ??= new Map(Object.keys(FICHIERS_POLICES).map(id => {
+    const b = readFileSync(cheminPolice(id)), ab = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+    return [id, glyphesDe(parse(ab), ab)];
+  }));
+  return fontes;
+}
+
+/** Les polices de la page pour la lecture : programmes embarques par io/policesPdf.ts, remplacantes depuis node_modules. */
+export const policesTest = (): PolicesPdf => ({ lire: lireFontePdf, remplacement: id => remplacantesTest().get(id) ?? null });
+
+/** Lit un PDF avec ses polices (le texte en lettres). */
+export const lireTexte = (o: Uint8Array, page?: number): LecturePdf => lirePdf(o, { decompresser: inflerSync, polices: policesTest(), ...(page ? { page } : {}) });
+
+/** Lit avec ses polices un PDF qui doit s'ouvrir. */
+export function luTexte(o: Uint8Array, page?: number): PdfLu {
+  const r = lireTexte(o, page);
+  if ('erreur' in r) throw new Error('le PDF devait se lire : ' + r.erreur);
+  return r;
+}

@@ -23,7 +23,8 @@ export {
 } from './edition/geometrie.js';
 
 export { lirePeinture, lirePeintureAlpha, type PeintureLue } from './edition/peinture.js';
-export { lireDessin, type DessinLu, type LectureDessin } from './edition/lecture.js';
+export { lireDessin, type DessinLu, type LectureDessin, type OptionsLecture } from './edition/lecture.js';
+export { CARACTERES_MAX, type PolicesTexte } from './edition/texteSvg.js';
 export { opaciteDuRemplissage, opaciteDuContour } from './edition/opacites.js';
 export {
   LIMITE_MITRE_DEFAUT, attributsTrait, pointillesEcrits, normaliserPointilles, genrePointilles, motifDeGenre,
@@ -78,3 +79,8 @@ export {
 export { inserer, combiner, sousChemins, separer, coller } from './edition/assemblage.js';
 
 export { pasGrille, aimanter } from './edition/grille.js';
+
+export {
+  cheminDeGlyphe, sourceDeGlyphes, formesDeGlyphes, PENCHE,
+  type CommandeGlyphe, type Glyphes, type SourceContours, type GlypheAPoser, type StyleGlyphes
+} from './edition/glyphes.js';

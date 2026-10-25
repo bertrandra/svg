@@ -5,7 +5,8 @@
 // `heritage.ts` (ce qui se transmet), `elements.ts` (les formes de base).
 
 import { analyserXml, phraseErreurXml } from '../../util/xml.js';
-import type { DessinSvg } from './types.js';
+import type { DessinSvg, Forme } from './types.js';
+import { phrasesRemplacements, type ContexteTexte, type PolicesTexte } from './texteSvg.js';
 import { IDENTITE } from './types.js';
 import { lireOpacite } from './opacites.js';
 import { heriter, refusDe } from './heritage.js';
@@ -29,10 +30,19 @@ function planDe(attributs: Readonly<Record<string, string>>): [number, number, n
     ? [vb[0] ?? 0, vb[1] ?? 0, vb[2] ?? 0, vb[3] ?? 0] : l > 0 && h > 0 && Number.isFinite(l) && Number.isFinite(h) ? [0, 0, l, h] : null;
 }
 
+/** Ce que la lecture peut recevoir en plus du texte du SVG. */
+export interface OptionsLecture {
+  /**
+   * Les fontes pour lire le texte en lettres (ADR-0020). Absentes, un <text> est refuse en le nommant, comme avant : la lecture
+   * d'un SVG sans texte ne change jamais, et celle d'un SVG avec texte ne change que si on lui donne de quoi le dessiner.
+   */
+  readonly polices?: PolicesTexte;
+}
+
 /** Le dessin d'un SVG et ce qu'il a fallu laisser tomber, ou ce qui empeche de l'editer. Ne leve jamais : un texte hostile est un refus nomme. */
-export function lireDessin(svg: string): LectureDessin {
+export function lireDessin(svg: string, options: OptionsLecture = {}): LectureDessin {
   try {
-    return lireDessinSansFiltre(svg);
+    return lireDessinSansFiltre(svg, options);
   } catch (e) {
     // Dernier filet : une pile de fonctions recursives qui deborde malgre les bornes se dit, elle ne fait pas planter la page.
     if (e instanceof RangeError) return { erreur: 'Ce SVG est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.' };
@@ -40,7 +50,7 @@ export function lireDessin(svg: string): LectureDessin {
   }
 }
 
-function lireDessinSansFiltre(svg: string): LectureDessin {
+function lireDessinSansFiltre(svg: string, options: OptionsLecture): LectureDessin {
   const doc = analyserXml(svg);
   if ('erreur' in doc) return { erreur: phraseErreurXml(doc.erreur) };
   const racine = doc.racine.enfants.find(e => e.nom === 'svg');
@@ -51,7 +61,9 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   // L'ecriture garde le millieme : un plan plus petit s'ecrirait « width="0" », que plus rien ne relit.
   if (plan[2] < 0.001 || plan[3] < 0.001) return { erreur: 'Ce SVG a un plan de travail trop petit (moins de 0,001 unité) : corrigez son viewBox.' };
   const analyse = analyser(racine);
-  const p: Parcours = { analyse, plan, formes: [], refus: new Set(), actifs: new Set([racine]), clones: 0, trop: false, donnees: 0 };
+  const formesLues: Forme[] = [], refus = new Set<string>();
+  const texte: ContexteTexte | null = options.polices ? { analyse, polices: options.polices, formes: formesLues, refus, remplacements: new Map(), caracteres: 0 } : null;
+  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
@@ -68,5 +80,5 @@ function lireDessinSansFiltre(svg: string): LectureDessin {
   const formes = p.formes.filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
   const production = lireProduction(racine.attributs);
-  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores], ...(production ? { production } : {}) };
+  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };
 }
