@@ -115,5 +115,7 @@ courbe »), comme le premier calque du dessin d’exemple. Rien ne s’écrit : 
   l’autre ; `demandeFormes` et `ouvrirFormes` portent le raccourci F jusqu’au bouton.
 - Une forme de base nouvelle : sa fonction dans `formesDeBase.ts` (en fractions de boîte si possible, pour qu’elle se reconnaisse),
   son modèle dans `lesModeles`, sa fiche (nom, genre, trait, proportion), son icône, sa place dans une rubrique de `GROUPES_FORMES`,
-  et une ligne de plus dans la référence `formes-de-base` (une référence neuve, jamais une réécriture).
+  et une ligne de plus dans la référence `formes-de-base` (une référence neuve, jamais une réécriture). Cette référence part d’un
+  fichier d’entrée existant (`plan-dimensions`, vidé) : un SVG de départ de plus changerait le corpus du fuzzing déterministe
+  (`tests/unit/securite/fuzz.test.ts`, qui prend toutes les entrées de `tests/fixtures/svg`) et ses tirages.
 - La palette est le premier menu en grille : `MenuDeroulant` le sait faire pour d’autres (`grille`, `titreMenu`, `demandeOuverture`).

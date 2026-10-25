@@ -239,7 +239,7 @@ describe('la palette des formes de base', () => {
       for (const [largeur, hauteur, tactile] of [[1280, 800, false], [390, 844, true]] as const) {
         const { page } = await navigateur.ouvrir({ largeur, hauteur, tactile, schema });
         await ouvrirCode(page, TOUTES, tactile);
-        await attend(() => formesVisibles(page)).toBe(37);
+        await attend(() => formesVisibles(page)).toBe(36);
         const noms = await page.locator('.editeur-calques .calque-nom').evaluateAll(l => l.map(e => e.getAttribute('aria-label') ?? ''));
         for (const genre of ['Cœur', 'Hexagone', 'Octogone', 'Flèche double', 'Anneau', 'Nuage', 'Spirale', 'Vague', 'Badge festonné', 'Bulle de dialogue', 'Étoile à 8 branches']) {
           expect(noms.some(n => n.startsWith(genre + ' ')), genre).toBe(true);

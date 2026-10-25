@@ -289,7 +289,9 @@ const CAS: readonly Cas[] = [
   { nom: 'lecture-use-symbole' },
   { nom: 'lecture-use-introuvable' },
   { nom: 'lecture-css-selecteurs' },
-  { nom: 'formes-de-base', operation: formesDeBase },
+  // Sans fichier d'entree a lui (un SVG de depart de plus changerait le corpus du fuzzing, tests/unit/securite) : un plan vide de
+  // 600 x 480, puis les formes.
+  { nom: 'formes-de-base', entree: 'plan-dimensions', operation: d => formesDeBase({ ...d, vb: [0, 0, 600, 480], formes: [] }) },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.
