@@ -119,7 +119,7 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | 5.8 | Tab, Maj+Tab, Échap, Entrée, Espace, Suppr, Retour arrière | comme dans les tests : Tab ne piège jamais |
 | 5.9 | Saisir « é », « ç » et le texte de la forme avec les dispositions ci-dessus | le texte en formes écrit les bons caractères |
 | 5.10 | Alt+C (même couleur de contour), et en contexte Cricut Alt+Maj+X et Alt+Maj+E (tout ce qui est à couper, à écrire), sous Windows (barre de menus du navigateur visible ou non) et Option sur macOS | la sélection change ; aucun menu du navigateur ne s’ouvre ; sur macOS, Option+C ne tape pas « ç » dans la toile |
-| 5.11 | Alt+glisser sur le vide (retirer de la sélection) sous un bureau Linux qui réserve Alt+glisser au déplacement des fenêtres | noter si la fenêtre se déplace au lieu du cadre ; Alt+cadre avec l’outil Cadre (F) aussi |
+| 5.11 | Alt+glisser sur le vide (retirer de la sélection) sous un bureau Linux qui réserve Alt+glisser au déplacement des fenêtres | noter si la fenêtre se déplace au lieu du cadre ; Alt+cadre avec l’outil Cadre (B) aussi |
 
 ## 6. Zoom et taille du texte (5 min)
 
