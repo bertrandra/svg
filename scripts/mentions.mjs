@@ -283,6 +283,9 @@ export async function composerMentions() {
     'des paquets : ne le modifiez pas à la main. Il liste ce que l’éditeur redistribue dans `dist/` (la page, le bundle d’embarquement, la bibliothèque de formes,',
     'les fontes, le traceur vtracer). Le même texte est livré sous le nom `MENTIONS.txt` ; l’éditeur le résume dans « À propos et crédits » (menu Fichier).', '',
     'Ce fichier ne couvre que les composants tiers ; la licence du projet lui-même, s’il en porte une, est dans le fichier `LICENSE` du dépôt.', '',
+    'Les polices libres que la personne télécharge à la demande (ADR-0025) ne sont pas redistribuées et ne figurent pas ici : `polices-catalogue.js`',
+    'n’en est que l’index (noms, licences, versions épinglées, empreintes), sans aucune fonte ; le fichier vient de sa source, et la boîte « À propos et',
+    'crédits » nomme la licence de chaque police téléchargée qu’emploie un dessin.', '',
     ...sectionFormes(credits),
     ...sectionFontes(credits, verrou),
     ...sectionLogiciels(credits, verrou, embarques)

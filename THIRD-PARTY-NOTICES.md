@@ -6,6 +6,10 @@ les fontes, le traceur vtracer). Le même texte est livré sous le nom `MENTIONS
 
 Ce fichier ne couvre que les composants tiers ; la licence du projet lui-même, s’il en porte une, est dans le fichier `LICENSE` du dépôt.
 
+Les polices libres que la personne télécharge à la demande (ADR-0025) ne sont pas redistribuées et ne figurent pas ici : `polices-catalogue.js`
+n’en est que l’index (noms, licences, versions épinglées, empreintes), sans aucune fonte ; le fichier vient de sa source, et la boîte « À propos et
+crédits » nomme la licence de chaque police téléchargée qu’emploie un dessin.
+
 ## Formes de la bibliothèque
 
 - Source : **Game Icons**, paquet `@iconify-json/game-icons` 1.2.4 — https://game-icons.net

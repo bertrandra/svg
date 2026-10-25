@@ -167,6 +167,14 @@ L’éditeur ne peut pas durcir la page qui l’héberge. À l’hôte de :
 - **Rien à savoir sur les polices** : la page autonome ne contacte plus aucun hôte au chargement (ses polices sont dans le
   fichier, voir le constat 14). Le bundle d’embarquement n’en charge pas non plus ; si vous voulez la typographie de la page
   entière chez vous, c’est à vous de servir *Instrument Sans* et *IBM Plex Mono* (voir `docs/integration.md`).
+- **Les polices téléchargées** (ADR-0025) : aucune requête tant que la personne n’a pas accepté, serveur par serveur
+  (`cdn.jsdelivr.net`, `fonts.bunny.net`, `gitlab.com`, `cdn.fontshare.com`) ; chez un hôte, seulement avec
+  `policesEnLigne: true`. La requête ne porte ni cookie ni référent ; chaque fichier est vérifié par son empreinte sha256
+  (`crypto.subtle`) contre l’index commis avant d’être lu par opentype.js : un serveur compromis ou un miroir d’une autre
+  version ne fait lire aucun octet inattendu, et le refus est dit. Le fichier est borné (8 Mo, puis les bornes du WOFF :
+  256 tables, 32 Mo décompressés). L’index (`polices-catalogue.js`) est validé en entier (licence de la liste blanche, version
+  épinglée, empreinte, chemin sans « .. », adresse qui commence par le préfixe de son serveur). Un seul `fetch` existe dans
+  `src/`, et un test le garde.
 - **Le stockage** (`localStorage`) est partagé par toute la page de l’origine : un script de l’hôte peut y écrire. L’éditeur
   valide ce qu’il y lit (types, longueurs, clés de prototype retirées), il ne le chiffre pas.
 
