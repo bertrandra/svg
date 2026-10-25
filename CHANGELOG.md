@@ -452,3 +452,16 @@ empreintes.
 
 - Un SVG qui contient du texte s'ouvre désormais en lettres quand la page a ses fontes (`polices.js`), au lieu d'être
   refusé. Deux références neuves (`texte-svg`, `texte-svg-blancs`) ; aucune référence existante ne change.
+- **Récupérer son fichier** : « Télécharger le SVG » dans la barre de l'éditeur, « Autres formats » à côté (une ligne par
+  format qui dit à quoi il sert) ; le format recommandé suit le contexte (SVG, Cricut, Print Then Cut). Le doublon
+  « Copier le code SVG » est retiré. Parcours « changer une couleur puis récupérer le SVG » : 6 gestes → 4.
+- **« Terminer »** : le bouton de fin de la page s'appelle « Terminer » ; la fiche du dessin a pour action primaire
+  « Télécharger le SVG » (qui prend le focus), avec un message neutre. L'option d'hôte `libelleEnregistrer` (validée)
+  donne le libellé chez un hôte. La confirmation d'abandon propose aussi le geste de fin.
+- **Ctrl+S garde un brouillon et ne ferme jamais l'éditeur** (`onBrouillon` chez un hôte) ; il n'appelle plus
+  `onEnregistrer` : un hôte qui comptait dessus passe par le bouton (docs/integration.md).
+- **Fin du parcours Cricut** : « Exporter quand même (N points à corriger) » avec une confirmation dans le panneau ; carte
+  « Dans Design Space » après l'export ; « Ajuster » cadre le tapis entier, « Ajuster au dessin » (D) ; millimètre par
+  défaut, pouce retenu ; le sélecteur dit « Machine : … » et commence par la machine ; matériaux à venir sur une ligne.
+- Le fichier d'une forme de la bibliothèque porte son nom français (`bonhomme-de-neige.svg`). Dans un menu à contenu libre,
+  Tab circule au lieu de refermer le menu.
