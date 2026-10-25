@@ -15,7 +15,7 @@ a { color: var(--cyan); text-underline-offset: 0.2em; }
 /* Un bouton est secondaire par defaut : un filet, de l'encre. Une seule action par panneau porte la
    couleur d'outil (.primaire) ; .discret est un lien en forme de bouton. */
 button { font: inherit; font-size: var(--texte-corps); font-weight: 600; padding: var(--esp-s) var(--esp-l); border-radius: var(--rayon-bouton); border: 1px solid var(--filet); background: transparent; color: var(--encre); cursor: pointer; transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.12s; }
-button:where(:not(.icone-bouton, .discret, .primaire, .menu-element, .danger)):hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+button:where(:not(.icone-bouton, .discret, .primaire, .menu-element, .menu-tuile, .danger)):hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
 button:active:not(:disabled) { transform: translateY(1px); }
 /* Au doigt, deux touches rapides sur « Annuler » ne doivent pas zoomer la page (iOS Safari le fait sur tout ce qui n'a pas touch-action) ; la toile a le sien (none). */
 button, summary, label, select { touch-action: manipulation; }

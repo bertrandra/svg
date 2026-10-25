@@ -21,7 +21,7 @@ describe('menus de la barre', () => {
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
+    expect(noms).toEqual(['Formes (F)', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {
@@ -123,7 +123,7 @@ describe('menus de la barre', () => {
     const page = await editeur();
     const cadre = page.locator('.editeur-cadre');
     await page.locator('.outil-formes .chevron-seul button').click();
-    await page.getByRole('menuitemcheckbox', { name: /Étoile/ }).click();
+    await page.getByRole('menuitemradio', { name: /Étoile/ }).click();
     await attend(() => cadre.evaluate(e => e.classList.contains('outil-etoile'))).toBe(true);
 
     // Retour a la selection au clavier, puis le bouton reprend l'etoile sans rouvrir le menu.

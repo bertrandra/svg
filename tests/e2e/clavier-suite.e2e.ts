@@ -3,7 +3,7 @@
 // selection s'additionne (Maj+Page suivante, Espace) ; l'outil texte mene au champ du panneau ; le lien
 // d'evitement est un lien ; la page de l'hote est cachee derriere l'editeur.
 //
-// Les phrases sont celles de la region « polite » (.annonces). Le dessin d'exemple : f1 tracé courbe (208 × 128),
+// Les phrases sont celles de la region « polite » (.annonces). Le dessin d'exemple : f1 rectangle arrondi (208 × 128),
 // f2 cercle rouge, f3 triangle bleu, f4 courbe ; plan de 240 × 160 (un pas de reticule : 2,4 ; Maj : 24).
 
 import { describe, expect, it } from 'vitest';

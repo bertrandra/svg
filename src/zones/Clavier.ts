@@ -72,6 +72,8 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       }
       const outil = RACCOURCIS_OUTILS[t];
       if (outil) ac.poserOutil(outil);
+      // F ouvre la palette des formes de la barre (ADR-0033), le focus sur la forme courante : fleches, puis Entree.
+      else if (t === 'f' && !e.shiftKey && !e.altKey) { e.preventDefault(); ac.ouvrirFormes(); }
       else if (t === 'o') ac.poserContours(v => !v);
       else if (t === 'g') ac.poserGrille(!u.grille);
       else if (t === 'm') ac.poserAimants(!u.aimants);

@@ -57,6 +57,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
 - **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
   facultatifs (`io/stockage.ts`), rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans
   `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
+- **Une forme de base est un chemin ordinaire, fait en pur** (ADR-0033) : `engine/edition/formesDeBase.ts` construit 26 formes dans
+  la boîte du tracé à deux coins, avec des réglages bornés qui ne sont que de la session ; la forme posée ne garde pas ses réglages ;
+  le nom se lit sur la géométrie ; une forme neuve ajoute un modèle, une icône, une place dans `GROUPES_FORMES` et une ligne à la
+  référence `formes-de-base`, jamais un nouveau SVG d'entrée (il changerait le corpus du fuzzing).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
 - **Une forme se prend par le calcul, pas par le DOM** (ADR-0029) : `engine/prise.ts` (pur, mémorisé par forme) rend les

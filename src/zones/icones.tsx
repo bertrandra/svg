@@ -6,6 +6,9 @@ import type { CSSProperties } from 'react';
 
 export type NomIcone =
   | 'selection' | 'points' | 'main' | 'rectangle' | 'ellipse' | 'etoile' | 'ligne' | 'plume'
+  | 'carre' | 'cercle' | 'rectangle-arrondi' | 'triangle' | 'losange' | 'parallelogramme' | 'trapeze' | 'polygone'
+  | 'coeur' | 'fleche' | 'croix' | 'anneau' | 'demi-cercle' | 'goutte' | 'lune' | 'nuage' | 'etiquette' | 'badge' | 'bulle'
+  | 'arc' | 'spirale' | 'vague'
   | 'annuler' | 'retablir' | 'copier' | 'couper' | 'coller'
   | 'zoom-moins' | 'zoom-plus' | 'ajuster' | 'zoom-selection' | 'taille-reelle'
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
@@ -32,6 +35,30 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   ellipse: [t('M3 12a9 6 0 1 0 18 0a9 6 0 1 0-18 0')],
   etoile: [t('M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z')],
   ligne: [t('M6 18L18 6'), t('M4 20a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true), t('M16 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
+  // Les formes de base de la palette (ADR-0033) : chacune trace par le moteur lui-meme dans sa case de 24, au trait comme les
+  // autres icones, pour que l'icone soit la forme qu'on obtient. L'anneau garde son trou, la spirale et la vague restent ouvertes.
+  carre: [t('M4 4h16v16H4z')],
+  cercle: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0')],
+  'rectangle-arrondi': [t('M7 6h10a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4z')],
+  triangle: [t('M12 4l9 16H3z')],
+  losange: [t('M12 3l9 9-9 9-9-9z')],
+  parallelogramme: [t('M7 6h15l-5 12H2z')],
+  trapeze: [t('M6 6h12l4 12H2z')],
+  polygone: [t('M12 3l9 4.5v9L12 21l-9-4.5v-9z')],
+  coeur: [t('M12 7.5C12.9 5.3 14.7 4 16.7 4C19.2 4 21 5.6 21 8.3C21 12.8 16 16 12 20C8 16 3 12.8 3 8.3C3 5.6 4.8 4 7.3 4C9.3 4 11.1 5.3 12 7.5z')],
+  fleche: [t('M2 9.4h12V6l8 6-8 6v-3.4H2z')],
+  croix: [t('M9 3h6v6h6v6h-6v6H9v-6H3V9h6z')],
+  anneau: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M7.5 12a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0-9 0')],
+  'demi-cercle': [t('M2 17a10 10 0 0 1 20 0z')],
+  goutte: [t('M12 2C15.2 6.1 19 10.8 19 15.8C19 19.2 15.9 22 12 22C8.1 22 5 19.2 5 15.8C5 10.8 8.9 6.1 12 2z')],
+  lune: [t('M19 4.4C15.2 2 10.2 2.8 7.2 6.1C4.3 9.5 4.3 14.5 7.2 17.9C10.2 21.3 15.2 22 19 19.6C16.1 19.9 13.2 18.5 11.7 16C10.1 13.6 10.1 10.4 11.7 8C13.2 5.5 16.1 4.1 19 4.4z')],
+  nuage: [t('M6.3 19C4.1 19 2.2 17.3 2 15.2C1.8 13 3.4 11.1 5.7 10.8C5.6 7.8 8.1 5.2 11.2 5C14.4 4.8 17.2 7 17.6 10C20.2 10.2 22.1 12.2 22 14.7C21.9 17.1 19.8 19 17.3 19z')],
+  etiquette: [t('M6.4 6H22v12H6.4L2 12z')],
+  badge: [t('M9.7 5.2C9.7 4 10.7 3 12 3S14.3 4 14.3 5.2C15 4.2 16.5 4 17.5 4.7S18.7 6.8 18 7.8C19.2 7.4 20.5 8.1 20.9 9.2S20.6 11.6 19.4 12C20.6 12.4 21.3 13.6 20.9 14.8S19.2 16.6 18 16.2C18.7 17.2 18.5 18.6 17.5 19.3S15 19.8 14.3 18.8C14.3 20 13.3 21 12 21S9.7 20 9.7 18.8C9 19.8 7.5 20 6.5 19.3S5.3 17.2 6 16.2C4.8 16.6 3.5 15.9 3.1 14.8S3.4 12.4 4.6 12C3.4 11.6 2.7 10.4 3.1 9.2S4.8 7.4 6 7.8C5.3 6.8 5.5 5.4 6.5 4.7S9 4.2 9.7 5.2z')],
+  bulle: [t('M5.2 4h13.6C20 4 21 5.2 21 6.6v6.8c0 1.4-1 2.6-2.2 2.6h-8.2l-4 4 1.1-4H5.2C4 16 3 14.8 3 13.4V6.6C3 5.2 4 4 5.2 4z')],
+  arc: [t('M3 17a9 10 0 0 1 18 0')],
+  spirale: [t('M12 10.7C12 9.3 11 8.1 9.8 8.1S7.5 9.3 7.5 10.7c0 2.8 2 5.2 4.5 5.2s4.5-2.3 4.5-5.2C16.5 6.5 13.5 3 9.8 3S3 6.5 3 10.7C3 16.4 7 21 12 21s9-4.6 9-10.3')],
+  vague: [t('M2 12C3.8 5.3 5.2 5.3 7 12S10.2 18.7 12 12S15.2 5.3 17 12S20.2 18.7 22 12')],
   plume: [t('M12 19l7-7 3 3-7 7-3-3z'), t('M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z'), t('M2 2l7.6 7.6'), t('M9 11a2 2 0 1 0 4 0a2 2 0 1 0-4 0')],
   annuler: [t('M3 7v6h6'), t('M3.5 13a9 9 0 1 0 2.5-6.3L3 9')],
   retablir: [t('M21 7v6h-6'), t('M20.5 13a9 9 0 1 1-2.5-6.3L21 9')],

@@ -81,6 +81,11 @@ export {
   STYLE_DEFAUT, rectangle, ellipse, etoile, polygone, ajouterForme,
   type Style
 } from './edition/formes.js';
+export {
+  FORMES_DE_BASE, FICHES_FORMES, BORNES_FORMES, PARAMETRES_FORMES_DEFAUT, bornerParametres, regleDeForme, formeDeBase, rectangleArrondi, polygoneRegulier, anneau,
+  reconnaitreFormeDeBase, branchesEtoile, estEllipseChemin,
+  type FormeDeBase, type FicheForme, type ParametresFormes, type AngleTriangle, type PointeFleche, type SensFleche, type PortionCercle
+} from './edition/formesDeBase.js';
 
 export { inserer, combiner, sousChemins, separer, coller } from './edition/assemblage.js';
 

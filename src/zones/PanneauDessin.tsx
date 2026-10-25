@@ -2,7 +2,7 @@
 // nettoyage, bibliotheque, versions, raccourcis.
 
 import { memo, useMemo, useState } from 'react';
-import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
+import { ajusterPlan, FICHES_FORMES, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
@@ -19,8 +19,10 @@ import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
+import { ReglagesForme } from './ReglagesForme.js';
 import { phraseIgnores } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import type { OutilForme } from './typesEditeur.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 
@@ -36,6 +38,7 @@ export function PanneauDessin() {
     <>
       <h3>{ui.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
       {ui.outil === 'texte' ? <PanneauTexte /> : null}
+      {FORMES.has(ui.outil) ? <ReglagesForme /> : null}
       {trace ? <StyleNouvelleForme /> : <SansSelection />}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
@@ -97,13 +100,13 @@ function SansSelection() {
 /** Le style des formes a venir : remplissage, contour, epaisseur. */
 function StyleNouvelleForme() {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
-  const s = ui.style;
+  const s = ui.style, trait = ui.outil === 'ligne' || (FORMES.has(ui.outil) && FICHES_FORMES[ui.outil as OutilForme].trait);
   return (
     <>
       <Peinture libelle="Remplissage" valeur={s.remplissage} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, remplissage: v })} />
       <Peinture libelle="Contour" valeur={s.contour} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, contour: v })} />
-      {s.contour || ui.outil === 'ligne' ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ac.poserStyle({ ...s, epaisseur: v })} /> : null}
-      <p className="aide">{ui.outil === 'ligne' ? 'Une ligne prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
+      {s.contour || trait ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ac.poserStyle({ ...s, epaisseur: v })} /> : null}
+      <p className="aide">{trait ? 'Un trait prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
     </>
   );
 }

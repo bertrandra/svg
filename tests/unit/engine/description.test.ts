@@ -50,11 +50,13 @@ describe('genreDeForme', () => {
     expect(genreDeForme(premiere('<path d="M10 10L90 10L90 50L10 50Z"/>'))).toBe('rectangle');
   });
 
+  // Depuis les formes de base (ADR-0033), un losange et un rectangle aux coins ronds se disent par leur nom.
   it('ne prend pas un losange pour un rectangle, ni une courbe pour un polygone', () => {
-    expect(genreDeForme(premiere('<path d="M50 0L100 50L50 100L0 50Z"/>'))).toBe('polygone à 4 sommets');
+    expect(genreDeForme(premiere('<path d="M50 0L100 50L50 100L0 50Z"/>'))).toBe('losange');
+    expect(genreDeForme(premiere('<path d="M50 0L100 40L60 100L0 50Z"/>'))).toBe('polygone à 4 sommets');
     expect(genreDeForme(premiere('<path d="M0 0Q50 50 100 0"/>'))).toBe('courbe');
     expect(genreDeForme(premiere('<path d="M0 0Q50 50 100 0L50 80Z"/>'))).toBe('tracé courbe');
-    expect(genreDeForme(premiere('<rect x="0" y="0" width="80" height="40" rx="10"/>'))).toBe('tracé courbe');
+    expect(genreDeForme(premiere('<rect x="0" y="0" width="80" height="40" rx="10"/>'))).toBe('rectangle arrondi');
   });
 });
 

@@ -2,7 +2,8 @@
 // l'editeur retient vit ici, une fois ; `Atelier` n'a plus qu'a le donner aux contextes.
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { aimanter, boiteDe, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, pasGrille, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
+import { arrondi } from './aidesEditeur.js';
 import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { phraseProduction, svgDocument, usePreparation } from './actionsProduction.js';
@@ -47,6 +48,9 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [outil, poserOutilBrut] = useState<Outil>('selection');
   const [point, poserPoint] = useState<number | null>(null);
   const [style, poserStyle] = useState<Style>(() => ({ ...STYLE_DEFAUT, remplissage: p.nuancier[0]?.hex ?? STYLE_DEFAUT.remplissage }));
+  // Les reglages des formes a tracer : de la session. Le rayon des coins part d'un quarantieme du plan, comme « Arrondir les angles ».
+  const [parametres, poserParametres] = useState<ParametresFormes>(() => ({ ...PARAMETRES_FORMES_DEFAUT, rayonCoins: arrondi(Math.max(p.initial.vb[2], p.initial.vb[3]) / 40) }));
+  const [demandeFormes, poserDemandeFormes] = useState(0);
   const [trace, poserTrace] = useState<readonly Point[]>([]);
   const [presse, poserPresse] = useState<readonly Forme[]>([]);
   const [grille, poserGrille] = useState(false);
@@ -105,7 +109,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, toile }
   ));
 
   // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
@@ -146,8 +150,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement]
+    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement }),
+    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

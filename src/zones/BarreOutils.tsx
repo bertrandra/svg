@@ -9,7 +9,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Icone, type NomIcone } from './icones.js';
 import { Bouton } from './commun/Bouton.js';
 import { BoutonRaison } from './commun/BoutonRaison.js';
-import { FORMES, estHex } from './aidesEditeur.js';
+import { FORMES, estHex, nomOutilForme } from './aidesEditeur.js';
 import { MenuDeroulant } from './commun/Menu.js';
 import { MenuEdition, MenuFichier, MenuPlus, MenuVue } from './MenusBarre.js';
 import { MenuAide } from './AideEditeur.js';
@@ -26,22 +26,41 @@ const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
 const OUTILS_APRES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
   ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'], ['texte', 'texte', 'Texte (T)']
 ];
-const FORMES_MENU: ReadonlyArray<readonly [OutilForme, NomIcone, string, string]> = [
-  ['rectangle', 'rectangle', 'Rectangle', 'R'], ['ellipse', 'ellipse', 'Ellipse', 'E'], ['etoile', 'etoile', 'Étoile', 'S'], ['ligne', 'ligne', 'Ligne', 'L']
+/**
+ * La palette des formes (ADR-0033), en rubriques : ce qu'on trace le plus souvent d'abord, les traits ouverts a la fin. Les formes
+ * d'avant gardent leur lettre (R, E, S, L) ; la palette s'ouvre par F.
+ */
+export const GROUPES_FORMES: ReadonlyArray<{ readonly id: string; readonly titre: string; readonly formes: readonly OutilForme[] }> = [
+  { id: 'basiques', titre: 'Basiques', formes: ['rectangle', 'carre', 'rectangle-arrondi', 'ellipse', 'cercle'] },
+  { id: 'polygones', titre: 'Polygones', formes: ['triangle', 'losange', 'parallelogramme', 'trapeze', 'polygone', 'etoile'] },
+  { id: 'symboles', titre: 'Symboles', formes: ['coeur', 'fleche', 'croix', 'anneau', 'demi-cercle', 'goutte', 'lune', 'nuage'] },
+  { id: 'etiquettes', titre: 'Étiquettes', formes: ['etiquette', 'badge', 'bulle'] },
+  { id: 'traits', titre: 'Traits', formes: ['ligne', 'arc', 'spirale', 'vague'] }
 ];
+const RACCOURCIS_FORMES: Partial<Record<OutilForme, string>> = { rectangle: 'R', ellipse: 'E', etoile: 'S', ligne: 'L' };
 
-/** Les quatre formes derriere un seul outil : le bouton reprend la derniere employee, le chevron liste les autres. */
+/** L'infobulle et le nom du bouton de la forme : son nom, sa lettre, et ce que fait Maj (le carre et le cercle sont deja carres). */
+function aideForme(f: OutilForme): string {
+  const r = RACCOURCIS_FORMES[f];
+  return nomOutilForme(f) + (r ? ' (' + r + ')' : '') + (f === 'ligne' ? ' · Maj : droite' : f === 'carre' || f === 'cercle' ? '' : ' · Maj : proportions');
+}
+
+/**
+ * Les formes derriere un seul outil (ADR-0006) : le bouton reprend la derniere employee, le chevron « Formes » ouvre la palette en
+ * grille, groupee, chaque forme avec son icone et son nom ; la forme du bouton y est cochee. F l'ouvre au clavier.
+ */
 function OutilFormes() {
-  const { outil } = useInterface(), ac = useActions();
+  const { outil, demandeFormes } = useInterface(), ac = useActions();
   const [derniere, poserDerniere] = useState<OutilForme>('rectangle');
   useEffect(() => { if (FORMES.has(outil)) poserDerniere(outil as OutilForme); }, [outil]);
-  const courante = FORMES_MENU.find(f => f[0] === derniere) ?? FORMES_MENU[0];
-  if (!courante) return null;
   return (
     <span className="outil-formes">
-      <Bouton icone={courante[1]} aide={courante[2] + ' (' + courante[3] + ')' + (courante[0] === 'rectangle' || courante[0] === 'ellipse' ? ' · Maj : proportions' : courante[0] === 'ligne' ? ' · Maj : droite' : '')} pressed={FORMES.has(outil)} onClick={() => ac.poserOutil(derniere)} />
-      <MenuDeroulant etiquette="Choisir une forme" className="chevron-seul"
-        elements={FORMES_MENU.map(([id, icone, libelle, raccourci]) => ({ id, libelle, icone, raccourci, coche: outil === id, onClick: () => ac.poserOutil(id) }))} />
+      <Bouton icone={derniere} aide={aideForme(derniere)} pressed={FORMES.has(outil)} onClick={() => ac.poserOutil(derniere)} />
+      <MenuDeroulant etiquette="Formes (F)" titreMenu="Formes" className="chevron-seul" grille demandeOuverture={demandeFormes}
+        sections={GROUPES_FORMES.map(g => ({
+          id: g.id, titre: g.titre,
+          elements: g.formes.map(f => { const r = RACCOURCIS_FORMES[f]; return { id: f, libelle: nomOutilForme(f), icone: f, ...(r ? { raccourci: r } : {}), radio: true, coche: f === derniere, onClick: () => ac.poserOutil(f) }; })
+        }))} />
     </span>
   );
 }

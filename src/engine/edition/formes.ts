@@ -1,5 +1,5 @@
 // Les formes qu'on dessine : rectangle, ellipse, etoile, ligne brisee, et leur ajout au premier plan
-// avec la peinture courante de l'editeur.
+// avec la peinture courante de l'editeur. Les autres formes de la palette sont dans formesDeBase.ts.
 
 import type { Chemin, Commande, DessinSvg, Forme } from './types.js';
 import { prochainId } from './operations.js';
@@ -51,11 +51,14 @@ export function polygone(points: readonly (readonly [number, number])[], fermer:
   return out;
 }
 
-/** Ajoute une forme au premier plan avec le style donne ; rend le dessin et son identifiant. */
-export function ajouterForme(dessin: DessinSvg, d: Chemin, style: Style): { dessin: DessinSvg; id: string | null } {
+/**
+ * Ajoute une forme au premier plan avec le style donne ; rend le dessin et son identifiant. La regle de remplissage est `nonzero`
+ * sauf demande (l'anneau des formes de base, perce en `evenodd`).
+ */
+export function ajouterForme(dessin: DessinSvg, d: Chemin, style: Style, regle: Forme['regle'] = 'nonzero'): { dessin: DessinSvg; id: string | null } {
   if (!d.length) return { dessin, id: null };
   const id = 'f' + prochainId(dessin);
   const contour = style.contour, remplissage = style.remplissage ?? (contour ? null : '#000000');
-  const forme: Forme = { id, d, remplissage, contour, epaisseur: contour ? style.epaisseur || 1 : 0, opacite: 1, regle: 'nonzero', visible: true, verrouille: false };
+  const forme: Forme = { id, d, remplissage, contour, epaisseur: contour ? style.epaisseur || 1 : 0, opacite: 1, regle, visible: true, verrouille: false };
   return { dessin: { ...dessin, formes: [...dessin.formes, forme] }, id };
 }

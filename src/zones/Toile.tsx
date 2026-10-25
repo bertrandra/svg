@@ -100,7 +100,7 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
   // Une forme a deux coins au clavier : le premier coin est pose (la trace n'a que lui), l'apercu va jusqu'au reticule.
   const [coin1] = ui.trace;
   if (FORMES.has(ui.outil) && ui.trace.length === 1 && coin1 && ui.curseur) {
-    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false);
+    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false, ui.parametres);
     r.push(<path key="apercu" className="trace-en-cours" d={ecrireChemin(d, 3)} pointerEvents="none" />);
   }
   if (ui.trace.length) {

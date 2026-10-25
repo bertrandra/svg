@@ -262,8 +262,8 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('avec le menu des formes ouvert', async () => {
       const page = await editeur();
-      await page.getByRole('button', { name: 'Choisir une forme' }).click();
-      await page.getByRole('menu', { name: 'Choisir une forme' }).waitFor();
+      await page.getByRole('button', { name: 'Formes (F)' }).click();
+      await page.getByRole('menu', { name: 'Formes' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, menu des formes ouvert'));
     });
 

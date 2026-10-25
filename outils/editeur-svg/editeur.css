@@ -198,7 +198,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .focale-fond { fill: none; stroke: var(--panneau); stroke-width: 5; vector-effect: non-scaling-stroke; }
 .focale { fill: none; stroke: var(--encre); stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .trace-en-cours { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
-.outil-rectangle .editeur-svg-toile, .outil-ellipse .editeur-svg-toile, .outil-etoile .editeur-svg-toile, .outil-ligne .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
+.trace-forme .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
 .cadre-selection { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .cadre-selection { fill: var(--repli-cyan-10); } }
 .editeur-toile.fond-blanc .plan-travail { fill: var(--toile-blanc); }
@@ -302,6 +302,26 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
 .menu-rubrique > .menu-titre { margin: var(--esp-m) var(--esp-m) var(--esp-2xs); }
 .menu-rubrique + .menu-rubrique { margin-top: var(--esp-xs); border-top: 1px solid var(--filet); }
+/* La palette des formes (ADR-0033) : un menu en grille, une rubrique titree par groupe, des tuiles icone et nom en trois colonnes
+   (deux sur un telephone). La forme du bouton est cochee comme une voie choisie : un filet cyan et un voile a 7 %, un etat, pas une action. */
+.menu-panneau-grille { width: min(32rem, calc(100vw - 16px)); }
+.menu-groupe + .menu-groupe { margin-top: var(--esp-xs); padding-top: var(--esp-2xs); border-top: 1px solid var(--filet); }
+.menu-groupe > .menu-titre { display: block; margin: var(--esp-s) var(--esp-m) var(--esp-xs); }
+.menu-tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2xs); }
+.menu-tuile { display: flex; align-items: center; gap: var(--esp-m); min-height: 32px; margin: 0; padding: var(--esp-xs) var(--esp-m); border: 0; border-radius: var(--rayon-champ); background: transparent; color: var(--encre); font-weight: 400; font-size: var(--texte-compact); line-height: 1.2; text-align: left; }
+.menu-tuile .icone { flex: none; }
+.menu-tuile .menu-libelle { flex: 1; min-width: 0; }
+.menu-tuile:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 14%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile:hover:not(:disabled) { background: var(--repli-cyan-14); } }
+.menu-tuile[aria-checked="true"] { background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); box-shadow: inset 0 0 0 1px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile[aria-checked="true"] { background: var(--repli-cyan-7-panneau); } }
+.menu-tuile[aria-checked="true"] .icone { color: var(--cyan); }
+.menu-tuile:focus-visible { outline: none; background: color-mix(in srgb, var(--cyan) 14%, transparent); box-shadow: inset 0 0 0 2px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile:focus-visible { background: var(--repli-cyan-14); } }
+@media (max-width: 480px) { .menu-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* La forme a tracer, en tete de son reglage : l'icone de l'outil et son nom, comme dans la palette. */
+.forme-a-tracer { display: flex; align-items: center; gap: var(--esp-m); margin: 0 0 var(--esp-s); font-weight: 600; }
+.reglage-part .valeur-part { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
 .contenu-export { display: grid; gap: var(--esp-s); min-width: 260px; width: min(28rem, calc(100vw - 48px)); }
 .contenu-export button { font-size: var(--texte-compact); padding: var(--esp-xs) var(--esp-m); justify-self: start; }
 /* Une ligne par format, en deux colonnes alignees : le geste (le bouton et son reglage), puis a quoi il sert, a l'encre douce. */
@@ -481,7 +501,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .chevron-seul .icone-bouton { width: 40px; margin-left: calc(-1 * var(--esp-2xs)); }
   button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
   .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
-  .menu-element { min-height: 44px; }
+  .menu-element, .menu-tuile { min-height: 44px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
   .par-couleur .couleur-choix { min-height: 40px; }
@@ -542,6 +562,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .menu-panneau { border: 2px solid CanvasText; }
   .menu-element:hover:not(:disabled), .menu-element:focus-visible { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid HighlightText; outline-offset: -3px; box-shadow: none; }
   .menu-element:hover:not(:disabled) .menu-coche, .menu-element:focus-visible .menu-coche, .menu-element:hover:not(:disabled) .menu-raccourci, .menu-element:focus-visible .menu-raccourci { color: HighlightText; }
+  .menu-tuile:hover:not(:disabled), .menu-tuile:focus-visible { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid HighlightText; outline-offset: -3px; box-shadow: none; }
+  .menu-tuile[aria-checked="true"] { border: 2px solid Highlight; }
+  .menu-tuile[aria-checked="true"] .icone { color: inherit; }
   .editeur-calques li.choisi, .par-couleur li.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .editeur-calques li.choisi button, .par-couleur li.choisi button, .par-couleur li.choisi code { color: HighlightText; }
   .editeur-calques li.choisi button:focus-visible, .par-couleur li.choisi button:focus-visible { outline-color: HighlightText; }

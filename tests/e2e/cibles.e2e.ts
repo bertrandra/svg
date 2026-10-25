@@ -278,8 +278,8 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
 
     it('avec le menu des formes, la boite des credits et le menu d export de l accueil', async () => {
       const page = await editeur();
-      await cliquer(page.getByRole('button', { name: 'Choisir une forme' }));
-      await page.getByRole('menu', { name: 'Choisir une forme' }).waitFor();
+      await cliquer(page.getByRole('button', { name: 'Formes (F)' }));
+      await page.getByRole('menu', { name: 'Formes' }).waitFor();
       await exiger(page);
       await page.keyboard.press('Escape');
       // Une modification, puis « Terminer » : l'editeur se ferme sur la fiche du resultat et son menu « Autres formats ».

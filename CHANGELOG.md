@@ -56,6 +56,9 @@ empreintes.
 
 ### Modifié
 
+- Le nom d'une forme suit les formes de base (« cœur », « hexagone », « étoile à 8 branches »…) ; un losange lu dans un fichier se
+  dit « losange », un rectangle aux coins ronds « rectangle arrondi » ; une forme tracée à la souris se dit « ajoutée et
+  sélectionnée » ; le menu des formes s'appelle « Formes (F) ».
 - « Dans la forme » (barre, menu de la sélection, barre resserrée) pose le texte déformé ; le remplissage en lignes se choisit dans
   le panneau (« Remplir : En lignes ») et un texte déjà posé en lignes le garde, octet pour octet. Un champ chiffré inactif dit
   pourquoi en infobulle.
@@ -186,6 +189,13 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Les formes de base** (ADR-0033) : une palette de 26 formes en cinq rubriques (Basiques, Polygones, Symboles, Étiquettes,
+  Traits), ouverte par le chevron « Formes » de la barre ou par F : carré, cercle, rectangle arrondi, triangle, losange,
+  parallélogramme, trapèze, polygone de 3 à 12 côtés, étoile réglable, cœur, flèche simple ou double, croix, anneau percé,
+  demi-cercle ou quart, goutte, lune, nuage, étiquette, badge festonné, bulle de dialogue, arc, spirale et vague. Chaque forme est
+  un chemin ordinaire, tracé d'un glisser ou au clavier ; ses réglages sont dans le panneau (« Forme à tracer ») ; Maj garde les
+  proportions ; le bouton de la barre reprend la dernière forme. Aucun octet écrit ne change ; référence neuve `formes-de-base`.
 
 - **Le texte déformé dans une forme** (ADR-0032) : « Dans la forme » étire et courbe tout le texte jusqu'au contour (un cœur, un
   cercle, une étoile), lettres déformées, le bloc à la silhouette de la forme. Il reste modifiable : on le retape sur la toile, la

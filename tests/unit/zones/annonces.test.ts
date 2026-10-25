@@ -40,6 +40,12 @@ describe('les autres phrases', () => {
     expect(phraseOutil('texte')).toMatch(/Entrée ouvre la saisie sur la toile/);
   });
 
+  it('nomme chaque forme de base par son nom, accents compris (ADR-0033)', () => {
+    expect(phraseOutil('etoile')).toMatch(/^Outil étoile : /);
+    expect(phraseOutil('coeur')).toMatch(/^Outil cœur : flèches déplacent le réticule, Entrée pose la forme/);
+    expect(phraseOutil('rectangle-arrondi')).toMatch(/^Outil rectangle arrondi : /);
+  });
+
   it('dit les coins d une forme a deux coins : place du premier, place et mesures de l autre', () => {
     expect(phrasePremierCoin([40, 12.5])).toMatch(/^Premier coin posé à 40, 12,5\. .*Échap : annuler\.$/);
     expect(phraseCoinOppose([40, 40], [80, 90])).toBe('Coin opposé à 80, 90 : 40 × 50.');

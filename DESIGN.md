@@ -409,6 +409,17 @@ Retenus au repos, francs à l'interaction.
 - **Style:** boutons d'icône carrés de 30 px, transparents ; survol : voile cyan à 12 % ; outil actif : plein cyan
   d'encre, icône blanche ; menu ouvert : voile à 14 %.
 
+### La palette des formes (ADR-0033)
+Vingt-six formes derrière un seul outil : le bouton reprend la dernière forme employée, le chevron « Formes (F) » ouvre la palette.
+- **Style:** un menu flottant (feuille de panneau, filet, coins de 8 px, ombre de menu) en rubriques titrées (Basiques, Polygones,
+  Symboles, Étiquettes, Traits ; titre en Aide 600, encre douce), séparées d’un filet. Une tuile par forme : l’icône de 22 px au trait,
+  le nom (Compact), la lettre en chasse fixe pour les formes d’avant ; trois colonnes au bureau, deux sous 480 px ; 32 px de haut à la
+  souris, 44 au doigt. Survol et focus comme un élément de menu (voile cyan à 14 %, anneau intérieur de 2 px au clavier).
+- **La forme du bouton est cochée** (`menuitemradio`) : filet cyan d’un pixel, voile à 7 % sur la feuille, icône cyan ; un état, pas
+  une action. Aucune action pleine dans la palette. En contraste forcé, `Highlight`.
+- **Les réglages** vivent dans le panneau du dessin, section « Forme à tracer » (ouverte) : l’icône et le nom de l’outil (600), des
+  listes pour les choix et les entiers, des curseurs pour les parts (valeur en chiffres tabulaires, alignée à droite), une aide.
+
 ### Prendre une forme sur la toile (ADR-0029)
 - **Curseur:** avec l'outil de sélection, `move` sur une forme qu'un clic prendrait (à 6 px de son trait à la souris, 12 au
   doigt) et pendant qu'on la tire ; le curseur par défaut ailleurs et sur une forme verrouillée. `move` est ce qui se déplace

@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { garderTextes, sansTexte, type DessinSvg, type Forme, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, garderTextes, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -31,6 +31,7 @@ export interface EtatDuMoment extends EtatLu {
 export interface Setters {
   poserH: Dispatch<SetStateAction<Historique<DessinSvg>>>; choisir: Dispatch<SetStateAction<string[]>>;
   poserOutilBrut: Dispatch<SetStateAction<Outil>>; poserPoint: Dispatch<SetStateAction<number | null>>; poserStyle: Dispatch<SetStateAction<Style>>;
+  poserParametres: Dispatch<SetStateAction<ParametresFormes>>; poserDemandeFormes: Dispatch<SetStateAction<number>>;
   poserTrace: Dispatch<SetStateAction<readonly Point[]>>; poserPresse: Dispatch<SetStateAction<readonly Forme[]>>;
   poserGrille: Dispatch<SetStateAction<boolean>>; poserAimants: Dispatch<SetStateAction<boolean>>; poserLisserBooleens: Dispatch<SetStateAction<boolean>>;
   poserGuides: Dispatch<SetStateAction<readonly Aimant[]>>;
@@ -97,6 +98,8 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       annoncer('Rétabli.');
     },
     nouvelleCle: () => 'geste-' + ++compteur,
+    poserParametres: p => s.poserParametres(x => bornerParametres({ ...x, ...p })),
+    ouvrirFormes: () => s.poserDemandeFormes(n => n + 1),
     dire, annoncer, poserCurseur: s.poserCurseur, poserFocale: s.poserFocale, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
     poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
     demanderFermeture: () => { const e = lire(); if (perdrait(e.modifie, e.enregistrement)) s.poserQuitter(true); else e.fermer(); },
