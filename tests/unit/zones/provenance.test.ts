@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin, lireDessin, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
-import { mentionOrigines, origineDeBibliotheque } from '../../../src/model/credits.js';
+import { mentionOrigines, origineDeBibliotheque, origineDeForme } from '../../../src/model/credits.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
@@ -101,5 +101,31 @@ describe('ouvrir une forme de la bibliotheque comme nouveau dessin', () => {
       expect(lu.dessin.formes.every(f => f.origine?.join() === origineDeBibliotheque(e.id)), e.id).toBe(true);
       expect(ecrireDessin(lu.dessin, 3), e.id).toBe(svg);
     }
+  });
+});
+
+describe('une forme d une source libre (MIT, ISC, Apache 2.0)', () => {
+  const LIGNE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480"><g transform="scale(20)"><path fill="none" stroke="#000000" stroke-width="2" d="M4 12h16"/></g></svg>';
+
+  it('inseree, garde son origine mais n ecrit aucune mention : data-origine, sans <metadata>', () => {
+    const { actions, etat, enregistrer } = monter();
+    actions.insererForme(FORME, origineDeForme('mdi', 'heart'));
+    actions.insererForme(LIGNE, origineDeForme('lucide', 'minus'));
+    expect(etat.dessin.formes.map(f => f.origine ?? null)).toEqual([null, ['mdi:heart'], ['lucide:minus']]);
+    actions.enregistrerTout();
+    const svg = String(enregistrer.mock.calls[0]?.[0]);
+    expect(svg).not.toContain('<metadata');
+    expect(svg).toContain('data-origine="mdi:heart"');
+    expect(svg).toMatch(/fill="none" stroke="#000000"[^>]*data-origine="lucide:minus"/);
+  });
+
+  it('ouverte comme nouveau dessin, se relit avec son origine et se reecrit a l identique', () => {
+    const svg = svgDeBibliotheque('minus', LIGNE, 'lucide');
+    expect(svg).not.toContain('<metadata');
+    expect(nettoyerSvg(svg)?.svg).toBe(svg);
+    const lu = lireDessin(svg);
+    if ('erreur' in lu) throw new Error(lu.erreur);
+    expect(lu.dessin.formes.map(f => f.origine)).toEqual([['lucide:minus']]);
+    expect(ecrireDessin(lu.dessin, 3)).toBe(svg);
   });
 });

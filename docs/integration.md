@@ -161,6 +161,7 @@ rattrapée par l’éditeur.
 |---|---|---|---|
 | `editeur-svg-embarque.js` | 717 Ko (227 Ko compressé) | toujours | L’éditeur, ses styles, React |
 | `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
+| `bibliotheque-<source>.js` | de 0,9 à 3,6 Mo chacun (voir ci-dessous) | facultatifs, si vous passez `bibliotheque` | Les cinq bibliothèques libres (Material, Phosphor, Tabler, Healthicons, Lucide), chacune chargée quand la personne choisit sa pastille « Source » (ou « Toutes », ou une nature qu’elle propose). Un fichier absent se dit dans le panneau ; le reste de la bibliothèque marche |
 | `polices.js` | 2,6 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Neuf fontes libres (OFL), chargées quand la personne ouvre l’outil Texte, ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
 | `MENTIONS.txt` | 18 Ko | **toujours, avec le bundle** | Le copyright et la licence de chaque composant tiers redistribué (voir « Attribution et licences ») |
 
@@ -182,8 +183,13 @@ rattrapée par l’éditeur.
 
   La base se lit au chargement du fichier : une fois `bibliotheque.js` arrivé, une autre base n’y change
   rien. Un fichier introuvable se dit dans le panneau (« … est introuvable à côté de la page »).
+- Les bibliothèques libres pèsent : `bibliotheque-mdi.js` 3,6 Mo (7 126 formes pleines), `bibliotheque-tabler.js` 2,8 Mo
+  (5 698 formes, en ligne et pleines), `bibliotheque-healthicons.js` 1,9 Mo (1 466), `bibliotheque-ph.js` 1,8 Mo (2 848),
+  `bibliotheque-lucide.js` 0,9 Mo (1 861 en ligne). Elles posent `window.__bibliothequeSvgMdi`, `…Ph`, `…Tabler`,
+  `…Healthicons`, `…Lucide`, et se cherchent sous la même `baseAnnexes`.
 - Si vous livrez `bibliotheque.js`, créditez **game-icons.net** (licence CC BY 3.0) ; les fontes de
-  `polices.js` sont sous licence SIL OFL 1.1. Voir « Attribution et licences » ci-dessous.
+  `polices.js` sont sous licence SIL OFL 1.1 ; les bibliothèques libres sont sous MIT, ISC ou Apache 2.0, dont la notice est
+  dans `MENTIONS.txt`. Voir « Attribution et licences » ci-dessous.
 - Servez les `.js` avec un type `text/javascript` ; la compression (gzip, brotli) divise les annexes par
   deux et demi.
 

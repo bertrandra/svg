@@ -156,7 +156,7 @@ function Accueil() {
         {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
         <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={() => { demanderVisite(true); ouvrir('exemple', EXEMPLE); }} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
-        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg))} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg, x.source))} /></div>
       </section>
 
       <details className="nuancier-page">

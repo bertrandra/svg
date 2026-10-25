@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  COMPOSANTS, PREFIXE_BIBLIOTHEQUE, SOURCES_ORIGINE, composantsDe, mentionOrigines, normaliserOrigines, origineDeBibliotheque, origineValide, texteMetadonnees
+  COMPOSANTS, PREFIXE_BIBLIOTHEQUE, SOURCES_ORIGINE, composantsDe, mentionExigee, mentionOrigines, normaliserOrigines, origineDeBibliotheque, origineDeForme, origineValide, texteMetadonnees
 } from '../../../src/model/credits.js';
 
 describe('les origines', () => {
@@ -63,7 +63,7 @@ describe('la liste des composants', () => {
   });
 
   it('porte la source des formes, les fontes et les logiciels', () => {
-    expect(composantsDe('forme').map(c => c.paquet)).toEqual(['@iconify-json/game-icons']);
+    expect(composantsDe('forme').map(c => c.paquet)).toEqual(['@iconify-json/game-icons', '@iconify-json/mdi', '@iconify-json/ph', '@iconify-json/tabler', '@iconify-json/healthicons', '@iconify-json/lucide']);
     expect(composantsDe('fonte').length).toBe(10);
     expect(composantsDe('logiciel').map(c => c.paquet)).toEqual(expect.arrayContaining(['react', 'react-dom', 'opentype.js', 'polygon-clipping', '@visioncortex/vtracer']));
   });
@@ -72,5 +72,27 @@ describe('la liste des composants', () => {
     const source = SOURCES_ORIGINE.find(s => s.prefixe === PREFIXE_BIBLIOTHEQUE);
     expect(source?.licence).toBe('CC BY 3.0');
     expect(composantsDe('forme')[0]?.spdx).toBe('CC-BY-3.0');
+  });
+});
+
+describe('les origines des sources libres', () => {
+  it('sont valides pour chaque source du registre, et l origine sans source est celle de game-icons', () => {
+    for (const o of ['mdi:heart', 'ph:heart-fill', 'tabler:heart-filled', 'healthicons:blood-bag', 'lucide:heart', 'healthicons:0']) expect(origineValide(o), o).toBe(true);
+    expect(origineValide('simple-icons:github')).toBe(false);
+    expect(origineDeForme('mdi', 'heart')).toBe('mdi:heart');
+    expect(origineDeForme(undefined, 'abacus')).toBe(origineDeBibliotheque('abacus'));
+  });
+
+  it('n exigent aucune mention dans le fichier : ni phrase, ni <metadata>, ni sujet de PDF', () => {
+    expect(mentionExigee(['mdi:heart', 'lucide:heart'])).toBe(false);
+    expect(mentionOrigines(['mdi:heart', 'lucide:heart'])).toBe('');
+    expect(texteMetadonnees(['lucide:heart', 'mdi:heart'])).toBe('');
+  });
+
+  it('melangees a game-icons, la mention ne nomme que game-icons, la liste des origines les nomme toutes', () => {
+    const t = texteMetadonnees(['game-icons:abacus', 'mdi:heart']);
+    expect(t.startsWith(mentionOrigines(['game-icons:abacus']))).toBe(true);
+    expect(t).not.toContain('Pictogrammers');
+    expect(t.endsWith('Origines : game-icons:abacus, mdi:heart.')).toBe(true);
   });
 });

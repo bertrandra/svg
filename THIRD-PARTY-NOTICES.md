@@ -22,6 +22,188 @@ la porte en commentaire. Un PNG ne peut pas la porter : citez la source là où 
 
 > Contient des formes dont la source est game-icons.net et ses contributeurs (https://game-icons.net), sous licence CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
 
+### Sources libres de la bibliothèque
+
+Ces jeux sont livrés en annexes chargées à la demande (`bibliotheque-<source>.js`). Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention
+dans chaque dessin : un SVG écrit garde seulement l’origine de la forme (`data-origine`, par exemple `mdi:heart`), sans `<metadata>`. Leur notice
+et le texte de leur licence accompagnent la bibliothèque, ici et dans `MENTIONS.txt`. Les logos de marque sont écartés par règle (`MOTS_DE_MARQUE`).
+
+#### Material Design Icons (Pictogrammers)
+
+- Paquet `@iconify-json/mdi` 1.2.3 (« Material Design Icons », 7447 icônes dans le jeu) — https://pictogrammers.com/library/mdi/
+- Licence : **Apache 2.0** (`Apache-2.0`) — https://www.apache.org/licenses/LICENSE-2.0 ; titulaire : Pictogrammers
+- Variantes gardées : sans suffixe (pleine), « outline » (pleine) ; plan de 480 unités.
+- Texte de la licence, copié du dépôt amont (https://github.com/Templarian/MaterialDesign/blob/master/LICENSE) :
+
+```text
+Pictogrammers Free License
+--------------------------
+
+This icon collection is released as free, open source, and GPL friendly by
+the [Pictogrammers](http://pictogrammers.com/) icon group. You may use it
+for commercial projects, open source projects, or anything really.
+
+# Icons: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Some of the icons are redistributed under the Apache 2.0 license. All other
+icons are either redistributed under their respective licenses or are
+distributed under the Apache 2.0 license.
+
+# Fonts: Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+All web and desktop fonts are distributed under the Apache 2.0 license. Web
+and desktop fonts contain some icons that are redistributed under the Apache
+2.0 license. All other icons are either redistributed under their respective
+licenses or are distributed under the Apache 2.0 license.
+
+# Code: MIT (https://opensource.org/licenses/MIT)
+The MIT license applies to all non-font and non-icon files.
+```
+
+#### Phosphor Icons
+
+- Paquet `@iconify-json/ph` 1.2.2 (« Phosphor », 9072 icônes dans le jeu) — https://phosphoricons.com
+- Licence : **MIT** (`MIT`) — https://opensource.org/licenses/MIT ; titulaire : Phosphor Icons
+- Variantes gardées : « fill » (pleine), « thin » (en ligne) ; plan de 480 unités.
+- Texte de la licence, copié du dépôt amont (https://github.com/phosphor-icons/core/blob/main/LICENSE) :
+
+```text
+MIT License
+
+Copyright (c) 2023 Phosphor Icons
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+#### Tabler Icons
+
+- Paquet `@iconify-json/tabler` 1.2.42 (« Tabler Icons », 6238 icônes dans le jeu) — https://tabler.io/icons
+- Licence : **MIT** (`MIT`) — https://opensource.org/licenses/MIT ; titulaire : Paweł Kuna
+- Variantes gardées : « filled » (pleine), sans suffixe (en ligne) ; plan de 480 unités.
+- Texte de la licence, copié du dépôt amont (https://github.com/tabler/tabler-icons/blob/master/LICENSE) :
+
+```text
+MIT License
+
+Copyright (c) 2020-2026 Paweł Kuna
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+#### Healthicons (Resolve to Save Lives)
+
+- Paquet `@iconify-json/healthicons` 1.2.13 (« Health Icons », 2042 icônes dans le jeu) — https://healthicons.org
+- Licence : **MIT** (`MIT`) — https://opensource.org/licenses/MIT ; titulaire : Resolve to Save Lives
+- Variantes gardées : sans suffixe (pleine), « outline » (en ligne) ; plan de 480 unités.
+- Texte de la licence, copié du dépôt amont (https://github.com/resolvetosavelives/healthicons/blob/main/LICENSE) :
+
+```text
+MIT License
+
+Copyright (c) 2021 Resolve to Save Lives
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+#### Lucide
+
+- Paquet `@iconify-json/lucide` 1.2.142 (« Lucide », 1870 icônes dans le jeu) — https://lucide.dev
+- Licence : **ISC** (`ISC`) — https://opensource.org/licenses/ISC ; titulaire : Lucide Icons and Contributors
+- Variantes gardées : sans suffixe (en ligne) ; plan de 480 unités.
+- Texte de la licence, copié du dépôt amont (https://github.com/lucide-icons/lucide/blob/main/LICENSE) :
+
+```text
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+The following Lucide icons are derived from the Feather project:
+
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Fontes
 
 9 fontes (8 familles) sont embarquées dans `polices.js`, pour le texte en formes ; 2 familles de plus (Instrument Sans et IBM Plex Mono,

@@ -5,7 +5,7 @@ import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
-import { origineDeBibliotheque } from '../model/credits.js';
+import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
 import { RechercheFormes, useBibliotheque } from './Bibliotheque.js';
@@ -112,18 +112,22 @@ function PanneauBibliotheque({ bibliotheque }: { bibliotheque: Bibliotheque | 'a
 
 const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
   const ac = useActions();
+  // Le procede du contexte de production : au stylo, les formes en ligne sont proposees d'abord (une chaine, que le procede
+  // « stylo » arrive ou non par sa propre branche : model/sourcesFormes.ts, NATURE_PROPOSEE_PAR_PROCEDE).
+  const procede: string | undefined = useInterface().profil?.procede;
   const chargee = useBibliotheque();
   const [panier, poserPanier] = useState<EntreeBibliotheque[]>([]);
   const [sceneId, poserSceneId] = useState(SCENES[0]?.id ?? '');
   const b = bibliotheque !== 'a-charger' ? bibliotheque : chargee.bibliotheque;
   if (chargee.erreur && !b) return <p className="aide" role="alert">{chargee.erreur}</p>;
   if (!b) return <p className="aide" role="status">Chargement…</p>;
-  // Chaque forme de la bibliotheque s'insere avec son origine : c'est ce qui fait ecrire la mention CC BY 3.0 dans le SVG.
-  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg, origineDeBibliotheque(x.id));
+  // Chaque forme de la bibliotheque s'insere avec son origine (`game-icons:…`, `mdi:…`) : celle de game-icons fait ecrire la
+  // mention CC BY 3.0 dans le SVG ; celle d'une source libre ne laisse que son `data-origine`.
+  const choisir = (x: EntreeBibliotheque) => ac.insererForme(x.svg, origineDeForme(x.source, x.id));
   // Le panier en grille : autant de colonnes que la racine du nombre, chaque case a 80 % de sa cellule.
   const insererPanier = () => {
     const n = panier.length, cols = Math.ceil(Math.sqrt(n)), lignes = Math.ceil(n / cols), cellule = 1 / Math.max(cols, lignes);
-    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, origine: origineDeBibliotheque(x.id), x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
+    ac.insererPlusieurs(panier.map((x, i) => ({ svg: x.svg, origine: origineDeForme(x.source, x.id), x: (i % cols) * cellule + cellule * 0.1, y: Math.floor(i / cols) * cellule + cellule * 0.1 + ((Math.max(cols, lignes) - lignes) * cellule) / 2, taille: cellule * 0.8 })));
     poserPanier([]);
   };
   const insererScene = () => {
@@ -139,7 +143,7 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
         <select aria-label="Scène prête" value={sceneId} onChange={e => poserSceneId(e.target.value)}>{SCENES.map(sc => <option key={sc.id} value={sc.id}>{sc.nom}</option>)}</select>
         <button type="button" title="Insérer la scène : ses formes, à leur place" aria-label="Insérer la scène" onClick={insererScene}><Icone nom="scene" taille={14} /></button>
       </div>
-      <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact />
+      <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact procede={procede} />
       {panier.length ? (
         <div className="panier">
           <span className="aide">{panier.length} dans le panier : {panier.map(x => x.nom).join(', ')}</span>

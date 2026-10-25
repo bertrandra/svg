@@ -128,8 +128,12 @@ describe('recherche dans la bibliotheque', () => {
     // Repliees, peu de pastilles : « Tous », les evenements qui arrivent, et de quoi deplier.
     expect(await groupe.locator('button.pastille-evenement').count()).toBeLessThanOrEqual(8);
 
+    // Entre le champ et les evenements, les pastilles de source et de nature (une dizaine) : Tab les traverse dans l'ordre.
     await champ(page).focus();
-    await page.keyboard.press('Tab');
+    for (let i = 0; i < 12 && !(await aLeFocus(tous)); i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('.bibliotheque'))).toBe(true);
+    }
     expect(await aLeFocus(tous)).toBe(true);
     await page.keyboard.press('ArrowRight');
     const seconde = groupe.locator('button.pastille-evenement').nth(1);
@@ -157,15 +161,15 @@ describe('recherche dans la bibliotheque', () => {
     expect(await auditer(page)).toEqual([]);
   });
 
-  it('donne a chaque vignette la meme hauteur, le nom complet en nom accessible et en infobulle', async () => {
+  it('donne a chaque vignette la meme hauteur, le nom complet et sa source en nom accessible et en infobulle', async () => {
     const page = await bibliotheque({ largeur: 1280, hauteur: 800 });
     await chercher(page, 'arbre');
     await attend(async () => (await decompte(page))[0]).toBeGreaterThan(8);
     const mesures = await page.locator('.bibliotheque .vignette').evaluateAll(l => l.map(e => ({ h: Math.round(e.getBoundingClientRect().height), titre: e.getAttribute('title'), texte: (e.textContent ?? '').trim() })));
     expect(new Set(mesures.map(m => m.h)).size).toBe(1);
-    for (const m of mesures) expect(m.titre).toBe(m.texte);
-    // Un nom long reste entier dans le nom accessible, meme coupe a l'ecran.
-    const long = page.locator('.bibliotheque').getByRole('button', { name: 'cabane dans un arbre', exact: true });
+    for (const m of mesures) expect(m.titre).toBe(m.texte + ' (game-icons)');
+    // Un nom long reste entier dans le nom accessible, meme coupe a l'ecran, suivi de sa source.
+    const long = page.locator('.bibliotheque').getByRole('button', { name: 'cabane dans un arbre (game-icons)', exact: true });
     expect(await long.count()).toBe(1);
   });
 
