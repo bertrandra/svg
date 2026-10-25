@@ -29,6 +29,8 @@ export function phraseOutil(outil: Outil): string {
     case 'main': return 'Outil main : déplacer la vue à la souris ou au doigt.';
     case 'texte': return 'Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.';
     case 'plume': return 'Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.';
+    case 'cadre': return 'Outil cadre de sélection : glissez, même sur une forme ; au clavier, flèches déplacent le réticule, Espace pose un coin, Entrée prend les formes du cadre, Maj et Entrée les ajoute.';
+    case 'lasso': return 'Outil lasso : entourez les formes à main levée ; au clavier, flèches déplacent le réticule, Espace pose un point, Entrée ferme le lasso et prend les formes.';
     default: return 'Outil ' + outil + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
   }
 }

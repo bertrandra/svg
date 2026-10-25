@@ -9,6 +9,8 @@
 // L'outil Texte (ADR-0027) : les fleches deplacent le reticule, Entree y ouvre la saisie d'un texte neuf, sur la toile.
 // Entree sur un texte vivant choisi rouvre sa saisie, le curseur a la fin.
 //
+// Les outils Cadre et Lasso (ADR-0035) : le reticule pose les coins du cadre ou les points du lasso (ClavierZone.ts).
+//
 // Regle de sortie (WCAG 2.1.2) : Tab ne tourne jamais dans la toile. Il parcourt les formes tant qu'une
 // est choisie, et au-dela de la derniere (ou avant la premiere) il laisse le navigateur faire : le
 // focus quitte la toile. Sans forme choisie, Tab quitte la toile tout de suite. Echap desselectionne.
@@ -23,6 +25,7 @@ import { styleLigne, FORMES } from './aidesEditeur.js';
 import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, PHRASE_COIN_ANNULE, PHRASE_COINS_TROP_PROCHES } from './annonces.js';
 import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { formeTracee } from './Gestes.js';
+import { toucheZone } from './ClavierZone.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 import type { EtatSaisie } from './contexteSaisie.js';
 
@@ -154,6 +157,7 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (outil === 'selection' && e.key === ' ') return basculerCurseur(c);
   if (parcourt && page) return changerForme(c, page);
   if (outil === 'texte') return texte(c, e);
+  if (outil === 'cadre' || outil === 'lasso') return toucheZone(c, e, () => departReticule(c));
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
   // Entree sur un texte vivant le rouvre sur la toile (ADR-0027) ; sur une autre forme, le mode points.
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && !c.m.formeSeule.verrouille && c.sx) { c.sx.ouvrir(c.m.formeSeule.id); return true; }

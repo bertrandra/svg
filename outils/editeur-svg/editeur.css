@@ -725,3 +725,30 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .poignee-depart { fill: Highlight; stroke: Canvas; }
   .editeur-svg-toile .poignee-depart-groupe:focus-visible .poignee-depart-halo { stroke: Highlight; }
 }
+
+/* Les outils de selection (ADR-0035). Le cadre et le lasso, sous le voile cyan a 10 % : en tirets quand ils prennent les formes
+   touchees (le defaut, le cadre d'avant), en trait plein quand ils ne prennent que les formes entierement dedans (la convention des
+   logiciels de CAO). Les formes que le relachement prendra portent le lisere de survol de l'ADR-0029 (memes classes, memes jetons,
+   meme contraste force). Les outils Cadre et Lasso gardent la croix sur la toile comme sur les formes : ils ne deplacent rien. Rien
+   ne s'anime. */
+/* Deux calques poses sur la toile, chacun dans sa couche : un mouvement de la zone ne repeint ni les formes ni l'apercu. */
+.calque-zone { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; will-change: transform; }
+.calque-zone .zone-selection .cadre-selection.dedans { stroke-dasharray: none; stroke-width: 1.5; }
+.calque-zone .zone-selection polygon.cadre-selection { stroke-linejoin: round; }
+.calque-zone .lisere-survol-fond { fill: none; stroke: var(--panneau); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.calque-zone .lisere-survol { fill: none; stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.calque-zone .reticule line { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.calque-zone .reticule circle { fill: var(--cyan); stroke: var(--panneau); stroke-width: 1; vector-effect: non-scaling-stroke; }
+@media (pointer: coarse) {
+  .calque-zone .lisere-survol-fond { stroke-width: 5; }
+  .calque-zone .lisere-survol { stroke-width: 2; }
+}
+@media (forced-colors: active) {
+  .calque-zone { forced-color-adjust: none; }
+  .calque-zone .cadre-selection, .calque-zone .lisere-survol, .calque-zone .reticule line { stroke: Highlight; }
+  .calque-zone .lisere-survol-fond { stroke: Canvas; }
+  .calque-zone .reticule circle { fill: Highlight; stroke: Canvas; }
+}
+.outil-cadre .editeur-svg-toile, .outil-lasso .editeur-svg-toile { cursor: crosshair; }
+/* Le bouton des outils de selection et son chevron, d'un seul tenant, comme celui des formes. */
+.outil-selection-groupe { display: inline-flex; align-items: center; }

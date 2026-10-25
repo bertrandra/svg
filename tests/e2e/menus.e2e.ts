@@ -15,13 +15,14 @@ describe('menus de la barre', () => {
 
   // Six menus depuis l'ADR-0019 : « Aide » (visite guidee, raccourcis) a rejoint Vue et Edition, pour qu'un debutant trouve
   // l'aide par son nom en haut de l'editeur. Sept avec la fin du parcours : « Autres formats », le chevron accole a « Télécharger le
-  // SVG », range les formats que le menu Fichier portait. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
-  it('annonce ses sept menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019) et les autres formats', async () => {
+  // SVG », range les formats que le menu Fichier portait. Huit avec les outils de selection (ADR-0035) : le chevron du bouton Selection
+  // liste Selection, Cadre et Lasso. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
+  it('annonce ses huit menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019), les autres formats et les outils de selection', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
+    expect(noms).toEqual(['Choisir un outil de sélection', 'Choisir une forme', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {

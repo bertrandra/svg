@@ -30,7 +30,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
-    poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(),
+    poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(), poserRegleZone: vi.fn(),
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);

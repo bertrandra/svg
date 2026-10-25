@@ -2,9 +2,9 @@
 // tracer, pincer, et poser ou deplacer le curseur d'un texte en saisie (ADR-0027). Le calcul est dans le
 // coeur pur ; ici, le fil des evenements de pointeur.
 
-import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
+import { useEffect, useRef, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
-  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, ellipse, etoile, polygone, rectangle, redimensionner, retourner, seCroisent,
+  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, ellipse, etoile, polygone, rectangle, redimensionner, retourner,
   type Boite, type Commande, type DessinSvg
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
@@ -13,13 +13,14 @@ import { styleLigne } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import { usePrise } from './PriseToile.js';
+import { useGesteZone } from './GesteZone.js';
+import { estOutilZone } from './commandesSelection.js';
 import type { Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
   | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string; cibles?: Boite[] }
   | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string }
-  | { type: 'cadre'; x0: number; y0: number; ajout: boolean }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
@@ -49,7 +50,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
   const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
   const pointeurs = useRef(new Map<number, { x: number; y: number }>());
-  const [cadre, poserCadre] = useState<Boite | null>(null);
+  // Le cadre et le lasso (ADR-0035) : leur geste vit a part, ici il n'est qu'appele.
+  const zone = useGesteZone();
   useEffect(() => {
     const bas = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -77,7 +79,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (pointeurs.current.size === 2) {
       const [a, b] = [...pointeurs.current.values()];
       if (a && b) {
-        if (geste.current && geste.current.type !== 'pan' && geste.current.type !== 'cadre' && 'cle' in geste.current) ac.annulerGeste(geste.current.cle);
+        if (geste.current && geste.current.type !== 'pan' && 'cle' in geste.current) ac.annulerGeste(geste.current.cle);
+        zone.annuler();
         geste.current = { type: 'pincer', d0: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vue };
       }
       return;
@@ -86,6 +89,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (e.button === 1 || ui.outil === 'main' || espace.current) { garderFocus.current = !!sx.saisie; geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
     if (sx.choixForme) { sx.viserForme.current?.(prise.toutes(e)); return; } // le choix de la forme d'un texte pose (ADR-0031) : le clic la donne
     if (sx.saisie || ui.outil === 'texte') { geste.current = gt.appuyer(x, y, t, e.shiftKey); return; }
+    if (estOutilZone(ui.outil)) { zone.commencer(ui.outil, [x, y], e); return; }
     const rot = t.getAttribute('data-rotation');
     if (rot !== null && mo.boite) { geste.current = { type: 'rotation', centre: centre(mo.boite), angle0: angleVers(centre(mo.boite), [x, y]), base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle() }; return; }
     if (ui.outil === 'plume') { ac.poserTrace([...ui.trace, versGrille(e)]); return; }
@@ -112,14 +116,13 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       return;
     }
     if (ui.outil === 'points' && ui.point !== null) { ac.poserPoint(null); return; }
-    geste.current = { type: 'cadre', x0: x, y0: y, ajout: e.shiftKey };
-    poserCadre({ x, y, l: 0, h: 0 });
+    zone.commencer('cadre', [x, y], e);
   };
 
   const bouger = (e: PE<SVGSVGElement>) => {
     const g = geste.current;
     if (pointeurs.current.has(e.pointerId)) pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!g) return;
+    if (!g) { zone.bouger(versDoc(e)); return; }
     if (g.type === 'saisie') { sx.poignee.current?.bouger(versDoc(e)); return; }
     if (g.type === 'pincer') {
       const [a, b] = [...pointeurs.current.values()];
@@ -154,7 +157,6 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     }
     const [gx, gy] = [ui.aimant(x), ui.aimant(y)];
     if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, e.shiftKey, mo.dessin.vb), g.cle);
-    else if (g.type === 'cadre') poserCadre({ x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) });
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
     // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
     else if (g.type === 'poignee') ac.appliquer(() => deplacerPoigneeLiee(g.base, g.id, g.i, g.k, gx, gy, e.altKey), g.cle);
@@ -167,7 +169,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (g?.type === 'pincer') { if (pointeurs.current.size === 0) geste.current = null; return; }
     geste.current = null;
     if (ui.guides.length) ac.poserGuides([]);
-    if (!g) return;
+    if (!g) { zone.lacher(versDoc(e)); return; }
     if (g.type === 'saisie') { sx.poignee.current?.lacher(); return; }
     if (g.type === 'tracer') {
       const [x, y] = versGrille(e);
@@ -181,17 +183,11 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       ac.poserOutil('selection');
       return;
     }
-    if (g.type !== 'cadre') { if (g.type !== 'pan') ac.finir(); return; }
-    const [x, y] = versDoc(e);
-    const c = { x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) };
-    poserCadre(null);
-    if (c.l * vue.zoom < 3 && c.h * vue.zoom < 3) { if (!g.ajout) ac.choisir([]); return; }
-    const pris = mo.dessin.formes.filter(f => { const b = boiteForme(f); return f.visible && !f.verrouille && !!b && seCroisent(b, c); }).map(f => f.id);
-    ac.choisir(g.ajout ? [...new Set([...mo.sel, ...pris])] : pris);
+    if (g.type !== 'pan') ac.finir();
   };
 
   const doubleClic = (e: ME<SVGSVGElement>) => { if (ui.outil === 'plume') ac.finirTrace(true); else gt.doubleClic(e, versDoc(e)); };
-  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, cadre };
+  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, zone: zone.zone };
 }
 
 /**

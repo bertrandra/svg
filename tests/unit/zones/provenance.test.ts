@@ -32,7 +32,7 @@ function monter() {
     poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: vi.fn(),
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
-    dire: vi.fn(), poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), toile: { current: null }
+    dire: vi.fn(), poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), poserRegleZone: vi.fn(), toile: { current: null }
   };
   return { actions: creerActions(() => etat, setters), etat, enregistrer };
 }

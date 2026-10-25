@@ -418,6 +418,17 @@ Retenus au repos, francs à l'interaction.
   s'anime. Au doigt, il vient au toucher. Pas sur une forme déjà choisie à la souris (elle a son tracé de sélection). En
   contraste forcé, `Highlight` sur `Canvas`.
 
+### Outils de sélection (ADR-0035)
+- **Barre:** un seul bouton reprend le dernier outil de sélection (Sélection V, Cadre F, Lasso Q), son chevron les liste en
+  `menuitemradio` avec leur raccourci, puis la règle : « Les formes touchées, même en partie » (défaut) ou « Les formes entièrement
+  dedans ». Sur un téléphone, « Points et poignées » rejoint ce menu : la ligne des outils garde ses cibles de 40 px.
+- **La zone:** le cadre et le lasso sous un voile cyan à 10 %, filet cyan d'un pixel, **en tirets** quand ils prennent les formes
+  touchées, **en trait plein** (1,5 px) quand ils ne prennent que les formes entièrement dedans : la règle se voit sur la zone.
+- **L'aperçu:** les formes que le relâchement prendra portent le liseré de survol (filet `--cyan` sur halo `--panneau`), en un
+  seul chemin ; ce qu'on voit est ce qu'on prend. Zone et aperçu se dessinent dans deux calques posés sur la toile, sans pointeur.
+  Les outils Cadre et Lasso gardent la croix, sur la toile comme sur les formes. Rien ne s'anime. En contraste forcé, `Highlight`
+  sur `Canvas`.
+
 ### Inputs / Fields
 - **Style:** fond de table sur une feuille (le champ « creuse » le panneau), filet, coins de 5 px, 6 × 8 px.
 - **Focus:** contour cyan plein de 2 px.
