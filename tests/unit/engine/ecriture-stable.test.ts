@@ -135,9 +135,14 @@ const casser = (id: string, i: number) => (d: DessinSvg): DessinSvg => {
 
 const palette = (id: string) => au(PALETTES.filter(p => p.id === id), 0).couleurs;
 
-/** Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), avec des choix en plus. */
+/**
+ * Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), en pouces, avec des choix en plus. Les references ont ete
+ * ecrites en pouces avant que le millimetre devienne l'unite par defaut de l'interface : elles le restent (cricut-export-mm couvre
+ * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference.
+ */
+const CRICUT_POUCES: ChoixMachine = { ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
 const profilCricut = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, ...choix });
   if (!p) throw new Error('profil Cricut introuvable');
   return p;
 };
@@ -296,7 +301,7 @@ const CAS: readonly Cas[] = [
   // Le contexte de production Cricut (ADR-0013) : des cas NEUFS. Sans contexte, rien ne change (toutes les references
   // ci-dessus, et les empreintes de la bibliotheque, le prouvent) ; avec, le document enregistre porte sa marque `data-ed-*`
   // sur la racine, et les exports pour la machine ont une taille physique, des fonds pleins et des octets figes.
-  { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT })))?.svg ?? 'REFUSE' },
+  { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES })))?.svg ?? 'REFUSE' },
   { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
   { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
   { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },

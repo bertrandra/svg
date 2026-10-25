@@ -62,3 +62,19 @@ export function distanceEdition(a: string, b: string, plafond = 2): number {
  * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne.
  */
 export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/« /g, '« ');
+
+/** La longueur d'un nom de fichier propose : au-dela, un nom de forme n'est plus un nom, et certains systemes coupent. */
+const LONGUEUR_NOM_FICHIER = 80;
+
+/**
+ * Un nom de fichier tire d'un nom affiche (« Bonhomme de neige » donne « bonhomme-de-neige ») : minuscules, sans accents ni
+ * ligatures, un tiret pour tout ce qui n'est ni lettre ni chiffre, sans tiret au bord. Pourquoi : le fichier d'une forme de la
+ * bibliotheque portait son identifiant anglais, que la personne n'a jamais vu ; un nom sans espace ni accent passe partout
+ * (Design Space, un courriel, un serveur). Un nom qui ne garde rien (« ??? ») rend `secours`.
+ */
+export function nomDeFichier(texte: string, secours = 'dessin'): string {
+  const base = texte.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const court = base.slice(0, LONGUEUR_NOM_FICHIER).replace(/-+$/, '');
+  return court || secours;
+}

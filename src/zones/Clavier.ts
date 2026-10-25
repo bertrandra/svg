@@ -33,7 +33,9 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       const mod = e.ctrlKey || e.metaKey, t = e.key.toLowerCase();
       if (mod && t === 'z') { e.preventDefault(); if (e.shiftKey) ac.refaire(); else ac.defaire(); return; }
       if (mod && t === 'y') { e.preventDefault(); ac.refaire(); return; }
-      if (mod && t === 's') { e.preventDefault(); v?.signaler('recupere'); ac.enregistrerTout(); return; }
+      // Ctrl+S garde le travail (le brouillon) et le dit ; il ne ferme jamais l'editeur : fermer reste un geste a part (le bouton de
+      // fin, Echap). Il fermait la page sur sa fiche, et l'habitude de Ctrl+S toutes les minutes ejectait de l'editeur.
+      if (mod && t === 's') { e.preventDefault(); ac.garderBrouillon(); return; }
       if (cible && /^(INPUT|SELECT|TEXTAREA)$/.test(cible.tagName)) { if (e.key === 'Escape') cible.blur(); return; }
       // Un menu ouvert garde ses fleches : elles le parcourent, elles ne deplacent pas la selection derriere lui.
       if (cible?.closest('.menu-panneau') && e.key !== 'Escape') return;
@@ -66,7 +68,8 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       else if (t === 'c') ac.choisirMemeCouleur();
       else if (t === '+' || t === '=') u.vues.zoomer(1.25);
       else if (t === '-') u.vues.zoomer(0.8);
-      else if (t === '0') u.vues.ajuster();
+      else if (t === '0') ac.ajuster();
+      else if (t === 'd') ac.ajusterAuDessin();
       else if (t === '1') u.vues.centrer100();
     };
     window.addEventListener('keydown', touche);

@@ -2,27 +2,31 @@
 // correction d'un constat en une entree d'historique avec sa phrase, et l'ecriture du document marquee seulement
 // hors de Generique.
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ecrireDessin, lireDessin, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { CHOIX_CRICUT_DEFAUT, CHOIX_GENERIQUE, type ChoixProduction } from '../../../src/model/contextes.js';
-import type { EtatLu } from '../../../src/zones/actions.js';
-import { actionsProduction, phraseProduction, phraseReste, svgDocument } from '../../../src/zones/actionsProduction.js';
+import type { EtatDuMoment } from '../../../src/zones/creerActions.js';
+import { actionsProduction, choixCricut, phraseProduction, phraseReste, svgDocument, uniteRetenue } from '../../../src/zones/actionsProduction.js';
+import { stockageMemoire } from '../../../src/io/stockage.js';
 
 const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
-const CRICUT: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT };
+// En pouces : ces phrases datent d'avant le millimetre par defaut, le choix explicite les garde.
+const CRICUT: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
 const TRAIT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288"><path d="M48 48H240V240H48Z" fill="#c81e28" stroke="#15181d" stroke-width="8"/></svg>';
 
 function monter(svg: string, production: ChoixProduction) {
-  const etat: EtatLu = {
+  const etat: EtatDuMoment = {
     dessin: lire(svg), sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
-    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() }, enregistrer: vi.fn(), production
+    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() }, enregistrer: vi.fn(), production,
+    modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null, productionModifiee: false,
+    fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
   };
   const messages: string[] = [], historique: DessinSvg[] = [];
   const poser = vi.fn((c: ChoixProduction) => { etat.production = c; });
   const actions = actionsProduction(() => etat, {
     appliquer: f => { historique.push(etat.dessin); etat.dessin = f(etat.dessin); }, choisir: vi.fn(), poserPoint: vi.fn(), poserOutil: vi.fn(), poserOutilBrut: vi.fn(),
     poserTrace: vi.fn(), poserPresse: vi.fn(), dire: t => { messages.push(t); }, toile: { current: null }
-  }, poser);
+  }, { poserProduction: poser, poserSuiteCricut: s => { etat.suiteCricut = s; } });
   return { actions, etat, messages, historique, poser };
 }
 
@@ -52,13 +56,61 @@ describe('les actions du contexte de production', () => {
     m.actions.corrigerConstat('trait');
     expect(m.historique).toHaveLength(0);
     m.actions.exporterPourCricut('dessin');
-    expect(m.messages).toEqual(['Choisissez d’abord le contexte Cricut dans la barre.']);
+    expect(m.messages).toEqual(['Choisissez d’abord une machine Cricut dans la barre.']);
   });
 
   it('refusent l export d un dessin qui bloque, en le nommant', () => {
     const m = monter(TRAIT, CRICUT);
     m.actions.exporterPourCricut('dessin');
     expect(m.messages[0]).toMatch(/^Corrigez d’abord, dans le panneau « Prêt pour Cricut » : Une forme a un contour/);
+  });
+});
+
+describe('la fin du parcours Cricut', () => {
+  const OUVERT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288"><path d="M48 48L240 48L144 240" fill="#c81e28"/></svg>';
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('demande une confirmation avant d exporter un dessin qui a un point a corriger, sans rien telecharger', () => {
+    const m = monter(OUVERT, CRICUT);
+    const telecharge = vi.fn(async () => ({ save: telecharge }));
+    vi.stubGlobal('window', { claude: { use: telecharge } });
+    m.actions.exporterPourCricut('dessin');
+    expect(m.etat.suiteCricut).toBe('confirmer');
+    expect(m.messages.at(-1)).toMatch(/^Il reste 1 point à corriger : .*tracé.* Exporter quand même, ou Revoir\.$/);
+    expect(telecharge).not.toHaveBeenCalled();
+  });
+
+  it('exporte « quand même » sur la confirmation, puis montre les etapes dans Design Space', async () => {
+    const m = monter(OUVERT, CRICUT);
+    const noms: string[] = [];
+    vi.stubGlobal('window', { claude: { use: async () => ({ save: async (o: { filename: string }) => { noms.push(o.filename); } }) } });
+    m.actions.exporterPourCricut('bonhomme-de-neige', true);
+    expect(m.etat.suiteCricut).toBe('design-space');
+    await vi.waitFor(() => expect(noms).toEqual(['bonhomme-de-neige-cricut.svg']));
+    await vi.waitFor(() => expect(m.messages.at(-1)).toMatch(/^Fichier proposé : bonhomme-de-neige-cricut\.svg\. 1 couche : 1 tapis, /));
+    m.actions.fermerSuiteCricut();
+    expect(m.etat.suiteCricut).toBeNull();
+  });
+
+  it('cadre le tapis quand une machine apparait, retient l unite choisie, et efface la suite d un autre choix', () => {
+    const m = monter(TRAIT, CHOIX_GENERIQUE);
+    m.etat.suiteCricut = 'design-space';
+    m.actions.poserProduction({ ...CRICUT, unite: 'mm' });
+    expect(m.etat.suiteCricut).toBeNull();
+    expect(vi.mocked(m.etat.vues.cadrer)).toHaveBeenCalledTimes(1);
+    expect(choixCricut(null)).toMatchObject({ contexte: 'cricut', unite: 'mm' });
+    m.actions.poserProduction({ ...CRICUT, unite: 'in' });
+    expect(choixCricut(null)).toMatchObject({ unite: 'in' });
+    // Le meme tapis, une autre unite : la vue ne bouge pas.
+    expect(vi.mocked(m.etat.vues.cadrer)).toHaveBeenCalledTimes(1);
+    // Un stockage garde l'unite d'une page a l'autre ; une valeur abimee s'y lit comme absente.
+    const st = stockageMemoire();
+    m.etat.stockage = st;
+    m.actions.poserProduction({ ...CRICUT, unite: 'mm' });
+    expect(st.lire('svg.unite')).toBe('mm');
+    expect(uniteRetenue(st)).toBe('mm');
+    st.ecrire('svg.unite', 'cm');
+    expect(uniteRetenue(st)).toBe('mm');
   });
 });
 

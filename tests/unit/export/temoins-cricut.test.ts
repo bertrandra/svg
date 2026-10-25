@@ -25,7 +25,8 @@ const lire = (corps: string, l: number, h: number): DessinSvg => {
   return r.dessin;
 };
 const profilDe = (procede: 'decoupe' | 'imprimer-decouper'): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, procede });
+  // Les temoins sont en pouces, l'unite de Design Space et du protocole : le millimetre par defaut de l'interface ne les touche pas.
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', procede });
   if (!p) throw new Error('profil');
   return p;
 };

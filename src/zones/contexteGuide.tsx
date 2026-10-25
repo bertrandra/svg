@@ -5,9 +5,8 @@
 // refuse d'ecrire, une memoire de session prend le relais : la visite et les reperes ne reviennent pas avant le rechargement.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { CHOIX_CRICUT_DEFAUT } from '../model/contextes.js';
 import { useStockage } from './contexteStockage.js';
-import { useActions, useDessin } from './contexteEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTactile, useTelephone } from './Vue.js';
 import {
   apresSignal, avecRepere, avecVisite, CLE_GUIDE, fusionner, lireMemoire, MEMOIRE_VIDE, ouvreSeule, phraseEtape, phraseFin, precedente, suivante,
@@ -119,11 +118,11 @@ const rien = (): void => undefined;
 const DELAI_ANNONCE: Readonly<Record<Cause, number>> = { depart: 600, geste: 1200, bouton: 0 };
 
 export function FournisseurVisite({ options, children }: { options: OptionsGuide | null; children: ReactNode }) {
-  const mo = useDessin(), ac = useActions(), reperes = useReperes(), telephone = useTelephone(), doigt = useTactile();
+  const mo = useDessin(), ac = useActions(), { fin } = useInterface(), reperes = useReperes(), telephone = useTelephone(), doigt = useTactile();
   const [etat, poserEtat] = useState<{ etape: EtapeVisite | null; cause: Cause }>({ etape: null, cause: 'depart' });
   const etape = etat.etape;
   const recuperation = options?.recuperer ?? 'telecharger';
-  const contexte = useMemo<ContexteVisite>(() => ({ telephone, doigt, selection: mo.sel.length > 0, recuperation }), [telephone, doigt, mo.sel.length, recuperation]);
+  const contexte = useMemo<ContexteVisite>(() => ({ telephone, doigt, selection: mo.sel.length > 0, recuperation, libelleFin: fin.libelle }), [telephone, doigt, mo.sel.length, recuperation, fin.libelle]);
   const lecture = useRef(contexte);
   lecture.current = contexte;
   const { noterVisite } = reperes;
@@ -182,5 +181,3 @@ function useObservation(etape: EtapeVisite | null, signaler: (s: SignalVisite) =
   }, [etape, mo.sel, mo.dessin, mo.h.futur.length, signaler]);
 }
 
-/** Le choix du contexte Cricut par defaut : la suite « Préparer pour une Cricut » de la fin de visite. */
-export const CHOIX_CRICUT = { contexte: 'cricut' as const, ...CHOIX_CRICUT_DEFAUT };

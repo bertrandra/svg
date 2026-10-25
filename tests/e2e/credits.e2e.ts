@@ -114,7 +114,7 @@ describe('à propos et crédits', () => {
       await page.locator('.editeur-inspecteur input[type=search]').fill('lapin');
       await page.locator('.editeur-inspecteur .vignette').first().click();
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       await page.locator('img.apercu').waitFor();
       const svg = await apercu(page);
       expect(svg).toContain('<metadata>');
@@ -129,7 +129,7 @@ describe('à propos et crédits', () => {
       await ouvrirExemple(page);
       await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
       await page.keyboard.press('ArrowRight');
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       await page.locator('img.apercu').waitFor();
       const svg = await apercu(page);
       expect(svg).toContain('<svg');
@@ -144,7 +144,7 @@ describe('à propos et crédits', () => {
       await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: CHARGEMENT });
       await page.locator('.bibliotheque .vignette').first().click();
       await page.locator('.editeur-cadre').waitFor();
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       await page.locator('img.apercu').waitFor();
       expect(await apercu(page)).toContain('<metadata>');
       // La forme supprimée, plus rien à créditer : le SVG réécrit n'en porte plus la mention.
@@ -155,7 +155,7 @@ describe('à propos et crédits', () => {
       await page.locator('.editeur-svg-toile').click({ position: { x: 40, y: 40 } });
       await page.keyboard.press('Control+z');
       await page.keyboard.press('Escape');
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       expect(await apercu(page)).toContain('data-origine');
     });
   });
@@ -183,7 +183,7 @@ describe('à propos et crédits', () => {
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: CHARGEMENT });
       await page.locator('.editeur-inspecteur .vignette').first().click();
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       const svg = await recu(page);
       expect(svg).toContain('<metadata>');
       expect(svg).toContain('game-icons.net et ses contributeurs');
@@ -195,7 +195,7 @@ describe('à propos et crédits', () => {
       const page = await hoteOuvert();
       await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
       await page.keyboard.press('ArrowRight');
-      await page.keyboard.press('Control+s');
+      await page.locator('.editeur-barre .groupe.fin button.primaire').click();
       const svg = await recu(page);
       expect(svg).toContain('<svg');
       expect(svg).not.toContain('<metadata');

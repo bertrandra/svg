@@ -22,8 +22,9 @@ function monter() {
   const enregistrer = vi.fn();
   const etat: EtatDuMoment = {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
-    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn() },
-    enregistrer, production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null
+    vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() },
+    enregistrer, production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage: null,
+    productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
   };
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; etat.dessin = h.present; etat.modifie = h.passe.length > 0; },
@@ -31,7 +32,7 @@ function monter() {
     poserOutilBrut: vi.fn(), poserPoint: vi.fn(), poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: vi.fn(),
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
-    dire: vi.fn(), poserProduction: vi.fn(), toile: { current: null }
+    dire: vi.fn(), poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), toile: { current: null }
   };
   return { actions: creerActions(() => etat, setters), etat, enregistrer };
 }

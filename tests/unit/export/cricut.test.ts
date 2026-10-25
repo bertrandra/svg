@@ -22,7 +22,7 @@ const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreu
 const fixture = (nom: string): DessinSvg => lire(readFileSync(resolve(DOSSIER, nom + '.svg'), 'utf8'));
 const svg = (corps: string, vb = '0 0 480 288') => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '">' + corps + '</svg>';
 const profil = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', ...choix });
   if (!p) throw new Error('profil');
   return p;
 };

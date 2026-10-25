@@ -52,9 +52,10 @@ function PanneauLateral({ nom }: { nom: string }) {
 /**
  * La confirmation prend le focus a son apparition (sur « Continuer l'édition », le choix sans perte) et le
  * rend a ce qui l'avait quand elle disparait. Echap la referme (Clavier.ts). Elle n'est pas modale : Tab en sort.
+ * Trois choix : abandonner, garder et fermer (le geste de fin), continuer.
  */
 function ConfirmerAbandon() {
-  const { h } = useDessin(), { quitter } = useInterface(), ac = useActions();
+  const { h } = useDessin(), { quitter, fin } = useInterface(), ac = useActions();
   const racine = useRef<HTMLDivElement>(null), idMessage = useId();
   useEffect(() => {
     if (!quitter) return;
@@ -73,6 +74,8 @@ function ConfirmerAbandon() {
     <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications" aria-describedby={idMessage} ref={racine}>
       <span id={idMessage}>{phraseAbandon(n)}</span>
       <button type="button" onClick={ac.fermer}>Abandonner</button>
+      {/* Le troisieme choix : garder et fermer, sous le libelle du geste de fin (« Terminer » dans la page). */}
+      <button type="button" onClick={ac.enregistrerEtFermer}>{fin.libelle}</button>
       <button type="button" className="primaire" onClick={ac.continuerEdition}>Continuer l’édition</button>
     </div>
   );

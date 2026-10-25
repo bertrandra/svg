@@ -63,6 +63,12 @@ button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled) { color: var
 .editeur-barre { grid-area: barre; display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs) 0; padding: var(--esp-xs) var(--esp-m); border-bottom: 1px solid var(--filet); background: var(--panneau); }
 .editeur-barre .groupe, .editeur-barre-selection .groupe { display: flex; align-items: center; gap: 1px; padding: 0 var(--esp-s); border-right: 1px solid var(--filet); }
 .editeur-barre .groupe.fin, .editeur-barre-selection .groupe:last-child { border-right: 0; }
+/* Sous 1 440 px, la barre se resserre (groupes et menus plus serres, titre plus court) pour tenir sur une ligne a 1 280 px avec
+   « Télécharger le SVG » et le choix de machine ; au-dessous de 1 280, elle passe a la ligne comme avant. */
+@media (max-width: 1439px) {
+  .editeur-barre .groupe { padding: 0 var(--esp-xs); }
+  .editeur-barre .menu-bouton.texte { padding: 0 var(--esp-s); }
+}
 .editeur-titre { font-size: var(--texte-compact); padding-right: var(--esp-m); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editeur-barre .espace, .editeur-etat .espace { flex: 1; }
 /* Les boutons d'outil : carres, neutres, l'etat actif en couleur d'outil. */
@@ -283,9 +289,20 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
 .menu-rubrique > .menu-titre { margin: var(--esp-m) var(--esp-m) var(--esp-2xs); }
 .menu-rubrique + .menu-rubrique { margin-top: var(--esp-xs); border-top: 1px solid var(--filet); }
-.contenu-export { display: grid; gap: var(--esp-s); min-width: 260px; }
+.contenu-export { display: grid; gap: var(--esp-s); min-width: 260px; width: min(28rem, calc(100vw - 48px)); }
 .contenu-export button { font-size: var(--texte-compact); padding: var(--esp-xs) var(--esp-m); justify-self: start; }
-.ligne-export { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-s); }
+/* Une ligne par format, en deux colonnes alignees : le geste (le bouton et son reglage), puis a quoi il sert, a l'encre douce. */
+.ligne-export { display: grid; grid-template-columns: 11rem minmax(0, 1fr); align-items: center; gap: var(--esp-xs) var(--esp-m); }
+.ligne-export-geste { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs); }
+.ligne-export .aide { margin: 0; font-size: var(--texte-petit); color: var(--encre-douce); }
+@media (max-width: 480px) { .ligne-export { grid-template-columns: minmax(0, 1fr); } }
+/* Recuperer le fichier (la fin du parcours) : le geste du moment et son chevron « Autres formats », en tete du groupe Fichier,
+   qui se range a droite meme quand il passe a la ligne. */
+.editeur-barre .groupe.fin { margin-left: auto; }
+.editeur-barre .recuperer { display: inline-flex; align-items: center; padding-right: var(--esp-s); margin-right: var(--esp-xs); border-right: 1px solid var(--filet); }
+.editeur-barre .recuperer-principal { margin-left: 0; }
+.autres-formats-repli > summary { display: flex; align-items: center; min-height: 24px; font-size: var(--texte-compact); font-weight: 600; color: var(--cyan); cursor: pointer; }
+.autres-formats-repli[open] > summary { margin-bottom: var(--esp-s); }
 .ligne-export select { width: auto; font-size: var(--texte-petit); }
 .ligne-export input[type="color"] { width: 28px; height: 26px; }
 /* Les options partagees des exports : une colonne de champs, chacun sur toute la largeur du menu. */
@@ -388,6 +405,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
   .section > summary { padding: var(--esp-l) var(--esp-2xs); }
   .ligne-export input[type="color"], .options-export input[type="color"] { width: 44px; height: 40px; }
+  .autres-formats-repli > summary { min-height: 40px; }
   .options-export .case { min-height: 40px; }
   .options-export .case input[type="checkbox"] { width: 20px; height: 20px; flex: none; }
 }
@@ -453,7 +471,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 @media (forced-colors: active) { .credits-dialogue { border: 2px solid CanvasText; } }
 
 /* Le contexte de production (ADR-0013) : le selecteur de la barre, le panneau « Pret pour Cricut », le gabarit du tapis. */
-.selecteur-contexte .menu-bouton { max-width: 14rem; }
+.selecteur-contexte .menu-bouton { max-width: 16rem; }
 .selecteur-contexte .menu-bouton span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .panneau-cricut { margin-bottom: var(--esp-s); }
 .panneau-cricut .section > summary .aide { color: var(--encre-douce); }
@@ -475,6 +493,20 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .panneau-cricut .a-verifier { font-style: italic; }
 .panneau-cricut .constat .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
 .panneau-cricut .export-cricut { margin: var(--esp-m) 0 var(--esp-s); }
+.panneau-cricut .titre-gravite:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* La confirmation d'un export avec des points a corriger : un message ambre dans le panneau, pas une fenetre ; l'action sure est pleine. */
+.confirmation-export { display: grid; gap: var(--esp-s); margin: var(--esp-m) 0 var(--esp-s); padding: var(--esp-m); border: 1px solid var(--alerte); border-radius: var(--rayon-bouton); background: var(--alerte-fond); color: var(--alerte); font-size: var(--texte-compact); }
+.confirmation-export p, .confirmation-export ul { margin: 0; }
+.confirmation-export ul { padding-left: var(--esp-xl); display: grid; gap: var(--esp-2xs); }
+.confirmation-export .aide { color: var(--alerte); }
+.confirmation-export .titre-confirmation { font-weight: 600; }
+.confirmation-export .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-s); }
+/* Les etapes dans Design Space, apres l'export : un guide pose dans le flux, comme un repere (filet et voile cyan), refermable. */
+.carte-design-space { display: grid; gap: var(--esp-s); justify-items: start; margin: 0 0 var(--esp-m); padding: var(--esp-m) var(--esp-l); border: 1px solid var(--cyan); border-radius: var(--rayon-bouton); background: color-mix(in srgb, var(--cyan) 8%, var(--panneau)); color: var(--encre); font-size: var(--texte-compact); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .carte-design-space { background: var(--repli-cyan-8-panneau); } }
+.carte-design-space h3 { margin: 0; font-size: var(--texte-compact); font-weight: 600; }
+.carte-design-space ol { margin: 0; padding-left: var(--esp-xl); display: grid; gap: var(--esp-xs); }
+.carte-design-space .discret { padding-left: 0; padding-right: 0; }
 .aide-cricut > summary { display: flex; align-items: center; min-height: 24px; font-size: var(--texte-compact); color: var(--cyan); cursor: pointer; }
 .aide-cricut p { margin: var(--esp-xs) 0; }
 .editeur-svg-toile .gabarit-tapis { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--filet); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -487,7 +519,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .aide-cricut > summary { min-height: 40px; }
 }
 @media (forced-colors: active) {
-  .panneau-cricut .constat { border-color: CanvasText; }
+  .panneau-cricut .constat, .confirmation-export, .carte-design-space { border-color: CanvasText; }
   .editeur-svg-toile .gabarit-zone, .editeur-svg-toile .forme-debordante, .editeur-svg-toile .zone-fine { stroke: Highlight; }
 }
 

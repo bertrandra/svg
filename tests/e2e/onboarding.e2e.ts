@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
+import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
 
 const VERT = '#1f8a3a';
 const bulle = (page: Page) => page.locator('.bulle-visite');
@@ -76,10 +76,11 @@ describe('la visite guidee', () => {
     await dite(3);
     await bulle(page).getByRole('button', { name: 'Suivant' }).click();
     await attend(() => etape(page)).toBe('4');
-    expect(await lu(page)).toContain('Ouvrez le menu « Fichier », puis « Télécharger le SVG »');
+    expect(await lu(page)).toContain('Cliquez « Télécharger le SVG », en haut à droite.');
     await dite(4);
-    await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
-    const fichier = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG' }).click());
+    // Le filet de l'etape entoure le bouton unique de la barre : un geste, plus un menu a ouvrir.
+    await attend(() => page.locator('.visite-cible').count()).toBe(1);
+    const fichier = await telecharger(page, () => boutonTelecharger(page).click());
     expect(fichier.nom).toBe('exemple.svg');
     expect(fichier.texte).toContain('fill="' + VERT + '"');
     expect(fichier.texte).not.toContain('#c81e28');
@@ -125,19 +126,16 @@ describe('la visite guidee', () => {
     await page.keyboard.press('Enter');
     await attend(() => etape(page)).toBe('4');
     // Le focus est reste dans la bulle. F6 rend la toile ; Echap y defait la selection (la visite reste), et Maj+Tab
-    // remonte de la toile, par les calques, jusqu'au menu Fichier de la barre.
+    // remonte de la toile, par les calques, jusqu'au bouton « Télécharger le SVG » de la barre.
     expect(await page.evaluate(() => !!document.activeElement?.closest('.bulle-visite'))).toBe(true);
     await page.keyboard.press('F6');
     await attend(() => aLeFocus(toile(page))).toBe(true);
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(0);
     expect(await etape(page)).toBe('4');
-    const fichier = page.locator('.menu-bouton', { hasText: 'Fichier' });
-    for (let i = 0; i < 60 && !(await aLeFocus(fichier)); i++) await page.keyboard.press('Shift+Tab');
-    expect(await aLeFocus(fichier)).toBe(true);
-    await page.keyboard.press('Enter');
-    await attend(() => page.locator('.menu-panneau [role^=menuitem]:focus').count()).toBe(1);
-    await page.keyboard.press('ArrowDown');
+    const recuperer = boutonTelecharger(page);
+    for (let i = 0; i < 60 && !(await aLeFocus(recuperer)); i++) await page.keyboard.press('Shift+Tab');
+    expect(await aLeFocus(recuperer)).toBe(true);
     const f = await telecharger(page, () => page.keyboard.press('Enter'));
     expect(f.texte).toContain('fill="' + VERT + '"');
     await attend(() => etape(page)).toBe('5');
@@ -409,7 +407,7 @@ describe('les reperes de premiere rencontre', () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await ouvrirExemple(page);
     await page.locator('.selecteur-contexte .menu-bouton').click();
-    await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+    await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
     await repere(page, 'cricut').waitFor();
     expect(await page.locator('.panneau-cricut .repere').count()).toBe(1);
     await repere(page, 'cricut').getByRole('button', { name: 'Compris' }).click();
@@ -495,7 +493,7 @@ describe('les etats vides', () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path d="M20 20H120V120H20Z" fill="#c81e28"/></svg>');
     await page.locator('.selecteur-contexte .menu-bouton').click();
-    await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+    await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
     await page.locator('.panneau-cricut .pret').waitFor();
     expect((await texteDe(page.locator('.panneau-cricut'))).replace(/\u00a0/g, ' ')).toContain('Rien à corriger. « Exporter pour Cricut » écrit le fichier à importer dans Design Space.');
   });

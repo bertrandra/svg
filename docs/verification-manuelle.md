@@ -85,7 +85,7 @@ paysage.
 | 3.9 | Champs (Rotation, Échelle, Texte) | le clavier virtuel s’ouvre, **la page ne saute pas**, la valeur s’applique avec le bouton « Appliquer » |
 | 3.10 | Ouvrir un SVG depuis Fichiers, une image depuis la photothèque | l’éditeur s’ouvre ; l’image se dépose |
 | 3.11 | Convertir une image de 12 mégapixels (photo d’appareil), mode par défaut | un résultat, ou un message en français ; **jamais** page blanche ni rechargement de l’onglet (limite mémoire de WebAssembly et du canvas sur iOS) |
-| 3.12 | Télécharger le SVG, le PNG, le PDF | le fichier s’ouvre dans l’aperçu / la feuille de partage / les téléchargements, avec le bon nom |
+| 3.12 | « Télécharger le SVG », puis le PNG et le PDF sous « Autres formats » | le fichier s’ouvre dans l’aperçu / la feuille de partage / les téléchargements, avec le bon nom |
 | 3.13 | Copier le code (en `https`) puis en `file://` ou `http` | « copié » en `https` ; en contexte non sécurisé la page dit qu’elle n’a pas pu copier |
 | 3.14 | Rotation de l’appareil pendant l’édition | la toile se réajuste, le dessin et la sélection restent |
 | 3.15 | Mode sombre du système, bascule en direct | l’interface suit sans recharger ; contraste du texte sur les boutons |
@@ -109,7 +109,7 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | # | Raccourci | Réussi si |
 |---|---|---|
 | 5.1 | Ctrl (Cmd sur Mac) + Z, Y, Maj+Z | annuler / rétablir ; la touche est celle de la lettre, pas sa position |
-| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare), enregistrer ; **Ctrl+S n’ouvre pas** « Enregistrer sous » du navigateur |
+| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare) ; Ctrl+S garde un brouillon et dit « Brouillon gardé. », **sans fermer l’éditeur** ni ouvrir « Enregistrer sous » du navigateur |
 | 5.3 | Ctrl+] et Ctrl+[ : sur AZERTY et QWERTZ ces crochets demandent AltGr (Ctrl+Alt sous Windows) | le plan avance / recule, ou le menu Édition dit un raccourci qui marche sur cette disposition ; noter la combinaison réelle |
 | 5.4 | Lettres d’outils et de vue (R rectangle, G grille, Z zoom sur la sélection, M aimants) sur AZERTY et QWERTZ : « Z », « W », « Y » ne sont pas aux mêmes places | la lettre d’outil est celle **imprimée sur la touche** (`e.key`), pas la position QWERTY |
 | 5.5 | Alt+flèches (Windows, Linux) | l’objet se redimensionne, **le navigateur ne revient pas à la page précédente** (Chrome, Edge, Firefox) |
@@ -146,7 +146,7 @@ Aucune feuille de style d’impression n’est écrite : on vérifie qu’elle n
 
 | # | Page | Réussi si |
 |---|---|---|
-| 8.1 | Accueil, après « Enregistrer » : aperçu du résultat (Ctrl+P, aperçu avant impression) | l’aperçu du SVG et sa fiche sont lisibles, rien n’est coupé au milieu d’un mot ; pas de page blanche |
+| 8.1 | Accueil, après « Terminer » : aperçu du résultat (Ctrl+P, aperçu avant impression) | l’aperçu du SVG et sa fiche sont lisibles, rien n’est coupé au milieu d’un mot ; pas de page blanche |
 | 8.2 | Éditeur ouvert | note : ce qui sort (en pratique la première page de la fenêtre fixe). Aucune erreur ; si l’éditeur imprime des pages vides, ouvrir une demande « imprimer le dessin » plutôt que de la corriger ici |
 | 8.3 | Le SVG exporté, ouvert seul dans le navigateur | s’imprime à la taille du plan ; le PDF vectoriel du menu Fichier est l’export à imprimer |
 

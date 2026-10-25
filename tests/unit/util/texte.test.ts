@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { auPluriel, distanceEdition, insecables, pluriel, selonSaisie } from '../../../src/util/texte.js';
+import { auPluriel, distanceEdition, insecables, nomDeFichier, pluriel, selonSaisie } from '../../../src/util/texte.js';
 
 describe('pluriel', () => {
   it('laisse au singulier zero et un', () => {
@@ -69,5 +69,28 @@ describe('insecables', () => {
     expect(insecables('Première fois ? Essayez : « Plus » ; voilà !')).toBe('Première fois\u00a0? Essayez\u00a0: «\u00a0Plus\u00a0»\u00a0; voilà\u00a0!');
     expect(insecables('Ctrl+Z, puis Tab.')).toBe('Ctrl+Z, puis Tab.');
     expect(insecables('déjà\u00a0: rien')).toBe('déjà\u00a0: rien');
+  });
+});
+
+describe('nomDeFichier', () => {
+  it('tire un nom de fichier du nom affiche : minuscules, sans accents, des tirets', () => {
+    expect(nomDeFichier('Bonhomme de neige')).toBe('bonhomme-de-neige');
+    expect(nomDeFichier('Cœur brisé')).toBe('coeur-brise');
+    expect(nomDeFichier('Échange de corps')).toBe('echange-de-corps');
+    expect(nomDeFichier('  Sapin (Noël) — étoile !  ')).toBe('sapin-noel-etoile');
+    expect(nomDeFichier('L’œuf de Pâques')).toBe('l-oeuf-de-paques');
+  });
+
+  it('rend le secours quand rien ne reste, et borne la longueur sans tiret final', () => {
+    expect(nomDeFichier('???')).toBe('dessin');
+    expect(nomDeFichier('', 'body-swapping')).toBe('body-swapping');
+    const long = nomDeFichier('mot '.repeat(40));
+    expect(long.length).toBeLessThanOrEqual(80);
+    expect(long.endsWith('-')).toBe(false);
+  });
+
+  it('ne garde que des caracteres surs pour un nom de fichier, et ouvre les ligatures typographiques', () => {
+    expect(nomDeFichier('ﬁn')).toBe('fin');
+    for (const t of ['../../etc/passwd', 'a/b\\c', 'nom<script>', 'été\u0000', 'ﬁn']) expect(nomDeFichier(t)).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   });
 });

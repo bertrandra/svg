@@ -11,6 +11,8 @@ import { svgDecoupe, svgExporte } from '../export/svgs.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { versPng } from '../io/image.js';
 import { EXTENSIONS, versRaster, type FormatRaster } from '../io/rasters.js';
+import type { ChoixProduction } from '../model/contextes.js';
+import { svgDocument } from './actionsProduction.js';
 
 export interface ContexteExport {
   /** Le dessin lu ; null si le SVG donne ne se lit pas (les formats vectoriels sont alors indisponibles). */
@@ -75,3 +77,13 @@ export function exporterRaster(c: ContexteExport, format: FormatRaster): void {
 
 /** Le SVG propre d'un dessin lu, ou le SVG donne. */
 export const svgPropreDe = (lu: DessinSvg | null, svg: string): string => (lu ? ecrireDessin(lu, 3) : svg);
+
+/**
+ * Le SVG que « Télécharger le SVG » de l'editeur remet. Options neutres : le document tel qu'on l'enregistre (marque du contexte
+ * comprise), les octets que donnait « Fichier > Télécharger le SVG ». Options touchees (precision, taille, optimise) : le SVG avec
+ * ces options, les octets que donnait le bouton « SVG » des exports. Aucun geste d'hier ne change d'octet.
+ */
+export function svgATelecharger(dessin: DessinSvg, production: ChoixProduction, o: OptionsExport): string {
+  const neutre = o.precision === 3 && !o.optimise && tailleDe(o) === null;
+  return neutre ? svgDocument(dessin, production) : svgExporte(dessin, optionsSvg(o));
+}

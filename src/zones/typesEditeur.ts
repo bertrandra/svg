@@ -23,6 +23,15 @@ export type Point = readonly [number, number];
 export interface Vue { zoom: number; x: number; y: number }
 export type Fond = 'damier' | 'blanc' | 'sombre';
 export type Tiroir = 'calques' | 'inspecteur' | null;
+/** Ce qui suit « Exporter pour Cricut » dans le panneau : la confirmation tant qu'un point reste a corriger, puis les etapes dans Design Space. */
+export type SuiteCricut = 'confirmer' | 'design-space' | null;
+
+/**
+ * Le geste de fin, tel que la page ou l'hote le veut : son libelle (« Terminer » dans la page, « Enregistrer » par defaut), s'il
+ * ferme l'editeur meme sans modification (la page : on revient a la fiche, rien n'est reecrit), et s'il existe un brouillon a garder
+ * (Ctrl+S). L'editeur ne devine pas ou il est : on le lui dit.
+ */
+export interface OptionsFin { readonly libelle: string; readonly fermerSansModification: boolean; readonly brouillon: boolean }
 
 // L'editeur se partage en trois contextes (contexteEditeur.tsx), pour qu'un panneau ne se redessine que
 // pour ce qu'il lit : le dessin (ce qu'on voit), l'interface (l'outil et la vue), les actions (les verbes).
@@ -90,6 +99,10 @@ export interface EtatInterface {
   profil: ProfilProduction | null;
   /** Le contexte a change depuis l'ouverture : il y a quelque chose a enregistrer meme sans modification du dessin. */
   productionModifiee: boolean;
+  /** La confirmation d'un export Cricut avec des points a corriger, ou la carte « Dans Design Space » apres l'export. */
+  suiteCricut: SuiteCricut;
+  /** Le geste de fin (libelle, fermeture sans modification, brouillon) : une donnee de la page ou de l'hote, constante. */
+  fin: OptionsFin;
 }
 
 /**
@@ -125,6 +138,16 @@ export interface ActionsEditeur {
   demanderFermeture: () => void;
   /** Ferme l'editeur sans rien demander (la confirmation « Abandonner »). */
   fermer: () => void;
+  /** Le bouton de fin : rend le dessin s'il a change, ferme sans rien reecrire si la page le veut, sinon dit pourquoi il n'y a rien a faire. */
+  terminer: () => void;
+  /** La confirmation d'abandon, troisieme choix : rendre le dessin, puis fermer (jamais fermer si le dessin n'a pas pu etre rendu). */
+  enregistrerEtFermer: () => void;
+  /** Ctrl+S : garde le brouillon du moment, sans fermer, et le dit. */
+  garderBrouillon: () => void;
+  /** « Ajuster » : le tapis entier en contexte de decoupe Cricut (le dessin dedans), le dessin sinon. */
+  ajuster: () => void;
+  /** « Ajuster au dessin » : le dessin seul, quel que soit le contexte. */
+  ajusterAuDessin: () => void;
   /** Referme la confirmation et reprend l'edition. */
   continuerEdition: () => void;
   garderVersion: (nom: string, svg: string) => void;
@@ -142,7 +165,8 @@ export interface ActionsEditeur {
   /** Choisit toutes les formes de la couleur de la premiere forme choisie (son remplissage, ou son contour sans remplissage). */
   choisirMemeCouleur: () => void;
   zoomerSelection: () => void;
-  enregistrerTout: () => void;
+  /** Rend le dessin nettoye a `enregistrer` ; faux quand il n'y a rien a rendre (aucune forme visible), et l'editeur l'a dit. */
+  enregistrerTout: () => boolean;
   /** Insere une forme au centre ; `origine` (`game-icons:<id>`) la credite : elle fera ecrire la mention CC BY 3.0 (engine/edition/provenance.ts). */
   insererForme: (svgForme: string, origine?: string) => void;
   insererPlusieurs: (svgs: readonly { svg: string; x: number; y: number; taille: number; origine?: string }[]) => void;
@@ -169,8 +193,17 @@ export interface ActionsEditeur {
   poserProduction: (c: ChoixProduction) => void;
   /** Applique la correction d'un constat du panneau, rejuge sur le dessin du moment : une entree d'historique. */
   corrigerConstat: (code: CodeConstat) => void;
-  /** Exporte pour la machine du contexte : le SVG de decoupe, ou l'archive Print Then Cut. */
-  exporterPourCricut: (nom: string) => void;
+  /**
+   * Exporte pour la machine du contexte : le SVG de decoupe, ou l'archive Print Then Cut. Tant qu'un constat « à corriger » reste,
+   * l'export attend une confirmation dans le panneau (`quandMeme` la donne) ; un constat bloquant le refuse.
+   */
+  exporterPourCricut: (nom: string, quandMeme?: boolean) => void;
+  /** Referme la confirmation de l'export ou la carte « Dans Design Space ». */
+  fermerSuiteCricut: () => void;
 }
 
-export interface Vues { vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void }
+export interface Vues {
+  vue: Vue; poserVue: (v: Vue | ((v: Vue) => Vue)) => void; ajuster: () => void; zoomer: (f: number, cx?: number, cy?: number) => void; centrer100: () => void;
+  /** Cadre une boite du plan (x, y, largeur, hauteur) a l'ecran, comme « Ajuster » cadre le dessin. */
+  cadrer: (b: { readonly x: number; readonly y: number; readonly l: number; readonly h: number }) => void;
+}

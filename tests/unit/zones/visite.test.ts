@@ -57,9 +57,13 @@ describe('les textes de la visite', () => {
   });
 
   it('dit ou trouver « Télécharger le SVG » selon l ecran, et « Enregistrer » chez un hote', () => {
-    expect(n(texteEtape('recuperer', BUREAU).corps)).toContain('menu « Fichier »');
+    // Au bureau, un seul geste : le bouton de la barre (plus le menu Fichier, qui ne l'a plus).
+    expect(n(texteEtape('recuperer', BUREAU).corps)).toContain('Cliquez « Télécharger le SVG », en haut à droite.');
+    expect(n(texteEtape('recuperer', BUREAU).corps)).not.toContain('Fichier');
     expect(n(texteEtape('recuperer', TELEPHONE).corps)).toContain('« Plus »');
     expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer' }).corps)).toContain('« Enregistrer »');
+    // Le libelle que l'hote a donne au geste de fin est celui que la visite nomme.
+    expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer', libelleFin: 'Mettre à jour le logo' }).corps)).toContain('Cliquez « Mettre à jour le logo » : votre dessin retouché revient');
   });
 
   it('demande d abord une forme quand rien n est choisi a l etape de la couleur', () => {
@@ -84,9 +88,9 @@ describe('les textes de la visite', () => {
     expect(n(phraseFin(true, true))).toBe('Visite guidée terminée. Elle se rejoue depuis « Plus », rubrique Aide.');
   });
 
-  it('visent la toile, la pastille, Annuler, puis Fichier, Plus ou Enregistrer', () => {
+  it('visent la toile, la pastille, Annuler, puis « Télécharger le SVG », Plus ou Enregistrer', () => {
     const cibles = (c: ContexteVisite) => ETAPES.map(e => cibleEtape(e, c));
-    expect(cibles(BUREAU)).toEqual(['.editeur-toile', '.editeur-barre .style-courant .pastille-style', '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]', '.editeur-barre .groupe.fin .menu-bouton', '.editeur-toile']);
+    expect(cibles(BUREAU)).toEqual(['.editeur-toile', '.editeur-barre .style-courant .pastille-style', '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]', '.editeur-barre .recuperer-principal', '.editeur-toile']);
     expect(cibleEtape('recuperer', TELEPHONE)).toBe('.editeur-barre .groupe.plus .menu-bouton');
     expect(cibleEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer' })).toBe('.editeur-barre .groupe.fin button.primaire');
     expect(cibleEtape('recuperer', { ...TELEPHONE, recuperation: 'enregistrer' })).toBe('.editeur-etat button.primaire');
