@@ -54,7 +54,17 @@ export interface TexteProjet {
   readonly ligatures: boolean;
   readonly trace?: 'median';
   readonly matrice: readonly [number, number, number, number, number, number];
+  /** Le texte sur le trace ou dans une forme (ADR-0031), liee par son identifiant ; absent pour un texte libre. */
+  readonly disposition?: DispositionProjet;
 }
+
+/**
+ * La disposition d'un texte (ADR-0031), champ pour champ celle du modele : la forme de base reste une forme ordinaire du dessin
+ * (masquee ou non), designee par son identifiant ; les identifiants du projet sont ceux du modele, sans renumerotation.
+ */
+export type DispositionProjet =
+  | { readonly mode: 'sur'; readonly forme: string; readonly depart: number; readonly cote: 'dessus' | 'dessous'; readonly repartir: boolean }
+  | { readonly mode: 'dans'; readonly forme: string; readonly marge: number; readonly ajuster: boolean; readonly justifier: boolean };
 
 /**
  * Une forme du dessin, champ pour champ celle du modele (engine/edition/types.ts), sauf `d` : le chemin en texte, chaque nombre a
@@ -254,8 +264,28 @@ function lireTexte(v: unknown): TexteProjet {
     alignement: choix(o['alignement'], 'l’alignement d’un texte', ['gauche', 'centre', 'droite'] as const),
     ligatures: booleen(o['ligatures'], 'les ligatures d’un texte'),
     ...facultatif(o, 'trace', x => choix(x, 'le tracé d’un texte', ['median'] as const)),
-    matrice
+    matrice,
+    ...facultatif(o, 'disposition', lireDisposition)
   };
+}
+
+function lireDisposition(v: unknown): DispositionProjet {
+  const o = objet(v, 'la disposition d’un texte');
+  const forme = texte(o['forme'], 'la forme d’un texte posé', BORNES_PROJET.identifiant);
+  if (!ID.test(forme)) refuser('la forme d’un texte posé est mal désignée');
+  if (o['mode'] === 'sur') {
+    return {
+      mode: 'sur', forme, depart: nombre(o['depart'], 'le départ d’un texte sur une forme', 0, 1),
+      cote: choix(o['cote'], 'le côté d’un texte sur une forme', ['dessus', 'dessous'] as const), repartir: booleen(o['repartir'], 'la répartition d’un texte sur une forme')
+    };
+  }
+  if (o['mode'] === 'dans') {
+    return {
+      mode: 'dans', forme, marge: nombre(o['marge'], 'la marge d’un texte dans une forme', 0, 100),
+      ajuster: booleen(o['ajuster'], 'l’ajustement d’un texte dans une forme'), justifier: booleen(o['justifier'], 'la justification d’un texte dans une forme')
+    };
+  }
+  return refuser('la disposition d’un texte n’est ni « sur » ni « dans » une forme');
 }
 
 function lirePointilles(v: unknown): readonly number[] {

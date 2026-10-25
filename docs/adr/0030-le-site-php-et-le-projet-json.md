@@ -1,7 +1,7 @@
 # ADR-0030 — Le site PHP et le projet JSON : un mot de passe, des projets natifs, le serveur pour seul interlocuteur
 
 **Date :** 25 octobre 2026
-**Statut :** acceptée (prolonge les ADR-0001, 0010, 0013, 0014, 0017, 0022, 0025, 0026 et 0028 ; amende la règle « un seul
+**Statut :** acceptée (prolonge les ADR-0001, 0010, 0013, 0014, 0017, 0022, 0025, 0026, 0028 et 0031 ; amende la règle « un seul
 `fetch` dans `src/` » de l’ADR-0025 et précise « Rien ne s’écrit sans le geste de fin » de l’ADR-0001) ; **aucun octet écrit ne
 change** : la page autonome, le bundle d’embarquement et toutes les références d’écriture sont intacts
 
@@ -74,7 +74,9 @@ deux dispositions sont décrites dans `docs/deploiement-php.md`.
 
 - **Tout l’état utile** : chaque forme champ pour champ (styles, opacités, pointillés, bouts et jonctions, origines et mentions,
   texte vivant complet — chaîne, police `id`/version/famille, taille, interlettrage, interligne, alignement, ligatures, tracé
-  Médian, matrice —, opération Cricut, verrouillage, visibilité, ordre), le plan de travail, le contexte de production et son choix,
+  Médian, matrice, et sa disposition sur ou dans une forme (ADR-0031 : `{ mode: 'sur', forme, depart, cote, repartir }` ou
+  `{ mode: 'dans', forme, marge, ajuster, justifier }`, absente d’un texte libre ; la forme de base reste une forme du dessin,
+  masquée ou non, liée par son identifiant, que le projet ne renumérote pas) —, opération Cricut, verrouillage, visibilité, ordre), le plan de travail, le contexte de production et son choix,
   le nuancier, le nom, les dates. Une **fonte déposée** employée par un texte est incluse en base64 (son identifiant `u-…` est
   l’empreinte de ses octets : relue, elle est revérifiée) ; une police du catalogue ou livrée se désigne par son identifiant et sa
   version. L’**image source** d’une conversion est gardée quand le projet sort de la voie « Convertir une image ».
@@ -159,7 +161,8 @@ directement. Le détail est dans `docs/securite.md`, § 9.
 - **Octets** : aucun ne change (`ecriture-stable` vert sans `ACTUALISER_REFERENCES`) ; la page autonome et le bundle ne posent ni
   source de données ni serveur de polices.
 - **Tests** : `tests/unit/model/projet.test.ts` (lecture, refus nommés, bornes, migrations, mutations au hasard sans exception),
-  `tests/unit/engine/projet.test.ts` (aller-retour exact sur chaque référence d’écriture), `tests/unit/io/serveur.test.ts`,
+  `tests/unit/engine/projet.test.ts` (aller-retour exact sur chaque référence d’écriture, dont un texte sur un cercle et un texte dans
+  une forme masquée), `tests/unit/io/serveur.test.ts`,
   `tests/unit/io/annexes.test.ts` et `policesEnLigne.test.ts` (source JSON, serveur de polices de l’hôte),
   `tests/unit/zones/creerActions.test.ts` (Ctrl+S et l’état annoncé) ; **tests PHP** sans dépendance (`npm run test:php` :
   fonctions sur un dossier temporaire, puis le site par HTTP sous `php -S`, une source de polices simulée) ; **navigateur**

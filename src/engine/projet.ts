@@ -8,7 +8,9 @@ import {
   FORMAT_PROJET, VERSION_PROJET, nomDeProjet,
   type FormeProjet, type ImageProjet, type PoliceProjet, type Projet, type TeinteProjet, type TexteProjet
 } from '../model/projet.js';
-import { peintureSure, type Chemin, type Commande, type DessinSvg, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
+import { peintureSure, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
+import type { DispositionProjet } from '../model/projet.js';
+
 
 /** Ce que l'editeur et son hote savent d'un travail : de quoi ecrire un projet, et ce qu'un projet rouvert redonne. */
 export interface EtatProjet {
@@ -45,13 +47,21 @@ export function lireCheminProjet(d: string): Chemin {
   });
 }
 
+/** Une disposition (ADR-0031), champ pour champ, dans l'ordre du modele : la meme copie sert dans les deux sens. */
+function disposition<D extends DispositionTexte | DispositionProjet>(d: D): D {
+  return (d.mode === 'sur'
+    ? { mode: 'sur', forme: d.forme, depart: d.depart, cote: d.cote, repartir: d.repartir }
+    : { mode: 'dans', forme: d.forme, marge: d.marge, ajuster: d.ajuster, justifier: d.justifier }) as D;
+}
+
 function texteProjet(t: TexteVivant): TexteProjet {
   return {
     texte: t.texte,
     police: { id: t.police.id, ...(t.police.version !== undefined ? { version: t.police.version } : {}), ...(t.police.famille !== undefined ? { famille: t.police.famille } : {}) },
     taille: t.taille, interlettrage: t.interlettrage, interligne: t.interligne, alignement: t.alignement, ligatures: t.ligatures,
     ...(t.trace !== undefined ? { trace: t.trace } : {}),
-    matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]]
+    matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]],
+    ...(t.disposition !== undefined ? { disposition: disposition(t.disposition) } : {})
   };
 }
 
@@ -60,7 +70,8 @@ const texteVivant = (t: TexteProjet): TexteVivant => ({
   police: { id: t.police.id, ...(t.police.version !== undefined ? { version: t.police.version } : {}), ...(t.police.famille !== undefined ? { famille: t.police.famille } : {}) },
   taille: t.taille, interlettrage: t.interlettrage, interligne: t.interligne, alignement: t.alignement, ligatures: t.ligatures,
   ...(t.trace !== undefined ? { trace: t.trace } : {}),
-  matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]]
+  matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]],
+  ...(t.disposition !== undefined ? { disposition: disposition(t.disposition) } : {})
 });
 
 /**

@@ -88,6 +88,39 @@ describe('l aller-retour d un projet', () => {
     expect(rouvert).toEqual({ ...e, nom: 'Carte - Noël' });
   });
 
+  it('garde un texte sur un cercle et un texte dans une forme masquee (ADR-0031) : disposition, lien et forme de base', () => {
+    for (const [f, mode] of [['texte-sur-forme.attendu.svg', 'sur'], ['texte-dans-forme.attendu.svg', 'dans']] as const) {
+      const l = lireDessin(readFileSync(resolve(dossier, f), 'utf8'));
+      if ('erreur' in l) throw new Error(l.erreur);
+      const poses = l.dessin.formes.filter(x => x.texte?.disposition?.mode === mode);
+      expect(poses.length, f).toBeGreaterThan(0);
+      const { projet, rouvert, texte } = allerRetour(etat(l.dessin, { contexte: 'generique' }));
+      expect(rouvert.dessin, f).toEqual(l.dessin);
+      expect(texte).toContain('"disposition":{"mode":"' + mode + '"');
+      const bases = poses.map(p => rouvert.dessin.formes.find(x => x.id === p.texte?.disposition?.forme));
+      expect(bases.every(b => b !== undefined), f + ' : chaque forme de base est gardee').toBe(true);
+      // La reference « dans » a un texte dans une forme masquee : la forme de base reste dans le projet, masquee.
+      if (mode === 'dans') expect(bases.some(b => b?.visible === false), 'une forme de base masquee').toBe(true);
+      expect(document(rouvert.dessin, rouvert.production)).toBe(document(l.dessin, { contexte: 'generique' }));
+      expect(projetDe(rouvert)).toEqual(projet);
+    }
+  });
+
+  it('refuse une disposition mal formee en la nommant', () => {
+    const l = lireDessin(readFileSync(resolve(dossier, 'texte-sur-forme.attendu.svg'), 'utf8'));
+    if ('erreur' in l) throw new Error(l.erreur);
+    const brut = JSON.parse(texteDuProjet(projetDe(etat(l.dessin, { contexte: 'generique' })))) as { dessin: { formes: Array<{ texte?: { disposition?: Record<string, unknown> } }> } };
+    const pose = brut.dessin.formes.find(x => x.texte?.disposition);
+    if (!pose?.texte?.disposition) throw new Error('pas de texte pose');
+    pose.texte.disposition['depart'] = 2;
+    const r = lireProjet(brut);
+    expect('erreur' in r ? r.erreur : '').toMatch(/départ/);
+    pose.texte.disposition['depart'] = 0;
+    pose.texte.disposition['mode'] = 'autour';
+    const r2 = lireProjet(brut);
+    expect('erreur' in r2 ? r2.erreur : '').toMatch(/ni « sur » ni « dans »/);
+  });
+
   it('nomme les fontes deposees qu emploient les textes, sans doublon', () => {
     const l = lireDessin(readFileSync(resolve(dossier, 'texte-vivant.attendu.svg'), 'utf8'));
     if ('erreur' in l) throw new Error(l.erreur);
