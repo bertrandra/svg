@@ -120,7 +120,7 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
-    // Un accueil par public (ADR-0022) : chaque etat de la question et chaque suite adaptee, clair et sombre, bureau et telephone.
+    // Un accueil par public (ADR-0024) : chaque etat de la question et chaque suite adaptee, clair et sombre, bureau et telephone.
     for (const [publicAccueil, nom] of [[undefined, 'question de la première visite'], ['machine', 'public machine'], ['retouche', 'public retouche'], ['integration', 'public intégration'], ['aucun', 'question passée']] as const) {
       for (const schema of ['light', 'dark'] as const) {
         it(`${nom}, thème ${schema === 'light' ? 'clair' : 'sombre'}`, async () => {

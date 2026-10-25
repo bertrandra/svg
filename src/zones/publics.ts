@@ -1,4 +1,4 @@
-// Un accueil par public (ADR-0022) : la page demande d'abord « Pour quoi dessinez-vous ? » et adapte la suite. Ici, le pur :
+// Un accueil par public (ADR-0024) : la page demande d'abord « Pour quoi dessinez-vous ? » et adapte la suite. Ici, le pur :
 // les trois publics et leurs mots, la memoire du choix relue champ par champ, l'ordre des voies, le circuit de chaque public,
 // le contexte de production que l'editeur prend a l'ouverture, et l'embarquement montre aux integrateurs. Rien ne touche au
 // DOM ni au stockage : la page (Application.tsx, AccueilPublic.tsx) lit et ecrit, ce module dit quoi.

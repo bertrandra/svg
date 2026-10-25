@@ -109,7 +109,7 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await exiger(page);
     });
 
-    // Un accueil par public (ADR-0022) : la question, la ligne qui la rappelle, chaque suite adaptee (le panneau des integrateurs compris).
+    // Un accueil par public (ADR-0024) : la question, la ligne qui la rappelle, chaque suite adaptee (le panneau des integrateurs compris).
     it('la question du public, puis chaque public et la question rouverte', async () => {
       const page = await ouvrirPage();
       await exiger(page);

@@ -70,7 +70,7 @@ export interface ProprietesEditeur {
   ignores?: readonly string[] | undefined;
   /**
    * Le contexte de production de depart (ADR-0013), quand le SVG n'en porte aucun : la page le donne pour le public « machine » de
-   * l'accueil (ADR-0022). Une marque du SVG l'emporte toujours ; rien ne s'ecrit tant que la personne ne modifie pas le dessin.
+   * l'accueil (ADR-0024). Une marque du SVG l'emporte toujours ; rien ne s'ecrit tant que la personne ne modifie pas le dessin.
    */
   production?: ChoixProduction | undefined;
 }

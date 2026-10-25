@@ -1,4 +1,4 @@
-// Un accueil par public (ADR-0022) : la memoire du choix relue champ par champ, l'ordre des voies de chaque public, le contexte
+// Un accueil par public (ADR-0024) : la memoire du choix relue champ par champ, l'ordre des voies de chaque public, le contexte
 // de production que l'editeur prend pour la machine, le circuit de chacun, et l'embarquement montre aux integrateurs.
 
 import { describe, expect, it } from 'vitest';

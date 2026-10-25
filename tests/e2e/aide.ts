@@ -77,7 +77,7 @@ export interface OptionsSession {
   /** JavaScript coupe : ce que voit un navigateur qui n'execute rien. */
   sansJavaScript?: boolean;
   /**
-   * Un public de l'accueil deja retenu (ADR-0022), pose dans le stockage du contexte avant le premier chargement, comme si la personne
+   * Un public de l'accueil deja retenu (ADR-0024), pose dans le stockage du contexte avant le premier chargement, comme si la personne
    * avait repondu lors d'une visite precedente : de quoi auditer un accueil adapte sans rejouer la question. Pose seulement si le
    * stockage n'a pas deja une reponse, pour qu'un choix fait pendant le test survive au rechargement. Sans l'option, l'accueil est
    * celui d'une premiere visite (la question en tete, les trois voies dessous, dans l'ordre d'avant) : les tests d'avant y passent tels quels.
@@ -200,6 +200,18 @@ export async function attendreAnimations(page: Page): Promise<void> {
       else { calmes++; await new Promise(fini => setTimeout(fini, 120)); }
     }
   });
+}
+
+/**
+ * Fait `faire` (un audit axe) avec une fenetre aussi haute que la page, puis rend la fenetre d'avant. Un texte a cheval sur le bord
+ * de la fenetre (la page defilee jusqu'a un champ) est un « doute » pour axe, fond indeterminable, pas un contraste : depuis que la
+ * question du public (ADR-0024) allonge l'accueil, la presentation de la bibliotheque y tombait. accessibilite-axe.e2e.ts fait de meme.
+ */
+export async function surToutLaHauteur<T>(page: Page, faire: () => Promise<T>): Promise<T> {
+  const vue = page.viewportSize();
+  const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
+  if (vue && hauteur > vue.height) await page.setViewportSize({ width: vue.width, height: Math.min(4000, hauteur + 40) });
+  try { return await faire(); } finally { if (vue) await page.setViewportSize(vue); }
 }
 
 /** Vrai quand l'element a le focus clavier. */

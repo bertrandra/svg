@@ -3,7 +3,7 @@
 // resultat (apercu, telechargement, autres formats). L'editeur lui-meme ne sait rien de cette page :
 // il recoit un SVG, un libelle pour son geste de fin (« Terminer »), et en rend un.
 //
-// L'accueil demande d'abord pour quoi l'on dessine (ADR-0022, AccueilPublic.tsx) et range la suite pour ce public : le circuit
+// L'accueil demande d'abord pour quoi l'on dessine (ADR-0024, AccueilPublic.tsx) et range la suite pour ce public : le circuit
 // qui le concerne, l'ordre des voies, le contexte de production avec lequel l'editeur s'ouvre. Repondre n'est jamais obligatoire.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
@@ -66,7 +66,7 @@ function Accueil() {
   const [fichier, poserFichier] = useState<Fichier | null>(null);
   const [edition, poserEdition] = useState(false);
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
-  // Le public de l'accueil (ADR-0022) : retenu, ou null tant qu'on n'a pas repondu (la question est alors posee en tete).
+  // Le public de l'accueil (ADR-0024) : retenu, ou null tant qu'on n'a pas repondu (la question est alors posee en tete).
   const [publicChoisi, choisirPublic] = usePublic(STOCKAGE);
   const [question, poserQuestion] = useState(publicChoisi === null);
   const [voie, poserVoie] = useState<Voie>(() => au(ordreDesVoies(publicChoisi), 0));
@@ -132,7 +132,7 @@ function Accueil() {
     window.scrollTo(0, 0);
   };
   // La visite enseigne la premiere retouche sur l'exemple, en contexte generique quel que soit le public : ses etapes nomment
-  // « Télécharger le SVG », et l'exemple a un trait que l'export Cricut refuserait (ADR-0022).
+  // « Télécharger le SVG », et l'exemple a un trait que l'export Cricut refuserait (ADR-0024).
   const essayer = () => { demanderVisite(true); ouvrir('exemple', EXEMPLE, [], null); };
   const circuit = circuitDu(publicChoisi);
   const reglage = depart();

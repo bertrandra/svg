@@ -87,7 +87,7 @@ describe('le choix et sa marque', () => {
     expect(choixDeMarque(null).choix).toEqual(CHOIX_GENERIQUE);
   });
 
-  it('part du depart propose (le public « machine », ADR-0022) quand le SVG ne porte aucune marque ; une marque l emporte toujours', () => {
+  it('part du depart propose (le public « machine », ADR-0024) quand le SVG ne porte aucune marque ; une marque l emporte toujours', () => {
     const depart: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT };
     expect(choixDeDepart(undefined, depart)).toEqual({ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' });
     expect(choixDeDepart(null, null)).toEqual(CHOIX_GENERIQUE);

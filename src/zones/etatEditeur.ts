@@ -22,7 +22,7 @@ export interface ParametresEtat {
   enregistrer: (svg: string) => void; fermer: () => void; brouillon?: ((svg: string) => unknown) | undefined;
   /** La marque de contexte lue dans le SVG ouvert (ADR-0013) : le panneau revient a la reouverture. */
   production?: MarqueProduction | undefined;
-  /** Le contexte de depart quand le SVG ne porte aucune marque (la page, pour le public « machine » de l'accueil, ADR-0022). */
+  /** Le contexte de depart quand le SVG ne porte aucune marque (la page, pour le public « machine » de l'accueil, ADR-0024). */
   depart?: ChoixProduction | undefined;
   /** Le libelle du bouton de fin (« Terminer » dans la page ; « Enregistrer » par defaut, ou celui de l'hote). */
   libelleEnregistrer?: string | undefined;

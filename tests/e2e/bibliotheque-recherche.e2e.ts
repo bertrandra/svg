@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, choisirEvenement, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, choisirEvenement, pilote, RACINE_DEPOT, surToutLaHauteur, texteDe } from './aide.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -24,22 +24,16 @@ const premiers = (page: Page, n: number) => page.locator('.bibliotheque .vignett
 
 /** axe-core sur la page : aucune violation, de quelque gravite que ce soit, et aucun doute laisse « a relire ». */
 async function auditer(page: Page): Promise<string[]> {
-  // Comme accessibilite-axe.e2e.ts : la fenetre prend la hauteur de la page le temps de l'audit. Un texte a cheval sur le bord de
-  // la fenetre (la page defilee jusqu'au champ de recherche) est un « doute » pour axe, fond indeterminable, pas un contraste ; il
-  // apparait depuis que la question du public (ADR-0024) allonge l'accueil au-dessus de la bibliotheque.
-  const vue = page.viewportSize();
-  const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
-  if (vue && hauteur > vue.height) await page.setViewportSize({ width: vue.width, height: Math.min(4000, hauteur + 40) });
-  await attendreAnimations(page);
-  await page.addScriptTag({ content: AXE });
-  const constats = await page.evaluate(async () => {
-    const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
-    const r = await w.axe.run(document, { resultTypes: ['violations', 'incomplete'] });
-    const dire = (genre: string) => (v: { id: string; nodes: Array<{ target: unknown[] }> }) => genre + ' ' + v.id + ' ' + JSON.stringify(v.nodes.slice(0, 3).map(n => n.target));
-    return [...r.violations.map(dire('violation')), ...r.incomplete.map(dire('à relire'))];
+  return surToutLaHauteur(page, async () => {
+    await attendreAnimations(page);
+    await page.addScriptTag({ content: AXE });
+    return page.evaluate(async () => {
+      const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
+      const r = await w.axe.run(document, { resultTypes: ['violations', 'incomplete'] });
+      const dire = (genre: string) => (v: { id: string; nodes: Array<{ target: unknown[] }> }) => genre + ' ' + v.id + ' ' + JSON.stringify(v.nodes.slice(0, 3).map(n => n.target));
+      return [...r.violations.map(dire('violation')), ...r.incomplete.map(dire('à relire'))];
+    });
   });
-  if (vue) await page.setViewportSize(vue);
-  return constats;
 }
 
 describe('recherche dans la bibliotheque', () => {

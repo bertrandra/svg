@@ -1,4 +1,4 @@
-// Un accueil par public (ADR-0022) : la question « Pour quoi dessinez-vous ? » en tete d'une premiere visite, la suite adaptee a
+// Un accueil par public (ADR-0024) : la question « Pour quoi dessinez-vous ? » en tete d'une premiere visite, la suite adaptee a
 // chacun des trois publics (le circuit, l'ordre des voies, le contexte de l'editeur, le panneau des integrateurs), « Passer », la
 // memoire (stockage, rechargement, sans stockage), « Changer de public », le clavier seul et le doigt a 390 px.
 

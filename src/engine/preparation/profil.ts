@@ -113,7 +113,7 @@ export function choixDeMarque(marque: MarqueProduction | null | undefined): { ch
 
 /**
  * Le contexte avec lequel un editeur s'ouvre : celui que le SVG porte (sa marque, meme Generique ou inconnue : le fichier a parle),
- * sinon le depart que la page ou l'hote propose (le public « machine » de l'accueil, ADR-0022), ramene a un choix valide, sinon
+ * sinon le depart que la page ou l'hote propose (le public « machine » de l'accueil, ADR-0024), ramene a un choix valide, sinon
  * Generique. Un depart n'ecrit rien : tant que la personne ne modifie pas le dessin, rien n'est reecrit.
  */
 export function choixDeDepart(marque: MarqueProduction | null | undefined, depart: ChoixProduction | null | undefined): ChoixProduction {

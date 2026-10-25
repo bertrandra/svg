@@ -1,4 +1,4 @@
-// Un accueil par public (ADR-0022), cote React : la question « Pour quoi dessinez-vous ? », la ligne qui rappelle le choix, le
+// Un accueil par public (ADR-0024), cote React : la question « Pour quoi dessinez-vous ? », la ligne qui rappelle le choix, le
 // circuit de chaque public et le panneau des integrateurs. Le pur (mots, memoire, ordre, circuit) est dans publics.ts ; la page
 // (Application.tsx) garde les voies, le dessin et l'editeur.
 //
