@@ -2,7 +2,7 @@
 // script que la page charge a la demande, comme la bibliotheque. Ouvert depuis le disque, un fetch
 // serait refuse ; une balise <script> passe.
 //
-// S'y ajoutent les fontes a trait unique (ADR-0021) : des polices SVG d'Evil Mad Scientist (SIL OFL 1.1), livrees par le
+// S'y ajoutent les fontes a trait unique (ADR-0022) : des polices SVG d'Evil Mad Scientist (SIL OFL 1.1), livrees par le
 // paquet hersheytext, dont chaque glyphe est un trace OUVERT (la course d'une plume). opentype.js ne lit pas une police
 // SVG, et une fonte TrueType ne sait pas dire un trace ouvert : on en garde les glyphes tels quels, en donnees.
 //

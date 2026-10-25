@@ -379,7 +379,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
      (axe) jugeait le contraste d'un texte du tiroir d'apres les formes dessinees dessous, selon ou tombait chaque ligne. */
   .tiroir-calques .editeur-svg-toile > g, .tiroir-inspecteur .editeur-svg-toile > g { visibility: hidden; }
 }
-/* Le texte vivant (ADR-0021) : le choix de police et son apercu « forme / ligne », l'alignement, les modes de vectorisation, la
+/* Le texte vivant (ADR-0022) : le choix de police et son apercu « forme / ligne », l'alignement, les modes de vectorisation, la
    saisie en place sur la toile. L'apercu est une feuille dans le flux du panneau, deux rendus cote a cote a l'encre. */
 .choix-police { display: grid; gap: var(--esp-xs); justify-items: start; }
 .choix-police .champ-ligne { width: 100%; }
