@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, ouvrirExemple, pilote, RACINE_DEPOT, surToutLaHauteur, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, ouvrirExemple, pilote, RACINE_DEPOT, surToutLaHauteur, terminer, texteDe } from './aide.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -153,7 +153,8 @@ describe('bibliotheques libres', () => {
     await zone.getByRole('button', { name: 'cœur (Lucide, en ligne)', exact: true }).click();
     await attend(() => p.locator('.editeur-barre-selection').count()).toBe(1);
 
-    await p.keyboard.press('Control+s');
+    // Ctrl+S ne garde qu'un brouillon : le geste de fin de la page ramene a la fiche et a son apercu.
+    await terminer(p);
     await p.locator('img.apercu').waitFor();
     const svg = await apercu(p);
     expect(svg).toContain('data-origine="mdi:heart"');
