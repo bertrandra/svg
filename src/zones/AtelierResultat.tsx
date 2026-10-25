@@ -16,10 +16,13 @@ import { MenuDeroulant, type SectionMenu } from './commun/Menu.js';
 import { Section } from './commun/Section.js';
 import type { NomIcone } from './icones.js';
 import { ReglagesFinsPanneau } from './ReglagesFins.js';
+import { EpaisseurLigne, ReglagesLignePanneau } from './ReglagesLigne.js';
 import { ReglagesPretraitementPanneau } from './ReglagesPretraitement.js';
 import { Repere } from './Repere.js';
 
-export const NOMS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)' };
+export const NOMS_MODES: Record<ModeVectorisation, string> = {
+  aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)', mediane: 'Ligne médiane (dessin au trait)'
+};
 export const NOMS_FINESSES: Record<Finesse, string> = { fine: 'Fin : garde les petits détails', normale: 'Normal', lisse: 'Lisse : des courbes franches' };
 
 /** Un essai : les reglages, et ce qu'ils ont donne. Le plus recent d'abord, huit au plus. */
@@ -159,7 +162,10 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
   // L'essai de reference d'un prétraitement : les mêmes réglages, sans lui.
   const reference = t.pretraitement ? essais.find(e => cleTraitement(e.traitement) === cleTraitement(sansPretraitement(t)))?.resultat : undefined;
   const aJour = resultat !== null && cleTraitement(resultat.traitement) === cle;
-  const touches = Object.keys(v?.fins ?? {}).length;
+  const mediane = v?.mode === 'mediane';
+  // L'epaisseur de la ligne mediane se regle a cote du mode : elle ne compte pas parmi les reglages fins.
+  const touches = mediane ? Object.keys(v?.ligne ?? {}).filter(k => k !== 'epaisseur').length : Object.keys(v?.fins ?? {}).length;
+  const mesure = resultat?.ligne ?? null;
   // Le bouton ne sert que s'il n'y a rien a montrer encore, ou si l'on rejoue a la main.
   const bouton = !auto || resultat === null;
   return (
@@ -176,7 +182,11 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
             <span className="aide">Vecteurs</span>
           </label>
         ) : null}
-        {resultat && resultat.traces !== null ? (
+        {resultat?.ligne ? (
+          <Repere id="conversion" titre="Votre dessin est devenu des lignes">
+            La vue « Contours » montre les lignes seules, au milieu du trait. Des petites branches en trop ? Montez « Retirer les barbules » dans les réglages fins. Puis « Ouvrir dans l’éditeur ».
+          </Repere>
+        ) : resultat && resultat.traces !== null ? (
           <Repere id="conversion" titre="Votre image est devenue des formes">
             La vue « Comparer » pose l’image d’origine et le résultat côte à côte. Trop de petites formes ? Passez le grain à « Lisse » ; trop peu ? à « Fin ». Puis « Ouvrir dans l’éditeur » pour recolorer chaque forme.
           </Repere>
@@ -191,17 +201,26 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
               <legend>Tracé</legend>
               <label className="champ-ligne"><span>Mode</span>
                 <select value={v.mode} onChange={e => poserT({ ...t, vecteurs: { mode: e.target.value as ModeVectorisation, finesse: v.finesse } })}>
-                  {MODES_VECTORISATION.map(m => <option key={m} value={m}>{NOMS_MODES[m]}</option>)}
+                  {MODES_VECTORISATION.map(m => <option key={m} value={m} title={m === 'mediane' ? 'Dessin au trait : une seule ligne au milieu du trait, pour le stylo' : undefined}>{NOMS_MODES[m]}</option>)}
                 </select>
               </label>
               <label className="champ-ligne"><span>Grain</span>
-                <select value={v.finesse} onChange={e => poserT({ ...t, vecteurs: { mode: v.mode, finesse: e.target.value as Finesse } })}>
+                {/* Le grain remet les reglages fins a zero ; l'epaisseur de la ligne mediane, reglee a cote, reste. */}
+                <select value={v.finesse} onChange={e => poserT({ ...t, vecteurs: { mode: v.mode, finesse: e.target.value as Finesse, ...(mediane && v.ligne?.epaisseur !== undefined ? { ligne: { epaisseur: v.ligne.epaisseur } } : {}) } })}>
                   {FINESSES.map(f => <option key={f} value={f}>{NOMS_FINESSES[f]}</option>)}
                 </select>
               </label>
+              {mediane ? (
+                <>
+                  <EpaisseurLigne v={v} mesure={mesure} poser={nv => poserT({ ...t, vecteurs: nv })} />
+                  <p className="aide">Pour le stylo d’une Cricut : une seule ligne par trait, sans remplissage.</p>
+                </>
+              ) : null}
             </fieldset>
             <Section titre="Réglages fins" note={touches ? touches + ' modifié' + (touches > 1 ? 's' : '') : undefined}>
-              <ReglagesFinsPanneau v={v} nCouleurs={resultat?.couleurs.length ?? 0} plafond={resultat?.pretraite && t.pretraitement?.couleurs !== undefined ? COULEURS_MAX : COULEURS_PALETTE_MAX} poser={nv => poserT({ ...t, vecteurs: nv })} />
+              {mediane
+                ? <ReglagesLignePanneau v={v} mesure={mesure} poser={nv => poserT({ ...t, vecteurs: nv })} />
+                : <ReglagesFinsPanneau v={v} nCouleurs={resultat?.couleurs.length ?? 0} plafond={resultat?.pretraite && t.pretraitement?.couleurs !== undefined ? COULEURS_MAX : COULEURS_PALETTE_MAX} poser={nv => poserT({ ...t, vecteurs: nv })} />}
               <label className="case" title="Chaque changement de réglage relance la vectorisation, après une courte pause">
                 <input type="checkbox" checked={auto} onChange={e => poserAuto(e.target.checked)} /> Rejouer à chaque changement
               </label>
