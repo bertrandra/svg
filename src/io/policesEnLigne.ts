@@ -63,6 +63,31 @@ export function cacheNavigateur(): CachePolices | null {
 
 const OUTILS: OutilsTelechargement = { chercher: (url, init) => fetch(url, init), empreinte: empreinteSha256, cache: null };
 
+/**
+ * Un hote qui sert lui-meme les polices du catalogue (le site PHP, ADR-0030) : le navigateur ne contacte que lui. Chaque fichier se
+ * demande a son adresse, avec sa session ; l'empreinte se verifie ici comme pour un serveur de polices, le serveur l'ayant deja
+ * verifiee avant de le ranger.
+ */
+export interface ServeurPolicesHote {
+  /** L'adresse du fichier chez l'hote, par son empreinte sha256 (la seule chose que le serveur accepte : un fichier de l'index). */
+  readonly adresse: (empreinte: string) => string;
+  /** Le nom dit dans une erreur (« le site »). */
+  readonly nom: string;
+}
+
+let serveurHote: ServeurPolicesHote | null = null;
+
+/** Pose (ou retire, null) le serveur de polices de l'hote ; la page autonome n'en pose jamais : elle va aux serveurs du registre. */
+export function definirServeurPolices(s: ServeurPolicesHote | null): void { serveurHote = s; }
+
+type FichierAdresse = { readonly url: string; readonly hote: string; readonly init: RequestInit };
+
+/** Les adresses ou demander un fichier : celle de l'hote s'il en pose une, sinon celles du registre, chacune sous son prefixe. */
+function adressesDe(f: VariantePolice['fichiers'][number]): FichierAdresse[] {
+  if (serveurHote) return [{ url: serveurHote.adresse(f.empreinte), hote: serveurHote.nom, init: { credentials: 'same-origin', mode: 'same-origin', cache: 'default' } }];
+  return f.adresses.filter(adresseAdmise).map(a => ({ url: a.url, hote: SERVEURS_POLICES[a.serveur].hote, init: { credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', cache: 'default' } }));
+}
+
 /** Les octets d'une reponse, bornes : un serveur qui enverrait davantage est coupe. */
 async function lireBorne(r: Response): Promise<Uint8Array | null> {
   const annonce = Number(r.headers.get('content-length') ?? 0);
@@ -82,14 +107,13 @@ const adresseAdmise = (a: Adresse): boolean => a.url.startsWith(SERVEURS_POLICES
  */
 async function fichierVerifie(f: VariantePolice['fichiers'][number], o: OutilsTelechargement): Promise<Uint8Array | { erreur: string }> {
   const raisons: string[] = [];
-  for (const a of f.adresses) {
-    if (!adresseAdmise(a)) continue;
-    const hote = SERVEURS_POLICES[a.serveur].hote;
+  for (const a of adressesDe(f)) {
+    const hote = a.hote;
     const enCache = await o.cache?.lire(a.url).catch(() => null);
     if (enCache && (await o.empreinte(enCache)) === f.empreinte) return enCache;
     let octets: Uint8Array | null;
     try {
-      const r = await o.chercher(a.url, { credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', cache: 'default' });
+      const r = await o.chercher(a.url, a.init);
       if (!r.ok) { raisons.push(hote + ' a répondu ' + r.status); continue; }
       octets = await lireBorne(r);
     } catch {
@@ -140,7 +164,7 @@ export async function telechargerVariante(v: VariantePolice, outils: Partial<Out
   const o = { ...OUTILS, ...outils };
   if (!estIdCatalogue(v.id)) return { erreur: 'identifiant de police inconnu' };
   // Chaque fichier doit avoir au moins une adresse admise ; sinon, pas une seule requete.
-  if (!v.fichiers.length || !v.fichiers.every(f => f.adresses.some(adresseAdmise))) return { erreur: 'aucun serveur connu ne sert cette police' };
+  if (!v.fichiers.length || !v.fichiers.every(f => adressesDe(f).length > 0)) return { erreur: 'aucun serveur connu ne sert cette police' };
   const glyphes: Glyphes[] = [];
   for (const f of v.fichiers) {
     const octets = await fichierVerifie(f, o);

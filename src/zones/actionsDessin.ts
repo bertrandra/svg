@@ -34,7 +34,8 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
       const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;
       if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return false; }
-      enregistrer(propre.svg);
+      // L'etat du modele accompagne le SVG : un hote qui garde des projets (le site, ADR-0030) en ecrit le JSON natif.
+      enregistrer(propre.svg, { dessin, production });
       return true;
     },
     finirTrace: (fermerTrace: boolean) => {

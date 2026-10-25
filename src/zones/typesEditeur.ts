@@ -31,7 +31,25 @@ export type SuiteCricut = 'confirmer' | 'design-space' | null;
  * ferme l'editeur meme sans modification (la page : on revient a la fiche, rien n'est reecrit), et s'il existe un brouillon a garder
  * (Ctrl+S). L'editeur ne devine pas ou il est : on le lui dit.
  */
-export interface OptionsFin { readonly libelle: string; readonly fermerSansModification: boolean; readonly brouillon: boolean }
+export interface OptionsFin {
+  readonly libelle: string; readonly fermerSansModification: boolean; readonly brouillon: boolean;
+  /** Ctrl+S rend le dessin a l'hote, sans fermer (le site, ADR-0030) ; faux ou absent : Ctrl+S garde un brouillon, comme partout. */
+  readonly ctrlSEnregistre?: boolean;
+  /** Les gestes que l'hote ajoute au menu Fichier (« Enregistrer sous… » sur le site) ; absents chez tout autre hote. */
+  readonly actionsHote?: readonly ActionHote[];
+}
+
+/** Ce que l'editeur rend a l'hote avec le SVG (ADR-0030) : le dessin du modele et le contexte choisi, de quoi ecrire un projet. */
+export interface EtatRendu { readonly dessin: DessinSvg; readonly production: ChoixProduction }
+
+/**
+ * Ce que l'hote dit de l'enregistrement, quand il garde lui-meme des projets (le site, ADR-0030) : enregistre, modifie depuis, en
+ * cours, ou en echec, avec la phrase a dire. L'editeur l'affiche dans sa barre et en tire « y a-t-il quelque chose a enregistrer ».
+ */
+export interface EtatEnregistrement { readonly etat: 'enregistre' | 'modifie' | 'en-cours' | 'echec'; readonly message?: string }
+
+/** Un geste de l'hote dans le menu Fichier : il recoit l'etat du moment (« Enregistrer sous… »). */
+export interface ActionHote { readonly id: string; readonly libelle: string; readonly faire: (etat: EtatRendu) => void }
 
 // L'editeur se partage en trois contextes (contexteEditeur.tsx), pour qu'un panneau ne se redessine que
 // pour ce qu'il lit : le dessin (ce qu'on voit), l'interface (l'outil et la vue), les actions (les verbes).
@@ -108,6 +126,8 @@ export interface EtatInterface {
   apercuMachine: boolean;
   /** Le geste de fin (libelle, fermeture sans modification, brouillon) : une donnee de la page ou de l'hote, constante. */
   fin: OptionsFin;
+  /** L'etat de l'enregistrement que l'hote annonce (le site, ADR-0030) ; absent ou null chez un hote qui ne le dit pas. */
+  enregistrement?: EtatEnregistrement | null;
 }
 
 /**

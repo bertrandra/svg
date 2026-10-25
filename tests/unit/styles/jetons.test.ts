@@ -12,7 +12,7 @@ import { COUCHES, ESPACES, RAYONS } from '../../../src/styles/espaces.js';
 
 const racine = join(__dirname, '../../..');
 // La page, et les feuilles qu'elle en a sorties (base.css, editeur.css : partagees avec l'embarquement) : les controles portent sur tout ce qui s'ecrit a la main.
-const page = ['page.html', 'base.css', 'editeur.css'].map(f => readFileSync(join(racine, 'outils/editeur-svg', f), 'utf8')).join('\n');
+const page = ['page.html', 'base.css', 'editeur.css', 'site.css'].map(f => readFileSync(join(racine, 'outils/editeur-svg', f), 'utf8')).join('\n');
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap(nom => {

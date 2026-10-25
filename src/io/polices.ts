@@ -27,6 +27,7 @@ const annexe: Annexe<PoliceEmbarquee[]> = {
   globale: '__policesSvg',
   contenu: 'les polices',
   consigne: 'lancez « npm run construire »',
+  donnees: true,
   valider: v => (Array.isArray(v) ? v as PoliceEmbarquee[] : undefined)
 };
 const embarquees = fabriquerChargeurAnnexe(annexe, navigateur);
@@ -105,6 +106,7 @@ export async function policeDeposee(fichier: File): Promise<Police | { erreur: s
   const octets = await fichier.arrayBuffer();
   // L'identifiant d'une fonte deposee est son empreinte (`u-…`) : un texte vivant le garde, jamais le fichier (ADR-0022).
   const p = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), nom, octets);
+  if (p) garderOctets(p.id, octets);
   return p ?? { erreur: 'Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.' };
 }
 
@@ -136,7 +138,9 @@ export async function policesDeLAppareil(): Promise<PoliceAppareil[] | { erreur:
 export async function lirePoliceAppareil(p: PoliceAppareil): Promise<Police | { erreur: string }> {
   try {
     const octets = await p.lire();
-    return lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), p.nom, octets) ?? { erreur: 'Cette police de l’appareil ne se lit pas (format non pris en charge).' };
+    const lue = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), p.nom, octets);
+    if (lue) garderOctets(lue.id, octets);
+    return lue ?? { erreur: 'Cette police de l’appareil ne se lit pas (format non pris en charge).' };
   } catch {
     return { erreur: 'Cette police de l’appareil ne se lit pas.' };
   }
@@ -150,6 +154,28 @@ const deposees: Police[] = [];
 /** Retient une fonte deposee pour la session ; une fonte deja retenue (meme empreinte) ne se double pas. */
 export function retenirDeposee(p: Police): void {
   if (!deposees.some(d => d.id === p.id)) deposees.push(p);
+}
+
+// Les octets des fontes deposees pendant la session, par identifiant : rien ne les ecrit dans un SVG (ADR-0022), mais un hote qui
+// garde des projets (le site, ADR-0030) les inclut dans le projet, pour qu'un texte rouvert se retape dans sa fonte.
+const octetsDeposees = new Map<string, Uint8Array>();
+const garderOctets = (id: string, octets: ArrayBuffer): void => { if (!octetsDeposees.has(id)) octetsDeposees.set(id, new Uint8Array(octets)); };
+
+/** Les octets d'une fonte deposee pendant la session (ou relue d'un projet), ou null. */
+export const octetsDeposee = (id: string): Uint8Array | null => octetsDeposees.get(id) ?? null;
+
+/**
+ * Une fonte deposee relue d'un projet (ADR-0030) : son identifiant doit etre l'empreinte de ses octets (un fichier change ne passe
+ * pas pour un autre), elle doit se lire ; elle est alors retenue pour la session comme si on venait de la deposer. Null sinon.
+ */
+export function retenirFonteDuProjet(id: string, famille: string, octets: Uint8Array): Police | null {
+  if (id !== 'u-' + empreinteOctets(octets)) return null;
+  const tampon = octets.slice().buffer;
+  const p = lirePolice(id, famille, tampon);
+  if (!p) return null;
+  garderOctets(id, tampon);
+  retenirDeposee(p);
+  return p;
 }
 
 /** Les fontes embarquees, puis celles deposees ou telechargees pendant la session. */

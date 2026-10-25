@@ -62,8 +62,10 @@ export const Calques = memo(function Calques() {
           <ol ref={liste} style={actif ? { paddingTop: fenetre.haut, paddingBottom: fenetre.bas, boxSizing: 'border-box', minHeight: fenetre.hauteur, alignContent: 'start' } : undefined}>{lignes}</ol>
         </>
       )}
-      {/* Un dessin sans forme ne s'ouvre pas : une liste vide est un dessin qu'on a vide, le retour est a Ctrl+Z. */}
-      {total ? null : <EtatVide genre="vide" titre="Toutes les formes ont été retirées.">Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>}
+      {/* Une liste vide est un dessin qu'on a vide (le retour est a Ctrl+Z), ou un projet vierge du site (ADR-0030), qui n'a rien a defaire. */}
+      {total ? null : mo.h.passe.length
+        ? <EtatVide genre="vide" titre="Toutes les formes ont été retirées.">Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>
+        : <EtatVide genre="premiere-fois" titre="Aucune forme pour l’instant.">Chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>}
     </aside>
   );
 });

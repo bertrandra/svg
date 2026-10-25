@@ -18,6 +18,7 @@ import { useTelephone } from './Vue.js';
 import { SelecteurContexte } from './Production.js';
 import { RecupererBarre } from './Recuperer.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
+import { aEnregistrer, raisonRienAEnregistrer } from './enregistrement.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
   ['selection', 'selection', 'Sélection (V)'], ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
@@ -133,11 +134,11 @@ const GroupeZoom = memo(function GroupeZoom() {
  * dans l'ordre de Tab). Plus de Ctrl+S ici : Ctrl+S garde un brouillon, il ne ferme jamais.
  */
 export function BoutonEnregistrer() {
-  const { h } = useDessin(), ac = useActions(), { productionModifiee, fin } = useInterface(), signaler = useSignalVisite();
-  const change = h.passe.length > 0 || productionModifiee;
+  const { h } = useDessin(), ac = useActions(), { productionModifiee, fin, enregistrement } = useInterface(), signaler = useSignalVisite();
+  const change = aEnregistrer(h.passe.length > 0, productionModifiee, enregistrement);
   return (
-    <BoutonRaison className="primaire texte" aide={fin.fermerSansModification ? 'Revenir à la page, le dessin prêt à télécharger' : fin.libelle}
-      raison={change || fin.fermerSansModification ? null : 'Aucune modification à enregistrer'} onClick={() => { if (change) signaler('recupere'); ac.terminer(); }}>
+    <BoutonRaison className="primaire texte" aide={fin.fermerSansModification ? 'Revenir à la page, le dessin prêt à télécharger' : fin.libelle + (fin.ctrlSEnregistre ? ' (Ctrl+S)' : '')}
+      raison={change || fin.fermerSansModification ? null : raisonRienAEnregistrer(enregistrement)} onClick={() => { if (change) signaler('recupere'); ac.terminer(); }}>
       <Icone nom={fin.fermerSansModification ? 'coche' : 'enregistrer'} /> {fin.libelle}
     </BoutonRaison>
   );

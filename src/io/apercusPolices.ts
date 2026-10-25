@@ -13,6 +13,7 @@ export const ANNEXE_APERCUS: Annexe<AnnexeApercus> = {
   globale: '__apercusPolicesSvg',
   contenu: 'les aperçus des polices',
   consigne: 'lancez « npm run construire »',
+  donnees: true,
   // Une valeur malformee ou trop grosse se lit comme absente : la validation rend une erreur, elle ne leve jamais.
   valider: v => { if (v === undefined) return undefined; const a = validerApercus(v); return 'erreur' in a ? undefined : a; }
 };

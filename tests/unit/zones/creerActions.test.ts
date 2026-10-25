@@ -317,3 +317,58 @@ describe('creerActions : les booleens suivent le reglage « rebatir les courbes 
     expect(m.setters.poserLisserBooleens).toHaveBeenCalledWith(false);
   });
 });
+
+describe('un hote qui garde des projets (le site, ADR-0030)', () => {
+  const changer = (m: ReturnType<typeof monter>) => m.actions.appliquer(d => modifier(d, ['f1'], { remplissage: '#1f8a3a' }));
+
+  it('rend avec le SVG l etat du modele : le dessin et le contexte', () => {
+    const m = monter();
+    changer(m);
+    m.actions.enregistrerTout();
+    const [svg, etat] = vi.mocked(m.etat.enregistrer).mock.calls[0] ?? [];
+    expect(svg).toMatch(/^<svg /);
+    expect(etat).toEqual({ dessin: m.etat.dessin, production: { contexte: 'generique' } });
+  });
+
+  it('Ctrl+S enregistre sans fermer quand l hote le demande, et dit quand il n y a rien a enregistrer', () => {
+    const m = monter();
+    m.etat.fin = { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false, ctrlSEnregistre: true };
+    m.etat.enregistrement = { etat: 'enregistre' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).not.toHaveBeenCalled();
+    expect(m.messages.at(-1)).toBe('Aucune modification : rien à enregistrer.');
+    changer(m);
+    m.etat.enregistrement = { etat: 'modifie' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).toHaveBeenCalledTimes(1);
+    expect(m.etat.fermer).not.toHaveBeenCalled();
+    m.etat.enregistrement = { etat: 'en-cours' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).toHaveBeenCalledTimes(1);
+    expect(m.messages.at(-1)).toBe('Enregistrement en cours…');
+  });
+
+  it('l etat annonce par l hote decide : un projet neuf s enregistre sans modification, un projet enregistre se ferme sans confirmation', () => {
+    const neuf = monter();
+    neuf.etat.enregistrement = { etat: 'modifie' };
+    neuf.actions.terminer();
+    expect(neuf.etat.enregistrer).toHaveBeenCalledTimes(1);
+
+    const enregistre = monter();
+    changer(enregistre);
+    enregistre.etat.enregistrement = { etat: 'enregistre' };
+    enregistre.actions.terminer();
+    expect(enregistre.etat.enregistrer).not.toHaveBeenCalled();
+    expect(enregistre.messages.at(-1)).toBe('Aucune modification à enregistrer.');
+    enregistre.actions.demanderFermeture();
+    expect(enregistre.poserQuitter).not.toHaveBeenCalled();
+    expect(enregistre.etat.fermer).toHaveBeenCalledTimes(1);
+
+    const echec = monter();
+    echec.etat.enregistrement = { etat: 'echec', message: 'Le serveur ne répond pas.' };
+    echec.actions.demanderFermeture();
+    expect(echec.poserQuitter).toHaveBeenCalledWith(true);
+    echec.actions.terminer();
+    expect(echec.etat.enregistrer).toHaveBeenCalledTimes(1);
+  });
+});

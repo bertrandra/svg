@@ -21,7 +21,28 @@ export interface Annexe<T> {
   consigne: string;
   /** Rend la valeur posee si elle a la bonne forme, undefined sinon (absente ou inattendue). */
   valider: (posee: unknown) => T | undefined;
+  /**
+   * Vrai pour une annexe de donnees (bibliotheque, polices, index, apercus) : un hote qui sert ses donnees en JSON (le site PHP,
+   * ADR-0030) la lit par `definirSourceDonnees` plutot que par une balise <script>. Le traceur, du code, n'en est pas.
+   */
+  donnees?: boolean;
 }
+
+/** Ou lire une annexe de donnees en JSON, par son nom (`bibliotheque`, `polices-catalogue`…) ; undefined quand elle manque. */
+export type SourceDonnees = (nom: string) => Promise<unknown>;
+
+let sourceDonnees: SourceDonnees | null = null;
+// Les annexes de donnees deja lues de la source : `annexePosee` les connait comme une globale posee par un script.
+const luesDeLaSource = new Set<string>();
+
+/**
+ * Pose la source des annexes de donnees (le site PHP, ADR-0030 : `io/serveur.ts`) ; null revient aux balises <script>. La page
+ * autonome et l'embarquement n'en posent jamais : leurs annexes restent des scripts voisins.
+ */
+export function definirSourceDonnees(source: SourceDonnees | null): void { sourceDonnees = source; }
+
+/** Le nom JSON d'une annexe : son fichier sans « .js » (`polices-catalogue.js` se lit dans data/json/polices-catalogue.json). */
+export const nomDonnees = <T>(a: Annexe<T>): string => a.fichier.replace(/\.js$/, '');
 
 /** Les deux gestes du navigateur, passes en parametre pour que le reste se teste sans page. */
 export interface Amenees {
@@ -85,6 +106,15 @@ export function memoiserSucces<T>(demarrer: () => Promise<T>): Chargeur<T> {
  */
 export function fabriquerChargeurAnnexe<T>(a: Annexe<T>, amenees: Amenees): Chargeur<T> {
   return memoiserSucces(async () => {
+    // Un hote qui sert ses donnees en JSON : la valeur se lit de sa source, et se valide comme la globale d'un script.
+    if (a.donnees && sourceDonnees) {
+      const brute = await sourceDonnees(nomDonnees(a));
+      if (brute === undefined) throw new Error('Les données « ' + nomDonnees(a) + ' » sont introuvables sur le serveur : relancez la construction du site.');
+      const lue = a.valider(brute);
+      if (lue === undefined) throw new Error(messageVide(a));
+      luesDeLaSource.add(nomDonnees(a));
+      return lue;
+    }
     const dejaLa = a.valider(amenees.lire(a.globale));
     if (dejaLa !== undefined) return dejaLa;
     if (!(await amenees.injecter(urlAnnexe(a.fichier)))) throw new Error(messageIntrouvable(a));
@@ -108,4 +138,4 @@ export const navigateur: Amenees = {
 
 /** Vrai quand le script a deja pose sa valeur : un panneau qui se rouvre n'a pas a redemander. */
 export const annexePosee = <T>(a: Annexe<T>, amenees: Amenees = navigateur): boolean =>
-  a.valider(amenees.lire(a.globale)) !== undefined;
+  (a.donnees === true && sourceDonnees !== null && luesDeLaSource.has(nomDonnees(a))) || a.valider(amenees.lire(a.globale)) !== undefined;

@@ -53,6 +53,7 @@ const annexe: Annexe<Bibliotheque> = {
   globale: '__bibliothequeSvg',
   contenu: 'la bibliothèque',
   consigne: 'lancez « npm run bibliotheque »',
+  donnees: true,
   valider: v => (typeof v === 'object' && v !== null && 'entrees' in v && Array.isArray(v.entrees) ? v as Bibliotheque : undefined)
 };
 
@@ -93,6 +94,7 @@ export const annexeSource = (s: SourceFormes): Annexe<SourceChargee> => ({
   globale: s.globale,
   contenu: 'les formes de ' + s.nomCourt,
   consigne: 'lancez « npm run bibliotheque »',
+  donnees: true,
   valider: v => normaliserSource(s, v)
 });
 

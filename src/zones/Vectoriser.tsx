@@ -82,7 +82,11 @@ function ChoixForme({ t, poserT }: { t: Traitement; poserT: (t: Traitement) => v
   );
 }
 
-export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => void }) {
+/**
+ * `surImage` : l'image deposee, telle quelle, pour un hote qui la garde avec le dessin qui en sortira (le site, ADR-0030 : l'image
+ * source d'une conversion entre dans le projet). La page ne la demande pas.
+ */
+export function Vectoriser({ ouvrir, surImage }: { ouvrir: (nom: string, svg: string) => void; surImage?: (nom: string, fichier: File) => void }) {
   const [source, poserSource] = useState<Deposee | null>(null);
   const [t, poserT] = useState<Traitement>(TRAITEMENT_DEFAUT);
   const [resultat, poserResultat] = useState<ImageConvertie | null>(null);
@@ -169,6 +173,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
     void lireSource(f).then(r => {
       if ('erreur' in r) { dire(r.erreur); return; }
       jeton.current++;
+      surImage?.(sansExtension(f.name), f);
       poserSource({ nom: sansExtension(f.name), image: r, original: apercuDetoure(r, { detourer: false, tolerance: TOLERANCE_DEFAUT, portee: 'bord' }) });
       poserResultat(null);
       poserEssais([]);

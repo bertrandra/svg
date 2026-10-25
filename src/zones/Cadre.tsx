@@ -23,6 +23,7 @@ import { FournisseurMenusOuverts } from './commun/Menu.js';
 import { FORMES, phraseAbandon } from './aidesEditeur.js';
 import { pluriel, selonSaisie } from '../util/texte.js';
 import type { Outil, Tiroir } from './typesEditeur.js';
+import { LIBELLES_ENREGISTREMENT } from './enregistrement.js';
 
 /** Les raccourcis clavier : un composant sans rendu, pour que le crochet vive sous les contextes. */
 function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
@@ -67,7 +68,7 @@ function PanneauLateral({ nom }: { nom: string }) {
  * Trois choix : abandonner, garder et fermer (le geste de fin), continuer.
  */
 function ConfirmerAbandon() {
-  const { h } = useDessin(), { quitter, fin } = useInterface(), ac = useActions();
+  const { h } = useDessin(), { quitter, fin, enregistrement } = useInterface(), ac = useActions();
   const racine = useRef<HTMLDivElement>(null), idMessage = useId();
   useEffect(() => {
     if (!quitter) return;
@@ -84,7 +85,8 @@ function ConfirmerAbandon() {
   const n = h.passe.length;
   return (
     <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications" aria-describedby={idMessage} ref={racine}>
-      <span id={idMessage}>{phraseAbandon(n)}</span>
+      {/* Chez un hote qui garde des projets, le compte depuis l'ouverture ne dit pas ce qui reste a enregistrer : une phrase generale. */}
+      <span id={idMessage}>{enregistrement ? 'Abandonner les modifications non enregistrées ?' : phraseAbandon(n)}</span>
       <button type="button" onClick={ac.fermer}>Abandonner</button>
       {/* Le troisieme choix : garder et fermer, sous le libelle du geste de fin (« Terminer » dans la page). */}
       <button type="button" onClick={ac.enregistrerEtFermer}>{fin.libelle}</button>
@@ -107,7 +109,7 @@ function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
 }
 
 function BarreEtat() {
-  const { h, sel } = useDessin(), { tiroir, outil, trace, message } = useInterface(), ac = useActions();
+  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement } = useInterface(), ac = useActions();
   const telephone = useTelephone(), doigt = useTactile();
   return (
     <footer className="editeur-etat">
@@ -118,6 +120,8 @@ function BarreEtat() {
       <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
+      {/* L'etat que l'hote annonce (le site, ADR-0030) : pas une region vocale, la phrase qui l'accompagne passe par la region unique. */}
+      {enregistrement ? <span className="etat-enregistrement" data-etat={enregistrement.etat}>{LIBELLES_ENREGISTREMENT[enregistrement.etat]}</span> : null}
       {telephone ? <BoutonEnregistrer /> : null}
     </footer>
   );
