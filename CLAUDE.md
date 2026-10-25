@@ -79,6 +79,11 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Le texte reste vivant, le fichier porte des contours** (ADR-0022) : `Forme.texte` garde de quoi recomposer, composé en pur
   (`engine/texte.ts`) au-dessus d'une interface `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures
   GSUB en option). Jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes ; au stylo, rien ne se remplit.
+- **Les polices libres se téléchargent sur accord, vérifiées** (ADR-0025) : un registre en données (`model/sourcesPolices.ts`,
+  liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
+  main par `scripts/catalogue-polices.mjs`, jamais au build) ; rien ne part sans accord par serveur (`svg.polices.consentement`,
+  `policesEnLigne` faux chez un hôte) ; chaque fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit
+  `c-…` avec sa version ; un seul `fetch` dans `src/`.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
@@ -130,4 +135,4 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   chargée à la demande ; le lexique des sources libres ne change aucun nom de game-icons ; moins de 3 % d'anglais par source.
 - **La mention voyage avec la forme, les licences ne se recopient pas** (ADR-0017) : `Forme.origine`, un `<metadata>`
   CC BY 3.0 et `data-origine` n'existent que pour une forme créditée ; `THIRD-PARTY-NOTICES.md` se génère depuis
-  `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur.
+  `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur sans un accord donné (ADR-0025).

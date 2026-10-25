@@ -152,6 +152,16 @@ empreintes.
 
 ### Ajouté
 
+- **Les polices libres à la demande** (ADR-0025) : « Toutes les polices » dans l'outil Texte ouvre plus de 2 000 familles
+  libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Collletttivo, Velvetyne, Fontshare) : recherche,
+  filtres, favoris, récentes, polices du document avec « Remplacer partout », vos polices (fichier déposé, ou polices de
+  l'appareil quand le navigateur le permet). Rien ne se télécharge sans votre accord, donné serveur par serveur, retenu et
+  révocable ; chaque fichier est vérifié par son empreinte sha256 avant d'être lu, une empreinte fausse est refusée et dite.
+  Un texte garde l'identifiant et la version de sa police pour se recomposer à l'identique ; la licence de chaque police
+  employée est nommée dans « À propos et crédits ». Chez un hôte, l'option `policesEnLigne` est fausse par défaut. L'index
+  est un instantané commis (`data/catalogue-polices.json`, `scripts/catalogue-polices.mjs`), livré dans l'annexe
+  `polices-catalogue.js` (1,3 Mo, à la demande) ; la page prend 38 Ko. Aucun octet écrit ne change.
+
 - **Un accueil par public** (ADR-0024) : l'accueil demande « Pour quoi dessinez-vous ? » (machine de découpe, retouche,
   intégration), sans obligation (« Passer »), retenu dans le stockage injecté (`svg.accueil`, relu champ par champ ; le
   temps de la page sans stockage) et changeable (« Changer de public »). Chaque public voit son circuit en trois étapes

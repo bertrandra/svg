@@ -38,7 +38,8 @@ Print Then Cut). Le succès : un fichier juste du premier coup, pour l'écran co
 couvrent chacun qu'une part :
 
 - tout se calcule dans le navigateur : aucun serveur, aucun compte, rien ne quitte la machine, pas même l'adresse
-  de la personne (la page autonome embarque ses fontes ; un test réseau coupé le prouve) ;
+  de la personne (la page autonome embarque ses fontes ; un test réseau coupé le prouve) ; une police libre de plus ne se
+  télécharge qu'avec l'accord donné, et rien de personnel ne part (ADR-0025) ;
 - un seul circuit de l'image ou de la forme jusqu'au fichier prêt pour la machine, avec un contrôle de préparation
   qui propose des corrections annulables ;
 - des fichiers reproductibles : un même dessin donne toujours les mêmes octets ;
