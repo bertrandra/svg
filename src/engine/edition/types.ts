@@ -104,6 +104,41 @@ export interface TexteVivant {
    */
   readonly trace?: 'median';
   readonly matrice: Matrice;
+  /**
+   * Le texte pose sur le trace d'une forme, ou dans son interieur (ADR-0031) : ABSENT pour un texte libre, donc sans effet sur
+   * les octets de tout texte d'avant. Quand il est la, `matrice` ne porte plus que l'echelle du texte (la taille dans le plan est
+   * `taille` fois l'echelle de la matrice) et un point d'ancrage (le debut du texte pose) : les lettres suivent la forme.
+   */
+  readonly disposition?: DispositionTexte;
+}
+
+/** Le texte sur le trace d'une forme ou dans son interieur (ADR-0031), et la forme qui le porte, par son identifiant. */
+export type DispositionTexte = DispositionSurForme | DispositionDansForme;
+
+/** Le cote d'un texte sur un trace : au-dessus d'un trace ouvert (a l'exterieur d'une forme fermee), ou dessous (a l'interieur). */
+export type CoteTexte = 'dessus' | 'dessous';
+
+export interface DispositionSurForme {
+  readonly mode: 'sur';
+  /** L'identifiant de la forme qui porte le texte. */
+  readonly forme: string;
+  /** Ou se pose le point d'alignement du texte, en part de la longueur du trace : dans [0 ; 1[ sur une forme fermee (0 : son point le plus haut a l'exterieur, le plus bas a l'interieur), dans [0 ; 1] sur un trace ouvert (0 : son debut) ; 0 par defaut. */
+  readonly depart: number;
+  /** `dessus` par defaut. */
+  readonly cote: CoteTexte;
+  /** Repartir les lettres sur tout le trace ; faux par defaut. */
+  readonly repartir: boolean;
+}
+
+export interface DispositionDansForme {
+  readonly mode: 'dans';
+  readonly forme: string;
+  /** La marge interieure, en part de la taille du texte ; 0,25 par defaut. */
+  readonly marge: number;
+  /** Prendre la plus grande taille qui tient dans la forme ; faux par defaut. */
+  readonly ajuster: boolean;
+  /** Justifier les lignes pleines ; faux par defaut. */
+  readonly justifier: boolean;
 }
 
 export interface DessinSvg { readonly vb: readonly [number, number, number, number]; readonly formes: readonly Forme[] }

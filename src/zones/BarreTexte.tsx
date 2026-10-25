@@ -10,7 +10,8 @@
 import { memo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import type { TexteVivant } from '../engine/editionSvg.js';
 import type { Police } from '../io/polices.js';
-import { appliquerChangement, policeDe, traceDe, type ChangementTexte } from './actionsTexte.js';
+import { appliquerChangement, policeDe, rienNeSePose, traceDe, type ChangementTexte } from './actionsTexte.js';
+import { phraseRienNeTient } from './phrasesDisposition.js';
 import { AIDES_TRACE, ChoixTrace, RAISON_PLEIN_TRAIT } from './ChoixTrace.js';
 import { familleDePolice, OptionsPolices, useStylesPolice } from './ChoixPolice.js';
 import { useSectionsSelection } from './BarreSelection.js';
@@ -23,10 +24,22 @@ import { usePolices, useTexte } from './contexteTexte.js';
 import { Icone, type NomIcone } from './icones.js';
 import { policeNouveauTexte, tailleNouveauTexte, type ReglagesNouveauTexte } from './saisie.js';
 import { useRangeeCompacte } from './Vue.js';
+import { ChoixDispositionBarre, useChoixDisposition } from './ChoixDisposition.js';
 
 const ALIGNEMENTS: ReadonlyArray<readonly [TexteVivant['alignement'], NomIcone, string]> = [
   ['gauche', 'texte-gauche', 'Aligner les lignes à gauche'], ['centre', 'texte-centre', 'Centrer les lignes'], ['droite', 'texte-droite', 'Aligner les lignes à droite']
 ];
+/** Sur une forme (ADR-0031), l'alignement dit ou le texte se pose par rapport a son point de depart : il commence, s'y centre, ou y finit. */
+const ALIGNEMENTS_SUR: ReadonlyArray<readonly [TexteVivant['alignement'], NomIcone, string]> = [
+  ['gauche', 'texte-gauche', 'Aligner au début : le texte part du point de départ'], ['centre', 'texte-centre', 'Centrer le texte sur le point de départ'], ['droite', 'texte-droite', 'Aligner à la fin : le texte finit au point de départ']
+];
+const AIDE_JUSTIFIER = 'Justifier les lignes dans la forme';
+
+/** Les alignements d'un texte, selon qu'il est libre, sur une forme ou dans une forme (avec « Justifier »). */
+function alignementsDe(t: TexteVivant | null) {
+  const p = t?.disposition;
+  return p?.mode === 'sur' ? ALIGNEMENTS_SUR : ALIGNEMENTS;
+}
 
 /** Ce que la barre regle, et sur quoi : la forme en saisie ou le texte choisi, sinon le prochain texte (une saisie neuve, encore vide). */
 function useBarreTexte() {
@@ -53,7 +66,9 @@ function useBarreTexte() {
       sx.poserNouveau(n);
     }
     const p = c.police ?? policeForme;
-    if (forme && t && p) ac.appliquer(d => appliquerChangement(d, forme.id, c, p, ui.profil), ac.nouvelleCle());
+    // Un texte pose qui ne dessinerait plus rien (trop grand pour sa forme) ne change pas, et c'est dit (ADR-0031).
+    if (forme && t && p && t.disposition && rienNeSePose(mo.dessin, forme.id, c, p)) ac.dire(phraseRienNeTient(t.disposition.mode));
+    else if (forme && t && p) ac.appliquer(d => appliquerChangement(d, forme.id, c, p, ui.profil), ac.nouvelleCle());
     revenir();
   };
   const poserPolice = (pid: string, donnee?: Police) => {
@@ -83,7 +98,13 @@ function useBarreTexte() {
     // Un clic sur le fond de la barre ne retire pas le focus au texte en saisie.
     onMouseDown: (e: MouseEvent<HTMLDivElement>) => { if (sx.saisie && e.target === e.currentTarget) e.preventDefault(); }
   };
+  const p = t?.disposition;
+  const justifie = p?.mode === 'dans' && p.justifier;
+  /** Un alignement : dans une forme justifiee, il retire la justification ; « Justifier » la pose (calee a gauche). */
+  const aligner = (a: TexteVivant['alignement']) => changer(p?.mode === 'dans' && p.justifier ? { alignement: a, disposition: { ...p, justifier: false } } : { alignement: a });
+  const justifier = () => { if (p?.mode === 'dans' && !p.justifier) changer({ alignement: 'gauche', disposition: { ...p, justifier: true } }); };
   return {
+    forme: t ? forme : undefined, aligner, justifier, justifie: !!justifie, dans: p?.mode === 'dans', alignements: alignementsDe(t), ajuste: p?.mode === 'dans' && p.ajuster,
     sx, ac, tx, polices, police, styles, verrou, inactif, racine, trait, trace, choisi: !sx.saisie && !!t,
     etiquette: sx.saisie ? 'Saisie · Échap pour finir' : t ? 'Texte' : 'Prochain texte', changer, poserPolice, versPanneau,
     taille: t ? t.taille : tailleNouveauTexte(sx.nouveau, mo.dessin.vb), alignement: t ? t.alignement : sx.nouveau.alignement,
@@ -102,7 +123,8 @@ function ChoixPoliceBarre({ b }: { b: Barre }) {
   );
 }
 
-const TailleBarre = ({ b }: { b: Barre }) => <Nombre libelle="Taille" valeur={b.taille} min={0.01} poser={v => b.changer({ taille: v })} />;
+// Dans une forme a taille ajustee (ADR-0031), la taille se calcule : le champ la montre, inactif.
+const TailleBarre = ({ b }: { b: Barre }) => <Nombre libelle="Taille" valeur={b.taille} min={0.01} desactive={!!b.ajuste} poser={v => b.changer({ taille: v })} />;
 
 export const BarreTexte = memo(function BarreTexte() {
   const b = useBarreTexte();
@@ -126,8 +148,10 @@ function BarreEntiere({ b, gestes }: { b: Barre; gestes: SectionMenu[] }) {
       </div>
       <div className="groupe" role="group" aria-label="Taille"><TailleBarre b={b} /></div>
       <ChoixTrace className="groupe choix-trace" trace={b.trace} trait={b.trait} desactive={b.inactif} poser={v => b.changer({ trace: v })} />
+      {b.forme?.texte ? <ChoixDispositionBarre forme={b.forme} /> : null}
       <div className="groupe" role="group" aria-label="Alignement des lignes">
-        {ALIGNEMENTS.map(([a, icone, nom]) => <Bouton key={a} icone={icone} aide={nom} pressed={b.alignement === a} disabled={b.inactif} onClick={() => b.changer({ alignement: a })} />)}
+        {b.alignements.map(([a, icone, nom]) => <Bouton key={a} icone={icone} aide={nom} pressed={!b.justifie && b.alignement === a} disabled={b.inactif} onClick={() => b.aligner(a)} />)}
+        {b.dans ? <Bouton icone="texte-justifie" aide={AIDE_JUSTIFIER} pressed={b.justifie} disabled={b.inactif} onClick={b.justifier} /> : null}
       </div>
       <div className="groupe">
         <button type="button" className="plus-options" onClick={() => b.versPanneau(false)}><Icone nom="options" taille={16} /><span>Plus d’options</span></button>
@@ -145,8 +169,13 @@ function BarreEntiere({ b, gestes }: { b: Barre; gestes: SectionMenu[] }) {
 /** Au doigt ou sous 640 px : la police et la taille, puis un menu qui porte le style, l'alignement, les options et les gestes. */
 function BarreCompacte({ b, gestes }: { b: Barre; gestes: SectionMenu[] }) {
   const { ac } = b;
+  const dispo = useChoixDisposition(b.forme);
   const sections: SectionMenu[] = [
-    { id: 'alignement', titre: 'Alignement', elements: ALIGNEMENTS.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-texte-' + a, libelle: nom, icone, radio: true, coche: b.alignement === a, desactive: b.inactif, onClick: () => b.changer({ alignement: a }) })) },
+    ...(b.forme?.texte ? [{ id: 'disposition', titre: 'Disposition', elements: dispo.menu }] : []),
+    { id: 'alignement', titre: 'Alignement', elements: [
+      ...b.alignements.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-texte-' + a, libelle: nom, icone, radio: true, coche: !b.justifie && b.alignement === a, desactive: b.inactif, onClick: () => b.aligner(a) })),
+      ...(b.dans ? [{ id: 'aligner-texte-justifie', libelle: AIDE_JUSTIFIER, icone: 'texte-justifie', radio: true, coche: b.justifie, desactive: b.inactif, onClick: b.justifier } as const] : [])
+    ] },
     { id: 'trace', titre: 'Tracé', elements: [
       { id: 'trace-plein', libelle: b.trait ? 'Plein : ' + RAISON_PLEIN_TRAIT.split(' : ')[0]?.toLowerCase() : AIDES_TRACE.plein, radio: true, coche: b.trace === 'plein', desactive: b.inactif || b.trait, onClick: () => b.changer({ trace: 'plein' }) },
       { id: 'trace-median', libelle: AIDES_TRACE.median, radio: true, coche: b.trace === 'median', desactive: b.inactif, onClick: () => b.changer({ trace: 'median' }) }

@@ -6,7 +6,8 @@
 // - une forme masquee ou verrouillee ne se prend jamais (elle laisse passer le clic, comme avant) ;
 // - une forme remplie (ou toute forme en vue « contours ») se prend sur sa surface, regle de remplissage respectee ;
 // - un trait se prend sur son encre (demi-epaisseur), et toute forme a moins de `tolerance` pixels de son trace ;
-// - un texte vivant se prend sur sa boite entiere, entre ses lettres aussi ;
+// - un texte vivant se prend sur sa boite entiere, entre ses lettres aussi ; pose sur ou dans une forme (ADR-0031), sur ses
+//   lettres comme une forme ordinaire (sa boite couvrirait la forme qui le porte, qu'on ne prendrait plus) ;
 // - une forme plus petite que la cible a l'ecran se prend dans sa boite gonflee jusqu'a la cible ;
 // - parmi les candidates, la plus haute dont la surface contient le point gagne, sauf un trait sans remplissage pose
 //   au-dessus d'elle et a portee (un filet sur un fond se prend sans viser au pixel) ; sans surface sous le point, la plus
@@ -186,10 +187,12 @@ function essayer(f: Forme, rang: number, px: number, py: number, o: OptionsPrise
   const e = etendue(f);
   if (!e) return null;
   const surface = !!o.contours || f.remplissage !== null;
-  const base = { id: f.id, rang, filet: !surface && !f.texte };
+  // Un texte pose sur ou dans une forme (ADR-0031) se prend par ses lettres : sa boite couvrirait la forme qui le porte.
+  const boiteTexte = !!f.texte && !f.texte.disposition;
+  const base = { id: f.id, rang, filet: !surface && !boiteTexte };
   // Une petite forme : sa cible minimale compte comme sa surface.
   if (e.l < cible && e.h < cible && distanceBoite(gonflee(e, cible), px, py) === 0) return { ...base, dedans: true, ecart: 0 };
-  if (f.texte) {
+  if (boiteTexte) {
     const b = boiteForme(f);
     if (!b) return null;
     const d = distanceBoite(b, px, py);
@@ -256,5 +259,5 @@ export function formeDessous(ids: readonly string[], choisies: readonly string[]
 export function zoneDePrise(f: Forme, o: OptionsPrise): Boite | null {
   const e = etendue(f), cible = o.cible / o.zoom;
   if (e && e.l < cible && e.h < cible) return gonflee(e, cible);
-  return f.texte ? boiteForme(f) : null;
+  return f.texte && !f.texte.disposition ? boiteForme(f) : null;
 }

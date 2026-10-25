@@ -16,7 +16,7 @@ import { cheminDeForme } from './elements.js';
 import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import { lireTexte, type ContexteTexte } from './texteSvg.js';
-import { lireTexteVivant, MSG_TEXTE_ILLISIBLE } from './texteVivant.js';
+import { lireTexteVivant, MSG_TEXTE_ILLISIBLE, type LienLu } from './texteVivant.js';
 import { ATTRIBUT_OPERATION, lireOperation } from './operation.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
@@ -47,6 +47,8 @@ export interface Parcours {
   donnees: number;
   /** De quoi lire le texte en lettres ; absent (null), un <text> est refuse en le nommant, comme avant. */
   readonly texte?: ContexteTexte | null;
+  /** Les liens des textes poses vers leur forme (ADR-0031), resolus quand toutes les formes sont lues. */
+  readonly liens?: Array<{ readonly id: string; readonly lien: LienLu }>;
 }
 
 /** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
@@ -127,6 +129,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
   else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);
   const texte = lu && 'texte' in lu ? lu.texte : undefined;
+  if (lu && 'texte' in lu && lu.lien) p.liens?.push({ id: 'f' + (p.formes.length + 1), lien: lu.lien });
   // L'operation de production (ADR-0028) qu'un SVG ecrit ici porte sur la forme elle-meme (jamais heritee d'un groupe).
   const operation = lireOperation(n.attributs[ATTRIBUT_OPERATION]);
   p.formes.push({

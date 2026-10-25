@@ -11,7 +11,7 @@ export type NomIcone =
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
   | 'telecharger' | 'fermer' | 'enregistrer'
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
-  | 'texte-gauche' | 'texte-centre' | 'texte-droite'
+  | 'texte-gauche' | 'texte-centre' | 'texte-droite' | 'texte-justifie' | 'texte-libre' | 'texte-sur' | 'texte-dans'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
@@ -61,6 +61,12 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   'texte-gauche': [t('M4 6h16'), t('M4 10h10'), t('M4 14h16'), t('M4 18h10')],
   'texte-centre': [t('M4 6h16'), t('M7 10h10'), t('M4 14h16'), t('M7 18h10')],
   'texte-droite': [t('M4 6h16'), t('M10 10h10'), t('M4 14h16'), t('M10 18h10')],
+  'texte-justifie': [t('M4 6h16'), t('M4 10h16'), t('M4 14h16'), t('M4 18h10')],
+  // La disposition d'un texte (ADR-0031) : libre sur sa ligne de base, pose sur un arc (les lettres dressees le long du trace), ou
+  // dans une forme (des lignes coupees sur ses bords).
+  'texte-libre': [t('M3 19h18'), t('M5 16l3.5-9 3.5 9'), t('M6.4 13h4.2'), t('M16 7v9'), t('M14 9.5h4')],
+  'texte-sur': [t('M3 18a10 10 0 0 1 18 0'), t('M12 12.4V8.5'), t('M7 13.7l-1.9-3.3'), t('M17 13.7l1.9-3.3')],
+  'texte-dans': [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M8.5 8.5h7'), t('M6.5 12h11'), t('M8.5 15.5h7')],
   'miroir-h': [t('M12 3v18'), t('M9 7L4 12l5 5z'), t('M15 7l5 5-5 5z', true)],
   'miroir-v': [t('M3 12h18'), t('M7 9l5-5 5 5z'), t('M7 15l5 5 5-5z', true)],
   'rotation-gauche': [t('M3 12a9 9 0 1 0 3.2-6.9'), t('M3 4v5h5')],

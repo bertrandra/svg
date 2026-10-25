@@ -14,6 +14,7 @@ import { analyser, proprietesDe } from './cascade.js';
 import { visiter, type Parcours } from './parcours.js';
 import { COORDONNEE_MAX, coordonneeSaine, CONFRONTATIONS_MAX } from './limites.js';
 import { lireProduction, type MarqueProduction } from './production.js';
+import { resoudreLiens } from './texteVivant.js';
 
 /**
  * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
@@ -63,7 +64,7 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture): LectureDess
   const analyse = analyser(racine);
   const formesLues: Forme[] = [], refus = new Set<string>();
   const texte: ContexteTexte | null = options.polices ? { analyse, polices: options.polices, formes: formesLues, refus, remplacements: new Map(), caracteres: 0 } : null;
-  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte };
+  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte, liens: [] };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
@@ -77,7 +78,7 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture): LectureDess
   }
   if (p.refus.size) return { erreur: 'Ce SVG contient ' + [...p.refus].join(', ') + ' : il ne s’édite pas ici. Vectorisez l’image, ou simplifiez-le dans votre logiciel.' };
   // Une forme sans aucune commande (chemin vide, nombre illisible) ne se dessine pas : un SVG qui n'en a que de telles formes est vide.
-  const formes = p.formes.filter(f => f.d.length > 0);
+  const formes = resoudreLiens(p.formes, p.liens ?? []).filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
   const production = lireProduction(racine.attributs);
   return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };

@@ -3,7 +3,9 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { garderTextes, sansTexte, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
+import { garderTextes, sansTexte, type DessinSvg, type Forme, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { suivreDispositions } from '../engine/texte/disposition.js';
+import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
@@ -39,9 +41,18 @@ export interface Setters {
 
 export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEditeur {
   let compteur = 0;
+  // Les glyphes des polices chargees (posees par le contexte du texte) : de quoi recomposer un texte pose sur une forme qui change.
+  let glyphesDe: ((p: PoliceTexte) => Glyphes | null) | null = null;
   // La garde du texte vivant (ADR-0022) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
-  // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts).
-  const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => { s.poserH(x => { const d = garderTextes(x.present, f(x.present)).dessin; return avancer(x, d, cle, limitePourTaille(d.formes.length)); }); };
+  // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts). Puis le lien des textes poses (ADR-0031) :
+  // un texte dont la forme a change se recompose sur elle, dans la meme entree d'historique ; sans forme, il redevient libre.
+  const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => {
+    s.poserH(x => {
+      const g = garderTextes(x.present, f(x.present)).dessin;
+      const d = suivreDispositions(x.present, g, p => glyphesDe?.(p) ?? null).dessin;
+      return avancer(x, d, cle, limitePourTaille(d.formes.length));
+    });
+  };
   const finir = () => s.poserH(x => clore(x));
   // Changer d'outil, de quelque facon que ce soit, rend aussi le reticule du clavier : il n'a de sens que pour l'outil qui l'a pose.
   const poserOutilBrut = (o: Outil) => { s.poserOutilBrut(o); s.poserCurseur(null); };
@@ -66,6 +77,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
   return {
     appliquer, finir, poserOutil,
+    poserGlyphes: g => { glyphesDe = g; },
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
     // Un geste qui n'a rien produit (un rectangle sans surface) retire l'entree qu'il avait ouverte.
     annulerGeste: cle => s.poserH(x => (x.cle === cle ? clore(annuler(x)) : x)),

@@ -15,6 +15,7 @@ import { phraseAlignement, phraseMiroir } from './phrasesSelection.js';
 import { phraseRotation } from './annonces.js';
 import { useRangeeCompacte } from './Vue.js';
 import { OperationSelection } from './OperationSelection.js';
+import { DispositionSelection, useSectionDisposition } from './ChoixDisposition.js';
 
 const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
   ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
@@ -62,6 +63,7 @@ function RangeeEntiere() {
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{libelleSelection(sel.length)}</span>
       <OperationSelection />
+      <DispositionSelection />
       <div className="groupe" role="group" aria-label="Aligner">
         {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => g.aligner(a)} />)}
       </div>
@@ -95,6 +97,7 @@ function RangeeEntiere() {
  */
 export function useSectionsSelection(complet: boolean): SectionMenu[] {
   const g = useGestes(), { sel, ac, surPlan } = g;
+  const disposition = useSectionDisposition();
   const transformer: ElementMenu[] = [
     ...(complet ? [{ id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: 'Miroir horizontal', icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
     { id: 'miroir-v', libelle: 'Miroir vertical', icone: 'miroir-v', onClick: () => g.miroir('v') },
@@ -102,6 +105,7 @@ export function useSectionsSelection(complet: boolean): SectionMenu[] {
     ...(complet ? [{ id: 'rotation-droite', libelle: 'Tourner de 90° vers la droite', icone: 'rotation-droite', onClick: () => g.tourner(90) } as const] : [])
   ];
   return [
+    ...(disposition ? [disposition] : []),
     { id: 'transformer', titre: 'Transformer', elements: transformer },
     { id: 'aligner', titre: 'Aligner' + surPlan, elements: ALIGNEMENTS_ICONES.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
     { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },

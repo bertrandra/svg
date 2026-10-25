@@ -10,20 +10,24 @@ import { MODES_VECTORISATION, NOMS_MODES, type ModeVectorisation } from '../engi
 import { Section } from './commun/Section.js';
 import { ChoixPolice } from './ChoixPolice.js';
 import { Nombre } from './commun/Nombre.js';
-import { appliquerChangement, nomDePolice, policeDe, traceDe, useActionsTexte, type ChangementTexte } from './actionsTexte.js';
+import { appliquerChangement, nomDePolice, policeDe, rienNeSePose, traceDe, useActionsTexte, type ChangementTexte } from './actionsTexte.js';
+import { phraseRienNeTient } from './phrasesDisposition.js';
 import { ChoixTrace } from './ChoixTrace.js';
+import { ReglagesDisposition } from './InspecteurDisposition.js';
 import { natureDuTexte } from '../engine/texte/vivant.js';
 import { naturePolice } from '../model/polices.js';
-import { useActions, useInterface } from './contexteEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useDemandePanneau } from './contexteSaisie.js';
 import { usePolices, useTexte } from './contexteTexte.js';
 import { estIdCatalogue, trouverVariante } from '../model/cataloguePolices.js';
 import type { Police } from '../io/polices.js';
 
 const ALIGNEMENTS: ReadonlyArray<readonly [TexteVivant['alignement'], string]> = [['gauche', 'À gauche'], ['centre', 'Au centre'], ['droite', 'À droite']];
+/** Sur une forme (ADR-0031), l'alignement dit comment le texte se pose sur son point de depart : il en part, s'y centre, y finit. */
+const ALIGNEMENTS_SUR: ReadonlyArray<readonly [TexteVivant['alignement'], string]> = [['gauche', 'Début'], ['centre', 'Centre'], ['droite', 'Fin']];
 
 export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } }) {
-  const ac = useActions(), ui = useInterface(), tx = useTexte(), { polices, deposer } = usePolices();
+  const ac = useActions(), ui = useInterface(), tx = useTexte(), { polices, deposer } = usePolices(), { dessin } = useDessin();
   const at = useActionsTexte();
   const t = forme.texte, police = policeDe(forme, polices);
   const [brouillon, poserBrouillon] = useState(t.texte);
@@ -36,6 +40,8 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
   const changer = (c: ChangementTexte, cleGeste: string | null = null) => {
     const p = c.police ?? police;
     if (!p) return;
+    // Un texte pose qui ne dessinerait plus rien (trop grand pour sa forme) ne change pas, et c'est dit (ADR-0031).
+    if (t.disposition && rienNeSePose(dessin, forme.id, c, p)) { ac.dire(phraseRienNeTient(t.disposition.mode)); return; }
     ac.appliquer(d => appliquerChangement(d, forme.id, c, p, ui.profil), cleGeste ?? ac.nouvelleCle());
   };
   const taper = (v: string) => {
@@ -48,6 +54,7 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
   const choisirPolice = (id: string, donnee?: Police) => { const p = donnee ?? polices?.find(x => x.id === id); if (p) changer({ police: p }); };
   const mode: ModeVectorisation = at.mode;
   const enTrait = natureDuTexte(t) === 'trait';
+  const dispo = t.disposition, justifie = dispo?.mode === 'dans' && dispo.justifier;
   return (
     <Section titre="Texte" ouverte className="section-texte" note={enTrait ? (naturePolice(t.police.id) === 'trait' ? 'trait unique' : 'tracé médian') : undefined}>
       <textarea rows={2} value={brouillon} disabled={absente} aria-label="Texte" onChange={e => taper(e.target.value)} onBlur={quitterChamp} />
@@ -62,16 +69,19 @@ export function SectionTexte({ forme }: { forme: Forme & { texte: TexteVivant } 
       {absente ? <RetrouverPolice texte={t} poser={choisirPolice} /> : null}
       {absente ? <DeposerPolice deposer={deposer} poser={choisirPolice} /> : null}
       <div className="grille-2">
-        <Nombre libelle="Taille" valeur={t.taille} min={0.01} poser={v => changer({ taille: v })} />
+        <Nombre libelle="Taille" valeur={t.taille} min={0.01} desactive={dispo?.mode === 'dans' && dispo.ajuster} poser={v => changer({ taille: v })} />
         <Nombre libelle="Espace" valeur={t.interlettrage} poser={v => changer({ interlettrage: v })} />
         <Nombre libelle="Interligne" valeur={t.interligne} min={0.1} poser={v => changer({ interligne: v })} />
       </div>
       <div className="alignement-texte" role="group" aria-label="Alignement des lignes">
-        {ALIGNEMENTS.map(([a, libelle]) => (
-          <button key={a} type="button" aria-pressed={t.alignement === a} disabled={absente} onClick={() => changer({ alignement: a })}>{libelle}</button>
+        {(dispo?.mode === 'sur' ? ALIGNEMENTS_SUR : ALIGNEMENTS).map(([a, libelle]) => (
+          <button key={a} type="button" aria-pressed={!justifie && t.alignement === a} disabled={absente}
+            onClick={() => changer(dispo?.mode === 'dans' && dispo.justifier ? { alignement: a, disposition: { ...dispo, justifier: false } } : { alignement: a })}>{libelle}</button>
         ))}
+        {dispo?.mode === 'dans' ? <button type="button" aria-pressed={justifie} disabled={absente} onClick={() => { if (!dispo.justifier) changer({ alignement: 'gauche', disposition: { ...dispo, justifier: true } }); }}>Justifié</button> : null}
       </div>
       <ChoixTrace trace={traceDe(t)} trait={naturePolice(t.police.id) === 'trait'} desactive={absente} poser={v => changer({ trace: v })} />
+      <ReglagesDisposition forme={forme} />
       {police?.glyphes.ligature ? (
         <label className="case">
           <input type="checkbox" checked={t.ligatures} disabled={t.interlettrage !== 0} onChange={e => changer({ ligatures: e.target.checked })} /> Ligatures (fi, fl…)

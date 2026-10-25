@@ -696,3 +696,27 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .lisere-survol-fond { stroke: Canvas; }
   .editeur-svg-toile .lisere-survol { stroke: Highlight; }
 }
+
+/* Le texte pose sur ou dans une forme (ADR-0031). Le guide de la forme d'un texte pose choisi : son trace en tirets d'outil, meme
+   masquee (on voit ce qui porte le texte), sans pointeur. La poignee du depart : un rond plein a la couleur d'outil sur un halo de
+   panneau, une cible invisible de 24 px (40 au doigt) ; elle se deplace, son curseur est « deplacer » ; son focus, un anneau d'outil.
+   Pendant le choix de la forme, la toile prend la croix de visee (posee une fois, pas au survol) et la forme visee le lisere de survol.
+   Rien ne s'anime. */
+.editeur-svg-toile .guide-forme { fill: none; stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .poignee-depart-groupe { cursor: move; outline: none; }
+.editeur-svg-toile .poignee-depart-cible { fill: transparent; stroke: none; }
+.editeur-svg-toile .poignee-depart-halo { fill: none; stroke: none; }
+.editeur-svg-toile .poignee-depart { fill: var(--cyan); stroke: var(--panneau); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .poignee-depart-groupe:focus-visible .poignee-depart-halo { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.editeur-toile[data-choix-forme] .editeur-svg-toile, .editeur-toile[data-choix-forme] .editeur-svg-toile path[data-id] { cursor: crosshair; }
+.disposition-texte .boutons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs) var(--esp-m); }
+.disposition-texte .discret { min-height: 24px; padding-left: 0; padding-right: 0; }
+.disposition-texte .message { margin: 0; }
+@media (pointer: coarse), (max-width: 900px) {
+  .disposition-texte .case { min-height: 40px; }
+}
+@media (forced-colors: active) {
+  .editeur-svg-toile .guide-forme { stroke: Highlight; }
+  .editeur-svg-toile .poignee-depart { fill: Highlight; stroke: Canvas; }
+  .editeur-svg-toile .poignee-depart-groupe:focus-visible .poignee-depart-halo { stroke: Highlight; }
+}
