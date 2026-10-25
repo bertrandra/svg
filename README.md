@@ -6,6 +6,7 @@ s'embarque aussi comme composant React dans un autre produit.
 
 ## Ce que fait la page
 
+- **Un accueil par public** : « Pour quoi dessinez-vous ? » (machine de découpe, retouche, intégration), facultatif et retenu ; chaque public voit son circuit jusqu’au fichier prêt, les voies dans son ordre, l’éditeur réglé pour une Cricut (Maker, découpe, millimètres) ou, pour les intégrateurs, l’embarquement expliqué et essayé comme un hôte (ADR-0024).
 - **Ouvrir un SVG ou un PDF** : un fichier déposé ou choisi, un code SVG collé, ou l'exemple ; d'un PDF, les tracés et le texte de la première page (ou de celle qu'on choisit) deviennent des formes, et ce qui n'est pas repris est dit (ADR-0020).
 - **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, affiché dès le dépôt, fond détouré
   (tolérance et portée réglables), puis vectorisé par vtracer (modes aplats, trait, fidèle ; trois
