@@ -12,7 +12,7 @@ import { memo, type ReactElement } from 'react';
 import type { GroupeCouleur, SurCouleur } from '../engine/editionSvg.js';
 import { segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
-import { useFenetreDefilante } from './Fenetre.js';
+import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
 import { LigneCouleur, type ActionsLigne } from './LigneCouleur.js';
 import type { SuiviCouleur } from './actionsCouleur.js';
 import type { Teinte } from './typesEditeur.js';
@@ -45,7 +45,7 @@ export const ListeCouleurs = memo(function ListeCouleurs({ groupes, choisies, su
     return <LigneCouleur key={cleDe(g)} g={g} choisie={choisie} sur={sur} nuancier={nuancier} actions={actions} rang={sg.index + 1} taille={actif ? total : 0} />;
   });
   return (
-    <ul className="par-couleur" ref={liste}>
+    <ul className="par-couleur" ref={liste} onFocus={montrerLigneAuClavier}>
       {lignes}
     </ul>
   );

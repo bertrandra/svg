@@ -5,7 +5,7 @@
 // Deux cas : la liste est dans un panneau qui defile (`useFenetre`, les calques), ou la liste est elle-meme
 // le conteneur qui defile (`useFenetreDefilante`, les couleurs : une liste de 260 px dans le panneau).
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
 import { defilementPour, fenetre, SEUIL_FENETRE, type Fenetre } from '../util/fenetre.js';
 
@@ -108,6 +108,21 @@ function useMesureFenetre<L extends HTMLElement>(total: number, seuil: number, i
   }, [conteneur, interne]);
 
   return { racine, liste, fenetre: fenetre(total, mesure.pas, mesure.defile, mesure.visible, undefined, seuil), pas: mesure.pas, actif, montrer };
+}
+
+/**
+ * A poser en `onFocus` sur une liste qui defile : quand un controle d'une ligne prend le focus au clavier, la ligne se montre
+ * entiere. Chromium le fait deja en donnant le focus ; Firefox et WebKit ne defilent pas pour un controle a demi visible, et
+ * Tab laissait le focus sur une ligne coupee par le bas de la liste (constate en CI, liste des couleurs du dessin). Un focus a
+ * la souris ne fait rien defiler : la ligne bougerait sous le pointeur entre l'appui et le relachement.
+ */
+export function montrerLigneAuClavier(e: FocusEvent<HTMLElement>): void {
+  const cible = e.target, ligne = cible.closest('li');
+  if (!ligne || ligne.parentElement !== e.currentTarget) return;
+  let auClavier = false;
+  // Un moteur qui ne connait pas :focus-visible leve une erreur de selecteur : il garde son propre defilement.
+  try { auClavier = cible.matches(':focus-visible'); } catch { return; }
+  if (auClavier) ligne.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 /** Les lignes a dessiner d'une liste de `total` lignes de meme hauteur, dans un panneau qui defile. */

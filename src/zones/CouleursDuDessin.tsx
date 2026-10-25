@@ -12,7 +12,7 @@ import { segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
 import { Section } from './commun/Section.js';
 import { useDessin } from './contexteEditeur.js';
-import { useFenetreDefilante } from './Fenetre.js';
+import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
 import { LigneCouleurDessin } from './LigneCouleurDessin.js';
 import { SEUIL_COULEURS } from './ListeCouleurs.js';
 import { useActionsCouleursDessin, type ActionsCouleurDessin } from './actionsCouleursDessin.js';
@@ -57,7 +57,7 @@ const ListeCouleursDessin = memo(function ListeCouleursDessin({ couleurs, nuanci
     return <LigneCouleurDessin key={cleDe(c)} c={c} nuancier={nuancier} actions={actions} rang={sg.index + 1} taille={actif ? total : 0} />;
   });
   return (
-    <ul className={'couleurs-dessin' + (actif ? ' fenetree' : '')} ref={liste}>
+    <ul className={'couleurs-dessin' + (actif ? ' fenetree' : '')} ref={liste} onFocus={montrerLigneAuClavier}>
       {lignes}
     </ul>
   );
