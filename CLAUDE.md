@@ -67,6 +67,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   candidates d'un point, avec une tolérance et une cible minimale en pixels d'écran (6 et 12 px à la souris, 12 et 24 au doigt) ;
   le clic, le double-clic et le survol l'appellent par `zones/PriseToile.tsx` ; Alt+clic passe dessous ; le curseur `move` n'est
   jamais posé sur la toile au survol (il restylerait chaque forme) ; le liseré de survol est en `--cyan` sur `--panneau`.
+- **Choisir par une zone se calcule sur le tracé réel** (ADR-0035) : `engine/selection.ts` (pur, mémorisé par forme via
+  `prise.ts`) prend toute forme dont la surface ou l'encre touche le cadre ou le lasso (« touchée », défaut) ou y tient entière
+  (« dedans », `regleZone`) ; l'outil Cadre (B) commence même sur une forme, le Lasso (Q) ; Maj ajoute, Alt retire ; le geste vit
+  hors de l'état de React (`zones/GesteZone.ts`, `ZoneToile.tsx`) ; les commandes qui choisissent vivent dans
+  `zones/commandesSelection.ts`. F ouvre la palette des formes (ADR-0033), M les aimants.
 - **Rien ne s'écrit sans le geste de fin** (« Enregistrer », le libellé de l'hôte par `libelleEnregistrer`, « Terminer »
   dans la page) ; Ctrl+S ne garde qu'un brouillon et ne ferme jamais ; récupérer un fichier (« Télécharger le SVG »,
   « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg` ; sur le site PHP, Ctrl+S est ce

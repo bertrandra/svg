@@ -18,6 +18,7 @@ import type { ActionsEditeur, EtatEnregistrement, Fond, OptionsFin, Outil, Point
 import { aEnregistrer, perdrait } from './enregistrement.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
 export interface EtatDuMoment extends EtatLu {
@@ -40,6 +41,7 @@ export interface Setters {
   poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
   poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
   poserApercuMachine: Dispatch<SetStateAction<boolean>>;
+  poserRegleZone: Dispatch<SetStateAction<RegleZone>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -135,6 +137,10 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire('Version « ' + nom + ' » gardée dans ce navigateur.');
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
+    poserRegleZone: r => {
+      s.poserRegleZone(r);
+      dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
+    },
     ...metier, ...trace, ...production
   };
 }

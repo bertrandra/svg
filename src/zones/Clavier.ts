@@ -16,8 +16,9 @@ import { useActionsTexte } from './actionsTexte.js';
 import { operationsApplicables } from '../engine/preparation.js';
 import { creerNuancierDepuisSelection } from './actionsNuancier.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
+import { toucheSelection } from './commandesSelection.js';
 
-const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte' };
+const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte', b: 'cadre', q: 'lasso' };
 
 /** Un cran de rotation au clavier : quinze degres, un seul avec Maj. */
 const CRAN_ROTATION = 15;
@@ -68,6 +69,8 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       // Maj+N : le nuancier du dessin devient les couleurs de la selection ; Alt+Maj+N les y ajoute (ADR-0037). Par le code de la
       // touche : Alt change le caractere rendu sur un Mac.
       if (e.shiftKey && e.code === 'KeyN') { e.preventDefault(); creerNuancierDepuisSelection(ac, m.dessin, m.sel, e.altKey ? 'ajouter' : 'remplacer'); return; }
+      // Les commandes de selection (ADR-0035) : I inverse, Y le meme type, Alt+C le meme contour, Alt+Maj+X ou E ce qui est a couper ou a ecrire.
+      if (toucheSelection(e, m, u, ac)) { e.preventDefault(); return; }
       // En contexte Cricut qui coupe ou ecrit (ADR-0028) : Maj+X range la selection a couper, Maj+E a ecrire, Maj+O montre ou retire
       // l'apercu de la machine. Ailleurs ces touches gardent leur sens (Maj+E reste l'ellipse, Maj+O la vue contours).
       if (e.shiftKey && !e.altKey && u.profil && operationsApplicables(u.profil.procede)) {

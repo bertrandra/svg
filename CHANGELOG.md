@@ -56,6 +56,8 @@ empreintes.
 
 ### Modifié
 
+- « Ne rien sélectionner » devient « Désélectionner », « Sélectionner la même couleur » devient « Sélectionner la même couleur de
+  fond » (C) ; sur un téléphone, « Points et poignées » se range dans le menu de l'outil de sélection.
 - Le nom d'une forme suit les formes de base (« cœur », « hexagone », « étoile à 8 branches »…) ; un losange lu dans un fichier se
   dit « losange », un rectangle aux coins ronds « rectangle arrondi » ; une forme tracée à la souris se dit « ajoutée et
   sélectionnée » ; le menu des formes s'appelle « Formes (F) ».
@@ -191,6 +193,14 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Les outils de sélection** (ADR-0035) : le cadre prend toute forme dont le tracé réel (surface remplie selon sa règle, ou encre
+  du trait) touche le rectangle, même en partie — plus le trou d'un anneau, ni le coin vide de la boîte d'une diagonale ; « Les
+  formes entièrement dedans » se choisit au menu de l'outil (zone en trait plein, tirets pour « touchées ») ; un bouton de la barre
+  reprend Sélection (V), **Cadre de sélection (B)**, qui commence même sur une forme et sert au doigt, et **Lasso (Q)** ; Maj
+  ajoute, Alt retire ; pendant le geste, le liseré de survol montre ce que le relâchement prendra ; au clavier, le réticule pose
+  les coins du cadre ou les points du lasso. Menu Édition : Inverser la sélection (I), même couleur de contour (Alt+C), même type
+  (Y) ; en Cricut, tout ce qui est à couper / à écrire (Alt+Maj+X, Alt+Maj+E). Aucun octet écrit ne change.
 
 - Modèle v2, étape 0 (ADR-0012) : des coutures sans effet visible. Types du modèle v2 en champs facultatifs ; arbre dérivé et
   invariants ; points d'extension de la lecture, de l'écriture et des transformations (catalogue vide) ; écriture riche en

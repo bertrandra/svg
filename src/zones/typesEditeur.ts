@@ -13,13 +13,16 @@ import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
 import type { Version } from './session.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
 
 /** Les outils qui tracent une forme d'un glisser ou au reticule : les formes de base de la palette (ADR-0033). */
 export type OutilForme = FormeDeBase;
-export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme;
+/** Les outils qui choisissent par une zone (ADR-0035) : le cadre, commence meme sur une forme, et le lasso. */
+export type OutilZone = 'cadre' | 'lasso';
+export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme | OutilZone;
 export type Coin = 'nw' | 'ne' | 'sw' | 'se';
 export type Point = readonly [number, number];
 export interface Vue { zoom: number; x: number; y: number }
@@ -134,6 +137,8 @@ export interface EtatInterface {
   fin: OptionsFin;
   /** L'etat de l'enregistrement que l'hote annonce (le site, ADR-0030) ; absent ou null chez un hote qui ne le dit pas. */
   enregistrement?: EtatEnregistrement | null;
+  /** Ce que le cadre et le lasso prennent (ADR-0035) : les formes touchees (defaut) ou entierement dedans. Un reglage de la session. */
+  regleZone: RegleZone;
 }
 
 /**
@@ -246,6 +251,8 @@ export interface ActionsEditeur {
   poserOperation: (operation: Operation, ids?: readonly string[]) => void;
   /** Montre ou retire l'apercu de la machine sur la toile, et le dit. */
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
+  /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */
+  poserRegleZone: (r: RegleZone) => void;
 }
 
 export interface Vues {

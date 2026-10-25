@@ -101,6 +101,7 @@ paysage.
 | 4.4 | Paume posée sur l’écran pendant un trait | pas de seconde forme ni de zoom parasite |
 | 4.5 | Stylet puis doigt sur la même toile | le doigt déplace/zoome, le stylet dessine, sans geste coincé |
 | 4.6 | Survol de l’Apple Pencil (iPad M2) ou S Pen au-dessus d’une forme | sans erreur ; pas d’effet attendu |
+| 4.7 | Au doigt, l’outil Cadre (menu du bouton Sélection), un glisser commencé sur une forme ; puis le Lasso | rien ne se déplace ; les formes touchées portent le liseré pendant le geste et sont choisies au relâchement ; deux doigts pendant le geste zooment sans rien choisir |
 
 ## 5. Claviers AZERTY, QWERTZ, QWERTY (10 min)
 
@@ -117,6 +118,8 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | 5.7 | Cmd+[ et Cmd+] dans Safari | le plan change **et** Safari ne navigue pas en arrière/avant |
 | 5.8 | Tab, Maj+Tab, Échap, Entrée, Espace, Suppr, Retour arrière | comme dans les tests : Tab ne piège jamais |
 | 5.9 | Saisir « é », « ç » et le texte de la forme avec les dispositions ci-dessus | le texte en formes écrit les bons caractères |
+| 5.10 | Alt+C (même couleur de contour), et en contexte Cricut Alt+Maj+X et Alt+Maj+E (tout ce qui est à couper, à écrire), sous Windows (barre de menus du navigateur visible ou non) et Option sur macOS | la sélection change ; aucun menu du navigateur ne s’ouvre ; sur macOS, Option+C ne tape pas « ç » dans la toile |
+| 5.11 | Alt+glisser sur le vide (retirer de la sélection) sous un bureau Linux qui réserve Alt+glisser au déplacement des fenêtres | noter si la fenêtre se déplace au lieu du cadre ; Alt+cadre avec l’outil Cadre (F) aussi |
 
 ## 6. Zoom et taille du texte (5 min)
 

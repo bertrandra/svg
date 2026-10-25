@@ -20,7 +20,9 @@ export type NomIcone =
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
-  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo';
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo'
+  // Les outils de selection (ADR-0035).
+  | 'cadre-selection' | 'lasso' | 'inverser-selection';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -139,7 +141,12 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Un stylo de machine, pointe en bas a gauche, et la ligne qu'il ecrit (ADR-0028) : l'outil qui suit le trait sans rien remplir.
   stylo: [t('M15.5 3.5l5 5L10 19l-5 1 1-5z'), t('M13.5 5.5l5 5'), t('M3 21c2-1 4-1 6 0')],
   // Du code : deux chevrons et la barre d'une balise fermante, ce qu'un integrateur ecrit pour embarquer l'editeur.
-  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')]
+  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')],
+  // Les outils de selection (ADR-0035) : le cadre en tirets et la fleche qui le tire ; le lasso, sa boucle, son noeud et sa corde ;
+  // inverser, un carre a moitie plein (ce qui etait choisi ne l'est plus, et l'inverse).
+  'cadre-selection': [{ d: 'M3 3h15v13H3z', pointille: true }, t('M13 12l8 4.5-3.6 1-1.4 3.6z', true)],
+  lasso: [t('M8 15.6C5.6 14.4 4 12.6 4 10.5 4 6.9 7.6 4 12 4s8 2.9 8 6.5S16.4 17 12 17c-1 0-1.9-.1-2.8-.4'), t('M7.2 16.8a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0'), t('M8 18.3c-.5 1.4-1.6 2.2-3 2.7')],
+  'inverser-selection': [t('M4 4h16v16H4z'), t('M4 4h8v16H4z', true)]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

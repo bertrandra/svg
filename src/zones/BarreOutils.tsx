@@ -19,9 +19,10 @@ import { SelecteurContexte } from './Production.js';
 import { RecupererBarre } from './Recuperer.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 import { aEnregistrer, raisonRienAEnregistrer } from './enregistrement.js';
+import { OutilSelectionBarre } from './OutilsSelection.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
-  ['selection', 'selection', 'Sélection (V)'], ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
+  ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
 ];
 const OUTILS_APRES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
   ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'], ['texte', 'texte', 'Texte (T)']
@@ -66,11 +67,13 @@ function OutilFormes() {
 }
 
 /** Les outils : ne lit que l'outil courant, jamais le dessin. */
-const GroupeOutils = memo(function GroupeOutils() {
+const GroupeOutils = memo(function GroupeOutils({ telephone = false }: { telephone?: boolean }) {
   const { outil } = useInterface(), ac = useActions();
   return (
     <div className="groupe outils" role="group" aria-label="Outil">
-      {OUTILS_FIXES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
+      {/* La selection, le cadre et le lasso derriere un seul bouton (ADR-0035) ; sur un telephone, les points aussi. */}
+      <OutilSelectionBarre avecPoints={telephone} />
+      {OUTILS_FIXES.filter(([o]) => !(telephone && o === 'points')).map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
       <OutilFormes />
       {OUTILS_APRES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
     </div>
@@ -173,7 +176,7 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
   if (telephone) {
     return (
       <header className="editeur-barre telephone">
-        <GroupeOutils />
+        <GroupeOutils telephone />
         <div className="groupe plus" role="group" aria-label="Plus"><MenuPlus nom={nom} /></div>
         <StyleCourant />
         <GroupeHistorique />

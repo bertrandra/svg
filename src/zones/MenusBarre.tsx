@@ -24,6 +24,7 @@ import { aEnregistrer } from './enregistrement.js';
 import { BoiteInsererAdresse } from './InsererAdresse.js';
 import { adressesPermises } from './OuvrirAdresse.js';
 import { useElementsNuancier } from './actionsNuancier.js';
+import { elementsSelection } from './commandesSelection.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -77,9 +78,8 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'couper', libelle: 'Couper', icone: 'couper', raccourci: 'Ctrl+X', desactive: rien, onClick: ac.couperSelection },
     { id: 'coller', libelle: 'Coller', icone: 'coller', raccourci: 'Ctrl+V', desactive: !mo.presse.length, onClick: ac.collerPresse },
     { id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', desactive: rien, onClick: ac.dupliquerSelection },
-    { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
-    { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
-    { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
+    // Choisir (ADR-0035) : tout, rien, inverser, meme fond, meme contour, meme type, et en Cricut ce qui est a couper ou a ecrire.
+    ...elementsSelection(mo, ui, ac),
     // Le nuancier du dessin depuis la selection (ADR-0037) : le remplacer ou le completer.
     ...nuancier,
     // Couper ou ecrire (ADR-0028), en contexte Cricut qui coupe ou ecrit : la selection passe d'un groupe a l'autre.

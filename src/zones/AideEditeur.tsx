@@ -11,7 +11,8 @@ import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 export function ListeRaccourcis() {
   return (
     <ul className="raccourcis">
-      <li>V sélection · A points · H, ou espace maintenu en glissant : main · O contours</li>
+      <li>V sélection · B cadre de sélection · Q lasso · A points · H, ou espace maintenu en glissant : main · O contours</li>
+      <li>Cadre et lasso : ils prennent toute forme dont le tracé touche la zone, même en partie (zone en tirets) ; « Les formes entièrement dedans », au menu de l’outil de sélection, ne prend que ce qu’ils contiennent (trait plein) · Maj ajoute à la sélection, Alt retire · avec l’outil sélection, un glisser sur le vide trace un cadre ; l’outil Cadre commence même sur une forme, et c’est lui qui sert au doigt</li>
       <li>R rectangle · E ellipse · S étoile · L ligne · F palette des formes (flèches, puis Entrée choisit) · P plume (Entrée ferme, Retour arrière retire un point) · T texte</li>
       <li>Formes : Maj en traçant garde les proportions (un carré, un cercle, une forme non étirée) ; le carré et le cercle les gardent toujours ; leurs réglages (côtés, branches, rayon des coins…) sont dans le panneau quand l’outil est choisi</li>
       <li>Alt en tirant la poignée d’un point lisse ou symétrique : elle bouge seule, le temps du geste</li>
@@ -20,14 +21,16 @@ export function ListeRaccourcis() {
       <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
       <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
       <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
-      <li>G grille magnétique · Z zoom sur la sélection · C choisir les formes de même couleur · Ctrl+S enregistrer</li>
+      <li>G grille magnétique · Z zoom sur la sélection · Ctrl+S enregistrer</li>
+      <li>I inverser la sélection · C même couleur de fond (de contour pour une forme sans fond) · Alt+C même couleur de contour · Y même type (texte, trait, forme pleine)</li>
       <li>Maj+N : le nuancier du dessin devient les couleurs de la sélection · Alt+Maj+N les y ajoute · dans le nuancier, Maj+clic (ou Maj+Entrée) pose la couleur sur le contour</li>
-      <li>En contexte Cricut, découpe ou stylo : Maj+X range la sélection à couper, Maj+E à écrire au stylo · Maj+O montre ou retire l’aperçu de la machine</li>
+      <li>En contexte Cricut, découpe ou stylo : Maj+X range la sélection à couper, Maj+E à écrire au stylo · Maj+O montre ou retire l’aperçu de la machine · Alt+Maj+X choisit tout ce qui est à couper, Alt+Maj+E tout ce qui est à écrire</li>
       <li>Flèches : déplacer (Maj : ×10) · Alt+flèches : redimensionner, coin haut gauche fixe (Maj : ×10) · Ctrl+flèche gauche ou droite : tourner de 15° (Maj : 1°) · Maj en glissant : contraindre</li>
       <li>Au clavier, sur la toile : Tab et Maj+Tab passent à la forme suivante ou précédente (en mode points, au point suivant ou précédent) ; après la dernière, Tab quitte la toile · Page suivante et Page précédente : forme suivante ou précédente, en boucle · Entrée sur une forme : ses points</li>
       <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme à sa taille par défaut au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
       <li>Une forme à deux coins au clavier : Espace (ou Maj+Entrée) pose le premier coin au réticule, les flèches déplacent l’autre coin (un aperçu en pointillés suit), Espace ou Entrée le pose ; Échap annule le premier coin</li>
-      <li>Sélection additive au clavier (outil sélection) : Maj+Page suivante ou Maj+Page précédente ajoute la forme voisine à la sélection et y place le curseur ; Espace ajoute ou retire la forme au curseur. Il n’y a pas de cadre de sélection au clavier : Ctrl+A, « Tout », « Inverser » et C (même couleur) en tiennent lieu</li>
+      <li>Sélection additive au clavier (outil sélection) : Maj+Page suivante ou Maj+Page précédente ajoute la forme voisine à la sélection et y place le curseur ; Espace ajoute ou retire la forme au curseur</li>
+      <li>Cadre au clavier (outil F) : Espace ou Entrée pose un coin au réticule, les flèches déplacent l’autre, Entrée prend les formes (Maj+Entrée les ajoute), Échap annule · Lasso au clavier (outil Q) : Espace pose un point, Retour arrière retire le dernier, Entrée ferme le lasso et prend les formes</li>
       <li>Outil texte : Entrée met le focus dans le champ Texte du panneau ; « Ajouter le texte » pose les lettres au centre du plan</li>
       <li>Visite guidée (menu Aide) : F6 va à sa bulle et revient à la toile, « Aller à la visite guidée » est le deuxième arrêt de Tab ; dans la bulle, Échap quitte la visite</li>
       <li>Molette : zoom · Maj+molette : défiler · + / − · 0 ajuster · 1 taille réelle · Échap désélectionner</li>
