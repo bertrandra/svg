@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AA, JETONS, PAIRES, ROLES, contrasteDe, cssJetons, lire, tableauJetons, valeur } from '../../../src/styles/jetons.js';
 import { FAMILLES, TAILLES } from '../../../src/styles/typographie.js';
+import { COUCHES, ESPACES, RAYONS } from '../../../src/styles/espaces.js';
 
 // Le registre est la seule source des couleurs de l'interface : ces tests le confrontent au CSS de la
 // page et au code, et tiennent les contrastes. Ajouter un jeton, c'est l'ajouter dans src/styles/jetons.ts,
@@ -26,8 +27,8 @@ const lues = (texte: string) => new Set([...texte.matchAll(/var\(--([a-z][a-z0-9
 
 const HEX = /^#[0-9a-f]{6}$/;
 const RGBA = /^rgba\(\d{1,3}, \d{1,3}, \d{1,3}, (0|1|0?\.\d+)\)$/;
-// La typographie a son registre (src/styles/typographie.ts) et son test : ses variables ne sont pas des couleurs.
-const NON_COULEURS = new Set([...FAMILLES.map(([id]) => id), ...TAILLES.map(t => t.id)]);
+// La typographie et les mesures ont leurs registres (typographie.ts, espaces.ts) et leurs tests : pas des couleurs.
+const NON_COULEURS = new Set([...FAMILLES.map(([id]) => id), ...[...TAILLES, ...ESPACES, ...RAYONS, ...COUCHES].map(t => t.id)]);
 
 describe('le registre', () => {
   it('a des identifiants uniques, en minuscules et tirets, et des valeurs que le CSS lit', () => {

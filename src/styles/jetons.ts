@@ -6,6 +6,7 @@
 // l'utilisateur (nuancier, palettes).
 
 import { contraste, lireHex, versHex } from '../util/couleur.js';
+import { declarationsEspaces, tableauEspaces } from './espaces.js';
 import { declarationsTypographie, tableauTypographie } from './typographie.js';
 
 export type RoleJeton = 'surface' | 'texte' | 'trait' | 'action' | 'etat' | 'toile' | 'relief' | 'repli';
@@ -147,6 +148,7 @@ export function cssJetons(): string {
     ':root {',
     declarations(JETONS, 'clair', '  '),
     declarationsTypographie('  '),
+    declarationsEspaces('  '),
     '}',
     '@media (prefers-color-scheme: dark) {',
     '  :root:not([data-theme="light"]) {',
@@ -179,6 +181,8 @@ export function tableauJetons(): string {
     ...paires,
     '',
     tableauTypographie(),
+    '',
+    tableauEspaces(),
     ''
   ].join('\n');
 }

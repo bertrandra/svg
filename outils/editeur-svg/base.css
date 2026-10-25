@@ -4,7 +4,7 @@ html, body { height: 100%; }
 body { margin: 0; background: var(--table); color: var(--encre); font-family: var(--sans); font-size: var(--texte-corps); line-height: 1.45; }
 /* Un bouton est secondaire par defaut : un filet, de l'encre. Une seule action par panneau porte la
    couleur d'outil (.primaire) ; .discret est un lien en forme de bouton. */
-button { font: inherit; font-size: var(--texte-corps); font-weight: 600; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--filet); background: transparent; color: var(--encre); cursor: pointer; transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.12s; }
+button { font: inherit; font-size: var(--texte-corps); font-weight: 600; padding: var(--esp-s) var(--esp-l); border-radius: var(--rayon-bouton); border: 1px solid var(--filet); background: transparent; color: var(--encre); cursor: pointer; transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.12s; }
 button:where(:not(.icone-bouton, .discret, .primaire, .menu-element, .danger)):hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
 button:active:not(:disabled) { transform: translateY(1px); }
 /* Au doigt, deux touches rapides sur « Annuler » ne doivent pas zoomer la page (iOS Safari le fait sur tout ce qui n'a pas touch-action) ; la toile a le sien (none). */
@@ -24,15 +24,15 @@ button, summary, input[type="text"], input[type="search"], select { min-height: 
 input[type="range"] { min-height: 24px; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-input[type="text"], select, textarea { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--filet); border-radius: 5px; background: var(--table); color: var(--encre); }
+input[type="text"], select, textarea { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: var(--esp-s) var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: var(--table); color: var(--encre); }
 textarea { font-family: var(--mono); font-size: var(--texte-compact); resize: vertical; }
-input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid var(--filet); border-radius: 5px; background: none; flex: none; }
+input[type="color"] { width: 38px; height: 32px; padding: 0; border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: none; flex: none; }
 .aide { font-size: var(--texte-petit); color: var(--encre-douce); }
 /* Les titres coupent en lignes egales, le texte evite un mot seul en derniere ligne ; un navigateur qui ignore
    text-wrap garde son retour a la ligne ordinaire. */
 h1, h2, h3, h4, summary { text-wrap: balance; }
 p, .aide { text-wrap: pretty; }
-.mini-onglets { display: flex; gap: 2px; background: var(--table); border-radius: 6px; padding: 2px; }
-.mini-onglets button { flex: 1; background: transparent; color: var(--encre-douce); border: 0; padding: 5px 6px; font-size: var(--texte-compact); white-space: nowrap; }
+.mini-onglets { display: flex; gap: var(--esp-2xs); background: var(--table); border-radius: var(--rayon-bouton); padding: var(--esp-2xs); }
+.mini-onglets button { flex: 1; background: transparent; color: var(--encre-douce); border: 0; padding: var(--esp-xs) var(--esp-s); font-size: var(--texte-compact); white-space: nowrap; }
 .mini-onglets button[aria-pressed="true"] { background: var(--cyan); color: var(--sur-cyan); }
 .mini-onglets button:hover:not(:disabled):not([aria-pressed="true"]) { color: var(--encre); background: var(--panneau); }

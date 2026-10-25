@@ -211,8 +211,10 @@ sur la table, l'inspecteur à droite (sections repliables), une barre d'état en
 nombre de modifications. L'accueil est une colonne centrée de trois voies côte à côte (Ouvrir, Convertir,
 Bibliothèque), une seule visible à la fois.
 
-Le rythme est serré : pas de 4 px (4, 8, 12, 16 px), espacements de 4 px dans la barre, 12 px entre cartes,
-16 px de marge intérieure de carte.
+Le rythme est serré, sur une base de 4 avec un pas de 6 : 2, 4, 6, 8, 12, 16, 24 et 48 px, chacun un jeton
+(`src/styles/espaces.ts`, `--esp-*`), comme les rayons (`--rayon-*`) et les couches d'empilement (`--couche-*`) ; un
+test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la barre, 6 px dans les listes,
+12 px entre cartes, 16 px à l'intérieur d'une carte.
 
 - **Au-dessous de 900 px ou au doigt** : les panneaux deviennent des tiroirs sur voile, les cibles passent à
   40 px (44 px dans les menus).

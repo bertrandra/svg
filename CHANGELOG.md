@@ -382,5 +382,11 @@ empreintes.
   `-titre`, `-titre-page` : 12, 13, 14, 16 et 24 px) au lieu de dix-huit valeurs écrites en dur ; les textes les plus
   petits passent de 11 à 12 px, la taille de base suit le réglage du navigateur (rem au lieu de px), les titres
   coupent en lignes égales. Un test interdit toute taille écrite en dur, comme pour les couleurs.
+- **Corrigé** : le bouton « Choisir les formes » d'un constat bloquant n'atteignait que 4,34:1 (cyan sur le fond
+  d'échec) ; il prend l'encre du message (5,28:1). L'audit axe du panneau attend la fin des fondus avant de mesurer.
 - `PRODUCT.md` et `DESIGN.md` (« le carnet d'atelier ») décrivent le produit et son système visuel pour les travaux
   de design ; la skill de design impeccable est rangée dans `.claude/skills/`.
+- **Espacements, rayons et couches en jetons** (`src/styles/espaces.ts` : `--esp-*` sur une base de 4 avec un pas de
+  6, `--rayon-*`, `--couche-*`) au lieu de valeurs écrites en dur ; les pas hors échelle (3, 5, 7, 9, 10, 14, 20,
+  28 px) se ramènent au plus proche, le plus serré à égalité. Un test interdit tout espacement, rayon ou couche en dur.
+- Les constats du panneau « Prêt pour Cricut » ont un filet tout autour au lieu d'une barre de couleur à gauche.

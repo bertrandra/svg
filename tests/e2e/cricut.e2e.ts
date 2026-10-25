@@ -193,10 +193,18 @@ describe('le contexte Cricut', () => {
     await attend(() => nombreDeConstats(page)).toBe(5);
     await page.locator('.aide-cricut > summary').click();
     const axe = async () => {
-      await page.evaluate(() => Promise.race([
-        Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))),
-        new Promise(fini => setTimeout(fini, 2000))
-      ]).then(() => undefined));
+      // Le jugement se recalcule 200 ms apres le dernier geste et peut remonter une section, dont le fondu repart :
+      // on attend qu'aucune animation finie ne tourne plus, trois sondages de suite, avant de mesurer un contraste.
+      await page.evaluate(async () => {
+        const enCours = () => document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity);
+        const limite = performance.now() + 4000;
+        let calmes = 0;
+        while (calmes < 3 && performance.now() < limite) {
+          const actives = enCours();
+          if (actives.length) { calmes = 0; await Promise.race([Promise.all(actives.map(a => a.finished.catch(() => undefined))), new Promise(fini => setTimeout(fini, 500))]); }
+          else { calmes++; await new Promise(fini => setTimeout(fini, 120)); }
+        }
+      });
       if (!(await page.evaluate(() => 'axe' in window))) await page.addScriptTag({ content: AXE });
       const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { resultTypes: ['violations', 'incomplete'] })));
       expect(r.violations.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);

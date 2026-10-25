@@ -93,3 +93,37 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--texte-corps` | `0.875rem` | Le texte courant, les boutons et les champs (14 px) |
 | `--texte-titre` | `1rem` | Titres de voie, de carte et de boîte (16 px) |
 | `--texte-titre-page` | `1.5rem` | Le titre de l’accueil, seul de son rang (24 px) |
+
+### L’espacement : une base de 4, avec un pas de 6
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `--esp-2xs` | `2px` | Entre deux éléments collés : onglets d’un groupe, icône et son repère |
+| `--esp-xs` | `4px` | L’intérieur d’une barre, entre les outils |
+| `--esp-s` | `6px` | Entre les lignes d’une liste, les boutons d’un groupe ; l’intérieur d’un bouton |
+| `--esp-m` | `8px` | L’intérieur d’un champ ou d’un menu ; entre les éléments d’un panneau |
+| `--esp-l` | `12px` | Entre deux cartes, l’intérieur d’un message, le côté d’un bouton |
+| `--esp-xl` | `16px` | L’intérieur d’une carte ou d’une boîte, entre deux groupes |
+| `--esp-2xl` | `24px` | Les marges de la page d’accueil |
+| `--esp-3xl` | `48px` | Le pied de la page d’accueil |
+
+### Les rayons : croissants avec la surface
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `--rayon-pastille` | `4px` | Pastilles de couleur, vignettes, petites marques |
+| `--rayon-champ` | `5px` | Champs, éléments de menu |
+| `--rayon-bouton` | `6px` | Boutons, messages, onglets |
+| `--rayon-menu` | `8px` | Menus déroulants, panneaux flottants |
+| `--rayon-carte` | `10px` | Cartes, zones de dépôt, boîtes de dialogue |
+
+### Les couches d’empilement
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `--couche-voile` | `14` | Le voile sous un tiroir ouvert |
+| `--couche-tiroir` | `15` | Les panneaux en tiroir sur tablette et téléphone |
+| `--couche-saut` | `40` | Le lien d’évitement vers la toile |
+| `--couche-editeur` | `1000` | L’éditeur en plein écran au-dessus de la page |
+| `--couche-menu` | `1100` | Les menus déroulants, au-dessus de l’éditeur |
+| `--couche-dialogue` | `1200` | Le voile et la boîte « À propos et crédits » |
