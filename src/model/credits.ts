@@ -107,8 +107,8 @@ export const COMPOSANTS: readonly Composant[] = [
   { paquet: '@expo-google-fonts/caveat', nom: 'Caveat', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Caveat Project Authors', url: 'https://github.com/googlefonts/caveat' },
   { paquet: '@expo-google-fonts/fredoka', nom: 'Fredoka', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Fredoka Project Authors', url: 'https://github.com/hafontia/Fredoka-One' },
   // Les fontes de l'interface de la page autonome, incorporees en data: URI (scripts/fontes-interface.mjs) : la page ne les demande a personne.
-  { paquet: '@fontsource/instrument-sans', nom: 'Instrument Sans', genre: 'fonte', usage: 'Police de l’interface de la page', ...OFL, titulaire: 'The Instrument Sans Project Authors', url: 'https://github.com/Instrument/instrument-sans' },
-  { paquet: '@fontsource/ibm-plex-mono', nom: 'IBM Plex Mono', genre: 'fonte', usage: 'Police à chasse fixe de l’interface de la page', ...OFL, titulaire: 'IBM Corp.', url: 'https://github.com/IBM/plex' },
+  { paquet: '@fontsource/instrument-sans', nom: 'Instrument Sans', genre: 'fonte', usage: 'Police de l’interface de la page autonome (l’éditeur embarqué ne l’emporte pas)', ...OFL, titulaire: 'The Instrument Sans Project Authors', url: 'https://github.com/Instrument/instrument-sans' },
+  { paquet: '@fontsource/ibm-plex-mono', nom: 'IBM Plex Mono', genre: 'fonte', usage: 'Police à chasse fixe de la page autonome (l’éditeur embarqué ne l’emporte pas)', ...OFL, titulaire: 'IBM Corp.', url: 'https://github.com/IBM/plex' },
 
   { paquet: 'react', nom: 'React', genre: 'logiciel', usage: 'L’interface', ...MIT, titulaire: 'Meta Platforms, Inc. and affiliates', url: 'https://react.dev' },
   { paquet: 'react-dom', nom: 'React DOM', genre: 'logiciel', usage: 'L’interface dans la page', ...MIT, titulaire: 'Meta Platforms, Inc. and affiliates', url: 'https://react.dev' },

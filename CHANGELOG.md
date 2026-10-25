@@ -403,3 +403,6 @@ empreintes.
   6, `--rayon-*`, `--couche-*`) au lieu de valeurs écrites en dur ; les pas hors échelle (3, 5, 7, 9, 10, 14, 20,
   28 px) se ramènent au plus proche, le plus serré à égalité. Un test interdit tout espacement, rayon ou couche en dur.
 - Les constats du panneau « Prêt pour Cricut » ont un filet tout autour au lieu d'une barre de couleur à gauche.
+- **Corrigé** : dans l'inspecteur, les étiquettes « Rotation ° », « Échelle % », « Incl. X ° », « Incl. Y ° » et « Angles du
+  décalage » passaient sur deux lignes (« Rotation » était rogné) : une étiquette courte tient sur une ligne, le champ cède
+  la place. Les crédits précisent que les fontes de l'interface ne sont pas dans l'éditeur embarqué.

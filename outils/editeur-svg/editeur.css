@@ -171,6 +171,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-svg button.danger { background: transparent; border-color: var(--echec); color: var(--echec); }
 .editeur-svg button.danger:hover:not(:disabled) { background: var(--echec-fond); }
 .champ-ligne { display: flex; align-items: center; gap: var(--esp-s); font-size: var(--texte-compact); min-width: 0; }
+/* Une etiquette courte tient sur une ligne : c'est le champ qui cede la place, pas le libelle (« Rotation » se rognait). */
+.champ-ligne > span:first-child { flex: none; white-space: nowrap; }
+.champ-ligne > input[type="text"], .champ-ligne > select { flex: 1 1 auto; min-width: 0; }
 .champ-ligne > span:first-child { min-width: 62px; color: var(--encre-douce); }
 .champ-ligne input[type="text"] { width: 84px; font-family: var(--mono); font-size: var(--texte-petit); padding: var(--esp-2xs) var(--esp-xs); }
 .champ-ligne input[type="color"], .couleurs-dessin input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid var(--filet); border-radius: var(--rayon-pastille); background: transparent; flex: none; }
