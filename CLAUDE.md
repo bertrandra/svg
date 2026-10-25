@@ -107,7 +107,7 @@ npm run test:php     # les tests du site PHP (tests/php/)
   liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
   main par `scripts/catalogue-polices.mjs`, jamais au build) ; le choix d'une police non livrée vaut demande, et rien ne part
   sans ce geste (ouvrir la liste, chercher, voir les aperçus : aucune requête ; `policesEnLigne` faux chez un hôte) ; chaque
-  fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit `c-…` avec sa version ; le réseau passe par `io/` (`policesEnLigne.ts`, `serveur.ts`).
+  fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit `c-…` avec sa version ; le réseau passe par `io/` (`policesEnLigne.ts`, `serveur.ts`, `adresse.ts`).
 - **Une police se voit avant de se télécharger, une ligne par famille** (ADR-0026) : le nom se dessine dans sa fonte, calculé
   sur place pour une police disponible (`engine/texte/apercuNom.ts`), préparé pour le catalogue dans `data/apercus-polices.json`
   (commis, refait à la main par `scripts/apercus-polices.mjs` après l'index, chaque fichier vérifié par sha256, jamais au
@@ -119,6 +119,12 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `engine/projet.ts`) garde tout le modèle à pleine précision, se migre, se valide sans lever et réécrit le même SVG à l'octet ;
   les annexes de données passent par `definirSourceDonnees`, les polices du catalogue par le serveur, qui les vérifie ; toute
   route sous session, toute écriture sous jeton CSRF et révision.
+- **Ouvrir depuis une adresse, le type sur les octets** (ADR-0036) : rien ne part sans « Ouvrir », un lien glissé ou une adresse
+  collée seule ; le champ n'existe que si l'hôte pose `definirOuvertureAdresse` (page, site ; jamais l'embarquement) ; https
+  seulement (`model/adresse.ts`) ; la nature se lit sur les octets (`engine/natureOctets.ts`), puis la lecture d'un fichier
+  d'inconnu ; sur le site, `api.php?r=adresse` sous session et CSRF, anti-SSRF dans `inc/adresse.php` (toutes les adresses
+  publiques, `CURLOPT_RESOLVE`, redirections à la main, journal limité à l'hôte) ; un vecteur nouveau entre dans
+  `tests/fixtures/hostile-adresse/`.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire

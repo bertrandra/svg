@@ -192,6 +192,14 @@ empreintes.
 
 ### Ajouté
 
+- **Ouvrir depuis une adresse** (ADR-0036) : un champ « Ouvrir depuis une adresse » dans les voies « Ouvrir un SVG ou un PDF » et
+  « Convertir une image », et « Insérer depuis une adresse… » dans le menu Fichier de l'éditeur (un SVG ou la première page d'un
+  PDF). Un lien glissé, ou une adresse collée seule dans la zone de code, l'ouvre aussi ; rien ne part avant ce geste. Le type se
+  décide sur les octets reçus, jamais sur l'extension, et la lecture reste celle d'un fichier d'inconnu. Dans la page autonome, le
+  navigateur va chercher le fichier (https seulement, sans cookie ni référent, 100 Mo et 60 s au plus, annulable) et dit
+  clairement un refus CORS ; sur le site PHP, le serveur le fait, avec des protections anti-SSRF (adresses privées refusées en
+  IPv4 et IPv6, connexion épinglée, redirections revues, taille et délai bornés, journal sans chemin ni paramètre ; cURL requis).
+
 - **Les formes de base** (ADR-0033) : une palette de 26 formes en cinq rubriques (Basiques, Polygones, Symboles, Étiquettes,
   Traits), ouverte par le chevron « Formes » de la barre ou par F : carré, cercle, rectangle arrondi, triangle, losange,
   parallélogramme, trapèze, polygone de 3 à 12 côtés, étoile réglable, cœur, flèche simple ou double, croix, anneau percé,
