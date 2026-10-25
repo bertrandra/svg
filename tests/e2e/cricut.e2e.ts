@@ -193,6 +193,10 @@ describe('le contexte Cricut', () => {
     await attend(() => nombreDeConstats(page)).toBe(5);
     await page.locator('.aide-cricut > summary').click();
     const axe = async () => {
+      // Un titre a demi cache par le defilement de l'inspecteur est un « doute » pour axe (fond indeterminable) : la
+      // fenetre prend la hauteur du contenu, pour que l'audit juge chaque texte entier et non une position de defilement.
+      const hauteur = await page.evaluate(() => { const i = document.querySelector('.editeur-inspecteur'); return i ? Math.ceil(i.scrollHeight - i.clientHeight + innerHeight) : innerHeight; });
+      await page.setViewportSize({ width: 1280, height: Math.min(4000, Math.max(800, hauteur + 40)) });
       await attendreAnimations(page);
       if (!(await page.evaluate(() => 'axe' in window))) await page.addScriptTag({ content: AXE });
       const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { resultTypes: ['violations', 'incomplete'] })));
