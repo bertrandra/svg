@@ -58,6 +58,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
+- **Une forme se prend par le calcul, pas par le DOM** (ADR-0029) : `engine/prise.ts` (pur, mémorisé par forme) rend les
+  candidates d'un point, avec une tolérance et une cible minimale en pixels d'écran (6 et 12 px à la souris, 12 et 24 au doigt) ;
+  le clic, le double-clic et le survol l'appellent par `zones/PriseToile.tsx` ; Alt+clic passe dessous ; le curseur `move` n'est
+  jamais posé sur la toile au survol (il restylerait chaque forme) ; le liseré de survol est en `--cyan` sur `--panneau`.
 - **Rien ne s'écrit sans le geste de fin** (« Enregistrer », le libellé de l'hôte par `libelleEnregistrer`, « Terminer »
   dans la page) ; Ctrl+S ne garde qu'un brouillon et ne ferme jamais ; récupérer un fichier (« Télécharger le SVG »,
   « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg`.

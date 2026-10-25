@@ -166,6 +166,13 @@ empreintes.
 
 ### Ajouté
 
+- **Une forme se prend facilement sur la toile** (ADR-0029) : tolérance de 6 px autour du tracé à la souris, 12 px au doigt,
+  à tout zoom ; un texte se prend entre ses lettres ; une petite forme a une cible minimale ; un trait fin posé sur un fond se
+  prend sans viser au pixel. Alt+clic passe à la forme du dessous, en boucle, et le dit à voix haute.
+- Avec l'outil de sélection, le curseur devient « déplacer » au survol d'une forme qu'un clic prendrait, et un liseré discret
+  (cyan sur un halo de panneau) la montre ; au doigt, le liseré vient au toucher. Une forme verrouillée ne montre ni l'un ni
+  l'autre.
+
 - **« Toutes les polices » montre l'allure de chaque police sans rien télécharger** (ADR-0026) : le nom d'une police déjà
   disponible (livrée, déposée, téléchargée dans la session) se dessine dans sa propre fonte ; celui d'une famille du catalogue
   vient d'un aperçu préparé (2 163 familles sur 2 200), dans l'annexe facultative `polices-apercus.js` (1,9 Mo, 0,64 Mo
