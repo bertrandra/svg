@@ -138,8 +138,12 @@ export function valeursParDefaut(mode: ModeVectorisation, finesse: Finesse, nCou
 
 export interface ParametreFin {
   id: 'filterSpeckle' | 'simplify' | 'cornerThreshold' | 'colorPrecision' | 'layerDifference' | 'couleursMax';
+  /** Ce que fait le curseur, en mots simples : c'est le nom du champ. */
   libelle: string;
+  /** L'infobulle : l'effet precis et le nom du parametre de vtracer, pour qui le connait. */
   aide: string;
+  /** L'unite affichee apres la valeur (« px », « ° »), s'il y en a une. */
+  unite?: string;
   min: number;
   max: number;
   pas: number;
@@ -149,14 +153,14 @@ export interface ParametreFin {
 
 const TOUS: readonly ModeVectorisation[] = ['aplats', 'trait', 'fidele'];
 
-/** Les reglages numeriques, dans l'ordre ou on les propose. */
+/** Les reglages numeriques, dans l'ordre ou on les propose. Changer un libelle ne change aucune sortie du traceur. */
 export const PARAMETRES_FINS: readonly ParametreFin[] = [
-  { id: 'couleursMax', libelle: 'Couleurs', aide: 'Au plus N couleurs de l’image, les plus présentes d’abord. Moins : des aplats plus simples.', min: 1, max: 8, pas: 1, modes: ['aplats'] },
-  { id: 'filterSpeckle', libelle: 'Poussières', aide: 'Ignore les taches de moins de N pixels de côté. Plus haut : moins de petits tracés.', min: 0, max: 16, pas: 1, modes: TOUS },
-  { id: 'simplify', libelle: 'Simplification', aide: 'Lisse les courbes en retirant des points. 0 garde tout ; plus haut : des tracés plus légers, moins fidèles.', min: 0, max: 4, pas: 0.1, modes: TOUS },
-  { id: 'cornerThreshold', libelle: 'Angles vifs', aide: 'Angle, en degrés, au-delà duquel un coin reste un coin. Plus haut : des coins plus arrondis.', min: 0, max: 180, pas: 5, modes: TOUS },
-  { id: 'colorPrecision', libelle: 'Précision des couleurs', aide: 'Bits significatifs par canal. Plus haut : plus de nuances distinguées.', min: 1, max: 8, pas: 1, modes: ['aplats', 'fidele'] },
-  { id: 'layerDifference', libelle: 'Écart entre couches', aide: 'Écart de couleur à partir duquel on ouvre une couche. Plus haut : moins de couches.', min: 0, max: 64, pas: 1, modes: ['aplats', 'fidele'] }
+  { id: 'couleursMax', libelle: 'Nombre de couleurs', aide: 'Au plus N couleurs de l’image, les plus présentes d’abord. Moins : des aplats plus simples. (Palette imposée au traceur.)', min: 1, max: 8, pas: 1, modes: ['aplats'] },
+  { id: 'filterSpeckle', libelle: 'Ignorer les taches de moins de', aide: 'Les taches de moins de N pixels de côté ne deviennent pas des tracés. Plus haut : moins de petits tracés. (filter_speckle de vtracer.)', unite: ' px', min: 0, max: 16, pas: 1, modes: TOUS },
+  { id: 'simplify', libelle: 'Alléger les courbes', aide: 'Lisse les courbes en retirant des points. 0 garde tout ; plus haut : des tracés plus légers, moins fidèles. (Simplification des chemins.)', min: 0, max: 4, pas: 0.1, modes: TOUS },
+  { id: 'cornerThreshold', libelle: 'Arrondir les coins', aide: 'Angle, en degrés, au-delà duquel un coin reste un coin. Plus haut : des coins plus arrondis. (corner_threshold de vtracer.)', unite: '°', min: 0, max: 180, pas: 5, modes: TOUS },
+  { id: 'colorPrecision', libelle: 'Nuances distinguées', aide: 'Plus haut : le traceur sépare des couleurs plus proches, donc plus de nuances. (color_precision de vtracer : bits significatifs par canal.)', min: 1, max: 8, pas: 1, modes: ['aplats', 'fidele'] },
+  { id: 'layerDifference', libelle: 'Regrouper les couleurs proches', aide: 'Plus haut : des couleurs voisines se fondent en une seule couche, donc moins de couches. (layer_difference de vtracer : écart de couleur entre deux couches.)', min: 0, max: 64, pas: 1, modes: ['aplats', 'fidele'] }
 ];
 
 export const parametresDuMode = (mode: ModeVectorisation): ParametreFin[] => PARAMETRES_FINS.filter(p => p.modes.includes(mode));
@@ -180,10 +184,10 @@ export function retirerFin(fins: ReglagesFins | undefined, id: keyof ReglagesFin
 const NOMS_COURTS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats', trait: 'Trait', fidele: 'Fidèle' };
 const NOMS_COURTS_FINESSES: Record<Finesse, string> = { fine: 'fin', normale: 'normal', lisse: 'lisse' };
 const LIBELLES_FINS: Record<keyof ReglagesFins, string> = {
-  filterSpeckle: 'poussières', simplify: 'simplif.', cornerThreshold: 'angles', colorPrecision: 'précision', layerDifference: 'écart', couleursMax: 'couleurs', courbes: 'courbes', empilement: 'empilement'
+  filterSpeckle: 'taches', simplify: 'allègement', cornerThreshold: 'coins', colorPrecision: 'nuances', layerDifference: 'regroupement', couleursMax: 'couleurs', courbes: 'courbes', empilement: 'empilement'
 };
 
-/** Un reglage en une ligne : « Aplats · normal · poussières 8 · segments droits ». */
+/** Un reglage en une ligne : « Aplats · normal · taches 8 · segments droits ». */
 export function resumeReglages(v: ReglageVecteurs): string {
   const fins = v.fins ?? {};
   const touches = (Object.keys(LIBELLES_FINS) as (keyof ReglagesFins)[]).filter(k => fins[k] !== undefined).map(k => {

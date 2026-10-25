@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, encoderPng, imageDeTest, pilote, texteDe } from './aide.js';
+import { attend, choisirVue, encoderPng, imageDeTest, pilote, texteDe } from './aide.js';
 
 // Le premier trace charge le WASM : on laisse a la machine le temps de le faire sans en faire une regle.
 const TRACE = 60_000;
@@ -24,8 +24,11 @@ describe('atelier de vectorisation', () => {
 
   const resume = (page: Page) => texteDe(page.locator('.fiche-resultat .aide').first());
   const essais = (page: Page) => page.locator('.essais li').count();
-  const legende = (page: Page) => texteDe(page.locator('.reglages-fins legend'));
-  const poussieres = (page: Page) => page.locator('.reglages-fins input[aria-label="Poussières"]');
+  /** La section repliee des reglages fins : son titre dit combien sont touches. */
+  const sectionFins = (page: Page) => page.locator('.reglages-vecto details.section', { has: page.locator('summary', { hasText: 'Réglages fins' }) });
+  const legende = (page: Page) => texteDe(sectionFins(page).locator('summary'));
+  const ouvrirFins = async (page: Page) => { if ((await sectionFins(page).getAttribute('open')) === null) await sectionFins(page).locator('summary').click(); };
+  const poussieres = (page: Page) => page.locator('.reglages-fins input[aria-label="Ignorer les taches de moins de"]');
   /** Attend que le resume du resultat change de `avant` : le traceur a rejoue. */
   const attendreRejeu = (page: Page, avant: string) => attend(() => resume(page), TRACE).not.toBe(avant);
 
@@ -44,28 +47,36 @@ describe('atelier de vectorisation', () => {
     expect(await page.locator('.visionneuse .ligne-rideau').count()).toBe(1);
     // Une seule action pleine dans la voie : ouvrir le resultat dans l'editeur.
     expect(await page.locator('main button.primaire:visible').count()).toBe(1);
+    // Au premier resultat, les reglages fins et le pretraitement sont replies ; deux vues seulement sont des boutons.
+    expect(await page.locator('.reglages-vecto details.section[open]').count()).toBe(0);
+    expect(await page.locator('.barre-visionneuse .mini-onglets button').allInnerTexts()).toEqual(['Comparer', 'Contours']);
+    // Le resume se lit une seule fois.
+    const texte = await texteDe(page.locator('.vectoriser'));
+    expect(texte.split('tracés vectoriels').length - 1).toBe(1);
   });
 
   it('rejoue seul quand un curseur bouge, et garde chaque essai', async () => {
     const page = await atelier();
     expect(await legende(page)).toBe('Réglages fins');
+    await ouvrirFins(page);
     const premier = await resume(page);
     expect(await essais(page)).toBe(0); // un seul essai ne fait pas une liste
 
     // Les poussieres a 16 pixels : les cinq grains de 9 pixels disparaissent, le trace change.
     await poussieres(page).fill('16');
     await attendreRejeu(page, premier);
-    expect(await legende(page)).toBe('Réglages fins · 1 modifié');
+    expect(await legende(page)).toBe('Réglages fins 1 modifié');
     await attend(() => essais(page)).toBe(2);
 
     await page.locator('.reglages-fins select').first().selectOption('polygon');
     await attend(() => resume(page), TRACE).toContain('segments droits');
     await attend(() => essais(page)).toBe(3);
-    expect(await legende(page)).toBe('Réglages fins · 2 modifiés');
+    expect(await legende(page)).toBe('Réglages fins 2 modifiés');
   });
 
   it('reprend un essai d\'un clic : les curseurs reviennent aux reglages de cet essai', async () => {
     const page = await atelier();
+    await ouvrirFins(page);
     const premier = await resume(page);
     const avant = await poussieres(page).inputValue();
     await poussieres(page).fill('16');
@@ -88,21 +99,24 @@ describe('atelier de vectorisation', () => {
     const base = page.locator('.visionneuse .calque.base');
     const haut = page.locator('.visionneuse .calque.haut');
 
-    await page.getByRole('button', { name: 'Rendu', exact: true }).click();
+    await choisirVue(page, 'Rendu');
     await attend(() => base.getAttribute('class')).toContain('cache');
-    await page.getByRole('button', { name: 'Contours', exact: true }).click();
+    // Une vue du menu donne son nom au bouton : on voit toujours ce qu'on regarde.
+    expect(await texteDe(page.locator('.barre-visionneuse .vue-plus .menu-bouton'))).toBe('Rendu');
+    await choisirVue(page, 'Contours');
     await attend(() => haut.count()).toBe(1);
-    await page.getByRole('button', { name: 'Détourée', exact: true }).click();
+    await choisirVue(page, 'Détourée');
     await attend(() => haut.count()).toBe(0);
     expect(await base.getAttribute('alt')).toBe('Image détourée');
-    await page.getByRole('button', { name: 'Originale', exact: true }).click();
+    await choisirVue(page, 'Originale');
     await attend(() => base.getAttribute('alt')).toBe('Image déposée');
 
-    await page.getByRole('button', { name: 'Comparer', exact: true }).click();
-    await page.locator('select[aria-label="Zoom"]').selectOption('2');
+    await choisirVue(page, 'Comparer');
+    expect(await texteDe(page.locator('.barre-visionneuse .vue-plus .menu-bouton'))).toBe('Plus de vues');
+    await choisirVue(page, '200 %');
     // Image de 240 px de large, a 200 % : 480 px a l'ecran.
     await attend(() => base.evaluate(e => (e as HTMLImageElement).width)).toBe(480);
-    await page.getByRole('button', { name: 'Fond sombre' }).click();
+    await choisirVue(page, 'Sombre');
     await attend(() => page.locator('.visionneuse').getAttribute('class')).toContain('fond-sombre');
 
     await page.locator('.rideau input').fill('20');
@@ -111,10 +125,11 @@ describe('atelier de vectorisation', () => {
 
   it('remet les reglages fins a zero quand le mode change, et ne rejoue plus sans la case', async () => {
     const page = await atelier();
+    await ouvrirFins(page);
     const premier = await resume(page);
     await poussieres(page).fill('16');
     await attendreRejeu(page, premier);
-    expect(await legende(page)).toBe('Réglages fins · 1 modifié');
+    expect(await legende(page)).toBe('Réglages fins 1 modifié');
 
     // « Trait noir » : autre mode, autres curseurs, et plus rien de « modifie ».
     await page.locator('.reglages-vecto select').first().selectOption('trait');
@@ -122,6 +137,8 @@ describe('atelier de vectorisation', () => {
     await attend(() => resume(page), TRACE).toContain('Trait');
 
     const dernier = await resume(page);
+    // Le bouton « Rejouer » n'a pas de raison d'etre tant que tout se rejoue seul ; il revient sans la case.
+    expect(await page.getByRole('button', { name: 'Rejouer', exact: true }).count()).toBe(0);
     await page.getByLabel('Rejouer à chaque changement').uncheck();
     await poussieres(page).fill('1');
     // Un refus ne s'attend pas : on laisse passer plus de deux fois la pause de rejeu (400 ms) et on

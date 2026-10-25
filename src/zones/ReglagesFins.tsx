@@ -1,6 +1,8 @@
 // Les reglages fins du traceur (ADR-0005) : un curseur par parametre qui change quelque chose dans le
 // mode choisi, la valeur que le mode donne, une marque quand on s'en ecarte, et le retour d'un clic.
-// Le calcul (valeurs par defaut, ce qui est « touche ») est du moteur ; ici, seulement les champs.
+// Le calcul (valeurs par defaut, ce qui est « touche ») est du moteur ; ici, seulement les champs. Le
+// panneau vit dans une section repliee de l'atelier, qui porte son titre et le nombre de reglages touches ;
+// chaque libelle dit l'effet en mots simples, l'infobulle garde le nom technique du parametre.
 
 import { COULEURS_PALETTE_MAX, parametresDuMode, poserFin, retirerFin, valeursParDefaut, type ReglageVecteurs, type ReglagesFins } from '../engine/vectorisation.js';
 import { Icone } from './icones.js';
@@ -14,8 +16,8 @@ export function ReglagesFinsPanneau({ v, nCouleurs, poser, plafond = COULEURS_PA
   const mettre = (f: ReglagesFins | undefined) => poser(f ? { ...v, fins: f } : { mode: v.mode, finesse: v.finesse });
   const touches = Object.keys(fins).length;
   return (
-    <fieldset className="editeur-groupe reglages-fins">
-      <legend>Réglages fins{touches ? ' · ' + touches + ' modifié' + (touches > 1 ? 's' : '') : ''}</legend>
+    <div className="reglages-fins">
+      <p className="aide">Changer de mode ou de grain remet ces réglages à leurs valeurs.</p>
       {parametresDuMode(v.mode).map(p => {
         const defaut = defauts[p.id];
         const max = p.id === 'couleursMax' ? Math.max(1, Math.min(plafond, nCouleurs > 0 ? nCouleurs : plafond)) : p.max;
@@ -27,20 +29,20 @@ export function ReglagesFinsPanneau({ v, nCouleurs, poser, plafond = COULEURS_PA
             <span className="fin-libelle">{p.libelle}</span>
             <input type="range" min={p.min} max={max} step={p.pas} value={Math.min(valeur, max)} aria-label={p.libelle}
               onChange={e => mettre(poserFin(v.fins, p.id, Number(e.target.value), defaut))} />
-            <output>{arrondi(valeur)}</output>
-            <button type="button" className="icone-bouton petit" disabled={!touche} title={'Revenir à la valeur du mode (' + arrondi(defaut) + ')'} aria-label={'Revenir à la valeur du mode pour ' + p.libelle}
+            <output>{arrondi(valeur)}{p.unite ?? ''}</output>
+            <button type="button" className="icone-bouton petit" disabled={!touche} title={'Revenir à la valeur du mode (' + arrondi(defaut) + ')'} aria-label={'Revenir à la valeur du mode pour « ' + p.libelle + ' »'}
               onClick={() => mettre(retirerFin(v.fins, p.id))}><Icone nom="annuler" taille={12} /></button>
           </label>
         );
       })}
-      <label className={'champ-ligne' + (fins.courbes ? ' touche' : '')}>
+      <label className={'champ-ligne' + (fins.courbes ? ' touche' : '')} title="Courbes de Bézier lissées, ou polygone de segments droits (mode du traceur)">
         <span>Courbes</span>
         <select value={fins.courbes ?? defauts.courbes} onChange={e => mettre(poserFin(v.fins, 'courbes', e.target.value === 'polygon' ? 'polygon' : 'spline', defauts.courbes))}>
           <option value="spline">Lissées</option>
           <option value="polygon">Segments droits</option>
         </select>
       </label>
-      <label className={'champ-ligne' + (fins.empilement ? ' touche' : '')}>
+      <label className={'champ-ligne' + (fins.empilement ? ' touche' : '')} title="Empilement du traceur (hiérarchie « stacked » ou « cutout »)">
         <span>Formes</span>
         <select value={fins.empilement ?? defauts.empilement} onChange={e => mettre(poserFin(v.fins, 'empilement', e.target.value === 'cutout' ? 'cutout' : 'stacked', defauts.empilement))}>
           <option value="stacked">Empilées (une couche sous l’autre)</option>
@@ -48,6 +50,6 @@ export function ReglagesFinsPanneau({ v, nCouleurs, poser, plafond = COULEURS_PA
         </select>
       </label>
       <button type="button" className="discret" disabled={!touches} onClick={() => mettre(undefined)}>Revenir aux valeurs du mode</button>
-    </fieldset>
+    </div>
   );
 }

@@ -38,7 +38,7 @@ function Curseur({ p, valeur, pose, retirer }: { p: ParametrePre; valeur: number
       <span className="fin-libelle">{p.libelle}</span>
       <input type="range" min={p.min} max={p.max} step={p.pas} value={v} aria-label={p.libelle} onChange={e => pose(Number(e.target.value))} />
       <output>{arrondi(v)}</output>
-      <button type="button" className="icone-bouton petit" disabled={!touche} title={'Retirer : ' + p.libelle.toLowerCase()} aria-label={'Retirer le réglage ' + p.libelle}
+      <button type="button" className="icone-bouton petit" disabled={!touche} title={'Retirer le réglage « ' + p.libelle + ' »'} aria-label={'Retirer le réglage « ' + p.libelle + ' »'}
         onClick={retirer}><Icone nom="annuler" taille={12} /></button>
     </label>
   );

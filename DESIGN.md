@@ -100,6 +100,18 @@ components:
     textColor: "{colors.encre}"
     rounded: "{rounded.carte}"
     padding: "16px"
+  pastille-evenement:
+    backgroundColor: "{colors.table-atelier}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "4px 8px"
+  pastille-evenement-choisie:
+    backgroundColor: "{colors.cyan-encre}"
+    textColor: "{colors.sur-cyan}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "4px 8px"
   message-alerte:
     backgroundColor: "{colors.alerte-fond}"
     textColor: "{colors.alerte}"
@@ -279,6 +291,32 @@ Retenus au repos, francs à l'interaction.
   et voile cyan à 7 %.
 - **Sections de l'inspecteur:** repliables (`details`), contenu dense, mémoire d'ouverture.
 - **Messages:** fond et texte d'alerte ou d'échec, coins de 6 px, 10 × 12 px.
+
+### Pastilles d'événements (bibliothèque)
+Le filtre de la bibliothèque, à la place d'une liste déroulante de 45 lignes.
+- **Style:** boutons à état (`aria-pressed`) au fond de table, filet, coins de 6 px, texte compact ; la pastille choisie
+  est pleine en cyan d'encre, comme un onglet choisi (un état, pas une action : la règle de l'encre unique tient).
+- **Repliées:** « Tous », puis les six événements du calendrier qui arrivent (le mois est lu par la zone et passé au
+  cœur pur) ; l'événement choisi reste visible même loin dans l'année ; « Plus d'événements (45) », bouton discret
+  `aria-expanded`, déplie les trois familles titrées (Calendrier, Événements de la vie, Catégories).
+- **Clavier:** un groupe nommé « Événement » ; Tab passe par chaque pastille, les flèches vont de l'une à l'autre,
+  Début et Fin aux bouts.
+- **Téléphone:** sous 640 px, les pastilles repliées tiennent sur une seule ligne qui défile ; 40 px au doigt.
+
+### Vignettes et état vide (bibliothèque)
+- **Vignette:** une hauteur régulière ; le libellé tient sur deux lignes au plus, coupé proprement ; le nom complet reste
+  le nom accessible et l'infobulle.
+- **Aucun résultat:** une phrase qui dit ce qui ne correspond pas, des propositions qui trouvent chacune quelque chose
+  (« Essayez l'événement Noël (43) », une faute de frappe corrigée, la même recherche dans tous les événements), en
+  boutons discrets, puis « Effacer la recherche » ; le focus revient au champ.
+
+### Atelier de conversion (divulgation progressive)
+Au premier résultat, seul l'essentiel se voit : le résultat et son résumé (dit une fois), le fond, le mode et le grain,
+une action primaire « Ouvrir dans l'éditeur ». Deux vues en mini-onglets (Comparer, Contours) ; les autres vues, le zoom
+et le fond du plan dans le menu « Plus de vues », dont le bouton prend le nom d'une vue cachée choisie. Réglages fins et
+prétraitement en sections repliées (mémoire d'ouverture) ; chaque réglage se nomme par son effet en mots simples,
+l'infobulle garde le nom technique de vtracer. « Rejouer » n'apparaît que s'il sert (pas encore de résultat, ou rejeu
+automatique coupé).
 
 ### Panneau « Prêt pour Cricut » (signature)
 Le carnet d'atelier le plus littéral : un profil en une ligne d'aide, la taille finale et les couches comme des
