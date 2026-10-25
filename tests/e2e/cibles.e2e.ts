@@ -152,6 +152,19 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await exiger(page);
     });
 
+    it('avec un texte vivant : sa section Texte, l apercu forme / ligne ouvert, et sa saisie en place', async () => {
+      const page = await editeur();
+      const outil = page.locator('.editeur-barre button[title^="Texte (T)"]');
+      await cliquer(outil);
+      await tiroir(page, 'Inspecteur');
+      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await cliquer(page.getByRole('button', { name: 'Ajouter le texte' }));
+      await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
+      await cliquer(page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first());
+      await page.locator('.apercu-police').waitFor();
+      await exiger(page);
+    });
+
     it('avec les menus ouverts, dont le panneau d export du menu Fichier', async () => {
       const page = await editeur();
       for (const menu of ['Vue', 'Édition', 'Fichier']) {

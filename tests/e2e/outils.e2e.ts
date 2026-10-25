@@ -27,18 +27,19 @@ describe('outils de l\'editeur', () => {
     return s;
   }
 
-  it('compose un texte en formes, une par lettre, jamais en <text>', async () => {
+  // Depuis le texte vivant (ADR-0021), un texte ajoute est UNE forme modifiable (il se vectorise ensuite, texte-vivant.e2e.ts).
+  it('compose un texte vivant, une seule forme, jamais en <text>', async () => {
     const page = await editeur();
     const avant = await nombreDeCalques(page);
     await page.keyboard.press('t');
     // Les fontes se chargent a la demande (polices.js).
-    const fonte = page.locator('.editeur-inspecteur select[aria-label="Fonte"]');
+    const fonte = page.locator('.editeur-inspecteur select[aria-label="Police"]');
     await fonte.waitFor({ timeout: 30_000 });
     await page.locator('.editeur-inspecteur textarea[aria-label="Texte"]').fill('Noël');
     await fonte.selectOption('lobster');
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
 
-    await attend(() => nombreDeCalques(page)).toBe(avant + 4);
+    await attend(() => nombreDeCalques(page)).toBe(avant + 1);
     expect(await page.locator('.editeur-svg-toile text').count()).toBe(0);
     expect(await message(page)).not.toBe('');
   });

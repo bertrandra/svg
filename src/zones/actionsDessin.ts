@@ -11,6 +11,7 @@ import { phraseBooleen, sansDoublons, styleLigne } from './aidesEditeur.js';
 import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { svgDocument } from './actionsProduction.js';
+import { avecVectorisation } from './phrasesTexte.js';
 
 type ActionsDessin = Pick<ActionsEditeur, 'finirTrace' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
@@ -89,7 +90,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       const resultat = r.id ? r.dessin.formes.find(f => f.id === r.id) : undefined;
       if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return false; }
       const reunies = dessin.formes.filter(f => sel.includes(f.id) && f.visible && !f.verrouille).length;
-      dire(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')));
+      dire(avecVectorisation(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')), dessin, sel));
       return true;
     },
     transformerNumerique: t => {

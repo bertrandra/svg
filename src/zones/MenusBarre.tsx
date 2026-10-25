@@ -11,6 +11,8 @@ import { DialogueCredits } from './Credits.js';
 import { ContenuExport } from './Exporter.js';
 import { allerAuChamp } from './OutilsTrace.js';
 import { svgDocument } from './actionsProduction.js';
+import { useActionsTexte } from './actionsTexte.js';
+import { MODES_VECTORISATION, NOMS_MODES } from '../engine/texte/vectoriser.js';
 import { useRubriquesProduction } from './Production.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
@@ -44,8 +46,13 @@ export function MenuVue() {
 }
 
 function useElementsEdition(): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
-  const rien = !mo.sel.length;
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte();
+  const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
+  // Vectoriser le texte (ADR-0021) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
+  const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
+    id: 'vectoriser-' + m, libelle: 'Vectoriser le texte : ' + NOMS_MODES[m].toLowerCase(), separateur: i === 0, desactive: sansTexte,
+    ...(m === at.mode ? { raccourci: 'Ctrl+Maj+O' } : {}), onClick: () => { void at.vectoriser(m); }
+  }));
   return [
     { id: 'annuler', libelle: 'Annuler', icone: 'annuler', raccourci: 'Ctrl+Z', desactive: !mo.h.passe.length, onClick: ac.defaire },
     { id: 'retablir', libelle: 'Rétablir', icone: 'retablir', raccourci: 'Ctrl+Maj+Z', desactive: !mo.h.futur.length, onClick: ac.refaire },
@@ -57,6 +64,7 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
     { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
+    ...vectoriser,
     { id: 'contour-en-forme', libelle: 'Contour en forme', separateur: true, desactive: rien, onClick: ac.contourEnForme },
     { id: 'decaler-contour', libelle: 'Décaler le contour…', desactive: rien, onClick: () => allerAuChamp(ac, 'decalage') },
     { id: 'arrondir-angles', libelle: 'Arrondir les angles…', desactive: rien, onClick: () => allerAuChamp(ac, 'rayon') },

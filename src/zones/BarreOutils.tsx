@@ -22,7 +22,7 @@ const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
   ['selection', 'selection', 'Sélection (V)'], ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
 ];
 const OUTILS_APRES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
-  ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'], ['texte', 'texte', 'Texte en formes (T)']
+  ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'], ['texte', 'texte', 'Texte (T)']
 ];
 const FORMES_MENU: ReadonlyArray<readonly [OutilForme, NomIcone, string, string]> = [
   ['rectangle', 'rectangle', 'Rectangle', 'R'], ['ellipse', 'ellipse', 'Ellipse', 'E'], ['etoile', 'etoile', 'Étoile', 'S'], ['ligne', 'ligne', 'Ligne', 'L']

@@ -53,6 +53,7 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('damier-b', 'toile', '#e6e6e6', '#e6e6e6', 'Le damier de transparence : les cases grises'),
   jeton('toile-blanc', 'toile', '#ffffff', '#ffffff', 'Le plan de travail en fond blanc'),
   jeton('toile-sombre', 'toile', '#1b1d20', '#1b1d20', 'Le plan de travail en fond sombre'),
+  jeton('encre-toile', 'toile', '#15181d', '#15181d', 'L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe)'),
   jeton('ombre-menu', 'relief', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.2)', 'L’ombre des menus déroulants'),
   jeton('ombre-tiroir', 'relief', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.25)', 'L’ombre des tiroirs mobiles'),
   jeton('voile', 'relief', 'rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)', 'Le voile qui assombrit la toile derrière un tiroir ouvert')
@@ -127,7 +128,8 @@ export const AA_GRAPHIQUE = 3;
  */
 export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'filet-fort', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur un panneau' },
-  { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' }
+  { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
+  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' }
 ];
 
 const parId = new Map(JETONS.map(j => [j.id, j] as const));

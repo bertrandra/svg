@@ -10,6 +10,7 @@ import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAut
 import { FORMES } from './aidesEditeur.js';
 import { styleLigne } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { useTexte } from './contexteTexte.js';
 import type { Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
@@ -40,7 +41,7 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
 export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui;
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), tx = useTexte(), { vues } = ui;
   const geste = useRef<Geste | null>(null), espace = useRef(false);
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
   const pointeurs = useRef(new Map<number, { x: number; y: number }>());
@@ -184,7 +185,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (ui.outil === 'plume') { ac.finirTrace(true); return; }
     // La capture du pointeur fait de la toile la cible du double-clic : on lit la forme sous le curseur.
     const id = document.elementFromPoint(e.clientX, e.clientY)?.getAttribute('data-id');
-    if (id && ui.outil === 'selection') { ac.choisir([id]); ac.poserOutil('points'); }
+    // Un texte vivant se retape en place (ADR-0021) ; une autre forme passe en mode points.
+    if (id && ui.outil === 'selection') { ac.choisir([id]); if (mo.dessin.formes.find(f => f.id === id)?.texte) tx.ouvrirSaisie(id); else ac.poserOutil('points'); }
   };
   return { appuyer, bouger, lacher, doubleClic, cadre };
 }
