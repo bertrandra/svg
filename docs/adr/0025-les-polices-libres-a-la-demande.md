@@ -38,7 +38,8 @@ recomposer demain avec les mêmes octets. Le cœur pur ne touche pas au réseau.
   | Velvetyne | API GitLab, au commit | commit de 40 chiffres dans l’adresse | 26 familles |
   | Fontshare | `cdn.fontshare.com` | version de l’API et empreinte, **`aVerifier`** | 100 familles |
 
-  Soit **2 205 familles, 9 441 variantes** (graisse × style) à l’instantané du 25 octobre 2026.
+  Soit **2 205 familles, 9 441 variantes** (graisse × style) à l’instantané du 25 octobre 2026 ; cinq familles que l’éditeur ne
+  sait pas lire (Pitagon, Peace Sans : `FAMILLES_ILLISIBLES`) en sont ensuite retirées : **2 200 familles, 9 386 variantes**.
 - **les exclusions**, dites : **Font Squirrel** (licences au cas par cas, parfois sans usage commercial, ni adresse versionnée ni
   API), **uncut.xyz** (répertoire aux licences mêlées, sans adresse versionnée ni empreinte publiée), les polices d’icônes
   (catégorie `icons`), les familles sans sous-ensemble latin.

@@ -54,6 +54,16 @@ export const baseDeGrasse = (id: string): IdPoliceLivree | null =>
   (Object.entries(VARIANTES_GRASSES) as Array<[IdPoliceLivree, IdPoliceLivree]>).find(([, g]) => g === id)?.[0] ?? null;
 
 /**
+ * Les styles d'une famille livree qui en a plusieurs (Inter : normal et gras), pour le choix « Style » : une famille, une
+ * ligne ; la variante grasse reste une fonte a part (son identifiant s'ecrit dans le fichier), seul le choix la regroupe.
+ */
+export function stylesLivres(id: string): Array<{ readonly id: IdPoliceLivree; readonly nom: string }> {
+  const base = baseDeGrasse(id) ?? (estPoliceLivree(id) ? id : null);
+  const grasse = base ? VARIANTES_GRASSES[base] : undefined;
+  return base && grasse ? [{ id: base, nom: 'Normal' }, { id: grasse, nom: 'Gras' }] : [];
+}
+
+/**
  * La police a trait unique la plus proche d'une police a contour : celle que propose la correction « Police à trait
  * unique » du stylo. Une seule fonte a trait est livree aujourd'hui ; la table est la pour en accueillir d'autres
  * (une scripte pour Pacifico, Lobster, Caveat).

@@ -287,7 +287,8 @@ export function rangsParNom<T>(elements: readonly T[], nom: (e: T) => string | n
 /**
  * Une ligne par nom de famille : pour chaque nom, seuls restent les elements de la source la mieux placee (la fonte livree,
  * puis Google Fonts, puis… Fontshare en dernier), dans l'ordre d'origine. Deux elements de la meme source gardent leur ligne
- * (Inter et Inter gras, livrees toutes deux). Un element sans nom (`null`) reste toujours.
+ * (la variante grasse d'une fonte livree est retiree avant, par la zone : elle se choisit dans « Style »). Un element sans
+ * nom (`null`) reste toujours.
  */
 export function uneParNom<T>(elements: readonly T[], nom: (e: T) => string | null, source: (e: T) => string): T[] {
   const rangs = rangsParNom(elements, nom, source);

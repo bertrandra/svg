@@ -12,7 +12,7 @@ import { useMemo, useRef, useState, type ReactElement } from 'react';
 import { CATEGORIES, NOMS_CATEGORIES, cleDeNom, estIdCatalogue, familleDe, filtrerFamilles, rangsParNom, trouverVariante, uneParNom, variantePrincipale, type CategoriePolice, type FamilleCatalogue, type VariantePolice } from '../model/cataloguePolices.js';
 import { CADRE_APERCU, cheminApercu, vueApercu, type AnnexeApercus } from '../model/apercusPolices.js';
 import { LICENCES_POLICES, SERVEURS_POLICES, SOURCES_POLICES, rangSource, type IdSourcePolices, type LicencePolice } from '../model/sourcesPolices.js';
-import { FAMILLES_LIVREES, estPoliceLivree, type IdPoliceLivree, type NaturePolice } from '../model/polices.js';
+import { FAMILLES_LIVREES, baseDeGrasse, estPoliceLivree, type IdPoliceLivree, type NaturePolice } from '../model/polices.js';
 import { lirePoliceAppareil, policesAppareilDisponibles, policesDeLAppareil, type Police, type PoliceAppareil } from '../io/polices.js';
 import { SEUIL_FENETRE, segmentsFenetre } from '../util/fenetre.js';
 import { au } from '../util/tableaux.js';
@@ -83,7 +83,8 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
   const entrees = useMemo<Entree[]>(() => {
     const r: Entree[] = [];
     for (const p of polices) {
-      if (estPoliceLivree(p.id)) r.push({ cle: p.id, nom: p.nom, source: 'livree', categorie: CATEGORIES_LIVREES[p.id], nature: p.nature, police: p, nomFamille: FAMILLES_LIVREES[p.id] });
+      // La variante grasse d'une famille livree n'a pas sa ligne : elle se choisit dans « Style ».
+      if (estPoliceLivree(p.id) && baseDeGrasse(p.id) === null) r.push({ cle: p.id, nom: p.nom, source: 'livree', categorie: CATEGORIES_LIVREES[p.id], nature: p.nature, police: p, nomFamille: FAMILLES_LIVREES[p.id] });
       else if (p.id.startsWith('u-')) r.push({ cle: p.id, nom: p.nom, source: 'deposee', categorie: 'autre', nature: p.nature, police: p, nomFamille: null });
     }
     for (const f of catalogue?.familles ?? []) r.push({ cle: cleFamille(f), nom: f.nom, source: f.source, categorie: f.categorie, nature: 'contour', licence: LICENCES_POLICES[f.licence], famille: f, nomFamille: f.nom });
@@ -289,7 +290,7 @@ function ListePolices({ entrees, valeur, enCours, choisir, favoris, basculerFavo
   const lignes: ReactElement[] = segmentsFenetre(fenetre, total, pas).map(sg => {
     if (sg.type === 'cale') return <li key={'cale-' + sg.lieu} data-cale="" aria-hidden="true" style={{ height: sg.hauteur }} />;
     const e = au(entrees, sg.index);
-    const choisie = e.police ? e.police.id === valeur : false, favori = favoris.includes(e.cle);
+    const choisie = e.police ? e.police.id === (baseDeGrasse(valeur) ?? valeur) : false, favori = favoris.includes(e.cle);
     const occupee = enCours !== null;
     // Seules les lignes visibles passent ici : un apercu ne se calcule (ou ne se decode) que pour elles, une fois.
     const apercu = choisirApercu(e.nom, e.police ?? chargees.get(e.cle) ?? null, e.famille ? e.cle : null, apercus);

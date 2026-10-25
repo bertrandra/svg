@@ -109,9 +109,9 @@ describe('les apercus des polices', () => {
     const page = s.page;
     await explorer(page);
     const total = Number((await page.locator('.explorateur-polices .polices-total').innerText()).replace(/\D/g, ''));
-    // 2 205 familles et dix fontes livrees : 35 familles doubles entre Google Fonts et Fontshare, huit familles livrees aussi
-    // servies par Google Fonts ; le total compte les lignes montrees.
-    expect(total).toBe(2205 + 10 - 35 - 8);
+    // 2 200 familles et neuf familles livrees (Inter gras se choisit dans « Style » d'Inter) : 35 familles doubles entre
+    // Google Fonts et Fontshare, huit familles livrees aussi servies par Google Fonts ; le total compte les lignes montrees.
+    expect(total).toBe(2200 + 9 - 35 - 8);
     await recherche(page).fill('bebas');
     await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(1);
     expect(await ligne(page, 'Bebas Neue').innerText()).toMatch(/Livrée/);

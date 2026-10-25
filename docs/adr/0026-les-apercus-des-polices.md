@@ -52,7 +52,9 @@ le nom par `tracerNom`. Il vérifie que chaque code se relit à l’identique, v
 (`validerApercus`) et écrit `data/apercus-polices.json` (une famille par ligne, pour qu’un rafraîchissement se relise dans un
 diff ; sa date est celle de l’index). `APERCUS_CACHE=<dossier>` garde les fichiers téléchargés entre deux passes.
 
-À l’instantané du 25 octobre 2026 : **2 163 familles sur 2 205 ont un aperçu**. Les **42** autres écrivent leur nom :
+À l’instantané du 25 octobre 2026 : **2 163 familles sur 2 205 ont un aperçu**. Les **42** autres écrivent leur nom (les cinq
+dernières de ce tableau, illisibles, sont depuis retirées de l’index par `FAMILLES_ILLISIBLES` : il reste 2 200 familles, dont
+2 163 avec aperçu, et 37 sans) :
 
 | Raison | Familles |
 |---|---|
@@ -115,7 +117,9 @@ livrée est une donnée (`FAMILLES_LIVREES`, `model/polices.ts` : « Playfair Di
 Deux polices de la même source gardent leur ligne (Inter et Inter gras, livrées toutes deux) ; une fonte déposée ne cache rien.
 
 - La ligne montrée se choisit sur **toutes** les entrées, pas sur ce qu’un filtre laisse : la même police représente sa famille
-  quelle que soit la recherche, et le total (« 2 172 polices ») compte les lignes montrées.
+  quelle que soit la recherche, et le total (« 2 166 polices ») compte les lignes montrées. Une famille livrée de plusieurs
+  styles n’a qu’une ligne : Inter gras se choisit dans « Style » d’Inter (`stylesLivres`), qui remplace l’ancienne case « Gras »
+  de l’inspecteur ; la fonte grasse garde son identifiant (`inter-gras`), aucun octet ne change.
 - **Choisir une source** dans le filtre « Source » montre toutes ses familles, sans les confronter à la source préférée : Bebas Neue
   de Fontshare se trouve en filtrant Fontshare.
 - Les **favoris** et les **récentes** suivent la même règle (deux favoris d’une famille de deux sources n’en font qu’un) ; une
@@ -147,7 +151,7 @@ le dit à côté de l’index.
   sombre, téléphone). Une ligne par nom de famille : la règle en unitaire (livrée > Google Fonts > Fontshare, ordre de l’index
   gardé, source choisie explicitement, deux livrées d’une même famille, police déposée, variante `c-…` de Fontshare retrouvée par
   son identifiant, l’index commis : 35 doubles et 8 familles livrées) ; en navigateur, « bebas » donne une seule ligne (Livrée),
-  celle de Fontshare quand on filtre Fontshare, et le total compte 2 172 lignes.
+  celle de Fontshare quand on filtre Fontshare, et le total compte 2 166 lignes.
 - **Limites, honnêtement** : 42 familles sans aperçu (tableau plus haut) ; un nom coupé à son bord n’a pas de points de suspension ;
   quelques ornements et descendantes rognés par le cadre ; l’aperçu montre la variante principale, pas le style qu’on choisira ;
   il faut relancer le script après chaque rafraîchissement de l’index (une famille nouvelle sans aperçu écrit son nom, une clé

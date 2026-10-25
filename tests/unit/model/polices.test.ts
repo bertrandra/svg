@@ -1,9 +1,23 @@
 // La regle de remplacement d'une police absente : en donnees, lue dans l'ordre, toujours une fonte embarquee.
 
 import { describe, it, expect } from 'vitest';
-import { nomLisible, phraseRemplacement, remplacerFamilles, remplacerPolice, NOMS_POLICES, REGLES_POLICES } from '../../../src/model/polices.js';
+import { nomLisible, phraseRemplacement, remplacerFamilles, remplacerPolice, stylesLivres, NOMS_POLICES, REGLES_POLICES } from '../../../src/model/polices.js';
 
 const id = (nom: string, gras?: boolean, italique?: boolean) => remplacerPolice({ nom, ...(gras === undefined ? {} : { gras }), ...(italique === undefined ? {} : { italique }) }).id;
+
+describe('les styles d une famille livree', () => {
+  it('regroupent Inter et Inter gras sous une famille, depuis l une ou l autre', () => {
+    const attendu = [{ id: 'inter', nom: 'Normal' }, { id: 'inter-gras', nom: 'Gras' }];
+    expect(stylesLivres('inter')).toEqual(attendu);
+    expect(stylesLivres('inter-gras')).toEqual(attendu);
+  });
+
+  it('n existent pas pour une famille d un seul style, ni hors des fontes livrees', () => {
+    expect(stylesLivres('oswald')).toEqual([]);
+    expect(stylesLivres('c-0123456789abcd')).toEqual([]);
+    expect(stylesLivres('u-perso')).toEqual([]);
+  });
+});
 
 describe('le remplacement des polices', () => {
   it('garde une fonte embarquee demandee par son nom, sans rien dire', () => {
