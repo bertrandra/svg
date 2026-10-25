@@ -13,6 +13,9 @@ import { FondPrise, SurvolToile } from './PriseToile.js';
 import { useSaisie } from './contexteSaisie.js';
 import { ApercuMachine } from './ApercuMachine.js';
 import { ChoixFormeToile, GuideDisposition } from './DispositionToile.js';
+import { Regles } from './Regles.js';
+import { CoucheReperes, PanneauReperes } from './Reperes.js';
+import { PanneauRepetition } from './PanneauRepetition.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
@@ -48,9 +51,15 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           {/* Le texte pose sur ou dans une forme (ADR-0031) : le guide de sa forme, la poignee de depart, le choix de la forme. */}
           <GuideDisposition svgRef={svgRef} chemin={cheminDe} />
           <ChoixFormeToile svgRef={svgRef} chemin={cheminDe} />
+          {/* Les reperes du document (ADR-0038) : par-dessus tout, pour se prendre a la souris. */}
+          <CoucheReperes toile={toile} svgRef={svgRef} />
         </g>
       </svg>
       <SaisieTexte svgRef={svgRef} />
+      {/* Les regles, et les panneaux flottants des reperes et de la repetition (ADR-0038). */}
+      <Regles toile={toile} />
+      <PanneauReperes svgRef={svgRef} />
+      <PanneauRepetition svgRef={svgRef} />
       {/* Un plan vide (ADR-0019) : le premier geste, sur la toile meme. Les clics passent a travers ; l'inspecteur le dit aux lecteurs d'ecran. */}
       {dessin.formes.length || ui.outil !== 'selection' ? null : (
         mo.h.passe.length

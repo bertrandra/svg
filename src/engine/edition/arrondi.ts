@@ -21,43 +21,51 @@ export interface ResultatArrondi {
 }
 
 /** Un sous-chemin ramene a des segments : `orig` est la commande d'origine, gardee telle quelle quand le segment n'est pas touche. */
-interface Contour { readonly segs: readonly Seg[]; readonly origs: readonly (Commande | null)[]; readonly ferme: boolean; readonly fermeture: boolean }
+interface Contour {
+  readonly segs: readonly Seg[]; readonly origs: readonly (Commande | null)[]; readonly ferme: boolean; readonly fermeture: boolean;
+  /** Pour chaque sommet j (le depart du segment j), les indices des commandes du chemin dont l'ancre y tombe : de quoi n'arrondir que les coins choisis. */
+  readonly sommets: readonly (readonly number[])[];
+}
 
 const egaux = (p: Pt, q: Pt) => Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9;
 const pt = (c: Commande, k: number): Pt => [c.p[k] ?? 0, c.p[k + 1] ?? 0];
 
-/** Un sous-chemin (de son M a son Z eventuel) en segments ; les droites de longueur nulle disparaissent. */
-function contourDe(sous: readonly Commande[]): Contour | null {
+/**
+ * Un sous-chemin (de son M a son Z eventuel) en segments ; les droites de longueur nulle disparaissent. `decalage` est l'indice,
+ * dans le chemin entier, de son M : les sommets se nomment par les commandes du chemin (celles que le mode points designe).
+ */
+function contourDe(sous: readonly Commande[], decalage = 0): Contour | null {
   const debut = sous[0];
   if (!debut || debut.c !== 'M') return null;
-  const segs: Seg[] = [], origs: (Commande | null)[] = [];
+  const segs: Seg[] = [], origs: (Commande | null)[] = [], sommets: number[][] = [];
   let courant = pt(debut, 0);
   const premierPoint = courant;
   const ferme = sous.some(c => c.c === 'Z');
-  for (const c of sous.slice(1)) {
+  // Les commandes dont l'ancre est le point courant : le M, puis celle qui y a mene (et les droites nulles qui y restent).
+  let ici: number[] = [decalage];
+  const poser = (s: Seg, c: Commande, i: number) => { segs.push(s); origs.push(c); sommets.push(ici); ici = [i]; courant = s.b; };
+  sous.forEach((c, k) => {
+    const i = decalage + k;
+    if (k === 0) return;
     if (c.c === 'L') {
       const b = pt(c, 0);
-      if (egaux(courant, b)) continue;
-      segs.push({ droit: true, a: courant, c1: courant, c2: b, b }); origs.push(c);
-      courant = b;
+      if (egaux(courant, b)) { ici.push(i); return; }
+      poser({ droit: true, a: courant, c1: courant, c2: b, b }, c, i);
     } else if (c.c === 'C') {
-      const b = pt(c, 4);
-      segs.push({ droit: false, a: courant, c1: pt(c, 0), c2: pt(c, 2), b }); origs.push(c);
-      courant = b;
+      poser({ droit: false, a: courant, c1: pt(c, 0), c2: pt(c, 2), b: pt(c, 4) }, c, i);
     } else if (c.c === 'Q') {
       // Une quadratique est une cubique : c1 = a + 2/3 (q - a), c2 = b + 2/3 (q - b), sans changer la courbe.
       const q = pt(c, 0), b = pt(c, 2);
-      segs.push({ droit: false, a: courant, c1: plus(courant, fois([q[0] - courant[0], q[1] - courant[1]], 2 / 3)), c2: plus(b, fois([q[0] - b[0], q[1] - b[1]], 2 / 3)), b }); origs.push(c);
-      courant = b;
+      poser({ droit: false, a: courant, c1: plus(courant, fois([q[0] - courant[0], q[1] - courant[1]], 2 / 3)), c2: plus(b, fois([q[0] - b[0], q[1] - b[1]], 2 / 3)), b }, c, i);
     }
-  }
+  });
   if (!segs.length) return null;
   let fermeture = false;
   if (ferme && !egaux(courant, premierPoint)) {
-    segs.push({ droit: true, a: courant, c1: courant, c2: premierPoint, b: premierPoint }); origs.push(null);
+    segs.push({ droit: true, a: courant, c1: courant, c2: premierPoint, b: premierPoint }); origs.push(null); sommets.push(ici);
     fermeture = true;
-  }
-  return { segs, origs, ferme, fermeture };
+  } else if (ferme) sommets[0] = [...(sommets[0] ?? []), ...ici];
+  return { segs, origs, ferme, fermeture, sommets };
 }
 
 /** Est-ce qu'un coin existe au sommet entre deux segments ? */
@@ -91,11 +99,13 @@ function commandeDe(s: Seg, orig: Commande | null, intact: boolean): Commande {
  * est le depart du segment j : le coin y raccorde le segment j-1 au segment j (un contour ouvert n'en a pas
  * au sommet 0, ni a son arrivee).
  */
-function arrondirContour(k: Contour, rayon: number): { commandes: Commande[]; angles: number; reduits: number; rayonMin: number } | null {
+function arrondirContour(k: Contour, rayon: number, voulus?: ReadonlySet<number>): { commandes: Commande[]; angles: number; reduits: number; rayonMin: number } | null {
   const { segs } = k, n = segs.length;
+  // Un coin que la personne n'a pas choisi (`voulus`) n'en est pas un ici : ses segments donnent tout leur budget au coin choisi.
+  const choisi = (j: number): boolean => !voulus || (k.sommets[j] ?? []).some(i => voulus.has(i));
   const paire = (j: number): [Seg, Seg] | null => {
     const s = segs[(j + n - 1) % n], t = segs[j];
-    return s && t && (k.ferme || j > 0) && estCoin(s, t) ? [s, t] : null;
+    return s && t && (k.ferme || j > 0) && choisi(j) && estCoin(s, t) ? [s, t] : null;
   };
   const coins = Array.from({ length: n }, (_, j) => paire(j));
   const filets = coins.map((c, j): Filet | null => {
@@ -123,28 +133,29 @@ function arrondirContour(k: Contour, rayon: number): { commandes: Commande[]; an
   return { commandes, angles: poses.length, reduits, rayonMin: Math.min(...poses.map(f => f.rayon)) };
 }
 
-/** Les sous-chemins d'un chemin : chacun commence a un M. */
-function decouper(d: Chemin): Commande[][] {
-  const r: Commande[][] = [];
-  for (const c of d) {
-    if (c.c === 'M' || !r.length) r.push([]);
-    r[r.length - 1]?.push(c);
-  }
+/** Les sous-chemins d'un chemin, chacun avec l'indice de sa premiere commande : chacun commence a un M. */
+function decouper(d: Chemin): { sous: Commande[]; decalage: number }[] {
+  const r: { sous: Commande[]; decalage: number }[] = [];
+  d.forEach((c, i) => {
+    if (c.c === 'M' || !r.length) r.push({ sous: [], decalage: i });
+    r[r.length - 1]?.sous.push(c);
+  });
   return r;
 }
 
 /**
  * Arrondit les coins du chemin au rayon donne. Le meme chemin (la meme reference) quand aucun coin ne
- * s'arrondit : rayon nul, chemin sans angle, ou coins trop proches pour le moindre filet.
+ * s'arrondit : rayon nul, chemin sans angle, ou coins trop proches pour le moindre filet. `coins` (ADR-0038) : les indices
+ * des commandes dont l'ancre est un coin a arrondir (le point choisi en mode points) ; absent, tous les coins.
  */
-export function arrondirAngles(chemin: Chemin, rayon: number): ResultatArrondi {
+export function arrondirAngles(chemin: Chemin, rayon: number, coins?: ReadonlySet<number>): ResultatArrondi {
   const rien: ResultatArrondi = { chemin, angles: 0, reduits: 0, rayonMin: 0 };
   if (!(rayon > 0) || !Number.isFinite(rayon)) return rien;
   let angles = 0, reduits = 0, rayonMin = Infinity, change = false;
   const sortie: Commande[] = [];
-  for (const sous of decouper(chemin)) {
-    const contour = contourDe(sous);
-    const r = contour ? arrondirContour(contour, rayon) : null;
+  for (const { sous, decalage } of decouper(chemin)) {
+    const contour = contourDe(sous, decalage);
+    const r = contour ? arrondirContour(contour, rayon, coins) : null;
     if (!r) { sortie.push(...sous); continue; }
     change = true; angles += r.angles; reduits += r.reduits; rayonMin = Math.min(rayonMin, r.rayonMin);
     sortie.push(...r.commandes);
@@ -161,12 +172,15 @@ export interface ResultatArrondiFormes {
   readonly rayonMin: number;
 }
 
-/** Arrondit les coins des formes choisies (deverrouillees) ; le meme dessin quand aucun coin ne bouge. */
-export function arrondirFormes(dessin: DessinSvg, ids: readonly string[], rayon: number): ResultatArrondiFormes {
+/**
+ * Arrondit les coins des formes choisies (deverrouillees) ; le meme dessin quand aucun coin ne bouge. `coins` (ADR-0038) ne vaut
+ * que pour une forme seule : les indices de ses commandes dont l'ancre est un coin a arrondir.
+ */
+export function arrondirFormes(dessin: DessinSvg, ids: readonly string[], rayon: number, coins?: ReadonlySet<number>): ResultatArrondiFormes {
   let formes = 0, angles = 0, reduits = 0, rayonMin = Infinity;
   const r = surFormes(dessin, ids, f => {
     if (f.verrouille) return f;
-    const a = arrondirAngles(f.d, rayon);
+    const a = arrondirAngles(f.d, rayon, ids.length === 1 ? coins : undefined);
     if (a.chemin === f.d) return f;
     formes++; angles += a.angles; reduits += a.reduits; rayonMin = Math.min(rayonMin, a.rayonMin);
     return { ...f, d: a.chemin };

@@ -728,3 +728,65 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .poignee-depart { fill: Highlight; stroke: Canvas; }
   .editeur-svg-toile .poignee-depart-groupe:focus-visible .poignee-depart-halo { stroke: Highlight; }
 }
+
+/* Les regles et les reperes (ADR-0038). Une regle est une feuille posee au bord de la toile : fond de panneau, filet, traits au filet
+   fort (3:1), libelles en chasse fixe a l'encre douce. Elle se prend pour tirer un repere : le curseur dit le sens du geste. Le coin
+   porte l'unite. Un repere est un trait d'outil fin, a l'ecran quel que soit le zoom ; choisi, il s'epaissit sur un halo de panneau ;
+   verrouille, il passe en tirets. Sa cible est invisible et large (10 px, 24 au doigt). L'etiquette suit le pointeur pendant un geste. */
+.regle { position: absolute; z-index: var(--couche-saisie); overflow: hidden; background: var(--panneau); touch-action: none; -webkit-user-select: none; user-select: none; }
+.regle-h { top: 0; right: 0; border-bottom: 1px solid var(--filet); cursor: row-resize; }
+.regle-v { left: 0; bottom: 0; border-right: 1px solid var(--filet); cursor: col-resize; }
+.regle-prise { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+.regle-prise:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.regle-graduation { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
+.regle-traits { display: block; }
+.regle-traits line { stroke: var(--filet-fort); stroke-width: 1; }
+.regle-libelle { position: absolute; top: 0; padding-left: var(--esp-2xs); background: var(--panneau); color: var(--encre-douce); font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.regle-libelle::before { content: attr(data-texte); }
+.regle-v .regle-libelle { top: auto; left: 0; transform: rotate(-90deg) translateX(-100%); transform-origin: top left; padding-left: 0; padding-right: var(--esp-2xs); }
+.regle-coin { position: absolute; top: 0; left: 0; z-index: var(--couche-saisie); display: grid; place-items: center; background: var(--panneau); border-right: 1px solid var(--filet); border-bottom: 1px solid var(--filet); color: var(--encre-douce); font-family: var(--mono); font-weight: 400; font-size: var(--texte-petit); }
+.etiquette-repere { position: absolute; z-index: var(--couche-saisie); transform: translate(var(--esp-m), calc(-100% - var(--esp-xs))); padding: var(--esp-2xs) var(--esp-xs); background: var(--encre); color: var(--panneau); border-radius: var(--rayon-pastille); font-family: var(--mono); font-weight: 500; font-size: var(--texte-petit); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.editeur-svg-toile .repere-trait { stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .repere-halo { stroke: var(--panneau); stroke-width: 5; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .repere.choisi .repere-trait { stroke-width: 2; }
+.editeur-svg-toile .repere.verrouille .repere-trait, .editeur-svg-toile .repere.tire .repere-trait { stroke-dasharray: 6 4; }
+.editeur-svg-toile .repere-cible { stroke: transparent; fill: none; }
+.editeur-svg-toile .repere-cible-h { cursor: row-resize; }
+.editeur-svg-toile .repere-cible-v { cursor: col-resize; }
+
+/* Les panneaux flottants de la toile (reperes, repetition) : une feuille posee en haut a droite, qui recouvre un coin du travail
+   le temps d'un reglage, donc l'ombre d'un menu. Ses actions restent secondaires : l'apercu est sur la toile, pas dans le panneau. */
+.panneau-flottant { position: absolute; top: var(--esp-l); right: var(--esp-l); z-index: var(--couche-saisie); width: 300px; max-width: calc(100% - 2 * var(--esp-l)); max-height: calc(100% - 2 * var(--esp-l)); overflow: auto; display: grid; gap: var(--esp-m); padding: var(--esp-l); background: var(--panneau); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); }
+/* Les regles affichees, le panneau descend sous la regle du haut : il ne cache pas ses libelles. */
+.regle-coin ~ .panneau-flottant { top: calc(24px + var(--esp-l)); }
+.panneau-flottant-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-m); }
+.panneau-flottant-tete h2 { margin: 0; font-size: var(--texte-titre); }
+.panneau-flottant-corps { display: grid; gap: var(--esp-m); min-width: 0; }
+.panneau-flottant-pied { display: flex; justify-content: flex-end; gap: var(--esp-s); }
+.panneau-flottant .aide { margin: 0; }
+.panneau-flottant .aide.erreur { color: var(--echec); }
+.panneau-flottant .unite { flex: none; color: var(--encre-douce); font-size: var(--texte-petit); }
+.panneau-flottant .mini-onglets button { display: inline-flex; align-items: center; justify-content: center; gap: var(--esp-xs); }
+.liste-reperes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
+.ligne-repere { display: flex; align-items: center; gap: var(--esp-s); }
+.ligne-repere .champ-ligne { flex: 1; }
+.ajout-repere { display: grid; gap: var(--esp-s); padding-top: var(--esp-m); border-top: 1px solid var(--filet); }
+.ajout-repere > button { justify-self: start; }
+@media (pointer: coarse), (max-width: 900px) {
+  .panneau-flottant .case { min-height: 40px; }
+  .regle-coin ~ .panneau-flottant { top: calc(40px + var(--esp-l)); }
+  .panneau-flottant .icone-bouton { width: 40px; height: 40px; }
+}
+@media (max-width: 640px) {
+  .panneau-flottant, .regle-coin ~ .panneau-flottant { top: auto; bottom: var(--esp-m); right: var(--esp-m); left: var(--esp-m); width: auto; max-width: none; max-height: 60%; }
+}
+@media (forced-colors: active) {
+  .regle-traits line { stroke: CanvasText; }
+  .regle-libelle { color: CanvasText; }
+  .editeur-svg-toile .repere-trait { stroke: LinkText; }
+  .editeur-svg-toile .repere.choisi .repere-trait { stroke: Highlight; }
+  .panneau-flottant { border: 2px solid CanvasText; }
+}
+.panneau-flottant input::placeholder { font-family: var(--sans); }
+.arrondi-direct, .largeur-variable { display: grid; gap: var(--esp-s); min-width: 0; }
+.largeur-variable > .discret, .arrondi-direct > .discret { justify-self: start; }

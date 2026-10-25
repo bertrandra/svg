@@ -21,12 +21,13 @@ import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
 import { aEnregistrer } from './enregistrement.js';
+import { useElementsRepetition, useElementsReperes } from './menusOutilsPro.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
 /** Les elements du menu Vue. `avecZoom` ajoute zoomer et dezoomer (en dernier), que la barre des petits ecrans ne porte plus. */
 function useElementsVue(avecZoom: boolean): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), reperes = useElementsReperes();
   const { vues } = ui;
   // En contexte de decoupe, « Ajuster » cadre le tapis entier (le dessin dedans) : un tapis de 12 po qui sortait de l'ecran ne
   // montrait pas ce que la machine verrait. « Ajuster au dessin » garde l'ancien cadrage, sous sa propre touche.
@@ -38,8 +39,10 @@ function useElementsVue(avecZoom: boolean): ElementMenu[] {
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
     { id: 'selection', libelle: 'Zoomer sur la sélection', icone: 'zoom-selection', raccourci: 'Z', desactive: !mo.sel.length, onClick: ac.zoomerSelection },
     { id: 'grille', libelle: 'Grille magnétique (pas ' + ui.pas + ')', raccourci: 'G', coche: ui.grille, separateur: true, onClick: () => ac.poserGrille(!ui.grille) },
-    { id: 'aimants', libelle: 'Aimants vers les autres formes', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
+    { id: 'aimants', libelle: 'Aimants vers les formes et les repères', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
     { id: 'contours', libelle: 'Vue contours', raccourci: 'O', coche: ui.contours, onClick: () => ac.poserContours(c => !c) },
+    // Les regles et les reperes (ADR-0038).
+    ...reperes,
     // L'apercu de la machine (ADR-0028) : en contexte Cricut qui coupe ou ecrit, la toile montre ce que la lame detache et ce que le
     // stylo trace ; ce reglage le retire pour revenir aux couleurs du dessin. La vue contours (O) le remplace tant qu'elle est active.
     ...(ui.profil && operationsApplicables(ui.profil.procede)
@@ -59,7 +62,7 @@ export function MenuVue() {
 }
 
 function useElementsEdition(): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
   const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
@@ -73,6 +76,8 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'couper', libelle: 'Couper', icone: 'couper', raccourci: 'Ctrl+X', desactive: rien, onClick: ac.couperSelection },
     { id: 'coller', libelle: 'Coller', icone: 'coller', raccourci: 'Ctrl+V', desactive: !mo.presse.length, onClick: ac.collerPresse },
     { id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', desactive: rien, onClick: ac.dupliquerSelection },
+    // Repeter la selection : grille, radiale, symetrie (ADR-0038).
+    ...repetition,
     { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
     { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
     { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },

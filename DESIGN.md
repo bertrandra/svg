@@ -372,6 +372,8 @@ d'une ombre au repos. L'ombre n'existe que pour ce qui flotte au-dessus du trava
 - **Menu flottant** (`box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2)`) : menus déroulants, boîte de crédits.
 - **Tiroir** (ombre `rgba(0, 0, 0, 0.25)` et voile `rgba(0, 0, 0, 0.35)` sur la toile) : panneaux en tiroir sur
   tablette et téléphone.
+- **Panneau flottant de la toile** (l'ombre du menu flottant) : les panneaux « Repères » et de répétition (ADR-0038), posés en haut à
+  droite de la toile le temps d'un réglage, en bas sous 640 px.
 
 ### Named Rules
 **La règle de la feuille posée.** Une surface au repos est plate ; seule une surface qui recouvre le travail a
@@ -629,6 +631,20 @@ Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un
   forme », le choix « Remplir » : son titre à l'encre douce (Compact), sur sa ligne, puis deux boutons à état, « En déformant les
   lettres » et « En lignes » (filet et texte cyan quand il est choisi, jamais pleins, 40 px au doigt). Déformé, la taille se
   calcule : le champ est inactif et dit pourquoi en infobulle ; la marge reste réglable. Rien ne s'anime.
+
+### Règles, repères et répétitions (ADR-0038)
+Des gabarits d'atelier : ils se voient en filets et en encre d'outil, ils ne colorent jamais le dessin.
+- **Les règles** : deux bandes de panneau de 24 px (40 au doigt) en haut et à gauche de la toile, bordées d'un filet ; traits au
+  filet fort (3:1), libellés en chasse fixe 400 à l'encre douce, taille Aide, chiffres tabulaires ; le coin porte l'unité (« mm »,
+  « po »). Masquées à l'ouverture (Maj+R). Le curseur dit le sens du geste (redimensionner en ligne ou en colonne) ; au focus, un
+  anneau cyan de 2 px à l'intérieur de la bande.
+- **Les repères** : un trait cyan d'encre de 1 px qui ne grossit pas avec la vue ; choisi, 2 px sur un halo de panneau ; verrouillé
+  ou en cours de tirage, en tirets 6 et 4. Cible invisible de 10 px (24 au doigt). Pendant un geste, la valeur suit le pointeur
+  dans une étiquette encre sur panneau inversée, en chasse fixe 500. En contraste forcé, `LinkText` (`Highlight` choisi).
+- **Le panneau flottant** : une feuille de panneau, coins de 8 px, filet et ombre de menu, 300 px, en haut à droite de la toile
+  (sous la règle du haut quand elle est là), en bas sur toute la largeur sous 640 px. Titre (Title), bouton de fermeture d'icône,
+  onglets en mini-onglets (le choisi plein cyan, comme ailleurs), champs en ligne, puis « Annuler » discret et « Appliquer »
+  secondaire : l'aperçu est sur la toile, l'action pleine reste celle de la barre. Échap le ferme et rend la toile.
 
 ## Surfaces du navigateur
 

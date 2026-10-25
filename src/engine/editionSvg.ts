@@ -90,3 +90,14 @@ export {
   cheminDeGlyphe, sourceDeGlyphes, formesDeGlyphes, PENCHE,
   type CommandeGlyphe, type Glyphes, type SourceContours, type GlypheAPoser, type StyleGlyphes
 } from './edition/glyphes.js';
+
+// Les reperes du document et la repetition d'une selection (ADR-0038).
+export type { Reperes } from './edition/types.js';
+export {
+  ATTRIBUT_REPERES, REPERES_MAX, normaliserReperes, avecReperes, ajouterRepere, deplacerRepere, supprimerRepere, effacerReperes,
+  repereLePlusProche, nombreReperes, ecrireReperes, lireReperes, marquerReperes, boitesReperes, type AxeRepere
+} from './edition/reperes.js';
+export {
+  REPETITION_MAX, copierPar, matricesGrille, pasGrilleParDefaut, dupliquerEnGrille, pasRadial, matricesRadiales, repetitionRadiale,
+  matriceSymetrie, axeParDefaut, symetrie, type ResultatRepetition, type ReglageGrille, type ReglageRadial, type ReglageSymetrie
+} from './edition/repetition.js';

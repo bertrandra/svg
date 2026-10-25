@@ -13,6 +13,8 @@ import { styleLigne } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import { usePrise } from './PriseToile.js';
+import { useReperesActifs } from './contexteRegles.js';
+import { effacerReperes as sansReperes } from '../engine/editionSvg.js';
 import type { Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
@@ -44,7 +46,7 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
 export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui, prise = usePrise(svgRef);
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui, prise = usePrise(svgRef), reperesActifs = useReperesActifs();
   const geste = useRef<Geste | null>(null), espace = useRef(false);
   const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
@@ -144,7 +146,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       if (g.b) { dx = ui.aimant(g.b.x + dx) - g.b.x; dy = ui.aimant(g.b.y + dy) - g.b.y; }
       if (g.b && ui.aimants && !ui.grille) {
         // Le dessin de depart et la selection ne changent pas pendant le geste : les cibles se calculent une fois.
-        g.cibles ??= ciblesAimants(g.base, g.ids);
+        g.cibles ??= ciblesAimants(reperesActifs ? g.base : sansReperes(g.base), g.ids); // des reperes masques n'attirent pas (ADR-0038)
         const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, g.cibles, 6 / vue.zoom);
         dx += a.dx; dy += a.dy;
         ac.poserGuides(a.lignes);

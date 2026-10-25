@@ -17,7 +17,8 @@ export type NomIcone =
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
-  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo';
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo'
+  | 'regle' | 'repeter' | 'radiale' | 'symetrie';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -112,7 +113,15 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Un stylo de machine, pointe en bas a gauche, et la ligne qu'il ecrit (ADR-0028) : l'outil qui suit le trait sans rien remplir.
   stylo: [t('M15.5 3.5l5 5L10 19l-5 1 1-5z'), t('M13.5 5.5l5 5'), t('M3 21c2-1 4-1 6 0')],
   // Du code : deux chevrons et la barre d'une balise fermante, ce qu'un integrateur ecrit pour embarquer l'editeur.
-  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')]
+  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')],
+  // Les outils de l'ADR-0038. Une regle graduee, en biais.
+  regle: [t('M3 16.5L16.5 3 21 7.5 7.5 21z'), t('M7 12.5l2 2'), t('M10 9.5l2 2'), t('M13 6.5l2 2')],
+  // Une forme et ses copies en grille, l'original plein.
+  repeter: [t('M3 3h7v7H3z', true), t('M14 3h7v7h-7z'), t('M3 14h7v7H3z'), t('M14 14h7v7h-7z')],
+  // Des copies en couronne autour d'un centre.
+  radiale: [t('M10 2.5h4v4h-4z', true), t('M17.5 10h4v4h-4z'), t('M10 17.5h4v4h-4z'), t('M2.5 10h4v4h-4z'), t('M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0', true)],
+  // Une forme et son reflet de part et d'autre d'un axe en pointilles.
+  symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

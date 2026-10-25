@@ -179,6 +179,8 @@ describe('ce que le fichier garde', () => {
       const texte = readFileSync(resolve(dossier, nom), 'utf8');
       // La reference neuve de ce chantier (cricut-operations) porte des operations : c'est son objet.
       if (texte.includes('data-ed-operation')) continue;
+      // Celle des reperes (reperes-document, ADR-0038) porte ses reperes, que le document reecrit : c'est son objet.
+      if (texte.includes('data-ed-reperes')) continue;
       const lu = lireDessin(texte);
       if ('erreur' in lu) continue;
       expect(svgDocument(lu.dessin, CHOIX_GENERIQUE), nom).toBe(ecrireDessin(lu.dessin, 3));
