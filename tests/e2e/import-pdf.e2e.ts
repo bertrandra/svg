@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, formesVisibles, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, deposerFichier, formesVisibles, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION } from './aide.js';
 
 const PDF = (nom: string) => resolve(RACINE_DEPOT, 'tests/fixtures/pdf', nom);
 const ENTREE = 'section[aria-label="Ouvrir un SVG ou un PDF"] input[type=file]';
@@ -21,13 +21,7 @@ const note = async (page: Page) => ((await page.locator('.editeur-svg [role=note
 
 /** Depose un fichier sur la zone de depot, comme un glisser depuis le bureau. */
 async function deposer(page: Page, nom: string): Promise<void> {
-  await page.evaluate(({ b64, nomFichier }) => {
-    const bin = atob(b64), u = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    const dt = new DataTransfer();
-    dt.items.add(new File([u], nomFichier, { type: 'application/pdf' }));
-    document.querySelector('.depot')?.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
-  }, { b64: readFileSync(PDF(nom)).toString('base64'), nomFichier: nom });
+  await deposerFichier(page, readFileSync(PDF(nom)), nom, 'application/pdf');
 }
 
 /** axe-core sur la page : aucune violation, aucun doute (« incomplete »), quel que soit leur impact. */

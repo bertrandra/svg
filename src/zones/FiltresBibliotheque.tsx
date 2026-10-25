@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { naturesDansLOrdre, sourcesDemandees } from '../model/bibliothequeSources.js';
 import { NOMS_NATURE, SOURCES_FORMES, SOURCE_PAR_DEFAUT, naturesDe, type NatureForme, type SourceFormes } from '../model/sourcesFormes.js';
 import { chargerSource, type SourceChargee } from '../io/bibliotheque.js';
+import { focusAuClavier } from './commun/focusClavier.js';
 import type { Procede } from '../model/contextes.js';
 
 interface Option { readonly id: string | null; readonly nom: string; readonly titre?: string }
@@ -19,7 +20,7 @@ function deplacer(e: KeyboardEvent<HTMLDivElement>) {
   if (i < 0) return;
   e.preventDefault();
   const cible = e.key === 'Home' ? 0 : e.key === 'End' ? liste.length - 1 : (i + (pas[e.key] ?? 0) + liste.length) % liste.length;
-  liste[cible]?.focus();
+  focusAuClavier(liste[cible]);
 }
 
 /** Un groupe nomme de pastilles a etat (aria-pressed) : une seule choisie, un etat et non une action. */

@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { attend, attendreAnimations, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+import { attend, attendreAnimations, NAVIGATEUR, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe } from './aide.js';
 
 type Schema = 'light' | 'dark';
 const SCHEMAS: readonly Schema[] = ['light', 'dark'];
@@ -33,11 +33,59 @@ function contraste(a: string, b: string): number {
   return ((h ?? 0) + 0.05) / ((s ?? 0) + 0.05);
 }
 
-/** Le texte d'exemple d'un champ : sa couleur, son fond (celui du champ), sa famille. */
+/**
+ * Le texte d'exemple d'un champ : sa couleur, son fond (celui du champ), sa famille. WebKit ne calcule pas le style d'un
+ * pseudo-element ::placeholder par getComputedStyle : il rend celui du champ (lu sous WebKit 26 : la chasse fixe et l'encre du
+ * champ, pas celles de son exemple). On le sait par une sonde ; le moteur qui ne le calcule pas voit ses valeurs relues dans les
+ * feuilles (la derniere regle ::placeholder qui vise le champ et declare la propriete), puis calculees sur un element-sonde
+ * place a cote du champ, qui herite des memes jetons.
+ */
 function exemple(l: Locator) {
   return l.evaluate(e => {
-    const p = getComputedStyle(e, '::placeholder');
-    return { couleur: p.color, fond: getComputedStyle(e).backgroundColor, famille: p.fontFamily, opacite: p.opacity };
+    const sondeCalcul = () => {
+      const style = document.createElement('style'), champ = document.createElement('input');
+      style.textContent = '.sonde-exemple::placeholder { color: rgb(1, 2, 3); }';
+      champ.className = 'sonde-exemple';
+      document.head.append(style); document.body.append(champ);
+      const calcule = getComputedStyle(champ, '::placeholder').color === 'rgb(1, 2, 3)';
+      style.remove(); champ.remove();
+      return calcule;
+    };
+    const fond = getComputedStyle(e).backgroundColor;
+    if (sondeCalcul()) {
+      const p = getComputedStyle(e, '::placeholder');
+      return { couleur: p.color, fond, famille: p.fontFamily, opacite: p.opacity };
+    }
+    const regles: CSSStyleRule[] = [];
+    const parcourir = (liste: CSSRuleList) => {
+      for (const r of Array.from(liste)) {
+        if (r instanceof CSSStyleRule) regles.push(r);
+        else if (r instanceof CSSMediaRule) { if (matchMedia(r.media.mediaText).matches) parcourir(r.cssRules); }
+        else if (r instanceof CSSSupportsRule) { if (CSS.supports(r.conditionText)) parcourir(r.cssRules); }
+      }
+    };
+    for (const f of Array.from(document.styleSheets)) { try { parcourir(f.cssRules); } catch { /* feuille d'une autre origine : illisible, et pas celle de la page */ } }
+    const declare = (prop: string): string => {
+      let v = '';
+      for (const r of regles) {
+        const valeur = r.style.getPropertyValue(prop);
+        if (!valeur) continue;
+        for (const brut of r.selectorText.split(',')) {
+          const m = /^(.*?)::(?:placeholder|-webkit-input-placeholder)$/.exec(brut.trim());
+          try { if (m && e.matches(m[1] || '*')) v = valeur; } catch { /* morceau d'un selecteur a virgules internes : pas un selecteur d'exemple */ }
+        }
+      }
+      return v;
+    };
+    const calcule = (prop: 'color' | 'fontFamily' | 'opacity', valeur: string): string => {
+      const sonde = document.createElement('i');
+      sonde.style[prop] = valeur;
+      (e.parentElement ?? document.body).append(sonde);
+      const v = getComputedStyle(sonde)[prop];
+      sonde.remove();
+      return v;
+    };
+    return { couleur: calcule('color', declare('color')), fond, famille: calcule('fontFamily', declare('font-family')), opacite: calcule('opacity', declare('opacity')) };
   });
 }
 
@@ -86,11 +134,14 @@ describe('la finition transversale', () => {
         const surfaces = await page.evaluate(() => ({
           caret: getComputedStyle(document.body).caretColor,
           selection: getComputedStyle(document.body, '::selection').backgroundColor,
-          defilement: getComputedStyle(document.querySelector('.editeur-inspecteur') ?? document.body).scrollbarColor
+          defilement: CSS.supports('scrollbar-color', 'red blue') ? getComputedStyle(document.querySelector('.editeur-inspecteur') ?? document.body).scrollbarColor : null
         }));
         expect(surfaces.caret).toBe(cyan);
         expect(surfaces.selection).toBe(await jeton(page, '--selection'));
-        expect(surfaces.defilement.startsWith(await jeton(page, '--filet-fort'))).toBe(true);
+        // `scrollbar-color` : WebKit ne la connait pas (docs/navigateurs.md : barres aux couleurs du systeme). Son absence n'est
+        // admise que la ; un moteur qui la connait doit y porter le jeton.
+        if (surfaces.defilement === null) expect(NAVIGATEUR).toBe('webkit');
+        else expect(surfaces.defilement.startsWith(await jeton(page, '--filet-fort'))).toBe(true);
         // Les cases a cocher du menu d'export (options) : la meme couleur, plus « auto ».
         await ouvrirMenu(page, 'Autres formats');
         await page.locator('.menu-panneau details.section > summary', { hasText: 'Options d’export' }).click();
@@ -159,8 +210,11 @@ describe('la finition transversale', () => {
           if (tactile) await bouton.tap(); else await bouton.click();
           await attend(() => bouton.getAttribute('aria-pressed')).toBe('true');
           const [cyan, echec] = [await jeton(page, '--cyan'), await jeton(page, '--echec')];
-          // Les couleurs d'un bouton passent en 120 ms : on attend la fin de la transition avant de les lire.
+          // Les couleurs d'un bouton passent en 120 ms, et pas toutes ensemble : le survol a deja mis le texte a la couleur d'outil
+          // quand le filet passe encore de 1 a 2 px (lu en CI sous Firefox : un filet a 1,98 px, d'une teinte intermediaire). On
+          // attend la fin de toutes les transitions, pas celle de la seule couleur du texte.
           await attend(() => bouton.evaluate(e => getComputedStyle(e).color)).toBe(cyan);
+          await attendreAnimations(page);
           const s = await bouton.evaluate(e => { const c = getComputedStyle(e); return { fond: c.backgroundColor, texte: c.color, filet: c.boxShadow + ' ' + c.borderColor }; });
           expect(s.fond, JSON.stringify(s)).not.toBe(echec);
           expect(s.texte).toBe(cyan);
@@ -282,7 +336,7 @@ describe('la finition transversale', () => {
     expect(await page.locator('.menu-panneau .menu-raccourci').evaluateAll(l => l.filter(e => e.getBoundingClientRect().width > 0).length)).toBe(0);
     expect(await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).toEqual(expect.arrayContaining(['Aide', 'Édition', 'Fichier', 'Vue']));
     expect((await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).slice(0, 4)).toEqual(['Aide', 'Édition', 'Fichier', 'Vue']);
-    expect((await page.getByRole('menu', { name: 'Vue' }).getByRole('menuitem').allInnerTexts()).map(t => t.trim()).slice(-2)).toEqual(['Zoomer', 'Dézoomer']);
+    expect((await textesDe(page.getByRole('menu', { name: 'Vue' }).getByRole('menuitem'))).slice(-2)).toEqual(['Zoomer', 'Dézoomer']);
   });
 
   it('au doigt, dit « Touchez » là où la souris dit « Cliquez »', async () => {

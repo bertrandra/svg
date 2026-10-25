@@ -96,6 +96,7 @@ const SONDES: ReadonlyArray<{ nom: string; motif: RegExp; dans: 'ts' | 'css' }> 
   { nom: 'wheel', motif: /'wheel'/, dans: 'ts' },
   { nom: 'WebAssembly', motif: /WebAssembly/, dans: 'ts' },
   { nom: 'inert', motif: /\.inert\b/, dans: 'ts' },
+  { nom: 'focusVisible', motif: /focusVisible/, dans: 'ts' },
   { nom: 'navigator.clipboard', motif: /navigator\.clipboard/, dans: 'ts' },
   { nom: 'URL.createObjectURL', motif: /URL\.createObjectURL/, dans: 'ts' },
   { nom: 'localStorage', motif: /localStorage/, dans: 'ts' },
@@ -173,8 +174,9 @@ describe('les replis de color-mix()', () => {
 describe('les sauts de test', () => {
   it('ont chacun leur raison ecrite dans docs/navigateurs.md, mot pour mot', () => {
     const specs = fichiers(join(racine, 'tests/e2e'), /\.e2e\.ts$/).map(f => readFileSync(f, 'utf8')).join('\n');
+    // Aucun saut aujourd'hui (le dernier, celui du contraste force, est leve : l'emulation agit dans les trois moteurs) ; le
+    // jour ou un saut revient, sa raison doit etre ecrite.
     const raisons = [...specs.matchAll(/sauteSauf\(\[[^\]]*\],\s*'([^']+)'\)/g)].map(m => m[1] ?? '');
-    expect(raisons.length).toBeGreaterThan(0);
     for (const r of raisons) expect(DOC, 'raison absente de docs/navigateurs.md : ' + r).toContain(r);
     expect(specs.match(/\.skipIf\(/g)?.length ?? 0, 'un skipIf qui ne passe pas par sauteSauf(moteurs, raison)').toBe(raisons.length);
   });

@@ -143,11 +143,13 @@ describe('calques par couleur, deux mille couleurs', () => {
     await page.mouse.move(zone.x + zone.width / 2, zone.y + zone.height / 2);
     // Des crans de 200 px : un cran plus haut que la liste (260 px) est ramene a une page par Firefox (90 % de la hauteur, 234 px
     // lus en CI) et par WebKit, et la liste n'irait pas ou la molette l'envoie. Dix-huit crans font les 3600 px d'avant.
+    // Chaque cran est attendu avant le suivant : WebKit defile la liste apres l'evenement, et des crans envoyes avant que le
+    // precedent ait porte s'y perdaient (3 123 px au lieu de 3 600, en CI comme en local ; cran par cran, il va jusqu'au bout).
     let but = 0;
     for (let k = 0; k < 18; k++) {
       await page.mouse.wheel(0, 200);
       but += 200;
-      await attend(() => defilement(page)).toBeGreaterThanOrEqual(Math.min(but, 1000) - 2);
+      await attend(() => defilement(page)).toBeGreaterThanOrEqual(but - 2);
     }
     // La premiere ligne est partie du DOM, avec son focus : la liste est la ou la molette l'a menee.
     await attend(() => rang(page, 0).count()).toBe(0);

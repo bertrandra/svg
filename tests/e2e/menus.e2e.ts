@@ -74,6 +74,22 @@ describe('menus de la barre', () => {
     await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('montre l element atteint aux fleches dans un menu ouvert a la souris', async () => {
+    // Le cas que WebKit manquait : le panneau prend le focus au clic (sans anneau, c'est la souris), puis la fleche, dont le geste
+    // par defaut est empeche, pose le focus par script ; sans `focusVisible`, l'element atteint n'y avait ni fond ni filet.
+    const page = await editeur();
+    await ouvrirMenu(page, 'Vue');
+    const elements = page.locator('.menu-panneau [role^=menuitem]');
+    await page.keyboard.press('ArrowDown');
+    await attend(() => aLeFocus(elements.nth(0))).toBe(true);
+    expect(await elements.nth(0).evaluate(e => e.matches(':focus-visible'))).toBe(true);
+    await page.keyboard.press('ArrowDown');
+    await attend(() => aLeFocus(elements.nth(1))).toBe(true);
+    const anneau = await elements.nth(1).evaluate(e => ({ visible: e.matches(':focus-visible'), filet: getComputedStyle(e).boxShadow }));
+    expect(anneau.visible).toBe(true);
+    expect(anneau.filet).toContain('inset');
+  });
+
   it('ouvre par Fleche haut sur le dernier element', async () => {
     const page = await editeur();
     await page.locator('.menu-bouton', { hasText: 'Vue' }).focus();
