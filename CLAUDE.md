@@ -64,8 +64,14 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
   du mode se retire ; les valeurs par défaut se calculent (`valeursParDefaut`), elles ne se recopient
   pas dans l'interface ; le temps d'un essai se mesure dans `io`, jamais dans le moteur.
+- **Les exports sont purs, le prétraitement n'existe que touché** (ADR-0018) : PDF, EPS, DXF, PNG `pHYs` et ZIP
+  s'écrivent à la main, mêmes entrées mêmes octets ; les options d'export sont de session, jamais stockées, et partent
+  neutres ; sans réglage de prétraitement, le traceur voit la source à l'octet (15 empreintes), dans un ordre d'étapes fixe.
 - **Les booléens aplatissent, l'éditeur rebâtit** (ADR-0004) : le moteur rend des segments droits, au style
   de la forme la plus basse ; l'éditeur rebâtit les courbes par défaut (`lisserBooleens`, réglage de session) ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
+- **Un bord de tracé se déduit d'une union, il ne se suit pas** (ADR-0015) : contour en forme et décalage unissent des
+  morceaux qui partagent leurs arêtes exactes ; le type d'un nœud se lit sur la géométrie ; un échec réessaie à
+  tolérance ×3 puis ×9, puis refuse en le nommant ; un outil neuf ajoute des références, n'en réécrit aucune.
 - **Le texte est une forme par lettre**, composé en pur (`engine/texte.ts`) au-dessus d'une interface
   `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures GSUB en option). Jamais
   de `<text>` dans un SVG écrit.
@@ -82,11 +88,17 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **La lecture est fidèle, ou dit ce qu'elle perd** (ADR-0009) : l'alpha, les noms de couleur et une épaisseur
   de trait nulle sont gardés ; `lireDessin` rend `ignores` et la page le dit à l'ouverture. Les octets
   changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.
+- **Un SVG d'inconnu se lit, il ne se nettoie pas** (ADR-0014) : analyse linéaire bornée qui ne développe aucune
+  entité, liste blanche réémise (`util/assainirSvg.ts`), lecture qui refuse sans jamais lever ; stockage et options
+  d'hôte validés ; un vecteur nouveau entre dans `tests/fixtures/hostile/` avec sa ligne d'`index.json`.
 - **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
   dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
 - **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,
   Alt+flèches, réticule), une seule région vocale `polite` le dit, Tab ne piège jamais le focus, et
   `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
+- **Les navigateurs promis sont un texte qu'un test relit** (ADR-0016) : `docs/navigateurs.md` liste chaque fonctionnalité
+  et son repli ; une garde de démarrage nomme ce qui manque ; ni `:has()` ni lookbehind, `color-mix()` doublé d'un jeton
+  `repli-*` ; la CI joue chromium, firefox et webkit, ces deux derniers non bloquants jusqu'à leurs premiers passages verts.
 - **Un contexte de production configure et juge, il n'invente pas d'outil** (ADR-0013) : un profil en données
   (`model/contextes.ts`, valeurs incertaines marquées `aVerifier`) règle les outils existants et rend des constats
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
@@ -95,3 +107,6 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.
   Elle se construit dans `dist/`, rien n'est commis.
+- **La mention voyage avec la forme, les licences ne se recopient pas** (ADR-0017) : `Forme.origine`, un `<metadata>`
+  CC BY 3.0 et `data-origine` n'existent que pour une forme créditée ; `THIRD-PARTY-NOTICES.md` se génère depuis
+  `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur.
