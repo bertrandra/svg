@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DessinSvg, MarqueProduction } from '../engine/editionSvg.js';
+import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Stockage } from '../io/stockage.js';
 import { Cadre } from './Cadre.js';
@@ -67,6 +68,11 @@ export interface ProprietesEditeur {
   guide?: OptionsGuide | null;
   /** Ce que la lecture du document d'origine n'a pas repris (un PDF, le texte d'un SVG mis en lettres) : dit avec ce que perd la lecture du SVG. */
   ignores?: readonly string[] | undefined;
+  /**
+   * Le contexte de production de depart (ADR-0013), quand le SVG n'en porte aucun : la page le donne pour le public « machine » de
+   * l'accueil (ADR-0024). Une marque du SVG l'emporte toujours ; rien ne s'ecrit tant que la personne ne modifie pas le dessin.
+   */
+  production?: ChoixProduction | undefined;
 }
 
 /** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
@@ -102,7 +108,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart }: ProprietesEditeur) {
   const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
@@ -122,7 +128,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
           <FournisseurReperes actif={!!guide}>
-            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
+            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} depart={depart} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
               libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} /></FournisseurSections>
           </FournisseurReperes>
         </FournisseurStockage>
@@ -133,7 +139,7 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 }
 
 interface ProprietesAtelier {
-  initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
+  initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; depart?: ChoixProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
   fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => unknown) | undefined; guide: OptionsGuide | null;
   libelleEnregistrer?: string | undefined; fermerSansModification?: boolean | undefined;
 }

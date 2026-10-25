@@ -2,8 +2,11 @@
 // image en SVG, choisir une forme de la bibliotheque, editer en plein ecran, puis reprendre le
 // resultat (apercu, telechargement, autres formats). L'editeur lui-meme ne sait rien de cette page :
 // il recoit un SVG, un libelle pour son geste de fin (« Terminer »), et en rend un.
+//
+// L'accueil demande d'abord pour quoi l'on dessine (ADR-0024, AccueilPublic.tsx) et range la suite pour ce public : le circuit
+// qui le concerne, l'ordre des voies, le contexte de production avec lequel l'editeur s'ouvre. Repondre n'est jamais obligatoire.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type RefObject } from 'react';
 import { EditeurSvg } from './EditeurSvg.js';
 import { SectionBibliotheque } from './Bibliotheque.js';
 import { MenuAutresFormats, telechargerSvgPage } from './Exporter.js';
@@ -24,8 +27,14 @@ import { svgDeBibliotheque } from './provenanceBibliotheque.js';
 import { Message, type TonMessage } from './commun/Message.js';
 import { ChoixPagePdf, fichierPdf, usePdf, type OuvrirDessin } from './OuvrirPdf.js';
 import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
+import type { ChoixProduction } from '../model/contextes.js';
+import { au } from '../util/tableaux.js';
+import { uniteRetenue } from './actionsProduction.js';
+import { CircuitPublic, ID_TITRE_SUITE, PanneauIntegration, QuestionPublic, usePublic } from './AccueilPublic.js';
+import { circuitDu, DEMO_HOTE, ordreDesVoies, phraseRecu, phraseReglageMachine, productionDuPublic, type ChoixPublic, type Voie } from './publics.js';
 
-interface Fichier { nom: string; svg: string; ignores?: readonly string[] }
+/** Le dessin ouvert ; `production` : le contexte de depart propose a l'editeur (le public « machine »), quand il y en a un. */
+interface Fichier { nom: string; svg: string; ignores?: readonly string[]; production?: ChoixProduction }
 
 const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
   + '<rect x="16" y="16" width="208" height="128" rx="14" fill="#e9ecef"/>'
@@ -36,12 +45,12 @@ const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
 
 const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
 
-type Voie = 'svg' | 'image' | 'formes';
-const VOIES: ReadonlyArray<readonly [Voie, NomIcone, string, string]> = [
-  ['svg', 'ouvrir', 'Ouvrir un SVG ou un PDF', 'Un fichier SVG ou PDF, du code collé, ou l’exemple'],
-  ['image', 'image', 'Convertir une image', 'PNG, JPG… en vecteurs, fond détouré'],
-  ['formes', 'scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
-];
+/** Chaque voie : son icone, son titre, son aide. Leur ordre vient du public (publics.ts, ordreDesVoies). */
+const VOIES: Readonly<Record<Voie, readonly [NomIcone, string, string]>> = {
+  svg: ['ouvrir', 'Ouvrir un SVG ou un PDF', 'Un fichier SVG ou PDF, du code collé, ou l’exemple'],
+  image: ['image', 'Convertir une image', 'PNG, JPG… en vecteurs, fond détouré'],
+  formes: ['scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
+};
 
 // La page est ce qui connait le magasin : le brouillon et les versions de l'editeur vont dans le navigateur.
 const STOCKAGE = stockageNavigateur();
@@ -57,13 +66,19 @@ function Accueil() {
   const [fichier, poserFichier] = useState<Fichier | null>(null);
   const [edition, poserEdition] = useState(false);
   const [nuancierTexte, poserNuancierTexte] = useState(NUANCIER_EXEMPLE);
-  const [voie, poserVoie] = useState<Voie>('svg');
+  // Le public de l'accueil (ADR-0024) : retenu, ou null tant qu'on n'a pas repondu (la question est alors posee en tete).
+  const [publicChoisi, choisirPublic] = usePublic(STOCKAGE);
+  const [question, poserQuestion] = useState(publicChoisi === null);
+  const [voie, poserVoie] = useState<Voie>(() => au(ordreDesVoies(publicChoisi), 0));
   // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
   const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
   const informer = useCallback((texte: string) => poserMessage({ texte, ton: 'info' }), []);
   const [credits, poserCredits] = useState(false);
   const [brouillon, poserBrouillon] = useState<Brouillon | null>(() => lireBrouillon(STOCKAGE));
+  // La demonstration des integrateurs : l'editeur ouvert comme un hote l'ouvrirait, et ce que la page « hote » en a recu.
+  const [demo, poserDemo] = useState(false);
+  const [recu, poserRecu] = useState('');
   // La visite guidee ne s'ouvre d'elle-meme que si on l'a demandee (« Essayer avec la visite guidée ») : ouvrir l'exemple
   // tout court ouvre l'exemple, rien d'autre (ADR-0019). Le menu Aide de l'editeur la rejoue.
   const [visiteDemandee, demanderVisite] = useState(false);
@@ -83,35 +98,50 @@ function Accueil() {
   const [retour, poserRetour] = useState(0);
   useEffect(() => { if (retour) telecharger.current?.focus(); }, [retour]);
 
+  // Repondre (ou passer) range l'accueil pour ce public et y mene le focus : le titre de ce qui suit dit ce qui a change.
+  const repondre = useCallback((c: ChoixPublic) => {
+    choisirPublic(c);
+    poserQuestion(false);
+    poserVoie(au(ordreDesVoies(c), 0));
+    requestAnimationFrame(() => document.getElementById(ID_TITRE_SUITE)?.focus());
+  }, [choisirPublic]);
+  const rouvrir = useCallback(() => {
+    poserQuestion(true);
+    requestAnimationFrame(() => (document.querySelector<HTMLElement>('.publics .public.actuel') ?? document.querySelector<HTMLElement>('.publics .public'))?.focus());
+  }, []);
+  // Le contexte de depart du public « machine » : Cricut, dans l'unite retenue (le millimetre par defaut, ADR-0013).
+  const depart = (): ChoixProduction | null => productionDuPublic(publicChoisi, uniteRetenue(STOCKAGE));
+
   /**
    * Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. `ignores` : ce que la lecture du document d'origine (un
-   * PDF, ou le texte du SVG mis en lettres) n'a pas repris, dit avec ce que la lecture du SVG laisse tomber.
+   * PDF, ou le texte du SVG mis en lettres) n'a pas repris, dit avec ce que la lecture du SVG laisse tomber. `production` : le
+   * contexte de depart de l'editeur (celui du public, par defaut ; aucun pour la visite guidee).
    */
-  const ouvrir = (nom: string, texte: string, ignores: readonly string[] = []) => {
+  const ouvrir = (nom: string, texte: string, ignores: readonly string[] = [], production: ChoixProduction | null = depart()) => {
     const propre = nettoyerSvgNomme(texte);
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
     // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
-    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores]))); return; }
+    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
     const lu = lireDessinMemo(propre.svg);
     if ('erreur' in lu) { dire(lu.erreur); return; }
-    poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores });
+    poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores, ...(production ? { production } : {}) });
     poserEdition(true);
     // Une seule fois, ici : ce que la lecture a laisse tomber, pour qu'un rendu qui change ne passe pas inapercu.
     dire(phraseIgnores([...ignores, ...lu.ignores]));
     window.scrollTo(0, 0);
   };
-  const stats = useMemo(() => {
-    if (!fichier) return null;
-    const lu = lireDessinMemo(fichier.svg);
-    return 'erreur' in lu ? null : statistiques(lu.dessin);
-  }, [fichier]);
+  // La visite enseigne la premiere retouche sur l'exemple, en contexte generique quel que soit le public : ses etapes nomment
+  // « Télécharger le SVG », et l'exemple a un trait que l'export Cricut refuserait (ADR-0024).
+  const essayer = () => { demanderVisite(true); ouvrir('exemple', EXEMPLE, [], null); };
+  const circuit = circuitDu(publicChoisi);
+  const reglage = depart();
 
   return (
     <main className="accueil">
       <header className="tete">
         <h1>Éditeur SVG</h1>
-        <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un SVG propre. Rien ne quitte votre navigateur.</p>
+        <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un fichier propre, pour l’écran ou pour une machine de découpe. Rien ne quitte votre navigateur.</p>
       </header>
 
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
@@ -126,55 +156,30 @@ function Accueil() {
         </section>
       ) : null}
 
-      {fichier ? (
-        <section className="resultat" aria-label="Dessin courant">
-          <img className="apercu" alt={'Aperçu de ' + fichier.nom} src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fichier.svg)} />
-          <div className="fiche">
-            <h2>{fichier.nom}.svg</h2>
-            {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
-            {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
-            <div className="actions">
-              <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer)}>Télécharger le SVG</button>
-              <button type="button" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
-              <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} />
-              <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }}>Fermer</button>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {fichier ? <FicheResultat fichier={fichier} telecharger={telecharger} informer={informer} reprendre={() => poserEdition(true)}
+        fermer={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }} /> : null}
 
-      <section className="voies" aria-label="Par où commencer">
-        <div className="voies-choix" role="tablist" aria-label="Point de départ">
-          {VOIES.map(([id, icone, titre, aide], i) => (
-            <button key={id} type="button" role="tab" id={'voie-' + id} aria-selected={voie === id} aria-controls={'panneau-' + id} tabIndex={voie === id ? 0 : -1} className="voie"
-              onClick={() => poserVoie(id)}
-              onKeyDown={e => {
-                const pas = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-                if (!pas) return;
-                e.preventDefault();
-                const suite = VOIES[(i + pas + VOIES.length) % VOIES.length];
-                if (suite) { poserVoie(suite[0]); document.getElementById('voie-' + suite[0])?.focus(); }
-              }}>
-              <Icone nom={icone} taille={22} />
-              <span className="voie-titre">{titre}</span>
-              <span className="voie-aide">{aide}</span>
-            </button>
-          ))}
-        </div>
-        {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
-        <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={() => { demanderVisite(true); ouvrir('exemple', EXEMPLE); }} /></div>
-        <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
-        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} /></div>
-      </section>
+      <QuestionPublic choix={publicChoisi} ouverte={question} choisir={repondre} rouvrir={rouvrir} />
 
-      <details className="nuancier-page">
-        <summary>Nuancier proposé dans l’éditeur <span className="aide">{nuancier.length} teinte{nuancier.length > 1 ? 's' : ''}</span></summary>
-        <label className="champ">
-          <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
-          <textarea rows={5} value={nuancierTexte} spellCheck={false} onChange={e => poserNuancierTexte(e.target.value)} />
-          <span className="aide">{nuancier.length ? nuancier.length + ' teinte' + (nuancier.length > 1 ? 's' : '') + ' lue' + (nuancier.length > 1 ? 's' : '') : 'Aucune teinte lue. Écrivez une teinte par ligne, par exemple « Rouge #c81e28 » ; sans teinte, l’éditeur ne propose que le sélecteur de couleur.'}</span>
-        </label>
-      </details>
+      {publicChoisi === 'integration'
+        ? <PanneauIntegration circuit={circuit} essayer={() => { poserRecu(''); poserDemo(true); }} recu={recu} />
+        : (
+          <CircuitPublic circuit={circuit}>
+            {publicChoisi === 'machine' && reglage ? <p className="aide">{phraseReglageMachine(reglage)}</p> : null}
+            {publicChoisi === 'retouche' ? <Invitation essayer={essayer} /> : null}
+          </CircuitPublic>
+        )}
+
+      <Voies ordre={ordreDesVoies(publicChoisi)} voie={voie} poserVoie={poserVoie}>
+        {{
+          svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} />,
+          image: <Vectoriser ouvrir={ouvrir} />,
+          formes: <SectionBibliotheque ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
+        }}
+      </Voies>
+
+      {/* Un reglage d'expert : replie, en bas, avant le pied de page. */}
+      <NuancierPage texte={nuancierTexte} poserTexte={poserNuancierTexte} teintes={nuancier.length} />
 
       <footer className="pied">
         <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> et de ses contributeurs (licence <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
@@ -184,15 +189,98 @@ function Accueil() {
 
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores}
-          libelleEnregistrer="Terminer" fermerSansModification
+          production={fichier.production} libelleEnregistrer="Terminer" fermerSansModification
           fermer={() => { poserEdition(false); demanderVisite(false); }}
           enregistrer={s => {
+            // Le dessin rendu porte sa marque s'il a ete prepare : la reprise de l'edition la relit, le depart ne sert plus.
             poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); demanderVisite(false);
             dire('Dessin prêt : téléchargez-le en SVG, ou choisissez un autre format.', 'info');
             poserRetour(n => n + 1);
           }} />
       ) : null}
+
+      {/* L'editeur comme un hote l'ouvre (embarque.tsx) : son libelle de fin, aucun guide, ni bibliotheque ni nuancier, et la page
+          garde la main a l'enregistrement (fermerApresEnregistrer). Rien de la fiche ni du brouillon n'est touche. */}
+      {demo ? (
+        <EditeurSvg svg={EXEMPLE} titre={DEMO_HOTE.nom + '.svg'} nom={DEMO_HOTE.nom} stockage={STOCKAGE} guide={null} libelleEnregistrer={DEMO_HOTE.libelleEnregistrer}
+          fermer={() => poserDemo(false)} enregistrer={s => { poserRecu(phraseRecu(s)); poserDemo(false); }} />
+      ) : null}
     </main>
+  );
+}
+
+/** Le nuancier propose a l'editeur, une teinte par ligne : un reglage d'expert, replie. */
+function NuancierPage({ texte, poserTexte, teintes }: { texte: string; poserTexte: (t: string) => void; teintes: number }) {
+  return (
+    <details className="nuancier-page">
+      <summary>Nuancier proposé dans l’éditeur <span className="aide">{teintes} teinte{teintes > 1 ? 's' : ''}</span></summary>
+      <label className="champ">
+        <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
+        <textarea rows={5} value={texte} spellCheck={false} onChange={e => poserTexte(e.target.value)} />
+        <span className="aide">{teintes ? teintes + ' teinte' + (teintes > 1 ? 's' : '') + ' lue' + (teintes > 1 ? 's' : '') : 'Aucune teinte lue. Écrivez une teinte par ligne, par exemple « Rouge #c81e28 » ; sans teinte, l’éditeur ne propose que le sélecteur de couleur.'}</span>
+      </label>
+    </details>
+  );
+}
+
+/** La fiche du dessin rendu par l'editeur : son apercu, ses mesures, et le geste du moment, le telecharger. */
+function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
+  fichier: Fichier; telecharger: RefObject<HTMLButtonElement | null>; informer: (t: string) => void; reprendre: () => void; fermer: () => void;
+}) {
+  const stats = useMemo(() => {
+    const lu = lireDessinMemo(fichier.svg);
+    return 'erreur' in lu ? null : statistiques(lu.dessin);
+  }, [fichier]);
+  return (
+    <section className="resultat" aria-label="Dessin courant">
+      <img className="apercu" alt={'Aperçu de ' + fichier.nom} src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fichier.svg)} />
+      <div className="fiche">
+        <h2>{fichier.nom}.svg</h2>
+        {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
+        {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
+        <div className="actions">
+          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer)}>Télécharger le SVG</button>
+          <button type="button" onClick={reprendre}>Reprendre l’édition</button>
+          <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} />
+          <button type="button" className="discret" onClick={fermer}>Fermer</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Les trois voies, dans l'ordre du public, en onglets (ADR-0006) : la premiere est celle qu'on voit apres un choix de public. Les
+ * trois panneaux restent montes, dans un ordre fixe : ce qu'on a regle dans l'un survit a un detour par un autre, et a un changement
+ * de public.
+ */
+function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
+  return (
+    <section className="voies" aria-label="Par où commencer">
+      <div className="voies-choix" role="tablist" aria-label="Point de départ">
+        {ordre.map((id, i) => {
+          const [icone, titre, aide] = VOIES[id];
+          return (
+            <button key={id} type="button" role="tab" id={'voie-' + id} aria-selected={voie === id} aria-controls={'panneau-' + id} tabIndex={voie === id ? 0 : -1} className="voie"
+              onClick={() => poserVoie(id)}
+              onKeyDown={e => {
+                const pas = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                if (!pas) return;
+                e.preventDefault();
+                const suite = ordre[(i + pas + ordre.length) % ordre.length];
+                if (suite) { poserVoie(suite); document.getElementById('voie-' + suite)?.focus(); }
+              }}>
+              <Icone nom={icone} taille={22} />
+              <span className="voie-titre">{titre}</span>
+              <span className="voie-aide">{aide}</span>
+            </button>
+          );
+        })}
+      </div>
+      {(['svg', 'image', 'formes'] as const).map(id => (
+        <div key={id} className="voie-panneau" role="tabpanel" id={'panneau-' + id} aria-labelledby={'voie-' + id} hidden={voie !== id}>{children[id]}</div>
+      ))}
+    </section>
   );
 }
 
@@ -212,8 +300,8 @@ function Invitation({ essayer }: { essayer: () => void }) {
   );
 }
 
-/** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. */
-function OuvrirSvg({ ouvrir, dire, essayer }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void }) {
+/** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit. */
+function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void; invitation: boolean }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);
@@ -241,7 +329,7 @@ function OuvrirSvg({ ouvrir, dire, essayer }: { ouvrir: OuvrirDessin; dire: (mes
           <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
         </div>
         <input ref={entree} type="file" accept=".svg,image/svg+xml,.pdf,application/pdf" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
-        <Invitation essayer={essayer} />
+        {invitation ? <Invitation essayer={essayer} /> : null}
       </div>
       <ChoixPagePdf pdf={pdf} />
       <label className="champ">

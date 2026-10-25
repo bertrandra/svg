@@ -170,6 +170,24 @@ components:
     typography: "{typography.compact}"
     rounded: "{rounded.bouton}"
     padding: "12px"
+  question-public:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.body}"
+    rounded: "{rounded.carte}"
+    padding: "16px"
+  etape-circuit:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.label}"
+    rounded: "{rounded.menu}"
+    size: "48px"
+  code-integration:
+    backgroundColor: "{colors.table-atelier}"
+    textColor: "{colors.encre}"
+    typography: "{typography.mesure}"
+    rounded: "{rounded.bouton}"
+    padding: "12px"
   carte-design-space:
     backgroundColor: "{colors.feuille-panneau}"
     textColor: "{colors.encre}"
@@ -304,8 +322,9 @@ L'éditeur est une grille d'application plein écran : une barre en haut (outils
 menus Vue, Édition, Aide, la machine, puis le groupe du fichier : « Télécharger le SVG » et son chevron « Autres formats »,
 le menu Fichier, le geste de fin), les calques à gauche, la toile au centre
 sur la table, l'inspecteur à droite (sections repliables), une barre d'état en bas qui dit l'aide du moment et le
-nombre de modifications. L'accueil est une colonne centrée de trois voies côte à côte (Ouvrir, Convertir,
-Bibliothèque), une seule visible à la fois.
+nombre de modifications. L'accueil est une colonne centrée : le titre et son chapeau, la question du public (ou la ligne qui
+la rappelle), le circuit du public, puis trois voies côte à côte, une seule visible à la fois, dans l'ordre du public (Ouvrir,
+Convertir, Bibliothèque ; Bibliothèque d'abord pour la machine), le nuancier replié et le pied de page (ADR-0024).
 
 Le rythme est serré, sur une base de 4 avec un pas de 6 : 2, 4, 6, 8, 12, 16, 24 et 48 px, chacun un jeton
 (`src/styles/espaces.ts`, `--esp-*`), comme les rayons (`--rayon-*`) et les couches d'empilement (`--couche-*`) ; un
@@ -331,6 +350,10 @@ test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la
 ### Named Rules
 **La règle de l'établi rangé.** La barre garde l'outil fréquent ; le reste vit dans un menu avec son raccourci.
 Une commande ne s'expose pas parce qu'elle existe.
+
+**La règle de la question facultative.** Une question d'accueil ne ferme aucune porte : les trois voies restent dessous,
+« Passer » est toujours visible, et une réponse ne fait que ranger (l'ordre des voies, le circuit montré, le contexte de départ de
+l'éditeur) ; elle ne retire rien et n'écrit aucun octet.
 
 ## Elevation & Depth
 
@@ -397,6 +420,32 @@ Retenus au repos, francs à l'interaction.
   succès.
 - **Calques:** une ligne nomme la forme par son genre (« Cercle 2 », « Triangle 3 », « Tracé courbe 1 ») tant que le
   modèle n'a pas de nom propre ; le nom accessible reste « Forme 3, triangle, fond… ». Rien ne s'écrit dans le SVG.
+
+### La question du public (accueil, ADR-0024)
+« Pour quoi dessinez-vous ? » en tête de l'accueil, facultative, retenue, changeable à tout moment.
+- **Une feuille de carnet, pas trois cartes** : une feuille de panneau (filet, coins de 10 px, 16 px), le titre (Title), une aide,
+  puis trois lignes d'un même formulaire séparées par un filet : l'icône en cyan d'encre, le titre (Body 600) et la phrase de ce
+  qu'on obtient (Compact, encre douce), en trois colonnes au bureau, la phrase sous le titre sous 640 px. Toute la ligne est le
+  bouton (secondaire, filet transparent ; survol : filet cyan) ; son nom est le titre puis la phrase. **Aucune action pleine** :
+  choisir un public règle l'accueil, ce n'est pas l'action du moment. « Passer » discret, en bas à droite.
+- **Rouverte**, la réponse du moment est marquée comme une voie choisie (filet cyan doublé, voile à 7 %, `aria-current`).
+- **Répondue**, une ligne la remplace : « Accueil adapté : *public* » (le public à l'encre, 600) et « Changer de public » (discret,
+  sans marge, comme un lien de la phrase) ; « Accueil général, pour tous les usages. » et « Choisir un public » après « Passer ».
+
+### Le circuit (accueil, ADR-0024)
+« L'ensemble sur une plateforme », dit pour chaque public au-dessus des voies : trois étapes, d'où part le dessin, ce que l'éditeur
+en fait, ce qui en sort. Un gabarit de carnet, pas une infographie.
+- **Style** : pour chaque étape, une feuille carrée de 48 px (filet, coins de 8 px) qui porte une icône de l'interface à l'encre
+  (décorative, `aria-hidden`), puis le numéro en chasse fixe (Aide, encre douce), le titre (600) et une phrase (Compact, encre
+  douce) ; d'une feuille à la suivante, un filet fort de 2 px en tirets, à mi-hauteur, qui ne touche jamais le texte. Sous 640 px,
+  les étapes s'empilent et le filet descend à gauche. Aucune couleur : le cyan reste à l'action.
+- **Ce qui suit** le circuit : pour la machine, la phrase du réglage de l'éditeur (le libellé du sélecteur de la barre) ; pour la
+  retouche, l'invitation à la visite en note (filet cyan, voile à 8 %, comme un repère), son bouton discret.
+- **Le panneau des intégrateurs** remplace le circuit : une feuille, une présentation, les trois étapes, les options en deux
+  colonnes (le nom en chasse fixe, ce qu'il fait en Compact à l'encre douce), l'extrait de code sur la table (IBM Plex Mono 400,
+  une région focalisable qui défile en largeur), « Essayer l'éditeur embarqué » secondaire, « Copier le code » discret, le lien
+  du guide au fil d'une phrase.
+- **Le focus** suit la réponse : le titre de ce qui suit (contour cyan au clavier seulement).
 
 ### Pastilles d'événements (bibliothèque)
 Le filtre de la bibliothèque, à la place d'une liste déroulante de 45 lignes.
