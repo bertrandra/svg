@@ -178,8 +178,8 @@ const forme = (k: number, d: Chemin, couleur: string, epaisseur: number): Forme 
 });
 
 /** Le masque nettoye, ou la raison d'un refus. */
-function masqueNettoye(image: ImageRgba, fond: Rgb, seuil: number, taches: number): Masque | { erreur: string } {
-  const { masque, encre } = masquer(contrastes(image, fond), image.largeur, image.hauteur, seuil);
+function masqueNettoye(image: ImageRgba, ecarts: Uint8Array, seuil: number, taches: number): Masque | { erreur: string } {
+  const { masque, encre } = masquer(ecarts, image.largeur, image.hauteur, seuil);
   if (!encre) return { erreur: 'Aucun trait trouvé : baissez « Séparer le trait du fond », ou vérifiez le détourage.' };
   if (encre > PART_TRAIT_MAX * image.largeur * image.hauteur) return { erreur: 'Plus de la moitié de l’image est du trait : ce n’est pas un dessin au trait. Montez « Séparer le trait du fond », ou choisissez un autre mode.' };
   retirerTaches(masque, taches * taches);
@@ -198,8 +198,8 @@ export function tracerLigneMediane(image: ImageRgba, fond: Rgb, finesse: Finesse
   const { largeur: l, hauteur: h } = image;
   if (l * h > PIXELS_LIGNE_MAX) return { erreur: 'Image trop grande pour la ligne médiane (' + l + ' × ' + h + ' px, quatre millions de pixels au plus) : désactivez « Agrandir ×2 ».' };
   const r = reglages ?? {}, grain = GRAINS[finesse];
-  const seuilMesure = seuilOtsu(contrastes(image, fond));
-  const masque = masqueNettoye(image, fond, r.seuil ?? seuilMesure, r.taches ?? grain.taches);
+  const ecarts = contrastes(image, fond), seuilMesure = seuilOtsu(ecarts);
+  const masque = masqueNettoye(image, ecarts, r.seuil ?? seuilMesure, r.taches ?? grain.taches);
   if ('erreur' in masque) return masque;
   const d2 = distances2(masque), couleurMesuree = couleurDominante(image, masque, d2);
   amincir(masque);

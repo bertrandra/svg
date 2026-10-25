@@ -5,7 +5,7 @@
 // Les paires se choisissent par critere croissant (rectitude, distance), puis par indice : le meme ensemble
 // de traces rend les memes enchainements.
 
-import type { Pt } from './graphe.js';
+import { COS_PROLONGE, type Pt } from './graphe.js';
 
 /**
  * Un trace : une polyligne, fermee ou non ; `libres` dit si chacun de ses bouts est une extremite libre ;
@@ -113,9 +113,6 @@ function directionSortante(pts: readonly Pt[], cote: 0 | 1, portee: number): Pt 
   }
   return unitaire(cible[0] - depart[0], cible[1] - depart[1]);
 }
-
-/** Sous ce cosinus (plus de 127 degres entre deux aretes), elles se prolongent a travers la jonction. */
-const COS_PROLONGE = -0.6;
 
 /**
  * Traverse les jonctions : a chaque noeud, les deux aretes qui se prolongent le mieux ne font qu'un trace, puis

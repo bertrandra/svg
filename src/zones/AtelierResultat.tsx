@@ -21,7 +21,7 @@ import { ReglagesPretraitementPanneau } from './ReglagesPretraitement.js';
 import { Repere } from './Repere.js';
 
 export const NOMS_MODES: Record<ModeVectorisation, string> = {
-  aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)', mediane: 'Ligne médiane (dessin au trait)'
+  aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)', mediane: 'Ligne médiane (stylo)'
 };
 export const NOMS_FINESSES: Record<Finesse, string> = { fine: 'Fin : garde les petits détails', normale: 'Normal', lisse: 'Lisse : des courbes franches' };
 

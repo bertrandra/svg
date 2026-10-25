@@ -240,8 +240,8 @@ function directionDepuis(e: Arete, v: number, portee: number): Pt {
   return l > 0 ? [x / l, y / l] : [0, 0];
 }
 
-/** Sous ce cosinus (plus de 127 degres), deux branches se prolongent. */
-const COS_PROLONGE = -0.6;
+/** Sous ce cosinus (plus de 127 degres), deux branches se prolongent : a travers une jonction, ou d'une jonction a l'autre. */
+export const COS_PROLONGE = -0.6;
 const prolonge = (a: Pt, b: Pt): boolean => a[0] * b[0] + a[1] * b[1] < COS_PROLONGE;
 
 /**
