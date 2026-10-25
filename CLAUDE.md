@@ -96,6 +96,10 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   geste réel, sans voile, bulle sur la toile ; elle ne s'ouvre que demandée (accueil, menu Aide, `visite: true` chez un hôte) et
   se retient par `svg.guide` dans le stockage injecté ; un repère est une note dans le flux, jamais répétée ; un état vide dit ce
   qui viendra et propose un geste discret (`commun/EtatVide.tsx`).
+- **Un accueil par public** (ADR-0024) : « Pour quoi dessinez-vous ? » ne ferme aucune porte (« Passer », les trois voies
+  toujours dessous) ; la réponse se retient par `svg.accueil` dans le stockage injecté et ne fait que ranger : le circuit,
+  l'ordre des voies, le contexte de départ de l'éditeur (`production`, qu'une marque du fichier remplace ; aucun octet sans
+  geste). La visite reste en Générique ; les tests voient la première visite, `publicAccueil` (`tests/e2e/aide.ts`) pose une réponse.
 - **La lecture est fidèle, ou dit ce qu'elle perd** (ADR-0009) : l'alpha, les noms de couleur et une épaisseur
   de trait nulle sont gardés ; `lireDessin` rend `ignores` et la page le dit à l'ouverture. Les octets
   changent par décision relue (`ACTUALISER_REFERENCES=1`), jamais par effet de bord.

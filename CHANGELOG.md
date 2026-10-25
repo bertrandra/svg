@@ -56,6 +56,8 @@ empreintes.
 
 ### Modifié
 
+- Le chapeau de l'accueil nomme la machine de découpe ; les audits axe de la bibliothèque se font sur toute la hauteur de
+  la page.
 - **Les boutons masquer et verrouiller des calques sont de vraies icônes** (cadenas ouvert ajouté), comme le
   bouton supprimer des versions ; noms et états inchangés. « Aller à la toile » est un lien, la page de
   l'hôte est cachée (`visibility: hidden`) en plus d'être inerte pendant l'édition, et les boutons de menu
@@ -149,6 +151,15 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Un accueil par public** (ADR-0024) : l'accueil demande « Pour quoi dessinez-vous ? » (machine de découpe, retouche,
+  intégration), sans obligation (« Passer »), retenu dans le stockage injecté (`svg.accueil`, relu champ par champ ; le
+  temps de la page sans stockage) et changeable (« Changer de public »). Chaque public voit son circuit en trois étapes
+  jusqu'au fichier prêt et les voies dans son ordre ; la machine ouvre l'éditeur en contexte Cricut (Maker, découpe,
+  millimètres) ; la retouche met l'invitation à la visite en évidence ; les intégrateurs ont un panneau (options
+  principales, extrait copiable, guide, « Essayer l'éditeur embarqué »).
+- La propriété `production` d'`EditeurSvg` : un contexte de production de départ quand le SVG ne porte aucune marque ;
+  rien ne s'écrit sans modification.
 
 - **Cinq bibliothèques libres de plus** (ADR-0023) : Material Design Icons (Apache 2.0), Phosphor, Tabler, Healthicons (MIT)
   et Lucide (ISC), soit 19 000 formes nommées en français par le lexique et rangées par les mêmes règles d'événement,
