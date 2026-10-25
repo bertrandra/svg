@@ -114,12 +114,13 @@ function LigneOperation({ f, operation, sel, choisie, rang }: { f: Forme; operat
   const glisser = (e: DragEvent) => { e.dataTransfer.setData(TYPE_GLISSE, cibles.join(' ')); e.dataTransfer.effectAllowed = 'move'; };
   return (
     <li className={choisie ? 'choisi' : undefined} style={fenetree} aria-posinset={rang?.[0]} aria-setsize={rang?.[1]} draggable={!f.verrouille} onDragStart={glisser}>
+      {/* La vignette, hors du bouton, est la poignee du glisser : firefox ne commence jamais un glisser sur un bouton. */}
+      <Vignette f={f} operation={operation} />
       <button type="button" className="calque-nom" data-forme={f.id} aria-label={nomDeForme(f)} aria-pressed={choisie} disabled={f.verrouille} onClick={e => {
         const ajout = e.shiftKey || e.ctrlKey || e.metaKey;
         ac.choisir(ajout ? (choisie ? sel.filter(s => s !== f.id) : [...sel, f.id]) : [f.id]);
         ac.poserPoint(null);
       }}>
-        <Vignette f={f} operation={operation} />
         <span className="calque-genre">{genreAffiche(f)}</span> <span className="calque-numero">{numeroDeForme(f)}</span>
       </button>
       <Bouton icone={g.icone} className="calque-bascule calque-operation" disabled={f.verrouille}

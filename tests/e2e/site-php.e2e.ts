@@ -174,11 +174,12 @@ describe('le site PHP', () => {
     expect(await quitterRetenu()).toBe(false);
     await page.keyboard.press('ArrowRight');
     await attend(() => etat(page)).toBe('Modifications non enregistrées');
-    // Quitter la page avec des modifications : le navigateur demande confirmation.
-    expect(await quitterRetenu()).toBe(true);
+    // Quitter la page avec des modifications : le navigateur demande confirmation. La garde se pose par un effet, apres
+    // l'affichage de l'etat : on l'attend plutot que de la lire au meme instant (webkit peint avant de la poser).
+    await attend(() => quitterRetenu()).toBe(true);
     await page.keyboard.press('Control+z');
     await attend(() => etat(page)).toBe('Enregistré');
-    expect(await quitterRetenu()).toBe(false);
+    await attend(() => quitterRetenu()).toBe(false);
     await fermerEditeur(page);
 
     // Rouvert : le meme dessin, le texte toujours vivant ; « Enregistrer sous… » ecrit les memes octets.

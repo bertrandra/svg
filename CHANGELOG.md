@@ -141,6 +141,8 @@ empreintes.
 
 ### Corrigé
 
+- Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
+  bouton, est la poignée du glisser (Firefox ne commence jamais un glisser sur un bouton).
 - Sous Safari et WebKit, un menu ouvert à la souris puis parcouru aux flèches montre de nouveau l'élément atteint, de même que
   les pastilles de la bibliothèque et les onglets de l'accueil (`focus({ focusVisible: true })`).
 - Tests de navigateur sous WebKit : le dépôt de fichier attend l'accueil, les textes de menu sont ramenés, le texte d'exemple est

@@ -642,7 +642,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .groupe-operation .etat-vide { padding-top: 0; }
 .vignette-forme { flex: none; width: 18px; height: 18px; background: var(--toile-blanc); border: 1px solid var(--filet-fort); border-radius: var(--rayon-pastille); }
 .vignette-forme .vignette-trait { stroke-width: 1.5px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.editeur-calques li[draggable="true"] { cursor: grab; }
+.editeur-calques li[draggable="true"] .vignette-forme { cursor: grab; }
+.editeur-calques li .vignette-forme { margin-left: var(--esp-xs); }
 @media (forced-colors: active) {
   .vignette-forme { forced-color-adjust: none; border-color: CanvasText; }
   /* La toile garde ses couleurs (forced-color-adjust: none) : l'apercu aussi, choisi pour se lire sur chaque fond du plan ; plus epais. */

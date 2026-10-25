@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { attend, attendreAnimations, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 /** Un anneau plein en pair-impair (le trou ne se decoupe pas), un disque plein, une courbe et une ligne en trait seul. */
@@ -139,7 +139,8 @@ describe('couper ou ecrire, forme par forme', () => {
 
   it('fait passer une forme en la glissant d un groupe a l autre (un raccourci, pas le seul chemin)', async () => {
     const page = await editeur();
-    await ligne(page, 'f4').dragTo(groupe(page, 'decoupe').locator('h4'));
+    // Par sa vignette, la poignee du glisser : un glisser ne commence pas sur un bouton dans firefox.
+    await ligne(page, 'f4').locator('.vignette-forme').dragTo(groupe(page, 'decoupe').locator('h4'));
     await attend(() => lignes(page, 'decoupe')).toEqual(['f4', 'f2', 'f1']);
   });
 
@@ -269,6 +270,8 @@ describe('couper ou ecrire, forme par forme', () => {
     // (Highlight sur HighlightText), que la page ne choisit pas ; l'emulation de firefox et webkit la donne a 2,94:1 et axe la
     // jugerait comme une couleur de la page. Les couleurs du mode sont verifiees ci-dessus, l'ecran entier l'est par axe ici.
     await page.emulateMedia({ forcedColors: 'none' });
+    // Les couleurs reviennent par leurs transitions : l'audit lit l'etat d'arrivee, pas un melange en cours.
+    await attendreAnimations(page);
     expect(await auditAxe(page)).toEqual([]);
   });
 
@@ -290,6 +293,8 @@ describe('couper ou ecrire, forme par forme', () => {
     const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
     await page.locator('.editeur-etat button[aria-label="Calques"]').tap();
     await attend(() => groupe(page, 'decoupe').isVisible()).toBe(true);
+    // Le tiroir glisse a l'ecran : mesurer pendant l'entree comparerait deux instants (firefox et webkit l'animent plus lentement).
+    await attendreAnimations(page);
     const bouton = ligne(page, 'f2').getByRole('button', { name: /^Écrire au stylo : Cercle 2/ });
     const boite = await bouton.boundingBox();
     expect(boite?.height ?? 0).toBeGreaterThanOrEqual(40);
