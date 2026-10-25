@@ -42,6 +42,9 @@ recomposer demain avec les mêmes octets. Le cœur pur ne touche pas au réseau.
 - **les exclusions**, dites : **Font Squirrel** (licences au cas par cas, parfois sans usage commercial, ni adresse versionnée ni
   API), **uncut.xyz** (répertoire aux licences mêlées, sans adresse versionnée ni empreinte publiée), les polices d’icônes
   (catégorie `icons`), les familles sans sous-ensemble latin.
+  L’exclusion vise le répertoire, pas une police qu’il présente : **Uncut Sans**, servie par Fontsource sous OFL 1.1 avec
+  version épinglée et empreinte, reste au catalogue (décision du propriétaire, 25 octobre 2026). Une famille entre par sa
+  licence et par une adresse vérifiable, jamais par le site qui la recense.
 
 Ce qui n’a pas pu être vérifié reste marqué, jamais inventé :
 
