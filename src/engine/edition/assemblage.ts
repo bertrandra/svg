@@ -2,11 +2,11 @@
 // un chemin en ses sous-chemins, coller des formes copiees.
 
 import type { Boite, Chemin, Commande, DessinSvg, Forme } from './types.js';
-import { boiteForme, echelle, multiplier, transformerChemin, translation, unir } from './geometrie.js';
+import { boiteForme, echelle, multiplier, translation, unir } from './geometrie.js';
 import { prochainId } from './operations.js';
-import { echellerTrait } from './trait.js';
 import { avecOrigines, originesDe } from './provenance.js';
-import { avecTexteTransforme, relierCopies } from './texteVivant.js';
+import { relierCopies } from './texteVivant.js';
+import { transformerFeuille } from './transformation.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -24,7 +24,7 @@ export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { de
     const id = 'f' + n++;
     ids.push(id);
     copies.set(f.id, id);
-    return avecTexteTransforme({ ...echellerTrait(f, k), id, verrouille: false, d: transformerChemin(f.d, m) }, f, m);
+    return { ...transformerFeuille(f, m, k), id, verrouille: false };
   });
   return { dessin: { ...dessin, formes: [...dessin.formes, ...relierCopies(formes, copies)] }, ids };
 }
@@ -73,7 +73,7 @@ export function coller(dessin: DessinSvg, formes: readonly Forme[], dx = 0, dy =
     const id = 'f' + n++;
     ids.push(id);
     copies.set(f.id, id);
-    return dx || dy ? avecTexteTransforme({ ...f, id, verrouille: false, visible: true, d: transformerChemin(f.d, translation(dx, dy)) }, f, translation(dx, dy)) : { ...f, id, verrouille: false, visible: true };
+    return dx || dy ? { ...transformerFeuille(f, translation(dx, dy), 1), id, verrouille: false, visible: true } : { ...f, id, verrouille: false, visible: true };
   });
   // Un texte pose colle avec sa forme se pose sur la copie de la forme (ADR-0031) ; colle seul, il redevient libre.
   const nouvelles = relierCopies(copiees, copies);

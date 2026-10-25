@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { garderTextes, sansTexte, type DessinSvg, type Forme, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { garderTextes, poidsDessin, sansTexte, type DessinSvg, type Forme, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -53,7 +53,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     s.poserH(x => {
       const g = garderTextes(x.present, f(x.present)).dessin;
       const d = suivreDispositions(x.present, g, p => glyphesDe?.(p) ?? null).dessin;
-      return avancer(x, d, cle, limitePourTaille(d.formes.length));
+      return avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
     });
   };
   const finir = () => s.poserH(x => clore(x));

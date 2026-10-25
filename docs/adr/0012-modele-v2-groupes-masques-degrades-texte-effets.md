@@ -4,11 +4,25 @@
 **Statut :** proposée (remplace en partie l'ADR-0001, « un dessin à plat, pas un DOM » ; précise l'ADR-0004 §2 et
 la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de version majeure**
 
-**Avancement (25 octobre 2026) :** les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à
-plat d'aujourd'hui, sans attendre les groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md),
-qui précise le §4 et l'annexe 4 (texte entièrement encodé en pourcentage ; pas de `<title>` ; « Vectoriser le texte » en trois
-modes plutôt qu'un groupe d'une forme par lettre ; une matrice de composition qui suit chaque transformation ; une garde qui
-vectorise le texte quand un outil change son tracé sans le connaître). Les autres étapes restent proposées.
+**Avancement (25 octobre 2026) :**
+
+- Les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à plat d'aujourd'hui, sans attendre les
+  groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md), qui précise le §4 et l'annexe 4
+  (texte entièrement encodé en pourcentage ; pas de `<title>` ; « Vectoriser le texte » en trois modes plutôt qu'un groupe d'une
+  forme par lettre ; une matrice de composition qui suit chaque transformation ; une garde qui vectorise le texte quand un outil
+  change son tracé sans le connaître), puis les ADR-0027 (saisie sur la toile), 0031 (texte sur et dans une forme, le « texte sur
+  tracé » que le §4 reportait après la bascule) et 0032 (texte déformé).
+- **L'étape 0, coutures, est faite** (aucun comportement ne change, aucun octet écrit ne bouge) : toute la surface de types,
+  l'arbre dérivé et ses invariants (`edition/arbre.ts`), les points d'extension de la lecture, de l'écriture et des
+  transformations (`edition/fonctionnalites.ts`, `catalogue.ts`), l'écriture riche en squelette (`ecritureRiche.ts`), les
+  définitions par empreinte (`definitions.ts`), la descente (`engine/aplatir.ts`) et les gardes-fous (manifeste des références
+  v1, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`, extensions de l'écriture permise, champs du
+  projet). Le détail est à l'annexe 8 §0.
+- **Révision du plan** (annexe 8 §0 et §3) : ce que les ADR fusionnés depuis ont rendu caduc ou déjà fait (texte vivant,
+  `util/empreinte.ts`, `<text>` étranger lu en lettres, corpus hostile, CI à trois moteurs, exports DXF/EPS/PDF CMJN), ce
+  qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux
+  groupes « À couper / À écrire » de l'ADR-0028 dans les calques ; la vignette du site PHP), les vagues revues (vague 1 : étapes
+  1, 3, 12 ; vague 2 : 2, 4, 5, 7) et les consignes de chaque paquet d'agent (annexe 8 §5). Les autres étapes restent proposées.
 
 Les annexes, dans [`0012-annexes/`](0012-annexes/), portent les types, les tables et le plan ; cette page porte
 les décisions et leurs raisons.
@@ -186,7 +200,8 @@ découpes, **6** masques d'opacité, **7** effets, **8** interface découpes/mas
 texte vivant (moteur), **11** texte vivant (interface), **12** images, **13** exports natifs et idiomes
 d'éditeurs (quatre lots), **14** bascule (défaut `riche` dans la page ; l'embarquement garde `plat` tant que
 l'hôte ne le demande pas). Jusqu'à quatre arbres de travail en parallèle (vague 1 : étapes 1, 3, 10, 12), carte
-des conflits en annexe 8 §3.
+des conflits en annexe 8 §3. *Révisé le 25 octobre 2026 : 10 et 11 sont faites ; vague 1 = 1, 3, 12 ; vague 2 = 2, 4, 5, 7
+(annexe 8 §0, §2, §5).*
 
 ## Conséquences
 

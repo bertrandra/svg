@@ -5,7 +5,8 @@
 // demain. Un dessin qui ne s'ecrirait qu'en changeant ce qu'on voit (un trait, une transparence, une piece plus
 // grande que le tapis) est refuse en le nommant : la correction se fait dans le panneau, sous les yeux. Pur.
 
-import { marquerProduction, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { marquerProduction, type Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { constatsBloquants, marqueDeProfil, partagerOperations, versUnite, type Constat, type ProfilProduction } from '../engine/preparation.js';
 import { svgExporte } from './svgs.js';
 
@@ -31,7 +32,7 @@ export const phraseRefus = (constats: readonly Constat[]): string => 'Corrigez d
  * choisie ou proposee selon le procede du profil) ; les autres formes visibles (a ecrire au stylo, ou sans fond) sont laissees de
  * cote et comptees. Le fichier porte la marque du contexte (`data-ed-*`) : rouvert dans l'editeur, il retrouve son panneau.
  */
-export function svgCricut(dessin: DessinSvg, p: ProfilProduction): ExportCricut {
+export function svgCricut(dessin: DessinPlat, p: ProfilProduction): ExportCricut {
   const profil: ProfilProduction = p.procede === 'decoupe' ? p : { ...p, procede: 'decoupe' };
   // Le partage suit le procede du profil d'origine : au stylo, seule une forme qu'on a dite « à couper » se decoupe.
   const { decoupe } = p.procede === 'imprimer-decouper' ? { decoupe: dessin } : partagerOperations(dessin, p.procede);

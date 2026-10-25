@@ -63,6 +63,139 @@ export interface Forme {
   readonly regle: 'nonzero' | 'evenodd';
   readonly visible: boolean;
   readonly verrouille: boolean;
+
+  // Le modele v2 (ADR-0012, annexe 1 §3) : des champs facultatifs, ABSENTS de tout dessin plat (arbre.ts, `estPlat`). Une forme qui
+  // n'en porte aucun s'ecrit, se transforme et s'exporte exactement comme avant ; chacun n'est pose que par la lecture riche ou par
+  // l'operation de l'etape qui le livre.
+
+  /** Le groupe parent (`Groupe.id`) ; absent a la racine et dans tout dessin plat. */
+  readonly parent?: string;
+  /**
+   * Une peinture non unie du fond (degrade, motif). Quand elle est la, `remplissage` vaut sa COULEUR DE REPLI (jamais null) : tout
+   * code qui ne connait que les couleurs unies voit une couleur plausible (annexe 1 §6).
+   */
+  readonly peintureRemplissage?: Peinture;
+  /** Idem pour le contour : `contour` vaut alors la couleur de repli. */
+  readonly peintureContour?: Peinture;
+  /** Le flou et l'ombre portee de la forme ; absent : aucun. */
+  readonly effets?: Effets;
+  /** Une image raster integree : `d` est alors le rectangle de l'image, `remplissage` et `contour` sont null (annexe 4, partie C). */
+  readonly image?: ImageIntegree;
+}
+
+// ---------------------------------------------------------------- le modele v2 (ADR-0012, annexe 1)
+// Ces types sont fixes a l'etape 0 pour que les etapes suivantes n'aient plus a editer ce fichier. Tout est dans le repere du plan :
+// les unites de boite (`objectBoundingBox`…) se resolvent a la lecture, l'ecriture est toujours `userSpaceOnUse`.
+
+/** Un arret de degrade : position dans [0 ; 1], croissante (la lecture trie et borne, comme un navigateur). */
+export interface ArretDegrade {
+  readonly position: number;
+  /** #rrggbb. */
+  readonly couleur: string;
+  /** stop-opacity ; absente : 1. */
+  readonly opacite?: number;
+}
+
+interface DegradeCommun {
+  /** De 2 a 64 arrets ; au-dela, la lecture garde les 64 premiers et le dit. */
+  readonly arrets: readonly ArretDegrade[];
+  /** gradientTransform, deja compose avec la matrice de l'element (repere du plan) ; absente : identite. */
+  readonly matrice?: Matrice;
+  /** spreadMethod ; absent : pad. */
+  readonly etalement?: 'reflect' | 'repeat';
+}
+
+export interface DegradeLineaire extends DegradeCommun {
+  readonly genre: 'lineaire';
+  readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number;
+}
+
+export interface DegradeRadial extends DegradeCommun {
+  readonly genre: 'radial';
+  readonly cx: number; readonly cy: number; readonly r: number;
+  /** Le foyer ; absents : le centre et un rayon nul. */
+  readonly fx?: number; readonly fy?: number; readonly fr?: number;
+}
+
+export type Degrade = DegradeLineaire | DegradeRadial;
+
+/** Un motif : une tuile en unites du plan (patternUnits et patternContentUnits resolus, viewBox cuit dans le contenu). */
+export interface Motif {
+  readonly genre: 'motif';
+  readonly x: number; readonly y: number; readonly l: number; readonly h: number;
+  /** patternTransform compose ; absente : identite. */
+  readonly matrice?: Matrice;
+  readonly contenu: Contenu;
+}
+
+export type Peinture = Degrade | Motif;
+
+/** Un flou gaussien : ecart-type en unites du plan, isotrope sans `ecartY`. */
+export interface Flou {
+  readonly ecart: number;
+  readonly ecartY?: number;
+}
+
+/** Une ombre portee : decalage dans le repere du PLAN (la lumiere ne tourne pas avec la forme), ecart, couleur #rrggbb, opacite 0..1. */
+export interface OmbrePortee {
+  readonly dx: number; readonly dy: number;
+  readonly ecart: number;
+  readonly couleur: string;
+  readonly opacite: number;
+}
+
+/** Au plus un flou et une ombre : l'ombre (de la silhouette nette) sous la forme floutee. Un effet de plus est un champ de plus. */
+export interface Effets {
+  readonly flou?: Flou;
+  readonly ombre?: OmbrePortee;
+}
+
+/** Une image raster integree : `data:image/(png|jpeg|gif|webp);base64,…` seulement, jamais une adresse. */
+export interface ImageIntegree {
+  readonly donnees: string;
+  readonly x: number; readonly y: number; readonly l: number; readonly h: number;
+  /** Rotation, inclinaison, composees ; absente : identite. */
+  readonly matrice?: Matrice;
+  /** preserveAspectRatio ; absent : « xMidYMid meet ». */
+  readonly aspect?: string;
+}
+
+/** Un groupe : un noeud de l'arbre, sans matrice vivante (les transformations sont cuites dans les feuilles, annexe 1 §1). */
+export interface Groupe {
+  /** 'g' et un numero, d'un compteur a part de celui des feuilles. */
+  readonly id: string;
+  /** Le groupe parent ; absent a la racine. */
+  readonly parent?: string;
+  readonly nom?: string;
+  readonly visible: boolean;
+  readonly verrouille: boolean;
+  /** Composition reelle du groupe (pas une multiplication sur les feuilles) ; absente : 1. */
+  readonly opacite?: number;
+  readonly decoupe?: Decoupe;
+  readonly masque?: Masque;
+  readonly effets?: Effets;
+  /** La provenance d'une insertion de plusieurs formes creditees, comme `Forme.origine` (ADR-0017, annexe 5 §5). */
+  readonly origine?: readonly string[];
+}
+
+/** Ce qui est commun au dessin, a la tuile d'un motif, a une decoupe et a un masque : des feuilles et leurs groupes. */
+export interface Contenu {
+  /** Les feuilles, dans l'ordre de peinture (le parcours en profondeur de l'arbre). */
+  readonly formes: readonly Forme[];
+  /** Les groupes par identifiant ; ABSENTE d'un contenu plat (jamais une table vide). */
+  readonly groupes?: Readonly<Record<string, Groupe>>;
+}
+
+/** Une decoupe (<clipPath>) : de la geometrie seulement ; la peinture des feuilles est ignoree, `regle` sert de clip-rule. */
+export interface Decoupe {
+  readonly contenu: Contenu;
+}
+
+/** Un masque d'opacite (<mask>), sa region dans le repere du plan. */
+export interface Masque {
+  readonly contenu: Contenu;
+  readonly type: 'luminance' | 'alpha';
+  readonly region: Boite;
 }
 
 /** Ce que la machine fait d'une forme (ADR-0028) : la decouper a la lame, ou l'ecrire (la dessiner) au stylo. */
@@ -156,7 +289,8 @@ export interface DispositionEnveloppe {
   readonly marge: number;
 }
 
-export interface DessinSvg { readonly vb: readonly [number, number, number, number]; readonly formes: readonly Forme[] }
+/** Le dessin : un plan de travail et un contenu. Sans `groupes` ni champ v2 sur ses feuilles, il est plat (ADR-0001). */
+export interface DessinSvg extends Contenu { readonly vb: readonly [number, number, number, number] }
 export interface Boite { x: number; y: number; l: number; h: number }
 export type Matrice = readonly [number, number, number, number, number, number];
 

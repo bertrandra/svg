@@ -14,6 +14,7 @@
 
 import clipping, { type MultiPolygon } from 'polygon-clipping';
 import { marquerProduction, prochainId, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import { cheminDeRegion, regionDeChemin, toleranceBooleen } from '../engine/booleens.js';
 import { cheminDeRegionChoisie, decaler } from '../engine/contours.js';
 import {
@@ -69,7 +70,7 @@ function fondPerdu(dessin: DessinSvg, anneau: MultiPolygon, distance: number, to
 }
 
 /** Les fichiers de Print Then Cut pour ce profil, ou le refus et ses raisons. */
-export function printThenCut(dessin: DessinSvg, p: ProfilProduction): ExportPrintThenCut {
+export function printThenCut(dessin: DessinPlat, p: ProfilProduction): ExportPrintThenCut {
   const profil: ProfilProduction = p.procede === 'imprimer-decouper' ? p : { ...p, procede: 'imprimer-decouper' };
   const ptc = profil.printThenCut;
   if (!ptc) return { erreur: 'La ' + profil.machine.nom + ' ne fait pas Print Then Cut : choisissez une Explore ou une Maker.', constats: [] };

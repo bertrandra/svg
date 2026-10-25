@@ -6,6 +6,7 @@
 // reproductible : memes entrees, memes octets.
 
 import { dessinSansTextes, marquerProduction, type DessinSvg } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import {
   compterOperations, constatsBloquants, formesPeintes, marqueDeProfil, partagerOperations, texteTaille, versUnite, type ProfilProduction
 } from '../engine/preparation.js';
@@ -70,7 +71,7 @@ function grouper(svg: string, n: number, m: number): string {
  * s'ecrit, les trois fichiers d'un dessin mele sinon. Le refus d'un constat bloquant (sur tout le dessin : la taille compte pour la
  * lame comme pour le stylo) est nomme, comme l'export d'une seule operation le nomme.
  */
-export function exportParOperation(dessin: DessinSvg, p: ProfilProduction): ExportParOperation {
+export function exportParOperation(dessin: DessinPlat, p: ProfilProduction): ExportParOperation {
   const n = operationsPeintes(dessin, p);
   if (!n.ecriture) {
     const r = svgCricut(dessin, p);
@@ -120,7 +121,7 @@ export function modeDEmploiOperations(nom: string, dessin: DessinSvg, p: ProfilP
 }
 
 /** L'archive d'un dessin mele : le mode d'emploi, le fichier a couper, le fichier a ecrire, le fichier combine. Deterministe. */
-export function archiveOperations(nom: string, dessin: DessinSvg, p: ProfilProduction, r: Extract<ExportParOperation, { genre: 'mixte' }>): Uint8Array {
+export function archiveOperations(nom: string, dessin: DessinPlat, p: ProfilProduction, r: Extract<ExportParOperation, { genre: 'mixte' }>): Uint8Array {
   const f = nomsOperations(nom), texte = new TextEncoder();
   return ecrireZip([
     { nom: 'LISEZMOI.txt', donnees: texte.encode(modeDEmploiOperations(nom, dessin, p, r)) },
