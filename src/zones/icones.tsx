@@ -16,7 +16,7 @@ export type NomIcone =
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
-  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun';
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -95,7 +95,9 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   'tout-selectionner': [t('M4 4h16v16H4z'), t('M8 8h8v8H8z', true)],
   'aucune-selection': [{ d: 'M4 4h16v16H4z', pointille: true }],
   // « Aucune couleur » : la barre oblique des nuanciers, pas la croix qui ferme (ni le rouge qui detruit).
-  aucun: [t('M5.5 18.5L18.5 5.5')]
+  aucun: [t('M5.5 18.5L18.5 5.5')],
+  // Une machine de decoupe vue de face : le corps, la fente du tapis, le chariot et sa lame.
+  machine: [t('M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'), t('M3 13h18'), t('M10 7V4h4v3'), t('M12 13v4')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

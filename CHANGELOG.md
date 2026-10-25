@@ -440,3 +440,28 @@ empreintes.
   toile, couleurs, versions, panier, lot, nuancier, bibliothèque, panneau Cricut).
 - Sur téléphone, un tiroir ouvert masque le dessin qu'il recouvre ; l'aide de l'inspecteur dit « assembler des formes »
   au lieu de « booléens » ; la typographie française pose ses espaces insécables dans les bulles et les états vides.
+- **Ouvrir un PDF depuis l'accueil** (ADR-0020), choisi ou déposé : ses tracés vectoriels et son texte deviennent des formes
+  éditables ; la première page par défaut, une autre se choisit (« Page 1 sur N ») ; ce qui n'est pas repris (images,
+  dégradés, découpes, couleurs approchées…) est dit à l'ouverture ; un PDF chiffré ou abîmé est refusé en le nommant.
+  Lecture pure et bornée (corpus de 39 PDF hostiles, fuzzer), aller-retour vérifié sur chaque PDF que l'éditeur exporte.
+- **Le texte d'un PDF ou d'un SVG s'importe en lettres**, une forme par lettre : une police TrueType ou OpenType embarquée
+  est dessinée exactement ; une police absente est remplacée par la plus proche des neuf fontes, et c'est dit (« 3 textes
+  en Arial, police remplacée par Inter ») ; le texte invisible (couche de reconnaissance de caractères) n'est jamais repris.
+
+### Version majeure (texte importé)
+
+- Un SVG qui contient du texte s'ouvre désormais en lettres quand la page a ses fontes (`polices.js`), au lieu d'être
+  refusé. Deux références neuves (`texte-svg`, `texte-svg-blancs`) ; aucune référence existante ne change.
+- **Récupérer son fichier** : « Télécharger le SVG » dans la barre de l'éditeur, « Autres formats » à côté (une ligne par
+  format qui dit à quoi il sert) ; le format recommandé suit le contexte (SVG, Cricut, Print Then Cut). Le doublon
+  « Copier le code SVG » est retiré. Parcours « changer une couleur puis récupérer le SVG » : 6 gestes → 4.
+- **« Terminer »** : le bouton de fin de la page s'appelle « Terminer » ; la fiche du dessin a pour action primaire
+  « Télécharger le SVG » (qui prend le focus), avec un message neutre. L'option d'hôte `libelleEnregistrer` (validée)
+  donne le libellé chez un hôte. La confirmation d'abandon propose aussi le geste de fin.
+- **Ctrl+S garde un brouillon et ne ferme jamais l'éditeur** (`onBrouillon` chez un hôte) ; il n'appelle plus
+  `onEnregistrer` : un hôte qui comptait dessus passe par le bouton (docs/integration.md).
+- **Fin du parcours Cricut** : « Exporter quand même (N points à corriger) » avec une confirmation dans le panneau ; carte
+  « Dans Design Space » après l'export ; « Ajuster » cadre le tapis entier, « Ajuster au dessin » (D) ; millimètre par
+  défaut, pouce retenu ; le sélecteur dit « Machine : … » et commence par la machine ; matériaux à venir sur une ligne.
+- Le fichier d'une forme de la bibliothèque porte son nom français (`bonhomme-de-neige.svg`). Dans un menu à contenu libre,
+  Tab circule au lieu de refermer le menu.

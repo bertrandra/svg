@@ -106,8 +106,9 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `bibliotheque` | `'a-charger'` ou la bibliothèque chargée | aucune | Les formes à insérer. `'a-charger'` : le fichier `bibliotheque.js` se charge au premier besoin. Sans l’option, la section n’apparaît pas |
 | `baseAnnexes` | `string` | `''` | Le dossier où chercher `bibliotheque.js` et `polices.js` (voir « Les fichiers à servir ») |
 | `fermerApresEnregistrer` | `boolean` | `true` | Fermer l’éditeur dès que le dessin est enregistré, comme le fait la page |
+| `libelleEnregistrer` | `string` | `'Enregistrer'` | Le libellé du bouton qui rend le dessin à `onEnregistrer` (« Valider », « Mettre à jour le logo »…). Une ligne, de 1 à 40 caractères, blancs du bord retirés. La confirmation d’abandon, le menu Fichier et la visite guidée le reprennent. La page autonome dit « Terminer » |
 | `onFermer` | `() => void` | | Appelée **une fois**, quand l’éditeur se ferme, quelle qu’en soit la cause |
-| `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification |
+| `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S`. Rendre `false` dit que le brouillon n’a pas été gardé : l’éditeur l’annonce au lieu de « Brouillon gardé. » |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 | `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
 
@@ -130,8 +131,14 @@ La version du paquet (`package.json`) qui a construit le bundle.
 
 ### Ce qui est enregistré, et quand
 
-- **Rien n’est rendu sans « Enregistrer »** : le bouton de la barre, `Ctrl+S` (ou `⌘S`), ou
-  Fichier → Enregistrer. `onEnregistrer` reçoit alors le SVG, et lui seul.
+- **Rien n’est rendu sans « Enregistrer »** (ou le libellé que vous donnez par `libelleEnregistrer`) : le bouton de la
+  barre, Fichier → Enregistrer, ou ce même choix dans la confirmation d’abandon (qui rend puis ferme). `onEnregistrer`
+  reçoit alors le SVG, et lui seul. Sans modification (ni du dessin, ni de la machine choisie), le bouton est grisé et dit
+  pourquoi.
+- **`Ctrl+S` (ou `⌘S`) ne rend rien et ne ferme jamais l’éditeur** : il garde le brouillon (`onBrouillon`, tout de suite) et
+  le dit (« Brouillon gardé. »). Sans `onBrouillon`, il dit que rien n’est gardé ici et nomme le bouton qui rend le dessin.
+  *Changement :* jusqu’à cette version, `Ctrl+S` appelait `onEnregistrer` (et fermait l’éditeur avec
+  `fermerApresEnregistrer: true`) ; l’habitude de `Ctrl+S` toutes les minutes éjectait la personne de l’éditeur.
 - Le SVG rendu est le dessin **réécrit** (ADR-0001) : à plat, en chemins absolus, coordonnées au
   millième ; les groupes, classes et feuilles de style de l’entrée disparaissent, le rendu reste le même.
   Les formes masquées sont retirées, et le panneau le dit. Un SVG réécrit aujourd’hui l’est à l’identique
@@ -149,8 +156,13 @@ La version du paquet (`package.json`) qui a construit le bundle.
   plusieurs fois). Le fermer ensuite par l’éditeur redemande confirmation, car il ne sait pas que le dessin
   est déjà gardé ; fermez-le plutôt par la poignée.
 - `onBrouillon` n’est pas un enregistrement : c’est le SVG du moment, de quoi reprendre après un
-  rechargement. Il n’est **pas** passé par `nettoyerSvg`. Appelée seulement quand le dessin a changé.
-- « Fermer » avec des modifications non enregistrées demande confirmation (« Abandonner »).
+  rechargement. Il n’est **pas** passé par `nettoyerSvg`. Appelée seulement quand le dessin a changé (une seconde après,
+  ou à `Ctrl+S`).
+- **Récupérer un fichier** sans rien rendre à votre page : « Télécharger le SVG » de la barre (en contexte Cricut, « Exporter
+  pour Cricut ») et « Autres formats » à côté (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code). Ce sont des
+  téléchargements pour la personne, pas des enregistrements : `onEnregistrer` n’est pas appelée.
+- « Fermer » avec des modifications non enregistrées demande confirmation : « Abandonner », « Enregistrer » (votre
+  libellé : rend le dessin puis ferme, jamais l’un sans l’autre) ou « Continuer l’édition ».
 
 Les rappels s’exécutent dans les évènements de l’éditeur ; une exception levée dans l’un d’eux n’est pas
 rattrapée par l’éditeur.
@@ -241,8 +253,8 @@ Ce que cette isolation ne couvre pas :
   tout entier, sans que vous ayez rien à faire.
 - **Le défilement** : `body` reçoit `overflow: hidden` tant que l’éditeur est ouvert, et le retrouve à la
   fermeture.
-- **Les raccourcis** : tant que l’éditeur est ouvert, `Ctrl+S`, `Ctrl+Z`, `Suppr`, les flèches (seules, avec `Alt`
-  ou avec `Ctrl`), etc. sont écoutés sur `window` ; `Tab`, `Entrée`, `Page suivante` et `Page précédente` ne le sont que sur la toile. Ne laissez pas votre page y réagir aussi.
+- **Les raccourcis** : tant que l’éditeur est ouvert, `Ctrl+S` (garder le brouillon), `Ctrl+Z`, `Suppr`, les flèches (seules, avec `Alt`
+  ou avec `Ctrl`), `0` et `D` (ajuster), etc. sont écoutés sur `window` ; `Tab`, `Entrée`, `Page suivante` et `Page précédente` ne le sont que sur la toile. Ne laissez pas votre page y réagir aussi.
 
 Besoin d’une isolation totale (feuilles de l’hôte qui visent des classes génériques, règles `svg`) :
 prenez l’iframe (1).
@@ -399,7 +411,9 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `bibliotheque?` | `Bibliotheque \| 'a-charger'` | Les formes à insérer ; `'a-charger'` charge `bibliotheque.js` au premier besoin |
 | `fermer` | `() => void` | Appelée quand la personne ferme (après confirmation s’il y a des modifications) |
 | `enregistrer` | `(svg: string) => void` | Reçoit le SVG retouché, déjà nettoyé. Le composant ne se ferme pas de lui-même : c’est à vous |
-| `brouillon?` | `(svg: string) => void` | Reçoit le SVG du moment, une seconde après la dernière modification |
+| `brouillon?` | `(svg: string) => unknown` | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S` (qui ne ferme jamais). Rendre `false` : le brouillon n’a pas été gardé, et l’éditeur le dit |
+| `libelleEnregistrer?` | `string` | Le libellé du geste qui appelle `enregistrer` (défaut « Enregistrer ») ; la page dit « Terminer ». L’éditeur ne devine pas où il est : il reçoit son libellé |
+| `fermerSansModification?` | `boolean` | Le geste de fin reste actif sans modification et appelle alors `fermer` (rien n’est réécrit) ; faux par défaut : il est grisé et dit pourquoi. La page le pose |
 | `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
 | `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
 
@@ -426,7 +440,8 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 
 1. Ouvrez la console : `window.EditeurSvg.version` rend un texte, `window.EditeurSvg.estEditable(svg)` vrai.
 2. `ouvrir` : l’éditeur couvre la page, la barre porte votre `titre`.
-3. Modifiez une forme, « Enregistrer » : `onEnregistrer` reçoit un texte qui commence par `<svg `.
+3. Modifiez une forme, « Enregistrer » (ou votre `libelleEnregistrer`) : `onEnregistrer` reçoit un texte qui commence par
+   `<svg `. `Ctrl+S`, lui, n’appelle que `onBrouillon`.
 4. Ouvrez la bibliothèque et l’outil Texte : si un fichier annexe est introuvable, le panneau le dit et
    l’onglet Réseau du navigateur montre l’adresse demandée (corrigez `baseAnnexes`).
 5. `exemples/integration.html` fait tout cela ; si lui marche et pas votre page, comparez les balises

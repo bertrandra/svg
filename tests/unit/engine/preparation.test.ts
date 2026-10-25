@@ -19,7 +19,7 @@ const lire = (corps: string, vb = '0 0 1200 1200'): DessinSvg => {
   return r.dessin;
 };
 const profil = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', ...choix });
   if (!p) throw new Error('profil');
   return p;
 };

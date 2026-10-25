@@ -43,8 +43,18 @@ export interface ProprietesEditeur {
   fermer: () => void;
   /** Recoit le SVG retouche, deja nettoye par `nettoyerSvg`. */
   enregistrer: (svg: string) => void;
-  /** Recoit le SVG du moment apres chaque modification (une seconde de repos) : de quoi reprendre apres un rechargement. */
-  brouillon?: (svg: string) => void;
+  /**
+   * Recoit le SVG du moment apres chaque modification (une seconde de repos), et a chaque Ctrl+S : de quoi reprendre apres un
+   * rechargement. Rendre `false` dit que le brouillon n'a pas ete garde (l'editeur ne pretend pas le contraire).
+   */
+  brouillon?: (svg: string) => unknown;
+  /**
+   * Le libelle du bouton de fin, qui rend le dessin a `enregistrer` (defaut « Enregistrer »). La page dit « Terminer » ; un hote dit
+   * le sien. L'editeur ne devine pas ou il est : il recoit son libelle.
+   */
+  libelleEnregistrer?: string;
+  /** Le bouton de fin ferme l'editeur meme sans modification, sans rien reecrire (la page). Faux par defaut : il reste inactif et dit pourquoi. */
+  fermerSansModification?: boolean;
   /**
    * Ou garder les versions nommees. Absent ou null : l'editeur ne garde rien (il ne connait aucun
    * magasin). La page lui donne celui du navigateur (`stockageNavigateur`), un hote ce qu'il veut.
@@ -92,7 +102,7 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant }: ProprietesEditeur) {
+export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification }: ProprietesEditeur) {
   const lu = useMemo(() => { const l = lireDessinMemo(svg); return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] }; }, [svg, avant]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
@@ -112,7 +122,8 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>
           <FournisseurReperes actif={!!guide}>
-            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null} /></FournisseurSections>
+            <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
+              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} /></FournisseurSections>
           </FournisseurReperes>
         </FournisseurStockage>
       )}
@@ -123,7 +134,8 @@ export function EditeurSvg({ svg, titre, nom, nuancier: brut = SANS_NUANCIER, bi
 
 interface ProprietesAtelier {
   initial: DessinSvg; ignores: readonly string[]; production?: MarqueProduction | undefined; titre: string; nom: string; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
-  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => void) | undefined; guide: OptionsGuide | null;
+  fermer: () => void; enregistrer: (svg: string) => void; brouillon?: ((svg: string) => unknown) | undefined; guide: OptionsGuide | null;
+  libelleEnregistrer?: string | undefined; fermerSansModification?: boolean | undefined;
 }
 
 /** Garde l'etat de l'editeur et le donne aux contextes ; le dessin de l'ecran est dans `Cadre`. */

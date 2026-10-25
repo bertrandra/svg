@@ -120,3 +120,15 @@ Décisions du propriétaire, non négociables :
   ou les réglages qu’on voulait toucher, et le dessin passait dessous.
 - **Des repères en bulles flottantes** : ils recouvraient ce que la personne allait cliquer ; une note dans le flux ne
   recouvre rien.
+
+## Amendement — la fin du parcours (25 octobre 2026)
+
+« Récupérez votre dessin » désignait le menu Fichier, où « Télécharger le SVG » se cachait entre « Enregistrer » (qui fermait
+l’éditeur sans rien télécharger), un second « Copier le code SVG » et neuf formats de même poids. L’étape désigne maintenant
+**le geste unique** : au bureau, le bouton « Télécharger le SVG » de la barre (« Cliquez « Télécharger le SVG », en haut à
+droite. »), que le filet entoure ; sous 640 px, « Plus » puis « Télécharger le SVG », en tête de la rubrique Fichier ; au
+doigt, « Touchez ». Chez un hôte, elle nomme le libellé qu’il a donné au geste de fin (`libelleEnregistrer`, « Enregistrer »
+par défaut). Le dernier bouton de la bulle devient « Terminer la visite » : la barre de la page a désormais son « Terminer »,
+qui ferme l’éditeur, et deux gestes ne partagent pas un nom. Le chemin compte un geste de moins (quatre : ouvrir l’exemple,
+choisir la forme, changer sa couleur, télécharger), et l’éditeur reste ouvert. Les preuves : `tests/unit/zones/visite.test.ts`,
+`tests/e2e/onboarding.e2e.ts`, `tests/e2e/fin-parcours.e2e.ts` ; aucun octet écrit ne change.

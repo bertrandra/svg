@@ -14,13 +14,14 @@ describe('menus de la barre', () => {
   }
 
   // Six menus depuis l'ADR-0019 : « Aide » (visite guidee, raccourcis) a rejoint Vue et Edition, pour qu'un debutant trouve
-  // l'aide par son nom en haut de l'editeur. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
-  it('annonce ses six menus comme des menus, dont le contexte de production (ADR-0013) et l aide (ADR-0019)', async () => {
+  // l'aide par son nom en haut de l'editeur. Sept avec la fin du parcours : « Autres formats », le chevron accole a « Télécharger le
+  // SVG », range les formats que le menu Fichier portait. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
+  it('annonce ses sept menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019) et les autres formats', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Générique', 'Fichier']);
+    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {
@@ -105,7 +106,7 @@ describe('menus de la barre', () => {
   it('range les formes derriere un seul outil dont le bouton retient la derniere', async () => {
     const page = await editeur();
     const cadre = page.locator('.editeur-cadre');
-    await page.locator('.chevron-seul button').click();
+    await page.locator('.outil-formes .chevron-seul button').click();
     await page.getByRole('menuitemcheckbox', { name: /Étoile/ }).click();
     await attend(() => cadre.evaluate(e => e.classList.contains('outil-etoile'))).toBe(true);
 
@@ -133,11 +134,21 @@ describe('menus de la barre', () => {
     await attend(() => page.getByRole('menuitem', { name: /Supprimer/ }).isDisabled()).toBe(false);
   });
 
-  it('porte les exports dans Fichier sans que le choix d\'une largeur ne le ferme', async () => {
+  it('porte les autres formats sous « Autres formats », chacun dit par son usage, sans que le choix d\'une largeur ne le ferme', async () => {
     const page = await editeur();
-    const fichier = await ouvrirMenu(page, 'Fichier');
+    const fichier = await ouvrirMenu(page, 'Autres formats');
     const boutons = page.locator('.menu-panneau .contenu-export button');
-    expect(await boutons.count()).toBe(9);
+    // Huit : le SVG a son bouton dans la barre, et le second « Copier le code SVG » du menu Fichier n'existe plus.
+    expect(await boutons.allInnerTexts()).toEqual(['PDF vectoriel', 'PNG', 'JPEG', 'WebP', 'EPS', 'DXF', 'SVG de découpe', 'Copier le code SVG']);
+    for (const b of await boutons.all()) expect(await b.getAttribute('aria-describedby'), await b.innerText()).toBeTruthy();
+    expect(await page.locator('.menu-panneau .ligne-export .aide').first().innerText()).toBe('un document à imprimer ou à envoyer, net à toute taille');
+    // Le menu Fichier ne porte plus ni telechargement, ni code a copier, ni formats.
+    await page.keyboard.press('Escape');
+    await ouvrirMenu(page, 'Fichier');
+    expect(await page.getByRole('menu', { name: 'Fichier' }).locator('.menu-libelle').allInnerTexts()).toEqual(['Terminer', 'Garder un brouillon', 'À propos et crédits', 'Fermer l’éditeur']);
+    expect(await page.locator('.menu-panneau .contenu-export').count()).toBe(0);
+    await page.keyboard.press('Escape');
+    await ouvrirMenu(page, 'Autres formats');
     const largeur = page.locator('.menu-panneau select[aria-label="Largeur du PNG"]');
     await largeur.selectOption('2048');
     expect(await fichier.getAttribute('aria-expanded')).toBe('true');

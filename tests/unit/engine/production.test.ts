@@ -13,7 +13,8 @@ import { violationsEcriture, violationsNettoyage } from '../securite/invariants.
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const CARRE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 96"><path d="M0 0H96V96H0Z" fill="#c81e28"/></svg>';
-const CRICUT_MAKER: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT };
+// En pouces : ces cas datent d'avant le millimetre par defaut de l'interface, et le choix explicite les garde tels quels.
+const CRICUT_MAKER: ChoixProduction = { contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
 const MARQUE: MarqueProduction = { contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'in' };
 
 describe('la marque de production', () => {

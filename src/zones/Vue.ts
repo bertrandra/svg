@@ -45,13 +45,15 @@ export function useRangeeCompacte(): boolean {
 /** La vue sur le plan de travail : zoom, defilement, ajustement a l'ecran, molette. */
 export function useVue(toile: RefObject<HTMLDivElement | null>, svgRef: RefObject<SVGSVGElement | null>, vb: DessinSvg['vb']): Vues {
   const [vue, poserVue] = useState<Vue>({ zoom: 1, x: 0, y: 0 });
-  const ajuster = useCallback(() => {
+  // Une boite du plan a 88 % de la toile, centree : ce que fait « Ajuster » pour le dessin, et pour le tapis d'une Cricut.
+  const cadrer = useCallback((b: { readonly x: number; readonly y: number; readonly l: number; readonly h: number }) => {
     const el = toile.current;
-    if (!el) return;
-    const [x, y, l, h] = vb, W = el.clientWidth, H = el.clientHeight;
-    const zoom = Math.max(0.01, Math.min(W / l, H / h) * 0.88);
-    poserVue({ zoom, x: (W - l * zoom) / 2 - x * zoom, y: (H - h * zoom) / 2 - y * zoom });
-  }, [toile, vb]);
+    if (!el || !(b.l > 0) || !(b.h > 0)) return;
+    const W = el.clientWidth, H = el.clientHeight;
+    const zoom = Math.max(0.01, Math.min(W / b.l, H / b.h) * 0.88);
+    poserVue({ zoom, x: (W - b.l * zoom) / 2 - b.x * zoom, y: (H - b.h * zoom) / 2 - b.y * zoom });
+  }, [toile]);
+  const ajuster = useCallback(() => { const [x, y, l, h] = vb; cadrer({ x, y, l, h }); }, [cadrer, vb]);
   const premier = useRef(true);
   useLayoutEffect(() => { if (premier.current) { premier.current = false; ajuster(); } }, [ajuster]);
   const zoomer = useCallback((f: number, cx?: number, cy?: number) => {
@@ -80,5 +82,5 @@ export function useVue(toile: RefObject<HTMLDivElement | null>, svgRef: RefObjec
     return () => el.removeEventListener('wheel', roue);
   }, [svgRef, zoomer]);
   // Un objet stable tant que rien ne change : il entre dans le contexte de l'interface.
-  return useMemo(() => ({ vue, poserVue, ajuster, zoomer, centrer100 }), [vue, ajuster, zoomer, centrer100]);
+  return useMemo(() => ({ vue, poserVue, ajuster, zoomer, centrer100, cadrer }), [vue, ajuster, zoomer, centrer100, cadrer]);
 }

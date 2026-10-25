@@ -3,17 +3,15 @@
 
 import { useState } from 'react';
 import { sousChemins } from '../engine/editionSvg.js';
-import { copier, proposer, texteOctets } from '../io/fichiers.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { useBoiteRaccourcis, useElementsAide } from './AideEditeur.js';
 import { DialogueCredits } from './Credits.js';
-import { ContenuExport } from './Exporter.js';
 import { allerAuChamp } from './OutilsTrace.js';
-import { svgDocument } from './actionsProduction.js';
 import { useActionsTexte } from './actionsTexte.js';
 import { MODES_VECTORISATION, NOMS_MODES } from '../engine/texte/vectoriser.js';
 import { useRubriquesProduction } from './Production.js';
+import { AutresFormatsRepliees, useElementRecuperer } from './Recuperer.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
@@ -24,9 +22,13 @@ const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fon
 function useElementsVue(avecZoom: boolean): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const { vues } = ui;
+  // En contexte de decoupe, « Ajuster » cadre le tapis entier (le dessin dedans) : un tapis de 12 po qui sortait de l'ecran ne
+  // montrait pas ce que la machine verrait. « Ajuster au dessin » garde l'ancien cadrage, sous sa propre touche.
+  const tapis = ui.profil?.procede === 'decoupe';
   return [
     // « 0 » (zero) et « O » (contours) se confondent en chasse fixe : le chiffre se dit en toutes lettres.
-    { id: 'ajuster', libelle: 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0 (zéro)', onClick: vues.ajuster },
+    { id: 'ajuster', libelle: tapis ? 'Ajuster au tapis' : 'Ajuster à l’écran', icone: 'ajuster', raccourci: '0 (zéro)', onClick: ac.ajuster },
+    ...(tapis ? [{ id: 'ajuster-dessin', libelle: 'Ajuster au dessin', raccourci: 'D', onClick: ac.ajusterAuDessin } satisfies ElementMenu] : []),
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
     { id: 'selection', libelle: 'Zoomer sur la sélection', icone: 'zoom-selection', raccourci: 'Z', desactive: !mo.sel.length, onClick: ac.zoomerSelection },
     { id: 'grille', libelle: 'Grille magnétique (pas ' + ui.pas + ')', raccourci: 'G', coche: ui.grille, separateur: true, onClick: () => ac.poserGrille(!ui.grille) },
@@ -80,26 +82,23 @@ export function MenuEdition() {
   return <MenuDeroulant etiquette="Édition" libelle="Édition" elements={useElementsEdition()} />;
 }
 
-/** Les elements du menu Fichier : enregistrer, telecharger, copier, credits, fermer. */
-function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void): ElementMenu[] {
+/**
+ * Les elements du menu Fichier : le geste de fin (son libelle vient de la page ou de l'hote), garder un brouillon (Ctrl+S, qui ne
+ * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
+ * tete de cette rubrique sur un telephone (`recuperer`).
+ */
+function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
-  const svg = () => svgDocument(mo.dessin, ui.production);
-  // Chaque facon de recuperer le dessin acheve l'etape « Récupérez votre dessin » de la visite (sans visite, rien).
+  const rien = !mo.h.passe.length && !ui.productionModifiee;
   return [
-    { id: 'enregistrer', libelle: 'Enregistrer', icone: 'enregistrer', raccourci: 'Ctrl+S', desactive: !mo.h.passe.length && !ui.productionModifiee, onClick: () => { signaler('recupere'); ac.enregistrerTout(); } },
-    { id: 'telecharger', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: () => { void proposer(nom + '.svg', texteOctets(svg())).then(m => { ac.dire(m); signaler('recupere'); }); } },
-    { id: 'copier-code', libelle: 'Copier le code SVG', icone: 'copier', onClick: () => { void copier(svg()).then(ok => { ac.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.'); if (ok) signaler('recupere'); }); } },
+    ...(recuperer ? [recuperer] : []),
+    // Le geste de fin acheve l'etape « Récupérez votre dessin » chez un hote, ou le dessin se recupere par lui (sans visite, rien).
+    // Pas de coche pour « Terminer » : dans un menu, la colonne des icones dit aussi un etat coche, et on y lirait un choix fait.
+    { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
+    ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
-}
-
-/** Le panneau d'export, sous les elements du menu Fichier. */
-function PanneauExport({ nom }: { nom: string }) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
-  // Un export dit son issue par `dire` : c'est aussi le signal qu'un fichier a ete recupere (visite guidee).
-  const dire = (t: string) => { ac.dire(t); signaler('recupere'); };
-  return <><hr className="menu-filet" /><p className="menu-titre">Exporter</p><ContenuExport svg="" dessin={mo.dessin} nom={nom} dire={dire} {...(ui.profil ? { pourCricut: () => { ac.exporterPourCricut(nom); signaler('recupere'); } } : {})} /></>;
 }
 
 /** La boite des credits : posee dans la racine de l'editeur, ses styles y sont cantonnes, et le reste de l'editeur devient inerte derriere elle. */
@@ -107,13 +106,13 @@ function BoiteCredits({ fermer }: { fermer: () => void }) {
   return <DialogueCredits fermer={fermer} conteneur={document.querySelector<HTMLElement>('.editeur-svg') ?? document.body} />;
 }
 
-/** Fichier : enregistrer, telecharger, copier, credits, fermer, et les formats d'export en dessous. */
-export function MenuFichier({ nom }: { nom: string }) {
+/** Fichier : le geste de fin, le brouillon, les credits, fermer. */
+export function MenuFichier() {
   const [credits, poserCredits] = useState(false);
-  const elements = useElementsFichier(nom, poserCredits);
+  const elements = useElementsFichier(poserCredits, null);
   return (
     <>
-      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} enfants={<PanneauExport nom={nom} />} />
+      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
     </>
   );
@@ -127,13 +126,13 @@ export function MenuFichier({ nom }: { nom: string }) {
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const raccourcis = useBoiteRaccourcis();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits), production = useRubriquesProduction();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom)), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
     { id: 'aide', titre: 'Aide', elements: aide },
     { id: 'edition', titre: 'Édition', elements: edition },
-    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <PanneauExport nom={nom} /> },
+    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <AutresFormatsRepliees nom={nom} /> },
     { id: 'vue', titre: 'Vue', elements: vue },
     // Le contexte de production (ADR-0013) : la barre du bureau le porte, le telephone le range ici, en dernier.
     ...production

@@ -7,17 +7,20 @@ import { garderTextes, sansTexte, type DessinSvg, type Forme, type Style } from 
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
-import { actionsProduction } from './actionsProduction.js';
+import { actionsProduction, cadreDeVue, svgDocument } from './actionsProduction.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
-import type { ActionsEditeur, Fond, Outil, Point, Tiroir } from './typesEditeur.js';
+import type { ActionsEditeur, Fond, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
-export interface EtatDuMoment extends EtatLu { modifie: boolean; refaisable: boolean; versions: readonly Version[]; fermer: () => void; stockage: Stockage | null }
+export interface EtatDuMoment extends EtatLu {
+  modifie: boolean; refaisable: boolean; versions: readonly Version[]; fermer: () => void; stockage: Stockage | null;
+  brouillon?: ((svg: string) => unknown) | undefined; productionModifiee: boolean; fin: OptionsFin; suiteCricut: SuiteCricut;
+}
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
 export interface Setters {
@@ -29,7 +32,7 @@ export interface Setters {
   poserVersions: Dispatch<SetStateAction<readonly Version[]>>; poserTiroir: Dispatch<SetStateAction<Tiroir>>; poserContours: Dispatch<SetStateAction<boolean>>;
   poserFond: Dispatch<SetStateAction<Fond>>; dire: Dispatch<SetStateAction<string>>; poserQuitter: Dispatch<SetStateAction<boolean>>;
   poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
-  poserProduction: Dispatch<SetStateAction<ChoixProduction>>;
+  poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -56,10 +59,10 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   // Tout ce que l'editeur dit dans la barre d'etat, il le dit aussi a voix haute.
   const dire = (t: string) => { s.dire(t); annoncer(t); };
   const poserVersions = (v: readonly Version[]) => { s.poserVersions(v); garderVersions(lire().stockage, v); };
-  const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, toile: s.toile };
+  const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, annoncer, toile: s.toile };
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
-  const production = actionsProduction(lire, leviers, s.poserProduction);
+  const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut });
   return {
     appliquer, finir, poserOutil,
     faire: (f, texte = '') => { appliquer(f); dire(texte); },
@@ -82,6 +85,24 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
     demanderFermeture: () => { const e = lire(); if (e.modifie) s.poserQuitter(true); else e.fermer(); },
     fermer: () => lire().fermer(),
+    terminer: () => {
+      const e = lire();
+      // Rien n'a change : la page referme sans rien reecrire (la fiche garde le fichier tel qu'il est venu) ; ailleurs, on le dit.
+      if (e.modifie || e.productionModifiee) metier.enregistrerTout();
+      else if (e.fin.fermerSansModification) e.fermer();
+      else dire('Aucune modification à enregistrer.');
+    },
+    enregistrerEtFermer: () => { if (metier.enregistrerTout()) lire().fermer(); },
+    garderBrouillon: () => {
+      const e = lire();
+      // Ctrl+S ne ferme jamais : fermer est un geste a part (le bouton de fin, Echap). Sans brouillon a garder, on dit ou va le dessin.
+      if (!e.brouillon) { dire('Ctrl+S ne garde rien ici : « ' + e.fin.libelle + ' » rend votre dessin.'); return; }
+      if (!e.modifie && !e.productionModifiee) { dire('Aucune modification : rien à garder.'); return; }
+      // Un brouillon qui rend faux n'a pas ete garde (stockage refuse ou plein) : on ne pretend pas le contraire.
+      dire(e.brouillon(svgDocument(e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
+    },
+    ajuster: () => { const e = lire(), cadre = cadreDeVue(e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
+    ajusterAuDessin: () => lire().vues.ajuster(),
     continuerEdition: () => s.poserQuitter(false),
     garderVersion: (nom, svg) => {
       const quand = Date.now(), { versions } = lire();

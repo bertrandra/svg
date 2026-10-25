@@ -107,3 +107,23 @@ export function choixDeMarque(marque: MarqueProduction | null | undefined): { ch
   };
   return { choix: normaliserChoix({ contexte: 'cricut', ...brut }) };
 }
+
+/** Une boite du plan : coin haut gauche, largeur et hauteur, en unites du plan. */
+export interface CadreTapis { readonly x: number; readonly y: number; readonly l: number; readonly h: number }
+
+/**
+ * Le tapis du profil tel que la toile le dessine : sa zone utile calee sur le coin haut gauche de `origine` (la ou Design Space pose
+ * les pieces), le tapis centre autour d'elle. `origine` est le coin de l'etendue visible du dessin, ou celui du plan s'il est vide.
+ * Une seule fonction pour le gabarit et pour « Ajuster » : la vue cadre exactement ce qu'on voit.
+ */
+export function cadreTapis(profil: ProfilProduction, origine: { readonly x: number; readonly y: number }): CadreTapis {
+  const l = unitesDePouces(profil.tapis.largeur.valeur), h = unitesDePouces(profil.tapis.hauteur.valeur), z = profil.zoneUtile;
+  return { x: origine.x - (l - z.l) / 2, y: origine.y - (h - z.h) / 2, l, h };
+}
+
+/** La plus petite boite qui contient les deux : le tapis et un dessin qui en deborde se voient ensemble. */
+export function unionCadres(a: CadreTapis, b: CadreTapis | null): CadreTapis {
+  if (!b) return a;
+  const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+  return { x, y, l: Math.max(a.x + a.l, b.x + b.l) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}

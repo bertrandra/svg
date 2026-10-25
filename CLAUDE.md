@@ -58,7 +58,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
-- **Rien ne s'écrit sans « Enregistrer »** ; le SVG réécrit passe par `nettoyerSvg`.
+- **Rien ne s'écrit sans le geste de fin** (« Enregistrer », le libellé de l'hôte par `libelleEnregistrer`, « Terminer »
+  dans la page) ; Ctrl+S ne garde qu'un brouillon et ne ferme jamais ; récupérer un fichier (« Télécharger le SVG »,
+  « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg`.
 - **La vectorisation est vtracer en WASM, épinglé, chargé à la demande** (ADR-0002) ; le réglage
   est pur et déterministe ; une image entièrement détourée n'est jamais tracée.
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
@@ -98,6 +100,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Un SVG d'inconnu se lit, il ne se nettoie pas** (ADR-0014) : analyse linéaire bornée qui ne développe aucune
   entité, liste blanche réémise (`util/assainirSvg.ts`), lecture qui refuse sans jamais lever ; stockage et options
   d'hôte validés ; un vecteur nouveau entre dans `tests/fixtures/hostile/` avec sa ligne d'`index.json`.
+- **Un PDF se lit en formes, le texte en lettres** (ADR-0020) : lecture pure et bornée, décompression injectée par `io`, une
+  police absente est remplacée par la règle de `model/polices.ts` et c'est dit ; ce qui n'est pas repris passe par `ignores`.
 - **On mesure avant de corriger la performance** (ADR-0008) : une liste longue se fenêtre (seuil 150), ce qui
   dépend d'une forme immuable se mémorise par forme, et l'historique limite ses états sur un gros dessin.
 - **L'éditeur se pilote et se lit sans souris** (ADR-0011) : un geste d'édition a son équivalent clavier (Tab,
@@ -109,7 +113,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Un contexte de production configure et juge, il n'invente pas d'outil** (ADR-0013) : un profil en données
   (`model/contextes.ts`, valeurs incertaines marquées `aVerifier`) règle les outils existants et rend des constats
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
-  le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques.
+  le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques. Millimètre par défaut, pouce retenu ;
+  un point « à corriger » demande une confirmation, jamais un bloquant de plus.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.

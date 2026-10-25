@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, boutonTelecharger, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
@@ -38,7 +38,7 @@ describe('le contexte Cricut', () => {
 
   async function choisirCricut(page: Page) {
     await selecteur(page).click();
-    await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+    await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
     await panneau(page).locator('.constat, .pret').first().waitFor();
   }
   async function telecharger(page: Page, action: () => Promise<void>): Promise<{ nom: string; octets: Buffer }> {
@@ -46,19 +46,28 @@ describe('le contexte Cricut', () => {
     return { nom: t.suggestedFilename(), octets: readFileSync(await t.path()) };
   }
 
-  it('se choisit dans la barre a la souris : Generique par defaut, puis Cricut Maker, tapis 12 x 12, papier cartonne', async () => {
+  it('se choisit dans la barre a la souris : Generique par defaut, puis Cricut Maker, tapis 12 x 12, papier cartonne, en millimetres', async () => {
     const page = await editeur();
-    await expect(selecteur(page).textContent()).resolves.toContain('Générique');
+    // Le bouton dit ce qu'il choisit : une machine.
+    await expect(selecteur(page).textContent()).resolves.toBe('Machine : Générique');
     expect(await panneau(page).count()).toBe(0);
-    await choisirCricut(page);
-    await expect(selecteur(page).textContent()).resolves.toContain('Cricut Maker');
-    await attend(() => dit(page)).toBe('Contexte Cricut : Maker (Maker / Maker 3), tapis 12 × 12 po, papier cartonné, en pouces.');
+    // Le menu met la machine en tete : Generique et les trois Cricut, rien d'autre tant qu'aucune n'est choisie.
     await selecteur(page).click();
-    for (const nom of ['Cricut', 'Maker (Maker / Maker 3)', 'Tapis 12 × 12 po', 'Papier cartonné', 'Découpe', 'Pouces']) {
+    expect(await page.getByRole('menu', { name: 'Machine' }).getByRole('menuitemradio').allInnerTexts()).toEqual(['Générique (aucune machine)', 'Cricut Joy', 'Cricut Explore (Air 2 / 3)', 'Cricut Maker (Maker / Maker 3)']);
+    expect(await page.locator('.menu-panneau .menu-rubrique').count()).toBe(1);
+    await page.keyboard.press('Escape');
+    await choisirCricut(page);
+    await expect(selecteur(page).textContent()).resolves.toBe('Cricut Maker · 12 × 12');
+    await attend(() => dit(page)).toBe('Contexte Cricut : Maker (Maker / Maker 3), tapis 12 × 12 po, papier cartonné, en millimètres.');
+    await selecteur(page).click();
+    for (const nom of ['Cricut Maker (Maker / Maker 3)', 'Tapis 12 × 12 po', 'Papier cartonné', 'Découpe', 'Millimètres']) {
       expect(await page.getByRole('menuitemradio', { name: nom, exact: true }).getAttribute('aria-checked'), nom).toBe('true');
     }
-    // Le vinyle est annonce, pas encore decrit : il ne se choisit pas.
-    expect(await page.getByRole('menuitemradio', { name: 'Vinyle (bientôt)' }).isDisabled()).toBe(true);
+    expect(await page.getByRole('menuitemradio', { name: 'Pouces', exact: true }).getAttribute('aria-checked')).toBe('false');
+    // Le vinyle, le thermocollant et le feutre sont annonces, pas encore decrits : une seule ligne, inactive, au lieu de trois choix grises.
+    const bientot = page.getByRole('menuitem', { name: 'Bientôt : vinyle, thermocollant, feutre' });
+    expect(await bientot.isDisabled()).toBe(true);
+    expect(await page.getByRole('menuitemradio', { name: /Vinyle|Feutre|Thermocollant/ }).count()).toBe(0);
     await page.getByRole('menuitemradio', { name: 'Tapis 12 × 24 po' }).click();
     await attend(() => dit(page)).toContain('tapis 12 × 24 po');
   });
@@ -69,7 +78,9 @@ describe('le contexte Cricut', () => {
     await page.keyboard.press('ArrowDown');
     await attend(() => aLeFocus(page.getByRole('menuitemradio', { name: 'Générique' }))).toBe(true);
     await page.keyboard.press('ArrowDown');
-    await attend(() => aLeFocus(page.getByRole('menuitemradio', { name: 'Cricut' }))).toBe(true);
+    await attend(() => aLeFocus(page.getByRole('menuitemradio', { name: 'Cricut Joy' }))).toBe(true);
+    await page.keyboard.press('End');
+    await attend(() => aLeFocus(page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }))).toBe(true);
     await page.keyboard.press('Enter');
     await attend(() => selecteur(page).textContent()).toContain('Cricut Maker');
     await attend(() => aLeFocus(selecteur(page))).toBe(true);
@@ -82,7 +93,8 @@ describe('le contexte Cricut', () => {
     await attend(() => nombreDeConstats(page)).toBe(5);
     expect(await constats(page)).toEqual(['bloquant', 'bloquant', 'a-corriger', 'a-corriger', 'a-corriger']);
     const texte = await panneau(page).textContent();
-    for (const bout of ['contour', 'plus grande que la zone utile', 'tracé ouvert', 'presque égales', 'plus étroites que 0,06 po', '12,1 × 4,88 po', '4 couches : 4 tapis']) expect(texte, bout).toContain(bout);
+    // En millimetres, l'unite par defaut d'une interface francaise (1/16 po : 1,59 mm ; 12,06 × 4,88 po : 306,4 × 123,8 mm).
+    for (const bout of ['contour', 'plus grande que la zone utile', 'tracé ouvert', 'presque égales', 'plus étroites que 1,59 mm', '306,4 × 123,8 mm', '4 couches : 4 tapis']) expect(texte, bout).toContain(bout);
     expect(await page.locator('.editeur-svg-toile .gabarit-zone').count()).toBe(1);
     expect(await page.locator('.editeur-svg-toile .gabarit-zone').getAttribute('width')).toBe(String(11.5 * 96));
     expect(await page.locator('.editeur-svg-toile .forme-debordante').count()).toBe(1);
@@ -105,7 +117,7 @@ describe('le contexte Cricut', () => {
       ['Redimensionner à la zone utile', 'Dessin réduit à'],
       ['Fermer les tracés', '1 tracé fermé.'],
       ['Fusionner les nuances', '1 nuance fusionnée'],
-      ['Épaissir', 'de 0,03 po de chaque côté.']
+      ['Épaissir', 'de 0,79 mm de chaque côté.']
     ];
     let restant = 5;
     for (const [bouton, phrase] of etapes) {
@@ -133,7 +145,13 @@ describe('le contexte Cricut', () => {
     const f = await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click());
     expect(f.nom).toBe('dessin-cricut.svg');
     const svg = f.octets.toString('utf8');
-    expect(/^<svg[^>]*>/.exec(svg)?.[0]).toContain('width="5in" height="3in"');
+    // En millimetres par defaut ; le pouce reste au choix et donne la taille en pouces.
+    expect(/^<svg[^>]*>/.exec(svg)?.[0]).toContain('width="127mm" height="76.2mm"');
+    await selecteur(page).click();
+    await page.getByRole('menuitemradio', { name: 'Pouces', exact: true }).click();
+    await panneau(page).locator('.pret').waitFor();
+    const enPouces = await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click());
+    expect(/^<svg[^>]*>/.exec(enPouces.octets.toString('utf8'))?.[0]).toContain('width="5in" height="3in"');
     expect(svg).toContain('data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12"');
     expect(svg).not.toMatch(/stroke|opacity/);
     expect(new Set([...svg.matchAll(/fill="(#[0-9a-f]{6})"/g)].map(m => m[1]))).toEqual(new Set(['#c81e28', '#1428a0']));
@@ -146,14 +164,18 @@ describe('le contexte Cricut', () => {
 
   it('garde le contexte dans le SVG telecharge ; en Generique, rien de plus', async () => {
     const page = await editeur(PROPRE);
-    const generique = await telecharger(page, async () => { await ouvrirMenu(page, 'Fichier'); await page.getByRole('menuitem', { name: 'Télécharger le SVG' }).click(); });
+    const generique = await telecharger(page, () => boutonTelecharger(page).click());
     expect(generique.octets.toString('utf8')).not.toContain('data-ed-');
     await choisirCricut(page);
-    // Changer de contexte suffit a pouvoir enregistrer : il s'ecrit dans le fichier.
-    expect(await page.locator('.editeur-barre button', { hasText: 'Enregistrer' }).getAttribute('aria-disabled')).toBeNull();
-    const cricut = await telecharger(page, async () => { await ouvrirMenu(page, 'Fichier'); await page.getByRole('menuitem', { name: 'Télécharger le SVG' }).click(); });
+    // En contexte Cricut, le bouton de la barre exporte pour la machine ; le SVG du dessin (avec son contexte) est sous « Autres formats ».
+    expect(await texteDe(boutonTelecharger(page))).toBe('Exporter pour Cricut');
+    const cricut = await telecharger(page, async () => { await ouvrirMenu(page, 'Autres formats'); await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click(); });
     const texte = cricut.octets.toString('utf8');
     expect(texte).toContain(' width="480" height="288" data-ed-contexte="cricut"');
+    // Changer de contexte suffit a rendre le dessin : « Terminer » le rend (la fiche dit qu'il est pret) au lieu de fermer sans rien.
+    await page.locator('.editeur-barre .groupe.fin button.primaire').click();
+    await attend(() => page.locator('.accueil .message.neutre').count()).toBe(1);
+    expect(await texteDe(page.locator('.accueil .message.neutre'))).toBe('Dessin prêt : téléchargez-le en SVG, ou choisissez un autre format.');
     const reouvert = await editeur(texte);
     await attend(() => selecteur(reouvert).textContent()).toContain('Cricut Maker');
   });
@@ -177,7 +199,7 @@ describe('le contexte Cricut', () => {
       p += 30 + ln + taille;
     }
     expect(noms).toEqual(['LISEZMOI.txt', 'dessin-impression.png', 'dessin-impression.svg', 'dessin-coupe.svg']);
-    await attend(() => dit(page)).toContain('fond perdu de 0,06 po');
+    await attend(() => dit(page)).toContain('fond perdu de 1,59 mm');
     // La Joy ne fait pas Print Then Cut : le choix se grise, et passer a la Joy ramene la decoupe.
     await selecteur(page).click();
     await page.getByRole('menuitemradio', { name: 'Joy' }).click();
@@ -213,7 +235,7 @@ describe('le contexte Cricut', () => {
     const page = await editeur(DESSIN, { largeur: 390, hauteur: 800, tactile: true });
     expect(await selecteur(page).count()).toBe(0);
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-    const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+    const cricut = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
     await cricut.scrollIntoViewIfNeeded();
     await cricut.tap();
     await attend(() => dit(page)).toContain('Contexte Cricut : Maker');

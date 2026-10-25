@@ -5,18 +5,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { ecrireDessin, marquerProduction, type DessinSvg } from '../engine/editionSvg.js';
 import {
-  constatsPreparation, corrigerPreparation, marqueDeChoix, normaliserChoix, resoudreProfil, resumePreparation, texteMesure, texteTaille, versUnite,
-  type ProfilProduction
+  cadreTapis, constatsPreparation, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, resoudreProfil, resumePreparation, texteMesure, texteTaille,
+  unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { svgCricut } from '../export/cricut.js';
 import { avecDpiPng } from '../export/png.js';
 import { archivePrintThenCut, printThenCut } from '../export/printThenCut.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { versPng } from '../io/image.js';
-import { CRICUT, NOMS_UNITE, type ChoixProduction } from '../model/contextes.js';
+import { CHOIX_CRICUT_DEFAUT, CRICUT, NOMS_UNITE, type ChoixProduction, type UniteLongueur } from '../model/contextes.js';
+import type { Stockage } from '../io/stockage.js';
 import { pluriel } from '../util/texte.js';
-import type { EtatLu, Leviers } from './actions.js';
-import type { ActionsEditeur, EtatPreparation } from './typesEditeur.js';
+import type { Leviers } from './actions.js';
+import type { EtatDuMoment } from './creerActions.js';
+import { CLE_UNITE, demandeConfirmation, etatExport, lireUnite, phraseConfirmation, phraseConfirmationCourte, phraseCouches } from './parcoursCricut.js';
+import type { ActionsEditeur, EtatPreparation, SuiteCricut } from './typesEditeur.js';
 
 /** Le SVG du document tel qu'on l'enregistre : l'ecriture ordinaire, plus la marque du contexte (rien en Generique). */
 export const svgDocument = (dessin: DessinSvg, production: ChoixProduction): string => marquerProduction(ecrireDessin(dessin, 3), marqueDeChoix(production));
@@ -51,21 +54,47 @@ export function usePreparation(dessin: DessinSvg, profil: ProfilProduction | nul
   return profil && etat?.profil === profil ? etat : null;
 }
 
-type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut'>;
+type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut'>;
+
+/**
+ * Ce que « Ajuster » cadre en contexte de decoupe : le tapis entier tel que la toile le dessine, et le dessin s'il en deborde ; null
+ * hors de ce contexte (Generique, Print Then Cut : pas de gabarit), ou la vue cadre le dessin comme avant.
+ */
+export function cadreDeVue(dessin: DessinSvg, production: ChoixProduction): CadreTapis | null {
+  const p = resoudreProfil(production);
+  if (!p || p.procede !== 'decoupe') return null;
+  const etendue = etendueVisible(dessin);
+  return unionCadres(cadreTapis(p, etendue ?? { x: dessin.vb[0], y: dessin.vb[1] }), etendue);
+}
+
+// L'unite choisie se retient d'une ouverture a l'autre : dans le stockage injecte s'il y en a un, sinon le temps de la page.
+let uniteDeSession: UniteLongueur | null = null;
+
+/** L'unite retenue (stockage, puis session), ou celle par defaut : le millimetre. */
+export const uniteRetenue = (stockage: Stockage | null): UniteLongueur => lireUnite(stockage?.lire<unknown>(CLE_UNITE)) ?? uniteDeSession ?? CHOIX_CRICUT_DEFAUT.unite;
+
+/** Le choix Cricut par defaut, dans l'unite retenue, pour une machine donnee (ou celle par defaut). */
+export const choixCricut = (stockage: Stockage | null, machine = CHOIX_CRICUT_DEFAUT.machine): ChoixProduction =>
+  ({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, machine, unite: uniteRetenue(stockage) });
+
+function retenirUnite(stockage: Stockage | null, u: UniteLongueur): void {
+  uniteDeSession = u;
+  if (lireUnite(stockage?.lire<unknown>(CLE_UNITE)) !== u) stockage?.ecrire(CLE_UNITE, u);
+}
 
 const remettre = (nom: string, donnees: Uint8Array | Blob, dire: (t: string) => void, suite: string) => { void proposer(nom, donnees).then(m => dire(m + (suite ? ' ' + suite : ''))); };
 
-/** Le SVG de decoupe, ou l'archive Print Then Cut (avec son PNG a la resolution du profil), remis au telechargement. */
-function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t: string) => void): void {
+/** Le SVG de decoupe, ou l'archive Print Then Cut (avec son PNG a la resolution du profil), remis au telechargement. Faux s'il est refuse. */
+function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t: string) => void): boolean {
   if (p.procede === 'decoupe') {
     const r = svgCricut(dessin, p);
-    if ('erreur' in r) { dire(r.erreur); return; }
+    if ('erreur' in r) { dire(r.erreur); return false; }
     const taille = resumePreparation(dessin).taille;
-    remettre(nom + '-cricut.svg', texteOctets(r.svg), dire, pluriel(r.couches, 'couche') + ' : ' + pluriel(r.couches, 'tapis') + (taille ? ', ' + texteTaille(taille.l, taille.h, p.unite) : '') + '.');
-    return;
+    remettre(nom + '-cricut.svg', texteOctets(r.svg), dire, phraseCouches(r.couches) + (taille ? ', ' + texteTaille(taille.l, taille.h, p.unite) : '') + '.');
+    return true;
   }
   const r = printThenCut(dessin, p);
-  if ('erreur' in r) { dire(r.erreur); return; }
+  if ('erreur' in r) { dire(r.erreur); return false; }
   const resolution = p.printThenCut?.resolution ?? 300;
   const largeur = Math.max(1, Math.round(versUnite(r.vb[2], 'in') * resolution));
   const archiver = (png: Uint8Array | null) => remettre(nom + '-print-then-cut.zip', new Blob([archivePrintThenCut(nom, r, p, png) as BlobPart], { type: 'application/zip' }), dire,
@@ -73,15 +102,28 @@ function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t:
   versPng(r.impression, largeur)
     .then(async b => avecDpiPng(new Uint8Array(await b.arrayBuffer()), resolution))
     .then(archiver, () => archiver(null));
+  return true;
 }
 
-export function actionsProduction(lire: () => EtatLu, l: Leviers, poserProductionBrut: (c: ChoixProduction) => void): ActionsProduction {
+/** Apres le prochain rendu (le gabarit pose, le panneau ouvert) ; tout de suite hors d'un navigateur (les tests sous Node). */
+const apresRendu = (f: () => void): void => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(f); else f(); };
+
+interface SettersProduction { poserProduction: (c: ChoixProduction) => void; poserSuiteCricut: (s: SuiteCricut) => void }
+
+export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: SettersProduction): ActionsProduction {
   const { appliquer, dire } = l;
   return {
     poserProduction: c => {
-      const n = normaliserChoix(c);
-      poserProductionBrut(n);
-      dire(phraseProduction(n));
+      const n = normaliserChoix(c), avant = lire().production;
+      s.poserProduction(n);
+      s.poserSuiteCricut(null);
+      if (n.contexte === 'cricut') retenirUnite(lire().stockage, n.unite);
+      // Le tapis qui apparait, ou qui change, se voit en entier : la vue le cadre (apres le rendu qui le pose), le dessin dedans. La
+      // phrase du contexte est dite avec ce cadrage, dans le meme rendu : un zoom au clavier qui suit (Entree dans le menu) ne la
+      // remplace pas par « Zoom 53 % » dans la region vocale.
+      const nouveau = n.contexte === 'cricut' && (avant.contexte !== 'cricut' || avant.tapis !== n.tapis || avant.procede !== n.procede);
+      if (!nouveau) { dire(phraseProduction(n)); return; }
+      apresRendu(() => { const e = lire(), cadre = cadreDeVue(e.dessin, n); if (cadre) e.vues.cadrer(cadre); dire(phraseProduction(n)); });
     },
     corrigerConstat: code => {
       const { dessin, production } = lire();
@@ -94,12 +136,24 @@ export function actionsProduction(lire: () => EtatLu, l: Leviers, poserProductio
       appliquer(() => r.dessin);
       dire(r.phrase + ' ' + phraseReste(constatsPreparation(r.dessin, p).length, p.procede) + ' Ctrl+Z annule.');
     },
-    exporterPourCricut: nom => {
+    exporterPourCricut: (nom, quandMeme = false) => {
       const { dessin, production } = lire();
       const p = resoudreProfil(production);
-      if (!p) { dire('Choisissez d’abord le contexte Cricut dans la barre.'); return; }
-      exporter(dessin, p, nom, dire);
-    }
+      if (!p) { dire('Choisissez d’abord une machine Cricut dans la barre.'); return; }
+      // Le jugement du moment, pas celui du panneau (qui suit le dessin d'un instant) : un point a corriger demande une confirmation ;
+      // un bloquant laisse l'export le refuser, qui nomme la cause.
+      const e = etatExport(constatsPreparation(dessin, p));
+      // La barre d'etat dit l'essentiel en une ligne (sur un telephone, la liste y prendrait cinq lignes) ; la region vocale dit chaque
+      // point, puisque le focus va a « Revoir » et qu'un lecteur d'ecran n'y lirait pas la liste.
+      if (demandeConfirmation(e, quandMeme)) {
+        s.poserSuiteCricut('confirmer');
+        dire(phraseConfirmationCourte(e.aCorriger.length));
+        (l.annoncer ?? dire)(phraseConfirmation(e.aCorriger));
+        return;
+      }
+      s.poserSuiteCricut(exporter(dessin, p, nom, dire) ? 'design-space' : null);
+    },
+    fermerSuiteCricut: () => s.poserSuiteCricut(null)
   };
 }
 

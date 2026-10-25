@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { attend, attendreAnimations, ouvrirExemple, pilote, texteDe } from './aide.js';
+import { attend, attendreAnimations, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
 
 type Schema = 'light' | 'dark';
 const SCHEMAS: readonly Schema[] = ['light', 'dark'];
@@ -92,7 +92,7 @@ describe('la finition transversale', () => {
         expect(surfaces.selection).toBe(await jeton(page, '--selection'));
         expect(surfaces.defilement.startsWith(await jeton(page, '--filet-fort'))).toBe(true);
         // Les cases a cocher du menu d'export (options) : la meme couleur, plus « auto ».
-        await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+        await ouvrirMenu(page, 'Autres formats');
         await page.locator('.menu-panneau details.section > summary', { hasText: 'Options d’export' }).click();
         const caseExport = page.locator('.menu-panneau input[type=checkbox]').first();
         expect(await caseExport.evaluate(e => getComputedStyle(e).accentColor)).toBe(cyan);
@@ -100,7 +100,7 @@ describe('la finition transversale', () => {
 
       it('donne au texte d exemple 4,5:1 sur le fond de son champ, et la grotesque quand ce sont des mots', async () => {
         const { page } = await navigateur.ouvrir({ schema, largeur: 1280, hauteur: 800 });
-        const accueil = await exemple(page.locator('section[aria-label="Ouvrir un SVG"] textarea'));
+        const accueil = await exemple(page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea'));
         expect(contraste(accueil.couleur, accueil.fond), JSON.stringify(accueil)).toBeGreaterThanOrEqual(4.5);
         expect(accueil.opacite).toBe('1');
         await ouvrirExemple(page);
@@ -109,7 +109,7 @@ describe('la finition transversale', () => {
         const aucun = await exemple(code);
         expect(contraste(aucun.couleur, aucun.fond), JSON.stringify(aucun)).toBeGreaterThanOrEqual(4.5);
         expect(aucun.famille).toMatch(/^"?Instrument Sans/);
-        await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+        await ouvrirMenu(page, 'Autres formats');
         await page.locator('.menu-panneau details.section > summary', { hasText: 'Options d’export' }).click();
         const largeur = await exemple(page.locator('.menu-panneau input[aria-label="Largeur du dessin exporté"]'));
         expect(contraste(largeur.couleur, largeur.fond), JSON.stringify(largeur)).toBeGreaterThanOrEqual(4.5);
@@ -119,10 +119,10 @@ describe('la finition transversale', () => {
       it('ne pose jamais plus d une action pleine par panneau, et seulement celle du menu ou de la confirmation quand ils sont ouverts', async () => {
         const page = await editeur(schema);
         expect(unParPanneau(await pleins(page))).toEqual({});
-        // Une modification, puis le menu Fichier : « Enregistrer » de la barre se retire, le menu n'a pas d'action pleine a lui.
+        // Une modification, puis le menu Fichier : « Terminer » de la barre se retire, le menu n'a pas d'action pleine a lui.
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         await page.keyboard.press('Delete');
-        expect((await pleins(page)).map(p => p.texte)).toEqual(['Enregistrer']);
+        expect((await pleins(page)).map(p => p.texte)).toEqual(['Terminer']);
         await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
         await page.getByRole('menu', { name: 'Fichier' }).waitFor();
         expect(await pleins(page)).toEqual([]);
@@ -132,19 +132,24 @@ describe('la finition transversale', () => {
         await page.getByRole('alertdialog').waitFor();
         expect(await pleins(page)).toEqual([{ texte: 'Continuer l’édition', zone: 'confirmation' }]);
         await page.keyboard.press('Escape');
-        await attend(async () => (await pleins(page)).map(p => p.texte)).toEqual(['Enregistrer']);
+        await attend(async () => (await pleins(page)).map(p => p.texte)).toEqual(['Terminer']);
+        // « Autres formats » non plus n'a pas d'action pleine : ses formats sont des choix de meme poids, dits par leur usage.
+        await ouvrirMenu(page, 'Autres formats');
+        await page.locator('.menu-panneau .contenu-export').waitFor();
+        expect(await pleins(page)).toEqual([]);
       });
 
-      it('en contexte Cricut : l export du panneau est la seule action pleine, celle du menu Fichier la remplace quand il s ouvre', async () => {
+      it('en contexte Cricut : l export du panneau est la seule action pleine, et s efface quand un menu s ouvre', async () => {
         const page = await editeur(schema);
         await page.locator('.selecteur-contexte .menu-bouton').click();
-        await page.getByRole('menuitemradio', { name: 'Cricut' }).click();
+        await page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' }).click();
         await page.locator('.panneau-cricut .constat, .panneau-cricut .pret').first().waitFor();
         await attendreAnimations(page);
         expect(await pleins(page)).toEqual([{ texte: 'Exporter pour Cricut', zone: 'cricut' }]);
+        // Le menu Fichier ne porte plus l'export (il a son bouton dans la barre et dans le panneau) : un menu ouvert, rien de plein.
         await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
         await page.getByRole('menu', { name: 'Fichier' }).waitFor();
-        expect(await pleins(page)).toEqual([{ texte: 'Exporter pour Cricut', zone: 'menu' }]);
+        expect(await pleins(page)).toEqual([]);
       });
 
       it('rend « aucun » par la couleur d outil et une barre oblique, jamais par le rouge d échec, à la souris comme au doigt', async () => {
@@ -168,7 +173,7 @@ describe('la finition transversale', () => {
         const page = await editeur(schema);
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         await page.keyboard.press('Delete');
-        await page.keyboard.press('Control+s');
+        await page.locator('.editeur-barre .groupe.fin button.primaire').click();
         const message = page.locator('main.accueil > p.message');
         await message.waitFor();
         expect(await message.getAttribute('role')).toBe('status');

@@ -61,12 +61,12 @@ describe('les profils de production', () => {
     expect(s?.detailMin.valeur).toBeLessThanOrEqual(1 / 8);
   });
 
-  it('ont un choix par defaut coherent : Maker, tapis 12 x 12, papier cartonne, decoupe, pouces', () => {
+  it('ont un choix par defaut coherent : Maker, tapis 12 x 12, papier cartonne, decoupe, millimetres (interface francaise)', () => {
     const m = CRICUT.machines.find(x => x.id === CHOIX_CRICUT_DEFAUT.machine);
     expect(m?.tapis).toContain(CHOIX_CRICUT_DEFAUT.tapis);
     expect(m?.procedes).toContain(CHOIX_CRICUT_DEFAUT.procede);
     expect(CRICUT.materiaux.find(x => x.id === CHOIX_CRICUT_DEFAUT.materiau)?.disponible).toBe(true);
-    expect(CHOIX_CRICUT_DEFAUT.unite).toBe('in');
+    expect(CHOIX_CRICUT_DEFAUT.unite).toBe('mm');
   });
 
   it('n ont que des identifiants qui s ecrivent tels quels dans un attribut data-ed-*', () => {

@@ -209,7 +209,12 @@ export interface ChoixMachine {
 export type ChoixProduction = { readonly contexte: 'generique' } | ({ readonly contexte: 'cricut' } & ChoixMachine);
 
 export const CHOIX_GENERIQUE: ChoixProduction = { contexte: 'generique' };
-export const CHOIX_CRICUT_DEFAUT: ChoixMachine = { machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'in' };
+/**
+ * Le premier choix Cricut. L'unite est le millimetre : l'interface est francaise, et une personne qui mesure en millimetres lisait
+ * « 0,06 po » sans le comprendre. Le pouce reste au choix (l'unite de Design Space) et se retient (zones/parcoursCricut.ts). Un fichier
+ * marque sans unite se relit toujours en pouces (choixDeMarque) : ses octets reecrits ne changent pas.
+ */
+export const CHOIX_CRICUT_DEFAUT: ChoixMachine = { machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' };
 
 export const NOMS_PROCEDE: Readonly<Record<Procede, string>> = { decoupe: 'Découpe', 'imprimer-decouper': 'Print Then Cut (imprimer puis découper)' };
 export const NOMS_UNITE: Readonly<Record<UniteLongueur, string>> = { in: 'po', mm: 'mm' };

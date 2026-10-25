@@ -5,7 +5,7 @@
 
 export {
   resoudreProfil, normaliserChoix, marqueDeChoix, marqueDeProfil, choixDeMarque, unitesDePouces, versUnite, depuisUnite, texteMesure, texteTaille,
-  type ProfilProduction
+  cadreTapis, unionCadres, type CadreTapis, type ProfilProduction
 } from './preparation/profil.js';
 export {
   constatsPreparation, constatsBloquants, resumePreparation, aUnTrait, estTransparente, GRAVITES, LIBELLES_CORRECTION, FORMES_MAX_FINESSE,

@@ -33,8 +33,9 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
       // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
       const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;
-      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return; }
+      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return false; }
       enregistrer(propre.svg);
+      return true;
     },
     finirTrace: (fermerTrace: boolean) => {
       const { dessin, trace, style } = lire();

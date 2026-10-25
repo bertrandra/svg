@@ -98,3 +98,32 @@ Print Then Cut dès le départ ; **aucune correction appliquée sans qu’on la 
   l’autre.
 - **Ajouter une machine ou un matériau** est une entrée dans `model/contextes.ts` (et, pour une nouvelle famille, un
   contexte et sa résolution dans `engine/preparation/profil.ts`) ; les constats ne connaissent que des seuils.
+
+## Amendement — la fin du parcours Cricut (25 octobre 2026)
+
+À l’usage, la fin du parcours laissait le maker seul : l’export partait sans un mot alors qu’un constat « à corriger » restait,
+le tapis sortait de l’écran, l’interface française parlait en pouces, le contexte se choisissait derrière « ··· Générique »,
+la suite dans Design Space était repliée et le fichier portait l’identifiant anglais de la forme. Décisions :
+
+1. **Le millimètre par défaut** (`CHOIX_CRICUT_DEFAUT.unite`) ; le pouce reste au choix et se retient (`svg.unite` dans le
+   stockage injecté, sinon le temps de la page). La lecture d’une marque sans unité reste en pouces : un fichier existant
+   se réécrit à l’octet. Les références et les témoins restent en pouces (choix explicite dans leurs tests) : aucune
+   n’est réécrite, `cricut-export-mm` couvre le millimètre.
+2. **Un point « à corriger » demande une confirmation**, jamais un bloquant de plus : le bouton dit « Exporter quand même
+   (N points à corriger) », et l’export ouvre dans le panneau un message qui liste les points, avec « Revoir » (l’action
+   sûre, pleine, qui prend le focus) et « Exporter quand même ». Pas de fenêtre modale : Tab en sort. Un conseil ne demande
+   rien ; un bloquant refuse comme avant. La logique est pure (`zones/parcoursCricut.ts`, `etatExport`).
+3. **Le tapis se voit en entier** : au choix d’une machine (ou d’un autre tapis), et par « Ajuster » (0) en découpe, la vue
+   cadre le tapis tel que la toile le dessine (`cadreTapis`, le même calcul que le gabarit), le dessin dedans ;
+   « Ajuster au dessin » (D) garde l’ancien cadrage.
+4. **Le sélecteur dit ce qu’il fait** : « Machine : Générique », « Cricut Maker · 12 × 12 », une icône de machine ; son menu
+   commence par la machine (Générique et les trois Cricut : quatre choix au lieu de dix-sept), les matériaux annoncés tiennent
+   sur une ligne inactive.
+5. **Après l’export, une carte « Dans Design Space »** dans le panneau, refermable : importer le fichier, vérifier sa taille,
+   régler couper, dessiner ou rainer par couche ; pour Print Then Cut, l’archive, l’étalonnage, la feuille sur le tapis. Ce
+   que le protocole n’a pas confirmé reste marqué « (à vérifier) ».
+6. **Le fichier porte le nom français de la forme** venue de la bibliothèque (`nomDeFichier`, pur : minuscules, sans accents
+   ni espaces) : `bonhomme-de-neige-cricut.svg`.
+
+Le SVG écrit ne change d’aucun octet pour une entrée existante ; seuls changent ce que l’interface propose par défaut et ce
+qu’elle dit.

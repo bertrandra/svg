@@ -75,3 +75,20 @@ describe('stockageDe', () => {
     expect(() => casse?.retirer('cle')).not.toThrow();
   });
 });
+
+describe('verifierOptions : le libelle du bouton de fin', () => {
+  it('accepte un texte d une ligne de 1 a 40 caracteres, et son absence', () => {
+    for (const libelleEnregistrer of [undefined, 'Valider', 'Mettre à jour le logo', '  Terminer  ', 'x'.repeat(40), '✓ Fini']) {
+      expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer }), String(libelleEnregistrer)).toBeNull();
+    }
+  });
+
+  it('refuse, en francais, ce qui n est pas un libelle de bouton', () => {
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 12 })).toBe('L’option « libelleEnregistrer » doit être un texte, par exemple « Valider ».');
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: null })).toMatch(/doit être un texte/);
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: '   ' })).toBe('L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».');
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'Deux\nlignes' })).toBe('L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.');
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'a\u0000b' })).toMatch(/sur une ligne/);
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'x'.repeat(41) })).toBe('L’option « libelleEnregistrer » dépasse 40 caractères : le bouton ne tiendrait plus dans la barre.');
+  });
+});

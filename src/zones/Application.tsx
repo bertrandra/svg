@@ -1,12 +1,12 @@
 // La page autonome : ouvrir un SVG ou un PDF (fichier, glisser-deposer, code colle ou exemple), convertir une
 // image en SVG, choisir une forme de la bibliotheque, editer en plein ecran, puis reprendre le
-// resultat (apercu, telechargement, copie du code). L'editeur lui-meme ne sait rien de cette page :
-// il recoit un SVG et en rend un.
+// resultat (apercu, telechargement, autres formats). L'editeur lui-meme ne sait rien de cette page :
+// il recoit un SVG, un libelle pour son geste de fin (« Terminer »), et en rend un.
 
-import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { EditeurSvg } from './EditeurSvg.js';
 import { SectionBibliotheque } from './Bibliotheque.js';
-import { MenuExport } from './Exporter.js';
+import { MenuAutresFormats, telechargerSvgPage } from './Exporter.js';
 import { Icone, type NomIcone } from './icones.js';
 import { Vectoriser } from './Vectoriser.js';
 import { lireNuancier } from './nuancier.js';
@@ -16,7 +16,7 @@ import { FournisseurReperes, useReperes, type OptionsGuide } from './contexteGui
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
 import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
-import { insecables } from '../util/texte.js';
+import { insecables, nomDeFichier } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
@@ -74,8 +74,14 @@ function Accueil() {
     convertir: () => { poserVoie('image'); requestAnimationFrame(() => document.getElementById('voie-image')?.focus()); }
   }), [visiteDemandee]);
   const nuancier = useMemo(() => lireNuancier(nuancierTexte), [nuancierTexte]);
-  // Chaque modification dans l'editeur laisse un brouillon : un rechargement ne perd rien.
-  const garder = useCallback((svg: string) => { if (fichier) garderBrouillon(STOCKAGE, fichier.nom, svg, Date.now()); }, [fichier]);
+  // Chaque modification dans l'editeur laisse un brouillon (et Ctrl+S) : un rechargement ne perd rien. Faux : le navigateur a refuse.
+  const garder = useCallback((svg: string) => (fichier ? garderBrouillon(STOCKAGE, fichier.nom, svg, Date.now()) : false), [fichier]);
+  // Quand l'editeur rend un dessin (« Terminer » apres une modification), le focus va au telechargement de la fiche plutot qu'au
+  // bouton qui l'avait ouvert, plus bas : Entree suffit a recuperer le fichier. Fermer sans rien rendre (Echap, abandon) rend le
+  // focus a ce bouton, comme l'editeur le fait chez tout hote (ADR-0011).
+  const telecharger = useRef<HTMLButtonElement>(null);
+  const [retour, poserRetour] = useState(0);
+  useEffect(() => { if (retour) telecharger.current?.focus(); }, [retour]);
 
   /**
    * Ouvre un texte SVG dans l'editeur, ou dit pourquoi il ne s'ouvre pas. `ignores` : ce que la lecture du document d'origine (un
@@ -126,9 +132,11 @@ function Accueil() {
           <div className="fiche">
             <h2>{fichier.nom}.svg</h2>
             {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
+            {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
             <div className="actions">
-              <button type="button" className="primaire" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
-              <MenuExport svg={fichier.svg} nom={fichier.nom} dire={informer} />
+              <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer)}>Télécharger le SVG</button>
+              <button type="button" onClick={() => poserEdition(true)}>Reprendre l’édition</button>
+              <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} />
               <button type="button" className="discret" onClick={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }}>Fermer</button>
             </div>
           </div>
@@ -156,7 +164,7 @@ function Accueil() {
         {/* Les trois panneaux restent montes : ce qu'on a regle dans l'un survit a un detour par un autre. */}
         <div className="voie-panneau" role="tabpanel" id="panneau-svg" aria-labelledby="voie-svg" hidden={voie !== 'svg'}><OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={() => { demanderVisite(true); ouvrir('exemple', EXEMPLE); }} /></div>
         <div className="voie-panneau" role="tabpanel" id="panneau-image" aria-labelledby="voie-image" hidden={voie !== 'image'}><Vectoriser ouvrir={ouvrir} /></div>
-        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(x.id, svgDeBibliotheque(x.id, x.svg))} /></div>
+        <div className="voie-panneau" role="tabpanel" id="panneau-formes" aria-labelledby="voie-formes" hidden={voie !== 'formes'}><SectionBibliotheque ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg))} /></div>
       </section>
 
       <details className="nuancier-page">
@@ -176,8 +184,13 @@ function Accueil() {
 
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores}
+          libelleEnregistrer="Terminer" fermerSansModification
           fermer={() => { poserEdition(false); demanderVisite(false); }}
-          enregistrer={s => { poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); demanderVisite(false); dire('Dessin enregistré : exportez-le en SVG, PNG ou PDF.', 'info'); }} />
+          enregistrer={s => {
+            poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); demanderVisite(false);
+            dire('Dessin prêt : téléchargez-le en SVG, ou choisissez un autre format.', 'info');
+            poserRetour(n => n + 1);
+          }} />
       ) : null}
     </main>
   );

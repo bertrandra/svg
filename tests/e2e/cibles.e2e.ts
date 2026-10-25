@@ -183,9 +183,9 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
         + '<path d="M384 96H576V288H384Z" fill="#c91f27"/><path d="M960 96H963V288H960Z" fill="#1428a0"/><path d="M96 480H1250V560H96Z" fill="#2a9d8f"/></svg>', tactile);
       const bouton = tactile ? page.getByRole('button', { name: /^Plus d’actions/ }) : page.locator('.selecteur-contexte .menu-bouton');
       await cliquer(bouton);
-      await page.getByRole('menu', { name: 'Contexte de production' }).waitFor();
+      await page.getByRole('menu', { name: 'Machine' }).waitFor();
       await exiger(page);
-      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
       await cricut.scrollIntoViewIfNeeded();
       await cliquer(cricut);
       await cliquer(bouton);
@@ -196,6 +196,31 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await tiroir(page, 'Inspecteur');
       await page.locator('.panneau-cricut .constat').first().waitFor();
       await cliquer(page.locator('.panneau-cricut .aide-cricut > summary'));
+      await exiger(page);
+    });
+
+    it('la fin du parcours : « Autres formats », la confirmation d un export Cricut et la carte « Dans Design Space »', async () => {
+      const page = await ouvrirPage();
+      // Un triangle ouvert a la pointe fine : deux points a corriger, aucun bloquant.
+      await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288"><path d="M48 48H240V240H48Z" fill="#c81e28"/><path d="M288 48L432 48L360 240" fill="#1428a0"/></svg>', tactile);
+      await ouvrirMenu(page, 'Autres formats');
+      await page.locator('.menu-panneau .contenu-export').waitFor();
+      await exiger(page);
+      await page.keyboard.press('Escape');
+      await attend(() => page.locator('.menu-panneau').count()).toBe(0);
+      const bouton = tactile ? page.getByRole('button', { name: /^Plus d’actions/ }) : page.locator('.selecteur-contexte .menu-bouton');
+      await cliquer(bouton);
+      const maker = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
+      await maker.scrollIntoViewIfNeeded();
+      await cliquer(maker);
+      await tiroir(page, 'Inspecteur');
+      const exporter = page.locator('.panneau-cricut .export-cricut button.primaire');
+      await attend(() => exporter.innerText()).toMatch(/^Exporter quand même/);
+      await cliquer(exporter);
+      await page.locator('.panneau-cricut .confirmation-export').waitFor();
+      await exiger(page);
+      await Promise.all([page.waitForEvent('download'), cliquer(page.locator('.panneau-cricut .confirmation-export').getByRole('button', { name: 'Exporter quand même' }))]);
+      await page.locator('.panneau-cricut .carte-design-space').waitFor();
       await exiger(page);
     });
 
@@ -220,7 +245,7 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       const page = await editeur();
       const bouton = tactile ? page.getByRole('button', { name: /^Plus d’actions/ }) : page.locator('.selecteur-contexte .menu-bouton');
       await cliquer(bouton);
-      const cricut = page.getByRole('menuitemradio', { name: 'Cricut' });
+      const cricut = page.getByRole('menuitemradio', { name: 'Cricut Maker (Maker / Maker 3)' });
       await cricut.scrollIntoViewIfNeeded();
       await cliquer(cricut);
       await tiroir(page, 'Inspecteur');
@@ -242,12 +267,14 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       await page.getByRole('menu', { name: 'Choisir une forme' }).waitFor();
       await exiger(page);
       await page.keyboard.press('Escape');
-      // Une modification, puis « Enregistrer » : l'editeur se ferme sur la fiche du resultat et son menu Exporter.
+      // Une modification, puis « Terminer » : l'editeur se ferme sur la fiche du resultat et son menu « Autres formats ».
       await cliquer(page.locator('.editeur-svg-toile path[data-id="f2"]'));
       await page.keyboard.press('Delete');
-      await page.keyboard.press('Control+s');
+      // Le geste de fin : dans la barre au bureau, dans la barre d'etat sur un telephone.
+      await cliquer(page.locator('.editeur-barre .groupe.fin button.primaire, .editeur-etat button.primaire').first());
       await page.locator('.resultat').waitFor();
-      await cliquer(page.locator('.resultat .menu-bouton', { hasText: 'Exporter' }));
+      await exiger(page);
+      await cliquer(page.locator('.resultat .menu-bouton', { hasText: 'Autres formats' }));
       await page.locator('.menu-panneau').waitFor();
       await exiger(page);
     });
