@@ -152,6 +152,14 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .rideau select { width: auto; flex: 0 0 auto; font-size: var(--texte-compact); }
 .fiche-resultat { display: grid; gap: var(--esp-s); }
 .fiche-resultat p { margin: 0; }
+/* Le nuancier d'une image convertie (ADR-0037) : deux rangees de pastilles a regarder, titrees comme les groupes du nuancier de
+   l'editeur ; la couleur est celle de l'image, le bord le filet fort. */
+.nuancier-image { display: grid; gap: var(--esp-s); }
+.nuancier-image-rangee { display: grid; gap: var(--esp-xs); }
+.nuancier-image-titre { margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.nuancier-image-titre .aide { font-weight: 400; font-variant-numeric: tabular-nums; }
+.nuancier-image-teintes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
+.nuancier-image-teintes .echantillon { display: block; width: 20px; height: 20px; border: 1px solid var(--filet-fort); border-radius: var(--rayon-pastille); }
 .essais h3 { font-size: var(--texte-compact); margin: var(--esp-xs) 0 var(--esp-s); display: flex; gap: var(--esp-m); align-items: baseline; }
 .essais ul { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--esp-s); overflow-x: auto; padding-bottom: var(--esp-xs); }
 .essais li button { display: grid; gap: var(--esp-2xs); justify-items: center; width: 118px; padding: var(--esp-s) var(--esp-xs); background: var(--table); color: var(--encre); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); font-weight: 400; font-size: var(--texte-petit); line-height: 1.25; text-align: center; }

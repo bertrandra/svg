@@ -449,7 +449,7 @@ describe('les etats vides', () => {
     await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBe(0);
     expect(await lu(page, page.locator('.editeur-calques [data-vide="vide"]'))).toContain('Toutes les formes ont été retirées.');
     expect(await page.locator('.toile-vide[data-vide="vide"]').count()).toBe(1);
-    expect(await lu(page, page.locator('.editeur-inspecteur details.section', { hasText: 'Couleurs du dessin' }))).toContain('Aucune couleur pour l’instant.');
+    expect(await lu(page, page.locator('.editeur-inspecteur details.section:not(.section-nuancier)', { hasText: 'Couleurs du dessin' }))).toContain('Aucune couleur pour l’instant.');
     await page.locator('.editeur-inspecteur [data-vide="vide"]').getByRole('button', { name: 'Faire revenir les formes' }).click();
     await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBe(4);
     expect(await page.locator('.toile-vide').count()).toBe(0);

@@ -2,6 +2,8 @@
 // un chemin en commandes absolues. Aucun calcul ici, pour que chaque module d'edition puisse les
 // importer sans s'importer entre eux.
 
+import type { NuancierDessin } from '../../model/nuancier.js';
+
 export type Lettre = 'M' | 'L' | 'C' | 'Q' | 'Z';
 export interface Commande { readonly c: Lettre; readonly p: readonly number[] }
 export type Chemin = readonly Commande[];
@@ -141,7 +143,16 @@ export interface DispositionDansForme {
   readonly justifier: boolean;
 }
 
-export interface DessinSvg { readonly vb: readonly [number, number, number, number]; readonly formes: readonly Forme[] }
+export interface DessinSvg {
+  readonly vb: readonly [number, number, number, number];
+  readonly formes: readonly Forme[];
+  /**
+   * Le nuancier du dessin (ADR-0037) : les couleurs tirees du fichier a l'ouverture, ou d'une selection. Une donnee du document
+   * que l'historique garde (Ctrl+Z defait « Créer le nuancier depuis la sélection ») et que le projet JSON porte, mais que
+   * l'ecriture du SVG ignore : aucun octet de plus. Absent, le nuancier se lit sur le dessin (engine/nuancier.ts).
+   */
+  readonly nuancier?: NuancierDessin;
+}
 export interface Boite { x: number; y: number; l: number; h: number }
 export type Matrice = readonly [number, number, number, number, number, number];
 

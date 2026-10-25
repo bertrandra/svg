@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ecrireDessin } from '../engine/editionSvg.js';
+import { avecNuancier } from '../engine/nuancier.js';
 import { nomDeProjet, type TeinteProjet } from '../model/projet.js';
 import { CHOIX_GENERIQUE } from '../model/contextes.js';
 import { stockageNavigateur } from '../io/stockage.js';
@@ -129,7 +130,9 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
     return () => window.removeEventListener('beforeunload', avant);
   }, [sale]);
 
-  const ouvrirTravail = useCallback((t: TravailOuvert) => {
+  const ouvrirTravail = useCallback((ouvert: TravailOuvert) => {
+    // Le nuancier du dessin (ADR-0037) pose ici, comme l'editeur le poserait : l'etat de reference est alors celui qu'il ouvre.
+    const t = { ...ouvert, dessin: avecNuancier(ouvert.dessin) };
     cles.current++;
     reference.current = t.id ? { dessin: t.dessin, production: t.production } : null;
     courant.current = { dessin: t.dessin, production: t.production };

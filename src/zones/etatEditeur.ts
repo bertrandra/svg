@@ -10,6 +10,7 @@ import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
+import { avecNuancier } from '../engine/nuancier.js';
 import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
@@ -42,7 +43,8 @@ export interface EtatEditeur {
 
 export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const stockage = useStockage();
-  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(p.initial));
+  // Le nuancier du dessin (ADR-0037) se tire de ses couleurs a l'ouverture, dans l'etat initial : ce n'est pas une modification.
+  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(avecNuancier(p.initial)));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
   const [point, poserPoint] = useState<number | null>(null);

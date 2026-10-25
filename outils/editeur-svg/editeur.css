@@ -242,6 +242,19 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
 .nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet-fort); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
+/* La section « Nuancier » (ADR-0037) : « Appliquer au » en boutons a etat (un etat, pas une action : filet et texte cyan, jamais
+   pleins), puis deux groupes titres comme les sous-titres des calques (Aide 600, encre douce), leur nombre et leur provenance a la
+   suite, leurs menus a droite. Les pastilles sont celles des autres nuanciers : la couleur du dessin, le filet fort. */
+.nuancier-cible { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs); }
+.nuancier-cible > .aide { margin-right: var(--esp-xs); }
+.nuancier-cible button { min-height: 24px; padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
+.nuancier-cible button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.nuancier-groupe { display: grid; gap: var(--esp-xs); min-width: 0; }
+.nuancier-tete { display: flex; align-items: center; gap: var(--esp-xs); min-width: 0; min-height: 24px; }
+.nuancier-titre { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.nuancier-titre .aide { font-weight: 400; font-variant-numeric: tabular-nums; }
+.nuancier-tete .menu-deroulant { flex: none; }
+.nuancier-tete .menu-bouton.texte { padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
 .couleurs-dessin li { display: flex; gap: var(--esp-s); align-items: center; min-width: 0; }
 .couleurs-dessin.fenetree { max-height: 260px; overflow: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
@@ -471,7 +484,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .apercu-plein { fill: CanvasText; }
   .apercu-ligne { stroke: CanvasText; }
   .apercu-rendu svg { background: Canvas; }
-  .alignement-texte button[aria-pressed="true"], .choix-trace button[aria-pressed="true"] { border-color: Highlight; }
+  .alignement-texte button[aria-pressed="true"], .choix-trace button[aria-pressed="true"], .nuancier-cible button[aria-pressed="true"] { border-color: Highlight; }
   .cadre-saisie, .curseur-saisie { stroke: Highlight; }
   .selection-saisie { fill: Highlight; }
 }
@@ -496,6 +509,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .pastille-style button.aucun:hover { border-color: var(--cyan); box-shadow: none; }
   .pastille-style button.aucun.actif { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
   .nuancier button.echantillon { width: 40px; height: 40px; }
+  .nuancier-cible button { min-height: 40px; }
   input[type="range"] { min-height: 40px; }
   .reglages-pretraitement input[type="range"] { min-height: 40px; }
   .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }

@@ -14,6 +14,7 @@ import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { ListeRaccourcis } from './AideEditeur.js';
 import { CouleursDuDessin } from './CouleursDuDessin.js';
+import { SectionNuancier } from './SectionNuancier.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
@@ -39,6 +40,7 @@ export function PanneauDessin() {
       {trace ? <StyleNouvelleForme /> : <SansSelection />}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
+      <SectionNuancier />
       <CouleursDuDessin />
       <PanneauPalettes />
       {mo.bibliotheque ? <PanneauBibliotheque bibliotheque={mo.bibliotheque} /> : null}

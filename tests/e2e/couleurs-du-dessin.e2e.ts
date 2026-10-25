@@ -72,7 +72,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
   it('ne dessine qu’une poignee de lignes, et dit leur place aux lecteurs d’ecran', async () => {
     const page = await editeur();
     expect(await formesVisibles(page)).toBe(N);
-    expect(await texteDe(page.locator('details.section', { hasText: 'Couleurs du dessin' }).locator('summary').first())).toContain(String(N));
+    expect(await texteDe(page.locator('details.section:not(.section-nuancier)', { hasText: 'Couleurs du dessin' }).locator('summary').first())).toContain(String(N));
     const n = await lignes(page).count();
     expect(n).toBeGreaterThan(8);
     expect(n).toBeLessThan(LIGNES_MAX);
