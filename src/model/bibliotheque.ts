@@ -1,10 +1,11 @@
-// La bibliotheque de formes : les 4 000 silhouettes de game-icons.net (CC BY 3.0), nommees en
-// francais et classees par evenement du calendrier francais (Noel, Paques, Halloween...), par
-// evenement de la vie (naissance, anniversaire, concert...) et par categorie (personnage, batiment,
-// animal...). Pur : le nom et le classement se deduisent de l'identifiant anglais de l'icone, par le
-// lexique et par des mots-cles ; la meme bibliotheque sort toujours de la meme source.
+// La bibliotheque de formes : les 4 000 silhouettes de game-icons.net (CC BY 3.0), et les jeux libres du
+// registre (model/sourcesFormes.ts), nommes en francais et classes par evenement du calendrier francais (Noel,
+// Paques, Halloween...), par evenement de la vie (naissance, anniversaire, concert...) et par categorie
+// (personnage, batiment, animal...). Pur : le nom et le classement se deduisent de l'identifiant anglais de
+// l'icone, par le lexique et par des mots-cles ; la meme bibliotheque sort toujours de la meme source.
 
-import { EXPRESSIONS, traduireMot } from './lexique.js';
+import { EXPRESSIONS, EXPRESSIONS_LIBRES, traduireMot, traduireMotLibre } from './lexique.js';
+import { SOURCE_PAR_DEFAUT, type NatureForme, type OrdreDesMots } from './sourcesFormes.js';
 
 export type FamilleEvenement = 'calendrier' | 'vie' | 'categorie';
 
@@ -25,13 +26,17 @@ export interface Evenement {
 }
 
 export interface EntreeBibliotheque {
-  /** L'identifiant de game-icons.net, en anglais. */
+  /** L'identifiant de l'icone dans sa source, en anglais. */
   id: string;
   /** Le nom en francais, tete en premier. */
   nom: string;
   evenements: readonly string[];
-  /** Le SVG complet, une seule couleur, sur un plan de 512 x 512. */
+  /** Le SVG complet, une seule couleur, sur un plan carre (512 pour game-icons, 480 pour les autres sources). */
   svg: string;
+  /** La source (model/sourcesFormes.ts) ; absente, c'est game-icons, la source d'avant le registre. */
+  source?: string;
+  /** Plein pour la lame, ligne pour le stylo ; absente, c'est plein. */
+  nature?: NatureForme;
 }
 
 const e = (id: string, nom: string, famille: FamilleEvenement, mots: readonly string[], mois?: number, sauf?: readonly string[]): Evenement =>
@@ -102,10 +107,38 @@ export function contient(mots: readonly string[], mot: string): boolean {
   return false;
 }
 
+/** Les mots d'icone qu'un mot-cle accepte, au pluriel pres : ceux pour lesquels `pareil` est vrai, ecrits une fois. */
+const formesDe = (b: string): ReadonlySet<string> => new Set([b, b + 's', b + 'es', ...(b.endsWith('y') ? [b.slice(0, -1) + 'ies'] : [])]);
+
+interface Suite { readonly regle: number; readonly exclusion: boolean; readonly mots: readonly ReadonlySet<string>[] }
+
+/**
+ * Les regles d'EVENEMENTS indexees par le premier mot de chaque mot-cle (sous toutes ses formes) : classer vingt mille icones
+ * ne compare plus chaque mot a trois mille mots-cles. Le resultat est exactement celui de `contient` sur chaque regle.
+ */
+const INDEX_REGLES: ReadonlyMap<string, readonly Suite[]> = (() => {
+  const index = new Map<string, Suite[]>();
+  EVENEMENTS.forEach((ev, regle) => {
+    const ajouter = (mot: string, exclusion: boolean) => {
+      const mots = mot.split('-').map(formesDe);
+      for (const f of mots[0] ?? []) index.set(f, [...(index.get(f) ?? []), { regle, exclusion, mots }]);
+    };
+    ev.mots.forEach(m => ajouter(m, false));
+    (ev.sauf ?? []).forEach(m => ajouter(m, true));
+  });
+  return index;
+})();
+
 /** Les identifiants d'evenements d'une icone, dans l'ordre d'EVENEMENTS ; vide si rien ne la range. */
 export function classer(id: string): string[] {
   const mots = motsDe(id);
-  return EVENEMENTS.filter(ev => ev.mots.some(m => contient(mots, m)) && !(ev.sauf ?? []).some(m => contient(mots, m))).map(ev => ev.id);
+  const ranges = new Set<number>(), exclus = new Set<number>();
+  mots.forEach((m, i) => {
+    for (const s of INDEX_REGLES.get(m) ?? []) {
+      if (i + s.mots.length <= mots.length && s.mots.every((f, k) => f.has(mots[i + k] ?? ''))) (s.exclusion ? exclus : ranges).add(s.regle);
+    }
+  });
+  return EVENEMENTS.filter((_, k) => ranges.has(k) && !exclus.has(k)).map(ev => ev.id);
 }
 
 const NUMERIQUE = /^\d+$/;
@@ -115,8 +148,11 @@ const NUMERIQUE = /^\d+$/;
  * la tete en premier (« broken-heart » devient « cœur brisé »), les nombres a la fin. Un mot que le
  * lexique ignore reste en anglais.
  */
-export function nomFrancais(id: string): string {
-  const expr = EXPRESSIONS[id];
+export function nomFrancais(id: string, ordre: OrdreDesMots = 'anglais', libre = false): string {
+  // Les noms composes et les sens des sources libres ne s'appliquent qu'a elles : un nom de game-icons ne change pas.
+  const expressions = libre ? EXPRESSIONS_LIBRES : EXPRESSIONS;
+  const traduire = libre ? traduireMotLibre : traduireMot;
+  const expr = expressions[id];
   if (expr !== undefined) return expr;
   const mots = motsDe(id);
   const jetons: string[] = [], nombres: string[] = [];
@@ -125,24 +161,25 @@ export function nomFrancais(id: string): string {
     let pris = 0, texte: string | undefined;
     for (let n = Math.min(4, mots.length - i); n >= 2 && texte === undefined; n--) {
       const cle = mots.slice(i, i + n).join('-');
-      if (EXPRESSIONS[cle] !== undefined) { texte = EXPRESSIONS[cle]; pris = n; }
+      if (expressions[cle] !== undefined) { texte = expressions[cle]; pris = n; }
     }
     if (texte === undefined) {
       const mot = mots[i] ?? '';
       pris = 1;
       if (NUMERIQUE.test(mot)) { nombres.push(mot); i += 1; continue; }
-      texte = traduireMot(mot) ?? mot;
+      texte = traduire(mot) ?? mot;
     }
     if (texte) jetons.push(texte);
     i += pris;
   }
-  return [...jetons.reverse(), ...nombres].join(' ');
+  return [...(ordre === 'anglais' ? jetons.reverse() : jetons), ...nombres].join(' ');
 }
 
 /** Les mots d'un identifiant que le lexique ne traduit pas (hors nombres et expressions). */
-export function motsInconnus(id: string): string[] {
-  if (EXPRESSIONS[id] !== undefined) return [];
-  return motsDe(id).filter(m => !NUMERIQUE.test(m) && traduireMot(m) === undefined);
+export function motsInconnus(id: string, libre = false): string[] {
+  if ((libre ? EXPRESSIONS_LIBRES : EXPRESSIONS)[id] !== undefined) return [];
+  const traduire = libre ? traduireMotLibre : traduireMot;
+  return motsDe(id).filter(m => !NUMERIQUE.test(m) && traduire(m) === undefined);
 }
 
 export interface IconeSource { body: string; width?: number; height?: number }
@@ -183,10 +220,16 @@ export function lireCorrections(brut: unknown): Corrections {
   return r;
 }
 
+/**
+ * La cle d'une correction : l'identifiant nu pour game-icons (bibliotheque/corrections.json d'avant le registre), prefixe de
+ * sa source pour une autre (`mdi:heart`), pour que deux sources ne se corrigent pas l'une l'autre.
+ */
+export const cleCorrection = (e: EntreeBibliotheque): string => (e.source === undefined || e.source === SOURCE_PAR_DEFAUT ? e.id : e.source + ':' + e.id);
+
 /** Les entrees corrigees : le nom et le classement du fichier l'emportent sur ceux du code. */
 export function appliquerCorrections(entrees: readonly EntreeBibliotheque[], corrections: Corrections): EntreeBibliotheque[] {
   return entrees.map(e => {
-    const c = corrections[e.id];
+    const c = corrections[cleCorrection(e)];
     if (!c) return e;
     const nom = c.nom?.trim();
     return { ...e, ...(nom ? { nom } : {}), ...(c.evenements ? { evenements: [...c.evenements] } : {}) };

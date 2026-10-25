@@ -39,3 +39,17 @@ describe('le contenu de « A propos et credits »', () => {
     }
   });
 });
+
+describe('les sources libres dans « A propos et credits »', () => {
+  const html = renderToStaticMarkup(createElement(ContenuCredits));
+
+  it('nomme chaque autre bibliotheque de formes, son titulaire et sa licence, et dit qu aucune mention n entre dans le dessin', () => {
+    for (const c of COMPOSANTS.filter(x => x.genre === 'forme' && x.paquet !== '@iconify-json/game-icons')) {
+      expect(html, c.paquet).toContain(c.nom);
+      expect(html, c.paquet).toContain(c.titulaire);
+      expect(html, c.paquet).toContain(c.licence);
+    }
+    expect(html).toContain('mdi:heart');
+    expect(html).toContain('sans élément <code>&lt;metadata&gt;</code>');
+  });
+});

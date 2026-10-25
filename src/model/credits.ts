@@ -8,32 +8,38 @@
 // ne peut pas importer une zone React. Les textes de licence, eux, ne sont jamais recopies a la main :
 // le script les lit dans les paquets (un test confronte cette liste au package-lock.json).
 
+import { SOURCE_PAR_DEFAUT, SOURCES_FORMES } from './sourcesFormes.js';
+
 /** Une source de formes dont la provenance voyage avec la forme (`Forme.origine`). */
 export interface SourceOrigine {
-  /** Le prefixe d'une origine : `game-icons` pour `game-icons:3d-glasses`. */
+  /** Le prefixe d'une origine : `game-icons` pour `game-icons:3d-glasses`, `mdi` pour `mdi:heart`. */
   readonly prefixe: string;
   readonly nom: string;
   readonly url: string;
   /** Le nom court de la licence, tel qu'on la cite : « CC BY 3.0 ». */
   readonly licence: string;
   readonly urlLicence: string;
+  /** Vrai quand la licence veut la mention jusque dans le fichier ecrit (CC BY) : seule une telle origine fait ecrire un <metadata>. */
+  readonly mentionDansLeFichier: boolean;
 }
 
-export const SOURCES_ORIGINE: readonly SourceOrigine[] = [
-  {
-    prefixe: 'game-icons',
-    nom: 'game-icons.net et ses contributeurs',
-    url: 'https://game-icons.net',
-    licence: 'CC BY 3.0',
-    urlLicence: 'https://creativecommons.org/licenses/by/3.0/'
-  }
-];
+/**
+ * Les sources des origines, lues dans le registre des sources de formes (model/sourcesFormes.ts) : game-icons d'abord (la
+ * seule dont la licence veut la mention dans le fichier), puis les sources libres, dont l'origine voyage aussi avec la forme
+ * (`data-origine`) pour qu'on sache toujours d'ou elle vient.
+ */
+export const SOURCES_ORIGINE: readonly SourceOrigine[] = SOURCES_FORMES.map(s => ({
+  prefixe: s.id, nom: s.nom, url: s.url, licence: s.licence, urlLicence: s.urlLicence, mentionDansLeFichier: s.mentionDansLeFichier
+}));
 
-/** Le prefixe des formes de la bibliotheque, pour que le code n'ecrive pas la chaine a la main. */
-export const PREFIXE_BIBLIOTHEQUE = 'game-icons';
+/** Le prefixe des formes de la bibliotheque par defaut, pour que le code n'ecrive pas la chaine a la main. */
+export const PREFIXE_BIBLIOTHEQUE = SOURCE_PAR_DEFAUT;
 
-/** L'origine d'une forme de la bibliotheque, d'apres son identifiant game-icons.net. */
+/** L'origine d'une forme de la bibliotheque par defaut, d'apres son identifiant game-icons.net. */
 export const origineDeBibliotheque = (id: string): string => PREFIXE_BIBLIOTHEQUE + ':' + id;
+
+/** L'origine d'une forme d'une source du registre (`mdi`, `heart` : `mdi:heart`) ; sans source, celle de la bibliotheque par defaut. */
+export const origineDeForme = (source: string | undefined, id: string): string => (source ?? PREFIXE_BIBLIOTHEQUE) + ':' + id;
 
 // Une origine s'ecrit dans un attribut et dans un element XML, et dans un commentaire : seuls des caracteres
 // qui n'ont rien a echapper, et jamais deux tirets de suite (interdits dans un commentaire).
@@ -50,20 +56,31 @@ export function normaliserOrigines(liste: Iterable<string>): string[] {
   return [...new Set([...liste].filter(origineValide))].sort();
 }
 
-/** La mention a faire figurer avec des formes d'origine donnee : une phrase par source presente, sans accent (elle part dans des PDF et des commentaires). */
+const prefixeDe = (o: string): string => o.slice(0, o.indexOf(':'));
+
+/** Vrai quand une de ces origines vient d'une source dont la licence veut la mention dans le fichier (CC BY). */
+export const mentionExigee = (origines: readonly string[]): boolean =>
+  origines.some(o => SOURCES_ORIGINE.some(s => s.mentionDansLeFichier && s.prefixe === prefixeDe(o)));
+
+/**
+ * La mention a faire figurer avec des formes d'origine donnee : une phrase par source presente dont la licence la veut dans le
+ * fichier, sans accent (elle part dans des PDF et des commentaires). Les licences MIT, ISC et Apache 2.0 ne la demandent pas :
+ * leur notice accompagne le logiciel (THIRD-PARTY-NOTICES.md, MENTIONS.txt), pas chaque dessin.
+ */
 export function mentionOrigines(origines: readonly string[]): string {
-  const presents = new Set(origines.map(o => o.slice(0, o.indexOf(':'))));
-  return SOURCES_ORIGINE.filter(s => presents.has(s.prefixe))
+  const presents = new Set(origines.map(prefixeDe));
+  return SOURCES_ORIGINE.filter(s => s.mentionDansLeFichier && presents.has(s.prefixe))
     .map(s => 'Contient des formes dont la source est ' + s.nom + ' (' + s.url + '), sous licence ' + s.licence + ' (' + s.urlLicence + ').')
     .join(' ');
 }
 
 /**
- * Le texte de l'element <metadata> d'un SVG qui porte des formes creditees : la mention lisible, puis la
- * liste des origines pour les machines. `origines` doit etre normalisee ; vide, il n'y a rien a dire.
+ * Le texte de l'element <metadata> d'un SVG qui porte des formes creditees : la mention lisible, puis la liste de toutes les
+ * origines pour les machines. `origines` doit etre normalisee ; sans origine qui exige la mention, il n'y a rien a dire.
  */
 export function texteMetadonnees(origines: readonly string[]): string {
-  return origines.length ? mentionOrigines(origines) + ' Origines : ' + origines.join(', ') + '.' : '';
+  // Sans forme dont la licence veut la mention, rien : une forme d'une source libre garde son `data-origine`, sans <metadata>.
+  return mentionExigee(origines) ? mentionOrigines(origines) + ' Origines : ' + origines.join(', ') + '.' : '';
 }
 
 export type GenreComposant = 'forme' | 'fonte' | 'logiciel';
@@ -102,6 +119,12 @@ const MIT = { spdx: 'MIT', licence: 'licence MIT' } as const;
 
 export const COMPOSANTS: readonly Composant[] = [
   { paquet: '@iconify-json/game-icons', nom: 'Game Icons', genre: 'forme', usage: 'Les formes de la bibliothèque', spdx: 'CC-BY-3.0', licence: 'Creative Commons Attribution 3.0 (CC BY 3.0)', titulaire: 'game-icons.net et ses contributeurs', url: 'https://game-icons.net' },
+  // Les sources libres de la bibliotheque (model/sourcesFormes.ts) : leur notice est ici, pas dans chaque dessin.
+  { paquet: '@iconify-json/mdi', nom: 'Material Design Icons', genre: 'forme', usage: 'Des formes pleines de la bibliothèque (source Material)', spdx: 'Apache-2.0', licence: 'Apache License 2.0', titulaire: 'Pictogrammers', url: 'https://pictogrammers.com/library/mdi/' },
+  { paquet: '@iconify-json/ph', nom: 'Phosphor Icons', genre: 'forme', usage: 'Des formes pleines et en ligne de la bibliothèque (source Phosphor)', ...MIT, titulaire: 'Phosphor Icons', url: 'https://phosphoricons.com' },
+  { paquet: '@iconify-json/tabler', nom: 'Tabler Icons', genre: 'forme', usage: 'Des formes pleines et en ligne de la bibliothèque (source Tabler)', ...MIT, titulaire: 'Paweł Kuna', url: 'https://tabler.io/icons' },
+  { paquet: '@iconify-json/healthicons', nom: 'Healthicons', genre: 'forme', usage: 'Des formes de santé et de vie quotidienne, pleines et en ligne (source Healthicons)', ...MIT, titulaire: 'Resolve to Save Lives', url: 'https://healthicons.org' },
+  { paquet: '@iconify-json/lucide', nom: 'Lucide', genre: 'forme', usage: 'Des formes en ligne de la bibliothèque (source Lucide)', spdx: 'ISC', licence: 'licence ISC', titulaire: 'Lucide Icons and Contributors', url: 'https://lucide.dev' },
 
   { paquet: '@expo-google-fonts/inter', nom: 'Inter', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Inter Project Authors', url: 'https://github.com/rsms/inter' },
   { paquet: '@expo-google-fonts/oswald', nom: 'Oswald', genre: 'fonte', usage: 'Police du texte en formes', ...OFL, titulaire: 'The Oswald Project Authors', url: 'https://github.com/googlefonts/OswaldFont' },

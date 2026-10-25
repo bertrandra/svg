@@ -25,9 +25,13 @@ const modules = depuisRacine('node_modules');
 const paquetDe = nom => join(modules, nom);
 const jsonDe = chemin => JSON.parse(readFileSync(chemin, 'utf8'));
 
-/** La liste des composants, lue dans src/model/credits.ts (compile a la volee, pas de copie). */
+/** La liste des composants, lue dans src/model/credits.ts, et le registre des sources de formes (compiles a la volee, pas de copie). */
 export async function lireCredits() {
-  const code = await empaqueter({ entryPoints: [depuisRacine('src/model/credits.ts')], bundle: true, format: 'esm', platform: 'node' });
+  // Le registre des sources de formes avec : la section des formes en tire chaque source libre.
+  const code = await empaqueter({
+    stdin: { contents: "export * from './src/model/credits.ts'; export { SOURCES_FORMES } from './src/model/sourcesFormes.ts';", resolveDir: depuisRacine(), loader: 'ts' },
+    bundle: true, format: 'esm', platform: 'node'
+  });
   return import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
 }
 
@@ -72,6 +76,19 @@ const INTEGRES = {
 
 /** Les textes de licence que le depot garde en copie, faute d'un paquet installe qui les porte : copies verbatim du fichier LICENSE du paquet publie. */
 const LICENCES_COPIEES = { 'tiny-inflate': { fichier: 'scripts/licences/tiny-inflate-1.0.3.LICENSE', source: 'le fichier LICENSE du paquet tiny-inflate 1.0.3 publié sur npm (copie dans scripts/licences/)' } };
+
+/**
+ * Les licences des sources libres de formes : les paquets @iconify-json ne livrent ni fichier de licence ni notice, seulement
+ * l'identifiant SPDX et l'adresse de la licence du depot amont. Le depot garde une copie verbatim de ce fichier, relevee le
+ * 25 octobre 2026 sur la branche principale de chaque depot (un test verifie que le titulaire du registre y figure).
+ */
+export const LICENCES_SOURCES = {
+  '@iconify-json/mdi': { fichier: 'scripts/licences/mdi-MaterialDesign.LICENSE', amont: 'https://github.com/Templarian/MaterialDesign/blob/master/LICENSE' },
+  '@iconify-json/ph': { fichier: 'scripts/licences/ph-phosphor-core.LICENSE', amont: 'https://github.com/phosphor-icons/core/blob/main/LICENSE' },
+  '@iconify-json/tabler': { fichier: 'scripts/licences/tabler-icons.LICENSE', amont: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
+  '@iconify-json/healthicons': { fichier: 'scripts/licences/healthicons.LICENSE', amont: 'https://github.com/resolvetosavelives/healthicons/blob/main/LICENSE' },
+  '@iconify-json/lucide': { fichier: 'scripts/licences/lucide.LICENSE', amont: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' }
+};
 
 /** La version d'un composant integre, lue dans le fichier livre de son paquet ; lance si la preuve manque. */
 function constaterIntegre(c, embarques) {
@@ -226,7 +243,31 @@ function sectionFormes(credits) {
     '', 'Ce que l’éditeur fait pour vous : tout SVG écrit qui contient une forme de la bibliothèque porte un élément `<metadata>` avec cette mention, et chaque `<path>` issu',
     'de la bibliothèque un attribut `data-origine` (par exemple `game-icons:3d-glasses`) ; un PDF la porte dans ses informations (`/Subject`) ; un SVG de découpe',
     'la porte en commentaire. Un PNG ne peut pas la porter : citez la source là où vous le publiez. La mention écrite est :', '',
-    '> ' + credits.mentionOrigines([credits.origineDeBibliotheque('exemple')]), ''];
+    '> ' + credits.mentionOrigines([credits.origineDeBibliotheque('exemple')]), '',
+    ...sectionSourcesLibres(credits, verrou)];
+  return lignes;
+}
+
+/** Ce qu'on garde d'une source libre, en une phrase : ses variantes et leur nature. */
+const variantesDe = source => source.variantes.map(v => (v.suffixe ? '« ' + v.suffixe + ' »' : 'sans suffixe') + ' (' + (v.nature === 'plein' ? 'pleine' : 'en ligne') + ')').join(', ');
+
+/** Les sources libres de la bibliotheque : chacune avec sa version, sa licence, son titulaire et le texte de sa licence. */
+function sectionSourcesLibres(credits, verrou) {
+  const libres = credits.SOURCES_FORMES.filter(s => !s.mentionDansLeFichier);
+  const lignes = ['### Sources libres de la bibliothèque', '',
+    'Ces jeux sont livrés en annexes chargées à la demande (`bibliotheque-<source>.js`). Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention',
+    'dans chaque dessin : un SVG écrit garde seulement l’origine de la forme (`data-origine`, par exemple `mdi:heart`), sans `<metadata>`. Leur notice',
+    'et le texte de leur licence accompagnent la bibliothèque, ici et dans `MENTIONS.txt`. Les logos de marque sont écartés par règle (`MOTS_DE_MARQUE`).', ''];
+  for (const s of libres) {
+    const copie = LICENCES_SOURCES[s.paquet];
+    if (!copie) throw new Error('mentions : ' + s.paquet + ' : pas de copie de licence déclarée (LICENCES_SOURCES)');
+    const info = jsonDe(join(paquetDe(s.paquet), 'info.json'));
+    lignes.push('#### ' + s.nom, '',
+      '- Paquet `' + s.paquet + '` ' + verrou.packages['node_modules/' + s.paquet].version + ' (« ' + info.name + ' », ' + info.total + ' icônes dans le jeu) — ' + s.url,
+      '- Licence : **' + s.licence + '** (`' + s.spdx + '`) — ' + s.urlLicence + ' ; titulaire : ' + s.titulaire,
+      '- Variantes gardées : ' + variantesDe(s) + ' ; plan de ' + s.plan + ' unités.',
+      '- Texte de la licence, copié du dépôt amont (' + copie.amont + ') :', '', bloc(lire(depuisRacine(copie.fichier))), '');
+  }
   return lignes;
 }
 

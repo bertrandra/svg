@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { FICHIER_BIBLIOTHEQUE, type Bibliotheque } from '../../../src/io/bibliotheque.js';
+import { SOURCES_FORMES } from '../../../src/model/sourcesFormes.js';
 
 const bibliotheque: Bibliotheque = { source: 'game-icons.net', licence: 'CC BY 3.0', url: 'https://game-icons.net', evenements: [], entrees: [] };
 
@@ -67,5 +68,37 @@ describe('chargerBibliotheque', () => {
     installerPage('vide');
     const { chargerBibliotheque } = await module();
     await expect(chargerBibliotheque()).rejects.toThrow('ne contient pas la bibliothèque');
+  });
+});
+
+describe('les annexes des sources libres', () => {
+  const lucide = SOURCES_FORMES.filter(s => s.id === 'lucide')[0];
+
+  it('se normalisent : la source attendue seulement, des entrees completes, une nature connue, la source rendue a chaque entree', async () => {
+    const { normaliserSource } = await module();
+    if (!lucide) throw new Error('lucide absent du registre');
+    const brut = { source: 'lucide', entrees: [{ id: 'a', nom: 'a', svg: '<svg/>', evenements: [], nature: 'ligne' }, { id: 'b', nom: 'b', svg: '<svg/>', evenements: ['noel'], nature: 'etrange' }, { id: 3 }] };
+    expect(normaliserSource(lucide, brut)?.entrees).toEqual([
+      { id: 'a', nom: 'a', svg: '<svg/>', evenements: [], source: 'lucide', nature: 'ligne' },
+      { id: 'b', nom: 'b', svg: '<svg/>', evenements: ['noel'], source: 'lucide', nature: 'plein' }
+    ]);
+    expect(normaliserSource(lucide, { ...brut, source: 'mdi' })).toBeUndefined();
+    expect(normaliserSource(lucide, null)).toBeUndefined();
+  });
+
+  it('se chargent a la demande par leur propre fichier, une source inconnue refusee en la nommant', async () => {
+    const w: Record<string, unknown> = {};
+    const scripts: string[] = [];
+    vi.stubGlobal('window', w);
+    vi.stubGlobal('document', {
+      createElement: () => ({ src: '', onload: null as (() => void) | null, onerror: null as (() => void) | null, remove: vi.fn() }),
+      head: { appendChild: (s: { src: string; onload: () => void }) => queueMicrotask(() => { scripts.push(s.src); w['__bibliothequeSvgLucide'] = { source: 'lucide', entrees: [] }; s.onload(); }) }
+    });
+    const { chargerSource, sourceChargee } = await module();
+    expect(sourceChargee('lucide')).toBe(false);
+    expect((await chargerSource('lucide')).source).toBe('lucide');
+    expect(scripts).toEqual(['bibliotheque-lucide.js']);
+    expect(sourceChargee('lucide')).toBe(true);
+    await expect(chargerSource('inconnue')).rejects.toThrow('Source de formes inconnue : inconnue.');
   });
 });

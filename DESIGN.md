@@ -108,6 +108,12 @@ components:
     typography: "{typography.compact}"
     rounded: "{rounded.bouton}"
     padding: "4px 8px"
+  pastille-filtre:
+    backgroundColor: "{colors.table-atelier}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "4px 8px"
   pastille-evenement-choisie:
     backgroundColor: "{colors.cyan-encre}"
     textColor: "{colors.sur-cyan}"
@@ -403,9 +409,24 @@ Le filtre de la bibliothèque, à la place d'une liste déroulante de 45 lignes.
   Début et Fin aux bouts.
 - **Téléphone:** sous 640 px, les pastilles repliées tiennent sur une seule ligne qui défile ; 40 px au doigt.
 
+### Pastilles de source et de nature (bibliothèque)
+Six bibliothèques (game-icons par défaut, puis Material, Phosphor, Tabler, Healthicons, Lucide), chargées à la demande.
+- **Style:** les pastilles des événements (`.pastille-filtre`), en deux groupes titrés « Source » et « Nature » sur une ligne
+  qui passe à la suivante ; le titre visible (`.pastilles-titre`) distingue les deux « Toutes ». Un état, pas une action.
+- **Source:** « Toutes », puis chaque source par son nom court ; game-icons est choisie à l'ouverture, les autres ne se
+  chargent qu'à la demande. L'infobulle dit le nom complet, la licence, les natures et le poids à charger.
+- **Nature:** « Toutes », « Pleines (découpe) », « En ligne (stylo) » ; au stylo d'un contexte de production, « En ligne »
+  vient d'abord. Un filtre ne mène jamais à une grille vide par construction : une nature que la source n'a pas élargit à
+  toutes les sources qui l'ont, une source sans la nature choisie remet la nature à « Toutes ».
+- **Chargement:** dit à la fin du décompte (« 234 formes · chargement de Tabler (environ 3 Mo)… »), dans la région polie du
+  décompte ; la grille porte `aria-busy` ; un fichier absent se dit en message d'alerte.
+- **Clavier et doigt:** comme les événements (Tab, flèches, Début, Fin) ; sous 640 px et dans le panneau de l'éditeur, chaque
+  groupe tient sur une ligne qui défile ; 40 px au doigt.
+
 ### Vignettes et état vide (bibliothèque)
-- **Vignette:** une hauteur régulière ; le libellé tient sur deux lignes au plus, coupé proprement ; le nom complet reste
-  le nom accessible et l'infobulle.
+- **Vignette:** une hauteur régulière ; le libellé tient sur deux lignes au plus, coupé proprement ; le nom complet suivi de
+  sa source (« cœur (Lucide, en ligne) ») est le nom accessible et l'infobulle : deux formes de même nom viennent de deux
+  sources, la source les distingue. Une forme en ligne se montre en trait noir sur la vignette blanche.
 - **Aucun résultat:** une phrase qui dit ce qui ne correspond pas, des propositions qui trouvent chacune quelque chose
   (« Essayez l'événement Noël (43) », une faute de frappe corrigée, la même recherche dans tous les événements), en
   boutons discrets, puis « Effacer la recherche » ; le focus revient au champ.

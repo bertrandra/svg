@@ -306,6 +306,12 @@ const CAS: readonly Cas[] = [
   { nom: 'provenance-union', entree: 'provenance', operation: booleen(['f1', 'f2'], 'union') },
   { nom: 'provenance-masquee', entree: 'provenance', operation: enchainer(d => modifier(d, ['f1', 'f2', 'f4'], { visible: false })) },
   { nom: 'provenance-decoupe', entree: 'provenance', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  // Les sources libres de la bibliotheque (MIT, ISC, Apache 2.0) : des cas NEUFS. Leur forme garde son `data-origine`, sans
+  // <metadata> (leur licence ne demande pas de mention dans le fichier) ; melangee a une forme de game-icons, la mention ne
+  // nomme que game-icons, et la liste des origines les nomme toutes. La decoupe n'ecrit aucun commentaire pour elles.
+  { nom: 'provenance-sources', entree: 'provenance-sources' },
+  { nom: 'provenance-sources-decoupe', entree: 'provenance-sources', produire: t => svgDecoupe(lire(t), '#0000ff', 0.1) },
+  { nom: 'provenance-mixte', entree: 'provenance-mixte' },
   // Les calques par couleur : recolorer sur le fond ou le trait, fusionner les nuances (une forme verrouillee garde sa couleur).
   { nom: 'couleurs-recolorer-fond', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'remplissage') },
   { nom: 'couleurs-recolorer-trait', entree: 'couleurs-calques', operation: d => remplacerCouleurSur(d, '#c81e28', '#7b2d8e', 'contour') },

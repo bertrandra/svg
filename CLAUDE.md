@@ -121,6 +121,9 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.
   Elle se construit dans `dist/`, rien n'est commis.
+- **D'autres sources libres sont des données** (ADR-0023) : `model/sourcesFormes.ts` décrit chacune (paquet épinglé, licence
+  MIT, ISC, Apache 2.0, CC0 ou CC BY seulement, variantes `plein` ou `ligne`, exclusions de marques) ; une annexe par source,
+  chargée à la demande ; le lexique des sources libres ne change aucun nom de game-icons ; moins de 3 % d'anglais par source.
 - **La mention voyage avec la forme, les licences ne se recopient pas** (ADR-0017) : `Forme.origine`, un `<metadata>`
   CC BY 3.0 et `data-origine` n'existent que pour une forme créditée ; `THIRD-PARTY-NOTICES.md` se génère depuis
   `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur.

@@ -11,6 +11,7 @@
 import { distanceEdition } from '../util/texte.js';
 import { EVENEMENTS, contient, type EntreeBibliotheque, type Evenement } from './bibliotheque.js';
 import { SYNONYMES } from './synonymes.js';
+import { rangDeSource, sourceDeEntree } from './bibliothequeSources.js';
 
 /** Les forces d'une correspondance, de la plus forte a la plus faible. Un synonyme perd un point par rang. */
 export const FORCES = { nomEntier: 1000, mot: 100, debut: 70, evenement: 40, synonyme: 30, anglais: 10 } as const;
@@ -78,12 +79,14 @@ function cleAlphabetique(nom: string): string {
 /**
  * L'ordre de presentation, sans recherche : les series numerotees (« abstrait 001 », « carte 10 cœurs ») en dernier, les
  * formes que les regles rangent dans un evenement avant celles qu'aucune ne range, puis l'ordre alphabetique du nom
- * francais (sans accents ni mot vide de tete), puis l'identifiant. Une regle, pas un choix fait a la main.
+ * francais (sans accents ni mot vide de tete), puis l'identifiant, puis la source. Une regle, pas un choix fait a la main.
  */
 export function ordreDePresentation(entrees: readonly EntreeBibliotheque[]): EntreeBibliotheque[] {
   const cles = new Map(entrees.map(e => [e, cleAlphabetique(e.nom)]));
   const groupe = (e: EntreeBibliotheque): number => (estSerie(e) ? 2 : e.evenements.length ? 0 : 1);
-  return [...entrees].sort((a, b) => groupe(a) - groupe(b) || comparer(cles.get(a) ?? '', cles.get(b) ?? '') || comparer(a.id, b.id));
+  // Deux formes de meme nom et de meme identifiant viennent de deux sources : l'ordre du registre les departage.
+  const rang = (e: EntreeBibliotheque): number => rangDeSource(sourceDeEntree(e));
+  return [...entrees].sort((a, b) => groupe(a) - groupe(b) || comparer(cles.get(a) ?? '', cles.get(b) ?? '') || comparer(a.id, b.id) || rang(a) - rang(b));
 }
 
 /**
