@@ -130,7 +130,7 @@ describe('le nom d un projet', () => {
   it('retire les caracteres de controle et de mise en forme, les barres, les points de tete ; borne ; « Sans titre » s il ne reste rien', () => {
     expect(nomDeProjet('  Carte   de  Noël ')).toBe('Carte de Noël');
     expect(nomDeProjet('../../etc/passwd')).toBe('-..-etc-passwd');
-    expect(nomDeProjet('a\u0000b‮c​d\nе')).toBe('abcdе');
+    expect(nomDeProjet('a\u0000b\u202Ec\u200Bd\n\u0435\tf')).toBe('abcd \u0435 f');
     expect(nomDeProjet('...')).toBe('Sans titre');
     expect(nomDeProjet('\u0007')).toBe('Sans titre');
     expect([...nomDeProjet('é'.repeat(300))]).toHaveLength(BORNES_PROJET.nom);

@@ -53,7 +53,7 @@ export interface Serveur {
 }
 
 const MESSAGES: Readonly<Record<string, string>> = {
-  session: 'Votre session a expiré : reconnectez-vous pour continuer (le travail ouvert reste dans cet onglet).',
+  session: 'Votre session a expiré : reconnectez-vous dans un autre onglet, puis enregistrez de nouveau ici (le travail ouvert reste dans cet onglet).',
   reseau: 'Le serveur ne répond pas : vérifiez la connexion, puis réessayez.',
   conflit: 'Ce projet a été enregistré ailleurs (un autre onglet ?) depuis que vous l’avez ouvert : « Enregistrer sous… » le garde sous un autre nom, sans rien écraser.',
   introuvable: 'Ce projet n’existe plus sur le serveur.',
@@ -105,6 +105,9 @@ const base64 = (o: Uint8Array): string => {
 
 export function creerServeur(options: OptionsServeur): Serveur {
   const chercher = options.chercher ?? ((url: string, init: RequestInit) => fetch(url, init));
+  // Le jeton change a chaque connexion : apres une reconnexion dans un autre onglet, celui de la page est perime. Une ecriture
+  // refusee pour son jeton en redemande un a la session (une lecture de la meme origine) et reessaie une fois.
+  let csrf = options.csrf;
   const url = (parametres: Record<string, string>) => options.api + '?' + new URLSearchParams(parametres).toString();
   const lecture: RequestInit = { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } };
 
@@ -119,14 +122,28 @@ export function creerServeur(options: OptionsServeur): Serveur {
     return corps === null ? echec('serveur') : { ok: true, valeur: { corps, reponse: r } };
   }
 
-  const ecriture = (corps: unknown, entetes: Record<string, string> = {}): RequestInit => ({
-    method: 'POST', credentials: 'same-origin', cache: 'no-store',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF': options.csrf, ...entetes },
-    body: JSON.stringify(corps)
-  });
+  const ecriture = (corps: unknown, entetes: Record<string, string> = {}): () => RequestInit => {
+    const texte = JSON.stringify(corps);
+    return () => ({
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF': csrf, ...entetes },
+      body: texte
+    });
+  };
 
-  async function meta(parametres: Record<string, string>, init: RequestInit): Promise<Reponse<MetaProjet>> {
-    const r = await demander(parametres, init);
+  /** Une ecriture ; refusee pour un jeton perime, elle reprend le jeton de la session et reessaie une fois. */
+  async function ecrire(parametres: Record<string, string>, init: () => RequestInit): Promise<Reponse<{ corps: unknown; reponse: Response }>> {
+    const r = await demander(parametres, init());
+    if (r.ok || r.code !== 'csrf') return r;
+    const j = await demander({ r: 'jeton' });
+    const neuf = j.ok && estObjet(j.valeur.corps) && typeof j.valeur.corps['csrf'] === 'string' ? j.valeur.corps['csrf'] : null;
+    if (!neuf) return j.ok ? r : j;
+    csrf = neuf;
+    return demander(parametres, init());
+  }
+
+  async function meta(parametres: Record<string, string>, init: () => RequestInit): Promise<Reponse<MetaProjet>> {
+    const r = await ecrire(parametres, init);
     if (!r.ok) return r;
     const m = estObjet(r.valeur.corps) ? lireMeta(r.valeur.corps['meta']) : null;
     return m ? { ok: true, valeur: m } : echec('serveur');
@@ -171,7 +188,7 @@ export function creerServeur(options: OptionsServeur): Serveur {
     renommer: (id, nom) => meta({ r: 'renommer', id }, ecriture({ nom })),
     dupliquer: id => meta({ r: 'dupliquer', id }, ecriture({})),
     supprimer: async id => {
-      const r = await demander({ r: 'supprimer', id }, ecriture({}));
+      const r = await ecrire({ r: 'supprimer', id }, ecriture({}));
       return r.ok ? { ok: true, valeur: null } : r;
     },
     donnees: async nom => {

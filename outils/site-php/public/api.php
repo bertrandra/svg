@@ -3,6 +3,7 @@
 // catalogue que le serveur telecharge et verifie pour le navigateur. Toute route exige la session ; toute ecriture exige en plus
 // POST, du JSON et le jeton CSRF de la session (en-tete X-CSRF), et refuse une requete venue d'un autre site.
 //
+//   GET  api.php?r=jeton                       le jeton CSRF de la session (apres une reconnexion dans un autre onglet)
 //   GET  api.php?r=projets                     la liste des fiches
 //   GET  api.php?r=projet&id=…                 le projet (ETag : sa revision)
 //   POST api.php?r=enregistrer[&id=…]          { projet, vignette? } ; par-dessus un projet : If-Match "<revision>"
@@ -90,6 +91,9 @@ function id_demande(): string
 
 $route = $_GET['r'] ?? '';
 switch ($route) {
+    case 'jeton':
+        // Lisible par la seule page du site (meme origine, aucune autorisation CORS) : un autre site ne peut pas le lire.
+        repondre_json(200, ['csrf' => jeton_csrf()]);
     case 'projets':
         repondre_json(200, ['projets' => lister_projets()]);
     case 'projet':

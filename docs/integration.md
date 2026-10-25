@@ -447,7 +447,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `nuancier?` | `readonly Teinte[]` (`{ nom, hex }`) | Les couleurs proposées |
 | `bibliotheque?` | `Bibliotheque \| 'a-charger'` | Les formes à insérer ; `'a-charger'` charge `bibliotheque.js` au premier besoin |
 | `fermer` | `() => void` | Appelée quand la personne ferme (après confirmation s’il y a des modifications) |
-| `enregistrer` | `(svg: string) => void` | Reçoit le SVG retouché, déjà nettoyé. Le composant ne se ferme pas de lui-même : c’est à vous |
+| `enregistrer` | `(svg: string, etat: EtatRendu) => void` | Reçoit le SVG retouché, déjà nettoyé, et l’état du modèle (`{ dessin, production }`, de quoi écrire un projet : ADR-0030). Le composant ne se ferme pas de lui-même : c’est à vous. Un hôte qui ne veut que le SVG ignore le second argument (le bundle ne le transmet pas) |
 | `brouillon?` | `(svg: string) => unknown` | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S` (qui ne ferme jamais). Rendre `false` : le brouillon n’a pas été gardé, et l’éditeur le dit |
 | `libelleEnregistrer?` | `string` | Le libellé du geste qui appelle `enregistrer` (défaut « Enregistrer ») ; la page dit « Terminer ». L’éditeur ne devine pas où il est : il reçoit son libellé |
 | `fermerSansModification?` | `boolean` | Le geste de fin reste actif sans modification et appelle alors `fermer` (rien n’est réécrit) ; faux par défaut : il est grisé et dit pourquoi. La page le pose |
@@ -455,6 +455,11 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
 | `policesEnLigne?` | `boolean` | Les polices libres téléchargeables (ADR-0025), au choix d’une police par la personne. **Absent : faux**, aucune requête ; la page autonome le donne vrai |
 | `production?` | `ChoixProduction` (`src/model/contextes.ts`) | Le contexte de production de départ (ADR-0013), quand le SVG ne porte aucune marque `data-ed-*` : par exemple `{ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' }`. Une marque du SVG l’emporte toujours ; rien ne s’écrit tant que la personne ne modifie pas le dessin. La page le pose pour le public « machine » de son accueil (ADR-0024) ; le bundle ne l’expose pas |
+| `dessin?` | `DessinSvg` (`src/engine/editionSvg.ts`) | Le dessin du modèle à ouvrir tel quel, sans relire de SVG (`svg` est alors ignoré) : un projet rouvert (le site PHP, ADR-0030). Son contexte vient de `production` ; le SVG écrit ensuite est celui qu’écrivait ce dessin, octet pour octet |
+| `enregistrement?` | `EtatEnregistrement` (`{ etat: 'enregistre' \| 'modifie' \| 'en-cours' \| 'echec', message? }`) | Pour un hôte qui garde des projets : l’état de l’enregistrement, affiché dans la barre d’état (« Enregistré », « Modifications non enregistrées »…) ; il décide de ce qu’il reste à enregistrer et si fermer demande confirmation, et sa phrase se dit. **Absent** : la règle d’avant (une modification depuis l’ouverture) |
+| `changement?` | `(etat: EtatRendu) => void` | Appelée à chaque changement du dessin ou du contexte, avec l’état du moment : de quoi en déduire « enregistré » ou « modifié » (le même objet dessin après Ctrl+Z jusqu’à l’état enregistré) |
+| `ctrlSEnregistre?` | `boolean` | Ctrl+S appelle `enregistrer` sans fermer (le site PHP) ; faux par défaut : Ctrl+S garde un brouillon |
+| `actionsHote?` | `{ id, libelle, faire(etat) }[]` | Des gestes ajoutés au menu Fichier après le geste de fin (« Enregistrer sous… » sur le site PHP) ; chacun reçoit l’état du moment |
 
 À savoir, côté React :
 

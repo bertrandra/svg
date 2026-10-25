@@ -404,7 +404,12 @@ export function lireProjet(x: unknown): ResultatProjet {
  */
 export function nomDeProjet(brut: string): string {
   let sans = '';
-  for (const c of brut) if (!caractereInvisible(c.codePointAt(0) ?? 0)) sans += c;
+  for (const c of brut) {
+    const code = c.codePointAt(0) ?? 0;
+    // Une tabulation ou un retour a la ligne separent des mots : ils deviennent une espace ; les autres invisibles partent.
+    if ((code >= 0x09 && code <= 0x0d) || code === 0x85) sans += ' ';
+    else if (!caractereInvisible(code)) sans += c;
+  }
   const propre = sans.replace(/[/\\]/g, '-').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').trim();
   return [...propre].slice(0, BORNES_PROJET.nom).join('').trim() || 'Sans titre';
 }

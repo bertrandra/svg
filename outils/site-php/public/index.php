@@ -84,7 +84,7 @@ if ($action === 'deconnexion') {
 
 if ($action === 'connexion') {
     if (!csrf_valide($_POST['csrf'] ?? null)) {
-        page_connexion('La page de connexion a expiré : saisissez de nouveau le mot de passe.', '', 400);
+        page_connexion('La page de connexion a expiré : saisissez de nouveau le mot de passe.');
     }
     $essai = $_POST['mot_de_passe'] ?? '';
     $r = essayer_connexion(is_string($essai) ? $essai : '', cle_client(), time());
@@ -97,7 +97,8 @@ if ($action === 'connexion') {
         page_connexion('Trop d’essais : patientez ' . $r['attente'] . ' seconde' . ($r['attente'] > 1 ? 's' : '') . ' avant de réessayer.', '', 429);
     }
     $suite = (int) ($r['refus'] ?? 0);
-    page_connexion('Mot de passe incorrect.' . ($suite > 0 ? ' Prochain essai possible dans ' . $suite . ' seconde' . ($suite > 1 ? 's' : '') . '.' : ''), '', 401);
+    // Le formulaire revient avec son erreur, en 200 : c'est une page a lire, pas une ressource refusee (la limitation, elle, rend 429).
+    page_connexion('Mot de passe incorrect.' . ($suite > 0 ? ' Prochain essai possible dans ' . $suite . ' seconde' . ($suite > 1 ? 's' : '') . '.' : ''));
 }
 
 if (!est_connecte()) {

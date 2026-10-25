@@ -114,6 +114,8 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
 
   const recharger = useCallback(async () => {
     const r = await serveur.lister();
+    // Sur l'ecran des projets, rien n'est ouvert : une session expiree ramene a la connexion, qui le dit.
+    if (!r.ok && r.code === 'session' && !travail.current) { window.location.reload(); return; }
     if (r.ok) poserProjets(r.valeur); else { poserProjets(p => p ?? []); dire(r.message); }
   }, [serveur, dire]);
   useEffect(() => { void recharger(); }, [recharger]);

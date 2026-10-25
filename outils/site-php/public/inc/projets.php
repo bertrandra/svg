@@ -65,8 +65,13 @@ function nom_propre(mixed $brut): string
 {
     $t = is_string($brut) ? $brut : '';
     if (!mb_check_encoding($t, 'UTF-8')) {
+        // Un octet qui n'est pas de l'UTF-8 part, sans rien a sa place.
+        $avant = mb_substitute_character();
+        mb_substitute_character('none');
         $t = mb_convert_encoding($t, 'UTF-8', 'UTF-8');
+        mb_substitute_character($avant);
     }
+    $t = preg_replace('/[\x{0009}-\x{000D}\x{0085}]/u', ' ', $t) ?? '';
     $t = preg_replace('/[\x{0000}-\x{001F}\x{007F}-\x{009F}\x{200B}-\x{200F}\x{2028}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u', '', $t) ?? '';
     $t = str_replace(['/', '\\'], '-', $t);
     $t = trim(preg_replace('/\s+/u', ' ', $t) ?? '');

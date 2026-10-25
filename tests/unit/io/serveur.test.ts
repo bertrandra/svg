@@ -68,6 +68,22 @@ describe('le serveur du site', () => {
     expect(sansEtag.ok).toBe(false);
   });
 
+  it('apres une reconnexion ailleurs, reprend le jeton de la session et reessaie l ecriture une fois', async () => {
+    const { serveur, appels } = faux(a => {
+      if (a.url === 'api.php?r=jeton') return json(200, { csrf: 'neuf' });
+      const jeton = (a.init.headers as Record<string, string>)['X-CSRF'];
+      return jeton === 'neuf' ? json(200, { meta: META }) : json(403, { erreur: 'csrf', message: 'Requête refusée' });
+    });
+    expect(await serveur.enregistrer(PROJET, null, null)).toEqual({ ok: true, valeur: META });
+    expect(appels.map(a => a.url)).toEqual(['api.php?r=enregistrer', 'api.php?r=jeton', 'api.php?r=enregistrer']);
+    expect(String(appels[2]?.init.body)).toBe(String(appels[0]?.init.body));
+    // Le jeton neuf sert ensuite tout de suite.
+    expect((await serveur.renommer(META.id, 'x')).ok).toBe(true);
+    expect(appels).toHaveLength(4);
+    const toujours = faux(a => (a.url === 'api.php?r=jeton' ? json(401, { erreur: 'session' }) : json(403, { erreur: 'csrf', message: 'x' })));
+    expect(await toujours.serveur.supprimer(META.id)).toMatchObject({ ok: false, code: 'session' });
+  });
+
   it('renomme, duplique, supprime par POST avec le jeton', async () => {
     const { serveur, appels } = faux(a => (a.url.includes('supprimer') ? json(200, { ok: true }) : json(200, { meta: META })));
     expect((await serveur.renommer(META.id, 'Neuf')).ok).toBe(true);

@@ -90,7 +90,8 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
+npm run test:php     # les tests du site PHP (PHP 8.1+, cURL), sans dépendance
 npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
 
@@ -100,7 +101,9 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run lint` | Aucun `any` dans le moteur, aucune assertion `!`, aucune fonction de plus de 150 lignes |
 | `npm run cliquet` | Aucun dossier ne régresse en typage |
 | `npm test` | Couches, cycles, pureté du cœur, lecture et écriture du dessin, opérations, points, historique, vectorisation réelle, bibliothèque entière |
-| `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
+| `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/`, puis le site PHP dans `dist/php/` |
+| `npm run site-php` | Le site PHP seul (après les autres) : `dist/php/` (ADR-0030, [`docs/deploiement-php.md`](docs/deploiement-php.md)) |
+| `npm run test:php` | Les tests du site PHP : ses fonctions sur un dossier temporaire, puis ses routes sous `php -S` (`tests/php/`) |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
@@ -112,6 +115,24 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
 statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo), les `bibliotheque-<source>.js` (de 0,9 à 3,6 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
 d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la bibliothèque, au premier texte).
+
+## Le site PHP
+
+Une autre cible, à côté de la page autonome (qui ne change pas) : `npm run construire` écrit aussi `dist/php/`, un site PHP où l’on
+retrouve ses **projets** d’une session à l’autre, derrière un **mot de passe** (ADR-0030). Un projet n’est pas le SVG mais le JSON
+natif du modèle, avec tout ce qu’il faut pour le rouvrir à l’identique (formes, textes vivants, opérations Cricut, contexte de
+production, nuancier, fonte déposée, image source) ; le SVG reste un export.
+
+- `public/` est la racine web (`index.php` : la connexion, puis l’écran « Projets » ; `api.php` : projets, données, polices) ;
+  `data/` vit **à côté**, hors de portée du navigateur (`data/pwd`, `data/projets`, `data/json`, `data/font`).
+- `php outils/mot-de-passe.php` pose l’empreinte du mot de passe ; sans elle, personne n’entre.
+- « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
+  Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
+- Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
+  est téléchargée et vérifiée par le serveur, puis gardée dans `data/font`.
+
+Installation sur un hébergeur (où poser `public/` et `data/`, droits, mot de passe, HTTPS, mise à jour) :
+[`docs/deploiement-php.md`](docs/deploiement-php.md) ; sécurité : [`docs/securite.md`](docs/securite.md), § 9.
 
 ## Embarquer l'éditeur
 
@@ -144,17 +165,20 @@ React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteu
 | Chemin | Rôle |
 |---|---|
 | `src/util/` | Primitives pures : lecture XML sans DOM, nettoyage d'un SVG, historique immuable, couleur (OKLab), lecture indexée sûre (`au`) |
-| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) |
+| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) ; le format du projet (`projet.ts`) |
 | `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
-| `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
+| `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
+| `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |
+| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `outils/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
+| `tests/php/` | Les tests du site PHP, sans dépendance (`npm run test:php`) |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page, ses feuilles de style (`base.css`, `editeur.css`) et ses points d'entrée (page, embarquement, traceur) ; `scripts/construire.mjs` assemble la page, `scripts/embarquer.mjs` le script d'embarquement |
 | `exemples/` | Une page d'intégration qui tourne depuis le disque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
-| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md) ; le texte vivant, la vectorisation et le trait unique, [ADR-0022](docs/adr/0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md) ; les bibliothèques libres, [ADR-0023](docs/adr/0023-plusieurs-bibliotheques-libres.md) ; les polices libres à la demande, [ADR-0025](docs/adr/0025-les-polices-libres-a-la-demande.md)) ; `docs/jetons.md` : les jetons, générés |
+| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md) ; le texte vivant, la vectorisation et le trait unique, [ADR-0022](docs/adr/0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md) ; les bibliothèques libres, [ADR-0023](docs/adr/0023-plusieurs-bibliotheques-libres.md) ; les polices libres à la demande, [ADR-0025](docs/adr/0025-les-polices-libres-a-la-demande.md) ; le site PHP et le projet JSON, [ADR-0030](docs/adr/0030-le-site-php-et-le-projet-json.md)) ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur

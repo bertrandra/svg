@@ -76,13 +76,13 @@ function cle_client(): string
     return substr(hash_hmac('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? ''), secret_site()), 0, 16);
 }
 
-/** Le delai a attendre apres `echecs` echecs (en secondes) : rien pendant les essais libres, puis 1, 2, 4… jusqu'au plafond. */
+/** Le delai a attendre apres `echecs` echecs (en secondes) : rien pendant les essais libres, puis 2, 4, 8… jusqu'au plafond. */
 function delai_apres(int $echecs): int
 {
     if ($echecs < CONNEXION_ESSAIS_LIBRES) {
         return 0;
     }
-    return (int) min(CONNEXION_DELAI_MAX, 2 ** min(30, $echecs - CONNEXION_ESSAIS_LIBRES));
+    return (int) min(CONNEXION_DELAI_MAX, 2 ** min(30, $echecs - CONNEXION_ESSAIS_LIBRES + 1));
 }
 
 /** Lit, change et reecrit data/connexions.json sous un verrou : deux essais de front ne perdent pas un echec. */

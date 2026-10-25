@@ -31,7 +31,11 @@ jobs:
         run: npm run cliquet
       - name: Tests (couches, purete, moteur)
         run: npm test
-      - name: Page autonome (le moteur se compile pour la page)
+      # Le site PHP (ADR-0030) : ses fonctions et ses routes, sous `php -S`, sans dependance. Le PHP du runner Ubuntu suffit
+      # (8.3, avec cURL et mbstring) ; la version minimale promise est 8.1 (docs/deploiement-php.md).
+      - name: Tests PHP (site, connexion, projets, polices)
+        run: php -v && npm run test:php
+      - name: Page autonome et site PHP (le moteur se compile pour la page, dist/php se construit)
         run: npm run construire
 
   # Les tests de navigateur (tests/e2e) : la page construite, ouverte dans un vrai navigateur, dans les trois
@@ -63,8 +67,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Construire la page, la bibliothèque, les fontes et le bundle d’embarquement
+      - name: Construire la page, la bibliothèque, les fontes, le bundle d’embarquement et le site PHP
         run: npm run construire
+      # tests/e2e/site-php.e2e.ts lance le site sous `php -S` : le PHP du runner Ubuntu suffit.
+      - name: PHP pour le site
+        run: php -v
       - name: ${{ matrix.navigateur }} de Playwright
         run: npx playwright install --with-deps ${{ matrix.navigateur }}
       - name: Tests de navigateur (${{ matrix.navigateur }})
