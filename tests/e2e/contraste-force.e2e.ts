@@ -2,17 +2,15 @@
 // les couleurs de l'interface par celles du système et efface fonds d'état et ombres. Ce qui ne se disait
 // que par une teinte (bouton enfoncé, ligne choisie, poignée, anneau de focus) doit rester visible.
 //
-// Chromium sait émuler le mode (`emulateMedia({ forcedColors })`) : on lit les couleurs calculées, et on
-// vérifie que l'état « actif » diffère de l'état « repos » sans passer par une teinte de l'éditeur.
+// Les trois moteurs savent émuler le mode (`emulateMedia({ forcedColors })`, vérifié sous Chromium 141, Firefox 142 et
+// WebKit 26) : on lit les couleurs calculées, et on vérifie que l'état « actif » diffère de l'état « repos » sans passer
+// par une teinte de l'éditeur.
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, ouvrirExemple, pilote, sauteSauf, URL_INTEGRATION } from './aide.js';
+import { aLeFocus, attend, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
 
-// Saut : l'emulation `forcedColors` de Playwright n'est verifiee que sur Chromium (Firefox et WebKit : a essayer, voir docs/navigateurs.md).
-const SANS_EMULATION = sauteSauf(['chromium'], 'emulateMedia({ forcedColors }) : emulation verifiee sur Chromium seulement');
-
-describe.skipIf(SANS_EMULATION)('contraste forcé', () => {
+describe('contraste forcé', () => {
   const navigateur = pilote();
 
   async function editeur(actif = true) {
@@ -50,12 +48,21 @@ describe.skipIf(SANS_EMULATION)('contraste forcé', () => {
 
   it('garde un anneau de focus de 3 px sur la toile et de 2 px sur un bouton', async () => {
     const page = await editeur();
-    await page.keyboard.press('Shift');
-    await page.locator('.editeur-svg-toile').focus();
+    // Le focus arrive par le clavier : un focus par script, puis Tab et Maj+Tab qui y reviennent. Une touche Maj seule puis un
+    // focus par script ne fait :focus-visible que sous Chromium (Firefox et WebKit ont une autre heuristique, voir edition.e2e.ts).
+    const auClavier = async (sel: string) => {
+      const el = page.locator(sel).first();
+      await el.focus();
+      await page.keyboard.press('Tab');
+      await attend(() => aLeFocus(el)).toBe(false);
+      await page.keyboard.press('Shift+Tab');
+      await attend(() => aLeFocus(el)).toBe(true);
+    };
+    await auClavier('.editeur-svg-toile');
     await attend(() => style(page, '.editeur-svg-toile', 'outline-width')).toBe('3px');
     expect(await style(page, '.editeur-svg-toile', 'outline-style')).toBe('solid');
     expect(await style(page, '.editeur-svg-toile', 'outline-color')).toBe(await systeme(page, 'Highlight'));
-    await page.locator('.editeur-barre .icone-bouton').first().focus();
+    await auClavier('.editeur-barre .icone-bouton');
     await attend(() => style(page, '.editeur-barre .icone-bouton', 'outline-width')).toBe('2px');
   });
 

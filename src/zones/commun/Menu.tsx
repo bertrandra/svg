@@ -6,6 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent as KE, type ReactNode } from 'react';
 import { dernier, premier, suivant } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
+import { focusAuClavier } from './focusClavier.js';
 
 export interface ElementMenu {
   id: string;
@@ -139,7 +140,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   const clavierPanneau = (e: KE<HTMLDivElement>) => {
     const liste = elementsActifs(), d = liste.map(b => b.disabled);
     const courant = liste.indexOf(document.activeElement as HTMLButtonElement);
-    const aller = (i: number) => { if (i >= 0) liste[i]?.focus(); };
+    const aller = (i: number) => { if (i >= 0) focusAuClavier(liste[i]); };
     if (e.key === 'ArrowDown') { e.preventDefault(); aller(suivant(d, courant, 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); aller(suivant(d, courant, -1)); }
     else if (e.key === 'Home') { e.preventDefault(); aller(premier(d)); }

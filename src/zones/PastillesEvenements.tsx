@@ -6,6 +6,7 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import type { Evenement, FamilleEvenement } from '../model/bibliotheque.js';
 import { evenementsProches, ordreCalendrier } from '../model/recherche.js';
+import { focusAuClavier } from './commun/focusClavier.js';
 
 const MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const FAMILLES: ReadonlyArray<readonly [FamilleEvenement, string]> = [['calendrier', 'Calendrier'], ['vie', 'Événements de la vie'], ['categorie', 'Catégories']];
@@ -30,7 +31,7 @@ function deplacer(e: KeyboardEvent<HTMLDivElement>) {
   if (i < 0) return;
   e.preventDefault();
   const cible = e.key === 'Home' ? 0 : e.key === 'End' ? liste.length - 1 : (i + (touches[e.key] ?? 0) + liste.length) % liste.length;
-  liste[cible]?.focus();
+  focusAuClavier(liste[cible]);
 }
 
 export function PastillesEvenements({ evenements, valeur, poser, mois, compact = false }: Proprietes) {

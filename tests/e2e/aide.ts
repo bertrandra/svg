@@ -224,6 +224,15 @@ export async function texteDe(l: Locator): Promise<string> {
   return (await l.innerText()).replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Le texte visible de chaque element, espaces ramenes a un seul et bords retires. `allInnerTexts` seul ne suffit pas : WebKit
+ * termine le texte d'un element de menu (un bouton en flex dont les enfants sont des boites) par une fin de ligne, que Chromium
+ * et Firefox retirent comme le veut la norme (lu sous WebKit 26 : « Visite guidée\n »).
+ */
+export async function textesDe(l: Locator): Promise<string[]> {
+  return (await l.allInnerTexts()).map(t => t.replace(/\s+/g, ' ').trim());
+}
+
 /** Ouvre le dessin d'exemple de la page d'accueil et attend l'editeur. */
 export async function ouvrirExemple(page: Page, tactile = false): Promise<void> {
   const bouton = page.getByRole('button', { name: 'Ouvrir l’exemple' });
@@ -240,6 +249,26 @@ export async function ouvrirCode(page: Page, svg: string, tactile = false): Prom
   const bouton = page.getByRole('button', { name: 'Ouvrir ce code' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
+}
+
+/**
+ * Depose un fichier sur la zone de depot de l'accueil, comme un glisser depuis le bureau (un `drop` synthetique qui porte le
+ * fichier). La zone est attendue d'abord : `goto` rend la main a l'evenement `load`, et sous WebKit React n'a pas toujours rendu
+ * l'accueil a cet instant (une fois sur quatre environ, sur trente chargements mesures ; jamais sous Chromium). Le depot partait
+ * alors dans le vide, et le test attendait 30 s une issue qui ne venait pas (onze fichiers du corpus hostile en CI). Une zone
+ * absente echoue maintenant en le disant.
+ */
+export async function deposerFichier(page: Page, octets: Buffer, nom: string, type: string): Promise<void> {
+  await page.locator('.depot').first().waitFor();
+  await page.evaluate(({ b64, nomFichier, typeFichier }) => {
+    const bin = atob(b64), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer();
+    dt.items.add(new File([u], nomFichier, { type: typeFichier }));
+    const zone = document.querySelector('.depot');
+    if (!zone) throw new Error('pas de zone de dépôt dans la page');
+    zone.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, { b64: octets.toString('base64'), nomFichier: nom, typeFichier: type });
 }
 
 /** Le nombre de modifications que la barre d'etat annonce (la taille de la pile d'annulation). */

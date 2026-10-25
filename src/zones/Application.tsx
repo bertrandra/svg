@@ -25,6 +25,7 @@ import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
 import { svgDeBibliotheque } from './provenanceBibliotheque.js';
 import { Message, type TonMessage } from './commun/Message.js';
+import { focusAuClavier } from './commun/focusClavier.js';
 import { ChoixPagePdf, fichierPdf, usePdf, type OuvrirDessin } from './OuvrirPdf.js';
 import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 import type { ChoixProduction } from '../model/contextes.js';
@@ -268,7 +269,7 @@ export function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Vo
                 if (!pas) return;
                 e.preventDefault();
                 const suite = ordre[(i + pas + ordre.length) % ordre.length];
-                if (suite) { poserVoie(suite); document.getElementById('voie-' + suite)?.focus(); }
+                if (suite) { poserVoie(suite); focusAuClavier(document.getElementById('voie-' + suite)); }
               }}>
               <Icone nom={icone} taille={22} />
               <span className="voie-titre">{titre}</span>

@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, BUNDLE_EMBARQUE, ouvrirMenu, pilote, RACINE_DEPOT, type Session, terminer, URL_INTEGRATION } from './aide.js';
+import { attend, BUNDLE_EMBARQUE, deposerFichier, ouvrirMenu, pilote, RACINE_DEPOT, type Session, terminer, URL_INTEGRATION } from './aide.js';
 import { violationsEcriture, violationsNettoyage } from '../unit/securite/invariants.js';
 import { passer } from '../unit/securite/passage.js';
 
@@ -152,13 +152,7 @@ describe('securite : le corpus hostile entre par la page', () => {
   }
 
   async function deposer(page: Page, octets: Buffer, nom: string): Promise<'ouvre' | 'refus'> {
-    await page.evaluate(({ b64, nomFichier }) => {
-      const bin = atob(b64), u = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-      const dt = new DataTransfer();
-      dt.items.add(new File([u], nomFichier, { type: 'image/svg+xml' }));
-      document.querySelector('.depot')?.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
-    }, { b64: octets.toString('base64'), nomFichier: nom });
+    await deposerFichier(page, octets, nom, 'image/svg+xml');
     return issue(page);
   }
 

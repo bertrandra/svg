@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
+import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
 
 const VERT = '#1f8a3a';
 const bulle = (page: Page) => page.locator('.bulle-visite');
@@ -218,7 +218,7 @@ describe('la visite guidee', () => {
     expect(await bulle(page).count()).toBe(0);
     // Le menu Aide la rejoue toujours, a la premiere etape ; il donne aussi les raccourcis.
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Visite guidée', 'Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier']);
     await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
     const boite = page.getByRole('dialog', { name: 'Raccourcis clavier' });
     await boite.waitFor();
@@ -324,7 +324,7 @@ describe('la visite dans l editeur embarque', () => {
     await ouvrir(page, {});
     expect(await bulle(page).count()).toBe(0);
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Raccourcis clavier']);
     await page.keyboard.press('Escape');
     // Un double-clic sur une forme (ses points) : pas de repere chez un hote qui n'a rien demande.
     await page.locator('.editeur-svg-toile path[data-id="f1"]').dblclick();
@@ -354,7 +354,7 @@ describe('la visite dans l editeur embarque', () => {
     await ouvrir(page, { visite: true });
     expect(await bulle(page).count()).toBe(0);
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Visite guidée', 'Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier']);
   });
 
   it('refuse une option « visite » qui n est pas vraie ou fausse, en francais', async () => {
