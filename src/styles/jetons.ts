@@ -132,7 +132,8 @@ export const AA_GRAPHIQUE = 3;
 export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'filet-fort', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur un panneau' },
   { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
-  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' }
+  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' },
+  { texte: 'cyan', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029)' }
 ];
 
 const parId = new Map(JETONS.map(j => [j.id, j] as const));
