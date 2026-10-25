@@ -357,8 +357,40 @@ describe('axe-core : accessibilite automatique', () => {
       await texteVivant(page);
       await page.locator('.editeur-svg-toile').focus();
       await page.keyboard.press('Enter');
-      await page.locator('.saisie-texte textarea').waitFor();
+      await page.locator('textarea.saisie-champ').waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, saisie en place'));
+    });
+
+    // Le texte sur la toile (ADR-0027) : la saisie ouverte (cadre, curseur, champ invisible), la barre de texte et son trace
+    // Median, dans les deux themes ; a 390 px, la barre resserree et son menu ouvert.
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec la saisie sur la toile et la barre de texte, trace Median (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await page.keyboard.press('t');
+        await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+        const r = await page.locator('.editeur-svg-toile .plan-travail').boundingBox();
+        await page.mouse.click((r?.x ?? 0) + 40, (r?.y ?? 0) + (r?.height ?? 0) / 2);
+        await page.keyboard.type('Bonjour');
+        await page.locator('.barre-texte').getByRole('button', { name: 'Médian' }).click();
+        await page.locator('textarea.saisie-champ').focus();
+        await page.keyboard.press('Shift+Home');
+        await page.mouse.move(0, 0);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, saisie sur la toile et barre de texte (' + schema + ')'));
+        await page.keyboard.press('Escape');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, barre de texte d un texte choisi (' + schema + ')'));
+      });
+    }
+
+    it('sur un téléphone de 390 px, la barre de texte resserree et son menu', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      const r = await page.locator('.editeur-svg-toile .plan-travail').boundingBox();
+      await page.touchscreen.tap((r?.x ?? 0) + 20, (r?.y ?? 0) + (r?.height ?? 0) / 2);
+      await page.locator('textarea.saisie-champ').waitFor();
+      await page.keyboard.type('Salut');
+      await page.locator('.barre-texte').getByRole('button', { name: /^Plus de réglages du texte/ }).tap();
+      await page.locator('.barre-texte .menu-panneau').waitFor();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, barre de texte et son menu'));
     });
 
     it('sur un téléphone de 390 px, l inspecteur d un texte vivant et son apercu', async () => {

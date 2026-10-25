@@ -158,7 +158,7 @@ function couleurDominante(img: ImageRgba, m: Masque, d2: Float64Array): string {
 }
 
 /** Les traces du graphe : ses aretes (bouts libres aux extremites), ses boucles, ses points. Une boucle minuscule est un point. */
-function tracesDuGraphe(g: Graphe): Trace[] {
+export function tracesDuGraphe(g: Graphe): Trace[] {
   const d = degres(g), traces: Trace[] = [];
   for (const e of g.aretes) if (e) traces.push({ pts: e.pts, ferme: false, libres: [d[e.a] === 1, d[e.b] === 1], noeuds: [e.a, e.b] });
   for (const b of g.boucles) {

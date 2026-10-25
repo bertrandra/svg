@@ -56,13 +56,13 @@ describe('le texte vivant', () => {
     expect(await page.locator('.editeur-svg-toile text').count()).toBe(0);
     await attend(() => texteDe(inspecteur(page).locator('h3'))).toBe('Texte « Bonne fête » 2');
 
-    // Double-clic : la saisie en place, focalisee, nommee ; Entree valide.
+    // Double-clic : la saisie sur la toile (ADR-0027), focalisee, nommee ; Echap la termine, le texte garde.
     await doubleCliquerTexte(page, id);
-    const saisie = page.locator('.saisie-texte textarea[aria-label="Texte de la forme"]');
+    const saisie = page.locator('textarea.saisie-champ[aria-label="Texte sur la toile"]');
     await attend(() => aLeFocus(saisie)).toBe(true);
     await page.keyboard.press('End');
     await page.keyboard.type(' Léa');
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Escape');
     await attend(() => saisie.count()).toBe(0);
     await attend(() => message(page)).toBe('Texte modifié : « Bonne fête Léa ».');
     // Toute la frappe est une seule modification.
@@ -85,17 +85,20 @@ describe('le texte vivant', () => {
     await expect(autre.locator('.editeur-inspecteur select[aria-label="Police"]').inputValue()).resolves.toBe('lobster');
   });
 
-  it('Echap dans la saisie rend le texte d avant, sans rien laisser dans l historique', async () => {
+  // Depuis l'ADR-0027, Echap termine la saisie en gardant le texte (comme un clic hors du texte) ; Ctrl+Z defait toute la frappe.
+  it('Echap dans la saisie garde le texte en une modification ; Ctrl+Z rend le texte d avant', async () => {
     const { page } = await navigateur.ouvrir();
     const id = await ajouter(page, 'Merci');
     await doubleCliquerTexte(page, id);
-    await attend(() => aLeFocus(page.locator('.saisie-texte textarea'))).toBe(true);
-    // Le curseur est a la fin ; Ctrl+A choisit tout le texte du champ, que la frappe remplace.
+    await attend(() => aLeFocus(page.locator('textarea.saisie-champ'))).toBe(true);
+    // Ctrl+A choisit tout le texte du champ, que la frappe remplace.
     await page.keyboard.press('Control+a');
     await page.keyboard.type('Au revoir');
     await attend(() => textePanneau(page).inputValue()).toBe('Au revoir');
     await page.keyboard.press('Escape');
-    await attend(() => message(page)).toBe('Saisie annulée : le texte est revenu.');
+    await attend(() => message(page)).toBe('Texte modifié : « Au revoir ».');
+    expect(await modifications(page)).toBe(2);
+    await page.keyboard.press('Control+z');
     await attend(() => textePanneau(page).inputValue()).toBe('Merci');
     expect(await modifications(page)).toBe(1);
   });
@@ -128,30 +131,26 @@ describe('le texte vivant', () => {
     await attend(() => message(page)).toMatch(/Le texte est vectorisé : il n’est plus modifiable comme texte/);
   });
 
-  it('au clavier seul : T, Entree, saisie, ajout ; Entree sur le texte le retape ; Ctrl+Maj+O le vectorise', async () => {
+  it('au clavier seul : T, Entree, saisie sur la toile ; Entree sur le texte le retape ; Ctrl+Maj+O le vectorise', async () => {
     const { page } = await navigateur.ouvrir();
     await ouvrirCode(page, PLAN);
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
     await page.keyboard.press('Enter');
-    await attend(() => aLeFocus(textePanneau(page))).toBe(true);
+    const saisie = page.locator('textarea.saisie-champ');
+    await attend(() => aLeFocus(saisie)).toBe(true);
     await inspecteur(page).locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
-    await page.keyboard.press('Control+a');
     await page.keyboard.type('Atelier');
-    for (let i = 0; i < 12 && !(await aLeFocus(page.getByRole('button', { name: 'Ajouter le texte' }))); i++) await page.keyboard.press('Tab');
-    await page.keyboard.press('Enter');
     await attend(() => nombreDeCalques(page)).toBe(2);
-    // Le lien d'evitement mene a la toile ; le texte ajoute est choisi : Entree ouvre sa saisie.
-    await page.getByRole('link', { name: 'Aller à la toile' }).focus();
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Escape');
+    // Le texte ajoute est choisi, le focus sur la toile : Entree rouvre sa saisie, le curseur a la fin.
     await attend(() => aLeFocus(page.locator('.editeur-svg-toile'))).toBe(true);
     await page.keyboard.press('Enter');
-    const saisie = page.locator('.saisie-texte textarea');
     await attend(() => aLeFocus(saisie)).toBe(true);
     await page.keyboard.type(' 2026');
-    await page.keyboard.press('Shift+Enter');
-    await page.keyboard.type('Paris');
     await page.keyboard.press('Enter');
+    await page.keyboard.type('Paris');
+    await page.keyboard.press('Escape');
     await attend(() => textePanneau(page).inputValue()).toBe('Atelier 2026\nParis');
     await page.keyboard.press('Control+Shift+O');
     await attend(() => message(page)).toMatch(/^1 texte vectorisé \(lettres séparées\)/);
@@ -179,7 +178,8 @@ describe('le texte vivant', () => {
       await expect(bouton(page).first().getAttribute('aria-expanded')).resolves.toBe('true');
       const apercu = inspecteur(page).locator('.apercu-police');
       await expect(apercu.getByRole('img', { name: 'Forme (découpe) : Lettres pleines : la lame suit leur pourtour.' }).count()).resolves.toBe(1);
-      await expect(apercu.getByRole('img', { name: 'Ligne (stylo) : Au stylo : lettres creuses, double trait.' }).count()).resolves.toBe(1);
+      // La ligne du stylo d'une police a contour est celle du trace Median (ADR-0027).
+      await expect(apercu.getByRole('img', { name: 'Ligne (stylo) : Au stylo : une ligne au milieu du trait (tracé Médian).' }).count()).resolves.toBe(1);
       await apercu.getByRole('button', { name: 'Fermer l’aperçu' }).click();
       await attend(() => apercu.count()).toBe(0);
     });

@@ -3,7 +3,7 @@
 // operations pures, qui rendent un nouveau dessin, ou le meme quand rien ne change.
 
 import { prochainId, type Chemin, type DessinSvg, type Forme, type Matrice, type Style, type TexteVivant } from '../editionSvg.js';
-import type { NaturePolice } from '../../model/polices.js';
+import { naturePolice, type NaturePolice } from '../../model/polices.js';
 
 /** La peinture d'un texte selon la nature de sa police : un fond pour une police a contour, un trait sans fond pour une police a trait. */
 export type PeintureTexte = Pick<Forme, 'remplissage' | 'contour' | 'epaisseur'>;
@@ -20,7 +20,7 @@ export function peintureDuTexte(nature: NaturePolice, style: Style, largeurTrait
 }
 
 /** Le texte vivant par defaut d'une creation : pose a l'origine, sans interlettrage, interligne 1,2, aligne a gauche. */
-export function nouveauTexte(texte: string, police: TexteVivant['police'], taille: number, matrice: Matrice, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>> = {}): TexteVivant {
+export function nouveauTexte(texte: string, police: TexteVivant['police'], taille: number, matrice: Matrice, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'interligne' | 'alignement' | 'ligatures' | 'trace'>> = {}): TexteVivant {
   return { texte, police, taille, interlettrage: 0, interligne: 1.2, alignement: 'gauche', ligatures: false, ...reglages, matrice };
 }
 
@@ -34,7 +34,7 @@ export function creerTexte(dessin: DessinSvg, texte: TexteVivant, d: Chemin, pei
 
 const memeTexte = (a: TexteVivant, b: TexteVivant): boolean =>
   a.texte === b.texte && a.police.id === b.police.id && a.police.version === b.police.version && a.police.famille === b.police.famille && a.taille === b.taille
-  && a.interlettrage === b.interlettrage && a.interligne === b.interligne && a.alignement === b.alignement && a.ligatures === b.ligatures
+  && a.interlettrage === b.interlettrage && a.interligne === b.interligne && a.alignement === b.alignement && a.ligatures === b.ligatures && a.trace === b.trace
   && a.matrice.every((v, i) => v === b.matrice[i]);
 
 /**
@@ -60,6 +60,24 @@ export function poserTexte(dessin: DessinSvg, id: string, texte: TexteVivant, d:
   const neuve: Forme = { ...f, ...p, texte, d };
   return { ...dessin, formes: dessin.formes.map(x => (x === f ? neuve : x)) };
 }
+
+/**
+ * Le texte en trace « median » (une ligne au milieu du trait), ou en trace de sa police (le champ retire). Une police a trait
+ * unique a deja sa ligne : elle ne prend jamais le trace median, qui ne vaut que pour une police a contour (ADR-0027).
+ */
+export function avecTrace(t: TexteVivant, median: boolean): TexteVivant {
+  if (median && naturePolice(t.police.id) !== 'trait') return t.trace === 'median' ? t : { ...t, trace: 'median' };
+  if (t.trace === undefined) return t;
+  const r: { -readonly [K in keyof TexteVivant]?: TexteVivant[K] } = { ...t };
+  delete r.trace;
+  return r as TexteVivant;
+}
+
+/**
+ * La nature du dessin d'un texte (ADR-0027) : un texte en trace « median » se dessine en lignes, comme une police a trait
+ * unique, quelle que soit sa police ; sinon, la nature de sa police.
+ */
+export const natureDuTexte = (t: Pick<TexteVivant, 'police' | 'trace'>): NaturePolice => (t.trace === 'median' ? 'trait' : naturePolice(t.police.id));
 
 /** Les textes vivants parmi ces formes (toutes si `ids` est absent), dans l'ordre du dessin. */
 export const textesDe = (dessin: DessinSvg, ids?: readonly string[]): Forme[] => dessin.formes.filter(f => f.texte && (!ids || ids.includes(f.id)));

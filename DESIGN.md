@@ -153,12 +153,12 @@ components:
     typography: "{typography.aide}"
     rounded: "{rounded.bouton}"
     padding: "8px"
-  saisie-texte:
+  barre-texte:
     backgroundColor: "{colors.feuille-panneau}"
     textColor: "{colors.encre}"
-    typography: "{typography.body}"
-    rounded: "{rounded.menu}"
-    padding: "6px"
+    typography: "{typography.compact}"
+    rounded: "{rounded.bouton}"
+    padding: "2px 12px"
   ligne-format:
     backgroundColor: "transparent"
     textColor: "{colors.encre-douce}"
@@ -548,14 +548,25 @@ primaire, « Exporter pour Cricut », qui dit « Exporter quand même (2 points 
   devient « Prêt pour le stylo », ses couches des stylos (une couleur, un stylo), son action « Exporter pour le stylo ». Un
   constat qui propose plusieurs corrections les aligne en boutons secondaires, la conseillée d'abord.
 
-### Texte vivant (ADR-0022)
-Un texte se retape là où il est, et se règle comme un formulaire.
-- **La saisie en place** : une feuille de panneau posée sur la toile, juste sous le texte (filet, coins de 8 px, ombre de menu
-  flottant : elle recouvre un instant le travail), un vrai champ de texte nommé et une ligne d'aide (Aide, encre douce :
-  « Entrée valide · Maj+Entrée : à la ligne · Échap annule »). Le curseur se pose à la fin ; le texte se recompose sous les
-  yeux ; la couche `--couche-saisie` la tient au-dessus du dessin, sous les tiroirs.
+### Texte vivant (ADR-0022, ADR-0027)
+Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d'une barre ; le panneau garde tout.
+- **La saisie sur la toile** : aucune feuille posée sur le dessin. Le texte en cours porte un cadre en tirets à la couleur d'outil
+  (1 px, comme la boîte d'une sélection), le curseur est un trait cyan de 2 px qui clignote (éteint par `prefers-reduced-motion`),
+  la sélection un voile cyan à 30 % sur les lettres ; tous trois ne grossissent pas avec la vue (`vector-effect`). Ce sont le
+  focus visible de la saisie : le vrai champ de texte qui porte le focus est transparent, posé sur le texte, à 16 px (un navigateur
+  mobile ne zoome pas pour le focaliser). La couche `--couche-saisie` tient le calque au-dessus du dessin, sous les tiroirs. Le
+  pointeur de l'outil Texte est une barre d'insertion (`cursor: text`). En contraste forcé, cadre, curseur et sélection en `Highlight`.
+- **La barre de texte** prend la place de la rangée de la sélection, avec l'outil Texte, pendant une saisie ou quand un texte est
+  choisi seul : même fond, mêmes groupes à filet. Dans l'ordre : l'état (« Saisie · Échap pour finir », « Texte », « Prochain
+  texte », Aide), la police (liste compacte, 13 em au plus) et son style, « Toutes les polices » (secondaire), la taille (champ
+  chiffré en chasse fixe), le tracé « Plein | Médian » et l'alignement (boutons à état : filet et texte cyan quand ils sont choisis,
+  jamais pleins), « Plus d'options » (secondaire), puis, pour un texte choisi, le menu des gestes de la sélection et « Supprimer ».
+  **Aucune action pleine** : ce sont des réglages. Au doigt ou sous 640 px, elle se resserre : la police (9,5 em), la taille, un
+  menu qui porte le tracé, l'alignement, le style, « Toutes les polices », « Plus d'options » et les gestes, et « Supprimer » ; tout
+  à 40 px, sans défilement à 390 px.
 - **La section « Texte »** de l'inspecteur, en tête quand un texte est choisi : le champ, le choix de police, « Gras » si la
-  famille en a un, trois champs chiffrés, l'alignement en trois boutons à état (un état, pas une action : filet et texte cyan
+  famille en a un, trois champs chiffrés, l'alignement en trois boutons à état, le tracé « Plein | Médian » (deux boutons à état ;
+  pour une police à trait unique, « Plein » reste focalisable, `aria-disabled`, et dit pourquoi) (un état, pas une action : filet et texte cyan
   quand il est choisi, jamais plein), puis « Vectoriser le texte » dans un groupe à filet : trois radios et un bouton
   **secondaire** (une action rare et destructrice ne prend pas l'encre unique).
 - **L'aperçu « forme / ligne »** (composant `ChoixPolice`, partout où l'on choisit une police) : un bouton discret

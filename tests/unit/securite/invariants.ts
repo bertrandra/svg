@@ -23,7 +23,7 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite',
   // Le texte vivant (ADR-0022) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
-  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice'
 ]);
 
 const NOMBRE_TEXTE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
@@ -42,6 +42,7 @@ const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
   'data-ed-interligne': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
   'data-ed-alignement': /^(?:centre|droite)$/,
   'data-ed-ligatures': /^1$/,
+  'data-ed-trace': /^median$/,
   'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i')
 };
 

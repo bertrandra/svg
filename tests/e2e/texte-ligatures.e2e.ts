@@ -65,7 +65,10 @@ describe('ligatures du texte', () => {
     await expect(case_(page).count()).resolves.toBe(0);
     await fonte.selectOption('lobster');
     await expect(case_(page).isChecked()).resolves.toBe(true);
-    await page.locator('.editeur-inspecteur label', { hasText: /^Espace$/ }).locator('input').fill('0.05');
+    // Un champ chiffre du panneau s'applique a la validation (Entree), comme ceux de l'inspecteur (ADR-0027).
+    const espace = page.locator('.editeur-inspecteur label', { hasText: /^Espace$/ }).locator('input');
+    await espace.fill('0.05');
+    await espace.press('Enter');
     await expect(case_(page).isDisabled()).resolves.toBe(true);
     expect(await ajouter(page, 'fi', 'lobster')).toBe(2);
   });

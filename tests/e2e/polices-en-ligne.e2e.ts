@@ -188,12 +188,16 @@ describe('les polices libres en ligne', () => {
     await page.keyboard.press('t');
     await selectPolice(page).waitFor({ timeout: 30_000 });
     expect(await page.getByRole('button', { name: 'Toutes les polices' }).count()).toBe(0);
+    // La barre de texte (ADR-0027) suit la meme regle que le panneau : sans polices en ligne, pas de « Toutes les polices ».
+    expect(await page.getByRole('toolbar', { name: 'Texte' }).count()).toBe(1);
     await page.evaluate(() => (window as unknown as { __p: { fermer: () => void } }).__p.fermer());
     await ouvrir(true);
     await page.locator('.editeur-svg .editeur-cadre').waitFor();
     await page.keyboard.press('t');
     await selectPolice(page).waitFor({ timeout: 30_000 });
-    expect(await page.getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
+    // Un dans le panneau, un dans la barre de texte (ADR-0027).
+    expect(await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
+    expect(await page.getByRole('toolbar', { name: 'Texte' }).getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
     expect(reseau.requetes).toEqual([]);
   });
 });

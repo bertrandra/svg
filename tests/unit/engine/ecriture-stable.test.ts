@@ -357,6 +357,9 @@ const CAS: readonly Cas[] = [
   },
   { nom: 'texte-vivant-lecture' },
   { nom: 'texte-vivant-trait', entree: 'texte-vivant', operation: vivant(texteFactice('Lune et soleil', [1, 0, 0, 1, 15, 55], { taille: 24 }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.6), glyphesTraitFactices) },
+  // Le trace « Median » (ADR-0027) : un cas NEUF. Une police a contour (la fonte factice courbe) se dessine en lignes au milieu
+  // du trait, sans fond, et porte `data-ed-trace="median"` ; aucun texte sans ce trace n'ecrit un octet de plus.
+  { nom: 'texte-vivant-median', entree: 'texte-vivant', operation: vivant(texteFactice('Bonjour', [1, 0, 0, 1, 15, 55], { taille: 30, trace: 'median' }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 1.5)) },
   { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },

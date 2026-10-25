@@ -53,7 +53,7 @@ export const BarreSelection = memo(function BarreSelection() {
   return compacte ? <RangeeCompacte /> : <RangeeEntiere />;
 });
 
-const libelleSelection = (n: number) => n + ' sélectionnée' + (n > 1 ? 's' : '');
+export const libelleSelection = (n: number) => n + ' sélectionnée' + (n > 1 ? 's' : '');
 
 function RangeeEntiere() {
   const g = useGestes(), { sel, ac, surPlan } = g;
@@ -88,16 +88,19 @@ function RangeeEntiere() {
 }
 
 /**
- * Au doigt sur un petit ecran (390 px) : le compte, les trois gestes qu'on fait le plus d'un doigt (dupliquer, retourner, tourner),
- * le menu « Plus » qui porte tout le reste, rubrique par rubrique, et Supprimer a part, au bout. La rangee entiere demandait 1 155 px.
+ * Les gestes de la selection en rubriques de menu : ce que porte le menu « Plus » de la rangee resserree (sans les trois gestes
+ * qu'elle montre), ou, `complet`, le menu de la barre de texte qui prend la place de la rangee (ADR-0027) : rien n'est retire.
  */
-function RangeeCompacte() {
+export function useSectionsSelection(complet: boolean): SectionMenu[] {
   const g = useGestes(), { sel, ac, surPlan } = g;
-  const sections: SectionMenu[] = [
-    { id: 'transformer', titre: 'Transformer', elements: [
-      { id: 'miroir-v', libelle: 'Miroir vertical', icone: 'miroir-v', onClick: () => g.miroir('v') },
-      { id: 'rotation-gauche', libelle: 'Tourner de 90° vers la gauche', icone: 'rotation-gauche', onClick: () => g.tourner(-90) }
-    ] },
+  const transformer: ElementMenu[] = [
+    ...(complet ? [{ id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: 'Miroir horizontal', icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
+    { id: 'miroir-v', libelle: 'Miroir vertical', icone: 'miroir-v', onClick: () => g.miroir('v') },
+    { id: 'rotation-gauche', libelle: 'Tourner de 90° vers la gauche', icone: 'rotation-gauche', onClick: () => g.tourner(-90) },
+    ...(complet ? [{ id: 'rotation-droite', libelle: 'Tourner de 90° vers la droite', icone: 'rotation-droite', onClick: () => g.tourner(90) } as const] : [])
+  ];
+  return [
+    { id: 'transformer', titre: 'Transformer', elements: transformer },
     { id: 'aligner', titre: 'Aligner' + surPlan, elements: ALIGNEMENTS_ICONES.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
     { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
     { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },
@@ -108,6 +111,15 @@ function RangeeCompacte() {
       { id: 'verrouiller', libelle: 'Verrouiller', icone: 'verrouiller', onClick: ac.verrouillerSelection }
     ] }
   ];
+}
+
+/**
+ * Au doigt sur un petit ecran (390 px) : le compte, les trois gestes qu'on fait le plus d'un doigt (dupliquer, retourner, tourner),
+ * le menu « Plus » qui porte tout le reste, rubrique par rubrique, et Supprimer a part, au bout. La rangee entiere demandait 1 155 px.
+ */
+function RangeeCompacte() {
+  const g = useGestes(), { sel, ac } = g;
+  const sections = useSectionsSelection(false);
   return (
     <div className="editeur-barre-selection compacte" role="toolbar" aria-label="Sélection">
       <span className="aide">{libelleSelection(sel.length)}</span>

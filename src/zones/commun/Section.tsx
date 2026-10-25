@@ -16,10 +16,10 @@ export function FournisseurSections({ children }: { children: ReactNode }) {
   return <ContexteSections.Provider value={memoire}>{children}</ContexteSections.Provider>;
 }
 
-export function Section({ titre, ouverte = false, note, children }: { titre: string; ouverte?: boolean; note?: ReactNode; children: ReactNode }) {
+export function Section({ titre, ouverte = false, note, className, children }: { titre: string; ouverte?: boolean; note?: ReactNode; className?: string; children: ReactNode }) {
   const memoire = useContext(ContexteSections);
   return (
-    <details className="section" open={memoire?.get(titre) ?? ouverte} onToggle={e => { memoire?.set(titre, (e.currentTarget as HTMLDetailsElement).open); }}>
+    <details className={'section' + (className ? ' ' + className : '')} open={memoire?.get(titre) ?? ouverte} onToggle={e => { memoire?.set(titre, (e.currentTarget as HTMLDetailsElement).open); }}>
       <summary><span>{titre}</span>{note ? <span className="aide">{note}</span> : null}</summary>
       <div className="section-corps">{children}</div>
     </details>

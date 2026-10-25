@@ -15,7 +15,7 @@ import clipping, { type MultiPolygon } from 'polygon-clipping';
 import { boiteChemin, prochainId, sansTexte, seCroisent, sousChemins, type Boite, type Chemin, type Commande, type DessinSvg, type Forme } from '../editionSvg.js';
 import { aireSignee, aplatir, cheminDeRegion, cheminLisseDeRegion, regionDeChemin, toleranceBooleen } from '../booleens.js';
 import { aireDeRegion } from '../contour/region.js';
-import { naturePolice } from '../../model/polices.js';
+import { natureDuTexte } from './vivant.js';
 
 export type ModeVectorisation = 'lettres' | 'souder-touchantes' | 'tout';
 export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['lettres', 'souder-touchantes', 'tout'];
@@ -43,7 +43,7 @@ export interface ResultatVectorisation {
 }
 
 /** Un texte a trait unique se vectorise sans union : ses traces n'ont pas d'aire. */
-export const estTraceOuvert = (f: Forme): boolean => (f.texte ? naturePolice(f.texte.police.id) === 'trait' : false) || (f.remplissage === null && f.contour !== null);
+export const estTraceOuvert = (f: Forme): boolean => (f.texte ? natureDuTexte(f.texte) === 'trait' : false) || (f.remplissage === null && f.contour !== null);
 
 /** Vrai si deux chemins ont les memes commandes, a `tol` pres (une relecture arrondit au millieme). */
 function memesChemins(a: Chemin, b: Chemin, tol: number): boolean {

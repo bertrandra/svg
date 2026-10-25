@@ -27,7 +27,7 @@ export function phraseOutil(outil: Outil): string {
     case 'selection': return 'Outil sélection : Tab passe à la forme suivante, flèches déplacent, Alt et flèches redimensionnent, Ctrl et flèches tournent.';
     case 'points': return 'Outil points : Tab passe au point suivant, flèches déplacent le point.';
     case 'main': return 'Outil main : déplacer la vue à la souris ou au doigt.';
-    case 'texte': return 'Outil texte : Entrée ouvre le champ de saisie du panneau, puis Tab mène à « Ajouter le texte ».';
+    case 'texte': return 'Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.';
     case 'plume': return 'Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.';
     default: return 'Outil ' + outil + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
   }
@@ -85,7 +85,3 @@ export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', 
 
 /** Espace sans forme au curseur : dire comment en avoir une. */
 export const PHRASE_SANS_CURSEUR = 'Aucune forme au curseur : Page suivante en choisit une, Maj et Page suivante en ajoute une.';
-
-/** Entree avec l'outil texte : le champ du panneau a pris le focus. */
-export const PHRASE_CHAMP_TEXTE = 'Champ Texte : saisissez le texte, puis Tab mène à « Ajouter le texte ».';
-export const PHRASE_PANNEAU_TEXTE = 'Panneau de l’inspecteur ouvert : Tab mène au champ Texte, puis à « Ajouter le texte ».';

@@ -7,6 +7,7 @@ import { RegionVocale } from './RegionVocale.js';
 import { Barre, BoutonEnregistrer } from './BarreOutils.js';
 import { useTactile, useTelephone } from './Vue.js';
 import { BarreSelection } from './BarreSelection.js';
+import { BarreTexte } from './BarreTexte.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
@@ -14,6 +15,7 @@ import { Inspecteur } from './Inspecteur.js';
 import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
 import { FournisseurTexte } from './contexteTexte.js';
+import { FournisseurSaisie, useSaisie } from './contexteSaisie.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BulleVisite, LienVisite } from './BulleVisite.js';
@@ -36,6 +38,15 @@ function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
  */
 function LienToile({ svgRef, idToile }: { svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   return <a className="saut" href={'#' + idToile} onClick={e => { e.preventDefault(); svgRef.current?.focus(); }}>Aller à la toile</a>;
+}
+
+/**
+ * La rangee sous la barre : la barre de texte avec l'outil Texte (elle regle le prochain texte : un clic sur la toile ne fait donc
+ * pas descendre le plan sous le pointeur), pendant une saisie, ou quand un texte est choisi seul (ADR-0027) ; sinon celle de la selection.
+ */
+function Rangee() {
+  const { formeSeule } = useDessin(), { outil } = useInterface(), sx = useSaisie();
+  return sx.saisie || outil === 'texte' || (formeSeule?.texte && outil === 'selection') ? <BarreTexte /> : <BarreSelection />;
 }
 
 /** Le panneau de droite : l'inspecteur d'une selection, le panneau du dessin sinon (ou avec un outil de trace). */
@@ -153,13 +164,14 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
   return (
     <FournisseurMenusOuverts value={signaler}>
       <FournisseurTexte>
+      <FournisseurSaisie>
       <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
         <LienToile svgRef={svgRef} idToile={idToile} />
         <LienVisite />
         <RegionVocale />
         <Barre titre={titre} nom={nom} />
-        <BarreSelection />
+        <Rangee />
         <ConfirmerAbandon />
         <Calques />
         <Voile />
@@ -168,6 +180,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
         <BarreEtat />
         <BulleVisite />
       </div>
+      </FournisseurSaisie>
       </FournisseurTexte>
     </FournisseurMenusOuverts>
   );

@@ -1,5 +1,5 @@
-// L'etat du texte vivant dans l'interface (ADR-0022) : la saisie en place ouverte (sur quelle forme), le mode de
-// vectorisation choisi, et les fontes chargees. Un contexte a part des trois de l'editeur (ADR-0010) : il ne change que
+// L'etat du texte vivant dans l'interface (ADR-0022) : le mode de vectorisation choisi, et les fontes chargees (la saisie
+// sur la toile a son propre contexte, contexteSaisie.tsx, ADR-0027). Un contexte a part des trois de l'editeur (ADR-0010) : il ne change que
 // quand on tape ou qu'on choisit, et seuls les panneaux du texte le lisent. Rien de tout cela n'entre dans l'historique.
 //
 // S'y ajoutent les polices libres telechargeables (ADR-0025) : l'index (une annexe voisine, chargee a la demande), le
@@ -33,10 +33,6 @@ export function listeDeCles(v: unknown, max: number): string[] {
 export type ResultatTelechargement = { id: string; police: Police } | { erreur: string } | null;
 
 export interface EtatTexte {
-  /** La forme dont le texte se saisit en place sur la toile, ou null. */
-  readonly saisie: string | null;
-  readonly ouvrirSaisie: (id: string) => void;
-  readonly fermerSaisie: () => void;
   /** Le mode de vectorisation choisi dans la session ; null : celui du contexte (souder en decoupe Cricut, sinon lettres separees). */
   readonly mode: ModeVectorisation | null;
   readonly poserMode: (m: ModeVectorisation) => void;
@@ -79,7 +75,6 @@ interface Demande { readonly variante: VariantePolice; readonly serveurs: readon
 
 export function FournisseurTexte({ children }: { children: ReactNode }) {
   const stockage = useStockage(), enLigne = useContext(ContextePolicesEnLigne);
-  const [saisie, poserSaisie] = useState<string | null>(null);
   const [mode, poserMode] = useState<ModeVectorisation | null>(null);
   const [polices, poserPolices] = useState<readonly Police[] | null>(null);
   const [erreurPolices, poserErreur] = useState('');
@@ -155,11 +150,10 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
     });
   }, [stockage]);
   const valeur = useMemo<EtatTexte & { demander: () => void }>(() => ({
-    saisie, ouvrirSaisie: id => { demander(true); poserSaisie(id); }, fermerSaisie: () => poserSaisie(null),
     mode, poserMode, polices, erreurPolices, deposer, retenir, demander: () => demander(true),
     enLigne, catalogue, erreurCatalogue, chargerCatalogue: () => demanderCatalogue(true), apercus, erreurApercus, acceptes, telecharger, revoquer,
     favoris, basculerFavori, recentes, noterRecente
-  }), [saisie, mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, apercus, erreurApercus, acceptes, telecharger, revoquer, favoris, basculerFavori, recentes, noterRecente]);
+  }), [mode, polices, erreurPolices, deposer, retenir, enLigne, catalogue, erreurCatalogue, apercus, erreurApercus, acceptes, telecharger, revoquer, favoris, basculerFavori, recentes, noterRecente]);
   return (
     <Contexte.Provider value={valeur}>
       {children}
@@ -169,7 +163,7 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
 }
 
 const HORS: EtatTexte & { demander: () => void } = {
-  saisie: null, ouvrirSaisie: () => undefined, fermerSaisie: () => undefined, mode: null, poserMode: () => undefined,
+  mode: null, poserMode: () => undefined,
   polices: null, erreurPolices: '', deposer: () => Promise.resolve({ erreur: 'Aucun éditeur.' }), retenir: () => undefined, demander: () => undefined,
   enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', acceptes: new Set(), telecharger: () => Promise.resolve(null),
   revoquer: () => undefined, favoris: [], basculerFavori: () => undefined, recentes: [], noterRecente: () => undefined
