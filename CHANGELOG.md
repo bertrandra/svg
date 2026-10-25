@@ -56,6 +56,11 @@ empreintes.
 
 ### Modifié
 
+- La liste « Police » montre toutes les polices (ADR-0034), dans le panneau, l'inspecteur et la barre de texte : une liste
+  déroulante à recherche avec la police actuelle, celles du document, les favoris, les récentes, les livrées, le trait unique, vos
+  polices, puis tout le catalogue, une ligne par famille, chaque nom dessiné dans sa police. Une police pas encore sur l'appareil
+  porte une marque « à télécharger » (icône et mots) ; la choisir la télécharge, vérifiée, et la marque disparaît ; ouvrir,
+  parcourir et chercher ne téléchargent rien. Taper filtre, le clavier suffit ; sur un téléphone, la liste s'ouvre en feuille.
 - « Ne rien sélectionner » devient « Désélectionner », « Sélectionner la même couleur » devient « Sélectionner la même couleur de
   fond » (C) ; sur un téléphone, « Points et poignées » se range dans le menu de l'outil de sélection.
 - Le nom d'une forme suit les formes de base (« cœur », « hexagone », « étoile à 8 branches »…) ; un losange lu dans un fichier se

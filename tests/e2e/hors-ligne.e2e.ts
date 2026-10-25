@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, imageDeTest, ouvrirExemple, pilote, type Session, URL_PAGE } from './aide.js';
+import { champPolice, listePolices, ouvrirPolices } from './polices.js';
 
 /** Les familles et graisses que l'interface demande, telles que scripts/fontes-interface.mjs les declare. */
 const POLICES: ReadonlyArray<readonly [string, number]> = [
@@ -128,7 +129,7 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
     const inspecteur = page.locator('.editeur-inspecteur');
-    await inspecteur.locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur).waitFor({ timeout: 30_000 });
     await inspecteur.getByRole('button', { name: 'Toutes les polices' }).click();
     await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/^\d[\d\s ]* polices$/);
     // Plus de deux mille polices, une poignee de lignes dans la page : la liste se fenetre (ADR-0008).
@@ -148,6 +149,35 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
     await alerte.waitFor();
     expect(await alerte.innerText()).toMatch(/^Roboto : cdn\.jsdelivr\.net ne répond pas ; fonts\.bunny\.net ne répond pas\.$/);
     expect(reseau.requetes.length).toBeGreaterThan(0);
+    expect([...new Set(reseau.requetes.map(u => new URL(u).hostname))].sort()).toEqual(['cdn.jsdelivr.net', 'fonts.bunny.net']);
+    // Le navigateur ecrit « Failed to load resource » pour ces requetes avortees : ce n'est pas une erreur de la page.
+    erreurs.length = 0;
+  });
+
+  // ADR-0034 : la liste deroulante des polices montre tout le catalogue, celles a telecharger marquees. L'ouvrir, la parcourir
+  // jusqu'au bout et y chercher ne contactent personne ; seul le choix d'une police marquee la demande, et l'erreur se dit sous le champ.
+  it('la liste deroulante des polices s\'ouvre, se parcourt et se cherche sans requete ; seul le choix d\'une police marquee la demande', async () => {
+    const { page, reseau, erreurs } = await session();
+    await ouvrirExemple(page);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('t');
+    const zone = page.locator('.editeur-inspecteur');
+    await ouvrirPolices(zone);
+    await attend(() => page.locator('.liste-polices-pied p').first().innerText()).toMatch(/^2\s?\d{3} polices$/);
+    // Les lignes du catalogue sont marquees et dessinees par leur apercu prepare (l'annexe voisine).
+    await attend(() => listePolices(zone).locator('[data-etat="a-telecharger"] .police-nom-apercu svg').count()).toBeGreaterThan(0);
+    // Jusqu'au bout, au clavier puis en faisant defiler ; puis une recherche.
+    await page.keyboard.press('End');
+    await listePolices(zone).evaluate(l => { l.scrollTop = l.scrollHeight; });
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('roboto');
+    await attend(() => listePolices(zone).locator('[role="option"]').first().getAttribute('aria-label')).toBe('Roboto, Google Fonts, à télécharger');
+    aucuneRequete(reseau);
+    // Le choix vaut demande : jsDelivr, puis Bunny Fonts en repli ; coupees, l'erreur est dite sous le champ.
+    await page.keyboard.press('Enter');
+    const alerte = zone.locator('.liste-polices-etat[role="alert"]');
+    await alerte.waitFor();
+    expect(await alerte.innerText()).toMatch(/^Roboto : cdn\.jsdelivr\.net ne répond pas ; fonts\.bunny\.net ne répond pas\.$/);
     expect([...new Set(reseau.requetes.map(u => new URL(u).hostname))].sort()).toEqual(['cdn.jsdelivr.net', 'fonts.bunny.net']);
     // Le navigateur ecrit « Failed to load resource » pour ces requetes avortees : ce n'est pas une erreur de la page.
     erreurs.length = 0;

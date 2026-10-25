@@ -23,6 +23,7 @@ import { useActions, useDessin } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { nomDePolice, useActionsTexte } from './actionsTexte.js';
 import { choisirApercu, type ApercuLigne } from './apercusPolices.js';
+import { COURTS_SOURCES, cleFamille } from './lignesPolices.js';
 
 /** Les categories des fontes livrees, pour que les filtres les rangent avec les autres. */
 const CATEGORIES_LIVREES: Readonly<Record<IdPoliceLivree, CategoriePolice>> = {
@@ -30,10 +31,8 @@ const CATEGORIES_LIVREES: Readonly<Record<IdPoliceLivree, CategoriePolice>> = {
   pacifico: 'manuscrite', caveat: 'manuscrite', fredoka: 'lineale', 'ems-readability': 'autre'
 };
 
-/** Le nom court d'une source, pour le badge d'une ligne. */
-const COURTS: Readonly<Record<IdSourcePolices, string>> = {
-  google: 'Google Fonts', fontsource: 'Fontsource', league: 'League', sil: 'SIL', collletttivo: 'Collletttivo', velvetyne: 'Velvetyne', fontshare: 'Fontshare'
-};
+/** Le nom court d'une source, pour le badge d'une ligne : le meme que celui de la liste deroulante. */
+const COURTS = COURTS_SOURCES;
 
 type SourceEntree = IdSourcePolices | 'livree' | 'deposee';
 
@@ -57,8 +56,6 @@ type SourceDite = (nomFamille: string, source: string) => string | null;
 /** Un nom en minuscules sans accents, pour chercher « fete » dans « Fête ». */
 const sansAccents = (t: string): string => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-/** La cle d'une famille de l'index, celle que retiennent les favoris. */
-export const cleFamille = (f: Pick<FamilleCatalogue, 'depot' | 'id'>): string => f.depot + ':' + f.id;
 
 export interface ProprietesExplorateur {
   readonly id: string;

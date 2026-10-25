@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, nombreDeCalques, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+import { champPolice, choisirPolice } from './polices.js';
 
 describe('outils de l\'editeur', () => {
   const navigateur = pilote();
@@ -33,10 +34,10 @@ describe('outils de l\'editeur', () => {
     const avant = await nombreDeCalques(page);
     await page.keyboard.press('t');
     // Les fontes se chargent a la demande (polices.js).
-    const fonte = page.locator('.editeur-inspecteur select[aria-label="Police"]');
-    await fonte.waitFor({ timeout: 30_000 });
+    const zone = page.locator('.editeur-inspecteur');
+    await champPolice(zone).waitFor({ timeout: 30_000 });
     await page.locator('.editeur-inspecteur textarea[aria-label="Texte"]').fill('Noël');
-    await fonte.selectOption('lobster');
+    await choisirPolice(zone, 'lobster');
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
 
     await attend(() => nombreDeCalques(page)).toBe(avant + 1);

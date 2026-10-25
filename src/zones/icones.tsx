@@ -22,7 +22,9 @@ export type NomIcone =
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
   | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo'
   // Les outils de selection (ADR-0035).
-  | 'cadre-selection' | 'lasso' | 'inverser-selection';
+  | 'cadre-selection' | 'lasso' | 'inverser-selection'
+  // La marque d'une police a telecharger (ADR-0034).
+  | 'nuage-telecharger';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -146,7 +148,10 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // inverser, un carre a moitie plein (ce qui etait choisi ne l'est plus, et l'inverse).
   'cadre-selection': [{ d: 'M3 3h15v13H3z', pointille: true }, t('M13 12l8 4.5-3.6 1-1.4 3.6z', true)],
   lasso: [t('M8 15.6C5.6 14.4 4 12.6 4 10.5 4 6.9 7.6 4 12 4s8 2.9 8 6.5S16.4 17 12 17c-1 0-1.9-.1-2.8-.4'), t('M7.2 16.8a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0'), t('M8 18.3c-.5 1.4-1.6 2.2-3 2.7')],
-  'inverser-selection': [t('M4 4h16v16H4z'), t('M4 4h8v16H4z', true)]
+  'inverser-selection': [t('M4 4h16v16H4z'), t('M4 4h8v16H4z', true)],
+  // Un nuage ouvert par le bas, et la fleche qui en descend : une police qui n'est pas encore sur cet appareil, et que la
+  // choisir fera venir de sa source (ADR-0034). La forme dit l'etat, pas la couleur.
+  'nuage-telecharger': [t('M8 17H6.5a4 4 0 0 1 0-8h.3A5.5 5.5 0 0 1 17.4 8.6 4.25 4.25 0 0 1 17.5 17H16'), t('M12 11v10'), t('M8.5 17.5L12 21l3.5-3.5')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];
