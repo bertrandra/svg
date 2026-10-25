@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { TOLERANCE_DEFAUT } from '../engine/detourage.js';
-import { cleTraitement, sansPretraitement, type Traceur } from '../engine/vectorisation.js';
+import { cleTraitement, parVtracer, sansPretraitement, type Traceur } from '../engine/vectorisation.js';
 import { sonderNavigateur } from '../io/capacites.js';
 import { pause } from '../io/fichiers.js';
 import { apercuDetoure, apercuPretraite, lireSource, resumeConversion, traiterImage, TRAITEMENT_DEFAUT, type ApercuPretraite, type ImageConvertie, type SourceImage, type Traitement } from '../io/image.js';
@@ -99,14 +99,16 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
 
   const lancer = useCallback(async (image: SourceImage, traitement: Traitement) => {
     // WebAssembly (le traceur) et le canvas (les pixels) se verifient avant de charger quoi que ce soit : la phrase dit quoi faire.
-    const absentes = manquantes(sonderNavigateur(), traitement.vecteurs ? 'vectorisation' : 'image');
+    // La ligne mediane est du moteur pur : ni WebAssembly ni traceur a charger, le canevas suffit.
+    const vtracer = traitement.vecteurs !== null && parVtracer(traitement.vecteurs.mode);
+    const absentes = manquantes(sonderNavigateur(), vtracer ? 'vectorisation' : 'image');
     if (absentes.length) { dire(phraseManquantes(absentes)); return; }
     const mien = ++jeton.current;
     poserEnCours(true);
     // Le traceur ne se charge qu'ici, au premier trace : deposer une image, la detourer ou l'envelopper
     // ne le demande pas. Son chargement se dit avant, et ses echecs avec la marche a suivre.
     let traceur: Traceur | undefined;
-    if (traitement.vecteurs && !traceurCharge()) {
+    if (vtracer && !traceurCharge()) {
       dire('Chargement du traceur…');
       try { traceur = await chargerTraceur(); } catch (e) {
         if (mien === jeton.current) { poserEnCours(false); dire(e instanceof Error ? e.message : String(e)); }
@@ -114,7 +116,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
       }
       if (mien !== jeton.current) return;
     }
-    dire(traitement.vecteurs ? 'Vectorisation…' : 'Détourage…');
+    dire(!traitement.vecteurs ? 'Détourage…' : vtracer ? 'Vectorisation…' : 'Tracé de la ligne médiane…');
     await pause();
     const r = await traiterImage(image, traitement, traceur);
     if (mien !== jeton.current) return;

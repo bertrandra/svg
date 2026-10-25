@@ -404,7 +404,10 @@ une action primaire « Ouvrir dans l'éditeur ». Deux vues en mini-onglets (Com
 et le fond du plan dans le menu « Plus de vues », dont le bouton prend le nom d'une vue cachée choisie. Réglages fins et
 prétraitement en sections repliées (mémoire d'ouverture) ; chaque réglage se nomme par son effet en mots simples,
 l'infobulle garde le nom technique de vtracer. « Rejouer » n'apparaît que s'il sert (pas encore de résultat, ou rejeu
-automatique coupé).
+automatique coupé). En mode « Ligne médiane » (ADR-0021), le groupe « Tracé » montre en plus le curseur « Épaisseur du
+trait » (la valeur mesurée sur l'image, au style des réglages fins) et une aide d'une ligne pour le stylo d'une Cricut ;
+seuil, taches, barbules, coupures et couleur vont dans les réglages fins repliés ; le résumé dit « N tracés · une ligne au
+milieu du trait ». Rien de nouveau dans le système : mêmes curseurs, mêmes jetons, toujours une seule action pleine.
 
 ### Bulle de la visite guidée (ADR-0019)
 Une feuille de panneau qui flotte : filet, coins de 8 px, ombre de menu flottant, 340 px au plus (la largeur de l'écran

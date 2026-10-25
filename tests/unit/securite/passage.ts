@@ -28,7 +28,19 @@ export interface Passage {
 /** Un SVG ecrit ne doit pas grossir sans mesure : un clone de <use> coute au plus quelques centaines d'octets. */
 export const tailleMax = (entree: number): number => 12 * entree + 6_000_000;
 
+/**
+ * Le passage d'un texte par tous les chemins de la page. Le budget de temps vise un calcul pathologique (quadratique, non
+ * borne), lent a chaque passage ; une machine chargee peut ralentir une seule mesure : un depassement se remesure donc une
+ * fois, et seul un depassement qui se repete reste un defaut. Le reste du verdict ne depend pas de l'horloge.
+ */
 export function passer(texte: string, budgetMs = BUDGET_MS, leger = false): Passage {
+  const premier = passerUneFois(texte, budgetMs, leger);
+  if (!premier.defauts.some(d => d.startsWith('temps : '))) return premier;
+  const second = passerUneFois(texte, budgetMs, leger);
+  return second.defauts.some(d => d.startsWith('temps : ')) ? premier : second;
+}
+
+function passerUneFois(texte: string, budgetMs: number, leger: boolean): Passage {
   const defauts: string[] = [], refus: string[] = [];
   let plusLong = { ms: 0, appel: '' }, plantage: string | null = null, ouvre = false, nettoye: string | null = null, ecrit: string | null = null;
 

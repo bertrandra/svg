@@ -12,7 +12,8 @@ s'embarque aussi comme composant React dans un autre produit.
   grains) ou enveloppé tel quel. Un atelier sous le dépôt montre l'image et son tracé (rideau de
   comparaison, rendu, contours, zoom, fond), expose huit réglages fins du traceur qui se rejouent à
   chaque changement, et garde les huit derniers essais pour comparer et revenir. Le résultat se
-  télécharge, se copie, s'ouvre dans l'éditeur.
+  télécharge, se copie, s'ouvre dans l'éditeur. Le mode « Ligne médiane » change un dessin au trait en traces ouverts d'une
+  seule ligne au milieu du trait, sans remplissage, pour le stylo d'une Cricut (moteur pur, sans vtracer ; ADR-0021).
 - **Choisir une forme** dans la bibliothèque : 4 134 silhouettes nommées en français, cherchées par
   nom et par événement du calendrier (Noël, Pâques, Halloween, 14 Juillet…), de la vie
   (naissance, anniversaire, mariage, concert…) ou par catégorie (personnage, bâtiment, animal…).

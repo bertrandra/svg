@@ -69,6 +69,8 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 - **Les exports sont purs, le prétraitement n'existe que touché** (ADR-0018) : PDF, EPS, DXF, PNG `pHYs` et ZIP
   s'écrivent à la main, mêmes entrées mêmes octets ; les options d'export sont de session, jamais stockées, et partent
   neutres ; sans réglage de prétraitement, le traceur voit la source à l'octet (15 empreintes), dans un ordre d'étapes fixe.
+- **La ligne médiane est du moteur pur** (ADR-0021) : masque d'Otsu, squelette de Guo-Hall, graphe élagué, cubiques ajustées ;
+  aucun appel à vtracer ; des réglages qui ne sont que ce qu'on a touché, aux défauts mesurés sur l'image.
 - **Les booléens aplatissent, l'éditeur rebâtit** (ADR-0004) : le moteur rend des segments droits, au style
   de la forme la plus basse ; l'éditeur rebâtit les courbes par défaut (`lisserBooleens`, réglage de session) ; `polygon-clipping` et `opentype.js` sont épinglés exactement.
 - **Un bord de tracé se déduit d'une union, il ne se suit pas** (ADR-0015) : contour en forme et décalage unissent des

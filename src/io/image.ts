@@ -7,11 +7,12 @@
 
 import { nettoyerSvg } from '../util/svg.js';
 import { couleursPixels, type CouleurExtraite } from '../engine/extraction.js';
-import { detourer, type Detourage } from '../engine/detourage.js';
+import { couleurDuBord, detourer, type Detourage } from '../engine/detourage.js';
+import { tracerLigneMediane, type MesureLigne } from '../engine/lignemediane.js';
 import {
   compterCouleurs, couleursExactes, COULEURS_MAX, normaliserPretraitement, pretraiter, type ClePretraitement, type ReglagesPretraitement, type ResultatPretraitement
 } from '../engine/pretraitement.js';
-import { aTracer, compterTraces, COULEURS_PALETTE_MAX, optionsTraceur, svgDuTraceur, TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '../engine/vectorisation.js';
+import { aTracer, compterTraces, COULEURS_PALETTE_MAX, optionsTraceur, parVtracer, svgDuTraceur, TRACES_MAX, TRAITEMENT_DEFAUT, type Traceur, type Traitement } from '../engine/vectorisation.js';
 import { chargerTraceur } from './vtracer.js';
 
 export { TRAITEMENT_DEFAUT, type Traitement };
@@ -46,6 +47,8 @@ export interface ImageConvertie {
   duree: number;
   /** Present seulement quand un pretraitement a ete joue. */
   pretraite?: InfoPretraitement;
+  /** Present seulement pour la ligne mediane : ce que l'image a dit d'elle (epaisseur, seuil, couleur du trait). */
+  ligne?: MesureLigne;
 }
 
 /** Au-dela, une image pese pour rien : un dessin se lit a cette taille sur tout support. */
@@ -139,6 +142,15 @@ export async function traiterImage(source: SourceImage, traitement: Traitement, 
     return { ...commun, svg: taille(propre.svg), matriciel: true, traces: null, duree: duree() };
   }
   if (!aTracer(pixels)) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
+  if (!parVtracer(traitement.vecteurs.mode)) {
+    // La ligne mediane ne charge pas vtracer : tout est du moteur pur. Le fond est la couleur du bord de l'image
+    // pretraitee, avant detourage (celle que le detourage a retiree) ; un pixel detoure est du fond.
+    const ligne = tracerLigneMediane({ data: pixels, largeur: l, hauteur: h }, couleurDuBord(pre.image.data, l, h), traitement.vecteurs.finesse, traitement.vecteurs.ligne);
+    if ('erreur' in ligne) return ligne;
+    const propre = nettoyerSvg(ligne.svg);
+    if (!propre) return { erreur: 'La ligne médiane n’a rien donné de lisible : changez de grain.' };
+    return { ...commun, svg: taille(propre.svg), matriciel: false, traces: ligne.traces, ligne: ligne.mesure, duree: duree() };
+  }
   let tracer: Traceur;
   try { tracer = traceur ?? await chargerTraceur(); } catch (e) { return { erreur: 'Le vectoriseur ne s’est pas chargé dans ce navigateur (' + raison(e) + ').' }; }
   const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex), traitement.vecteurs.fins, exactes ? COULEURS_MAX : COULEURS_PALETTE_MAX);
@@ -199,7 +211,8 @@ export async function lireSource(fichier: Blob): Promise<SourceImage | { erreur:
 /** Ce que l'image est devenue, en une ligne. */
 export function resumeConversion(r: ImageConvertie): string {
   const fond = r.detourage ? 'fond ' + r.detourage.fond.toUpperCase() + ' retiré ' + (r.traitement.portee === 'partout' ? 'partout' : 'depuis le bord') + ' (' + Math.round(r.detourage.part * 100) + ' %)' : r.traitement.detourer ? 'aucun fond à retirer' : 'fond gardé';
-  const forme = r.traces !== null ? r.traces + ' tracé' + (r.traces > 1 ? 's' : '') + ' vectoriel' + (r.traces > 1 ? 's' : '') : 'image telle quelle';
+  const s = r.traces !== null && r.traces > 1 ? 's' : '';
+  const forme = r.traces === null ? 'image telle quelle' : r.ligne ? r.traces + ' tracé' + s + ' · une ligne au milieu du trait' : r.traces + ' tracé' + s + ' vectoriel' + s;
   return fond + ' · ' + forme + ' · ' + Math.max(1, Math.round(r.svg.length / 1024)) + ' Ko';
 }
 

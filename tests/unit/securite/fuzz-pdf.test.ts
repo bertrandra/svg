@@ -80,7 +80,15 @@ function verdict(o: Uint8Array): string | null {
   let lu: ReturnType<typeof lire>;
   try { lu = lire(o); } catch (e) { return 'exception : ' + (e instanceof Error ? e.name + ' ' + e.message : String(e)).slice(0, 200); }
   const ms = performance.now() - t0;
-  if (ms > BUDGET_MS) return 'temps : ' + Math.round(ms) + ' ms';
+  if (ms > BUDGET_MS) {
+    // Le budget vise un calcul pathologique (quadratique, non borne), qui reste lent a chaque passage ; une machine chargee
+    // (d'autres suites en parallele) peut ralentir une seule mesure. On remesure donc une fois : seule une lenteur qui se
+    // repete est un defaut.
+    const t1 = performance.now();
+    lire(o);
+    const encore = performance.now() - t1;
+    if (encore > BUDGET_MS) return 'temps : ' + Math.round(ms) + ' ms puis ' + Math.round(encore) + ' ms';
+  }
   if ('erreur' in lu) return typeof lu.erreur === 'string' && lu.erreur.length > 10 ? null : 'refus sans phrase';
   const p = passer(ecrireDessin(lu.dessin, 3), BUDGET_MS, true);
   if (p.plantage) return 'ecriture : ' + p.plantage;

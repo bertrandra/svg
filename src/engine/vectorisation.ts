@@ -4,11 +4,18 @@
 // donnent toujours le meme SVG.
 
 import { TOLERANCE_DEFAUT, type PorteeDetourage } from './detourage.js';
+import { resumeLigne, type ReglagesLigne } from './lignemediane.js';
 import type { ReglagesPretraitement } from './pretraitement.js';
 
-/** Ce que la vectorisation cherche a garder de l'image. */
-export type ModeVectorisation = 'aplats' | 'trait' | 'fidele';
-export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['aplats', 'trait', 'fidele'];
+/**
+ * Ce que la vectorisation cherche a garder de l'image. Les trois premiers modes reglent vtracer, qui rend des
+ * contours ; `mediane` ne l'appelle pas : une seule ligne ouverte au milieu de chaque trait (engine/lignemediane.ts).
+ */
+export type ModeVectorisation = 'aplats' | 'trait' | 'fidele' | 'mediane';
+export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['aplats', 'trait', 'fidele', 'mediane'];
+
+/** Vrai pour un mode que trace vtracer (il faut alors le charger) ; faux pour la ligne mediane, toute en moteur pur. */
+export const parVtracer = (mode: ModeVectorisation): boolean => mode !== 'mediane';
 
 /** Le grain : `fine` garde les petits details, `lisse` les efface au profit de courbes franches. */
 export type Finesse = 'fine' | 'normale' | 'lisse';
@@ -37,8 +44,11 @@ export interface ReglagesFins {
   empilement?: 'stacked' | 'cutout';
 }
 
-/** Ce que l'on demande au traceur : un mode, un grain, et les reglages fins touches. */
-export interface ReglageVecteurs { mode: ModeVectorisation; finesse: Finesse; fins?: ReglagesFins }
+/**
+ * Ce que l'on demande au traceur : un mode, un grain, et les reglages fins touches. `ligne` ne vaut que pour la ligne
+ * mediane, `fins` que pour les modes de vtracer.
+ */
+export interface ReglageVecteurs { mode: ModeVectorisation; finesse: Finesse; fins?: ReglagesFins; ligne?: ReglagesLigne }
 
 /** Ce qu'on fait d'une image deposee : son fond, et sa forme (image enveloppee, ou vecteurs). */
 export interface Traitement {
@@ -181,14 +191,15 @@ export function retirerFin(fins: ReglagesFins | undefined, id: keyof ReglagesFin
   return Object.keys(r).length ? r : undefined;
 }
 
-const NOMS_COURTS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats', trait: 'Trait', fidele: 'Fidèle' };
+const NOMS_COURTS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats', trait: 'Trait', fidele: 'Fidèle', mediane: 'Ligne médiane' };
 const NOMS_COURTS_FINESSES: Record<Finesse, string> = { fine: 'fin', normale: 'normal', lisse: 'lisse' };
 const LIBELLES_FINS: Record<keyof ReglagesFins, string> = {
   filterSpeckle: 'taches', simplify: 'allègement', cornerThreshold: 'coins', colorPrecision: 'nuances', layerDifference: 'regroupement', couleursMax: 'couleurs', courbes: 'courbes', empilement: 'empilement'
 };
 
-/** Un reglage en une ligne : « Aplats · normal · taches 8 · segments droits ». */
+/** Un reglage en une ligne : « Aplats · normal · taches 8 · segments droits », « Ligne médiane · lisse · épaisseur 4 ». */
 export function resumeReglages(v: ReglageVecteurs): string {
+  if (v.mode === 'mediane') return [NOMS_COURTS_MODES.mediane, NOMS_COURTS_FINESSES[v.finesse], ...resumeLigne(v.ligne)].join(' · ');
   const fins = v.fins ?? {};
   const touches = (Object.keys(LIBELLES_FINS) as (keyof ReglagesFins)[]).filter(k => fins[k] !== undefined).map(k => {
     const val = fins[k];
