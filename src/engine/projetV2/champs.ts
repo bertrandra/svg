@@ -11,6 +11,7 @@ import { peintureDuProjet, peintureProjet } from './peinture.js';
 import { imageDuProjet, imageProjet, refusImagesProjet } from './image.js';
 import { decoupeDuProjet, decoupeProjet } from './decoupe.js';
 import { effetsDuProjet, effetsProjet } from './effets.js';
+import { formesDesMasques, masqueDuProjet, masqueProjet, type ConversionContenu } from './masque.js';
 
 /** Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. */
 interface AllerRetour {
@@ -67,9 +68,13 @@ const ALLERS_RETOURS: readonly AllerRetour[] = [
 /** Les champs v2 d'une forme du modele, en projet, dans l'ordre du format. */
 export const champsV2VersProjet = (f: Forme): ChampsFormeV2 => Object.assign({}, ...ALLERS_RETOURS.map(a => a.versProjet(f))) as ChampsFormeV2;
 
-/** Ce qui empeche d'ouvrir les champs v2 d'un dessin de projet deja valide dans sa forme (des octets d'image), ou null. */
-export function refusChampsV2(formes: readonly FormeProjet[]): string | null {
-  for (const a of ALLERS_RETOURS) { const r = a.refus?.(formes) ?? null; if (r !== null) return r; }
+/**
+ * Ce qui empeche d'ouvrir les champs v2 d'un dessin de projet deja valide dans sa forme (des octets d'image), ou null. Les formes du
+ * contenu des masques (etape 6) passent par les memes gardes que celles du dessin.
+ */
+export function refusChampsV2(formes: readonly FormeProjet[], groupes?: Readonly<Record<string, GroupeProjet>>): string | null {
+  const toutes = groupes ? [...formes, ...formesDesMasques(groupes)] : formes;
+  for (const a of ALLERS_RETOURS) { const r = a.refus?.(toutes) ?? null; if (r !== null) return r; }
   return null;
 }
 
@@ -78,11 +83,28 @@ export const champsV2VersModele = (f: FormeProjet): Partial<Forme> => Object.ass
 
 // ---------------------------------------------------------------- les groupes (etape 1)
 
-/** Un champ v2 d'un groupe au-dela de sa base (decoupe, masque, effets : une ligne par etape, dans l'ordre de `CHAMPS_GROUPE_V2`). */
+/**
+ * Un champ v2 d'un groupe au-dela de sa base (decoupe, masque, effets : une ligne par etape, dans l'ordre de `CHAMPS_GROUPE_V2`). `c` :
+ * de quoi convertir un contenu de formes et de groupes entiers (le masque, etape 6), comme ceux du dessin.
+ */
 interface AllerRetourGroupe {
-  readonly versProjet: (g: Groupe) => Record<string, unknown>;
-  readonly versModele: (g: GroupeProjet) => Partial<Groupe>;
+  readonly versProjet: (g: Groupe, c: ConversionContenu) => Record<string, unknown>;
+  readonly versModele: (g: GroupeProjet, c: ConversionContenu) => Partial<Groupe>;
 }
+
+/**
+ * La conversion d'une forme entiere, dans les deux sens : celle du dessin (engine/projet.ts, `formeProjet`, `formeDuProjet`), que le
+ * projet prete aux groupes (etape 6) ; elle ne peut pas etre importee ici sans un cycle (une forme porte ses champs v2, donc ce fichier).
+ */
+export interface ConversionFormes {
+  readonly versProjet: (f: Forme) => FormeProjet;
+  readonly versModele: (f: FormeProjet) => Forme;
+}
+
+/** Les conversions d'un contenu : ses formes par celles du dessin, ses groupes par celles d'ici. */
+const conversionContenu = (f: ConversionFormes): ConversionContenu => ({
+  formeVersProjet: f.versProjet, formeVersModele: f.versModele, groupeVersProjet: g => groupeProjet(g, f), groupeVersModele: g => groupeDuProjet(g, f)
+});
 
 /** Une ligne par etape, dans l'ordre de `CHAMPS_GROUPE_V2` (model/projetV2/champs.ts). */
 const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
@@ -91,6 +113,11 @@ const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
     versProjet: g => (g.decoupe ? { decoupe: decoupeProjet(g.decoupe) } : {}),
     versModele: g => (g.decoupe ? { decoupe: decoupeDuProjet(g.decoupe) } : {})
   },
+  // Etape 6 : le masque d'opacite, son contenu converti comme le dessin.
+  {
+    versProjet: (g, c) => (g.masque ? { masque: masqueProjet(g.masque, c) } : {}),
+    versModele: (g, c) => (g.masque ? { masque: masqueDuProjet(g.masque, c) } : {})
+  },
   // Etape 7 : les effets du groupe.
   {
     versProjet: g => (g.effets !== undefined ? { effets: effetsProjet(g.effets) } : {}),
@@ -98,8 +125,9 @@ const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
   }
 ];
 
-/** Un groupe du modele en groupe de projet : sa base dans l'ordre du format, puis ses champs v2. */
-export function groupeProjet(g: Groupe): GroupeProjet {
+/** Un groupe du modele en groupe de projet : sa base dans l'ordre du format, puis ses champs v2 (`formes` : les conversions du dessin). */
+export function groupeProjet(g: Groupe, formes: ConversionFormes): GroupeProjet {
+  const c = conversionContenu(formes);
   return Object.assign({
     id: g.id,
     ...(g.parent !== undefined ? { parent: g.parent } : {}),
@@ -108,11 +136,12 @@ export function groupeProjet(g: Groupe): GroupeProjet {
     verrouille: g.verrouille,
     ...(g.opacite !== undefined ? { opacite: g.opacite } : {}),
     ...(g.origine !== undefined ? { origine: [...g.origine] } : {})
-  }, ...ALLERS_RETOURS_GROUPE.map(a => a.versProjet(g))) as GroupeProjet;
+  }, ...ALLERS_RETOURS_GROUPE.map(a => a.versProjet(g, c))) as GroupeProjet;
 }
 
-/** Un groupe de projet (deja valide) en groupe du modele. */
-export function groupeDuProjet(g: GroupeProjet): Groupe {
+/** Un groupe de projet (deja valide) en groupe du modele (`formes` : les conversions du dessin). */
+export function groupeDuProjet(g: GroupeProjet, formes: ConversionFormes): Groupe {
+  const c = conversionContenu(formes);
   return Object.assign({
     id: g.id,
     ...(g.parent !== undefined ? { parent: g.parent } : {}),
@@ -121,7 +150,7 @@ export function groupeDuProjet(g: GroupeProjet): Groupe {
     verrouille: g.verrouille,
     ...(g.opacite !== undefined ? { opacite: g.opacite } : {}),
     ...(g.origine !== undefined ? { origine: [...g.origine] } : {})
-  }, ...ALLERS_RETOURS_GROUPE.map(a => a.versModele(g))) as Groupe;
+  }, ...ALLERS_RETOURS_GROUPE.map(a => a.versModele(g, c))) as Groupe;
 }
 
 /** Une table de groupes copiee dans un sens, dans l'ordre de ses cles, a etaler ; rien si le dessin n'en a pas. */

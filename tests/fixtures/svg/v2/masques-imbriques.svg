@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <mask id="interieur" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="120">
+      <circle cx="100" cy="60" r="40" fill="#fff"/>
+    </mask>
+    <clipPath id="moitie">
+      <rect x="0" y="0" width="100" height="120"/>
+    </clipPath>
+    <mask id="exterieur" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="120">
+      <rect x="10" y="10" width="180" height="100" fill="#fff" mask="url(#interieur)"/>
+      <g clip-path="url(#moitie)">
+        <rect x="0" y="0" width="200" height="120" fill="#808080"/>
+      </g>
+    </mask>
+  </defs>
+  <g mask="url(#exterieur)">
+    <rect x="0" y="0" width="200" height="120" fill="#c81e28"/>
+  </g>
+</svg>

@@ -1280,6 +1280,66 @@
       "famille": "v2-effets",
       "vecteur": "feMerge de 500 noeuds (modele v2, effets) : refuse a la borne de 16 noeuds, sans construire de pile",
       "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-cycle-soi.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un <mask> dont le contenu emploie le meme masque : refuse en mode riche, « un cycle de masques »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-cycle-croise.svg",
+      "famille": "v2-masques",
+      "vecteur": "Deux masques qui s'emploient l'un l'autre (un groupe du contenu de a masque par b, une forme de b masquee par a) : refuse, « un cycle de masques »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-use-vers-soi.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un <use> dans un <mask> qui renvoie au <mask> (rien n'est dessine, comme dans un navigateur) et un autre au groupe masque lui-meme (un cycle) : refuse en mode riche",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-bombe-imbrication.svg",
+      "famille": "v2-masques",
+      "vecteur": "Douze masques emboites (une forme de chacun masquee par le suivant) : refuse au-dela de PROFONDEUR_DEFS_MAX (8), sans rien construire de plus",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-bombe-references.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un masque de 50 formes cite par 500 groupes (25 000 formes de definitions) : refuse au-dela de NOEUDS_DEFS_MAX, la lecture termine vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-renvoi-externe.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masques qui renvoient a un fichier ou a une adresse exterieurs : refuses en mode riche ; le nettoyage les neutralise (none), le dessin s'ouvre sans eux",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-masques-css-image.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque CSS (mask-image vers une adresse) : refuse en mode riche, « un masque CSS » ; le nettoyage neutralise l'adresse, le mode plat ne lit pas mask-image",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-masques-css-degrade.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque CSS par une feuille de style (-webkit-mask-image en degrade, mask-composite) : refuse en mode riche ; le mode plat ne le lit pas (rien ne change en plat)",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-masques-porteur-use.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque pose sur un clone <use> : refuse en le nommant, « un masque ou une découpe (posé sur un clone <use>) »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-region-demesuree.svg",
+      "famille": "v2-masques",
+      "vecteur": "Region de masque demesuree (x=-1e308, width=1e309, height=NaN) : refusee comme toute coordonnee hors bornes, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
     }
   ]
 }

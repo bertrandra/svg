@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <mask id="lumiere">
+      <rect x="20" y="20" width="160" height="80" fill="#ffffff"/>
+      <circle cx="100" cy="60" r="30" fill="#808080"/>
+      <path d="M30 30L60 30L45 55Z" fill="black"/>
+    </mask>
+  </defs>
+  <g mask="url(#lumiere)">
+    <rect x="10" y="10" width="180" height="100" fill="#1f5fb0"/>
+    <circle cx="150" cy="40" r="25" fill="#f2b705" stroke="#15181d" stroke-width="3"/>
+  </g>
+  <path d="M150 100L190 100L170 118Z" fill="#c81e28"/>
+</svg>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120px" height="120px" viewBox="0 0 120 120" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 70.3 (109109) - https://sketch.com -->
+    <title>Masque</title>
+    <defs>
+        <circle id="path-1" cx="50" cy="50" r="50"></circle>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Artboard" transform="translate(-10.000000, -10.000000)">
+            <g id="Avatar" transform="translate(20.000000, 20.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <use id="Mask" fill="#D8D8D8" xlink:href="#path-1"></use>
+                <rect id="Rectangle" fill="#1F5FB0" mask="url(#mask-2)" x="-10" y="55" width="120" height="60"></rect>
+                <path d="M-10,45 C20,25 50,65 80,45 C95,35 105,35 110,40 L110,60 L-10,60 Z" id="Wave" fill="#F2B705" mask="url(#mask-2)"></path>
+            </g>
+        </g>
+    </g>
+</svg>

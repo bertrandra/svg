@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <linearGradient id="fondu">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.2" stop-color="white"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="dissolution">
+      <rect x="0" y="0" width="200" height="60" fill="url(#fondu)"/>
+      <ellipse cx="100" cy="90" rx="90" ry="28" fill="url(#halo)"/>
+    </mask>
+  </defs>
+  <g mask="url(#dissolution)">
+    <rect x="0" y="0" width="200" height="120" fill="#1f5fb0"/>
+    <path d="M0 80C50 40 100 120 150 80C170 64 185 64 200 80L200 120L0 120Z" fill="#f2b705"/>
+  </g>
+</svg>

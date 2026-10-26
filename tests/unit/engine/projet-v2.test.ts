@@ -8,7 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { creerDecoupe, dupliquer, ecrireDessin, lireDessin, transformer, rotation, type Degrade, type DessinSvg, type Forme, type Groupe } from '../../../src/engine/editionSvg.js';
+import {
+  creerDecoupe, creerMasque, dupliquer, ecrireDessin, inverserMasque, lireDessin, transformer, rotation, type Degrade, type DessinSvg, type Forme, type Groupe, type Masque
+} from '../../../src/engine/editionSvg.js';
 import { etatDuProjet, formeDuProjet, formeProjet, projetDe, texteDuProjet, type EtatProjet } from '../../../src/engine/projet.js';
 import { FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, lireProjet } from '../../../src/model/projet.js';
 import { ARRETS_PROJET_MAX } from '../../../src/model/projetV2/peinture.js';
@@ -28,7 +30,7 @@ const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte',
 /** Les champs d'un groupe (etape 1 : sa base ; puis une ligne de CHAMPS_GROUPE_V2 par etape). */
 const CHAMPS_GROUPE: Readonly<Record<keyof Groupe, Portage>> = {
   id: 'porte', parent: 'porte', nom: 'porte', visible: 'porte', verrouille: 'porte', opacite: 'porte', origine: 'porte',
-  decoupe: 'porte', masque: 'etape 6', effets: 'porte'
+  decoupe: 'porte', masque: 'porte', effets: 'porte'
 };
 
 const lire = (nom: string, modele: 'plat' | 'riche' = 'plat'): DessinSvg => {
@@ -80,7 +82,7 @@ describe('le projet porte tout le modele', () => {
     const attendus = Object.entries({ ...CHAMPS_FORME, ...CHAMPS_DESSIN }).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
     expect(attendus).toEqual([]);
     const duGroupe = Object.entries(CHAMPS_GROUPE).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
-    expect(duGroupe).toEqual(['masque : etape 6']);
+    expect(duGroupe).toEqual([]);
   });
 
   it('un dessin plat garde son nuancier et ses reperes, au format 1', () => {
@@ -249,6 +251,12 @@ describe('les groupes dans le projet (etape 1)', () => {
   });
 });
 
+/** Un masque d'une forme, d'un identifiant que rien d'autre ne porte. */
+const masqueSimple: Masque = {
+  contenu: { formes: [{ id: 'f900', d: [{ c: 'M', p: [0, 0] }, { c: 'L', p: [10, 0] }, { c: 'L', p: [10, 10] }, { c: 'Z', p: [] }], remplissage: '#ffffff', contour: null, epaisseur: 0, opacite: 0.5, regle: 'nonzero', visible: true, verrouille: false }] },
+  type: 'alpha', region: { x: -1.25, y: 0, l: 12.5, h: 1e-3 }
+};
+
 describe('les decoupes dans le projet (etape 5)', () => {
   const plein = (): DessinSvg => {
     const d = lire('v2/decoupes-imbriquees.svg', 'riche');
@@ -262,7 +270,10 @@ describe('les decoupes dans le projet (etape 5)', () => {
     const d = plein();
     const avecDecoupe = Object.values(d.groupes ?? {}).find(x => x.decoupe);
     // Un parent neuf, qui n'enveloppe que ce groupe : l'arbre reste bien forme.
-    const g: Groupe = { ...(avecDecoupe as Groupe), parent: 'g99', nom: 'Fenêtre', visible: false, verrouille: true, opacite: 0.4, origine: ['game-icons:a'], effets: { flou: { ecart: 1.5 } } };
+    const g: Groupe = {
+      ...(avecDecoupe as Groupe), parent: 'g99', nom: 'Fenêtre', visible: false, verrouille: true, opacite: 0.4, origine: ['game-icons:a'], effets: { flou: { ecart: 1.5 } },
+      masque: masqueSimple
+    };
     expect(Object.keys(g).sort()).toEqual(portes);
     const x: DessinSvg = { ...d, groupes: { ...d.groupes, [g.id]: g, g99: { id: 'g99', visible: true, verrouille: false } } };
     expect(allerRetour(etat(x)).rouvert.dessin.groupes?.[g.id]).toEqual(g);
@@ -302,6 +313,72 @@ describe('les decoupes dans le projet (etape 5)', () => {
     // L'identifiant d'une forme du dessin, repris dans une decoupe : I1, verifie a l'ouverture.
     expect(ouvrir(avec({ formes: [{ ...sansParent, id: d.formes[0]?.id }] }))).toBe('Ce projet porte des groupes mal formés.');
     // Au format 1, la table des groupes, et la decoupe avec elle, est ignoree.
+    const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
+    expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.groupes).toBeUndefined();
+  });
+});
+
+describe('les masques dans le projet (etape 6)', () => {
+  const noms = ['masques-groupe', 'masques-feuille', 'masques-alpha', 'masques-region', 'masques-contenu-boite', 'masques-degrade', 'masques-transformes', 'masques-use', 'masques-imbriques', 'masques-ignores', 'masques-partages'];
+
+  it('un dessin a masques s ecrit au format 2 et fait l aller-retour exact : modele, contenu peint, texte JSON et SVG ecrit', () => {
+    for (const nom of noms) {
+      const d = lire('v2/' + nom + '.svg', 'riche');
+      const tous = d.formes.map(f => f.id);
+      for (const x of [d, transformer(d, tous, rotation(17, 40, 30)), dupliquer(d, Object.keys(d.groupes ?? {}), 5, 5).dessin]) {
+        const { texte, rouvert } = allerRetour(etat(x));
+        expect(JSON.parse(texte).version, nom).toBe(VERSION_PROJET);
+        expect(rouvert.dessin, nom).toEqual(x);
+        expect(texteDuProjet(projetDe(rouvert)), nom).toBe(texte);
+        expect(ecrireDessin(rouvert.dessin, 3), nom).toBe(ecrireDessin(x, 3));
+      }
+    }
+    const plat = lire('chemins.svg');
+    const cree = creerMasque(plat, plat.formes.map(f => f.id).slice(0, 3));
+    expect(cree.erreur).toBeUndefined();
+    const inverse = inverserMasque(cree.dessin, cree.id ?? '');
+    expect(allerRetour(etat(inverse.dessin)).rouvert.dessin).toEqual(inverse.dessin);
+  });
+
+  it('une image dans un masque fait l aller-retour, et ses octets sont verifies a l ouverture comme ceux du dessin', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><mask id="m"><image href="' + png + '" width="50" height="50"/></mask></defs>'
+      + '<g mask="url(#m)"><rect width="100" height="100" fill="#c81e28"/></g></svg>';
+    const r = lireDessin(svg, { modele: 'riche' });
+    if ('erreur' in r) throw new Error(r.erreur);
+    const { texte, rouvert } = allerRetour(etat(r.dessin));
+    expect(rouvert.dessin).toEqual(r.dessin);
+    // Des octets menteurs (un SVG annonce PNG) dans le contenu d'un masque : refuses a l'ouverture.
+    const menteur = texte.replace(png.slice('data:image/png;base64,'.length), Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString('base64'));
+    const lu = lireProjet(JSON.parse(menteur));
+    if ('erreur' in lu) throw new Error(lu.erreur);
+    expect('erreur' in etatDuProjet(lu.projet)).toBe(true);
+  });
+
+  it('refuse en le nommant un masque mal forme, trop emboite, et des identifiants repris dans un masque a l ouverture', () => {
+    const d = lire('v2/masques-use.svg', 'riche');
+    const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { dessin: { formes: Array<Record<string, unknown>>; groupes: Record<string, Record<string, unknown>> } };
+    const cle = Object.keys(base.dessin.groupes).find(k => base.dessin.groupes[k]?.['masque'] !== undefined) ?? '';
+    const mq = base.dessin.groupes[cle]?.['masque'] as { region: Record<string, number>; formes: Array<Record<string, unknown>> };
+    const avec = (masque: unknown) => ({ ...base, dessin: { ...base.dessin, groupes: { ...base.dessin.groupes, [cle]: { ...base.dessin.groupes[cle], masque } } } });
+    const ouvrir = (x: unknown): string => { const r = lireProjet(x); if ('erreur' in r) return r.erreur; const e = etatDuProjet(r.projet); return 'erreur' in e ? e.erreur : ''; };
+    expect(ouvrir(avec(mq))).toBe('');
+    expect(ouvrir(avec({ ...mq, type: 'autre' }))).toMatch(/type d’un masque/);
+    expect(ouvrir(avec({ ...mq, region: { ...mq.region, l: -1 } }))).toMatch(/largeur de la région d’un masque/);
+    expect(ouvrir(avec({ ...mq, formes: [{ ...mq.formes[0], d: 'M0 0 A1 1 0 0 0 5 5' }] }))).toMatch(/mal formé/);
+    expect(ouvrir(avec({ ...mq, formes: [{ ...mq.formes[0], parent: 'g99' }, ...mq.formes.slice(1)] }))).toMatch(/dans un groupe absent/);
+    expect(ouvrir(avec({ ...mq, formes: [{ ...mq.formes[0], remplissage: 'url(#x)' }] }))).not.toBe('');
+    expect(ouvrir(avec({ ...mq, formes: [mq.formes[0], mq.formes[0]] }))).toMatch(/deux formes d’un masque/);
+    // L'identifiant d'une forme du dessin, repris dans un masque : I1, verifie a l'ouverture.
+    expect(ouvrir(avec({ ...mq, formes: [{ ...mq.formes[0], id: base.dessin.formes[0]?.['id'] }, ...mq.formes.slice(1)] }))).toBe('Ce projet porte des groupes mal formés.');
+    // Neuf masques emboites : au-dela de la borne de la lecture d'un SVG.
+    let profond: unknown = { type: 'luminance', region: { x: 0, y: 0, l: 1, h: 1 }, formes: [] };
+    for (let i = 0; i < 9; i++) {
+      const g = 'g' + (800 + i);
+      profond = { type: 'luminance', region: { x: 0, y: 0, l: 1, h: 1 }, formes: [{ ...mq.formes[0], id: 'f' + (800 + i), parent: g }], groupes: { [g]: { id: g, visible: true, verrouille: false, masque: profond } } };
+    }
+    expect(ouvrir(avec(profond))).toMatch(/masques emboîtés sur plus de 8 niveaux/);
+    // Au format 1, la table des groupes, et le masque avec elle, est ignoree.
     const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
     expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.groupes).toBeUndefined();
   });

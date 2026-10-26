@@ -150,6 +150,9 @@ export { creerDecoupe, liberer, MSG_DECOUPE } from './edition/decoupes.js';
 export { renumeroterContenus } from './edition/arbre.js';
 
 // ---- etape 6 : masques d'opacite
+export { masques, REFUS_MASQUES, MSG_MASQUES, transformerMasque } from './edition/fonctions/masques.js';
+export { creerMasque, libererMasque, inverserMasque, MSG_MASQUE } from './edition/masques.js';
+export type { OutilsTransformation } from './edition/fonctionnalites.js';
 
 // ---- etape 7 : effets
 export {

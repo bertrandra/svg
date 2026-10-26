@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <mask id="plan" maskUnits="userSpaceOnUse" x="10%" y="25" width="50%" height="50%">
+      <rect x="0" y="0" width="200" height="120" fill="#fff"/>
+    </mask>
+    <mask id="boite" x="0.25" y="10%" width="0.5" height="80%">
+      <rect x="0" y="0" width="200" height="120" fill="#fff"/>
+    </mask>
+    <mask id="unite" maskUnits="userSpaceOnUse" x="1em" y="0" width="200" height="120">
+      <rect x="0" y="0" width="200" height="120" fill="#fff"/>
+    </mask>
+  </defs>
+  <g mask="url(#plan)">
+    <rect x="0" y="0" width="200" height="60" fill="#1f5fb0"/>
+  </g>
+  <rect x="0" y="60" width="120" height="60" fill="#c81e28" mask="url(#boite)"/>
+  <circle cx="160" cy="90" r="25" fill="#f2b705" mask="url(#unite)"/>
+</svg>
