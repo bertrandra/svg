@@ -40,6 +40,9 @@ function DupliquerSurFeuille({ svgRef }: { svgRef: RefObject<SVGSVGElement | nul
   useEffect(() => { racine.current?.querySelector<HTMLElement>('.panneau-flottant-corps input, .panneau-flottant-corps button')?.focus(); }, []);
   // Fermer le panneau arrete un calcul en cours : rien n'est pose.
   const enCours = useRef<TachePlacement | null>(null);
+  // Le dessin du moment, lu a la fin d'un calcul : un dessin change entre-temps ne recoit pas des copies calculees sur un autre.
+  const dessinCourant = useRef(mo.dessin);
+  dessinCourant.current = mo.dessin;
   useEffect(() => () => enCours.current?.annuler(), []);
 
   const fermer = () => { calcul?.tache.annuler(); arg.ouvrir(null); svgRef.current?.focus(); };
@@ -64,6 +67,7 @@ function DupliquerSurFeuille({ svgRef }: { svgRef: RefObject<SVGSVGElement | nul
       poserCalcul(null);
       if (annule) { ac.dire('Placement arrêté : aucune copie posée.'); return; }
       // Le dessin a pu changer pendant le calcul : on ne pose rien sur un autre dessin que celui mesure.
+      if (dessinCourant.current !== dessin) { poserErreur('Le dessin a changé pendant le calcul : aucune copie posée. Relancez.'); ac.dire('Le dessin a changé pendant le calcul : aucune copie posée.'); return; }
       const r = finirPlacement(dessin, etat);
       if (!r.copies) { poserErreur(r.erreur ?? 'Aucune copie ne tient sur la feuille.'); ac.dire(r.erreur ?? 'Aucune copie ne tient sur la feuille.'); return; }
       ac.appliquer(() => r.dessin);
