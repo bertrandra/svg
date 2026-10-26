@@ -9,7 +9,8 @@ import { passer } from './passage.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/hostile');
 
-interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus' }
+/** `attendu` : l'issue en lecture plate (l'embarquement) ; `attenduRiche`, quand elle differe, celle de la lecture riche (la page, ADR-0012, etape 14). */
+interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus'; attenduRiche?: 'ouvre' | 'refus' }
 const index = JSON.parse(readFileSync(resolve(DOSSIER, 'index.json'), 'utf8')) as { fichiers: Ligne[] };
 
 /** Le texte tel que la page le lit : `File.text()` decode en UTF-8 et retire la marque d'ordre des octets. */
@@ -33,5 +34,17 @@ describe('le corpus hostile', () => {
       expect(p.defauts.join('\n')).toBe('');
       expect(p.ouvre, l.attendu === 'ouvre' ? 'devait s ouvrir ; refus : ' + p.refus.join(' | ') : 'devait etre refuse').toBe(l.attendu === 'ouvre');
     });
+
+    it(l.fichier + ' : en lecture riche, celle de la page', () => {
+      const attendu = l.attenduRiche ?? l.attendu;
+      const p = passer(lireComme(l.fichier), undefined, false, 'riche');
+      expect(p.plantage, 'exception echappee').toBeNull();
+      expect(p.defauts.join('\n')).toBe('');
+      expect(p.ouvre, attendu === 'ouvre' ? 'devait s ouvrir ; refus : ' + p.refus.join(' | ') : 'devait etre refuse').toBe(attendu === 'ouvre');
+    });
   }
+
+  it('ne dit une issue riche que la ou elle differe de l issue plate', () => {
+    for (const l of index.fichiers) if (l.attenduRiche !== undefined) expect(l.attenduRiche, l.fichier).not.toBe(l.attendu);
+  });
 });
