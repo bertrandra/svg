@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { EVENEMENTS, appliquerCorrections, classer, construireBibliotheque, motsInconnus, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
+import { EVENEMENTS, appliquerCorrections, classer, construireBibliotheque, motsInconnus, nomAffiche, nomAnglais, nomFrancais, type IconeSource } from '../../../src/model/bibliotheque.js';
+import { definirLangue } from '../../../src/util/i18n.js';
 import { lireDessin } from '../../../src/engine/editionSvg.js';
 import { chercher } from '../../../src/model/recherche.js';
 
@@ -14,6 +15,28 @@ describe('nomFrancais', () => {
     expect(nomFrancais('abstract-042')).toBe('abstrait 042');
     expect(nomFrancais('pumpkin-lantern')).toBe('citrouille-lanterne');
     expect(nomFrancais('the-ultimate-xyzzy')).toBe('xyzzy ultimate');
+  });
+});
+
+describe('nomAnglais et nomAffiche (ADR-0042)', () => {
+  it('rend les mots de l identifiant dans leur ordre, les nombres a la fin, sans rien traduire', () => {
+    expect(nomAnglais('broken-heart')).toBe('broken heart');
+    expect(nomAnglais('abstract-042')).toBe('abstract 042');
+    expect(nomAnglais('dna1')).toBe('dna1');
+    expect(nomAnglais('snowflake-1')).toBe('snowflake 1');
+    expect(nomAnglais('the-ultimate-xyzzy')).toBe('the ultimate xyzzy');
+  });
+
+  it('montre le nom francais (corrige ou non) en francais, et les mots de l identifiant en anglais', () => {
+    const entree = { id: 'broken-heart', nom: 'cœur brisé' };
+    expect(nomAffiche(entree)).toBe('cœur brisé');
+    definirLangue('en');
+    try {
+      expect(nomAffiche(entree)).toBe('broken heart');
+      expect(nomAffiche({ id: 'pumpkin-lantern', nom: 'Citrouille corrigée' })).toBe('pumpkin lantern');
+    } finally {
+      definirLangue('fr');
+    }
   });
 });
 
