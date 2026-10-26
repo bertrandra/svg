@@ -200,6 +200,10 @@ empreintes.
 
 ### Corrigé
 
+- Site PHP : un projet s'ouvre derrière un hébergeur qui compresse ses réponses (nginx en gzip ou brotli). La compression
+  affaiblit l'ETag (`W/"1"`) ; la page ne lisait que la forme forte et disait « Le serveur a rencontré une erreur » alors que le
+  projet était rendu. La page et le serveur (`If-Match`) acceptent les deux formes (vu sur un site en ligne, sous Chrome).
+
 - Les tests du site PHP sous Firefox ne tombent plus une fois sur deux sur le premier chargement (`page.goto` à 10 s). Ni le site
   ni Firefox : la page est chargée (`readyState` à `complete`, mesuré), mais quand elle pose `Cross-Origin-Opener-Policy:
   same-origin`, Firefox change de groupe de contextes depuis l'`about:blank` d'une page neuve, et Playwright 1.56.1 perd alors

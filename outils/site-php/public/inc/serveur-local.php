@@ -1,7 +1,10 @@
 <?php
 // Le routeur du serveur integre de PHP, pour essayer le site sur sa machine (docs/deploiement-php.md, « Essayer en local ») :
 //
-//   php -S 127.0.0.1:8080 -t public public/inc/serveur-local.php
+//   PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8080 -t public public/inc/serveur-local.php
+//
+// Plusieurs travailleurs : le site se demande a lui-meme, une fois par heure, si data/pwd se lit ; avec un seul, cette requete
+// attendrait la fin de la page (3 s) et le site dirait a tort que sa protection n'a pas pu etre verifiee.
 //
 // `php -S` n'applique pas les .htaccess : ce routeur refuse a leur place data/ (mot de passe, projets, sessions), inc/, les reglages
 // et les fichiers caches, puis laisse le serveur integre servir le reste. Il ne fait rien ailleurs que sous `php -S` (et inc/ est
