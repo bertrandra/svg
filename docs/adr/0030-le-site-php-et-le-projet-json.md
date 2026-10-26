@@ -3,7 +3,8 @@
 **Date :** 25 octobre 2026
 **Statut :** acceptée (prolonge les ADR-0001, 0010, 0013, 0014, 0017, 0022, 0025, 0026, 0028 et 0031 ; amende la règle « un seul
 `fetch` dans `src/` » de l’ADR-0025 et précise « Rien ne s’écrit sans le geste de fin » de l’ADR-0001) ; **aucun octet écrit ne
-change** : la page autonome, le bundle d’embarquement et toutes les références d’écriture sont intacts
+change** : la page autonome, le bundle d’embarquement et toutes les références d’écriture sont intacts ; **révisée le 26 octobre
+2026** : un seul format de projet, la version 1, qui porte tout le modèle (voir « Révision du 26 octobre 2026 »)
 
 ## Contexte
 
@@ -174,6 +175,41 @@ directement. Le détail est dans `docs/securite.md`, § 9.
   sont pas chiffrés sur le disque ; la vignette d’un très gros dessin (plus de 200 Ko) n’est pas gardée ; un projet vierge ne
   s’enregistre qu’avec une forme visible (comme « Enregistrer » partout) ; la corbeille ne se vide qu’à la main ; la vérification
   HTTP de `data/pwd` demande cURL ; aucun essai sur un hébergement réel (Apache, nginx, mutualisé) n’a été fait ici.
+
+## Révision du 26 octobre 2026 — un seul format de projet
+
+**Contexte.** Le modèle v2 (ADR-0012) avait ajouté au projet un format 2 (`VERSION_PROJET = 2`) : un dessin plat s’écrivait au
+format 1 (`VERSION_PROJET_PLAT`), octet pour octet comme avant, un dessin riche (groupes, peintures, images, découpes, masques,
+effets, motifs) au format 2, avec une migration 1 → 2 (l’identité) et une règle : au format 1, un champ v2 est inconnu, donc
+ignoré. Tout cela ne servait qu’à protéger des projets déjà enregistrés. Or le site n’a jamais été mis en ligne : **aucun projet
+JSON n’existe à conserver** (décision du propriétaire, 26 octobre 2026).
+
+**Décision.** Le projet n’a qu’un format, **la version 1**, qui porte tout le modèle :
+
+- `VERSION_PROJET = 1`, `VERSION_PROJET_PLAT` n’existe plus ; `projetDe` écrit toujours `"version": 1`.
+- Les champs du modèle v2 sont des champs facultatifs comme les autres, **lus et validés toujours**, sans condition de version
+  (`lireChampsFormeV2` ne reçoit plus de version ; la table `groupes` se lit dès qu’elle est présente). La règle « ignoré au
+  format 1 » disparaît : un champ v2 mal formé est refusé en le nommant, jamais ignoré.
+- `MIGRATIONS` est vide ; la mécanique de `migrer` et le test « chaque version antérieure a sa migration » restent pour l’avenir.
+  **La chaîne n’est jamais tronquée à partir d’aujourd’hui** : le jour où un format 2 existera, la migration du format 1 y entrera.
+- Toute autre version est refusée en la nommant : une version supérieure est « plus récente » (« … (format 2) ; cette version lit
+  les projets jusqu’au format 1. Mettez le site à jour pour l’ouvrir. »), une version qui n’est pas un entier positif est
+  « illisible ».
+
+**Pourquoi.** Deux versions pour un seul programme, c’était deux chemins de lecture, une règle d’oubli silencieux (un champ v2 au
+format 1) et des tests qui ne gardaient aucun fichier réel. Un seul format est plus simple à lire, à valider et à faire évoluer ; la
+règle « un document plus récent que le programme est refusé » reste entière.
+
+**Conséquences.**
+
+- **Un dessin plat produit exactement le même JSON qu’avant** (il était déjà au format 1) : vérifié sur toutes les références
+  d’écriture lues en plat (305 projets, mêmes octets) ; un dessin riche passe de `"version": 2` à `"version": 1`, le reste du texte
+  inchangé (279 projets) ; le SVG réécrit depuis chaque projet rouvert est le même à l’octet (584 sur 584). Aucune référence
+  d’écriture n’a été régénérée.
+- **Le serveur PHP ne change pas** : il ne juge pas le format, seulement que la version est un entier lisible (1 à 1000) ; c’est le
+  client, livré avec lui, qui refuse une version qu’il ne lit pas.
+- Un champ v2 entre toujours au projet par une ligne de `model/projetV2/champs.ts` et de `engine/projetV2/champs.ts` (ADR-0012,
+  annexe 8 §0), sans toucher à la version.
 
 ## Alternatives écartées
 

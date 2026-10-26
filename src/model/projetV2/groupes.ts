@@ -1,8 +1,8 @@
 // Les groupes dans le projet JSON (ADR-0012, etape 1 ; ADR-0030) : la table `dessin.groupes`, champ pour champ celle du modele
 // (engine/edition/types.ts, `Groupe`), absente d'un dessin plat. La validation borne et verifie ce qu'elle peut sans le moteur
 // (chaque cle est l'identifiant de son groupe, chaque parent existe, la table n'est jamais vide) ; l'arbre lui-meme (cycles,
-// profondeur, contiguite) est verifie a l'ouverture par le moteur (`verifierDessin`, engine/projet.ts). Comme tout champ v2, la
-// table n'existe qu'au format 2 : un projet au format 1 qui en porterait une la voit ignoree (model/projet.ts). Pur.
+// profondeur, contiguite) est verifie a l'ouverture par le moteur (`verifierDessin`, engine/projet.ts). Comme tout champ v2, elle
+// est facultative et toujours lue (model/projet.ts). Pur.
 
 import { CHAMPS_GROUPE_V2, type ChampsGroupeV2, type OutilsProjet } from './champs.js';
 
