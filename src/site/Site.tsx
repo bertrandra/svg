@@ -24,7 +24,8 @@ import { useFocusDialogue } from '../zones/focusEditeur.js';
 import { lireNuancier } from '../zones/nuancier.js';
 import { svgDeBibliotheque } from '../zones/provenanceBibliotheque.js';
 import { phraseIgnores } from '../zones/aidesEditeur.js';
-import { modeleRetenu } from '../zones/modele.js';
+import { MODELE_PAGE, modeleRetenu, refusAvecRepli } from '../zones/modele.js';
+import type { Modele } from '../zones/typesEditeur.js';
 import type { TonMessage } from '../zones/commun/Message.js';
 import { nomDeFichier } from '../util/texte.js';
 import type { Voie } from '../zones/publics.js';
@@ -32,6 +33,10 @@ import { EcranProjets, type GestesProjets } from './Projets.js';
 import { imageSource, memeEtat, projetAEnregistrer, travailDuProjet, travailDuSvg, type TravailOuvert } from './projetSite.js';
 
 const STOCKAGE = stockageNavigateur();
+
+/** Le modele de lecture du site, comme celui de la page : le reglage garde, son defaut sinon (ADR-0012, etape 14). */
+const modeleDuSite = (): Modele => modeleRetenu(STOCKAGE, MODELE_PAGE);
+
 const NUANCIER: readonly TeinteProjet[] = lireNuancier(NUANCIER_EXEMPLE);
 const ORDRE: readonly Voie[] = ['svg', 'image', 'formes'];
 const GUIDE: OptionsGuide = { demarrer: 'jamais', recuperer: 'enregistrer' };
@@ -147,8 +152,8 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
 
   const ouvrirSvg = useCallback((nom: string, texte: string, ignores: readonly string[] = []) => {
     // Le modele de lecture (ADR-0012, annexe 5 §3) : le reglage garde, que le menu Edition de l'editeur change.
-    void travailDuSvg(nom, texte, NUANCIER, ignores, modeleRetenu(STOCKAGE)).then(async t => {
-      if ('erreur' in t) { dire(t.erreur); return; }
+    void travailDuSvg(nom, texte, NUANCIER, ignores, modeleDuSite()).then(async t => {
+      if ('erreur' in t) { dire(refusAvecRepli(texte, t.erreur, modeleDuSite())); return; }
       const img = image.current?.nom === nom ? await imageSource(nom, image.current.fichier) : null;
       ouvrirTravail(img ? { ...t, images: [img] } : t);
       if (t.ignores?.length) dire(phraseIgnores(t.ignores));
@@ -240,7 +245,7 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
       <EcranProjets projets={projets} message={message} gestes={gestes} csrf={csrf} voies={voies} pied={pied} />
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
       {edition && t ? (
-        <EditeurSvg key={edition.cle} svg="" dessin={t.dessin} titre={t.nom} nom={nomDeFichier(t.nom, 'projet')} nuancier={t.nuancier} bibliotheque="a-charger" stockage={STOCKAGE}
+        <EditeurSvg key={edition.cle} svg="" dessin={t.dessin} titre={t.nom} nom={nomDeFichier(t.nom, 'projet')} nuancier={t.nuancier} bibliotheque="a-charger" stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE}
           guide={GUIDE} ignores={t.ignores} production={t.production} libelleEnregistrer="Enregistrer" policesEnLigne
           enregistrement={enregistrement} changement={changement} ctrlSEnregistre actionsHote={actionsHote}
           fermer={fermer} enregistrer={(_svg, etat) => { void enregistrer(etat); }} />

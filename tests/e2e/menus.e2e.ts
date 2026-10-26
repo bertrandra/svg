@@ -162,7 +162,7 @@ describe('menus de la barre', () => {
     // Le menu Fichier ne porte plus ni telechargement, ni code a copier, ni formats.
     await page.keyboard.press('Escape');
     await ouvrirMenu(page, 'Fichier');
-    expect(await page.getByRole('menu', { name: 'Fichier' }).locator('.menu-libelle').allInnerTexts()).toEqual(['Terminer', 'Garder un brouillon', 'Insérer depuis une adresse…', 'À propos et crédits', 'Fermer l’éditeur']);
+    expect(await page.getByRole('menu', { name: 'Fichier' }).locator('.menu-libelle').allInnerTexts()).toEqual(['Terminer', 'Garder un brouillon', 'Télécharger le SVG à plat', 'Insérer une image…', 'Insérer depuis une adresse…', 'À propos et crédits', 'Fermer l’éditeur']);
     expect(await page.locator('.menu-panneau .contenu-export').count()).toBe(0);
     await page.keyboard.press('Escape');
     await ouvrirMenu(page, 'Autres formats');

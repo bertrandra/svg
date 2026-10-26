@@ -79,7 +79,9 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `prefers-reduced-motion` | 74 | 63 | 10.1 | Absent : les animations jouent |
 | `prefers-color-scheme` | 76 | 67 | 12.1 | Absent : thème clair |
 | `all: revert` | 84 | 67 | 9.1 | Aucun : le bouclier de l’embarquement n’agit pas, l’hôte peut teinter les boutons. Sous le plancher technique |
-| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image |
+| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image. Les découpes du modèle riche sont des `<clipPath>` SVG en unités du plan (`userSpaceOnUse`), lus partout bien avant ces versions |
+| `<filter>` | 8 | 3 | 6 | Aucun, sous le plancher technique : le flou et l’ombre du modèle riche (ADR-0012, étape 7) s’écrivent en primitives que tous lisent (`feGaussianBlur`, `feOffset`, `feFlood`, `feComposite`, `feMerge` ; `feDropShadow` se lit, ne s’écrit jamais), sur une région explicite et en `color-interpolation-filters="sRGB"`, dont le défaut linéaire varie d’un moteur à l’autre. Au-delà de 20 nœuds à effet, la toile retire les filtres pendant un geste (`data-brouillon`) |
+| `mask-type` | 24 | 35 | 7 | Aucun, sous le plancher technique : un masque alpha du modèle riche s’écrit `style="mask-type:alpha"` ; un moteur qui l’ignorerait le peindrait en luminance |
 | `vector-effect` | 6 | 15 | 5.1 | Aucun : les traits de sélection grossiraient avec le zoom. Sous le plancher technique |
 | `<details>` | 12 | 49 | 6 | Aucun, toujours présent |
 | `type="color"` | 20 | 29 | 12.1 | Aucun, toujours présent |
@@ -218,6 +220,13 @@ de Playwright 1.56.1) avant et après correction :
 | Couleur d’outil des curseurs (`finition.e2e.ts`, deux thèmes) : `scrollbarColor` indéfini | WebKit ne connaît pas `scrollbar-color` (ligne du tableau, repli « barres aux couleurs du système ») | Le test lit `CSS.supports` : l’absence n’est admise que sous WebKit, le jeton est exigé ailleurs |
 | Texte d’exemple en grotesque (`finition.e2e.ts`, deux thèmes) : la chasse fixe du champ | Test : WebKit ne calcule pas le style de `::placeholder` par `getComputedStyle`, il rend celui du champ (sonde : couleur et famille du champ, pas de l’exemple) | Une sonde dit si le moteur le calcule ; sinon la couleur, la famille et l’opacité sont relues dans les feuilles (dernière règle `::placeholder` qui vise le champ) et calculées sur un élément voisin. Le contraste de 4,5:1 est ainsi mesuré pour de bon sous WebKit, il ne l’était pas |
 | La molette qui retire la ligne au focus (`couleurs-nombreuses.e2e.ts`) : 3 123 px au lieu de 3 600 | Test : passé 1 000 px, il n’attendait plus qu’un cran ait porté avant d’envoyer le suivant, et WebKit en perdait ; cran par cran, la liste va jusqu’au bout, focus retiré compris (mesuré) | Chaque cran est attendu |
+
+La bascule du modèle riche (ADR-0012, étape 14, 26 octobre 2026), en local, suite entière : Firefox 142 et WebKit 26 **entièrement
+verts** (1 492 tests passés dans chacun, les 4 non joués étant les captures demandées de `texte-enveloppe.e2e.ts`), Chromium 141 aussi,
+sauf un audit axe intermittent (un bouton de constat Cricut survolé à 4,33:1, défaut de la page, corrigé, son fichier et quatre autres
+rejoués verts dans les trois). En route, sous Firefox seul : un clic synthétique ne choisit pas une forme dans un contexte tactile (le
+test la touche), et Firefox tronque au pixel les coordonnées du pointeur (un geste peut perdre un pixel : le test de l'aimant des repères
+visait 5,8 px pour une attraction à 6). Le détail est à l'annexe 8 de l'ADR-0012, « Ce que l'étape 14 a posé ».
 
 Trouvé en levant le saut du contraste forcé, **défaut de la page sous WebKit** : un focus posé par script pendant un `keydown`
 dont le geste par défaut est empêché (`preventDefault`, pour que la flèche ne fasse pas défiler la page) n’y reçoit pas

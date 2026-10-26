@@ -43,19 +43,21 @@ describe('edition', () => {
       const toile = await haut('.editeur-svg-toile'), cale = page.locator('.editeur-cale-selection');
       expect(await cale.count()).toBe(1);
       expect(await cale.getAttribute('aria-hidden')).toBe('true');
-      await forme(page, 'f2').click();
+      // Au doigt, un toucher : sous Firefox, un contexte tactile ne choisit pas une forme par un clic de souris synthetique.
+      if (tactile) await forme(page, 'f2').tap(); else await forme(page, 'f2').click();
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
       expect(await cale.count()).toBe(0);
       expect(await haut('.editeur-svg-toile')).toBe(toile);
     }
   });
 
-  it('range l\'inspecteur en sections sans cadre, trois ouvertes (le nuancier, ADR-0037) et le chiffre ferme', async () => {
+  it('range l\'inspecteur en sections sans cadre, trois ouvertes (le nuancier, ADR-0037), les effets du modele riche et le chiffre fermes', async () => {
     const page = await editeur();
     await forme(page, 'f2').click();
-    await attend(() => sections(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille', 'Transformer']);
+    await attend(() => sections(page)).toEqual(['Apparence', 'Effets', 'Nuancier', 'Position et taille', 'Transformer']);
     expect(await sectionsOuvertes(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille']);
-    expect(await page.locator('.editeur-inspecteur fieldset').count()).toBe(0);
+    // Sans cadre : le seul fieldset est celui du genre de peinture (Uni, Degrade...), un groupe de boutons radio sans bordure.
+    expect(await page.locator('.editeur-inspecteur fieldset').evaluateAll(l => l.filter(f => parseFloat(getComputedStyle(f).borderTopWidth) > 0).length)).toBe(0);
     // Une seule action pleine par panneau (ADR-0006) : ici aucune, tout est secondaire.
     expect(await page.locator('.editeur-cadre button.primaire:visible').count()).toBeLessThanOrEqual(1);
 
@@ -74,7 +76,7 @@ describe('edition', () => {
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(0);
     await forme(page, 'f3').click();
-    await attend(() => sections(page)).toEqual(['Apparence', 'Nuancier', 'Position et taille', 'Transformer']);
+    await attend(() => sections(page)).toEqual(['Apparence', 'Effets', 'Nuancier', 'Position et taille', 'Transformer']);
     expect(await sectionsOuvertes(page)).toEqual(['Nuancier', 'Position et taille']);
   });
 

@@ -84,6 +84,8 @@ const SONDES: ReadonlyArray<{ nom: string; motif: RegExp; dans: 'ts' | 'css' }> 
   { nom: 'prefers-color-scheme', motif: /prefers-color-scheme/, dans: 'ts' },
   { nom: 'all: revert', motif: /all:revert/, dans: 'ts' },
   { nom: 'clip-path', motif: /clipPath|clip-path/, dans: 'ts' },
+  { nom: '<filter>', motif: /feGaussianBlur/, dans: 'ts' },
+  { nom: 'mask-type', motif: /mask-type/, dans: 'ts' },
   { nom: 'vector-effect', motif: /vector-effect/, dans: 'css' },
   { nom: '<details>', motif: /<details/, dans: 'ts' },
   { nom: 'type="color"', motif: /type="color"/, dans: 'ts' },

@@ -7,7 +7,8 @@ Consignes pour travailler dans ce dépôt. Le contexte est dans `README.md` et `
 Un éditeur SVG autonome et embarquable, un convertisseur d'image en SVG, et une bibliothèque de
 formes classées par événement. **Un SVG réécrit aujourd'hui doit l'être à l'identique demain** : un
 changement qui déplace une coordonnée, un tracé ou un octet écrit est un événement de version
-majeure, jamais une correction discrète.
+majeure, jamais une correction discrète (dans le même modèle de lecture : l'embarquement garde `plat`, la page lit en `riche`
+depuis l'ADR-0012).
 
 ## Vérifier avant de pousser
 
@@ -49,9 +50,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
 
 ## Décisions déjà prises
 
-- **Un dessin à plat, pas un DOM** (ADR-0001) : `engine/editionSvg.ts` lit un SVG (`util/xml.ts`,
-  sans DOM) en chemins absolus M, L, C, Q, Z dans les coordonnées du plan de travail. Ce qui ne s'y
-  ramène pas est refusé en le nommant ; un `<use>` se déplie en formes plates, cycles et renvois externes refusés.
+- **Un dessin en feuilles, pas un DOM** (ADR-0001, amendé par l'ADR-0012) : `engine/editionSvg.ts` lit un SVG (`util/xml.ts`,
+  sans DOM) en feuilles de chemins absolus M, L, C, Q, Z dans les coordonnées du plan de travail ; les groupes sont un index
+  (`parent`, `groupes`), les dégradés, motifs, découpes, masques et effets des valeurs en ligne. En lecture `plat`, ce qui ne s'y
+  ramène pas est refusé en le nommant ; en `riche`, ce qui sort du sous-ensemble de l'annexe 5 l'est aussi ; un `<use>` se déplie
+  (en riche, la structure de sa cible est gardée), cycles et renvois externes refusés.
 - **Chaque opération est pure** et rend un nouveau dessin ; l'historique (`util/historique.ts`) est
   une pile d'états immuables, deux cents au plus, un geste continu fondu par sa clé.
 - **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
@@ -93,7 +96,9 @@ npm run test:php     # les tests du site PHP (tests/php/)
   tolérance ×3 puis ×9, puis refuse en le nommant ; un outil neuf ajoute des références, n'en réécrit aucune.
 - **Le texte reste vivant, le fichier porte des contours** (ADR-0022) : `Forme.texte` garde de quoi recomposer, composé en pur
   (`engine/texte.ts`) au-dessus d'une interface `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures
-  GSUB en option). Jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes ; au stylo, rien ne se remplit.
+  GSUB en option). Un texte vivant est une feuille ; jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes, « lettres
+  séparées » donnant en riche un groupe « Texte « … » » d'une forme par lettre (à plat, des formes à la racine) ; un `<text>` lu en
+  riche devient un groupe de lettres (étape 13c) ; au stylo, rien ne se remplit.
 - **Le texte se tape sur la toile** (ADR-0027) : un `<textarea>` transparent posé sur le texte porte le focus, la sélection et
   l'IME ; le curseur et la sélection se dessinent d'après `engine/texte/curseur.ts` (pur) ; une frappe est un geste d'historique,
   un texte vide n'est pas créé, Échap termine ; la barre de texte (`zones/BarreTexte.tsx`) porte le fréquent, le panneau garde
@@ -144,7 +149,7 @@ npm run test:php     # les tests du site PHP (tests/php/)
   nuancier de la page ou de l'hôte reste un groupe à part ; Maj+N et Alt+Maj+N sont pris.
 - **Le modèle v2 entre par des crochets, un dessin plat ne bouge pas** (ADR-0012, étape 0) : `estPlat` garde l'écriture d'avant,
   sans ligne commune avec `ecritureRiche.ts` ; une fonctionnalité est un fichier `engine/edition/fonctions/<nom>.ts` et une ligne de
-  `catalogue.ts`, sa descente `engine/descente/<nom>.ts` ; la lecture `plat` (défaut) ne consulte aucune fonctionnalité ; un
+  `catalogue.ts`, sa descente `engine/descente/<nom>.ts` ; la lecture `plat` (défaut de l'API et de l'embarquement) ne consulte aucune fonctionnalité ; un
   exporteur reçoit un `DessinPlat` par `aplatirPour` ; les références v1 sont gelées par `references-v1.sha256` ; le plan et les
   consignes des vagues sont dans `docs/adr/0012-annexes/08-plan-de-livraison.md`.
 - **Les repères sont un réglage du document, les répétitions des formes ordinaires** (ADR-0038) : `DessinSvg.reperes` (au millième,
@@ -177,10 +182,18 @@ npm run test:php     # les tests du site PHP (tests/php/)
   les abandonne et le dit ; une prise posée hors d'une feuille ou d'un groupe est refusée en disant où (`refusHorsFeuille`) ;
   `ContexteEcriture.courant()` donne le contenu à mesurer ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-effets-*`.
 - **Le modèle riche se règle et se voit par les crochets** (ADR-0012, étape 2) : le réglage `modele` (`svg.modele` dans le stockage
-  injecté, `plat` sans lui ; fixé, `plat` par défaut, chez un hôte qui embarque) ne décide que de la lecture ; la toile d'un dessin
+  injecté ; sans réglage lisible, `riche` dans la page et le site, `plat` ailleurs ; fixé, `plat` par défaut, chez un hôte qui embarque) ne décide que de la lecture ; la toile d'un dessin
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Le modèle riche est le défaut de la page, jamais celui de l'embarquement** (ADR-0012, étape 14, la bascule) : `MODELE_PAGE =
+  'riche'` (`zones/modele.ts`) est le seul défaut de la page autonome et du site PHP, qu'ils passent par `modeleParDefaut` ; un
+  stockage sans réglage lisible vaut ce défaut, la case « Groupes, dégradés, effets » du menu Édition ramène à plat (`svg.modele`) ;
+  `EditeurSvg.ouvrir`, `estEditable` et le composant sans `modele` ni `modeleParDefaut` lisent `plat`, et le défaut de
+  l'embarquement ne change pas d'une version à l'autre ; un refus propre au riche dit que la lecture à plat l'ouvrirait
+  (`refusAvecRepli`) ; le corpus hostile porte `attenduRiche` et se lit dans les deux modèles ; un test de navigateur qui exerce un
+  modèle le pose par l'option `modele` de session (après le chargement, jamais par un script d'amorce) ; le retour en arrière est le
+  revert d'un seul commit.
 - **Le contenu d'une découpe ou d'un masque se modifie par une lentille pure** (ADR-0012, paquet 8-D) : `engine/edition/lentilles.ts`
   (`contenuEnDessin`, `reposerContenu` : même objet sans changement, I1 renuméroté par `renommagesDe`, feuilles de découpe refixées,
   région d'un masque qui la suivait recalculée, plan jamais changé) ; contexte `{ groupe, dans, sous? }` lu par `niveauEdition`

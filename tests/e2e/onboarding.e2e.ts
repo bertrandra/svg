@@ -269,7 +269,7 @@ describe('la visite guidee', () => {
     expect(await lu(page)).toContain('Touchez « Plus » (les trois points)');
     expect((await mesure()).petits).toBe(0);
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG' }).tap());
+    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).tap());
     expect(f.texte).toContain('fill="' + VERT + '"');
     await attend(() => etape(page)).toBe('5');
     // La suite « bibliotheque » ouvre le tiroir de l'inspecteur sur la section de la bibliotheque.

@@ -1,10 +1,18 @@
 # ADR-0012 — Modèle v2 : groupes, masques, dégradés, texte vivant, effets
 
 **Date :** 24 octobre 2026
-**Statut :** proposée (remplace en partie l'ADR-0001, « un dessin à plat, pas un DOM » ; précise l'ADR-0004 §2 et
-la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de version majeure**
+**Statut :** **acceptée** le 26 octobre 2026, à la bascule (étape 14 : le modèle riche est le défaut de la page autonome et du
+site PHP, l'embarquement garde `plat`) ; proposée le 24 octobre 2026. Remplace en partie l'ADR-0001, « un dessin à plat, pas un
+DOM » ; précise l'ADR-0004 §2 et la règle « une forme par lettre » ; prolonge l'ADR-0009 ; **événement de version majeure** (0.2.0)
 
 **Avancement (25 octobre 2026) :**
+
+- **L'étape 14, la bascule, est faite** (26 octobre 2026) : `MODELE_PAGE = 'riche'` (`zones/modele.ts`), un seul commit de
+  valeurs par défaut, que l'on défait seul ; la page et le site PHP lisent en riche quand le stockage ne garde aucun réglage
+  lisible, la case « Groupes, dégradés, effets » du menu Édition ramène à plat ; `EditeurSvg.ouvrir`, `estEditable` et le
+  composant React sans `modele` ni `modeleParDefaut` restent à plat (annexe 9, question 3) ; aucun octet d'une lecture `plat` ne
+  bouge. Restent, faute d'outil ou d'humain : la revue au lecteur d'écran (annexe 8 §1, « Étape 14 », la liste), la comparaison
+  Inkscape/resvg d'un échantillon, et WebKit exigé en CI après son premier passage vert. Détail : annexe 8 §0.
 
 - Les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à plat d'aujourd'hui, sans attendre les
   groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md), qui précise le §4 et l'annexe 4
@@ -224,7 +232,8 @@ texte vivant (moteur), **11** texte vivant (interface), **12** images, **13** ex
 d'éditeurs (quatre lots), **14** bascule (défaut `riche` dans la page ; l'embarquement garde `plat` tant que
 l'hôte ne le demande pas). Jusqu'à quatre arbres de travail en parallèle (vague 1 : étapes 1, 3, 10, 12), carte
 des conflits en annexe 8 §3. *Révisé le 25 octobre 2026 : 10 et 11 sont faites ; vague 1 = 1, 3, 12 ; vague 2 = 2, 4, 5, 7
-(annexe 8 §0, §2, §5).*
+(annexe 8 §0, §2, §5). Le 26 octobre 2026 : l'étape 14, la bascule, est faite ; ce qui reste de chaque étape est dit à l'annexe 8
+§0.*
 
 ## Conséquences
 

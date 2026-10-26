@@ -172,6 +172,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-calques li { display: flex; align-items: center; gap: var(--esp-2xs); border-radius: var(--rayon-pastille); content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-calques li.choisi { background: var(--repli-cyan-18); } }
+/* Survolee, une ligne choisie garde l'encre : le cyan du survol des boutons sur la teinte de la selection tombe a 4:1. La rangee de la
+   selection ne decalant plus la liste, le pointeur reste sur la ligne qu'il vient de choisir. */
+.editeur-calques li.choisi .calque-nom:hover:not(:disabled) { color: var(--encre); }
 .editeur-calques .calque-nom { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--esp-s); background: transparent; color: var(--encre); border: 0; padding: var(--esp-2xs) var(--esp-xs); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
 /* Le nom d'une forme est son genre (« Cercle », « Polygone à 7 sommets ») : il se tronque plutot que de pousser les bascules ; son
    numero suit, a l'encre douce et en chiffres tabulaires, pour distinguer deux rectangles. */
@@ -729,6 +732,9 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .panneau-cricut .constat-a-corriger p, .panneau-cricut .constat-a-corriger .discret { color: var(--alerte); }
 .panneau-cricut .a-verifier { font-style: italic; }
 .panneau-cricut .constat .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
+/* Survole, un bouton d'un constat prend le cyan du survol des boutons discrets : le cyan d'outil sur le fond d'un constat bloquant ne
+   fait que 4,33:1 (axe, quand le pointeur reste sur le panneau). */
+.panneau-cricut .constat .boutons button:not(.discret):hover:not(:disabled) { color: var(--cyan-survol); }
 .panneau-cricut .export-cricut { margin: var(--esp-m) 0 var(--esp-s); }
 .panneau-cricut .titre-gravite:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 /* La confirmation d'un export avec des points a corriger : un message ambre dans le panneau, pas une fenetre ; l'action sure est pleine. */
@@ -987,7 +993,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .peinture-degradable, .editeur-degrade, .arret-choisi { display: grid; gap: var(--esp-s); min-width: 0; }
 .choix-genre-peinture { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-2xs) var(--esp-m); min-width: 0; }
 .choix-genre-peinture > legend { padding: 0; margin-bottom: var(--esp-2xs); }
-.choix-genre { display: inline-flex; align-items: center; gap: var(--esp-xs); font-size: var(--texte-compact); }
+.choix-genre { display: inline-flex; align-items: center; gap: var(--esp-xs); min-height: 24px; font-size: var(--texte-compact); }
 .liste-arrets { display: grid; gap: 1px; max-height: 200px; overflow: auto; padding: var(--esp-2xs); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); }
 .liste-arrets:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .arret-option { display: flex; align-items: center; gap: var(--esp-s); min-width: 0; padding: var(--esp-2xs) var(--esp-xs); border: 1px solid transparent; border-radius: var(--rayon-pastille); font-size: var(--texte-petit); color: var(--encre); cursor: pointer; }
@@ -1030,7 +1036,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .calque-pastilles > .pastille-icone { display: inline-flex; flex: none; align-items: center; height: 16px; }
 .pastille-mot { flex: none; white-space: nowrap; }
 /* La section Effets de l'inspecteur (ADR-0012, etape 8) : une case par effet, ses reglages dessous. */
-.case-effet { gap: var(--esp-s); }
+.case-effet { gap: var(--esp-s); min-height: 24px; }
 .case-effet > span { flex: 1; }
 .reglages-effet { display: grid; gap: var(--esp-s); min-width: 0; padding-inline-start: var(--esp-l); }
 @media (pointer: coarse), (max-width: 900px) {

@@ -104,17 +104,20 @@ describe('le texte vivant', () => {
     expect(await modifications(page)).toBe(1);
   });
 
-  for (const [mode, libelle, formes] of [['lettres', 'lettres séparées', 5], ['souder', 'souder les lettres qui se touchent', 1], ['tout', 'tout souder', 1]] as const) {
-    it('vectorise en mode « ' + libelle + ' » par le menu Edition, et Ctrl+Z rend le texte vivant', async () => {
-      const { page } = await navigateur.ouvrir();
+  // Le modele de la page (riche depuis l'etape 14 de l'ADR-0012) range les lettres separees dans un groupe ; a plat, elles restent a la racine.
+  for (const [mode, libelle, formes, modele] of [['lettres', 'lettres séparées', 5, 'riche'], ['lettres', 'lettres séparées', 5, 'plat'], ['souder', 'souder les lettres qui se touchent', 1, 'riche'], ['tout', 'tout souder', 1, 'riche']] as const) {
+    it('vectorise en mode « ' + libelle + ' » par le menu Edition (' + modele + '), et Ctrl+Z rend le texte vivant', async () => {
+      const { page } = await navigateur.ouvrir({ modele });
       // Des lettres serrees : en Pacifico, « mamie » s'ecrit d'un seul tenant.
       await ajouter(page, 'mamie', 'pacifico');
       await ouvrirMenu(page, 'Édition');
       await page.getByRole('menuitem', { name: new RegExp('^Vectoriser le texte : ' + libelle) }).click();
       await attend(() => message(page)).toMatch(/^1 texte vectorisé/);
-      const n = await nombreDeCalques(page) - 1;
+      // Les formes de la toile, la forme de depart comprise ; un groupe en riche pour les lettres separees, aucun sinon.
+      const n = await page.locator('.editeur-svg-toile path[data-id]').count() - 1;
       if (mode === 'lettres') expect(n).toBe(formes);
       else expect(n).toBeLessThanOrEqual(2);
+      expect(await page.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(mode === 'lettres' && modele === 'riche' ? 1 : 0);
       expect(await inspecteur(page).locator('textarea[aria-label="Texte"]').count()).toBe(0);
       await page.keyboard.press('Control+z');
       await attend(() => nombreDeCalques(page)).toBe(2);
@@ -155,7 +158,7 @@ describe('le texte vivant', () => {
     await attend(() => textePanneau(page).inputValue()).toBe('Atelier 2026\nParis');
     await page.keyboard.press('Control+Shift+O');
     await attend(() => message(page)).toMatch(/^1 texte vectorisé \(lettres séparées\)/);
-    await attend(() => nombreDeCalques(page)).toBeGreaterThan(10);
+    await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBeGreaterThan(10);
     await page.keyboard.press('Control+z');
     await attend(() => nombreDeCalques(page)).toBe(2);
   });

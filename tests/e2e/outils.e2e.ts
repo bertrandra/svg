@@ -74,9 +74,12 @@ describe('outils de l\'editeur', () => {
     await page.getByRole('menuitem', { name: /Ajuster à l’écran/ }).click();
     const f1 = await forme(page, 'f1').boundingBox();
     if (!f1) throw new Error('la forme f1 manque');
+    // Le bord gauche du fond (x = 16 sur un plan de 240) vient sur celui du cercle (x = 40) : 24 unites du plan, a l'echelle de la vue
+    // (le fond fait 208 de large). Le geste vise un alignement, il ne compte plus sur un decalage de la page a la premiere selection.
+    const echelle = f1.width / 208;
     await page.mouse.move(f1.x + 20, f1.y + 20);
     await page.mouse.down();
-    await page.mouse.move(f1.x + 60, f1.y + 50, { steps: 10 });
+    await page.mouse.move(f1.x + 20 + 24 * echelle, f1.y + 20, { steps: 10 });
     await attend(() => page.locator('.editeur-svg-toile .guide').count()).toBeGreaterThan(0);
     await page.mouse.up();
     await attend(() => page.locator('.editeur-svg-toile .guide').count()).toBe(0);

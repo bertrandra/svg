@@ -541,7 +541,7 @@ describe('clavier et lecteur d ecran', () => {
       await attend(() => dit(page)).toMatch(/^Outil sélection/);
       await page.keyboard.press('Escape');
       await page.keyboard.press('Control+g');
-      await attend(() => dit(page)).toBe('Choisissez au moins deux formes déverrouillées à combiner.');
+      await attend(() => dit(page)).toBe('Choisissez les formes à grouper.');
       await choisirForme(page, 3);
       await page.keyboard.press('Delete');
       await attend(() => dit(page)).toBe('1 forme supprimée.');

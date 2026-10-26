@@ -123,7 +123,7 @@ describe('recuperer son dessin', () => {
     await page.locator('.editeur-svg-toile path[data-id="f2"]').tap();
     await page.locator('.editeur-barre input[type=color][aria-label="Remplissage"]').fill(VERT);
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG' }).tap());
+    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).tap());
     expect(f.texte).toContain(VERT);
     const fin = page.locator('.editeur-etat').getByRole('button', { name: 'Terminer' });
     const r = await fin.boundingBox();

@@ -125,6 +125,8 @@ export const PAIRES: readonly PaireContraste[] = [
   { texte: 'sur-cyan', fond: 'cyan', minimum: AA, usage: 'libellé de l’action primaire et de l’outil actif' },
   { texte: 'alerte', fond: 'alerte-fond', minimum: AA, usage: 'message d’avertissement' },
   { texte: 'echec', fond: 'echec-fond', minimum: AA, usage: 'message d’échec, survol d’un geste destructif' },
+  { texte: 'cyan-survol', fond: 'echec-fond', minimum: AA, usage: 'bouton survolé d’un constat bloquant (Prêt pour Cricut)' },
+  { texte: 'cyan-survol', fond: 'alerte-fond', minimum: AA, usage: 'bouton survolé d’un constat à corriger (Prêt pour Cricut)' },
   { texte: 'echec', fond: 'panneau', minimum: AA, usage: 'geste destructif au repos' }
 ];
 

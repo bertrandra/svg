@@ -2,7 +2,7 @@
 // et en verifiant les invariants de chaque sortie. `performance.now()` ne sert qu'ici, dans les tests : le coeur
 // pur ne connait pas l'horloge.
 
-import { ecrireDessin, lireDessin } from '../../../src/engine/editionSvg.js';
+import { ecrireDessin, lireDessin, type OptionsLecture } from '../../../src/engine/editionSvg.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { violationsEcriture, violationsNettoyage } from './invariants.js';
 
@@ -32,15 +32,19 @@ export const tailleMax = (entree: number): number => 12 * entree + 6_000_000;
  * Le passage d'un texte par tous les chemins de la page. Le budget de temps vise un calcul pathologique (quadratique, non
  * borne), lent a chaque passage ; une machine chargee peut ralentir une seule mesure : un depassement se remesure donc une
  * fois, et seul un depassement qui se repete reste un defaut. Le reste du verdict ne depend pas de l'horloge.
+ *
+ * `modele` : la lecture de la page et de l'embarquement, `plat` par defaut (le contrat de l'embarquement) ; `riche` est celle de la
+ * page depuis la bascule (ADR-0012, etape 14). La relecture de l'ecrit se fait dans le meme modele.
  */
-export function passer(texte: string, budgetMs = BUDGET_MS, leger = false): Passage {
-  const premier = passerUneFois(texte, budgetMs, leger);
+export function passer(texte: string, budgetMs = BUDGET_MS, leger = false, modele: 'plat' | 'riche' = 'plat'): Passage {
+  const premier = passerUneFois(texte, budgetMs, leger, modele);
   if (!premier.defauts.some(d => d.startsWith('temps : '))) return premier;
-  const second = passerUneFois(texte, budgetMs, leger);
+  const second = passerUneFois(texte, budgetMs, leger, modele);
   return second.defauts.some(d => d.startsWith('temps : ')) ? premier : second;
 }
 
-function passerUneFois(texte: string, budgetMs: number, leger: boolean): Passage {
+function passerUneFois(texte: string, budgetMs: number, leger: boolean, modele: 'plat' | 'riche'): Passage {
+  const options: OptionsLecture = modele === 'riche' ? { modele } : {};
   const defauts: string[] = [], refus: string[] = [];
   let plusLong = { ms: 0, appel: '' }, plantage: string | null = null, ouvre = false, nettoye: string | null = null, ecrit: string | null = null;
 
@@ -66,7 +70,7 @@ function passerUneFois(texte: string, budgetMs: number, leger: boolean): Passage
     if (net === null || net.svg !== e) defauts.push(etape + '/enregistrement : le nettoyage change une ecriture');
     // La relecture de son propre resultat redonne les memes octets (sauf en mode leger : un million de points se relit en sept secondes).
     if (leger) return;
-    const relu = appeler(etape + '/relecture', () => lireDessin(e));
+    const relu = appeler(etape + '/relecture', () => lireDessin(e, options));
     if (relu === undefined) return;
     if ('erreur' in relu) defauts.push(etape + '/relecture : l ecriture ne se relit pas (' + relu.erreur + ')');
     else {
@@ -83,13 +87,13 @@ function passerUneFois(texte: string, budgetMs: number, leger: boolean): Passage
     for (const v of violationsNettoyage(propre.svg)) defauts.push('nettoyage : ' + v);
     if (propre.svg.length > tailleMax(texte.length)) defauts.push('nettoyage : sortie de ' + propre.svg.length + ' caracteres pour ' + texte.length + ' en entree');
     if (!(propre.ratio > 0 && Number.isFinite(propre.ratio))) defauts.push('nettoyage : ratio ' + propre.ratio);
-    const lu = appeler('lireDessin(nettoye)', () => lireDessin(propre.svg));
+    const lu = appeler('lireDessin(nettoye)', () => lireDessin(propre.svg, options));
     if (lu !== undefined) {
       if ('erreur' in lu) refus.push(lu.erreur); else { ouvre = true; verifierEcriture('page', lu.dessin); }
     }
   }
   // 2. Le chemin de l'embarquement : l'hote donne son texte tel quel, sans nettoyage prealable.
-  const direct = leger ? undefined : appeler('lireDessin(brut)', () => lireDessin(texte));
+  const direct = leger ? undefined : appeler('lireDessin(brut)', () => lireDessin(texte, options));
   if (direct !== undefined) {
     if ('erreur' in direct) refus.push(direct.erreur); else verifierEcriture('embarque', direct.dessin);
   }

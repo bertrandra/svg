@@ -387,7 +387,7 @@ describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)'
     actions.poserModele('riche');
     expect(etat.modele).toBe('riche');
     expect(stockage.lire('svg.modele')).toEqual({ modele: 'riche' });
-    expect(messages.at(-1)).toBe('Groupes, dégradés et effets activés (bêta) : les prochains fichiers ouverts gardent leurs groupes.');
+    expect(messages.at(-1)).toBe('Groupes, dégradés et effets activés : les prochains fichiers ouverts gardent leurs groupes.');
     const sans = monter(null);
     sans.actions.poserModele('riche');
     expect(sans.messages.at(-1)).toMatch(/ne garde pas ce réglage/);
