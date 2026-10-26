@@ -17,7 +17,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2, 4 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; 2-B, 2-C, 2-D proposés |
+| 4 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -152,6 +153,89 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   l'en-tête côté serveur (la bombe de pixels), laissé pour plus tard. **Aucune étape ne prévoit encore l'interface d'insertion**
   (« Insérer une image… » au menu Fichier, dépôt d'une image dans l'éditeur, l'« Insérer depuis une adresse » de l'ADR-0036 qui
   accepterait une image) : à ajouter au plan, après l'étape 2.
+
+### Ce que les paquets 2-0 et 2-A ont posé (26 octobre 2026)
+
+Aucun octet écrit ne bouge, la lecture `plat` est inchangée, et **un dessin plat rend sur la toile exactement le DOM d'avant**
+(un calque par forme ; `tests/unit/zones/toile.test.ts` compare, pour chaque SVG de référence lu à plat et en riche quand il reste
+plat, le rendu de la toile au corps d'avant recopié, en vue normale et en vue « contours »). Ce que les paquets suivants trouvent :
+
+- **Le réglage du modèle** (2-0) : `zones/modele.ts` (`Modele` est dans `typesEditeur.ts`) — `CLE_MODELE = 'svg.modele'`, valeur
+  `{ modele: 'plat' | 'riche' }` validée à la lecture (`lireModele` ; tout le reste vaut `plat`), `modeleRetenu(stockage)` (`plat`
+  sans stockage), `garderModele`, `optionsModele(m)` (rien pour `plat` : l'appel d'avant à l'identique), `porteModeleRiche(svg)` (le
+  marqueur sur la balise `<svg>`), `refusModele(svg, m, 'version' | 'brouillon')` et `phraseModele`. Le menu Édition porte la case
+  « Groupes, dégradés, effets (bêta) » (`modele-riche`) seulement quand l'éditeur a un stockage et que l'hôte n'a pas fixé le modèle ;
+  le changer vaut pour les SVG lus ensuite (le dessin ouvert reste tel qu'il a été lu, et s'affiche selon `estPlat`).
+- **La propriété `modele`** : `EditeurSvg` (`modele?: Modele` ; donnée, elle est fixe et la case disparaît ; absente, le réglage
+  gardé, lu une fois à l'ouverture), `EditeurSvg.ouvrir({ modele })` (validée par `verifierOptions` ; **`plat` par défaut et toujours
+  fixée** : un réglage gardé dans le stockage de l'hôte ne compte pas, annexe 5 §3), `estEditable(svg, modele?)`, `editable(svg,
+  modele)` (une image intégrée s'édite en riche). La page et le site lisent le réglage de leur stockage (`modeleRetenu`) pour ce
+  qu'ils lisent eux-mêmes ; la démonstration des intégrateurs passe `modele="plat"`, comme un hôte. **Chaque lecture des hôtes passe le
+  modèle** : `zones/lecture.ts` (déjà), `EditeurSvg`, `Application.tsx` (ouverture, fiche, téléchargement, autres formats),
+  `Exporter.tsx` (`contexteExport(…, modele)`, `ListeFormats`/`MenuAutresFormats` `modele`, `telechargerSvgPage(…, modele)`),
+  `Versions.tsx`, `actionsDessin.ts` (insertions, par `EtatLu.modele`), `InsererAdresse.tsx` (`svgAInserer(r, modele)`),
+  `io/texteSvg.ts` (`lettresDuSvg(svg, fontes, modele)`), `embarque.tsx`, `site/projetSite.ts` (`travailDuSvg(…, modele)`) et
+  `site/Site.tsx`. `session.ts` ne lit aucun SVG : le brouillon se juge à la reprise.
+- **Brouillon et versions v2 ouverts à plat** (annexe 5 §3) : une version au marqueur ne se rouvre pas (« Cette version emploie des
+  groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets (bêta) », menu Édition) pour l'ouvrir. »),
+  elle reste gardée ; le bandeau de reprise de la page dit la même chose d'un brouillon et propose « Activer le modèle riche et
+  reprendre » (qui garde le réglage puis ouvre) ; rien n'est effacé. Un projet du site (JSON natif) s'ouvre tel qu'il a été
+  enregistré quel que soit le réglage : il ne se relit pas.
+- **L'état d'`Interface`** (ADR-0010) : `modele`, `modeleFixe`, `contexte: ContexteEdition | null` (`{ groupe, dans? }`, toujours un
+  groupe du dessin du moment : un groupe défait, retiré ou annulé ramène à la racine, `contexteValide`), `deplies: ReadonlySet<string>`
+  (vide au départ ; aucun lecteur encore : c'est pour 2-B). **Verbes stables** : `poserModele(m)`, `poserContexte(c)`,
+  `entrerGroupe(id)` (le contexte, la sélection vidée, « Dans le groupe « Nuage », 2 éléments. » ; faux pour autre chose qu'un groupe),
+  `sortirGroupe()` (le parent devient le contexte, le groupe quitté reste choisi, « Retour à la racine. » ; faux à la racine),
+  `deplier(ids, deplie)` (rend le même ensemble quand rien ne change). La sélection admet des **identifiants de groupes**
+  (`etatEditeur.ts` : un groupe du dessin reste choisi) ; `boite` est celle du nœud (étape 1).
+- **Le contexte, côté moteur** : `engine/edition/contexteEdition.ts` — `contexteValide`, `uniteDans(d, id, contexte)` (l'enfant du
+  contexte qui contient un nœud, null hors du contexte), `noeudsDuNiveau(d, contexte)` (les frères), `unitesPrenables(d, contexte)`
+  (par rang de feuille : son unité, ou null si elle est hors du contexte, masquée ou verrouillée, elle ou un ancêtre ; mémorisé par
+  dessin et par contexte), `cheminDuContexte`. `engine/prise.ts` : **`candidatesDans(d, contexte, x, y, o)`** (un dessin plat :
+  `candidates` à l'identique ; un dessin riche : la feuille touchée remonte à son unité, sans doublon, `rang` de la feuille) ;
+  `candidates` et `formeSousPoint` sont inchangés (feuilles). `engine/selection.ts` : **`noeudsDansZone(d, contexte, zone, o)`**
+  (touchée : une feuille de l'unité prise ; dedans : toutes celles qui peignent). `engine/transformations.ts` : `ciblesAimants(d,
+  exclus, contexte = null)` (un dessin riche : les nœuds visibles du niveau, un groupe par sa boîte, hors de ceux dont une feuille est
+  choisie). La façade les exporte dans un bloc « étape 2 ».
+- **Le rendu générique** : `engine/edition/rendu.ts` — `renduDe(d, fonctions = FONCTIONNALITES)` rend, par les crochets d'écriture du
+  catalogue, `feuille(f)` (`{ genre: 'chemin', forme /* peinte : url(#…) */, attributs }` ou `{ genre: 'element', balisage }`),
+  `groupe(g)` (`{ attributs }`) et `definitions` (le contenu de `<defs>`, dans l'ordre de l'arbre, masqués compris) ; mémorisé par
+  objet (feuille, groupe) et par dessin ; une collision d'empreinte rend le dessin d'un seul tenant avec le recueil de l'écriture.
+  `lireAttributs`, `PRECISION_RENDU` (3, celle des chemins de la toile). `ecritureRiche.ts` exporte **`ecrireCorps`** (le corps d'un
+  contenu, que le rendu emploie pour `ContexteEcriture.contenu` : une découpe, un masque, une tuile s'y écrivent comme à l'écriture) ;
+  aucun octet de l'écriture riche n'a bougé. **Une fonctionnalité nouvelle n'a rien à faire pour la toile** : ce que ses écrivains
+  posent (attributs de feuille ou de groupe, définitions, élément) s'y voit (test : une fonctionnalité fictive à filtre et à découpe).
+- **La toile** (2-A) : `zones/ToileNoeuds.tsx` — `FormesToile` (le seul appel de `ToileEditeur` : un dessin plat, les `Calque` d'avant ;
+  sinon `NoeudsToile`), `NoeudsToile` (`<g class="noeuds-toile">`, `<defs>` du recueil, un `<g data-groupe>` par groupe visible avec
+  ses attributs écrits, rien en vue « contours »), un `Noeud` mémorisé par sous-arbre (mêmes objets de feuilles et de groupes),
+  `nomReact`/`proprietesReact` (ni `id`, ni `style`, ni `on…`). Une image se rend par son élément écrit (`<g data-id>` qui le porte).
+  Hors du contexte : enveloppé dans `<g class="hors-contexte" pointer-events="none">` (une opacité, pas de jeton de couleur) ; le
+  chemin du contexte se dessine normalement. `Toile.tsx` : `traitReact` exporté ; la surcouche d'un dessin riche trace les feuilles
+  d'un groupe choisi et la boîte du contexte (`contour-groupe` en `--cyan` sur son halo `--panneau`, comme le liseré de survol, et
+  `Highlight` en contraste forcé) ; **aucun jeton n'a été ajouté** (`voile-contexte`, `contour-groupe`, `pastille-groupe` restent à
+  2-C s'il en veut). `editeur.css` : `.hors-contexte`, `.contour-groupe(-fond)`, l'aperçu de la machine sur `.noeuds-toile`.
+- **Les gestes** : `PriseToile.tsx` passe par `candidatesDans` (le clic, le survol, Alt+clic, dont la phrase nomme un groupe) ; le
+  liseré de survol d'un groupe suit sa boîte ; `usePrise().viserDans(e, contexte)`. `Gestes.ts` : **le double-clic sur un groupe y
+  entre** (et choisit ce qui est sous le pointeur au nouveau niveau) ; les aimants passent le contexte. `GesteZone.ts`, `ZoneToile.tsx`,
+  `ClavierZone.ts` : `noeudsDansZone` ; l'aperçu d'un groupe pris montre ses feuilles. `Clavier.ts` : **Échap** défait, dans l'ordre,
+  le point, la sélection, puis un niveau de contexte (avant l'outil et la fermeture). Rien d'autre du clavier (Tab, Ctrl+A,
+  Entrée, Maj+Entrée), ni menu, ni fil d'Ariane : c'est 2-C. `Calques.tsx` et `CalquesOperations.tsx` n'ont pas bougé (2-B).
+- **Tests** : `tests/unit/engine/rendu.test.ts`, `contexte-edition.test.ts`, `tests/unit/zones/toile.test.ts`, `modele.test.ts`, des cas
+  dans `creerActions.test.ts` ; e2e `tests/e2e/modele-riche.e2e.ts` (le réglage au menu ; un SVG à groupes et à dégradé en riche :
+  clic qui prend le groupe, double-clic qui y entre, enfant déplacé seul, forme hors contexte non prise, Échap, « Terminer » qui garde
+  les `<g>` ; axe dans le contexte et après ; un brouillon riche repris à plat).
+- **Pour 2-B** (calques en arbre) : lire `ui.deplies` et `ac.deplier` ; une ligne de groupe se choisit par son identifiant (la
+  sélection l'admet) ; « entrer » par `ac.entrerGroupe`, le contexte se lit dans `ui.contexte`. **Pour 2-C** : `ac.entrerGroupe`,
+  `ac.sortirGroupe`, `ui.contexte` pour le fil d'Ariane ; les phrases de `zones/phrasesGroupes.ts` (`nomDeGroupe`, `groupeDit`,
+  `phraseEntreeGroupe`, `PHRASE_RACINE`) sont un minimum à compléter ; Tab, Ctrl+A et `navigation.ts` ne voient pas encore le contexte
+  (`noeudsDuNiveau`/`unitesPrenables` sont prêts) ; Entrée sur un groupe, Maj+Entrée, le clic hors du contexte qui en sort, les points
+  refusés sur une image (`dessinableEnPoints`) restent à faire ; le double-clic sur une image passe encore en mode points.
+  **Pour 4-B** (poignées de dégradé) : la feuille peinte telle que la toile la rend est `renduDe(d).feuille(f)` ; les poignées vont
+  dans la surcouche (`surcouche` de `Toile.tsx`), au-dessus de `FormesToile`, et la prise d'une poignée se fait comme celle d'un coin
+  (attribut `data-*` lu par `Gestes.ts`) ; le dégradé lui-même se voit déjà, sans rien ajouter. **Pour 7-B** (brouillon des effets) :
+  les effets écrits par `effets.ts` (attributs `filter`, définitions `<filter>`) se verront sans toucher la toile ; le mode brouillon
+  d'un geste peut se poser sur `<g class="noeuds-toile" data-brouillon>` (un attribut de `NoeudsToile`) et retirer les filtres par
+  le CSS, ou passer à `renduDe` une liste sans les effets (`renduDe(d, fonctions)` n'est pas mémorisé).
 
 ### Caduc
 
