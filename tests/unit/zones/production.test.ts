@@ -45,7 +45,8 @@ describe('les actions du contexte de production', () => {
     m.actions.corrigerConstat('trait');
     expect(m.historique).toHaveLength(1);
     expect(m.etat.dessin.formes.every(f => f.contour === null)).toBe(true);
-    expect(m.messages).toEqual(['1 contour transformé en forme. Prêt à découper. Ctrl+Z annule.']);
+    // Le contour devenu forme est un anneau d'une autre couleur que le carre : son centre est un ilot (ADR-0040), qui reste a dire.
+    expect(m.messages).toEqual(['1 contour transformé en forme. Reste 1 constat. Ctrl+Z annule.']);
     m.actions.corrigerConstat('trait');
     expect(m.historique).toHaveLength(1);
     expect(m.messages.at(-1)).toBe('Ce constat ne se pose plus : le dessin a changé.');

@@ -21,6 +21,7 @@ import { silhouetteDe } from './silhouette.js';
 import { gabaritDuTapis, regionDeCoupe, texteMesure, texteTaille, type ProfilProduction } from './profil.js';
 import { corrigerTexte } from './stylo.js';
 import { poserOperation } from './operations.js';
+import { ajouterLiens, LIENS_DEFAUT, type OptionsLiens } from './liens.js';
 
 export type ResultatCorrection = { readonly dessin: DessinSvg; readonly phrase: string } | { readonly erreur: string };
 
@@ -129,8 +130,11 @@ function trous(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
   return n ? { dessin: { ...dessin, formes }, phrase: pluriel(n, 'forme') + ' réécrite' + (n > 1 ? 's' : '') + ' selon le sens du tracé : les trous sont les mêmes.' } : { erreur: RIEN };
 }
 
-/** Applique une correction. `constat` donne les formes en cause ; le profil, les valeurs du materiau. */
-export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, constat: Pick<Constat, 'formes'>, p: ProfilProduction): ResultatCorrection {
+/**
+ * Applique une correction. `constat` donne les formes en cause ; le profil, les valeurs du materiau ; `liens`, les reglages des
+ * liens des ilots (ADR-0040 : ceux de la session, sinon 2 mm et 3 par ilot).
+ */
+export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, constat: Pick<Constat, 'formes'>, p: ProfilProduction, liens: OptionsLiens = LIENS_DEFAUT): ResultatCorrection {
   const formes = constat.formes;
   switch (code) {
     case 'contour-en-forme': {
@@ -167,6 +171,11 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
     case 'ecrire': {
       const r = poserOperation(dessin, formes, 'ecriture', p.procede);
       return r.changees ? { dessin: r.dessin, phrase: r.phrase } : { erreur: RIEN };
+    }
+    // Les liens des ilots (ADR-0040) : chaque ilot des formes en cause, en une fois ; les courbes rebaties comme les booleens.
+    case 'ajouter-liens': {
+      const r = ajouterLiens(dessin, formes, { ...liens, lisser: true }, p.procede);
+      return r.liens ? { dessin: r.dessin, phrase: r.phrase } : { erreur: r.ilots ? r.phrase : RIEN };
     }
     // Changer de police demande une fonte : l'interface la compose, pas le moteur.
     case 'police-trait': return { erreur: 'Cette correction se fait dans l’éditeur.' };

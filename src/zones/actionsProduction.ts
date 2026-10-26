@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ecrireDessin, marquerProduction, marquerReperes, type DessinSvg } from '../engine/editionSvg.js';
 import {
-  constatsPreparation, feuillePartielle, gabaritDuTapis, planPourChoix, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
+  ajouterLiens, constatsPreparation, feuillePartielle, gabaritDuTapis, planPourChoix, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
   resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { archiveOperations, exportParOperation, nomsOperations, operationsPeintes } from '../export/operations.js';
@@ -69,7 +69,7 @@ export function usePreparation(dessin: DessinSvg, profil: ProfilProduction | nul
   return profil && etat?.profil === profil ? etat : null;
 }
 
-type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut' | 'poserOperation' | 'poserApercuMachine'>;
+type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut' | 'poserOperation' | 'ajouterLiens' | 'poserApercuMachine'>;
 
 /**
  * Ce que « Ajuster » cadre en contexte de decoupe : le tapis entier tel que la toile le dessine, et le dessin s'il en deborde ; null
@@ -252,6 +252,19 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       if (!r.changees) { dire(r.phrase); return; }
       appliquer(d => poserOperation(d, cibles, operation, p.procede).dessin);
       dire(r.phrase + ' Ctrl+Z annule.');
+    },
+    ajouterLiens: (reglages, ids) => {
+      const { dessin, production, sel, lisserBooleens } = lire();
+      const p = resoudreProfil(production);
+      if (!p || !operationsApplicables(p.procede)) { dire('Les liens se posent en contexte Cricut, sur les formes à couper.'); return false; }
+      const cibles = ids ?? sel;
+      if (!cibles.length) { dire('Choisissez d’abord une forme à couper.'); return false; }
+      const r = ajouterLiens(dessin, cibles, { ...reglages, lisser: lisserBooleens }, p.procede);
+      // Une forme sans ilot ne change pas : pas d'entree d'historique pour rien, mais la raison dite.
+      if (!r.liens) { dire(r.phrase); return false; }
+      appliquer(() => r.dessin);
+      dire(r.phrase + ' Ctrl+Z les retire.');
+      return true;
     },
     poserApercuMachine: a => {
       const avant = lire().apercuMachine;

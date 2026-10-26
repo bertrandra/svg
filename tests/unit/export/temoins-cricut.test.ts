@@ -172,7 +172,8 @@ describe('les temoins du protocole Cricut', () => {
       return constatsPreparation(r.dessin, p).map(c => c.code);
     };
     expect(constats('temoin-1-taille.svg')).toEqual([]);
-    expect(constats('temoin-2-trou.svg')).toEqual(['pair-impair']);
+    // Les deux anneaux ont chacun un ilot (ADR-0040) : en pochoir, leur centre tomberait.
+    expect(constats('temoin-2-trou.svg')).toEqual(['ilot', 'pair-impair']);
     expect(constats('temoin-3-couleurs-proches.svg')).toEqual(['nuances-proches']);
     expect(constats('temoin-4-trait.svg')).toEqual(['trait', 'detail-fin']);
     expect(constats('temoin-5-depasse-le-tapis.svg')).toEqual(['piece-trop-grande']);
@@ -191,7 +192,7 @@ describe('les temoins du protocole Cricut', () => {
     expect(constats('temoin-9-couper-ecrire-a-ecrire.svg', STYLO)).toEqual([]);
     expect(constats('temoin-9-couper-ecrire-combine.svg')).toEqual([]);
     // 10 : rouvert (sans la marque du recalage, qu'aucun export ne porte), seuls les cadres de reperage se disent trop fins pour la
-    // lame : ce sont des guides, qu'on ne coupe pas.
-    expect(constats('temoin-10-feuille-partielle.svg')).toEqual(['detail-fin']);
+    // lame : ce sont des guides, qu'on ne coupe pas. Anneaux, ils ont aussi leur ilot (ADR-0040) : le constat le dit, sans plus.
+    expect(constats('temoin-10-feuille-partielle.svg')).toEqual(['detail-fin', 'ilot']);
   });
 });

@@ -185,12 +185,16 @@ describe('couper ou ecrire, forme par forme', () => {
 
   it('exporte une archive qui separe les operations, et la carte « Dans Design Space » dit les deux fichiers', async () => {
     const page = await editeur();
-    const exporter = panneau(page).getByRole('button', { name: 'Exporter pour Cricut' });
-    // L'anneau en pair-impair est un conseil : il ne demande rien.
-    await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
+    // Le centre de l'anneau tombera a la decoupe (ADR-0040) : un point a corriger, que l'export fait confirmer.
+    const exporter = panneau(page).locator('.export-cricut button.primaire');
+    await attend(() => texteDe(exporter)).toBe('Exporter quand même (1 point à corriger)');
+    const exporterQuandMeme = async () => {
+      await exporter.click();
+      return telecharger(page, () => panneau(page).locator('.confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click());
+    };
     // Par defaut, le tapis est fixe (ADR-0039, revision du 26 octobre 2026) : trois fichiers a la taille du tapis, un cadre de reperage
     // par couleur sous les formes de la lame et sous les traits du stylo, et le mode d'emploi le dit.
-    const fixe = entreesZip((await telecharger(page, () => exporter.click())).octets);
+    const fixe = entreesZip((await exporterQuandMeme()).octets);
     expect(fixe.get('dessin-a-couper.svg')?.match(/<path /g)).toHaveLength(4);
     expect([...(fixe.get('dessin-a-ecrire.svg') ?? '').matchAll(/ fill="([^"]*)"/g)].map(m => m[1])).toEqual(['none', 'none', 'none', 'none']);
     for (const s of ['dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']) expect(fixe.get(s)).toMatch(/ width="304.8mm" height="304.8mm"/);
@@ -200,8 +204,8 @@ describe('couper ou ecrire, forme par forme', () => {
     await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).check();
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('ControlOrMeta+z');
-    await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
-    const f = await telecharger(page, () => exporter.click());
+    await attend(() => texteDe(exporter)).toBe('Exporter quand même (1 point à corriger)');
+    const f = await exporterQuandMeme();
     expect(f.nom).toBe('dessin-cricut.zip');
     const zip = entreesZip(f.octets);
     expect([...zip.keys()]).toEqual(['LISEZMOI.txt', 'dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']);

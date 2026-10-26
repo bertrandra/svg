@@ -112,20 +112,23 @@ describe('le contexte Cricut', () => {
     const page = await editeur();
     await choisirCricut(page);
     await attend(() => nombreDeConstats(page)).toBe(5);
-    const etapes: Array<[string, string]> = [
-      ['Contour en forme', '1 contour transformé en forme.'],
-      ['Redimensionner à la zone utile', 'Dessin réduit à'],
-      ['Fermer les tracés', '1 tracé fermé.'],
-      ['Fusionner les nuances', '1 nuance fusionnée'],
-      ['Épaissir', 'de 0,79 mm de chaque côté.']
+    // Le contour devenu forme est un anneau d'une autre couleur que son carre : son centre est un ilot (ADR-0040), un constat de
+    // plus que « Ajouter des liens » corrige a son tour.
+    const etapes: Array<[string, string, number]> = [
+      ['Contour en forme', '1 contour transformé en forme.', 0],
+      ['Redimensionner à la zone utile', 'Dessin réduit à', 1],
+      ['Fermer les tracés', '1 tracé fermé.', 1],
+      ['Fusionner les nuances', '1 nuance fusionnée', 1],
+      ['Ajouter des liens', '3 liens posés sur 1 îlot.', 1],
+      ['Épaissir', 'de 0,79 mm de chaque côté.', 1]
     ];
     let restant = 5;
-    for (const [bouton, phrase] of etapes) {
+    for (const [bouton, phrase, retires] of etapes) {
       const avant = await modifications(page);
       await corriger(page, bouton);
       await attend(() => dit(page)).toContain(phrase);
       expect(await modifications(page), bouton).toBe(avant + 1);
-      restant--;
+      restant -= retires;
       await attend(() => nombreDeConstats(page), 5000).toBe(restant);
     }
     await attend(() => dit(page)).toContain('Prêt à découper.');

@@ -18,7 +18,7 @@ import { resolve } from 'node:path';
 import {
   type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, type FormeDeBase, type ParametresFormes, ajouterForme, ellipse, formeDeBase, FORMES_DE_BASE, FICHES_FORMES, PARAMETRES_FORMES_DEFAUT, regleDeForme, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg, polygone,
 } from '../../../src/engine/editionSvg.js';
-import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { ajouterLiens, marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, LARGEUR_LIEN_DEFAUT, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
@@ -419,6 +419,10 @@ const CAS: readonly Cas[] = [
   { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES })))?.svg ?? 'REFUSE' },
   { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
   { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
+  // Les liens des ilots (ADR-0040) : des cas NEUFS. L'anneau courbe recoit ses 3 liens de 2 mm (courbes rebaties) ; les carres
+  // pair-impair 2 liens de 3 mm (segments droits), la forme pleine du meme trace ne change pas.
+  { nom: 'liens-anneau', entree: 'cricut', operation: d => ajouterLiens(d, ['f1', 'f2', 'f3'], { largeur: LARGEUR_LIEN_DEFAUT, nombre: 3 }, 'decoupe').dessin },
+  { nom: 'liens-pair-impair', entree: 'evenodd-opacite', operation: d => ajouterLiens(d, ['f1', 'f2', 'f3'], { largeur: LARGEUR_LIEN_DEFAUT * 1.5, nombre: 2 }, 'decoupe').dessin },
   { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
   { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') },
   // Le texte vivant et sa vectorisation (ADR-0022) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus

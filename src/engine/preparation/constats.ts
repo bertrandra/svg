@@ -13,6 +13,7 @@ import { feuillePartielle, gabaritDuTapis, regionDeCoupe, texteMesure, texteTail
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { constatTraitsOuverts, constatsStylo, textesQuiSeChevauchent, traitOuvert, type ConstatTexte } from './stylo.js';
 import { partagerOperations } from './operations.js';
+import { ilotsQuiTombent } from './liens.js';
 
 export type Gravite = 'bloquant' | 'a-corriger' | 'conseil';
 export const GRAVITES: readonly Gravite[] = ['bloquant', 'a-corriger', 'conseil'];
@@ -21,12 +22,12 @@ export type CodeConstat =
   | 'vide' | 'trait' | 'opacite' | 'piece-trop-grande' | 'ptc-trop-grand'
   | 'depassement' | 'hors-tapis' | 'trace-ouvert' | 'lettres-chevauchent' | 'nuances-proches' | 'detail-fin'
   | 'trop-de-noeuds' | 'trou-superpose' | 'pair-impair' | 'analyse-limitee'
-  | 'decoupe-trait-ouvert' | 'stylo-plein' | 'stylo-double-trait';
+  | 'decoupe-trait-ouvert' | 'stylo-plein' | 'stylo-double-trait' | 'ilot';
 
 export type CodeCorrection =
   | 'contour-en-forme' | 'rendre-opaque' | 'ajuster-zone' | 'fermer' | 'fusionner-nuances'
   | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder'
-  | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire' | 'ramener-zone';
+  | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire' | 'ramener-zone' | 'ajouter-liens';
 
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'contour-en-forme': 'Contour en forme',
@@ -43,7 +44,8 @@ export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   hachurer: 'Hachurer',
   'police-trait': 'Police à trait unique',
   ecrire: 'Écrire au stylo',
-  'ramener-zone': 'Ramener dans la zone utile'
+  'ramener-zone': 'Ramener dans la zone utile',
+  'ajouter-liens': 'Ajouter des liens'
 };
 
 export interface Constat {
@@ -67,7 +69,7 @@ export interface Constat {
 /** Au-dela, les parties fines ne se mesurent que sur les premieres formes : le panneau juge en continu. */
 export const FORMES_MAX_FINESSE = 300;
 
-const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'hors-tapis', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
+const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'hors-tapis', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'ilot', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
 const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
@@ -199,6 +201,27 @@ function constatsFinesse(peintes: readonly Forme[], dessin: DessinSvg, p: Profil
   return r;
 }
 
+/**
+ * Les ilots (ADR-0040) : une forme pleine a couper qui a un trou laisse, apres la coupe, un morceau de feuille entoure par la zone
+ * decoupee ; en pochoir (on garde la feuille), il tombe. En autocollant (on garde la forme), ce trou s'echenille : le constat le dit,
+ * a corriger mais jamais bloquant. Un trou bouche par une forme de la meme couleur posee dessus n'en est pas un ; les formes trop
+ * chargees sont sautees comme pour les parties fines.
+ */
+function constatIlots(coupees: readonly Forme[], dessin: DessinSvg, p: ProfilProduction): Constat | null {
+  const tolerance = toleranceBooleen(dessin);
+  const avec: Forme[] = [];
+  let n = 0;
+  for (const f of coupees.slice(0, FORMES_MAX_FINESSE)) {
+    const k = ilotsQuiTombent(dessin, f, p.procede, tolerance).length;
+    if (k) { avec.push(f); n += k; }
+  }
+  if (!avec.length) return null;
+  return {
+    code: 'ilot', gravite: 'a-corriger', formes: ids(avec), correction: 'ajouter-liens',
+    message: (avec.length > 1 ? 'Le centre de ' + avec.length + ' formes tombera' : 'Le centre de cette forme tombera') + ' à la découpe (' + pluriel(n, 'îlot') + ') : pour un pochoir, ajoutez des liens qui ' + accord(n, 'le', 'les') + ' retiennent à la feuille. Pour un autocollant, ' + accord(n, 'ce centre s’échenille', 'ces centres s’échenillent') + ' : ignorez ce constat.'
+  };
+}
+
 function constatNoeuds(peintes: readonly Forme[], p: ProfilProduction): Constat | null {
   const lourdes = peintes.filter(f => compterPoints(f.d) > p.noeudsParForme);
   if (!lourdes.length) return null;
@@ -267,7 +290,7 @@ export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Con
     const coupees = formesPeintes(decoupe);
     r = [
       constatTraitOuvert(decoupe), constatTrait(coupees), constatOpacite(coupees), ...constatsTaille(peintes, dessin, p), constatOuverts(coupees), constatLettres(decoupe),
-      constatNuances(decoupe, p), ...constatsFinesse(coupees, decoupe, p), constatNoeuds(peintes, p), constatTrous(decoupe), constatPairImpair(coupees),
+      constatNuances(decoupe, p), ...constatsFinesse(coupees, decoupe, p), constatIlots(coupees, dessin, p), constatNoeuds(peintes, p), constatTrous(decoupe), constatPairImpair(coupees),
       // Le stylo (ADR-0022) : un trait n'est plus un defaut, un fond si.
       ...constatsStylo(ecriture).map(versConstat)
     ];
