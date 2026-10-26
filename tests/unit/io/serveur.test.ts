@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REGLAGES_PAR_DEFAUT, creerServeur, lireCompte, lireFiche, lireMeta, lireReglages, lireSite } from '../../../src/io/serveur.js';
+import { REGLAGES_PAR_DEFAUT, creerServeur, lireCompte, lireFiche, lireMeta, lireReglages, lireSite, type Reglages } from '../../../src/io/serveur.js';
 import { FORMAT_PROJET, VERSION_PROJET, type Projet } from '../../../src/model/projet.js';
 
 // Le client de l'API du site (ADR-0030) : jamais d'exception, toujours un code et une phrase ; le jeton CSRF sur chaque ecriture,
@@ -198,7 +198,7 @@ describe('les comptes du site (ADR-0041)', () => {
   it('lit les reglages champ par champ, chacun a son defaut, et ne renvoie le mot de passe SMTP que tape', async () => {
     const { serveur, appels } = faux(a => (a.init.method === 'POST' ? json(200, { ok: true }) : json(200, CONFIG)));
     const lu = await serveur.reglages();
-    const attendu = { site: CONFIG.site, inscriptions: CONFIG.inscriptions, courrier: CONFIG.courrier, sessions: CONFIG.sessions, smtpMotDePassePose: true };
+    const attendu: Reglages = { site: { ...CONFIG.site, langue: 'en' }, inscriptions: CONFIG.inscriptions, courrier: { ...CONFIG.courrier, mode: 'smtp', smtp: { ...CONFIG.courrier.smtp, securite: 'ssl' } }, sessions: CONFIG.sessions, smtpMotDePassePose: true };
     expect(lu).toEqual({ ok: true, valeur: attendu });
     expect(lireReglages({ site: { nom: 'X', langue: 'xx' }, courrier: { mode: 'pigeon', smtp: { port: 70000 } } })).toEqual({
       ...REGLAGES_PAR_DEFAUT, site: { ...REGLAGES_PAR_DEFAUT.site, nom: 'X' }

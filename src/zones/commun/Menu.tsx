@@ -65,6 +65,10 @@ interface Proprietes {
   titreMenu?: string;
   /** Un compteur : quand il change, le menu s'ouvre comme au clavier, le focus sur l'element coche (un raccourci, F). */
   demandeOuverture?: number;
+  /** Le contenu du bouton a la place de l'icone et du libelle (les initiales du profil, ADR-0041) ; `etiquette` reste son nom. */
+  contenu?: ReactNode;
+  /** Un en-tete hors menu, avant les elements (le nom et l'adresse du profil) : du texte qu'on lit, pas un element qu'on choisit. */
+  entete?: ReactNode;
 }
 
 interface Position { top: number; left?: number; right?: number }
@@ -76,7 +80,7 @@ interface Position { top: number; left?: number; right?: number }
 const ContexteMenusOuverts = createContext<((ouvert: boolean) => void) | null>(null);
 export const FournisseurMenusOuverts = ContexteMenusOuverts.Provider;
 
-export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className, grille = false, titreMenu, demandeOuverture }: Proprietes) {
+export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className, grille = false, titreMenu, demandeOuverture, contenu, entete }: Proprietes) {
   const [ouvert, poserOuvert] = useState(false);
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
@@ -201,8 +205,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
       <button ref={bouton} type="button" className={libelle ? 'menu-bouton texte' : 'icone-bouton menu-bouton'} aria-haspopup="menu" aria-expanded={ouvert}
         title={etiquette} aria-label={libelle ? undefined : etiquette}
         onClick={() => { if (ouvert) fermer(false); else ouvrir(null); }} onKeyDown={clavierBouton}>
-        {icone ? <Icone nom={icone} /> : null}
-        {libelle ? <span>{libelle}</span> : null}
+        {contenu ?? <>{icone ? <Icone nom={icone} /> : null}{libelle ? <span>{libelle}</span> : null}</>}
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
@@ -216,6 +219,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
             </div>
           )) : (
             <>
+              {entete ? <div className="menu-entete">{entete}</div> : null}
               {elements.length ? <ListeElements titre={etiquette} elements={elements} fermer={fermer} /> : null}
               {enfants ? <div className="menu-libre">{enfants}</div> : null}
             </>

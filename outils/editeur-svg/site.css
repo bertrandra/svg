@@ -44,3 +44,76 @@
 .enregistrer-sous { max-width: 28rem; display: grid; gap: var(--esp-m); }
 .enregistrer-sous h2, .enregistrer-sous p { margin: 0; }
 .enregistrer-sous input { width: 100%; }
+
+/* Les comptes (ADR-0041). L'icone du profil, a droite de l'en-tete : un rond aux initiales, 30 px comme un bouton d'icone (40 au doigt,
+   par la regle des .icone-bouton) ; la pastille des demandes en attente se pose sur son coin. */
+.menu-profil { display: inline-flex; align-items: center; }
+.menu-profil-bouton .menu-bouton { border-radius: 50%; border-color: var(--filet-fort); background: var(--table); font-weight: 600; font-size: var(--texte-compact); letter-spacing: 0.02em; position: relative; overflow: visible; }
+.menu-profil-bouton .menu-bouton:hover:not(:disabled), .menu-profil-bouton .menu-bouton[aria-expanded="true"] { border-color: var(--cyan); color: var(--cyan); }
+.profil-initiales { display: inline-grid; place-items: center; }
+.profil-pastille { position: absolute; top: calc(-1 * var(--esp-xs)); right: calc(-1 * var(--esp-xs)); min-width: var(--esp-xl); height: var(--esp-xl); padding: 0 var(--esp-xs); border-radius: var(--rayon-menu); background: var(--cyan); color: var(--sur-cyan); font-size: var(--texte-petit); font-weight: 600; line-height: var(--esp-xl); text-align: center; }
+/* L'en-tete du menu : le nom et l'adresse, du texte qu'on lit, sous un filet. */
+.menu-entete { display: grid; gap: var(--esp-2xs); padding: var(--esp-s) var(--esp-m) var(--esp-m); margin-bottom: var(--esp-xs); border-bottom: 1px solid var(--filet); min-width: 0; }
+.profil-nom { font-size: var(--texte-compact); font-weight: 600; overflow-wrap: anywhere; }
+.profil-email { font-size: var(--texte-petit); color: var(--encre-douce); overflow-wrap: anywhere; }
+.site-deconnexion[hidden] { display: none; }
+
+/* Les formulaires du site : un champ par ligne, le libelle au-dessus, l'erreur sous le champ en couleur d'echec et liee a lui. */
+.formulaire-site { display: grid; gap: var(--esp-l); }
+.formulaire-site h2, .formulaire-site h3, .formulaire-site p { margin: 0; }
+.formulaire-site h3 { font-size: var(--texte-titre); }
+.formulaire-site h2 + .champ-site, .formulaire-site h3 + .champ-site { margin-top: 0; }
+.formulaire-site h2:not(:first-child) { margin-top: var(--esp-l); }
+.carte-site { border: 1px solid var(--filet); border-radius: var(--rayon-carte); background: var(--panneau); padding: var(--esp-xl); }
+.champ-site { display: grid; gap: var(--esp-s); min-width: 0; margin: 0; padding: 0; border: 0; }
+.champ-site > label, .champ-site > legend { font-size: var(--texte-compact); font-weight: 600; padding: 0; }
+.champ-site input:not([type="checkbox"], [type="radio"]), .champ-site select { font: inherit; font-size: var(--texte-corps); width: 100%; min-width: 0; padding: var(--esp-s) var(--esp-m); border: 1px solid var(--filet); border-radius: var(--rayon-champ); background: var(--table); color: var(--encre); }
+.champ-site.en-erreur input { border-color: var(--echec); }
+.champ-site p { margin: 0; }
+.champ-erreur { font-size: var(--texte-petit); color: var(--echec); }
+.choix-radio, .choix-case { display: flex; gap: var(--esp-m); align-items: flex-start; font-size: var(--texte-corps); font-weight: 400; min-height: var(--esp-2xl); }
+.choix-radio input, .choix-case input { margin: var(--esp-2xs) 0 0; flex: none; accent-color: var(--cyan); }
+.choix-radio > span { display: grid; gap: var(--esp-2xs); }
+.choix-langue { display: flex; flex-wrap: wrap; gap: var(--esp-xl); }
+.choix-langue > legend { float: left; width: 100%; margin-bottom: var(--esp-s); }
+.champs-smtp { display: grid; gap: var(--esp-l); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); padding-left: var(--esp-m); border-left: 2px solid var(--filet-fort); }
+.champs-smtp .champ-site:first-child { grid-column: 1 / -1; }
+.essai-courrier { display: grid; gap: var(--esp-m); padding: var(--esp-l); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); background: var(--table); }
+
+/* « Mon profil » : la boite des credits, plus etroite, deux formulaires separes par un filet. */
+.profil-dialogue { width: min(32rem, 100%); display: grid; gap: var(--esp-xl); }
+.profil-dialogue h2 { margin: 0; }
+.profil-dialogue .formulaire-site + .formulaire-site { padding-top: var(--esp-xl); border-top: 1px solid var(--filet); }
+
+/* « Comptes » et « Réglages du site » : le retour vers les projets au-dessus du titre, les onglets, une ligne par compte. */
+.fil-retour { margin: 0 0 var(--esp-s); }
+.fil-retour .discret { margin-left: calc(-1 * var(--esp-l) - 1px); }
+.site-comptes h1:focus-visible, .site-reglages h1:focus-visible { outline: 2px solid var(--cyan); outline-offset: var(--esp-xs); border-radius: var(--rayon-pastille); }
+.onglets { display: flex; flex-wrap: wrap; gap: var(--esp-xs); border-bottom: 1px solid var(--filet); margin-bottom: var(--esp-l); }
+.onglet { display: inline-flex; align-items: center; gap: var(--esp-s); padding: var(--esp-s) var(--esp-l); margin-bottom: -1px; border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--rayon-bouton) var(--rayon-bouton) 0 0; background: transparent; color: var(--encre-douce); font-weight: 500; }
+.onglet[aria-selected="true"] { color: var(--cyan); border-bottom-color: var(--cyan); }
+.onglet-nombre { min-width: 1.5em; padding: 0 var(--esp-xs); border-radius: var(--rayon-menu); background: var(--table); color: var(--encre); font-size: var(--texte-petit); font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.onglet[aria-selected="true"] .onglet-nombre { background: var(--cyan); color: var(--sur-cyan); }
+@media (forced-colors: active) { .onglet[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; } }
+.comptes { display: grid; gap: 0; }
+.liste-comptes { list-style: none; margin: 0; padding: 0; }
+.compte { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-l); align-items: start; padding: var(--esp-m) 0; border-bottom: 1px solid var(--filet); }
+.compte:last-child { border-bottom: 0; }
+.compte-infos { display: grid; gap: var(--esp-2xs); min-width: 0; }
+.compte-infos p { margin: 0; overflow-wrap: anywhere; }
+.compte-nom { display: flex; flex-wrap: wrap; gap: var(--esp-s); align-items: center; }
+.compte-marque { padding: 0 var(--esp-s); border: 1px solid var(--filet-fort); border-radius: var(--rayon-menu); font-size: var(--texte-petit); color: var(--encre-douce); }
+.compte-marque.etat { border-color: var(--alerte); color: var(--alerte); }
+.compte-email { font-size: var(--texte-compact); }
+.compte-actions { justify-content: flex-end; align-self: center; }
+.compte-actions button.danger, .compte-confirmer button.danger { border-color: var(--echec); color: var(--echec); background: transparent; }
+.compte-actions button.danger:hover:not(:disabled), .compte-confirmer button.danger:hover:not(:disabled) { background: var(--echec-fond); }
+.compte-confirmer { display: grid; gap: var(--esp-s); margin-top: var(--esp-s); border-left: 2px solid var(--filet-fort); padding-left: var(--esp-m); }
+.compte-confirmer p { margin: 0; }
+.creation-compte { max-width: 32rem; }
+.site-reglages .carte-site { max-width: 40rem; }
+@media (max-width: 640px) {
+  .compte { grid-template-columns: minmax(0, 1fr); }
+  .compte-actions { justify-content: flex-start; }
+  .champs-smtp { grid-template-columns: minmax(0, 1fr); }
+}

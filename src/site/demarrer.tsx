@@ -7,17 +7,29 @@ import { definirOuvertureAdresse } from '../io/adresse.js';
 import { definirBaseAnnexes, definirSourceDonnees } from '../io/annexes.js';
 import { sonderNavigateur } from '../io/capacites.js';
 import { definirServeurPolices } from '../io/policesEnLigne.js';
-import { creerServeur } from '../io/serveur.js';
+import { creerServeur, lireCompte, lireSite } from '../io/serveur.js';
 import { manquantes } from '../util/capacites.js';
 import { PageIncompatible } from '../zones/Incompatible.js';
 import { DOCUMENTATIONS_LIVREES, definirDocumentation } from '../zones/documentation.js';
 import { Site } from './Site.js';
+
+/** Un attribut JSON de la page, lu sans lever : null s'il manque ou ne se lit pas. */
+function jsonDe(attribut: string | undefined): unknown {
+  if (!attribut) return null;
+  try { return JSON.parse(attribut) as unknown; } catch { return null; }
+}
 
 export function demarrerSite(conteneur: HTMLElement): void {
   const absentes = manquantes(sonderNavigateur(), 'demarrage');
   const racine = createRoot(conteneur);
   if (absentes.length) { racine.render(<PageIncompatible manquantes={absentes} />); return; }
   const csrf = conteneur.dataset['csrf'] ?? '';
+  // La personne connectee et le site (ADR-0041) : la page les donne en JSON, valides sans lever. Un attribut illisible ne bloque
+  // rien : l'application s'ouvre sans le menu du profil, avec la deconnexion d'avant, et le dit.
+  const compte = lireCompte(jsonDe(conteneur.dataset['compte']));
+  const site = lireSite(jsonDe(conteneur.dataset['site']));
+  const avertissement = compte ? undefined : 'La page n’a pas pu dire qui est connecté : le menu du profil n’est pas disponible. Rechargez la page ; si cela persiste, reconnectez-vous.';
+  // La langue du compte : preparerLangue(compte.langue), pose a l'integration (ADR-0042).
   const serveur = creerServeur({ api: conteneur.dataset['api'] ?? 'api.php', csrf });
   // Le traceur (du code) reste un script, servi avec la page sous assets/ ; les donnees viennent de data/json par l'API.
   definirBaseAnnexes(conteneur.dataset['assets'] ?? 'assets/');
@@ -31,5 +43,5 @@ export function demarrerSite(conteneur: HTMLElement): void {
   });
   // Les documentations sont servies avec la page, dans public/aide/ : le menu Aide de l'editeur les ouvre.
   definirDocumentation(DOCUMENTATIONS_LIVREES);
-  racine.render(<Site serveur={serveur} csrf={csrf} />);
+  racine.render(<Site serveur={serveur} csrf={csrf} compte={compte} site={site} {...(avertissement ? { avertissement } : {})} />);
 }
