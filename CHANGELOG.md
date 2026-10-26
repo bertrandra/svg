@@ -203,6 +203,12 @@ empreintes.
 
 ### Ajouté
 
+- Calques en arbre (modèle riche, bêta) : un dessin à groupes montre ses calques en arbre accessible (treegrid), pilotable sans
+  souris : flèches pour parcourir, déplier et replier, Entrée pour entrer dans un groupe, Espace pour choisir, F2 pour renommer,
+  Ctrl+Maj+flèches pour monter, descendre, sortir d'un groupe ou entrer dans celui du dessus, « Déplacer vers… » (Maj+F10) qui
+  liste les groupes, et glisser-déposer d'une ligne dans un groupe. Fenêtré au-delà de 150 lignes. En Cricut, « À couper / À
+  écrire » restent en tête, l'arbre vient dessous. Un dessin plat garde sa liste à l'identique.
+
 - Groupes au clavier et au menu (modèle riche, bêta) : Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer dans le groupe (Entrée),
   Sortir du groupe (Maj+Entrée ou Échap), au menu Édition et dans la rangée de la sélection. Dans un groupe, Tab, Page suivante et
   Ctrl+A ne parcourent que ses éléments, et un clic sur une forme hors du groupe en fait sortir. Un fil d'Ariane (« Racine ›

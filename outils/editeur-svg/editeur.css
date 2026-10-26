@@ -177,6 +177,25 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-calques .calque-bascule { width: 26px; height: 26px; color: var(--encre-douce); }
 .editeur-calques .calque-bascule[aria-pressed="true"] { color: var(--sur-cyan); }
 .editeur-calques .echantillon { flex: none; width: 14px; height: 14px; border-radius: var(--rayon-pastille); border: 1px solid var(--filet-fort); }
+/* L'arbre des calques d'un dessin riche (ADR-0012, annexe 6 §1) : les lignes de la liste, un retrait par niveau (sur la ligne, en
+   variable d'espacement), un chevron par groupe, tourne quand le groupe est replie ; aucun mouvement. La ligne porte le focus. */
+.editeur-calques .arbre-entete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-s); margin: var(--esp-m) 0 var(--esp-xs); }
+.editeur-calques .arbre-entete h4 { margin: 0; }
+.arbre-entete .menu-bouton.texte { min-height: 28px; padding: var(--esp-2xs) var(--esp-s); font-size: var(--texte-petit); }
+.arbre-calques { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+.calque-ligne { display: flex; align-items: center; gap: var(--esp-2xs); border-radius: var(--rayon-pastille); }
+.calque-ligne.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .calque-ligne.choisi { background: var(--repli-cyan-18); } }
+.calque-ligne:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.calque-ligne.depot-dans { box-shadow: inset 0 0 0 2px var(--cyan); }
+.calque-ligne.depot-sous { box-shadow: inset 0 -2px 0 var(--cyan); }
+.calque-ligne > [role="gridcell"] { flex: none; display: flex; align-items: center; }
+.calque-ligne > .calque-arbre-nom { flex: 1; min-width: 0; gap: var(--esp-s); min-height: 26px; padding-block: var(--esp-2xs); padding-inline-end: var(--esp-xs); color: var(--encre); font-size: var(--texte-petit); }
+.calque-ligne.estompee > .calque-arbre-nom { color: var(--encre-douce); }
+.calque-ligne.contexte .calque-genre { font-weight: 600; }
+.calque-chevron { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: var(--encre-douce); }
+.calque-ligne[aria-expanded="false"] .calque-chevron .icone { transform: rotate(-90deg); }
+.calque-renommer { flex: 1; min-width: 0; padding: 0 var(--esp-xs); font-size: var(--texte-petit); }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
 .editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
 .editeur-svg-toile:focus { outline: none; }
@@ -570,6 +589,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
   .menu-element, .menu-tuile { min-height: 44px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
+  .calque-ligne > .calque-arbre-nom { min-height: 40px; }
+  .calque-chevron { width: 40px; height: 40px; }
+  .arbre-entete .menu-bouton.texte { min-height: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
   .par-couleur .couleur-choix { min-height: 40px; }
   .par-couleur input[type="color"].recolorer { width: 40px; height: 40px; }
@@ -638,6 +660,11 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-calques li.choisi, .par-couleur li.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .editeur-calques li.choisi button, .par-couleur li.choisi button, .par-couleur li.choisi code { color: HighlightText; }
   .editeur-calques li.choisi button:focus-visible, .par-couleur li.choisi button:focus-visible { outline-color: HighlightText; }
+  .calque-ligne.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .calque-ligne.choisi > .calque-arbre-nom, .calque-ligne.choisi button { color: HighlightText; }
+  .calque-ligne:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
+  .calque-ligne.choisi:focus-visible, .calque-ligne.choisi button:focus-visible { outline-color: HighlightText; }
+  .calque-ligne.depot-dans, .calque-ligne.depot-sous { outline: 2px dashed Highlight; outline-offset: -2px; box-shadow: none; }
   .echantillon, .menu-pastille, input[type="color"] { forced-color-adjust: none; border: 1px solid CanvasText; }
   .nuancier .echantillon[aria-pressed="true"] { outline: 3px solid Highlight; outline-offset: 1px; }
   .section > summary:focus-visible { outline-offset: -2px; }
