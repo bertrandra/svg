@@ -210,7 +210,8 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
         {source ? (
           <div className="reglages-image">
             <fieldset className="editeur-groupe">
-              <legend>{t('Fond')}</legend>
+              {/* « Fond » est aussi la couleur de fond d'une forme (Fill) : la cle du detourage porte une valeur vide pour sa propre traduction. */}
+              <legend>{t('Fond{detourage}', { detourage: '' })}</legend>
               <label className="case"><input type="checkbox" checked={tr.detourer} onChange={e => poserT({ ...tr, detourer: e.target.checked })} /> {t('Détourer le fond')}</label>
               {tr.detourer ? (
                 <>
