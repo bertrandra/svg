@@ -218,6 +218,12 @@ empreintes.
   modèle riche et reprendre ». Tant que le réglage reste à plat, rien ne change : un dessin sans groupe se dessine et s'écrit
   exactement comme avant.
 
+- Modèle v2, étape 6 (moteur, mode riche seulement) : les masques d'opacité. Un `mask` vers un `<mask>` (luminance ou alpha,
+  région et unités résolues, contenu peint avec ses dégradés, images, groupes et `<use>`) se lit, s'écrit en `<mask id="ed-m-…">`
+  par empreinte et se relit à l'identique ; le masque suit son groupe et rogne sa boîte visuelle ; créer, libérer et inverser un
+  masque (moteur) ; les exports qui ne savent pas masquer l'ignorent et le disent ; le projet le garde au format 2. Un masque CSS,
+  un renvoi extérieur, un cycle ou une imbrication trop profonde sont refusés en les nommant. Le mode plat ne change pas.
+
 - Modèle v2, étape 7 (moteur, mode riche seulement) : le flou gaussien et l'ombre portée d'une forme ou d'un groupe se lisent,
   s'écrivent en filtres portables (`<filter id="ed-f-…">`, région calculée, `color-interpolation-filters="sRGB"`), suivent les
   transformations, comptent dans la boîte visuelle et sont gardés par le projet. Les exports de tracés les abandonnent en le

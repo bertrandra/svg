@@ -157,6 +157,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
   remplissages par intersection booléenne, garde un trait entier et le dit ; une copie renumérote les contenus
   (`renumeroterContenus`) ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-decoupes-*`.
+- **Un masque d'opacité est un contenu peint, rangé sur un groupe** (ADR-0012, étape 6) : `Groupe.masque` garde type, région (boîte
+  du plan) et contenu entier, lu par `edition/contenus.ts` (pile, tables et budget communs aux définitions) ; une feuille masquée
+  s'enveloppe dans un groupe ; l'écriture pose `<mask id="ed-m-…" maskUnits="userSpaceOnUse">` par empreinte ; le contenu suit la
+  fermeture par les `OutilsTransformation` du crochet `groupe` ; la descente l'ignore et le dit ; un vecteur nouveau entre dans
+  `tests/fixtures/hostile/v2-masques-*`.
 - **Un effet est un flou et une ombre, écrits aux formes exactes** (ADR-0012, étape 7) : `edition/fonctions/effets.ts` évalue les
   primitives et reconnaît le sous-ensemble (flou du graphique, ombre décomposée ou `feDropShadow`, les deux fusionnés), refuse toute
   autre primitive en la nommant ; l'ombre vit dans le repère du plan, le flou suit la matrice ; l'écriture pose
