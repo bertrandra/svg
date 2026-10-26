@@ -1,0 +1,15 @@
+{
+  "fichiers": [
+    "engine/edition/formesDeBase.ts",
+    "model/bibliotheque.ts",
+    "model/contextes.ts",
+    "model/credits.ts",
+    "model/lexique.ts",
+    "model/lexiqueSources.ts",
+    "model/sourcesFormes.ts",
+    "model/sourcesPolices.ts",
+    "styles/espaces.ts",
+    "styles/jetons.ts",
+    "styles/typographie.ts"
+  ]
+}
