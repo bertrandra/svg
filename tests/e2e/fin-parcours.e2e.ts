@@ -39,7 +39,7 @@ describe('recuperer son dessin', () => {
     await g.geste(() => boutonFichier(page).click());
     // « Télécharger le SVG » est le premier element de la rubrique « Récupérer le dessin ».
     const recuperer = page.getByRole('menu', { name: 'Récupérer le dessin' }).getByRole('menuitem');
-    expect(await recuperer.first().innerText()).toBe('Télécharger le SVG');
+    expect(await texteDe(recuperer.first())).toBe('Télécharger le SVG');
     await g.geste(async () => { fichier = await telecharger(page, () => recuperer.first().click()); });
     expect(fichier.nom).toBe('exemple.svg');
     expect(fichier.texte).toContain('fill="' + VERT + '"');
