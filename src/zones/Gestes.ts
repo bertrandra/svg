@@ -126,9 +126,10 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       geste.current = { type: 'poignee', i: i ?? 0, k: k === 1 ? 1 : 0, base: mo.dessin, id: mo.formeSeule.id, cle: ac.nouvelleCle() };
       return;
     }
-    const id = prise.prendre(e);
+    // Une forme hors du contexte d'edition fait sortir jusqu'a son niveau (ADR-0012, annexe 6 §2) : elle seule est alors choisie.
+    const dedans = prise.prendre(e), id = dedans ?? prise.sortir(e);
     if (id) {
-      const sel = mo.sel;
+      const sel = dedans ? mo.sel : [];
       const ids = e.shiftKey ? (sel.includes(id) ? sel.filter(s => s !== id) : [...sel, id]) : sel.includes(id) ? sel : [id];
       ac.choisir(ids);
       if (ui.outil === 'points') { ac.poserPoint(null); return; }

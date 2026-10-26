@@ -6,9 +6,13 @@ import { createPortal } from 'react-dom';
 import { useVisite } from './contexteGuide.js';
 import { useFocusDialogue } from './focusEditeur.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
+import { useDessin, useInterface } from './contexteEditeur.js';
+import { groupesActifs } from './commandesGroupes.js';
 
 /** Les raccourcis de l'editeur, tels qu'on les dit : la meme liste dans le panneau du dessin et dans la boite de l'aide. */
 export function ListeRaccourcis() {
+  // Le modele riche (ADR-0012, etape 2) donne Ctrl+G aux groupes : la liste dit les raccourcis du dessin ouvert.
+  const riche = groupesActifs(useDessin().dessin, useInterface().modele);
   return (
     <ul className="raccourcis">
       <li>V sélection · B cadre de sélection · Q lasso · A points · H, ou espace maintenu en glissant : main · O contours</li>
@@ -20,7 +24,9 @@ export function ListeRaccourcis() {
       <li>M aimants · poignée ronde : rotation (Maj : par 15°) · deux doigts : zoom</li>
       <li>Ctrl+Z annuler · Ctrl+Maj+Z ou Ctrl+Y rétablir</li>
       <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
-      <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
+      {riche
+        ? <li>Ctrl+G grouper · Ctrl+Maj+G dégrouper · Entrée sur un groupe : y entrer, double-clic aussi · Maj+Entrée ou Échap : en sortir · dans un groupe, Tab, Page suivante et Ctrl+A ne voient que ses éléments · Combiner et Séparer : menu Édition · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
+        : <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>}
       <li>G grille magnétique · Z zoom sur la sélection · Ctrl+S enregistrer</li>
       <li>Maj+R règles (glissez depuis une règle : un repère ; Entrée sur une règle : un repère au milieu de la vue) · Ctrl+; repères · Ctrl+Alt+; verrouiller les repères · Ctrl+Maj+; les effacer · un repère choisi : Suppr le retire, les flèches le déplacent, Entrée ouvre son champ, double-clic aussi</li>
       <li>I inverser la sélection · C même couleur de fond (de contour pour une forme sans fond) · Alt+C même couleur de contour · Y même type (texte, trait, forme pleine)</li>

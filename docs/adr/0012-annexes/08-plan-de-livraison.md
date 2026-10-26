@@ -17,7 +17,7 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; 2-B, 2-C, 2-D proposés |
+| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; 2-B, 2-D proposés |
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
 | 4, 6, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
@@ -238,6 +238,63 @@ plat, le rendu de la toile au corps d'avant recopié, en vue normale et en vue �
   les effets écrits par `effets.ts` (attributs `filter`, définitions `<filter>`) se verront sans toucher la toile ; le mode brouillon
   d'un geste peut se poser sur `<g class="noeuds-toile" data-brouillon>` (un attribut de `NoeudsToile`) et retirer les filtres par
   le CSS, ou passer à `renduDe` une liste sans les effets (`renduDe(d, fonctions)` n'est pas mémorisé).
+
+### Ce que le paquet 2-C a posé (26 octobre 2026)
+
+Aucun octet écrit ne bouge, la lecture `plat` est inchangée, et **en modèle plat rien n'apparaît ni ne change** (Ctrl+G combine,
+Ctrl+Maj+G sépare, aucun élément de menu de plus ; e2e « à plat, aucune commande de groupe »). « Modèle riche » veut dire ici : le
+réglage à `riche`, **ou un dessin déjà riche** (un projet du site s'ouvre tel qu'il a été enregistré, quel que soit le réglage) —
+`groupesActifs(dessin, modele)` dans `zones/commandesGroupes.ts`.
+
+- **Les commandes** (`zones/commandesGroupes.ts`, nouveau) : `groupesActifs`, `groupeSeul`, `aUnGroupe`, `entrerDansGroupe` (entre et
+  choisit le premier enfant du niveau, pour que Tab parcoure aussitôt ses frères ; une phrase dit les deux), `sortirDuGroupe` (« Vous
+  êtes déjà à la racine du dessin. » à la racine), `remonterVers(m, u, ac, cible)` (fil d'Ariane : le groupe quitté reste choisi),
+  `elementsGroupes` (menu), `ctrlG`, `toucheGroupes` (Entrée, Maj+Entrée) et `telechargerAPlat`. **Les verbes** `ac.grouper()` et
+  `ac.degrouper()` (`zones/actionsGroupes.ts`, nouveau, branché dans `creerActions.ts` ; déclarés dans `ActionsEditeur`) : grouper les
+  racines de la sélection (`unites`), le groupe nouveau choisi ; dégrouper les groupes choisis, les enfants remontés choisis, et dire
+  ce que le groupe portait (opacité, découpe, masque, effets) quand il part avec lui. **2-B les reprend tels quels** (mêmes noms).
+- **Le menu Édition** (pas de menu Objet : il n'existe pas, ADR-0006 range le rare dans Édition) : Grouper (Ctrl+G), Dégrouper
+  (Ctrl+Maj+G), Entrer dans le groupe (Entrée), Sortir du groupe (Maj+Entrée), juste avant Combiner et Séparer, qui **perdent leur
+  raccourci en riche** (question 1 de l'annexe 9 tranchée ainsi : aucune touche libre ne vaut sur tous les claviers — AltGr est
+  Ctrl+Alt, l'AZERTY prend les chiffres sans Maj ; ils restent au menu et dans la rangée). **La rangée de la sélection**
+  (`BarreSelection.tsx`) : boutons Grouper et Dégrouper dans « Formes » (et dans le menu « Plus » de la rangée resserrée), icônes
+  `grouper` et `degrouper` (`icones.tsx`). **Le menu Fichier** : « Télécharger le SVG à plat » (`<nom>-a-plat.svg`), la descente
+  `CAPACITES_PLAT` écrite par `svgDocument` comme « Télécharger le SVG » écrit un dessin plat, ce qui a été approché dit ; un
+  téléchargement, pas un enregistrement. `MenuFichier` prend `nom`. La liste des raccourcis (`AideEditeur.tsx`) dit ceux du dessin ouvert.
+- **Le clavier** : `Clavier.ts` (Ctrl+G par `ctrlG` ; Ctrl+A au niveau du contexte), `ClavierToile.ts` (Tab, Maj+Tab, Page
+  suivante et précédente au niveau ; `toucheGroupes` avant « Entrée sur une feuille »), `ClavierSelection.ts` (Maj+Page suivante et
+  Espace au niveau), `commandesSelection.ts` (« Tout sélectionner » et « Inverser » au niveau, sur un dessin riche seulement). Le
+  moteur : `engine/navigation.ts` — **`noeudsChoisissables(d, contexte)`** (dessin plat : la liste d'avant, à l'identique ; riche : les
+  frères du contexte, visibles et déverrouillés eux et leurs ancêtres), `formeVoisine(…, contexte = null)`, `formeAuCurseur(…,
+  contexte = null)`.
+- **Le clic hors du contexte en sort** : `usePrise().sortir(e)` (`PriseToile.tsx`) cherche, du parent du contexte jusqu'à la racine,
+  le premier niveau où l'appui prend un nœud, en fait le contexte et le dit (« Retour à la racine. Forme 3 sélectionnée : … ») ;
+  `Gestes.ts` ne fait que l'appeler quand rien n'est pris dans le contexte (trois lignes). Un appui sur le vide garde le contexte (le
+  cadre de sélection y commence).
+- **Le fil d'Ariane** (`zones/FilAriane.tsx`, nouveau, dans la barre d'état de `Cadre.tsx`) : un `nav` « Contexte d'édition », une
+  liste de boutons (`Racine › Nuage › Soleil`), le niveau du moment en `aria-current="location"` ; seulement en contexte. Le bouton
+  cliqué disparaît toujours : le focus revient à la toile (`focusAuClavier`). CSS dans `editeur.css` (`.fil-ariane`, 40 px au doigt,
+  pleine ligne sur un téléphone), aucune couleur nouvelle.
+- **Les phrases** : `engine/description.ts` — `nomDeGroupe`, `groupeDit` (déplacés depuis `phrasesGroupes.ts`, qui les réexporte),
+  `porteParGroupe`, `detailsGroupe`, `groupeDecrit` (« groupe « Nuage », 3 formes, ombre portée, opacité 50 %, 80 × 40 à 10, 20 »).
+  `annonces.ts` : `phraseSelection` dit un groupe (« Groupe « Nuage » sélectionné : 3 formes, 80 × 40 à 10, 20. ») et plusieurs nœuds
+  (« 3 éléments sélectionnés. ») ; une sélection de feuilles se dit comme avant ; `phraseBascule` dit « Groupe 3 ajouté ».
+  `phrasesGroupes.ts` : `elementsDits`, `phraseGroupeCree` (« Groupe créé : 3 formes. »), `phraseGroupeDefait`, `cheminGroupes`,
+  `phraseNiveau`.
+- **Les points refusés sur une image** : `ac.poserOutil('points')` (`creerActions.ts`) refuse sur une image choisie seule et dit
+  `MSG_POINTS_IMAGE` (double-clic, Entrée, touche A, bouton). Et **une image se prend sur toute sa surface** (`engine/prise.ts`, une
+  ligne : elle n'a ni remplissage ni trait, elle ne se prenait qu'au bord de son cadre) ; aucun dessin plat n'a d'image.
+- **Jetons** : aucun ajouté. `voile-contexte` : l'estompe reste une opacité (2-A), sans couleur ; `contour-groupe` : le contour du
+  groupe en contexte reprend `--cyan` sur `--panneau`, comme le liseré de survol (ADR-0029) ; `pastille-groupe` sert aux pastilles
+  des calques (2-B).
+- **Tests** : `tests/unit/engine/navigation-contexte.test.ts`, `tests/unit/zones/commandesGroupes.test.ts`, des cas dans
+  `creerActions.test.ts` ; e2e `modele-riche.e2e.ts` : le parcours clavier complet (deux formes choisies au clavier, Ctrl+G et sa
+  phrase, Entrée, Tab et Maj+Tab entre les enfants, Ctrl+A au niveau, le fil d'Ariane, Maj+Entrée, « Racine » au clavier et le focus
+  rendu à la toile, Ctrl+Maj+G, « SVG à plat » téléchargé sans `<g>`), axe en clair, sombre et au doigt, à plat rien de nouveau, le
+  double-clic sur une image ; le clic hors du contexte (qui en sort désormais) dans le parcours à la souris.
+- **Reste pour 2-D** : les budgets de l'annexe 7 §4 ; `contraste-force.e2e.ts` sur le fil d'Ariane ; firefox et webkit en CI. **Pour
+  2-B** : la ligne « Entrée » d'un groupe dans la grille peut appeler `entrerDansGroupe` ; « Tout » et « Inverser » des calques
+  (`Calques.tsx`) voient encore toutes les feuilles : `noeudsChoisissables` est prêt.
 
 ### Ce que l'étape 5 a posé (26 octobre 2026)
 

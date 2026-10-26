@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, type RefObject } from 'react';
 import { ancre, boiteDe, deplacer, deplacerAncre, redimensionner } from '../engine/editionSvg.js';
-import { boiteRedimensionnee, coteMinimal, directionDe, pasDeplacement, type Direction } from '../engine/navigation.js';
+import { boiteRedimensionnee, coteMinimal, directionDe, noeudsChoisissables, pasDeplacement, type Direction } from '../engine/navigation.js';
 import { tournerAutour } from '../engine/transformations.js';
 import { phrasePoint, phrasePosition, phraseRotation, phraseTaille } from './annonces.js';
 import { toucheToile } from './ClavierToile.js';
@@ -17,6 +17,7 @@ import { operationsApplicables } from '../engine/preparation.js';
 import { creerNuancierDepuisSelection } from './actionsNuancier.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
 import { toucheSelection } from './commandesSelection.js';
+import { ctrlG } from './commandesGroupes.js';
 
 const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte', b: 'cadre', q: 'lasso' };
 
@@ -46,14 +47,16 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (cible?.closest('.menu-panneau') && e.key !== 'Escape') return;
       // La bulle de la visite garde ses touches (Tab, Entree, Echap) : une fleche n'y deplace pas la forme choisie derriere elle.
       if (cible?.closest('.bulle-visite')) return;
-      if (mod && t === 'a') { e.preventDefault(); ac.choisir(m.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)); return; }
+      // Ctrl+A : tout ce qu'on peut choisir, au niveau du contexte d'edition sur un dessin riche (ADR-0012, annexe 6 §2).
+      if (mod && t === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, u.contexte?.groupe ?? null)); return; }
       if (mod && t === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
       if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }
       if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }
       if (mod && t === 'v') { e.preventDefault(); ac.collerPresse(); return; }
       // Ctrl+Maj+O : vectoriser le texte choisi, dans le mode du moment (ADR-0022 ; le raccourci des logiciels de dessin).
       if (mod && e.shiftKey && t === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
-      if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) ac.separerSelection(); else ac.combinerSelection(); return; }
+      // Ctrl+G et Ctrl+Maj+G : grouper et degrouper en modele riche, combiner et separer a plat (annexe 9, question 1).
+      if (mod && t === 'g') { e.preventDefault(); ctrlG(m, u, ac, e.shiftKey); return; }
       if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }
       if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, sx: x })) { e.preventDefault(); return; }
       if (u.outil === 'plume' && u.trace.length) {

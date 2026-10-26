@@ -438,4 +438,54 @@ describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)'
     actions.deplier(['g1'], false);
     expect([...deplies()]).toEqual(['g2']);
   });
+
+  it('groupe la selection (Ctrl+G en riche) et la degroupe, choisit ce qui en resulte et le dit', () => {
+    const { actions, etat, messages, historique: h } = monter(null, SVG, 'riche');
+    actions.grouper();
+    expect(messages.at(-1)).toBe('Choisissez les formes à grouper.');
+    expect(h().passe).toHaveLength(0);
+    etat.sel = ['f1', 'f2'];
+    actions.grouper();
+    expect(Object.keys(etat.dessin.groupes ?? {})).toEqual(['g1']);
+    expect(etat.dessin.formes.map(f => f.parent)).toEqual(['g1', 'g1']);
+    expect(etat.sel).toEqual(['g1']);
+    expect(messages.at(-1)).toBe('Groupe créé : 2 formes.');
+    // Un groupe et une forme : deux elements.
+    etat.sel = ['f1'];
+    actions.degrouper();
+    expect(messages.at(-1)).toBe('Choisissez un groupe à dégrouper.');
+    etat.sel = ['g1'];
+    actions.degrouper();
+    expect(etat.dessin.groupes).toBeUndefined();
+    expect(etat.sel).toEqual(['f1', 'f2']);
+    expect(messages.at(-1)).toBe('Groupe défait : 2 formes.');
+    expect(h().passe).toHaveLength(2);
+  });
+
+  it('degroupe en disant ce que le groupe portait, et compte les elements quand un groupe remonte', () => {
+    const SVG_OPACITE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g opacity="0.5"><path d="M0 0h10v10h-10z"/><g><path d="M20 0h10v10h-10z"/><path d="M40 0h10v10h-10z"/></g></g></svg>';
+    const { actions, etat, messages } = monter(null, SVG_OPACITE, 'riche');
+    etat.sel = ['g1'];
+    actions.degrouper();
+    expect(etat.sel).toEqual(['f1', 'g2']);
+    expect(messages.at(-1)).toBe('Groupe défait : 2 éléments. L’opacité, la découpe, le masque ou les effets du groupe sont retirés ; Ctrl+Z les rend.');
+    etat.sel = ['f1', 'g2'];
+    actions.grouper();
+    expect(messages.at(-1)).toBe('Groupe créé : 2 éléments.');
+  });
+
+  it('refuse le mode points sur une image, et le dit ; une autre forme y passe', () => {
+    const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC';
+    const AVEC_IMAGE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><image x="0" y="0" width="10" height="10" href="data:image/png;base64,' + PNG + '"/><path d="M20 0h10v10h-10z"/></svg>';
+    const { actions, etat, messages, setters } = monter(null, AVEC_IMAGE, 'riche');
+    const [image, forme] = etat.dessin.formes;
+    if (!image?.image || !forme) throw new Error('une image et une forme');
+    etat.formeSeule = image;
+    actions.poserOutil('points');
+    expect(setters.poserOutilBrut).not.toHaveBeenCalled();
+    expect(messages.at(-1)).toMatch(/^Les points d’une image ne se modifient pas/);
+    etat.formeSeule = forme;
+    actions.poserOutil('points');
+    expect(setters.poserOutilBrut).toHaveBeenCalledWith('points');
+  });
 });

@@ -201,7 +201,7 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       {/* Le fichier, d'un seul tenant : le recuperer, le menu Fichier, et le geste de fin. Sous 1 440 px, il passe a la ligne entier, a droite. */}
       <div className="groupe fin" role="group" aria-label="Fichier">
         <RecupererBarre nom={nom} />
-        <MenuFichier />
+        <MenuFichier nom={nom} />
         <BoutonEnregistrer />
       </div>
     </header>

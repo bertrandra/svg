@@ -26,6 +26,7 @@ import { BoiteInsererAdresse } from './InsererAdresse.js';
 import { adressesPermises } from './OuvrirAdresse.js';
 import { useElementsNuancier } from './actionsNuancier.js';
 import { elementsSelection } from './commandesSelection.js';
+import { elementsGroupes, groupesActifs, telechargerAPlat } from './commandesGroupes.js';
 import { useStockage } from './contexteStockage.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
@@ -70,6 +71,7 @@ function useElementsEdition(): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition(), stockage = useStockage();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
   const nuancier = useElementsNuancier();
+  const groupes = elementsGroupes(mo, ui, ac), riche = groupes.length > 0;
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
   const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
     id: 'vectoriser-' + m, libelle: 'Vectoriser le texte : ' + NOMS_MODES[m].toLowerCase(), separateur: i === 0, desactive: sansTexte,
@@ -102,8 +104,11 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'arrondir-angles', libelle: 'Arrondir les angles…', desactive: rien, onClick: () => allerAuChamp(ac, 'rayon') },
     { id: 'joindre-traces', libelle: 'Joindre ou fermer les tracés', desactive: mo.sel.length < 1 || mo.sel.length > 2, onClick: ac.joindreSelection },
     { id: 'inverser-sens', libelle: 'Inverser le sens du tracé', desactive: rien, onClick: ac.inverserSens },
-    { id: 'combiner', libelle: 'Combiner en un tracé composé', icone: 'combiner', raccourci: 'Ctrl+G', desactive: mo.sel.length < 2, onClick: ac.combinerSelection },
-    { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !mo.formeSeule || sousChemins(mo.formeSeule.d).length < 2, onClick: ac.separerSelection },
+    // Les groupes (ADR-0012, etape 2), en modele riche seulement : Ctrl+G et Ctrl+Maj+G y groupent et degroupent (annexe 9, question 1),
+    // et Combiner et Separer gardent leur place, sans raccourci.
+    ...groupes,
+    { id: 'combiner', libelle: 'Combiner en un tracé composé', icone: 'combiner', ...(riche ? {} : { raccourci: 'Ctrl+G' }), separateur: riche, desactive: mo.sel.length < 2, onClick: ac.combinerSelection },
+    { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', ...(riche ? {} : { raccourci: 'Ctrl+Maj+G' }), desactive: !mo.formeSeule || sousChemins(mo.formeSeule.d).length < 2, onClick: ac.separerSelection },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ac.supprimerSelection }
   ];
 }
@@ -117,7 +122,7 @@ export function MenuEdition() {
  * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
  * tete de cette rubrique sur un telephone (`recuperer`).
  */
-function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void): ElementMenu[] {
+function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
@@ -129,6 +134,9 @@ function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: 
     { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
     ...hote,
     ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
+    // Le SVG a plat (ADR-0012 §6), en modele riche : les octets d'avant le modele v2, sans groupe ni definition ; un telechargement,
+    // pas un enregistrement.
+    ...(groupesActifs(mo.dessin, ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', separateur: true, onClick: () => telechargerAPlat(mo.dessin, ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
     // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
     ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: true, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
@@ -156,11 +164,11 @@ function usePolicesDuDessin(): PoliceCreditee[] {
   return [...new Set(textes.map(p => p.famille ?? p.id))].map(nom => ({ nom, source: '', licence: null }));
 }
 
-/** Fichier : le geste de fin, le brouillon, les credits, fermer. */
-export function MenuFichier() {
+/** Fichier : le geste de fin, le brouillon, le SVG a plat en modele riche, les credits, fermer. */
+export function MenuFichier({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
-  const elements = useElementsFichier(poserCredits, null, poserAdresse);
+  const elements = useElementsFichier(nom, poserCredits, null, poserAdresse);
   return (
     <>
       <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
@@ -179,7 +187,7 @@ export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
   const raccourcis = useBoiteRaccourcis();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom), poserAdresse), production = useRubriquesProduction();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits, useElementRecuperer(nom), poserAdresse), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.

@@ -3,7 +3,8 @@
 // (« Forme 3 sélectionnée : … ») sont composees dans zones/annonces.ts avec ces briques.
 
 import { lireHex, type Rgb } from '../util/couleur.js';
-import { ancre, boiteForme, estEllipseChemin, reconnaitreFormeDeBase, type Chemin, type Forme } from './editionSvg.js';
+import { pluriel } from '../util/texte.js';
+import { ancre, boiteDe, boiteForme, estEllipseChemin, feuillesDe, reconnaitreFormeDeBase, type Chemin, type DessinSvg, type Forme, type Groupe } from './editionSvg.js';
 
 /**
  * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
@@ -129,3 +130,34 @@ export function nomDeForme(f: Forme): string {
   const genre = genreDeForme(f);
   return genre.charAt(0).toUpperCase() + genre.slice(1) + ' ' + numeroDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', verrouillée' : '') + (f.visible ? '' : ', masquée');
 }
+
+// ---------------------------------------------------------------- les groupes (ADR-0012, annexe 6 §7)
+
+/** Le nom d'un groupe tel qu'on le dit : le sien, sinon « Groupe 3 » (le numero de son identifiant `g3`). */
+export const nomDeGroupe = (g: Groupe): string => g.nom ?? 'Groupe ' + (/^g(\d+)$/.exec(g.id)?.[1] ?? g.id);
+
+/** « groupe « Nuage » », ou « groupe 3 » : un groupe nomme dans une phrase. */
+export const groupeDit = (g: Groupe): string => (g.nom ? 'groupe « ' + g.nom + ' »' : nomDeGroupe(g).toLowerCase());
+
+/** Ce que le groupe porte, dans l'ordre de l'annexe 6 §7 : « découpé, masque d’opacité, flou, ombre portée, opacité 50 % ». */
+export function porteParGroupe(g: Groupe): string[] {
+  const t: string[] = [];
+  if (g.decoupe) t.push('découpé');
+  if (g.masque) t.push('masque d’opacité');
+  if (g.effets?.flou) t.push('flou');
+  if (g.effets?.ombre) t.push('ombre portée');
+  if (g.opacite !== undefined && g.opacite < 1) t.push('opacité ' + Math.round(g.opacite * 100) + ' %');
+  return t;
+}
+
+/**
+ * Le detail d'un groupe : le nombre de ses formes (ses feuilles, a toute profondeur), ce qu'il porte, puis la taille et le coin de sa
+ * boite : « 3 formes, ombre portée, 80 × 40 à 10, 20 ».
+ */
+export function detailsGroupe(d: DessinSvg, g: Groupe): string {
+  const b = boiteDe(d, [g.id]);
+  return [pluriel(feuillesDe(d, [g.id]).length, 'forme'), ...porteParGroupe(g), ...(b ? [nombreFr(b.l) + ' × ' + nombreFr(b.h) + ' à ' + nombreFr(b.x) + ', ' + nombreFr(b.y)] : [])].join(', ');
+}
+
+/** « groupe « Nuage », 3 formes, 80 × 40 à 10, 20 » (annexe 6 §7). */
+export const groupeDecrit = (d: DessinSvg, g: Groupe): string => groupeDit(g) + ', ' + detailsGroupe(d, g);
