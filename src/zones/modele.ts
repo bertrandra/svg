@@ -8,7 +8,7 @@
 // Tout ce qui vient du stockage se valide (ADR-0014) : une valeur qu'on n'a pas ecrite se lit comme absente.
 
 import type { DessinSvg, OptionsLecture } from '../engine/editionSvg.js';
-import { ATTRIBUT_MODELE, estPlat } from '../engine/editionSvg.js';
+import { ATTRIBUT_MODELE, estPlat, lireDessin } from '../engine/editionSvg.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Modele } from './typesEditeur.js';
 
@@ -59,6 +59,16 @@ export function refusModele(svg: string, m: Modele, garde: Garde): string | null
   return garde === 'version'
     ? 'Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets », menu Édition) pour l’ouvrir.'
     : 'Ce brouillon emploie des groupes, des dégradés ou des effets ; activez le modèle riche pour le reprendre.';
+}
+
+/**
+ * Un refus de la lecture riche que la lecture a plat n'aurait pas (plus de 64 niveaux de groupes, plus de 20 000 groupes, un masque
+ * CSS : les bornes de l'annexe 5 §2) : la phrase dit comment l'ouvrir quand meme, ses groupes fondus. Tout autre refus reste tel quel.
+ * Une seconde lecture, seulement apres un refus.
+ */
+export function refusAvecRepli(svg: string, erreur: string, m: Modele): string {
+  if (m !== 'riche' || 'erreur' in lireDessin(svg)) return erreur;
+  return erreur + ' Lu à plat, ses groupes fondus, il s’ouvrirait : décochez « Groupes, dégradés, effets » au menu Édition de l’éditeur, puis rouvrez-le.';
 }
 
 /** Ce que dit le reglage quand il change : il vaut pour les fichiers ouverts ensuite, le dessin ouvert reste tel qu'il a ete lu. */

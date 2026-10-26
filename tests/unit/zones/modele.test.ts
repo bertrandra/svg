@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { ecrireDessin, lireDessin } from '../../../src/engine/editionSvg.js';
 import { stockageMemoire } from '../../../src/io/stockage.js';
-import { CLE_MODELE, estModele, garderModele, lireModele, modeleRetenu, optionsModele, porteModeleRiche, refusModele } from '../../../src/zones/modele.js';
+import { CLE_MODELE, estModele, garderModele, lireModele, modeleRetenu, optionsModele, porteModeleRiche, refusAvecRepli, refusModele } from '../../../src/zones/modele.js';
 import { estEditable, verifierOptions } from '../../../src/zones/embarque.js';
 import { editable } from '../../../src/zones/EditeurSvg.js';
 
@@ -63,6 +63,20 @@ describe('un brouillon ou une version ecrits en riche, rouverts a plat', () => {
     expect(refusModele(ecritRiche(), 'plat', 'brouillon')).toMatch(/^Ce brouillon emploie des groupes/);
     expect(refusModele(ecritRiche(), 'riche', 'version')).toBeNull();
     expect(refusModele(GROUPE, 'plat', 'version')).toBeNull();
+  });
+});
+
+describe('un refus propre a la lecture riche', () => {
+  it('dit que la lecture a plat l ouvrirait, et seulement alors', () => {
+    const profond = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">' + '<g>'.repeat(65) + '<path d="M0 0h10v10z"/>' + '</g>'.repeat(65) + '</svg>';
+    const r = lireDessin(profond, { modele: 'riche' });
+    if (!('erreur' in r)) throw new Error('65 niveaux devaient etre refuses en riche');
+    expect(refusAvecRepli(profond, r.erreur, 'riche')).toBe(r.erreur + ' Lu à plat, ses groupes fondus, il s’ouvrirait : décochez « Groupes, dégradés, effets » au menu Édition de l’éditeur, puis rouvrez-le.');
+    expect(refusAvecRepli(profond, r.erreur, 'plat')).toBe(r.erreur);
+    const degrade = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><defs><linearGradient id="a" href="#a"/></defs><path d="M0 0h10v10z" fill="url(#a)"/></svg>';
+    const d = lireDessin(degrade, { modele: 'riche' });
+    if (!('erreur' in d)) throw new Error('un cycle de degrades devait etre refuse');
+    expect(refusAvecRepli(degrade, d.erreur, 'riche')).toBe(d.erreur);
   });
 });
 

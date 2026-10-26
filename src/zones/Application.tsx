@@ -21,7 +21,7 @@ import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { insecables, nomDeFichier } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
-import { garderModele, MODELE_PAGE, modeleRetenu, refusModele } from './modele.js';
+import { garderModele, MODELE_PAGE, modeleRetenu, refusAvecRepli, refusModele } from './modele.js';
 import type { Modele } from './typesEditeur.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
@@ -136,7 +136,7 @@ function Accueil() {
     const modele = modeleDeLaPage();
     if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg, undefined, modele).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
     const lu = lireDessinMemo(propre.svg, modele);
-    if ('erreur' in lu) { dire(lu.erreur); return; }
+    if ('erreur' in lu) { dire(refusAvecRepli(propre.svg, lu.erreur, modele)); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores, ...(production ? { production } : {}) });
     poserEdition(true);
     // Une seule fois, ici : ce que la lecture a laisse tomber, pour qu'un rendu qui change ne passe pas inapercu.
