@@ -154,6 +154,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
+  plus ce schéma dans `data-href-externe` (trouvé par le fuzzing sur le corpus réuni ; vecteur ajouté au corpus).
 - Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
   corpus a changé) ; rien ne peut plus le recomposer.
 - Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
@@ -198,6 +200,13 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle v2, étape 3 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les dégradés linéaires et radiaux
+  sont lus (unités de boîte, pourcentages, transformation, chaîne `href`, 64 arrêts au plus), réécrits sous un identifiant
+  d'empreinte, une seule définition par dégradé, et suivent leur forme. Les exports qui ne savent pas peindre un dégradé (PDF, SVG
+  de découpe, DXF, EPS, fichiers Cricut) reçoivent sa couleur moyenne et le disent ; le nuancier lit les couleurs des arrêts. Le
+  projet du site garde dégradés et images au format 2 ; un dessin plat reste au format 1, octet pour octet. La vignette du site
+  montre les dégradés.
 
 - Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se
   lit en mode riche, vérifiée sur ses octets (une « image » qui est un SVG ou une adresse extérieure sont refusées en le nommant ;
