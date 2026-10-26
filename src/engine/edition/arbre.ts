@@ -6,6 +6,7 @@
 // `normaliser`. Les operations lisent `formes` ; l'interface (calques, toile, navigation) lit l'arbre.
 
 import type { Contenu, Forme, Groupe, Peinture } from './types.js';
+import { t } from '../../util/i18n.js';
 
 /** La profondeur d'imbrication des groupes au-dela de laquelle la lecture refuse (annexe 5 §2). */
 export const PROFONDEUR_GROUPES_MAX = 64;
@@ -251,7 +252,7 @@ export function verifierDessin(d: Contenu): string[] {
   const out: string[] = [], tuiles = new Set<Contenu>();
   const visiter = (c: Contenu, vus: Set<string>, niveau: number) => {
     for (const id of [...c.formes.map(f => f.id), ...Object.keys(c.groupes ?? {})]) {
-      if (vus.has(id)) out.push('I1 : identifiant en double « ' + id + ' »');
+      if (vus.has(id)) out.push(t('I1 : identifiant en double « {id} »', { id }));
       vus.add(id);
     }
     out.push(...verifierContenu(c));
@@ -282,31 +283,31 @@ function dansUnCycle(c: Contenu, id: string): boolean {
 
 function verifierContenu(c: Contenu): string[] {
   const out: string[] = [];
-  if (c.groupes && Object.keys(c.groupes).length === 0) out.push('I9 : table de groupes vide (elle doit etre absente)');
+  if (c.groupes && Object.keys(c.groupes).length === 0) out.push(t('I9 : table de groupes vide (elle doit etre absente)'));
   for (const [cle, g] of Object.entries(c.groupes ?? {})) {
-    if (g.id !== cle) out.push('I9 : le groupe rangé sous « ' + cle + ' » s’appelle « ' + g.id + ' »');
-    if (g.parent !== undefined && !groupeDe(c, g.parent)) out.push('I2 : le groupe « ' + g.id + ' » a un parent absent « ' + g.parent + ' »');
-    if (dansUnCycle(c, g.id)) out.push('I2 : cycle de groupes autour de « ' + g.id + ' »');
-    else if (ancetres(c, g.id).length >= PROFONDEUR_GROUPES_MAX) out.push('I2 : le groupe « ' + g.id + ' » est emboîté sur plus de ' + PROFONDEUR_GROUPES_MAX + ' niveaux');
+    if (g.id !== cle) out.push(t('I9 : le groupe rangé sous « {cle} » s’appelle « {id} »', { cle, id: g.id }));
+    if (g.parent !== undefined && !groupeDe(c, g.parent)) out.push(t('I2 : le groupe « {id} » a un parent absent « {parent} »', { id: g.id, parent: g.parent }));
+    if (dansUnCycle(c, g.id)) out.push(t('I2 : cycle de groupes autour de « {id} »', { id: g.id }));
+    else if (ancetres(c, g.id).length >= PROFONDEUR_GROUPES_MAX) out.push(t('I2 : le groupe « {id} » est emboîté sur plus de {n} niveaux', { id: g.id, n: PROFONDEUR_GROUPES_MAX }));
   }
   for (const f of c.formes) {
-    if (f.parent !== undefined && !groupeDe(c, f.parent)) out.push('I2 : la forme « ' + f.id + ' » a un parent absent « ' + f.parent + ' »');
-    if (f.peintureRemplissage && f.remplissage === null) out.push('I5 : la forme « ' + f.id + ' » a un dégradé ou un motif sans couleur de repli au fond');
-    if (f.peintureContour && f.contour === null) out.push('I5 : la forme « ' + f.id + ' » a un dégradé ou un motif sans couleur de repli au contour');
+    if (f.parent !== undefined && !groupeDe(c, f.parent)) out.push(t('I2 : la forme « {id} » a un parent absent « {parent} »', { id: f.id, parent: f.parent }));
+    if (f.peintureRemplissage && f.remplissage === null) out.push(t('I5 : la forme « {id} » a un dégradé ou un motif sans couleur de repli au fond', { id: f.id }));
+    if (f.peintureContour && f.contour === null) out.push(t('I5 : la forme « {id} » a un dégradé ou un motif sans couleur de repli au contour', { id: f.id }));
   }
   if (!c.groupes) return out;
   // I3 et I4 : chaque groupe couvre un intervalle contigu de feuilles, et au moins une.
   const intervalles = new Map<string, { debut: number; fin: number; nombre: number }>();
   c.formes.forEach((f, i) => {
     for (const a of ancetres(c, f.id)) {
-      const t = intervalles.get(a);
-      if (t) { t.fin = i + 1; t.nombre++; } else intervalles.set(a, { debut: i, fin: i + 1, nombre: 1 });
+      const iv = intervalles.get(a);
+      if (iv) { iv.fin = i + 1; iv.nombre++; } else intervalles.set(a, { debut: i, fin: i + 1, nombre: 1 });
     }
   });
   for (const id of Object.keys(c.groupes)) {
-    const t = intervalles.get(id);
-    if (!t) out.push('I4 : le groupe « ' + id + ' » est vide');
-    else if (t.fin - t.debut !== t.nombre) out.push('I3 : les formes du groupe « ' + id + ' » ne se suivent pas');
+    const iv = intervalles.get(id);
+    if (!iv) out.push(t('I4 : le groupe « {id} » est vide', { id }));
+    else if (iv.fin - iv.debut !== iv.nombre) out.push(t('I3 : les formes du groupe « {id} » ne se suivent pas', { id }));
   }
   return out;
 }

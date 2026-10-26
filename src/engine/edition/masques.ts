@@ -17,15 +17,16 @@ import { boiteVisuelle } from './etendueVisuelle.js';
 import { boiteChemin, unir } from './geometrie.js';
 import { couleurDeRepli, estDegrade } from './degrades.js';
 import { lireHex, versHex } from '../../util/couleur.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que disent les operations quand elles ne s'appliquent pas (phrases de l'interface, au vouvoiement). */
+/** Ce que disent les operations quand elles ne s'appliquent pas (phrases de l'interface, au vouvoiement) ; des accesseurs, traduits a la lecture. */
 export const MSG_MASQUE = {
-  selection: 'Choisissez au moins deux éléments visibles et déverrouillés : celui du dessus masque les autres.',
-  vide: 'L’élément du dessus ne laisse rien voir : il ne peut pas servir de masque.',
-  aucun: 'Ce groupe ne porte pas de masque.',
-  image: 'Ce masque contient une image : il ne s’inverse pas.',
-  couleur: 'Ce masque porte une couleur ou une peinture qui ne s’inverse pas (seuls les codes #rrggbb et les dégradés s’inversent).'
-} as const;
+  get selection(): string { return t('Choisissez au moins deux éléments visibles et déverrouillés : celui du dessus masque les autres.'); },
+  get vide(): string { return t('L’élément du dessus ne laisse rien voir : il ne peut pas servir de masque.'); },
+  get aucun(): string { return t('Ce groupe ne porte pas de masque.'); },
+  get image(): string { return t('Ce masque contient une image : il ne s’inverse pas.'); },
+  get couleur(): string { return t('Ce masque porte une couleur ou une peinture qui ne s’inverse pas (seuls les codes #rrggbb et les dégradés s’inversent).'); }
+};
 
 const idDe = (n: NoeudArbre): string => (n.genre === 'feuille' ? n.forme.id : n.groupe.id);
 /** Le premier et le dernier index de `formes` couverts par un noeud. */

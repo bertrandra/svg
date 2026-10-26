@@ -4,6 +4,7 @@
 
 import type { Chemin, Commande, DessinSvg, Forme } from './types.js';
 import { ancre, depart } from './chemins.js';
+import { t } from '../../util/i18n.js';
 import { sousChemin, surChemin } from './points.js';
 import { prochainId, surFormes } from './operations.js';
 import { ajusterCubiques } from './ajustement.js';
@@ -65,7 +66,8 @@ export function inverserSens(dessin: DessinSvg, ids: readonly string[]): DessinS
 
 // ---------------------------------------------------------------- casser
 
-export const MSG_BOUT_NE_SE_CASSE_PAS = 'Un bout du tracé ne se casse pas : choisissez un point du milieu.';
+// Des cles, evaluees au chargement avant la langue (le francais) ; `t(MSG_X)` les traduit quand on les dit.
+export const MSG_BOUT_NE_SE_CASSE_PAS = t('Un bout du tracé ne se casse pas : choisissez un point du milieu.');
 
 /** Un tracé ferme, rouvert en son nœud `local` (indice dans le sous-chemin) : un seul tracé ouvert qui part du nœud et y revient. */
 function ouvrirBoucle(s: readonly Commande[], local: number): Commande[] {
@@ -85,11 +87,11 @@ function ouvrirBoucle(s: readonly Commande[], local: number): Commande[] {
  */
 export function casserEnNoeud(d: Chemin, i: number): { avant: Chemin; morceaux: Chemin[]; apres: Chemin } | { erreur: string } {
   const c = d[i], point = c ? ancre(c) : null;
-  if (!c || !point) return { erreur: 'Choisissez un point à casser.' };
+  if (!c || !point) return { erreur: t('Choisissez un point à casser.') };
   const [a, b] = sousChemin(d, i), sous = d.slice(a, b), local = i - a;
   const avant = d.slice(0, a), apres = d.slice(b);
   if (estFerme(sous)) return { avant, morceaux: [ouvrirBoucle(sous, local)], apres };
-  if (local === 0 || local === sous.length - 1) return { erreur: MSG_BOUT_NE_SE_CASSE_PAS };
+  if (local === 0 || local === sous.length - 1) return { erreur: t(MSG_BOUT_NE_SE_CASSE_PAS) };
   return { avant, morceaux: [sous.slice(0, local + 1), [{ c: 'M', p: [point[0], point[1]] }, ...sous.slice(local + 1)]], apres };
 }
 
@@ -99,11 +101,11 @@ export function casserEnNoeud(d: Chemin, i: number): { avant: Chemin; morceaux: 
  */
 export function casserForme(dessin: DessinSvg, id: string, i: number): { dessin: DessinSvg; ids: string[] } | { erreur: string } {
   const forme = dessin.formes.find(f => f.id === id);
-  if (!forme || forme.verrouille) return { erreur: 'Cette forme est verrouillée : déverrouillez-la pour la casser.' };
+  if (!forme || forme.verrouille) return { erreur: t('Cette forme est verrouillée : déverrouillez-la pour la casser.') };
   const r = casserEnNoeud(forme.d, i);
   if ('erreur' in r) return r;
   const [premier, second] = r.morceaux;
-  if (!premier) return { erreur: MSG_BOUT_NE_SE_CASSE_PAS };
+  if (!premier) return { erreur: t(MSG_BOUT_NE_SE_CASSE_PAS) };
   const principale: Forme = { ...forme, d: [...r.avant, ...premier, ...r.apres] };
   if (!second) return { dessin: { ...dessin, formes: dessin.formes.map(f => (f === forme ? principale : f)) }, ids: [id] };
   const neuve: Forme = { ...forme, id: 'f' + prochainId(dessin), d: second };
@@ -112,7 +114,7 @@ export function casserForme(dessin: DessinSvg, id: string, i: number): { dessin:
 
 // ---------------------------------------------------------------- joindre
 
-export const MSG_JOINDRE = 'Choisissez un tracé ouvert à fermer, ou deux tracés ouverts à joindre.';
+export const MSG_JOINDRE = t('Choisissez un tracé ouvert à fermer, ou deux tracés ouverts à joindre.');
 
 /** Le tracé ouvert unique d'une forme (un seul sous-chemin, sans Z), ou null. */
 const unSeulOuvert = (f: Forme): Commande[] | null => { const s = decouper(f.d); const [un] = s; return s.length === 1 && un && !estFerme(un) && un.length > 1 ? un : null; };
@@ -137,7 +139,7 @@ const rien = (dessin: DessinSvg, erreur: string): ResultatJonction => ({ dessin,
 /** Ferme tous les sous-chemins ouverts d'une forme : un Z, la droite de fermeture se trace seule. */
 function fermerForme(dessin: DessinSvg, f: Forme): ResultatJonction {
   const sous = decouper(f.d);
-  if (sous.every(estFerme)) return rien(dessin, 'Ce tracé est déjà fermé.');
+  if (sous.every(estFerme)) return rien(dessin, t('Ce tracé est déjà fermé.'));
   const d = sous.flatMap(s => (estFerme(s) ? s : [...s, { c: 'Z' as const, p: [] }]));
   return { dessin: surFormes(dessin, [f.id], x => ({ ...x, d })), id: f.id, genre: 'ferme' };
 }
@@ -150,10 +152,10 @@ export function joindreExtremites(dessin: DessinSvg, ids: readonly string[]): Re
   const voulus = new Set(ids);
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille);
   const [un, deux, trop] = choisies;
-  if (!un || trop) return rien(dessin, MSG_JOINDRE);
+  if (!un || trop) return rien(dessin, t(MSG_JOINDRE));
   if (!deux) return fermerForme(dessin, un);
   const a = unSeulOuvert(un), b = unSeulOuvert(deux);
-  if (!a || !b) return rien(dessin, 'Chaque forme à joindre doit être un seul tracé ouvert.');
+  if (!a || !b) return rien(dessin, t('Chaque forme à joindre doit être un seul tracé ouvert.'));
   const [da, fa] = bouts(a), [db, fb] = bouts(b);
   const essais = [
     { ecart: norme(moins(fa, db)), d: recoller(a, b) },
@@ -169,8 +171,8 @@ export function joindreExtremites(dessin: DessinSvg, ids: readonly string[]): Re
 
 // ---------------------------------------------------------------- retirer un nœud sans changer la courbe
 
-export const MSG_NOEUD_PORTE = 'Ce point porte la courbe : le retirer la déformerait. « Supprimer le point » le retire et laisse la courbe se refermer.';
-export const MSG_TROIS_POINTS = 'Un tracé garde au moins trois points : supprimez plutôt la forme.';
+export const MSG_NOEUD_PORTE = t('Ce point porte la courbe : le retirer la déformerait. « Supprimer le point » le retire et laisse la courbe se refermer.');
+export const MSG_TROIS_POINTS = t('Un tracé garde au moins trois points : supprimez plutôt la forme.');
 
 /** Un segment de chemin vu comme `Seg` (une quadratique est elevee en cubique). */
 function segDe(a: Pt, c: Commande): Seg {
@@ -212,14 +214,14 @@ function fusionExacte(s1: Seg, s2: Seg, tolerance: number): Seg | null {
 export function supprimerNoeudEnGardantLaCourbe(dessin: DessinSvg, id: string, i: number, tolerance: number): DessinSvg | { erreur: string } {
   const forme = dessin.formes.find(f => f.id === id), c = forme?.d[i], suivante = forme?.d[i + 1];
   if (!forme || !c || !suivante) return dessin;
-  if (c.c === 'M' || c.c === 'Z' || suivante.c === 'M' || suivante.c === 'Z') return { erreur: 'Ce point est un départ ou une arrivée : seul un point du milieu se retire en gardant la courbe.' };
+  if (c.c === 'M' || c.c === 'Z' || suivante.c === 'M' || suivante.c === 'Z') return { erreur: t('Ce point est un départ ou une arrivée : seul un point du milieu se retire en gardant la courbe.') };
   const [a, b] = sousChemin(forme.d, i);
-  if (forme.d.slice(a + 1, b).filter(x => x.c !== 'Z').length <= 2) return { erreur: MSG_TROIS_POINTS };
+  if (forme.d.slice(a + 1, b).filter(x => x.c !== 'Z').length <= 2) return { erreur: t(MSG_TROIS_POINTS) };
   const p0 = depart(forme.d, i), s1 = segDe(p0, c), s2 = segDe(s1.b, suivante), p3 = s2.b;
   const exacte = !s1.droit && !s2.droit ? fusionExacte(s1, s2, tolerance) : null;
   let fusion: Commande;
   if (s1.droit && s2.droit) {
-    if (ecartSegment(s1.b, p0, p3) > tolerance) return { erreur: MSG_NOEUD_PORTE };
+    if (ecartSegment(s1.b, p0, p3) > tolerance) return { erreur: t(MSG_NOEUD_PORTE) };
     fusion = { c: 'L', p: [p3[0], p3[1]] };
   } else if (exacte) {
     fusion = { c: 'C', p: [exacte.c1[0], exacte.c1[1], exacte.c2[0], exacte.c2[1], p3[0], p3[1]] };
@@ -229,7 +231,7 @@ export function supprimerNoeudEnGardantLaCourbe(dessin: DessinSvg, id: string, i
     for (let k = 1; k <= pas; k++) pts.push(evaluer(s2, k / pas));
     const pieces = ajusterCubiques(pts, tolerance, tangente(s1, 0), fois(tangente(s2, 1), -1));
     const unique = pieces?.length === 1 ? pieces[0] : undefined;
-    if (!unique) return { erreur: MSG_NOEUD_PORTE };
+    if (!unique) return { erreur: t(MSG_NOEUD_PORTE) };
     fusion = { c: 'C', p: [unique.c1[0], unique.c1[1], unique.c2[0], unique.c2[1], p3[0], p3[1]] };
   }
   return surChemin(dessin, id, d => [...d.slice(0, i), fusion, ...d.slice(i + 2)]);

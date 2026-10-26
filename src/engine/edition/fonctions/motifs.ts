@@ -40,32 +40,34 @@ import { ancetresDe, etatContenus, lireContenu, visiterSousBudget } from '../con
 import { lireCode, versOklab, depuisOklch, versHex } from '../../../util/couleur.js';
 import { aireDeChemin, longueurDeChemin } from '../../nuancier/surfaces.js';
 import type { Recueil } from '../definitions.js';
-import { nombre } from '../../../util/i18n.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
 /** La plus petite tuile (largeur et hauteur, dans le repere du motif) : en dessous, rien de lisible ne se repete, et la tuile ecrite au centieme serait nulle. */
 export const TUILE_MIN = 0.01;
 
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
+
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … », annexe 5 §1). */
 export const REFUS_MOTIFS = {
-  externe: 'une peinture ou un motif qui renvoie à un fichier ou une adresse extérieurs',
-  cycle: 'un cycle de motifs',
-  chaine: 'des motifs qui héritent l’un de l’autre sur plus de 16 niveaux',
-  profondeur: 'des définitions emboîtées sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux (motifs, masques, découpes)',
-  trop: 'des motifs trop lourds (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)',
-  nombreux: 'trop de motifs distincts (plus de ' + nombre(NOEUDS_DEFS_MAX) + ')',
-  vide: 'un motif dont la tuile est vide, nulle ou plus petite qu’un centième (rien ne s’y répète)',
-  unite: 'un motif dont une longueur n’est ni un nombre, ni des pixels, ni un pourcentage',
-  transformation: 'un motif dont la transformation est illisible ou dégénérée',
-  demesure: 'un motif aux coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')',
-  image: 'une image dans la tuile d’un motif'
-} as const;
+  get externe(): string { return t('une peinture ou un motif qui renvoie à un fichier ou une adresse extérieurs'); },
+  get cycle(): string { return t('un cycle de motifs'); },
+  get chaine(): string { return t('des motifs qui héritent l’un de l’autre sur plus de 16 niveaux'); },
+  get profondeur(): string { return t('des définitions emboîtées sur plus de {n} niveaux (motifs, masques, découpes)', { n: PROFONDEUR_DEFS_MAX }); },
+  get trop(): string { return t('des motifs trop lourds (plus de {n} formes dans leurs définitions)', { n: nombre(NOEUDS_DEFS_MAX) }); },
+  get nombreux(): string { return t('trop de motifs distincts (plus de {n})', { n: nombre(NOEUDS_DEFS_MAX) }); },
+  get vide(): string { return t('un motif dont la tuile est vide, nulle ou plus petite qu’un centième (rien ne s’y répète)'); },
+  get unite(): string { return t('un motif dont une longueur n’est ni un nombre, ni des pixels, ni un pourcentage'); },
+  get transformation(): string { return t('un motif dont la transformation est illisible ou dégénérée'); },
+  get demesure(): string { return t('un motif aux coordonnées démesurées (au-delà de ± {max})', { max: nombre(COORDONNEE_MAX) }); },
+  get image(): string { return t('une image dans la tuile d’un motif'); }
+};
 
 /** Ce que la lecture riche dit perdre (`ignores`). */
 export const MSG_MOTIFS = {
-  debord: 'un motif dont la tuile déborde (overflow: visible) : il est rogné à la tuile'
-} as const;
+  get debord(): string { return t('un motif dont la tuile déborde (overflow: visible) : il est rogné à la tuile'); }
+};
 
 // ---------------------------------------------------------------- calcul pur : repli, transformation
 
@@ -171,14 +173,14 @@ function lireMotif(cible: Noeud, n: Noeud, pret: Pret, marche: Marche): Peinture
   const p = marche.parcours, a = p.analyse;
   const etat = etatContenus(marche);
   const chaine = chaineHref(cible, a.ids, estPattern);
-  if ('cycle' in chaine) { marche.refuser(REFUS_MOTIFS.cycle + ' (« #' + chaine.cycle + ' »)'); return null; }
+  if ('cycle' in chaine) { marche.refuser(t('{refus} (« #{id} »)', { refus: REFUS_MOTIFS.cycle, id: chaine.cycle })); return null; }
   if ('externe' in chaine) { marche.refuser(REFUS_MOTIFS.externe); return null; }
   if ('trop' in chaine) { marche.refuser(REFUS_MOTIFS.chaine); return null; }
   const maillons = chaine.maillons;
   // Le contenu est celui du premier maillon qui en porte (un motif sans enfant prend celui dont il herite).
   const porteur = maillons.find(m => m.enfants.some(e => !MUETS.has(e.nom)));
   if (etat.actives.includes(cible) || (porteur && etat.actives.includes(porteur))) {
-    marche.refuser(REFUS_MOTIFS.cycle + ' (« #' + (cible.attributs.id ?? '').slice(0, 40) + ' »)');
+    marche.refuser(t('{refus} (« #{id} »)', { refus: REFUS_MOTIFS.cycle, id: (cible.attributs.id ?? '').slice(0, 40) }));
     return null;
   }
   if (etat.actives.length >= PROFONDEUR_DEFS_MAX) { marche.refuser(REFUS_MOTIFS.profondeur); return null; }
@@ -243,7 +245,7 @@ function lireMotif(cible: Noeud, n: Noeud, pret: Pret, marche: Marche): Peinture
 function lireTuile(porteur: Noeud, repere: Matrice, profondeur: number, marche: Marche): Contenu | null {
   const p = marche.parcours, a = p.analyse;
   const table = p.groupes;
-  if (!table) { marche.refuser('un dégradé ou un motif'); return null; }
+  if (!table) { marche.refuser(t('un dégradé ou un motif')); return null; }
   const etat = etatContenus(marche);
   // Les enfants heritent de l'endroit ou le <pattern> est ecrit, pas de la forme qu'il peint.
   const chaine = ancetresDe(a, porteur);

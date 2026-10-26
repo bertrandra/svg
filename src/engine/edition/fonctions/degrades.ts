@@ -22,30 +22,32 @@ import { COORDONNEE_MAX } from '../limites.js';
 import { attributHerite, chaineHref, lireFraction, lireLongueur, lireReference, NOEUDS_DEFS_MAX, type Longueur } from '../resolution.js';
 import { ARRETS_MAX, couleurDeRepli, definitionDegrade, estDegrade, transformerDegrade } from '../degrades.js';
 import type { Definition, Recueil } from '../definitions.js';
-import { nombre } from '../../../util/i18n.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
+
 /** Ce que la lecture riche dit perdre (`ignores`). */
 export const MSG_DEGRADES = {
-  arrets: 'les arrêts de dégradé au-delà de ' + ARRETS_MAX + ' (les derniers sont ignorés)',
-  interpolation: 'l’espace colorimétrique des dégradés (color-interpolation) : toujours sRVB',
-  reference: 'les peintures url(#…) qui ne renvoient à aucun dégradé (rien n’est peint, ou leur couleur de secours, comme dans un navigateur)',
-  sansArret: 'les dégradés sans arrêt de couleur (rien n’est peint, comme dans un navigateur)',
-  boitePlate: 'les dégradés en unités de boîte sur une forme sans largeur ou sans hauteur (rien n’est peint, comme dans un navigateur)',
-  degenere: 'les dégradés dont la transformation est dégénérée (rien n’est peint, comme dans un navigateur)'
-} as const;
+  get arrets(): string { return t('les arrêts de dégradé au-delà de {n} (les derniers sont ignorés)', { n: ARRETS_MAX }); },
+  get interpolation(): string { return t('l’espace colorimétrique des dégradés (color-interpolation) : toujours sRVB'); },
+  get reference(): string { return t('les peintures url(#…) qui ne renvoient à aucun dégradé (rien n’est peint, ou leur couleur de secours, comme dans un navigateur)'); },
+  get sansArret(): string { return t('les dégradés sans arrêt de couleur (rien n’est peint, comme dans un navigateur)'); },
+  get boitePlate(): string { return t('les dégradés en unités de boîte sur une forme sans largeur ou sans hauteur (rien n’est peint, comme dans un navigateur)'); },
+  get degenere(): string { return t('les dégradés dont la transformation est dégénérée (rien n’est peint, comme dans un navigateur)'); }
+};
 
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … »). */
 export const REFUS_DEGRADES = {
-  externe: 'une peinture ou un dégradé qui renvoie à un fichier ou une adresse extérieurs',
-  cycle: 'un cycle de dégradés',
-  chaine: 'des dégradés qui héritent l’un de l’autre sur plus de 16 niveaux',
-  unite: 'un dégradé dont une coordonnée n’est ni un nombre, ni des pixels, ni un pourcentage',
-  transformation: 'un dégradé dont la transformation est illisible',
-  demesure: 'un dégradé aux coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')',
-  trop: 'trop de dégradés distincts (plus de ' + nombre(NOEUDS_DEFS_MAX) + ')'
-} as const;
+  get externe(): string { return t('une peinture ou un dégradé qui renvoie à un fichier ou une adresse extérieurs'); },
+  get cycle(): string { return t('un cycle de dégradés'); },
+  get chaine(): string { return t('des dégradés qui héritent l’un de l’autre sur plus de 16 niveaux'); },
+  get unite(): string { return t('un dégradé dont une coordonnée n’est ni un nombre, ni des pixels, ni un pourcentage'); },
+  get transformation(): string { return t('un dégradé dont la transformation est illisible'); },
+  get demesure(): string { return t('un dégradé aux coordonnées démesurées (au-delà de ± {max})', { max: nombre(COORDONNEE_MAX) }); },
+  get trop(): string { return t('trop de dégradés distincts (plus de {n})', { n: nombre(NOEUDS_DEFS_MAX) }); }
+};
 
 // ---------------------------------------------------------------- lecture d'une definition (sans la forme qui l'emploie)
 
@@ -92,7 +94,7 @@ function lireDefinition(cible: Noeud, marche: Marche): DefinitionLue | { readonl
   const a = marche.parcours.analyse;
   const genre = GENRES[cible.nom] ?? 'lineaire';
   const chaine = chaineHref(cible, a.ids, estElementDegrade);
-  if ('cycle' in chaine) return { refus: REFUS_DEGRADES.cycle + ' (« #' + chaine.cycle + ' »)' };
+  if ('cycle' in chaine) return { refus: t('{refus} (« #{id} »)', { refus: REFUS_DEGRADES.cycle, id: chaine.cycle }) };
   if ('externe' in chaine) return { refus: REFUS_DEGRADES.externe };
   if ('trop' in chaine) return { refus: REFUS_DEGRADES.chaine };
   const maillons = chaine.maillons;

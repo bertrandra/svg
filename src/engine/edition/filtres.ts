@@ -12,27 +12,29 @@
 
 import { gamma, lineaire, versHex } from '../../util/couleur.js';
 import { arrondirOpacite } from './opacites.js';
+import { t } from '../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
 /**
  * Ce que la lecture riche refuse en le nommant, pour un filtre dont les primitives sont admises mais dont le calcul ne se ramene pas a
- * un flou et une ombre portee (apres « Ce SVG contient … ») ; l'idiome reconnu s'y ajoute entre parentheses (`avecIdiome`).
+ * un flou et une ombre portee (apres « Ce SVG contient … ») ; l'idiome reconnu s'y ajoute entre parentheses (`avecIdiome`). Des
+ * accesseurs : la phrase est celle de la langue de l'interface au moment ou on la lit.
  */
 export const REFUS_IDIOMES = {
-  interieure: 'une ombre intérieure',
-  plusieurs: 'plusieurs ombres portées',
-  flouCalque: 'un flou appliqué à la forme et à son ombre ensemble',
-  couleurs: 'un filtre qui change les couleurs de la forme',
-  inverse: 'un filtre qui inverse les couleurs de la forme',
-  matrice: 'une matrice de couleurs illisible (feColorMatrix)',
-  fond: 'un fond de couleur posé par un filtre',
-  efface: 'un filtre qui efface la forme',
-  transparente: 'une ombre portée calculée sur la forme pleine, sous une forme en partie transparente'
-} as const;
+  get interieure(): string { return t('une ombre intérieure'); },
+  get plusieurs(): string { return t('plusieurs ombres portées'); },
+  get flouCalque(): string { return t('un flou appliqué à la forme et à son ombre ensemble'); },
+  get couleurs(): string { return t('un filtre qui change les couleurs de la forme'); },
+  get inverse(): string { return t('un filtre qui inverse les couleurs de la forme'); },
+  get matrice(): string { return t('une matrice de couleurs illisible (feColorMatrix)'); },
+  get fond(): string { return t('un fond de couleur posé par un filtre'); },
+  get efface(): string { return t('un filtre qui efface la forme'); },
+  get transparente(): string { return t('une ombre portée calculée sur la forme pleine, sous une forme en partie transparente'); }
+};
 
 /** Un mode de fusion qui n'est pas `normal`, entre deux images qui se voient toutes les deux. */
-export const refusFusion = (mode: string): string => 'un mode de fusion autre que normal (' + mode.slice(0, 20) + ')';
+export const refusFusion = (mode: string): string => t('un mode de fusion autre que normal ({mode})', { mode: mode.slice(0, 20) });
 
 /** Les editeurs dont un idiome se reconnait (pour dire ce qui est refuse, jamais pour accepter). */
 export type Idiome = 'Figma' | 'Sketch' | 'Illustrator';
@@ -323,7 +325,7 @@ function phraseDe(r: Image): string {
   if (r.k === 'vide') return REFUS_IDIOMES.efface;
   if (r.k === 'flou' && r.de.k === 'pile' && r.de.couches.some(c => graphique(couche(c)))) return REFUS_IDIOMES.flouCalque;
   if (r.k === 'pile' && r.couches.some(c => c.k === 'aplat')) return REFUS_IDIOMES.fond;
-  return 'un filtre qui n’est ni un flou ni une ombre portée';
+  return t('un filtre qui n’est ni un flou ni une ombre portée');
 }
 
 /**

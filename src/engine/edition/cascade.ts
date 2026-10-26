@@ -11,6 +11,7 @@ import { correspond } from './selecteurs.js';
 import { lireDeclarations, lireFeuille, type Declaration, type Regle } from './feuille.js';
 import { CONFRONTATIONS_MAX } from './limites.js';
 import { MSG_FEUILLE_MEDIA, MSG_TRANSFORM_CSS, MSG_VARIABLES, textePeint, type Proprietes } from './ignores.js';
+import { t } from '../../util/i18n.js';
 
 // Les attributs de presentation que la lecture sait porter ; `overflow` ne sert qu'au cadre d'un <symbol>.
 const PROPRIETES = [
@@ -74,7 +75,7 @@ export function analyser(racine: Noeud): Analyse {
     if (id !== undefined && !ids.has(id)) ids.set(id, n);
     if (n.nom === 'style') {
       const lue = feuilleLue(n);
-      if (lue === 'media') { if (textePeint(n.texte)) ignores.add(MSG_FEUILLE_MEDIA); } else if (lue === 'oui') {
+      if (lue === 'media') { if (textePeint(n.texte)) ignores.add(t(MSG_FEUILLE_MEDIA)); } else if (lue === 'oui') {
         const f = lireFeuille(n.texte, ordre);
         regles.push(...f.regles);
         f.ignores.forEach(m => ignores.add(m));
@@ -120,9 +121,9 @@ export function proprietesDe(a: Analyse, n: Noeud): Proprietes {
   poser(r, enLigne, false);
   for (const regle of regles) poser(r, regle.declarations, true);
   poser(r, enLigne, true);
-  if (regles.some(g => g.declarations.some(d => d.prop === 'transform')) || enLigne.some(d => d.prop === 'transform')) a.ignores.add(MSG_TRANSFORM_CSS);
+  if (regles.some(g => g.declarations.some(d => d.prop === 'transform')) || enLigne.some(d => d.prop === 'transform')) a.ignores.add(t(MSG_TRANSFORM_CSS));
   for (const [k, v] of Object.entries(r)) {
-    if (/var\s*\(/i.test(v)) { delete r[k]; a.ignores.add(MSG_VARIABLES); }
+    if (/var\s*\(/i.test(v)) { delete r[k]; a.ignores.add(t(MSG_VARIABLES)); }
   }
   a.cache.set(n, r);
   return r;

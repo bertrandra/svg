@@ -8,10 +8,12 @@
 
 import type { Noeud } from '../../util/xml.js';
 import type { Proprietes } from './ignores.js';
+import { t } from '../../util/i18n.js';
 
-export const MSG_FUSION = 'le mode de fusion (mix-blend-mode) : les formes se superposent normalement';
-export const MSG_ORDRE_PEINTURE = 'l’ordre de peinture (paint-order) : le contour se peint par-dessus le fond';
-export const MSG_VECTOR_EFFECT = 'vector-effect (trait non mis à l’échelle) : il s’écrit à l’échelle';
+// Des cles, evaluees au chargement avant la langue (le francais) ; `t(MSG_X)` les traduit quand on les dit.
+export const MSG_FUSION = t('le mode de fusion (mix-blend-mode) : les formes se superposent normalement');
+export const MSG_ORDRE_PEINTURE = t('l’ordre de peinture (paint-order) : le contour se peint par-dessus le fond');
+export const MSG_VECTOR_EFFECT = t('vector-effect (trait non mis à l’échelle) : il s’écrit à l’échelle');
 
 /**
  * La valeur d'une propriete : celle de la cascade (style, feuille), sinon l'attribut de presentation. `paint-order` et
@@ -36,9 +38,9 @@ function contourAvantFond(ordre: string): boolean {
 export function ignoresDeFusion(pr: Proprietes, n: Noeud): string[] {
   const out: string[] = [];
   const fusion = valeur(pr, n, 'mix-blend-mode');
-  if (fusion !== '' && fusion !== 'normal' && fusion !== 'initial' && fusion !== 'inherit' && fusion !== 'unset') out.push(MSG_FUSION);
-  if (contourAvantFond(valeur(pr, n, 'paint-order'))) out.push(MSG_ORDRE_PEINTURE);
+  if (fusion !== '' && fusion !== 'normal' && fusion !== 'initial' && fusion !== 'inherit' && fusion !== 'unset') out.push(t(MSG_FUSION));
+  if (contourAvantFond(valeur(pr, n, 'paint-order'))) out.push(t(MSG_ORDRE_PEINTURE));
   const effet = valeur(pr, n, 'vector-effect');
-  if (effet !== '' && effet !== 'none' && effet !== 'inherit' && effet !== 'initial' && effet !== 'unset') out.push(MSG_VECTOR_EFFECT);
+  if (effet !== '' && effet !== 'none' && effet !== 'inherit' && effet !== 'initial' && effet !== 'unset') out.push(t(MSG_VECTOR_EFFECT));
   return out;
 }

@@ -7,6 +7,7 @@
 
 import type { Chemin, Commande, DessinSvg } from './types.js';
 import { ancre, depart } from './chemins.js';
+import { t } from '../../util/i18n.js';
 import { sousChemin, surChemin } from './points.js';
 import { fois, moins, norme, plus, unitaire, vectoriel, scalaire, type Pt } from './vecteurs.js';
 
@@ -116,10 +117,11 @@ function avecPoignees(d: Chemin, n: Noeud, entrant: Pt | null, sortant: Pt | nul
   return r;
 }
 
-export const MSG_EXTREMITE = 'Une extrémité n’a qu’une poignée : il n’y a rien à aligner.';
-export const MSG_DROIT = 'Ce point est entre deux segments droits : il n’a pas de poignées à régler.';
-export const MSG_SYMETRIE_DROITE = 'Un point voisin d’un segment droit ne peut pas être symétrique : choisissez « Lisse ».';
-export const MSG_POIGNEES_RENTREES = 'Les poignées de ce point sont rentrées : tirez-en une pour la sortir, puis alignez-les.';
+// Des cles, evaluees au chargement avant la langue (le francais) ; `t(MSG_X)` les traduit quand on les dit.
+export const MSG_EXTREMITE = t('Une extrémité n’a qu’une poignée : il n’y a rien à aligner.');
+export const MSG_DROIT = t('Ce point est entre deux segments droits : il n’a pas de poignées à régler.');
+export const MSG_SYMETRIE_DROITE = t('Un point voisin d’un segment droit ne peut pas être symétrique : choisissez « Lisse ».');
+export const MSG_POIGNEES_RENTREES = t('Les poignées de ce point sont rentrées : tirez-en une pour la sortir, puis alignez-les.');
 
 /**
  * Convertit le nœud `i` : `angle` rentre ses poignees (elles deviennent independantes, a tirer une a une),
@@ -129,15 +131,15 @@ export const MSG_POIGNEES_RENTREES = 'Les poignées de ce point sont rentrées :
  */
 export function convertirNoeud(d: Chemin, i: number, type: TypeNoeud): { chemin: Chemin } | { erreur: string } {
   const n = lireNoeud(d, i);
-  if (!n || !n.entrant || !n.sortant) return { erreur: MSG_EXTREMITE };
-  if (!n.entrant.poignee && !n.sortant.poignee) return { erreur: MSG_DROIT };
+  if (!n || !n.entrant || !n.sortant) return { erreur: t(MSG_EXTREMITE) };
+  if (!n.entrant.poignee && !n.sortant.poignee) return { erreur: t(MSG_DROIT) };
   // Un nœud symetrique est aussi lisse : le demander ne change rien.
   if (n.type === type || (type === 'lisse' && n.type === 'symetrique')) return { chemin: d };
   const { point, entrant: e, sortant: s } = n;
   if (type === 'angle') return { chemin: avecPoignees(d, n, point, point) };
   const le = e.poignee ? norme(e.direction) : 0, ls = s.poignee ? norme(s.direction) : 0;
-  if (type === 'symetrique' && (!e.poignee || !s.poignee)) return { erreur: MSG_SYMETRIE_DROITE };
-  if (le < 1e-9 && ls < 1e-9 && e.poignee && s.poignee) return { erreur: MSG_POIGNEES_RENTREES };
+  if (type === 'symetrique' && (!e.poignee || !s.poignee)) return { erreur: t(MSG_SYMETRIE_DROITE) };
+  if (le < 1e-9 && ls < 1e-9 && e.poignee && s.poignee) return { erreur: t(MSG_POIGNEES_RENTREES) };
   // L'axe, du cote sortant : la droite voisine s'impose ; sinon la moyenne de la sortie et de l'oppose de l'entree.
   let axe: Pt;
   if (!e.poignee) axe = unitaire(fois(e.direction, -1));
