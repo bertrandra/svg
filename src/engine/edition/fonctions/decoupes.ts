@@ -11,11 +11,8 @@
 // forme CSS (`circle()`), un renvoi a un autre fichier, un cycle, une imbrication au-dela de `PROFONDEUR_DEFS_MAX`, des contenus au-dela
 // de `NOEUDS_DEFS_MAX`, une decoupe posee sur un <use>, un <symbol> ou le SVG entier.
 //
-// Les identifiants : un seul espace de numeros par dessin, contenus compris (annexe 1 §2, I1). Les feuilles d'une decoupe sont lues
-// par la marche, donc numerotees a la suite des autres ; elles quittent ensuite la liste des formes et y laissent une place vide (un
-// trace sans commande, que la lecture retire a la fin, comme toute forme vide) pour que la suite de la numerotation ne les reprenne
-// pas. Les groupes d'un contenu (une decoupe elle-meme decoupee) reservent de meme leur numero dans la table des groupes, par une
-// place sans feuille que `normaliser` retire.
+// Les identifiants (un seul espace de numeros par dessin, contenus compris : annexe 1 §2, I1), la pile des definitions en cours, les
+// places vides et le budget sont ceux de tout contenu de definition : `edition/contenus.ts`, partage avec les masques (etape 6).
 
 import type { Noeud } from '../../../util/xml.js';
 import type { ContexteEcriture, Fonctionnalite, Marche } from '../fonctionnalites.js';
@@ -26,13 +23,15 @@ import { IDENTITE } from '../types.js';
 import type { Proprietes } from '../ignores.js';
 import { proprietesDe, type Analyse } from '../cascade.js';
 import { heriter } from '../heritage.js';
-import { boiteChemin, lireTransformation, multiplier, transformerChemin, translation, unir } from '../geometrie.js';
-import { cheminDeForme } from '../elements.js';
+import { boiteChemin, lireTransformation, multiplier, transformerChemin, unir } from '../geometrie.js';
 import { cibleDe } from '../clones.js';
 import { ecrireChemin } from '../chemins.js';
 import { ancetres, visibleEffectif } from '../arbre.js';
 import { lireReference, NOEUDS_DEFS_MAX, PROFONDEUR_DEFS_MAX } from '../resolution.js';
 import type { Definition, Recueil } from '../definitions.js';
+import {
+  ancetresDe, boiteDescendants, boiteFeuille, etatContenus, FORMES, intersectionBoites, lireContenu, placeVide, reserverGroupe, type EtatContenus
+} from '../contenus.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -64,84 +63,20 @@ export function feuilleDeDecoupe(id: string, d: Chemin, regle: Forme['regle'], p
   return { id, d, remplissage: '#000000', contour: null, epaisseur: 0, opacite: 1, regle, visible, verrouille, ...(parent !== undefined ? { parent } : {}) };
 }
 
-/** Une place vide laissee dans la liste des formes : elle garde son numero, et la lecture la retire a la fin (trace sans commande). */
-const placeVide = (id: string): Forme => ({ id, d: [], remplissage: null, contour: null, epaisseur: 0, opacite: 1, regle: 'nonzero', visible: true, verrouille: false });
-
 // ---------------------------------------------------------------- ce que la lecture retient
 
-/** Ce qui se retient par lecture. */
-interface Etat {
-  /** Les <clipPath> en cours de lecture, du plus exterieur au plus interieur : y revenir est un cycle. */
-  readonly actives: Noeud[];
-  /** Les tables des groupes des contenus en cours de lecture (une decoupe decoupee) ; vide hors d'un contenu. */
-  readonly tables: Map<string, Groupe>[];
-  /** Le numero du groupe que le lecteur des groupes est en train de poser (le crochet `groupe` est appele avant qu'il le range). */
-  enAttente: string | undefined;
-  /** Les feuilles et groupes lus dans toutes les decoupes (borne `NOEUDS_DEFS_MAX`). */
-  noeuds: number;
-  trop: boolean;
-  /** Les elements qui portent une decoupe, deja regardes. */
-  readonly porteurs: Map<Noeud, boolean>;
-}
-const etats = new WeakMap<object, Etat>();
-function etatDe(marche: Marche): Etat {
-  let e = etats.get(marche.parcours);
-  if (!e) { e = { actives: [], tables: [], enAttente: undefined, noeuds: 0, trop: false, porteurs: new Map() }; etats.set(marche.parcours, e); }
-  return e;
+/** Les elements qui portent une decoupe, deja regardes, par lecture. */
+const porteursLus = new WeakMap<object, Map<Noeud, boolean>>();
+function porteursDe(marche: Marche): Map<Noeud, boolean> {
+  let m = porteursLus.get(marche.parcours);
+  if (!m) { m = new Map(); porteursLus.set(marche.parcours, m); }
+  return m;
 }
 
 /** La valeur `clip-path` d'un element, ou null s'il n'en porte pas. */
 function valeurDecoupe(pr: Proprietes): string | null {
   const v = (pr['clip-path'] ?? '').trim();
   return v === '' || v.toLowerCase() === 'none' ? null : v;
-}
-
-/**
- * Reserve un numero de groupe dans la table de la lecture, par une place sans feuille (que `normaliser` retire si rien ne la
- * reprend) : la table reste numerotee sans trou, et le lecteur des groupes, qui prend « taille + 1 », ne retombe jamais sur un numero
- * pris. Le groupe en attente (celui dont on lit la decoupe) a deja le sien.
- */
-function reserverGroupe(table: Map<string, Groupe>, etat: Etat): string {
-  let k = table.size + 1;
-  while (table.has('g' + k) || 'g' + k === etat.enAttente) k++;
-  const id = 'g' + k;
-  table.set(id, { id, visible: true, verrouille: false });
-  return id;
-}
-
-// ---------------------------------------------------------------- boites (unites de boite)
-
-const FORMES = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
-
-/**
- * La boite des descendants d'un element (un groupe), dans son repere : ce que `objectBoundingBox` mesure. Les formes, les groupes et
- * les clones <use> d'une forme ou d'un groupe comptent ; le texte, les images et les symboles n'y entrent pas (une approximation,
- * rare : une decoupe en unites de boite sur un groupe qui n'en contient pas d'autre). Bornee : un groupe immense ne coute pas plus.
- */
-function boiteDescendants(a: Analyse, n: Noeud, m: Matrice): Boite | null {
-  let budget = 50_000;
-  const vus = new Set<Noeud>();
-  const boiteDe = (e: Noeud, me: Matrice, niveau: number): Boite | null => {
-    if (--budget < 0 || niveau > 32) return null;
-    if ((proprietesDe(a, e).display ?? '').trim() === 'none') return null;
-    const t = e.attributs.transform ? lireTransformation(e.attributs.transform) : IDENTITE;
-    if (!t) return null;
-    const mt = multiplier(me, t);
-    if (e.nom === 'g' || e.nom === 'a') return unir(e.enfants.map(x => boiteDe(x, mt, niveau + 1)));
-    if (e.nom === 'use') {
-      const c = cibleDe(e, a.ids);
-      if (!('noeud' in c) || vus.has(c.noeud) || c.noeud.nom === 'symbol') return null;
-      vus.add(c.noeud);
-      const x = Number.parseFloat(e.attributs.x ?? '0'), y = Number.parseFloat(e.attributs.y ?? '0');
-      const b = boiteDe(c.noeud, multiplier(mt, translation(Number.isFinite(x) ? x : 0, Number.isFinite(y) ? y : 0)), niveau + 1);
-      vus.delete(c.noeud);
-      return b;
-    }
-    if (!FORMES.has(e.nom)) return null;
-    const d = cheminDeForme(e);
-    return d && d.length ? boiteChemin(transformerChemin(d, mt)) : null;
-  };
-  return unir(n.enfants.map(e => boiteDe(e, m, 0)));
 }
 
 // ---------------------------------------------------------------- la regle d'une feuille de decoupe
@@ -157,13 +92,6 @@ const regleDe = (chaine: readonly Noeud[]): Forme['regle'] => {
   for (const n of chaine) { const r = regleDeclaree(n); if (r) return r; }
   return 'nonzero';
 };
-
-/** L'element et ses ancetres, du plus proche au plus lointain (borne). */
-function ancetresDe(a: Analyse, n: Noeud): Noeud[] {
-  const out: Noeud[] = [];
-  for (let x: Noeud | undefined = n; x && out.length < 256; x = a.parents.get(x)) out.push(x);
-  return out;
-}
 
 // ---------------------------------------------------------------- lecture d'une decoupe
 
@@ -183,7 +111,7 @@ function cibleAdmise(a: Analyse, u: Noeud): Noeud | null | 'autre' {
  * La decoupe que designe une valeur `clip-path`, pour un element pose par `base` (sa matrice, la sienne comprise) et dont `boite`
  * donne la boite dans son repere ; null si la reference est ignoree, ou refusee (dit par `marche`).
  */
-function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, profondeur: number, marche: Marche, etat: Etat): Decoupe | null {
+function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, profondeur: number, marche: Marche, etat: EtatContenus): Decoupe | null {
   const p = marche.parcours, a = p.analyse;
   const ref = lireReference(valeur);
   if (!ref) { marche.refuser(REFUS_DECOUPES.formeCss); return null; }
@@ -204,12 +132,8 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
   }
   const table = p.groupes;
   if (!table) { marche.refuser('un masque ou une découpe'); return null; }
-  etat.actives.push(cible);
-  const locale = new Map<string, Groupe>();
-  etat.tables.push(locale);
-  const avant = p.formes.length;
   const regles = new Map<string, Forme['regle']>();
-  try {
+  const lu = lireContenu(marche, etat, table, cible, locale => {
     // Une decoupe du <clipPath> lui-meme : le contenu entier est rogne par elle, donc range dans un groupe qui la porte.
     let parent: string | undefined;
     const propre = valeurDecoupe(proprietesDe(a, cible));
@@ -233,57 +157,33 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
       const regle = regleDe([...(visee ? [visee] : []), e, ...chaine]);
       for (let i = i0; i < p.formes.length; i++) { const f = p.formes[i]; if (f && !regles.has(f.id)) regles.set(f.id, regle); }
     }
-  } finally {
-    etat.tables.pop();
-    etat.actives.pop();
-  }
-  // Les feuilles lues quittent la liste des formes (leurs places restent, vides) et deviennent de la geometrie.
-  const lues: Forme[] = [];
-  for (let i = avant; i < p.formes.length; i++) {
-    const f = p.formes[i];
-    if (!f) continue;
-    if (f.d.length) lues.push(feuilleDeDecoupe(f.id, f.d, regles.get(f.id) ?? 'nonzero', f.parent));
-    p.formes[i] = placeVide(f.id);
-  }
-  // Un groupe du contenu sans feuille (une feuille vide, un contenu vide) part, et la table avec lui si elle se vide.
-  const peuples = new Set<string>();
-  for (const f of lues) for (let g = f.parent; g !== undefined && !peuples.has(g); g = locale.get(g)?.parent) peuples.add(g);
-  const groupes = [...locale].filter(([id]) => peuples.has(id));
-  etat.noeuds += lues.length + groupes.length;
-  if (etat.noeuds > NOEUDS_DEFS_MAX) {
-    if (!etat.trop) marche.refuser(REFUS_DECOUPES.trop);
-    etat.trop = true;
-    return null;
-  }
-  return { contenu: groupes.length ? { formes: lues, groupes: Object.fromEntries(groupes) } : { formes: lues } };
+  }, REFUS_DECOUPES.trop);
+  if (!lu) return null;
+  // Les feuilles lues deviennent de la geometrie ; un groupe du contenu sans feuille est deja parti, et la table avec lui si elle se vide.
+  const lues = lu.feuilles.map(f => feuilleDeDecoupe(f.id, f.d, regles.get(f.id) ?? 'nonzero', f.parent));
+  return { contenu: lu.groupes.length ? { formes: lues, groupes: Object.fromEntries(lu.groupes) } : { formes: lues } };
 }
 
 /** Vrai si un element en cours de lecture (un <use>, un <symbol>, la racine) porte une decoupe que la lecture ne sait pas garder. */
-function porteurRefuse(marche: Marche, etat: Etat): boolean {
-  const p = marche.parcours;
+function porteurRefuse(marche: Marche): boolean {
+  const p = marche.parcours, porteurs = porteursDe(marche);
   for (const n of p.actifs) {
     if (n.nom !== 'use' && n.nom !== 'symbol' && n.nom !== 'svg') continue;
-    let r = etat.porteurs.get(n);
-    if (r === undefined) { r = valeurDecoupe(proprietesDe(p.analyse, n)) !== null; etat.porteurs.set(n, r); }
+    let r = porteurs.get(n);
+    if (r === undefined) { r = valeurDecoupe(proprietesDe(p.analyse, n)) !== null; porteurs.set(n, r); }
     if (r) return true;
   }
   return false;
 }
 
-/** La boite d'une feuille dans son repere (avant sa propre matrice, que `pret.m` porte deja) : une image par son cadre. */
-function boiteFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Boite | null {
-  if (f.image) return { x: f.image.x, y: f.image.y, l: f.image.l, h: f.image.h };
-  return marche.boiteForme(n, { ...pret, m: IDENTITE });
-}
-
 /** Une feuille lue qui porte sa propre decoupe : enveloppee dans un groupe qui la porte (dans le contenu en cours de lecture). */
 function completerFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme {
-  const etat = etatDe(marche);
-  if (porteurRefuse(marche, etat)) { marche.refuser(REFUS_DECOUPES.porteur); return f; }
+  if (porteurRefuse(marche)) { marche.refuser(REFUS_DECOUPES.porteur); return f; }
   const v = valeurDecoupe(pret.pr);
   if (!v) return f;
   const table = marche.parcours.groupes;
   if (!table) { marche.refuser('un masque ou une découpe'); return f; }
+  const etat = etatContenus(marche);
   const id = reserverGroupe(table, etat);
   // La feuille a deja son numero (« taille + 1 ») mais n'est pas encore rangee : une place le lui garde le temps de lire sa decoupe,
   // dont les feuilles prennent les numeros suivants ; la place part ensuite, la feuille sera rangee par la marche.
@@ -294,6 +194,8 @@ function completerFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme
   if (!decoupe) return f;
   const cible = etat.tables[etat.tables.length - 1] ?? table;
   cible.set(id, { id, ...(f.parent !== undefined ? { parent: f.parent } : {}), visible: true, verrouille: false, decoupe });
+  // Hors d'un contenu, le groupe prend sa place dans la table de la lecture : ce n'est plus une simple place.
+  if (cible === table) etat.places.delete(id);
   return { ...f, parent: id };
 }
 
@@ -301,7 +203,7 @@ function completerFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme
 function completerGroupe(g: Groupe, n: Noeud, pret: Pret, marche: Marche): Groupe {
   const v = valeurDecoupe(pret.pr);
   if (!v) return g;
-  const etat = etatDe(marche), avant = etat.enAttente;
+  const etat = etatContenus(marche), avant = etat.enAttente;
   etat.enAttente = g.id;
   try {
     const decoupe = lireDecoupe(v, pret.m, () => boiteDescendants(marche.parcours.analyse, n, IDENTITE), pret.profondeur, marche, etat);
@@ -396,13 +298,6 @@ export function boiteDecoupe(dec: Decoupe): Boite | null {
   return b;
 }
 
-/** L'intersection de deux boites ; vide, une boite sans largeur ni hauteur au bord de la premiere. */
-function intersection(a: Boite, b: Boite | null): Boite {
-  if (!b) return { x: a.x, y: a.y, l: 0, h: 0 };
-  const x0 = Math.max(a.x, b.x), y0 = Math.max(a.y, b.y), x1 = Math.min(a.x + a.l, b.x + b.l), y1 = Math.min(a.y + a.h, b.y + b.h);
-  return x1 >= x0 && y1 >= y0 ? { x: x0, y: y0, l: x1 - x0, h: y1 - y0 } : { x: Math.min(Math.max(a.x, b.x), a.x + a.l), y: Math.min(Math.max(a.y, b.y), a.y + a.h), l: 0, h: 0 };
-}
-
 export const decoupes: Fonctionnalite = {
   nom: 'decoupes',
   lecture: { prises: ['decoupe'], feuille: completerFeuille, groupe: completerGroupe },
@@ -416,6 +311,6 @@ export const decoupes: Fonctionnalite = {
     groupe: (g, m) => (g.decoupe && !estIdentite(m) ? { ...g, decoupe: transformerDecoupe(g.decoupe, m) } : g)
   },
   etendue: {
-    groupe: (g, b) => (g.decoupe ? intersection(b, boiteDecoupe(g.decoupe)) : b)
+    groupe: (g, b) => (g.decoupe ? intersectionBoites(b, boiteDecoupe(g.decoupe)) : b)
   }
 };

@@ -186,11 +186,44 @@ const decoupes: ExtensionEcriture = {
   }
 };
 
+const ID_MASQUE = /^ed-m-[0-9a-f]{14}(?:-\d+)?$/;
+const URL_MASQUE = /^url\(#ed-m-[0-9a-f]{14}(?:-\d+)?\)$/;
+
+/**
+ * Etape 6 : les masques. Un <mask> dans <defs>, identifie par son empreinte, toujours en unites du plan, une region numerique (largeur
+ * et hauteur jamais negatives), au plus `style="mask-type:alpha"` ; dedans, un contenu comme le dessin en porte : des <path>, des <g>
+ * (dont les attributs relevent des autres etapes), des <image>. Un groupe ne cite un masque que par `url(#ed-m-…)`. Avant `groupes`,
+ * qui refuse tout autre attribut d'un <g> et un <g> hors de la racine ou d'un autre <g>.
+ */
+const masques: ExtensionEcriture = {
+  nom: 'etape 6 : masques',
+  element: e => {
+    if (e.nom === 'mask') return e.parent === 'defs' && e.profondeur === 2;
+    if (e.parent === 'mask') return e.nom === 'path' || e.nom === 'g' || e.nom === 'image';
+    return undefined;
+  },
+  attribut: (e, nom, valeur) => {
+    if (e.nom === 'mask') {
+      switch (nom) {
+        case 'id': return ID_MASQUE.test(valeur);
+        case 'maskUnits': return valeur === 'userSpaceOnUse';
+        case 'x': case 'y': return NOMBRE.test(valeur);
+        case 'width': case 'height': return NOMBRE.test(valeur) && Number(valeur) >= 0;
+        case 'style': return valeur === 'mask-type:alpha';
+        default: return false;
+      }
+    }
+    if (e.nom === 'g' && nom === 'mask') return URL_MASQUE.test(valeur);
+    return undefined;
+  }
+};
+
 /** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images). */
 export const EXTENSIONS_ECRITURE: readonly ExtensionEcriture[] = [
   racine,
-  // Les decoupes et les effets avant les groupes : `clip-path` et `filter` sur un <g> (l'extension des groupes refuse tout autre attribut qu'elle ne connait pas).
+  // Les decoupes, les masques et les effets avant les groupes : `clip-path`, `mask` et `filter` sur un <g> (l'extension des groupes refuse tout autre attribut qu'elle ne connait pas).
   decoupes,
+  masques,
   effets,
   groupes,
   degrades,

@@ -102,8 +102,18 @@ export interface CrochetsTransformation {
    * la fonctionnalite transforme les siens (la matrice d'un degrade, l'ecart d'un flou). La meme feuille si elle n'en porte pas.
    */
   readonly feuille?: (f: Forme, m: Matrice) => Forme;
-  /** Un groupe dans la fermeture d'une transformation (annexe 1 §9) : sa decoupe, son masque, ses effets. Le meme groupe sinon. */
-  readonly groupe?: (g: Groupe, m: Matrice) => Groupe;
+  /**
+   * Un groupe dans la fermeture d'une transformation (annexe 1 §9) : sa decoupe, son masque, ses effets. Le meme groupe sinon. `outils`
+   * transforme par la meme matrice une feuille ou un groupe d'un contenu imbrique peint (un masque : ses degrades, ses images, ses
+   * effets suivent aussi), par toutes les fonctionnalites (ajoute a l'etape 6).
+   */
+  readonly groupe?: (g: Groupe, m: Matrice, outils: OutilsTransformation) => Groupe;
+}
+
+/** Ce que la transformation prete au crochet d'un groupe : la feuille et le groupe d'un contenu imbrique, transformes comme ceux du dessin. */
+export interface OutilsTransformation {
+  feuille(f: Forme): Forme;
+  groupe(g: Groupe): Groupe;
 }
 
 // ---------------------------------------------------------------- etendue visuelle

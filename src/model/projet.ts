@@ -344,7 +344,12 @@ function chemin(v: unknown, quoi: string): string {
   return cheminProjetValide(d) ? d : refuser(quoi + ' est mal formé');
 }
 
-const OUTILS: OutilsProjet = { refuser, texte, nombre, booleen, tableau, objet, choix, chemin, identifiant: ID };
+const OUTILS: OutilsProjet = {
+  refuser, texte, nombre, booleen, tableau, objet, choix, chemin, identifiant: ID,
+  // Le contenu d'un masque (etape 6) : des formes et des groupes du format 2, valides comme ceux du dessin.
+  forme: (v, i) => lireForme(v, i, VERSION_PROJET),
+  groupes: v => lireGroupesProjet(v, OUTILS, lireOrigine)
+};
 
 function lireForme(v: unknown, i: number, version: number): FormeProjet {
   const o = objet(v, 'la forme ' + (i + 1));

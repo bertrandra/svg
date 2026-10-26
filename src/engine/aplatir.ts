@@ -11,6 +11,7 @@ import { estPlat, visibleEffectif, type DessinSvg, type Forme } from './editionS
 import { degrades } from './descente/degrades.js';
 import { images } from './descente/images.js';
 import { descenteDecoupes } from './descente/decoupes.js';
+import { descenteMasques } from './descente/masques.js';
 import { effets } from './descente/effets.js';
 import { descenteGroupes } from './descente/groupes.js';
 
@@ -48,6 +49,7 @@ export const REGLES_DESCENTE: readonly RegleDescente[] = [
   degrades,
   images,
   descenteDecoupes,
+  descenteMasques,
   effets,
   descenteGroupes
 ];

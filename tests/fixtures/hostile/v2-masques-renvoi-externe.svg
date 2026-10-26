@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g mask="url(https://exemple.invalid/masques.svg#m)"><rect width="50" height="50" fill="#1f5fb0"/></g><rect x="50" y="50" width="50" height="50" fill="#c81e28" style="mask: url('masques.svg#m')"/></svg>

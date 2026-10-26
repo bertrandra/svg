@@ -10,7 +10,7 @@ import {
 } from '../model/projet.js';
 import { estPlat, peintureSure, verifierDessin, type DessinSvg, type DispositionTexte, type Forme, type TexteVivant } from './editionSvg.js';
 import { ecrireCheminProjet, lireCheminProjet } from './projetV2/chemin.js';
-import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, refusChampsV2, tableVers } from './projetV2/champs.js';
+import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, refusChampsV2, tableVers, type ConversionFormes } from './projetV2/champs.js';
 import type { DispositionProjet } from '../model/projet.js';
 import { avecReperes, normaliserReperes } from './editionSvg.js';
 import type { NuancierDessin } from '../model/nuancier.js';
@@ -101,6 +101,9 @@ export function formeDuProjet(f: FormeProjet): Forme {
   } as Forme;
 }
 
+/** La conversion d'une forme entiere, pretee aux groupes dont un contenu porte des formes (le masque, etape 6). */
+const CONVERSION: ConversionFormes = { versProjet: formeProjet, versModele: formeDuProjet };
+
 const choixCopie = (c: ChoixProduction): ChoixProduction => (c.contexte === 'cricut'
   ? { contexte: 'cricut', machine: c.machine, tapis: c.tapis, materiau: c.materiau, procede: c.procede, unite: c.unite }
   : { contexte: 'generique' });
@@ -128,7 +131,7 @@ export function projetDe(e: EtatProjet): Projet {
       // Les reperes (ADR-0038), seulement s'il y en a : le projet d'un dessin sans repere reste le meme texte.
       ...(e.dessin.reperes ? { reperes: { h: [...e.dessin.reperes.h], v: [...e.dessin.reperes.v] } } : {}),
       // Les groupes (ADR-0012, etape 1), seulement s'il y en a : un dessin a groupes n'est pas plat, son projet est au format 2.
-      ...tableVers(e.dessin.groupes, groupeProjet)
+      ...tableVers(e.dessin.groupes, g => groupeProjet(g, CONVERSION))
     },
     production: choixCopie(e.production),
     nuancier: e.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
@@ -148,12 +151,12 @@ export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
     if ((f.remplissage !== null && !peintureSure(f.remplissage)) || (f.contour !== null && !peintureSure(f.contour))) return { erreur: 'Ce projet porte une couleur que l’éditeur n’écrit pas.' };
   }
   // Les champs du modele v2 que la validation du format ne peut pas juger (les octets d'une image) : verifies avant d'ouvrir.
-  const refus = refusChampsV2(p.dessin.formes);
+  const refus = refusChampsV2(p.dessin.formes, p.dessin.groupes);
   if (refus !== null) return { erreur: refus };
   const dessin = avecReperes(
     {
       vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet), ...nuancierCopie(p.dessin.nuancier),
-      ...tableVers(p.dessin.groupes, groupeDuProjet)
+      ...tableVers(p.dessin.groupes, g => groupeDuProjet(g, CONVERSION))
     },
     p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null
   );

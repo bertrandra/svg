@@ -6,7 +6,7 @@ import type { Forme, Groupe, Matrice } from './types.js';
 import { echellerTrait } from './trait.js';
 import { facteur, transformerChemin } from './geometrie.js';
 import { avecTexteTransforme } from './texteVivant.js';
-import type { Fonctionnalite } from './fonctionnalites.js';
+import type { Fonctionnalite, OutilsTransformation } from './fonctionnalites.js';
 import { FONCTIONNALITES } from './catalogue.js';
 
 /**
@@ -18,6 +18,11 @@ export function transformerFeuille(f: Forme, m: Matrice, k = facteur(m), fonctio
   return fonctions.reduce<Forme>((x, c) => c.transformation?.feuille?.(x, m) ?? x, g);
 }
 
-/** Le groupe dans la fermeture d'une transformation (annexe 1 §9) : sa decoupe, son masque, ses effets suivent. Le meme sinon. */
-export const transformerGroupe = (g: Groupe, m: Matrice, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): Groupe =>
-  fonctions.reduce<Groupe>((x, c) => c.transformation?.groupe?.(x, m) ?? x, g);
+/**
+ * Le groupe dans la fermeture d'une transformation (annexe 1 §9) : sa decoupe, son masque, ses effets suivent. Le meme sinon. Les
+ * feuilles et les groupes d'un contenu imbrique peint (un masque) se transforment par ces memes fonctions (etape 6).
+ */
+export function transformerGroupe(g: Groupe, m: Matrice, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): Groupe {
+  const outils: OutilsTransformation = { feuille: f => transformerFeuille(f, m, facteur(m), fonctions), groupe: x => transformerGroupe(x, m, fonctions) };
+  return fonctions.reduce<Groupe>((x, c) => c.transformation?.groupe?.(x, m, outils) ?? x, g);
+}

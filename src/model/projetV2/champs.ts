@@ -10,6 +10,9 @@ import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
 import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
 import { lireDecoupeProjet, type DecoupeProjet } from './decoupe.js';
 import { lireEffetsProjet, type EffetsProjet } from './effets.js';
+import { lireMasqueProjet, type MasqueProjet } from './masque.js';
+import type { FormeProjet } from '../projet.js';
+import type { GroupeProjet } from './groupes.js';
 
 /** Ce que la validation du projet prete a un lecteur de champ : ses gardes, qui refusent en nommant (jamais une exception visible). */
 export interface OutilsProjet {
@@ -24,6 +27,10 @@ export interface OutilsProjet {
   chemin(v: unknown, quoi: string): string;
   /** La forme d'un identifiant de forme ou de groupe. */
   readonly identifiant: RegExp;
+  /** Une forme entiere, validee comme une forme du dessin au format 2 (etape 6 : les feuilles peintes d'un masque) ; `i` son rang. */
+  forme(v: unknown, i: number): FormeProjet;
+  /** Une table de groupes, validee comme celle du dessin (etape 6 : les groupes du contenu d'un masque). */
+  groupes(v: unknown): Readonly<Record<string, GroupeProjet>>;
 }
 
 /** Les champs v2 d'une forme de projet, tels que les lecteurs les rendent. */
@@ -86,6 +93,8 @@ export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly 
 export interface ChampsGroupeV2 {
   /** Etape 5 : la decoupe du groupe (decoupe.ts). */
   readonly decoupe?: DecoupeProjet;
+  /** Etape 6 : le masque d'opacite du groupe (masque.ts). */
+  readonly masque?: MasqueProjet;
   /** Etape 7. */
   readonly effets?: EffetsProjet;
 }
@@ -100,6 +109,8 @@ export interface ChampGroupeV2 {
 export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [
   // Etape 5 : la decoupe, de la geometrie seule.
   { cle: 'decoupe', lire: (v, o) => lireDecoupeProjet(v, o) },
+  // Etape 6 : le masque d'opacite, son contenu peint lu comme le dessin.
+  { cle: 'masque', lire: (v, o) => lireMasqueProjet(v, o) },
   // Etape 7 : les effets du groupe.
   { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'un groupe') }
 ];
