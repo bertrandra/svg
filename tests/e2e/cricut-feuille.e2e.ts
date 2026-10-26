@@ -192,15 +192,30 @@ describe('le tapis fixe et la feuille, en Cricut', () => {
     };
     await axe();
     await toutChoisir(page);
-    // Le panneau flottant se pose sur la toile, en haut a droite. Quand le bord de la feuille (un rectangle peint du gabarit) passe
-    // sous un paragraphe du panneau, axe doute du fond de ce texte (« partially overlaps »), bien que le panneau soit opaque : un doute
-    // de mesure, qu'on n'admet pas. Il est apparu quand la barre a tenu sur une ligne a 1 280 px (Fichier et le geste de fin devenus
-    // des icones) : la toile plus haute, la vue ajustee grossit, et le bord de la feuille tombait sous un texte. La vue se dezoome d'un
-    // cran (-) : le bord de la feuille ne coupe plus les textes du panneau, et l'audit juge le panneau entier.
-    await page.keyboard.press('-');
-    await ouvrirMenu(page, 'Édition');
-    await page.getByRole('menuitem', { name: 'Dupliquer sur la feuille…' }).click();
-    await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor();
+    // Le panneau flottant se pose sur la toile, en haut a droite. Quand une forme de la toile (le bord de la feuille, un gabarit) passe
+    // en partie sous un texte du panneau, axe doute du fond de ce texte (« partially overlaps »), bien que le panneau soit opaque : un
+    // doute de mesure, qu'on n'admet pas. Le cadrage de la vue depend de la mise en page (la barre, le tapis fixe) : plutot qu'un nombre
+    // de crans, on mesure la place du panneau, puis la vue se dezoome (-) jusqu'a ce qu'aucune forme de la toile ne passe dessous.
+    const ouvrirDuplication = async () => {
+      await ouvrirMenu(page, 'Édition');
+      await page.getByRole('menuitem', { name: 'Dupliquer sur la feuille…' }).click();
+      await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor();
+    };
+    await ouvrirDuplication();
+    const place = await page.locator('.panneau-flottant').boundingBox();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor({ state: 'detached' });
+    const sousLePanneau = () => page.evaluate(p => p ? [...document.querySelectorAll('.editeur-svg-toile *:not(g):not(defs):not(.fond-prise)')].filter(e => {
+      const b = e.getBoundingClientRect();
+      return b.width > 0 && b.height > 0 && b.left < p.x + p.width && b.right > p.x && b.top < p.y + p.height && b.bottom > p.y;
+    }).length : 0, place);
+    for (let i = 0; i < 12 && (await sousLePanneau()) > 0; i++) {
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('-');
+      await attendreAnimations(page);
+    }
+    expect(await sousLePanneau()).toBe(0);
+    await ouvrirDuplication();
     await axe();
   });
 
