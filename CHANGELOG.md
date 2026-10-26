@@ -203,6 +203,14 @@ empreintes.
 
 ### Ajouté
 
+- « Groupes, dégradés, effets (bêta) » au menu Édition (modèle v2, étape 2, premiers paquets) : un SVG à groupes s'ouvre avec ses
+  groupes, ses dégradés, ses découpes, ses effets et ses images, et se dessine sur la toile tel qu'il s'écrit. Un double-clic entre
+  dans un groupe : le reste s'estompe, et seuls ses éléments se prennent, se choisissent au cadre ou au lasso et servent d'aimants ;
+  Échap en sort. Le réglage se garde dans le navigateur ; l'embarquement reçoit l'option `modele` (`plat` par défaut). Un brouillon
+  ou une version enregistrés avec des groupes le disent quand le réglage est à plat, sans rien effacer, et proposent « Activer le
+  modèle riche et reprendre ». Tant que le réglage reste à plat, rien ne change : un dessin sans groupe se dessine et s'écrit
+  exactement comme avant.
+
 - Modèle v2, étape 7 (moteur, mode riche seulement) : le flou gaussien et l'ombre portée d'une forme ou d'un groupe se lisent,
   s'écrivent en filtres portables (`<filter id="ed-f-…">`, région calculée, `color-interpolation-filters="sRGB"`), suivent les
   transformations, comptent dans la boîte visuelle et sont gardés par le projet. Les exports de tracés les abandonnent en le

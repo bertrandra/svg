@@ -21,6 +21,7 @@ import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { insecables, nomDeFichier } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
+import { garderModele, modeleRetenu, refusModele } from './modele.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
 import { svgDeBibliotheque } from './provenanceBibliotheque.js';
@@ -127,8 +128,10 @@ function Accueil() {
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
     // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
-    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
-    const lu = lireDessinMemo(propre.svg);
+    // Le modele de lecture (ADR-0012, annexe 5 §3) : le reglage garde, celui que l'editeur reprendra a l'ouverture.
+    const modele = modeleRetenu(STOCKAGE);
+    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg, undefined, modele).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
+    const lu = lireDessinMemo(propre.svg, modele);
     if ('erreur' in lu) { dire(lu.erreur); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores, ...(production ? { production } : {}) });
     poserEdition(true);
@@ -151,15 +154,7 @@ function Accueil() {
 
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
 
-      {brouillon && !fichier ? (
-        <section className="reprise" aria-label="Reprendre">
-          <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
-          <div className="actions">
-            <button type="button" className="primaire" onClick={() => { ouvrir(brouillon.nom, brouillon.svg); }}>Reprendre</button>
-            <button type="button" className="discret" onClick={() => { oublierBrouillon(STOCKAGE); poserBrouillon(null); }}>Oublier</button>
-          </div>
-        </section>
-      ) : null}
+      {brouillon && !fichier ? <RepriseBrouillon brouillon={brouillon} reprendre={() => ouvrir(brouillon.nom, brouillon.svg)} oublier={() => { oublierBrouillon(STOCKAGE); poserBrouillon(null); }} /> : null}
 
       {fichier ? <FicheResultat fichier={fichier} telecharger={telecharger} informer={informer} reprendre={() => poserEdition(true)}
         fermer={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }} /> : null}
@@ -207,10 +202,30 @@ function Accueil() {
       {/* L'editeur comme un hote l'ouvre (embarque.tsx) : son libelle de fin, aucun guide, ni bibliotheque ni nuancier, et la page
           garde la main a l'enregistrement (fermerApresEnregistrer). Rien de la fiche ni du brouillon n'est touche. */}
       {demo ? (
-        <EditeurSvg svg={EXEMPLE} titre={DEMO_HOTE.nom + '.svg'} nom={DEMO_HOTE.nom} stockage={STOCKAGE} guide={null} libelleEnregistrer={DEMO_HOTE.libelleEnregistrer}
+        <EditeurSvg svg={EXEMPLE} titre={DEMO_HOTE.nom + '.svg'} nom={DEMO_HOTE.nom} stockage={STOCKAGE} guide={null} libelleEnregistrer={DEMO_HOTE.libelleEnregistrer} modele="plat"
           fermer={() => poserDemo(false)} enregistrer={s => { poserRecu(phraseRecu(s)); poserDemo(false); }} />
       ) : null}
     </main>
+  );
+}
+
+/**
+ * Le bandeau de reprise (un dessin etait en cours) : reprendre ou oublier le brouillon. Un brouillon ecrit en modele riche ne se reprend pas
+ * a plat (ADR-0012, annexe 5 §3) : le bandeau le dit, et propose d'activer le modele riche pour le reprendre ; rien n'est efface.
+ */
+function RepriseBrouillon({ brouillon, reprendre, oublier }: { brouillon: Brouillon; reprendre: () => void; oublier: () => void }) {
+  const refus = refusModele(brouillon.svg, modeleRetenu(STOCKAGE), 'brouillon');
+  return (
+    <section className="reprise" aria-label="Reprendre">
+      <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
+      {refus ? <p className="aide">{refus}</p> : null}
+      <div className="actions">
+        {refus
+          ? <button type="button" className="primaire" onClick={() => { garderModele(STOCKAGE, 'riche'); reprendre(); }}>Activer le modèle riche et reprendre</button>
+          : <button type="button" className="primaire" onClick={reprendre}>Reprendre</button>}
+        <button type="button" className="discret" onClick={oublier}>Oublier</button>
+      </div>
+    </section>
   );
 }
 
@@ -233,7 +248,7 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
   fichier: Fichier; telecharger: RefObject<HTMLButtonElement | null>; informer: (t: string) => void; reprendre: () => void; fermer: () => void;
 }) {
   const stats = useMemo(() => {
-    const lu = lireDessinMemo(fichier.svg);
+    const lu = lireDessinMemo(fichier.svg, modeleRetenu(STOCKAGE));
     return 'erreur' in lu ? null : statistiques(lu.dessin);
   }, [fichier]);
   return (
@@ -244,9 +259,9 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
         {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
         {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
         <div className="actions">
-          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer)}>Télécharger le SVG</button>
+          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer, modeleRetenu(STOCKAGE))}>Télécharger le SVG</button>
           <button type="button" onClick={reprendre}>Reprendre l’édition</button>
-          <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} />
+          <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} modele={modeleRetenu(STOCKAGE)} />
           <button type="button" className="discret" onClick={fermer}>Fermer</button>
         </div>
       </div>

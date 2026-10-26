@@ -1,7 +1,7 @@
 // Ce qui se dessine sur la toile : les formes, la grille, et la surcouche (selection, poignees, trace).
 
 import { memo, type ReactNode } from 'react';
-import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { ancre, attributsTrait, boiteDe, depart, ecrireChemin, estPlat, feuillesDe, opaciteDuContour, opaciteDuRemplissage, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { FORMES } from './aidesEditeur.js';
 import { formeTracee } from './Gestes.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
@@ -14,7 +14,7 @@ export function cheminDe(f: Forme): string {
 }
 
 /** Le style du trait en proprietes React (stroke-dasharray devient strokeDasharray) : la meme liste que l'ecriture du SVG. */
-const traitReact = (f: Forme): Record<string, string> =>
+export const traitReact = (f: Forme): Record<string, string> =>
   Object.fromEntries(attributsTrait(f).map(([k, v]) => [k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()), v]));
 
 export const Calque = memo(function Calque({ f, contours, masquee = false }: { f: Forme; contours: boolean; masquee?: boolean }) {
@@ -55,7 +55,15 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ta
   // Une forme par identifiant, une fois : `find` pour chaque forme choisie coute n x m (5000 x 5000 = 60 ms).
   const parId = new Map<string, Forme>();
   if (mo.sel.length) for (const x of mo.dessin.formes) if (!parId.has(x.id)) parId.set(x.id, x);
-  for (const id of mo.sel) {
+  // Un dessin riche (ADR-0012, etape 2) : le groupe ou l'on est entre montre sa boite, et un groupe choisi le trace de ses feuilles.
+  const riche = !estPlat(mo.dessin);
+  const boiteContexte = riche && ui.contexte ? boiteDe(mo.dessin, [ui.contexte.groupe]) : null;
+  if (boiteContexte) {
+    const { x, y, l, h } = boiteContexte;
+    r.push(<rect key="contexte-fond" className="contour-groupe-fond" x={x} y={y} width={l} height={h} pointerEvents="none" />);
+    r.push(<rect key="contexte" className="contour-groupe" x={x} y={y} width={l} height={h} pointerEvents="none" />);
+  }
+  for (const id of riche ? feuillesDe(mo.dessin, mo.sel) : mo.sel) {
     const f = parId.get(id);
     if (f) r.push(<path key={'s' + id} className="trace-choisi" d={cheminDe(f)} pointerEvents="none" />);
   }

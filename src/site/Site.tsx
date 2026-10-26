@@ -24,6 +24,7 @@ import { useFocusDialogue } from '../zones/focusEditeur.js';
 import { lireNuancier } from '../zones/nuancier.js';
 import { svgDeBibliotheque } from '../zones/provenanceBibliotheque.js';
 import { phraseIgnores } from '../zones/aidesEditeur.js';
+import { modeleRetenu } from '../zones/modele.js';
 import type { TonMessage } from '../zones/commun/Message.js';
 import { nomDeFichier } from '../util/texte.js';
 import type { Voie } from '../zones/publics.js';
@@ -145,7 +146,8 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
   }, [dire]);
 
   const ouvrirSvg = useCallback((nom: string, texte: string, ignores: readonly string[] = []) => {
-    void travailDuSvg(nom, texte, NUANCIER, ignores).then(async t => {
+    // Le modele de lecture (ADR-0012, annexe 5 §3) : le reglage garde, que le menu Edition de l'editeur change.
+    void travailDuSvg(nom, texte, NUANCIER, ignores, modeleRetenu(STOCKAGE)).then(async t => {
       if ('erreur' in t) { dire(t.erreur); return; }
       const img = image.current?.nom === nom ? await imageSource(nom, image.current.fichier) : null;
       ouvrirTravail(img ? { ...t, images: [img] } : t);

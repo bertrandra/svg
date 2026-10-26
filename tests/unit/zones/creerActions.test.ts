@@ -9,8 +9,8 @@ const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
   + '<path d="M0 0L10 0L10 10Z" fill="#c81e28"/><path d="M20 20L40 20L40 40Z" fill="#1428a0"/></svg>';
 
 /** Un editeur sans React : un etat qu'on tient a la main, et des setters qui le mettent a jour. */
-function monter(stockage: Stockage | null = null, svg = SVG) {
-  const lu = lireDessin(svg);
+function monter(stockage: Stockage | null = null, svg = SVG, modele: 'plat' | 'riche' = 'plat') {
+  const lu = lireDessin(svg, modele === 'riche' ? { modele } : {});
   if ('erreur' in lu) throw new Error(lu.erreur);
   let h: Historique<DessinSvg> = historique(lu.dessin);
   const messages: string[] = [], annonces: string[] = [];
@@ -21,6 +21,7 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null, apercuMachine: true
   };
   const poserQuitter = vi.fn();
+  let deplies: ReadonlySet<string> = new Set();
   const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; etat.refaisable = h.futur.length > 0; };
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; miseAJour(); },
@@ -31,10 +32,13 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
     poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(),
+    poserModele: u => { etat.modele = typeof u === 'function' ? u(etat.modele ?? 'plat') : u; },
+    poserContexte: u => { etat.contexte = typeof u === 'function' ? u(etat.contexte ?? null) : u; },
+    poserDeplies: u => { deplies = typeof u === 'function' ? u(deplies) : u; },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
-  return { actions, etat, messages, annonces, poserQuitter, setters, historique: () => h };
+  return { actions, etat, messages, annonces, poserQuitter, setters, historique: () => h, deplies: () => deplies };
 }
 
 describe('creerActions : des verbes qui lisent l etat du moment', () => {
@@ -370,5 +374,68 @@ describe('un hote qui garde des projets (le site, ADR-0030)', () => {
     expect(echec.poserQuitter).toHaveBeenCalledWith(true);
     echec.actions.terminer();
     expect(echec.etat.enregistrer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)', () => {
+  const GROUPES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 0h10v10h-10z" fill="#c81e28"/>'
+    + '<g data-ed-nom="Nuage"><path d="M20 0h10v10h-10z" fill="#1428a0"/><g><path d="M40 0h10v10h-10z" fill="#1428a0"/><path d="M60 0h10v10h-10z" fill="#1428a0"/></g></g></svg>';
+
+  it('change le reglage du modele, le garde dans le stockage et le dit ; sans stockage, il ne vaut que pour l edition', () => {
+    const stockage = stockageMemoire();
+    const { actions, etat, messages } = monter(stockage);
+    actions.poserModele('riche');
+    expect(etat.modele).toBe('riche');
+    expect(stockage.lire('svg.modele')).toEqual({ modele: 'riche' });
+    expect(messages.at(-1)).toBe('Groupes, dégradés et effets activés (bêta) : les prochains fichiers ouverts gardent leurs groupes.');
+    const sans = monter(null);
+    sans.actions.poserModele('riche');
+    expect(sans.messages.at(-1)).toMatch(/ne garde pas ce réglage/);
+  });
+
+  it('ne change rien quand l hote a fixe le modele', () => {
+    const stockage = stockageMemoire();
+    const { actions, etat, messages } = monter(stockage);
+    etat.modeleFixe = true;
+    actions.poserModele('riche');
+    expect(etat.modele).toBeUndefined();
+    expect(stockage.lire('svg.modele')).toBeNull();
+    expect(messages).toEqual([]);
+  });
+
+  it('entre dans un groupe, en sort d un niveau a la fois, et le dit', () => {
+    const { actions, etat, annonces } = monter(null, GROUPES, 'riche');
+    const groupes = Object.values(etat.dessin.groupes ?? {});
+    const nuage = groupes.find(g => g.nom === 'Nuage'), dedans = groupes.find(g => g.parent === nuage?.id);
+    if (!nuage || !dedans) throw new Error('deux groupes');
+    etat.sel = ['f1'];
+    expect(actions.entrerGroupe('f1')).toBe(false);
+    expect(actions.entrerGroupe(nuage.id)).toBe(true);
+    expect(etat.contexte).toEqual({ groupe: nuage.id });
+    expect(etat.sel).toEqual([]);
+    expect(annonces.at(-1)).toBe('Dans le groupe « Nuage », 2 éléments.');
+    actions.entrerGroupe(dedans.id);
+    expect(annonces.at(-1)).toBe('Dans le ' + 'groupe ' + dedans.id.slice(1) + ', 2 éléments.');
+    expect(actions.sortirGroupe()).toBe(true);
+    expect(etat.contexte).toEqual({ groupe: nuage.id });
+    expect(etat.sel).toEqual([dedans.id]);
+    expect(actions.sortirGroupe()).toBe(true);
+    expect(etat.contexte).toBeNull();
+    expect(etat.sel).toEqual([nuage.id]);
+    expect(annonces.at(-1)).toBe('Retour à la racine.');
+    expect(actions.sortirGroupe()).toBe(false);
+  });
+
+  it('ne pose qu un contexte qui existe, et deplie ou replie sans recreer l ensemble pour rien', () => {
+    const { actions, etat, deplies } = monter(null, GROUPES, 'riche');
+    actions.poserContexte({ groupe: 'g99' });
+    expect(etat.contexte).toBeNull();
+    const avant = deplies();
+    actions.deplier(['g1'], false);
+    expect(deplies()).toBe(avant);
+    actions.deplier(['g1', 'g2'], true);
+    expect([...deplies()]).toEqual(['g1', 'g2']);
+    actions.deplier(['g1'], false);
+    expect([...deplies()]).toEqual(['g2']);
   });
 });

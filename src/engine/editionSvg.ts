@@ -128,6 +128,10 @@ export { groupes, nomDuGroupe, GROUPES_MAX, NOM_GROUPE_MAX, ATTRIBUT_NOM, MSG_GR
 export { boiteVisuelle } from './edition/etendueVisuelle.js';
 export { ignoresDeFusion, MSG_FUSION, MSG_ORDRE_PEINTURE, MSG_VECTOR_EFFECT } from './edition/fusion.js';
 
+// ---- etape 2 : groupes (interface) : le contexte d'edition et le rendu generique de la toile
+export { contexteValide, uniteDans, noeudsDuNiveau, unitesPrenables, cheminDuContexte } from './edition/contexteEdition.js';
+export { renduDe, lireAttributs, PRECISION_RENDU, type RenduDessin, type RenduFeuille, type RenduGroupe, type AttributRendu } from './edition/rendu.js';
+
 // ---- etape 3 : definitions et degrades
 export {
   ARRETS_MAX, estDegrade, poidsArrets, couleurDeRepli, transformerDegrade, definitionDegrade

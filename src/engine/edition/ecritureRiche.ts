@@ -31,50 +31,58 @@ const ESPACE_XLINK = 'http://www.w3.org/1999/xlink';
  */
 export type EcrivainFeuilles = (dessin: DessinSvg, ecrites: readonly Forme[]) => (f: Forme) => string;
 
+/**
+ * Le corps d'un contenu riche (feuilles et groupes, dans l'ordre de l'arbre), et les feuilles qui s'y ecrivent. `signaler` est appele
+ * des que quelque chose de riche s'ecrit (un <g>, une feuille peinte, un attribut ou un element d'une fonctionnalite). Partage par
+ * l'ecriture (ci-dessous) et par le rendu de la toile (rendu.ts), qui y ecrit le contenu d'une definition : ce qui se voit est ce qui
+ * s'ecrit.
+ */
+export function ecrireCorps(c: DessinSvg, ctx: ContexteEcriture, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[], signaler: () => void): { texte: string; ecrites: Forme[] } {
+  const ecrites = c.formes.filter(f => visibleEffectif(c, f.id));
+  const ecrire = ecrivain(c, ecrites);
+  // Les attributs v2 d'une feuille, apres sa peinture (les definitions se deposent dans l'ordre ou l'element les cite).
+  const attributs = (f: Forme): string => attributsTries(fonctions.flatMap(k => k.ecriture?.attributsFeuille?.(f, ctx) ?? []));
+  const feuille = (f: Forme): string => {
+    for (const k of fonctions) {
+      const e = k.ecriture?.elementFeuille?.(f, ctx);
+      if (e === null || e === undefined) continue;
+      signaler();
+      // Un element entier (une image) recoit aussi les attributs v2 de la feuille (son filtre), avant de se fermer.
+      const a = e.endsWith('/>') ? attributs(f) : '';
+      return a ? e.slice(0, -2) + a + '/>' : e;
+    }
+    const peinte = fonctions.reduce<Forme>((v, k) => k.ecriture?.peindreFeuille?.(v, ctx) ?? v, f);
+    const s = ecrire(peinte), a = attributs(f);
+    if (peinte !== f || a) signaler();
+    return a ? s.slice(0, -2) + a + '/>' : s;
+  };
+  const noeuds = (t: readonly NoeudArbre[]): string => t.map(n => {
+    if (n.genre === 'feuille') return n.forme.visible ? feuille(n.forme) : '';
+    if (!n.groupe.visible) return '';
+    const dedans = noeuds(n.enfants);
+    if (!dedans) return '';
+    signaler();
+    return '<g' + attributsTries(fonctions.flatMap(k => k.ecriture?.attributsGroupe?.(n.groupe, ctx) ?? [])) + '>' + dedans + '</g>';
+  }).join('');
+  return { texte: noeuds(arbreDe(c).racine), ecrites };
+}
+
 /** Le SVG d'un dessin riche. `fonctions` : le catalogue, ou une liste donnee (les tests des points d'extension). */
 export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): string {
   const [x, y, l, h] = dessin.vb;
   const definitions = recueil();
   let riche = false;
+  const signaler = (): void => { riche = true; };
   // Le contenu en cours d'ecriture, pour `ctx.courant` : le dessin, ou le contenu imbrique qu'ecrit `ctx.contenu`, le temps de l'ecrire.
   let courant: Contenu = dessin;
   const corps = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
     const avant = courant;
     courant = c;
     try {
-      return corpsDe(c);
+      return ecrireCorps(c, ctx, ecrivain, fonctions, signaler);
     } finally {
       courant = avant;
     }
-  };
-  const corpsDe = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
-    const ecrites = c.formes.filter(f => visibleEffectif(c, f.id));
-    const ecrire = ecrivain(c, ecrites);
-    // Les attributs v2 d'une feuille, apres sa peinture (les definitions se deposent dans l'ordre ou l'element les cite).
-    const attributs = (f: Forme): string => attributsTries(fonctions.flatMap(k => k.ecriture?.attributsFeuille?.(f, ctx) ?? []));
-    const feuille = (f: Forme): string => {
-      for (const k of fonctions) {
-        const e = k.ecriture?.elementFeuille?.(f, ctx);
-        if (e === null || e === undefined) continue;
-        riche = true;
-        // Un element entier (une image) recoit aussi les attributs v2 de la feuille (son filtre), avant de se fermer.
-        const a = e.endsWith('/>') ? attributs(f) : '';
-        return a ? e.slice(0, -2) + a + '/>' : e;
-      }
-      const peinte = fonctions.reduce<Forme>((v, k) => k.ecriture?.peindreFeuille?.(v, ctx) ?? v, f);
-      const s = ecrire(peinte), a = attributs(f);
-      if (peinte !== f || a) riche = true;
-      return a ? s.slice(0, -2) + a + '/>' : s;
-    };
-    const noeuds = (t: readonly NoeudArbre[]): string => t.map(n => {
-      if (n.genre === 'feuille') return n.forme.visible ? feuille(n.forme) : '';
-      if (!n.groupe.visible) return '';
-      const dedans = noeuds(n.enfants);
-      if (!dedans) return '';
-      riche = true;
-      return '<g' + attributsTries(fonctions.flatMap(k => k.ecriture?.attributsGroupe?.(n.groupe, ctx) ?? [])) + '>' + dedans + '</g>';
-    }).join('');
-    return { texte: noeuds(arbreDe(c).racine), ecrites };
   };
   const ctx: ContexteEcriture = { precision, definitions, contenu: (c: Contenu) => corps({ ...c, vb: dessin.vb }).texte, courant: () => courant };
   const { texte, ecrites } = corps(dessin);

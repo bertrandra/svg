@@ -106,6 +106,8 @@ function echapper(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur, v: Retu
   else if (u.tiroir) ac.poserTiroir(null);
   else if (u.point !== null) ac.poserPoint(null);
   else if (m.sel.length) ac.choisir([]);
+  // Puis un niveau de contexte d'edition (ADR-0012, annexe 6 §2) : Echap sort du groupe ou l'on est entre.
+  else if (u.contexte) ac.sortirGroupe();
   else if (u.outil !== 'selection') ac.poserOutil('selection');
   else if (v?.etape) v.quitter(false);
   else ac.demanderFermeture();

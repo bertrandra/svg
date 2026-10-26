@@ -12,6 +12,7 @@ import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { svgDocument } from './actionsProduction.js';
 import { avecVectorisation } from './phrasesTexte.js';
+import { optionsModele } from './modele.js';
 
 type ActionsDessin = Pick<ActionsEditeur, 'finirTrace' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
@@ -52,8 +53,8 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       dire('Tracé ajouté : ' + points.length + ' points.');
     },
     insererForme: (svgForme: string, origine?: string) => {
-      const { dessin } = lire();
-      const autre = lireDessin(svgForme);
+      const { dessin, modele } = lire();
+      const autre = lireDessin(svgForme, optionsModele(modele));
       if ('erreur' in autre) { dire(autre.erreur); return; }
       const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh) / 3;
       const r = inserer(dessin, creditee(autre.dessin, origine), { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
@@ -65,12 +66,12 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
     },
     // Plusieurs formes d'un coup, chacune a sa place relative (0 a 1) dans le carre inscrit au plan.
     insererPlusieurs: elements => {
-      const { dessin } = lire();
+      const { dessin, modele } = lire();
       const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh), ox = vx + (vl - c) / 2, oy = vy + (vh - c) / 2;
       let d = dessin;
       const ids: string[] = [];
       for (const e of elements) {
-        const autre = lireDessin(e.svg);
+        const autre = lireDessin(e.svg, optionsModele(modele));
         if ('erreur' in autre) continue;
         const r = inserer(d, creditee(autre.dessin, e.origine), { x: ox + e.x * c, y: oy + e.y * c, l: e.taille * c, h: e.taille * c });
         d = r.dessin;

@@ -5,7 +5,7 @@
 // vocale le dit. Alt retire, Maj ajoute, sinon la selection est remplacee.
 
 import { useState, useSyncExternalStore } from 'react';
-import { appliquerZone, formesDansZone, pointLasso, rectangleDe, type EffetZone, type PointZone, type RegleZone, type Zone } from '../engine/selection.js';
+import { appliquerZone, noeudsDansZone, pointLasso, rectangleDe, type EffetZone, type PointZone, type RegleZone, type Zone } from '../engine/selection.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { effetDe, phraseZone } from './commandesSelection.js';
 import type { OutilZone } from './typesEditeur.js';
@@ -71,7 +71,8 @@ export function useGesteZone() {
 
   const apercu = (z: Omit<ZoneEnCours, 'ids'>, avant: readonly string[]): readonly string[] => {
     const geo = zoneDe(z.forme, z.points);
-    const ids = geo ? formesDansZone(mo.dessin.formes, geo, { regle: z.regle, contours: ui.contours }) : [];
+    // Au niveau du contexte d'edition (ADR-0012, annexe 6 §2) ; un dessin plat : ses formes, comme avant.
+    const ids = geo ? noeudsDansZone(mo.dessin, ui.contexte?.groupe ?? null, geo, { regle: z.regle, contours: ui.contours }) : [];
     return memes(ids, avant) ? avant : ids;
   };
   const poser = magasin.poser;
@@ -126,7 +127,7 @@ export function useGesteZone() {
         return true;
       }
       const geo = zoneDe(z.forme, points);
-      const pris = geo ? formesDansZone(mo.dessin.formes, geo, { regle: z.regle, contours: ui.contours }) : [];
+      const pris = geo ? noeudsDansZone(mo.dessin, ui.contexte?.groupe ?? null, geo, { regle: z.regle, contours: ui.contours }) : [];
       const apres = appliquerZone(mo.sel, pris, z.effet);
       ac.choisir(apres);
       ac.poserPoint(null);

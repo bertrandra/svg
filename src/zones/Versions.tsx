@@ -11,13 +11,17 @@ import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { useStockage } from './contexteStockage.js';
 import { dateCourte } from './session.js';
+import { optionsModele, refusModele } from './modele.js';
 
 export function PanneauVersions() {
-  const mo = useDessin(), ac = useActions(), { production } = useInterface(), stockage = useStockage();
+  const mo = useDessin(), ac = useActions(), { production, modele } = useInterface(), stockage = useStockage();
   const [nom, poserNom] = useState('');
   const garder = () => { ac.garderVersion(nom.trim() || 'Version ' + (mo.versions.length + 1), svgDocument(mo.dessin, production)); poserNom(''); };
   const revenir = (svg: string, nomVersion: string) => {
-    const lu = lireDessin(svg);
+    // Une version ecrite en modele riche ne se rouvre pas a plat (annexe 5 §3) : on le dit, elle reste gardee.
+    const refus = refusModele(svg, modele, 'version');
+    if (refus) { ac.dire(refus); return; }
+    const lu = lireDessin(svg, optionsModele(modele));
     if ('erreur' in lu) { ac.dire(lu.erreur); return; }
     ac.appliquer(() => lu.dessin);
     ac.choisir([]);

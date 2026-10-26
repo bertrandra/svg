@@ -26,6 +26,7 @@ import { BoiteInsererAdresse } from './InsererAdresse.js';
 import { adressesPermises } from './OuvrirAdresse.js';
 import { useElementsNuancier } from './actionsNuancier.js';
 import { elementsSelection } from './commandesSelection.js';
+import { useStockage } from './contexteStockage.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -66,7 +67,7 @@ export function MenuVue() {
 }
 
 function useElementsEdition(): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition(), stockage = useStockage();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
   const nuancier = useElementsNuancier();
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
@@ -93,6 +94,8 @@ function useElementsEdition(): ElementMenu[] {
       { id: 'operation-ecriture', libelle: 'Sélection à écrire au stylo', icone: 'stylo', raccourci: 'Maj+E', desactive: rien, onClick: () => ac.poserOperation('ecriture') }
     ] satisfies ElementMenu[] : []),
     { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
+    // Le modele de lecture (ADR-0012, annexe 5 §3) : garde par le stockage injecte, absent sans lui ou quand l'hote l'a fixe.
+    ...(stockage && !ui.modeleFixe ? [{ id: 'modele-riche', libelle: 'Groupes, dégradés, effets (bêta)', coche: ui.modele === 'riche', onClick: () => ac.poserModele(ui.modele === 'riche' ? 'plat' : 'riche') } satisfies ElementMenu] : []),
     ...vectoriser,
     { id: 'contour-en-forme', libelle: 'Contour en forme', separateur: true, desactive: rien, onClick: ac.contourEnForme },
     { id: 'decaler-contour', libelle: 'Décaler le contour…', desactive: rien, onClick: () => allerAuChamp(ac, 'decalage') },

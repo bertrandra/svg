@@ -2,7 +2,7 @@
 // l'editeur retient vit ici, une fois ; `Atelier` n'a plus qu'a le donner aux contextes.
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { aimanter, boiteDe, pasGrille, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, contexteValide, pasGrille, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
 import { arrondi } from './aidesEditeur.js';
 import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
@@ -16,7 +16,7 @@ import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
-import type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Fond, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
+import type { ActionHote, ActionsEditeur, ContexteEdition, EtatEnregistrement, EtatInterface, EtatRendu, Fond, Modele, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
 import type { RegleZone } from '../engine/selection.js';
 
@@ -36,6 +36,10 @@ export interface ParametresEtat {
   changement?: ((etat: EtatRendu) => void) | undefined;
   ctrlSEnregistre?: boolean | undefined;
   actionsHote?: readonly ActionHote[] | undefined;
+  /** Le modele dans lequel le SVG a ete lu (ADR-0012, annexe 5 §3) : celui de l'hote, ou le reglage garde. Absent : `plat`. */
+  modele?: Modele | undefined;
+  /** L'hote a fixe le modele : le reglage du menu Edition ne se montre pas. */
+  modeleFixe?: boolean | undefined;
 }
 
 export interface EtatEditeur {
@@ -79,6 +83,12 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [apercuMachine, poserApercuMachine] = useState(true);
   // Ce que le cadre et le lasso prennent (ADR-0035) : un reglage de la session, qui revient aux formes touchees a chaque ouverture.
   const [regleZone, poserRegleZone] = useState<RegleZone>('touche');
+  // Le modele de lecture (ADR-0012, annexe 5 §3) : il change au menu Edition pour les SVG lus ensuite (versions, insertions).
+  const [modeleLecture, poserModele] = useState<Modele>(p.modele ?? 'plat');
+  const modeleFixe = p.modeleFixe ?? false;
+  // Le contexte d'edition et les groupes deplies (annexe 6 §1 et §2) : des etats d'interface, jamais ecrits.
+  const [contexteBrut, poserContexte] = useState<ContexteEdition | null>(null);
+  const [deplies, poserDeplies] = useState<ReadonlySet<string>>(() => new Set());
   // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
   const aBrouillon = !!p.brouillon;
   const { ctrlSEnregistre = false, actionsHote } = p;
@@ -97,7 +107,10 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   // En contexte de production, la grille suit l'unite de la machine : un quart de pouce, ou 5 mm.
   const pas = useMemo(() => (profil ? depuisUnite(profil.unite === 'in' ? 0.25 : 5, profil.unite) : pasGrille(dessin.vb)), [dessin.vb, profil]);
   const preparation = usePreparation(dessin, profil);
-  const presentes = useMemo(() => new Set(dessin.formes.map(f => f.id)), [dessin]);
+  // Une selection est faite de noeuds (ADR-0012, annexe 3) : feuilles, et groupes d'un dessin riche (sans groupe, les memes feuilles qu'avant).
+  const presentes = useMemo(() => new Set([...dessin.formes.map(f => f.id), ...Object.keys(dessin.groupes ?? {})]), [dessin]);
+  // Un groupe defait, retire ou annule fait revenir a la racine : le contexte est toujours un groupe du dessin du moment.
+  const contexte = useMemo(() => (contexteBrut && contexteValide(dessin, contexteBrut.groupe) ? contexteBrut : null), [contexteBrut, dessin]);
   // Tant que toutes les formes choisies existent, la selection reste le meme tableau : rien en aval ne se recalcule pendant un geste.
   const sel = useMemo(() => (selection.every(id => presentes.has(id)) ? selection : selection.filter(id => presentes.has(id))), [selection, presentes]);
   const choisies = useMemo(() => new Set(sel), [sel]);
@@ -110,11 +123,11 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const moment = useRef<EtatDuMoment | null>(null);
   moment.current = {
     dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
-    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement
+    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement, modele: modeleLecture, modeleFixe, contexte
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, poserModele, poserContexte, poserDeplies, toile }
   ));
 
   // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
@@ -155,8 +168,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone }),
-    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone]
+    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, modele: modeleLecture, modeleFixe, contexte, deplies }),
+    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, modeleLecture, modeleFixe, contexte, deplies]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

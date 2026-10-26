@@ -787,6 +787,21 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .lisere-survol { stroke: Highlight; }
 }
 
+/* Le contexte d'edition d'un dessin riche (ADR-0012, annexe 6 §2). Ce qui est hors du groupe ou l'on est entre s'estompe par une
+   opacite, jamais par une teinte (les couleurs du dessin sont a l'utilisateur) ; le groupe montre sa boite d'un tiret d'outil sur
+   son halo, comme le lisere de survol. L'apercu de la machine rend les formes d'un dessin riche transparentes comme les autres.
+   Aucun mouvement : rien a eteindre sous prefers-reduced-motion. */
+.editeur-svg-toile .hors-contexte { opacity: 0.3; }
+.editeur-svg-toile .contour-groupe-fond { fill: none; stroke: var(--panneau); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .contour-groupe { fill: none; stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 6 3; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .apercu-machine ~ .noeuds-toile { opacity: 0; }
+.outil-selection .editeur-svg-toile .noeuds-toile [data-id] { cursor: move; }
+.outil-selection .editeur-svg-toile .hors-contexte [data-id] { cursor: auto; }
+@media (forced-colors: active) {
+  .editeur-svg-toile .contour-groupe-fond { stroke: Canvas; }
+  .editeur-svg-toile .contour-groupe { stroke: Highlight; }
+}
+
 /* Le texte pose sur ou dans une forme (ADR-0031). Le guide de la forme d'un texte pose choisi : son trace en tirets d'outil, meme
    masquee (on voit ce qui porte le texte), sans pointeur. La poignee du depart : un rond plein a la couleur d'outil sur un halo de
    panneau, une cible invisible de 24 px (40 au doigt) ; elle se deplace, son curseur est « deplacer » ; son focus, un anneau d'outil.

@@ -4,9 +4,10 @@
 // les formes, lu par editeur.css) et le lisere de la forme qu'un clic prendrait, ou de celle que le doigt touche.
 
 import { memo, useEffect, useRef, useState, type RefObject } from 'react';
-import type { Forme } from '../engine/editionSvg.js';
+import { boiteDe, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { genreDeForme, numeroDeForme } from '../engine/description.js';
-import { candidates, formeDessous, optionsPrise, zoneDePrise, type OptionsPrise } from '../engine/prise.js';
+import { candidatesDans, formeDessous, optionsPrise, zoneDePrise, type OptionsPrise } from '../engine/prise.js';
+import { groupeDit } from './phrasesGroupes.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import type { Vue } from './typesEditeur.js';
@@ -18,12 +19,23 @@ interface Pointage { clientX: number; clientY: number; pointerType?: string; alt
 export const phraseDessous = (f: Forme, rang: number, total: number): string =>
   'Forme du dessous, ' + rang + ' sur ' + total + ' : ' + genreDeForme(f) + ' ' + numeroDeForme(f) + '.';
 
-/** Les formes que le pointeur peut prendre, la meilleure d'abord : le seul calcul du clic et du survol. */
-function idsSous(svg: SVGSVGElement | null, formes: readonly Forme[], vue: Vue, contours: boolean, e: Pointage): string[] {
+/** La meme phrase pour un noeud d'un dessin riche : une feuille, ou un groupe (« groupe « Nuage » ») ; null pour un inconnu. */
+function phraseNoeudDessous(d: DessinSvg, id: string, rang: number, total: number): string | null {
+  const f = d.formes.find(x => x.id === id);
+  if (f) return phraseDessous(f, rang, total);
+  const g = d.groupes && Object.prototype.hasOwnProperty.call(d.groupes, id) ? d.groupes[id] : undefined;
+  return g ? 'Forme du dessous, ' + rang + ' sur ' + total + ' : ' + groupeDit(g) + '.' : null;
+}
+
+/**
+ * Les noeuds que le pointeur peut prendre, la meilleure d'abord : le seul calcul du clic et du survol. Un dessin plat : ses formes,
+ * comme avant ; un dessin riche : les noeuds du niveau du contexte d'edition (une feuille remonte a l'enfant du contexte).
+ */
+function idsSous(svg: SVGSVGElement | null, dessin: DessinSvg, contexte: string | null, vue: Vue, contours: boolean, e: Pointage): string[] {
   const r = svg?.getBoundingClientRect();
   if (!r) return [];
   const o: OptionsPrise = optionsPrise(vue.zoom, e.pointerType === 'touch', contours);
-  return candidates(formes, (e.clientX - r.left - vue.x) / vue.zoom, (e.clientY - r.top - vue.y) / vue.zoom, o).map(c => c.id);
+  return candidatesDans(dessin, contexte, (e.clientX - r.left - vue.x) / vue.zoom, (e.clientY - r.top - vue.y) / vue.zoom, o).map(c => c.id);
 }
 
 /**
@@ -42,10 +54,12 @@ function priseSansAlt(svg: SVGSVGElement | null, ids: readonly string[], sel: re
 /** La prise des gestes : la forme sous le pointeur, ou, avec Alt, celle du dessous de la selection (dite a voix haute). */
 export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
-  const sous = (e: Pointage): string[] => idsSous(svgRef.current, mo.dessin.formes, ui.vues.vue, ui.contours, e);
+  const sous = (e: Pointage, contexte = ui.contexte?.groupe ?? null): string[] => idsSous(svgRef.current, mo.dessin, contexte, ui.vues.vue, ui.contours, e);
   return {
     /** La forme qu'un double-clic vise : la meilleure, sans cycle. */
     viser: (e: Pointage): string | null => sous(e)[0] ?? null,
+    /** Le noeud qu'un appui prendrait dans un autre contexte (celui ou un double-clic vient d'entrer). */
+    viserDans: (e: Pointage, contexte: string | null): string | null => sous(e, contexte)[0] ?? null,
     /** Toutes les formes que le pointeur peut prendre, la meilleure d'abord (le choix de la forme d'un texte pose, ADR-0031). */
     toutes: (e: Pointage): string[] => sous(e),
     /** La forme qu'un appui prend ; Alt passe a celle du dessous, en boucle. */
@@ -57,10 +71,10 @@ export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
         return id;
       }
       if (ids.length < 2) return ids[0] ?? null;
-      const id = formeDessous(ids, mo.sel), f = mo.dessin.formes.find(x => x.id === id);
-      if (!id || !f) return null;
+      const id = formeDessous(ids, mo.sel), phrase = id ? phraseNoeudDessous(mo.dessin, id, ids.indexOf(id) + 1, ids.length) : null;
+      if (!id || !phrase) return null;
       if (svg) dessous.set(svg, { id, x: e.clientX, y: e.clientY });
-      ac.annoncer(phraseDessous(f, ids.indexOf(id) + 1, ids.length));
+      ac.annoncer(phrase);
       return id;
     }
   };
@@ -88,8 +102,8 @@ export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRe
   const mo = useDessin(), ui = useInterface(), { choixForme } = useSaisie();
   const [survol, poserSurvol] = useState<Survol | null>(null);
   // Les ecouteurs sont poses une fois : ils lisent l'etat du dernier rendu.
-  const etat = useRef({ formes: mo.dessin.formes, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil });
-  etat.current = { formes: mo.dessin.formes, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil };
+  const etat = useRef({ dessin: mo.dessin, contexte: ui.contexte?.groupe ?? null, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil });
+  etat.current = { dessin: mo.dessin, contexte: ui.contexte?.groupe ?? null, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil };
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -100,8 +114,8 @@ export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRe
       poserSurvol(avant => (avant?.id === s?.id && avant?.doigt === s?.doigt ? avant : s));
     };
     const viser = (e: PointerEvent, doigt: boolean): string | null => {
-      const { formes, sel, vue, contours, outil } = etat.current;
-      const id = outil !== 'selection' || (e.target instanceof Element && e.target.closest(SUR_POIGNEE)) ? null : priseSansAlt(svg, idsSous(svg, formes, vue, contours, e), sel, e);
+      const { dessin, contexte, sel, vue, contours, outil } = etat.current;
+      const id = outil !== 'selection' || (e.target instanceof Element && e.target.closest(SUR_POIGNEE)) ? null : priseSansAlt(svg, idsSous(svg, dessin, contexte, vue, contours, e), sel, e);
       poser(id ? { id, doigt } : null);
       return id;
     };
@@ -139,6 +153,12 @@ export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRe
   }, [ui.outil, svgRef]);
 
   const f = survol ? mo.dessin.formes.find(x => x.id === survol.id) : undefined;
+  // Un groupe d'un dessin riche (ADR-0012, etape 2) : le lisere suit sa boite, celle des feuilles qu'un clic emmene.
+  const boiteGroupe = survol && !f && mo.dessin.groupes?.[survol.id] ? boiteDe(mo.dessin, [survol.id]) : null;
+  if (survol && boiteGroupe && (survol.doigt || !mo.sel.includes(survol.id)) && ui.outil === 'selection' && !choixForme) {
+    const b = boiteGroupe;
+    return <g pointerEvents="none" aria-hidden="true"><rect className="lisere-survol-fond" x={b.x} y={b.y} width={b.l} height={b.h} /><rect className="lisere-survol" x={b.x} y={b.y} width={b.l} height={b.h} /></g>;
+  }
   // Une forme deja choisie a son trace de selection : le lisere ne s'y ajoute qu'au doigt, pour montrer ce qu'il touche.
   // Pendant le choix de la forme d'un texte (ADR-0031), c'est ce choix qui montre la forme visee.
   if (!survol || !f || !f.visible || f.verrouille || (!survol.doigt && mo.sel.includes(f.id)) || ui.outil !== 'selection' || choixForme) return null;

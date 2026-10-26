@@ -44,6 +44,19 @@ export interface OptionsFin {
   readonly actionsHote?: readonly ActionHote[];
 }
 
+/**
+ * Le modele de lecture (ADR-0012, annexe 5 §3) : `plat` (defaut, le contrat de l'ADR-0001) ou `riche` (groupes, degrades, effets,
+ * en beta). Il ne decide que de la lecture d'un SVG ; un dessin lu s'affiche et s'ecrit selon ce qu'il porte.
+ */
+export type Modele = 'plat' | 'riche';
+
+/**
+ * Le contexte d'edition (ADR-0012, annexe 6 §2) : le groupe ou l'on est entre, et, plus tard, sa decoupe, son masque ou la tuile
+ * de son motif. Null : la racine. La prise, le cadre, le lasso et les aimants ne voient que les noeuds de ce niveau ; le reste de la
+ * toile est estompe. Un etat d'interface, jamais ecrit ni garde dans l'historique.
+ */
+export interface ContexteEdition { readonly groupe: string; readonly dans?: 'decoupe' | 'masque' | 'motif' }
+
 /** Ce que l'editeur rend a l'hote avec le SVG (ADR-0030) : le dessin du modele et le contexte choisi, de quoi ecrire un projet. */
 export interface EtatRendu { readonly dessin: DessinSvg; readonly production: ChoixProduction }
 
@@ -139,6 +152,14 @@ export interface EtatInterface {
   enregistrement?: EtatEnregistrement | null;
   /** Ce que le cadre et le lasso prennent (ADR-0035) : les formes touchees (defaut) ou entierement dedans. Un reglage de la session. */
   regleZone: RegleZone;
+  /** Le modele de lecture du moment : celui de l'hote, ou le reglage du menu Edition (garde par le stockage injecte). */
+  modele: Modele;
+  /** L'hote a fixe le modele (`modele` donne a l'editeur) : le reglage du menu Edition ne se montre pas. */
+  modeleFixe: boolean;
+  /** Le contexte d'edition, ou null (la racine) ; toujours un groupe qui existe dans le dessin du moment. */
+  contexte: ContexteEdition | null;
+  /** Les groupes deplies dans la liste des calques (annexe 6 §1) : un etat d'interface, par editeur. */
+  deplies: ReadonlySet<string>;
 }
 
 /**
@@ -253,6 +274,16 @@ export interface ActionsEditeur {
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
   /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */
   poserRegleZone: (r: RegleZone) => void;
+  /** Change le reglage du modele (menu Edition), le garde dans le stockage injecte et le dit ; sans effet si l'hote l'a fixe. */
+  poserModele: (m: Modele) => void;
+  /** Pose le contexte d'edition tel quel (null : la racine) ; un groupe qui n'existe pas fait revenir a la racine. */
+  poserContexte: (c: ContexteEdition | null) => void;
+  /** Entre dans un groupe : il devient le contexte, la selection se vide, et c'est dit. Faux si ce n'est pas un groupe du dessin. */
+  entrerGroupe: (id: string) => boolean;
+  /** Sort d'un niveau : le parent du contexte devient le contexte, le groupe quitte est choisi, et c'est dit. Faux a la racine. */
+  sortirGroupe: () => boolean;
+  /** Deplie (vrai) ou replie (faux) ces groupes dans la liste des calques. */
+  deplier: (ids: readonly string[], deplie: boolean) => void;
 }
 
 export interface Vues {

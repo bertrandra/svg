@@ -163,6 +163,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `<filter id="ed-f-…" filterUnits="userSpaceOnUse">` sur une région mesurée sur la géométrie telle qu'elle s'écrit ; la descente
   les abandonne et le dit ; une prise posée hors d'une feuille ou d'un groupe est refusée en disant où (`refusHorsFeuille`) ;
   `ContexteEcriture.courant()` donne le contenu à mesurer ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-effets-*`.
+- **Le modèle riche se règle et se voit par les crochets** (ADR-0012, étape 2) : le réglage `modele` (`svg.modele` dans le stockage
+  injecté, `plat` sans lui ; fixé, `plat` par défaut, chez un hôte qui embarque) ne décide que de la lecture ; la toile d'un dessin
+  riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
+  le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
+  aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente

@@ -167,7 +167,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       if (g.b) { dx = ui.aimant(g.b.x + dx) - g.b.x; dy = ui.aimant(g.b.y + dy) - g.b.y; }
       if (g.b && ui.aimants && !ui.grille) {
         // Le dessin de depart et la selection ne changent pas pendant le geste : les cibles se calculent une fois.
-        g.cibles ??= ciblesAimants(reperesActifs ? g.base : sansReperes(g.base), g.ids); // des reperes masques n'attirent pas (ADR-0038)
+        // Des reperes masques n'attirent pas (ADR-0038) ; dans un groupe, seuls ses freres attirent (ADR-0012, annexe 6 §2).
+        g.cibles ??= ciblesAimants(reperesActifs ? g.base : sansReperes(g.base), g.ids, ui.contexte?.groupe ?? null);
         const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, g.cibles, 6 / vue.zoom);
         dx += a.dx; dy += a.dy;
         ac.poserGuides(a.lignes);
@@ -238,13 +239,20 @@ function useGestesTexte(prise: ReturnType<typeof usePrise>) {
   };
   /**
    * Le double-clic : dans une saisie, il choisit le mot. A l'outil selection, un texte vivant se retape sur la toile, le curseur
-   * au point du clic ; une autre forme passe en mode points. Le calcul du clic (PriseToile), pas la cible du DOM : la capture
+   * au point du clic ; un groupe d'un dessin riche s'ouvre (on y entre, et ce qui est sous le pointeur y est choisi, ADR-0012
+   * annexe 6 §2) ; une autre forme passe en mode points. Le calcul du clic (PriseToile), pas la cible du DOM : la capture
    * du pointeur fait de la toile celle du double-clic.
    */
   const doubleClic = (e: ME<SVGSVGElement>, p: readonly [number, number]) => {
     if (sx.saisie) { sx.poignee.current?.doubleClic(p); return; }
     const id = prise.viser(e);
     if (!id || ui.outil !== 'selection') return;
+    if (mo.dessin.groupes && Object.prototype.hasOwnProperty.call(mo.dessin.groupes, id)) {
+      if (!ac.entrerGroupe(id)) return;
+      const dedans = prise.viserDans(e, id);
+      if (dedans) ac.choisir([dedans]);
+      return;
+    }
     ac.choisir([id]);
     const f = mo.dessin.formes.find(x => x.id === id);
     if (f?.texte && !f.verrouille) sx.ouvrir(id, p); else ac.poserOutil('points');

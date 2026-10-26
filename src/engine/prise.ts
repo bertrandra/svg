@@ -16,9 +16,11 @@
 // Ce qui ne depend que d'une forme immuable (sa boite avec trait, son trace aplati) se memorise par forme (ADR-0008) ; les
 // boites d'un dessin se rangent une fois par tableau de formes, et le survol ne fait le calcul fin que pres du point.
 
-import type { Boite, Forme } from './edition/types.js';
+import type { Boite, Contenu, Forme } from './edition/types.js';
 import { boiteChemin, boiteForme } from './edition/geometrie.js';
 import { boiteAvecTrait } from './edition/etendue.js';
+import { estPlat } from './edition/arbre.js';
+import { unitesPrenables } from './edition/contexteEdition.js';
 
 /** La tolerance autour d'un trace, en pixels d'ecran : a la souris (ou au stylet), au doigt. */
 export const TOLERANCE_SOURIS = 6;
@@ -210,12 +212,18 @@ function essayer(f: Forme, rang: number, px: number, py: number, o: OptionsPrise
 
 /** Les formes que le point (x, y) du plan peut prendre, la meilleure d'abord (voir l'en-tete pour l'ordre). */
 export function candidates(formes: readonly Forme[], x: number, y: number, o: OptionsPrise): Candidate[] {
+  return ordonner(trouver(formes, x, y, o, null));
+}
+
+/** Les candidates d'un point, dans l'ordre des formes ; `garder` ecarte d'avance les rangs qu'on ne prend pas (null : tous). */
+function trouver(formes: readonly Forme[], x: number, y: number, o: OptionsPrise, garder: readonly (string | null)[] | null): Candidate[] {
   if (!(o.zoom > 0)) return [];
   const r = rangee(formes);
   // La marge du tri grossier : la tolerance, ou la demi-cible d'une petite forme, la plus grande des deux.
   const marge = Math.max(o.tolerance, o.cible / 2) / o.zoom;
   const trouvees: Candidate[] = [];
   for (let i = 0; i < formes.length; i++) {
+    if (garder && !garder[i]) continue;
     const x0 = r[i * 4] ?? NaN;
     // NaN : forme masquee, verrouillee ou vide ; toute comparaison est fausse, la forme est ecartee.
     if (!(x - x0 >= -marge) || !((r[i * 4 + 2] ?? NaN) - x >= -marge) || !(y - (r[i * 4 + 1] ?? NaN) >= -marge) || !((r[i * 4 + 3] ?? NaN) - y >= -marge)) continue;
@@ -223,7 +231,25 @@ export function candidates(formes: readonly Forme[], x: number, y: number, o: Op
     const c = f ? essayer(f, i, x, y, o) : null;
     if (c) trouvees.push(c);
   }
-  return ordonner(trouvees);
+  return trouvees;
+}
+
+/**
+ * Les noeuds que le point peut prendre dans le contexte d'edition (ADR-0012, annexe 6 §2), le meilleur d'abord. Un dessin plat :
+ * exactement `candidates` (un seul niveau, une feuille par unite). Un dessin riche : les feuilles hors du contexte, masquees ou
+ * verrouillees (elles ou un ancetre) ne se prennent pas ; une feuille prise remonte a l'enfant du contexte qui la contient (un
+ * groupe, ou elle-meme), a la place de sa meilleure feuille, sans doublon. `rang` reste celui de la feuille touchee.
+ */
+export function candidatesDans(d: Contenu, contexte: string | null, x: number, y: number, o: OptionsPrise): Candidate[] {
+  if (estPlat(d)) return candidates(d.formes, x, y, o);
+  const unites = unitesPrenables(d, contexte), vus = new Set<string>(), out: Candidate[] = [];
+  for (const c of ordonner(trouver(d.formes, x, y, o, unites))) {
+    const id = unites[c.rang];
+    if (!id || vus.has(id)) continue;
+    vus.add(id);
+    out.push({ ...c, id });
+  }
+  return out;
 }
 
 /** L'ordre des candidates : un filet a portee au-dessus de la surface la plus haute, puis les surfaces du haut vers le bas, puis les plus proches. */

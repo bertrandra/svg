@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, garderTextes, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, contexteValide, garderTextes, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -14,7 +14,9 @@ import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
-import type { ActionsEditeur, EtatEnregistrement, Fond, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
+import type { ActionsEditeur, ContexteEdition, EtatEnregistrement, Fond, Modele, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
+import { garderModele, phraseModele } from './modele.js';
+import { PHRASE_RACINE, phraseEntreeGroupe } from './phrasesGroupes.js';
 import { aEnregistrer, perdrait } from './enregistrement.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
@@ -26,6 +28,10 @@ export interface EtatDuMoment extends EtatLu {
   brouillon?: ((svg: string) => unknown) | undefined; productionModifiee: boolean; fin: OptionsFin; suiteCricut: SuiteCricut; apercuMachine: boolean;
   /** L'etat d'enregistrement que l'hote annonce (le site, ADR-0030) ; absent chez un hote qui ne garde rien. */
   enregistrement?: EtatEnregistrement | null | undefined;
+  /** L'hote a fixe le modele : le reglage ne change pas (ADR-0012, annexe 5 §3). Absent : faux. */
+  modeleFixe?: boolean | undefined;
+  /** Le contexte d'edition du moment (ADR-0012, annexe 6 §2). Absent : la racine. */
+  contexte?: ContexteEdition | null | undefined;
 }
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
@@ -42,6 +48,8 @@ export interface Setters {
   poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
   poserApercuMachine: Dispatch<SetStateAction<boolean>>;
   poserRegleZone: Dispatch<SetStateAction<RegleZone>>;
+  poserModele: Dispatch<SetStateAction<Modele>>; poserContexte: Dispatch<SetStateAction<ContexteEdition | null>>;
+  poserDeplies: Dispatch<SetStateAction<ReadonlySet<string>>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -137,6 +145,40 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire('Version « ' + nom + ' » gardée dans ce navigateur.');
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
+    poserModele: m => {
+      const e = lire();
+      if (e.modeleFixe) return;
+      s.poserModele(m);
+      dire(phraseModele(m, garderModele(e.stockage, m)));
+    },
+    poserContexte: c => { const { dessin } = lire(); s.poserContexte(c && contexteValide(dessin, c.groupe) ? c : null); },
+    entrerGroupe: id => {
+      const { dessin } = lire(), phrase = contexteValide(dessin, id) ? phraseEntreeGroupe(dessin, id) : null;
+      if (!phrase) return false;
+      s.poserContexte({ groupe: id });
+      s.choisir([]);
+      s.poserPoint(null);
+      annoncer(phrase);
+      return true;
+    },
+    sortirGroupe: () => {
+      const { dessin, contexte } = lire(), actuel = contexteValide(dessin, contexte?.groupe);
+      if (!actuel) return false;
+      const parent = contexteValide(dessin, dessin.groupes?.[actuel]?.parent);
+      s.poserContexte(parent ? { groupe: parent } : null);
+      // Le groupe quitte reste choisi : on voit d'ou l'on sort, et Echap suivant vide la selection, comme partout.
+      s.choisir([actuel]);
+      s.poserPoint(null);
+      annoncer((parent ? phraseEntreeGroupe(dessin, parent) : null) ?? PHRASE_RACINE);
+      return true;
+    },
+    deplier: (ids, deplie) => s.poserDeplies(avant => {
+      const change = ids.filter(id => avant.has(id) !== deplie);
+      if (!change.length) return avant;
+      const apres = new Set(avant);
+      for (const id of change) { if (deplie) apres.add(id); else apres.delete(id); }
+      return apres;
+    }),
     poserRegleZone: r => {
       s.poserRegleZone(r);
       dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
