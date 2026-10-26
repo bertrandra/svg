@@ -7,6 +7,7 @@
 import { ancetres, arbreDe, unites, type DessinSvg, type Groupe, type NoeudArbre } from '../engine/editionSvg.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
 import type { NomIcone } from './icones.js';
+import { nombre, t } from '../util/i18n.js';
 
 export interface LigneArbre {
   readonly id: string;
@@ -99,7 +100,7 @@ export function destinations(d: DessinSvg, ids: readonly string[]): Destination[
   const choisis = new Set(us);
   const parents = new Set(us.map(id => parentDe(d, id)));
   const commun = parents.size === 1 ? [...parents][0] ?? null : undefined;
-  const out: Destination[] = [{ id: null, libelle: 'Racine', refusee: commun === null }];
+  const out: Destination[] = [{ id: null, libelle: t('Racine'), refusee: commun === null }];
   const parcourir = (freres: readonly NoeudArbre[], chemin: string, interdit: boolean) => {
     for (let k = freres.length - 1; k >= 0; k--) {
       const n = freres[k];
@@ -130,10 +131,10 @@ export interface PastilleGroupe { readonly icone: NomIcone; readonly mot: string
  */
 export function pastillesGroupe(g: Groupe): PastilleGroupe[] {
   const p: PastilleGroupe[] = [];
-  if (g.decoupe) p.push({ icone: 'decoupe', mot: 'découpe' });
-  if (g.masque) p.push({ icone: 'masque', mot: 'masque' });
-  if (g.effets?.flou) p.push({ icone: 'flou', mot: 'flou' });
-  if (g.effets?.ombre) p.push({ icone: 'ombre', mot: 'ombre' });
-  if (g.opacite !== undefined && g.opacite < 1) p.push({ icone: 'opacite', mot: 'opacité ' + Math.round(g.opacite * 100) + ' %' });
+  if (g.decoupe) p.push({ icone: 'decoupe', mot: t('découpe') });
+  if (g.masque) p.push({ icone: 'masque', mot: t('masque') });
+  if (g.effets?.flou) p.push({ icone: 'flou', mot: t('flou') });
+  if (g.effets?.ombre) p.push({ icone: 'ombre', mot: t('ombre') });
+  if (g.opacite !== undefined && g.opacite < 1) p.push({ icone: 'opacite', mot: t('opacité {valeur} %', { valeur: nombre(Math.round(g.opacite * 100)) }) });
   return p;
 }

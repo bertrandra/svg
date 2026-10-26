@@ -4,6 +4,7 @@
 
 import { arbreDe, type DessinSvg, type NoeudArbre } from '../engine/editionSvg.js';
 import { groupeDit, nomDeGroupe } from '../engine/description.js';
+import { t } from '../util/i18n.js';
 import { pluriel } from '../util/texte.js';
 
 export { groupeDit, nomDeGroupe };
@@ -12,28 +13,31 @@ export { groupeDit, nomDeGroupe };
 export function phraseEntreeGroupe(d: DessinSvg, id: string): string | null {
   const n = arbreDe(d).parId.get(id);
   if (n?.genre !== 'groupe') return null;
-  return 'Dans le ' + groupeDit(n.groupe) + ', ' + pluriel(n.enfants.length, 'élément') + '.';
+  return t('Dans le {groupe}, {elements}.', { groupe: groupeDit(n.groupe), elements: pluriel(n.enfants.length, 'élément') });
 }
 
-export const PHRASE_RACINE = 'Retour à la racine.';
+export const PHRASE_RACINE = t('Retour à la racine.');
 
 /** « 3 formes » quand il n'y a que des feuilles, « 3 éléments » des qu'un groupe en est : ce qu'on compte se nomme juste. */
 export function elementsDits(d: DessinSvg, ids: readonly string[]): string {
   const a = arbreDe(d), groupe = ids.some(id => a.parId.get(id)?.genre === 'groupe');
-  return pluriel(ids.length, groupe ? 'élément' : 'forme');
+  return groupe ? pluriel(ids.length, 'élément') : pluriel(ids.length, 'forme');
 }
 
 /** « Groupe créé : 3 formes. » (annexe 6 §7) ; `ids` sont les noeuds qu'il a reunis, lus dans le dessin d'avant. */
-export const phraseGroupeCree = (avant: DessinSvg, ids: readonly string[]): string => 'Groupe créé : ' + elementsDits(avant, ids) + '.';
+export const phraseGroupeCree = (avant: DessinSvg, ids: readonly string[]): string => t('Groupe créé : {elements}.', { elements: elementsDits(avant, ids) });
 
 /**
  * « Groupe défait : 3 formes. », « 2 groupes défaits : 5 éléments. » ; `enfants` sont les noeuds remontes, lus dans le dessin d'apres.
  * Un groupe qui portait une opacite, une decoupe, un masque ou des effets les perd : la phrase le dit, puisque rien ne le montre.
  */
 export function phraseGroupeDefait(apres: DessinSvg, n: number, enfants: readonly string[], porteurs: number): string {
-  const tete = n > 1 ? n + ' groupes défaits' : 'Groupe défait';
-  const perte = porteurs ? ' L’opacité, la découpe, le masque ou les effets ' + (porteurs > 1 ? 'de ces groupes' : 'du groupe') + ' sont retirés ; Ctrl+Z les rend.' : '';
-  return tete + ' : ' + elementsDits(apres, enfants) + '.' + perte;
+  const v = { tete: n > 1 ? t('{n} groupes défaits', { n }) : t('Groupe défait'), elements: elementsDits(apres, enfants) };
+  const phrase = t('{tete} : {elements}.', v);
+  if (!porteurs) return phrase;
+  return phrase + ' ' + (porteurs > 1
+    ? t('L’opacité, la découpe, le masque ou les effets de ces groupes sont retirés ; Ctrl+Z les rend.')
+    : t('L’opacité, la découpe, le masque ou les effets du groupe sont retirés ; Ctrl+Z les rend.'));
 }
 
 /** Le chemin du contexte, de la racine au groupe ou l'on est : les groupes, du plus haut au plus proche (vide a la racine). */

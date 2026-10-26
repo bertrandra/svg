@@ -11,6 +11,7 @@ import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
+import { t } from '../util/i18n.js';
 import { avecNuancier } from '../engine/nuancier.js';
 import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
@@ -98,7 +99,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const aBrouillon = !!p.brouillon;
   const { ctrlSEnregistre = false, actionsHote } = p;
   const fin = useMemo<OptionsFin>(() => ({
-    libelle: p.libelleEnregistrer ?? 'Enregistrer', fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon,
+    libelle: p.libelleEnregistrer ?? t('Enregistrer'), fermerSansModification: p.fermerSansModification ?? false, brouillon: aBrouillon,
     ...(ctrlSEnregistre ? { ctrlSEnregistre } : {}), ...(actionsHote?.length ? { actionsHote } : {})
   }), [p.libelleEnregistrer, p.fermerSansModification, aBrouillon, ctrlSEnregistre, actionsHote]);
   const enregistrement = p.enregistrement ?? null;
@@ -140,7 +141,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement, modele: modeleLecture, modeleFixe, contexte, verrouProportions
   };
   const [actions] = useState(() => creerActions(
-    () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
+    () => { if (!moment.current) throw new Error(t('Un verbe de l’éditeur a été appelé avant le premier rendu.')); return moment.current; },
     { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, poserVerrouProportions, poserModele, poserContexte, poserDeplies, toile }
   ));
 
@@ -148,7 +149,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const { production: marque } = p;
   useEffect(() => {
     const inconnu = choixDeMarque(marque).inconnu;
-    if (inconnu) actions.dire('Ce fichier a été préparé pour le contexte « ' + inconnu + ' », que cette version ne connaît pas : il s’ouvre en contexte générique.');
+    if (inconnu) actions.dire(t('Ce fichier a été préparé pour le contexte « {contexte} », que cette version ne connaît pas : il s’ouvre en contexte générique.', { contexte: inconnu }));
   }, [actions, marque]);
 
   // Un depart Cricut se voit comme un choix fait dans la barre : le tapis entier cadre (apres le rendu qui le pose) et la phrase du

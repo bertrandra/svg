@@ -9,17 +9,18 @@ import { TITRE_LIENS } from './PanneauLiens.js';
 import { useActionsRegles, useRegles } from './contexteRegles.js';
 import type { ElementMenu } from './commun/Menu.js';
 import { TITRES_REPETITION } from './PanneauRepetition.js';
+import { t } from '../util/i18n.js';
 
 /** Regles et reperes, dans le menu Vue : trois bascules, le panneau des valeurs exactes, l'effacement. */
 export function useElementsReperes(): ElementMenu[] {
   const rg = useRegles(), arg = useActionsRegles(), { dessin } = useDessin();
   const n = nombreReperes(dessin);
   return [
-    { id: 'regles', libelle: 'Afficher les règles', icone: 'regle', raccourci: 'Maj+R', coche: rg.regles, separateur: true, onClick: arg.basculerRegles },
-    { id: 'reperes', libelle: 'Afficher les repères', raccourci: 'Ctrl+;', coche: rg.reperesVisibles, onClick: arg.basculerReperes },
-    { id: 'verrouiller-reperes', libelle: 'Verrouiller les repères', raccourci: 'Ctrl+Alt+;', coche: rg.verrouilles, onClick: arg.basculerVerrou },
-    { id: 'poser-repere', libelle: 'Repères : valeurs exactes…', onClick: () => arg.ouvrir('reperes') },
-    { id: 'effacer-reperes', libelle: 'Effacer les repères', raccourci: 'Ctrl+Maj+;', desactive: !n, onClick: arg.effacer }
+    { id: 'regles', libelle: t('Afficher les règles'), icone: 'regle', raccourci: t('Maj+R'), coche: rg.regles, separateur: true, onClick: arg.basculerRegles },
+    { id: 'reperes', libelle: t('Afficher les repères'), raccourci: 'Ctrl+;', coche: rg.reperesVisibles, onClick: arg.basculerReperes },
+    { id: 'verrouiller-reperes', libelle: t('Verrouiller les repères'), raccourci: 'Ctrl+Alt+;', coche: rg.verrouilles, onClick: arg.basculerVerrou },
+    { id: 'poser-repere', libelle: t('Repères : valeurs exactes…'), onClick: () => arg.ouvrir('reperes') },
+    { id: 'effacer-reperes', libelle: t('Effacer les repères'), raccourci: t('Ctrl+Maj+;'), desactive: !n, onClick: arg.effacer }
   ];
 }
 
@@ -34,11 +35,12 @@ export function useElementsRepetition(separateur = false): ElementMenu[] {
   const feuille = !!profil && operationsApplicables(profil.procede);
   return [
     ...(feuille ? [
-      { id: 'dupliquer-feuille', libelle: TITRE_FEUILLE + '…', icone: 'repeter', separateur, desactive: rien, onClick: () => arg.ouvrir('feuille') },
-      { id: 'ajouter-liens', libelle: TITRE_LIENS + '…', desactive: rien, onClick: () => arg.ouvrir('liens') }
+      // Les titres des panneaux sont des cles francaises : ils se traduisent ici, au moment d'etaler le menu (ADR-0042).
+      { id: 'dupliquer-feuille', libelle: t(TITRE_FEUILLE) + '…', icone: 'repeter', separateur, desactive: rien, onClick: () => arg.ouvrir('feuille') },
+      { id: 'ajouter-liens', libelle: t(TITRE_LIENS) + '…', desactive: rien, onClick: () => arg.ouvrir('liens') }
     ] satisfies ElementMenu[] : []),
-    { id: 'repeter-grille', libelle: TITRES_REPETITION.grille + '…', icone: 'repeter', separateur: separateur && !feuille, desactive: rien, onClick: () => arg.ouvrir('grille') },
-    { id: 'repeter-radiale', libelle: TITRES_REPETITION.radiale + '…', icone: 'radiale', desactive: rien, onClick: () => arg.ouvrir('radiale') },
-    { id: 'repeter-symetrie', libelle: TITRES_REPETITION.symetrie + '…', icone: 'symetrie', desactive: rien, onClick: () => arg.ouvrir('symetrie') }
+    { id: 'repeter-grille', libelle: t(TITRES_REPETITION.grille) + '…', icone: 'repeter', separateur: separateur && !feuille, desactive: rien, onClick: () => arg.ouvrir('grille') },
+    { id: 'repeter-radiale', libelle: t(TITRES_REPETITION.radiale) + '…', icone: 'radiale', desactive: rien, onClick: () => arg.ouvrir('radiale') },
+    { id: 'repeter-symetrie', libelle: t(TITRES_REPETITION.symetrie) + '…', icone: 'symetrie', desactive: rien, onClick: () => arg.ouvrir('symetrie') }
   ];
 }
