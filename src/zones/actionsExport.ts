@@ -3,14 +3,14 @@
 
 import { ecrireDessin, type DessinSvg } from '../engine/editionSvg.js';
 import { aplatirPour, phrasePertes, type Capacites, type DessinPlat } from '../engine/aplatir.js';
-import { CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PDF, CAPACITES_SVG_DECOUPE } from '../export/capacites.js';
+import { CAPACITES_DXF, CAPACITES_EPS, CAPACITES_SVG_DECOUPE } from '../export/capacites.js';
 import { ecrireDxf } from '../export/dxf.js';
 import { ecrireEps } from '../export/eps.js';
 import { largeurRaster, optionsDxf, optionsEps, optionsPdf, optionsSvg, tailleDe, type OptionsExport } from '../export/options.js';
 import { avecDpiPng } from '../export/png.js';
-import { ecrirePdf } from '../export/pdf.js';
 import { svgDecoupe, svgExporte } from '../export/svgs.js';
 import { copier, proposer, texteOctets } from '../io/fichiers.js';
+import { pdfDuDessin } from '../io/exportPdf.js';
 import { versPng } from '../io/image.js';
 import { EXTENSIONS, versRaster, type FormatRaster } from '../io/rasters.js';
 import type { ChoixProduction } from '../model/contextes.js';
@@ -37,7 +37,7 @@ const remettre = (c: ContexteExport, fichier: string, donnees: Uint8Array | Blob
 function descendu(c: ContexteExport, capacites: Capacites): { readonly dessin: DessinPlat; readonly approche: string } | null {
   if (!c.lu) return null;
   const r = aplatirPour(c.lu, capacites);
-  return { dessin: r.dessin, approche: phrasePertes(r.pertes) };
+  return { dessin: r.dessin, approche: phrasePertes(r.pertes, r.perdus) };
 }
 
 /** Le SVG avec les options d'export (precision, taille, optimise) ; sans dessin lu, le SVG donne tel quel. */
@@ -54,9 +54,12 @@ export function exporterDecoupe(c: ContexteExport): void {
   if (d) remettre(c, c.nom + '-decoupe.svg', texteOctets(svgDecoupe(d.dessin, c.couleurDecoupe, 0.25, 3, tailleDe(c.options))), d.approche);
 }
 
+/** Le PDF : un dessin riche y garde ses degrades, decoupes, masques et images (etape 13a), apres la decompression de ses PNG. */
 export function exporterPdf(c: ContexteExport): void {
-  const d = descendu(c, CAPACITES_PDF);
-  if (d) remettre(c, c.nom + '.pdf', new Blob([ecrirePdf(d.dessin, optionsPdf(c.options)) as BlobPart], { type: 'application/pdf' }), d.approche);
+  if (!c.lu) return;
+  pdfDuDessin(c.lu, optionsPdf(c.options))
+    .then(r => { remettre(c, c.nom + '.pdf', new Blob([r.octets as BlobPart], { type: 'application/pdf' }), phrasePertes(r.pertes, r.perdus)); })
+    .catch(() => c.dire('L’écriture du PDF a échoué.'));
 }
 
 export function exporterEps(c: ContexteExport): void {

@@ -51,19 +51,24 @@ describe('la descente des decoupes', () => {
     expect(fonctions.indexOf('decoupes')).toBeLessThan(fonctions.indexOf('groupes'));
     const d = riche(readFileSync(resolve(__dirname, '../../fixtures/svg/corpus/figma-cadre-decoupe.svg'), 'utf8'));
     expect(descenteDecoupes.descendre(d, 'natif').dessin).toBe(d);
-    for (const c of [CAPACITES_PLAT, CAPACITES_PDF, CAPACITES_SVG_DECOUPE]) {
+    for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE]) {
       const r = aplatirPour(d, c);
       expect(estPlat(r.dessin)).toBe(true);
       expect(verifierDessin(r.dessin)).toEqual([]);
       expect(phrasePertes(r.pertes)).toContain(MSG_DESCENTE_DECOUPES.rognees);
     }
     // Le cadre blanc, les traits et le texte du cadre restent dedans : seules la vague et le soleil qui debordent sont rognes.
-    const r = aplatirPour(d, CAPACITES_PDF);
+    const r = aplatirPour(d, CAPACITES_PLAT);
     for (const f of r.dessin.formes) {
       const b = boiteForme(f);
       expect(b && b.x >= -0.01 && b.y >= -0.01 && b.x + b.l <= 160.01 && b.y + b.h <= 120.01, f.id).toBe(true);
     }
     expect(ecrirePdf(r.dessin).length).toBeGreaterThan(100);
     expect(svgDecoupe(aplatirPour(d, CAPACITES_SVG_DECOUPE).dessin)).toContain('<path');
+    // Le PDF ecrit la decoupe en chemin de decoupe (etape 13a) : rien n'est rogne, rien n'est dit, une portee dans la scene.
+    const pdf = aplatirPour(d, CAPACITES_PDF);
+    expect(estPlat(pdf.dessin)).toBe(true);
+    expect(pdf.pertes).toEqual([]);
+    expect(pdf.scene?.noeuds.some(n => n.genre === 'portee' && n.decoupe && n.decoupe.d.length > 0)).toBe(true);
   });
 });

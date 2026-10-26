@@ -104,6 +104,6 @@ export function toucheGroupes(e: KeyboardEvent, m: ModeleDessin, u: EtatInterfac
  * Recuperer un fichier n'est pas un enregistrement : rien n'est rendu a l'hote.
  */
 export function telechargerAPlat(dessin: DessinSvg, production: ChoixProduction, nom: string, dire: (t: string) => void): void {
-  const { dessin: plat, pertes } = aplatirPour(dessin, CAPACITES_PLAT), approche = phrasePertes(pertes);
+  const { dessin: plat, pertes, perdus } = aplatirPour(dessin, CAPACITES_PLAT), approche = phrasePertes(pertes, perdus);
   void proposer(nom + '-a-plat.svg', texteOctets(svgDocument(plat, production))).then(m => dire(approche ? m + ' ' + approche : m));
 }

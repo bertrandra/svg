@@ -39,15 +39,20 @@ describe('la descente des masques', () => {
     const d = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg/v2/masques-degrade.svg'), 'utf8'), { modele: 'riche' });
     if ('erreur' in d) throw new Error(d.erreur);
     expect(descenteMasques.descendre(d.dessin, 'natif').dessin).toBe(d.dessin);
-    for (const capacites of [CAPACITES_PDF, CAPACITES_SVG_DECOUPE, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION, CAPACITES_PLAT]) {
+    for (const capacites of [CAPACITES_SVG_DECOUPE, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION, CAPACITES_PLAT]) {
       const r = aplatirPour(d.dessin, capacites);
       expect(estPlat(r.dessin)).toBe(true);
       expect(verifierDessin(r.dessin)).toEqual([]);
       expect(r.pertes).toContain(MSG_DESCENTE_MASQUES);
+      expect(r.perdus).toContain(MSG_DESCENTE_MASQUES);
       expect(phrasePertes(r.pertes)).toContain('les masques d’opacité');
       expect(r.dessin.formes.map(x => x.id)).toEqual(d.dessin.formes.map(x => x.id));
     }
-    expect(ecrirePdf(aplatirPour(d.dessin, CAPACITES_PDF).dessin).length).toBeGreaterThan(100);
+    // Le PDF (etape 13a) ecrit le masque en masque doux : une portee masquee dans sa scene, rien de dit.
+    const pdf = aplatirPour(d.dessin, CAPACITES_PDF);
+    expect(pdf.pertes).toEqual([]);
+    expect(pdf.scene?.noeuds.some(n => n.genre === 'portee' && n.masque !== undefined && n.masque.contenu.noeuds.length > 0)).toBe(true);
+    expect(ecrirePdf(pdf.dessin).length).toBeGreaterThan(100);
     expect(svgDecoupe(aplatirPour(d.dessin, CAPACITES_SVG_DECOUPE).dessin)).toContain('<path');
   });
 

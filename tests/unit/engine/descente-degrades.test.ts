@@ -1,12 +1,12 @@
 // La descente des degrades (ADR-0012, etape 3 ; annexe 5 §4) : pour chaque exporteur qui ne sait pas peindre un degrade, la peinture
 // part et la couleur de repli reste ; le dessin descendu est plat, bien forme, et son ecriture se relit en mode plat sans refus. Un
-// exporteur « natif » (le PDF a l'etape 13) garderait le degrade.
+// exporteur « natif » (le PDF depuis l'etape 13a) recoit le degrade dans sa scene, sans perte dite.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin, estPlat, lireDessin, verifierDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { aplatirPour, CAPACITES_PLAT, REGLES_DESCENTE, type DessinPlat } from '../../../src/engine/aplatir.js';
+import { aplatirPour, CAPACITES_PLAT, REGLES_DESCENTE } from '../../../src/engine/aplatir.js';
 import { degrades, PERTE_DEGRADES } from '../../../src/engine/descente/degrades.js';
 import { CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PDF, CAPACITES_PRODUCTION, CAPACITES_SVG_DECOUPE } from '../../../src/export/capacites.js';
 import { ecrirePdf } from '../../../src/export/pdf.js';
@@ -18,7 +18,7 @@ const riche = (nom: string): DessinSvg => {
   return r.dessin;
 };
 
-const EXPORTEURS = { 'SVG à plat': CAPACITES_PLAT, PDF: CAPACITES_PDF, 'SVG de découpe': CAPACITES_SVG_DECOUPE, DXF: CAPACITES_DXF, EPS: CAPACITES_EPS, production: CAPACITES_PRODUCTION };
+const EXPORTEURS = { 'SVG à plat': CAPACITES_PLAT, 'SVG de découpe': CAPACITES_SVG_DECOUPE, DXF: CAPACITES_DXF, EPS: CAPACITES_EPS, production: CAPACITES_PRODUCTION };
 
 describe('la descente des degrades', () => {
   it('est inscrite la premiere, avant les images et les groupes', () => {
@@ -40,12 +40,16 @@ describe('la descente des degrades', () => {
     }
   });
 
-  it('le PDF et le SVG de decoupe ecrivent la couleur de repli', () => {
+  it('le SVG de decoupe ecrit la couleur de repli ; le PDF recoit le degrade dans sa scene, et le dessin plat de la couleur de repli', () => {
     const d = riche('degrades-chaine');
-    const plat = aplatirPour(d, CAPACITES_PDF).dessin;
-    // Le PDF ne lit que les couleurs unies : le dessin riche et le dessin descendu y donnent les memes octets, ceux de la couleur de repli.
-    expect(ecrirePdf(plat)).toEqual(ecrirePdf(d as DessinPlat));
     expect(svgDecoupe(aplatirPour(d, CAPACITES_SVG_DECOUPE).dessin)).not.toContain('url(');
+    const r = aplatirPour(d, CAPACITES_PDF);
+    expect(r.pertes).toEqual([]);
+    expect(estPlat(r.dessin)).toBe(true);
+    const feuilles = (r.scene?.noeuds ?? []).filter(n => n.genre === 'forme');
+    expect(feuilles.some(n => n.genre === 'forme' && (n.fond ?? n.trait))).toBe(true);
+    // Sans la scene, le PDF du dessin descendu est celui de la couleur de repli, octet pour octet.
+    expect(ecrirePdf(r.dessin)).toEqual(ecrirePdf(aplatirPour(d, CAPACITES_PLAT).dessin));
   });
 
   it('niveau natif : le degrade reste ; un dessin sans degrade passe tel quel', () => {

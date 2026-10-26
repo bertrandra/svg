@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+  <!-- Une image WebP, que le PDF ne sait pas ecrire (perdue, dite), a cote d un PNG ecrit. -->
+  <rect width="120" height="60" fill="#e8eef4"/>
+  <image href="data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAACwAgCdASoIAAgAAgA0JagCdLcAlgH8AuP8D0P9gAAA/vaw64VOXrH/ji+FUl6/eFUl/8Cd/4U1/5nM6/LrKOkkS4AAAA==" x="10" y="10" width="40" height="40"/>
+  <image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAS0lEQVR42mPQqLgDRB/ACJnNqFFxloGB4QQDCFiASQib6QTDRyCyACNkNnOFTQADw885DD+BZAqYhLBZgJJYjWLQqJgIRB/ACJkNAMWlNtABJRMXAAAAAElFTkSuQmCC" x="70" y="10" width="40" height="40" preserveAspectRatio="none"/>
+</svg>

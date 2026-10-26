@@ -49,19 +49,26 @@ describe('la descente des groupes', () => {
 
   it('est inscrite en dernier dans REGLES_DESCENTE, et aplatirPour la passe a tout exporteur', () => {
     expect(REGLES_DESCENTE[REGLES_DESCENTE.length - 1]?.fonction).toBe('groupes');
-    for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE, CAPACITES_PDF, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION]) {
+    for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION]) {
       const r = aplatirPour(dessin(true), c);
       expect(r.pertes).toEqual([MSG_OPACITE_COMPOSEE]);
       expect(estPlat(r.dessin)).toBe(true);
     }
+    // Le PDF ecrit l'opacite du groupe en groupe de transparence (etape 13a) : exacte, rien a dire.
+    const pdf = aplatirPour(dessin(true), CAPACITES_PDF);
+    expect(pdf.pertes).toEqual([]);
+    expect(estPlat(pdf.dessin)).toBe(true);
+    expect(pdf.scene?.noeuds.some(n => n.genre === 'portee' && n.opacite !== undefined)).toBe(true);
     expect(phrasePertes([])).toBe('');
     expect(phrasePertes(['a', 'b'])).toBe('Approché par ce format : a ; b.');
+    expect(phrasePertes(['a', 'b', 'c'], ['b'])).toBe('Approché par ce format : a ; c. Perdu dans ce format : b.');
+    expect(phrasePertes(['b'], ['b'])).toBe('Perdu dans ce format : b.');
   });
 
   it('un dessin riche construit a la main s exporte en PDF, DXF, EPS et SVG de decoupe, et dit ce qui est approche', () => {
-    const r = aplatirPour(dessin(true), CAPACITES_PDF);
+    const r = aplatirPour(dessin(true), CAPACITES_EPS);
     expect(phrasePertes(r.pertes)).toContain('une opacité de groupe composée sur ses formes');
-    expect(ecrirePdf(r.dessin).length).toBeGreaterThan(100);
+    expect(ecrirePdf(aplatirPour(dessin(true), CAPACITES_PDF).dessin).length).toBeGreaterThan(100);
     expect(ecrireDxf(aplatirPour(dessin(true), CAPACITES_DXF).dessin)).toContain('ENTITIES');
     expect(ecrireEps(aplatirPour(dessin(true), CAPACITES_EPS).dessin).eps).toContain('%!PS-Adobe');
     // La forme d'un groupe masque ne part pas, comme a l'enregistrement.
@@ -71,7 +78,7 @@ describe('la descente des groupes', () => {
   it('sous un groupe, le degrade descend en couleur de repli, l image part, l opacite du groupe se multiplie ; tout est dit', () => {
     const lu = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg/v2/groupes-degrade-image.svg'), 'utf8'), { modele: 'riche' });
     if ('erreur' in lu) throw new Error(lu.erreur);
-    const r = aplatirPour(lu.dessin, CAPACITES_PDF);
+    const r = aplatirPour(lu.dessin, CAPACITES_SVG_DECOUPE);
     expect(estPlat(r.dessin)).toBe(true);
     expect(verifierDessin(r.dessin)).toEqual([]);
     expect(r.dessin.formes.map(x => [x.id, x.remplissage, x.opacite])).toEqual(
@@ -79,7 +86,19 @@ describe('la descente des groupes', () => {
     );
     expect(r.pertes.length).toBeGreaterThanOrEqual(2);
     expect(phrasePertes(r.pertes)).toMatch(/image/);
-    expect(ecrirePdf(r.dessin).length).toBeGreaterThan(100);
+    // L'image est perdue, le degrade approche : la phrase le dit a part.
+    expect(r.perdus.some(p => /image/.test(p))).toBe(true);
+    expect(phrasePertes(r.pertes, r.perdus)).toMatch(/^Approché par ce format : les dégradés[^.]*\. Perdu dans ce format : une image/);
+    // Le PDF (etape 13a) garde le degrade et l'image dans sa scene ; l'opacite du groupe y est multipliee comme ailleurs.
+    const pdf = aplatirPour(lu.dessin, CAPACITES_PDF);
+    expect(pdf.perdus).toEqual([]);
+    const noeuds = pdf.scene?.noeuds ?? [];
+    expect(noeuds.filter(n => n.genre === 'image').map(n => n.genre === 'image' && n.opacite)).toEqual([1]);
+    // Le groupe « Ciel » (0,8) a deux feuilles : un groupe de transparence, ses feuilles a leur opacite propre.
+    const ciel = noeuds.find(n => n.genre === 'portee');
+    expect(ciel?.genre === 'portee' && ciel.opacite).toBe(0.8);
+    expect(ciel?.genre === 'portee' && ciel.enfants.some(n => n.genre === 'forme' && n.fond !== undefined && n.trait !== undefined && n.forme.opacite === 1)).toBe(true);
+    expect(ecrirePdf(pdf.dessin).length).toBeGreaterThan(100);
   });
 
   it('la descente de chaque fixture lue en riche est plate, bien formee, et s ecrit en un SVG que la lecture plate accepte', () => {

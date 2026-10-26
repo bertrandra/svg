@@ -14,6 +14,9 @@ import { descenteDecoupes } from './descente/decoupes.js';
 import { descenteMasques } from './descente/masques.js';
 import { effets } from './descente/effets.js';
 import { descenteGroupes } from './descente/groupes.js';
+import { sceneNative, type Scene } from './descente/scene.js';
+
+export type { Scene, NoeudScene, FeuilleScene, ImageScene, PorteeScene, PeintureScene, DecoupeScene, MasqueScene } from './descente/scene.js';
 
 /** Ce qu'un exporteur fait d'une fonction du modele : il la sait, il l'approche, il la rend en image, ou il la refuse. */
 export type Niveau = 'natif' | 'approche' | 'raster' | 'refus';
@@ -32,13 +35,21 @@ declare const plat: unique symbol;
  */
 export type DessinPlat = DessinSvg & { readonly [plat]: true };
 
-/** Un dessin descendu et ce qui a ete approche, en phrases a montrer a l'export (comme « courbes rebaties » des booleens). */
-export interface Descente { readonly dessin: DessinPlat; readonly pertes: readonly string[] }
+/**
+ * Un dessin descendu et ce qui a ete approche, en phrases a montrer a l'export (comme « courbes rebaties » des booleens) ; `perdus`
+ * est la part de ces phrases qui ne s'exporte pas du tout (une image, un effet, un masque abandonnes), pour que l'export dise
+ * « approché » ou « perdu » ; `scene`, ce que l'exporteur ecrit lui-meme (ses fonctions « natif », etape 13a), absente quand le
+ * dessin n'en porte pas.
+ */
+export interface Descente { readonly dessin: DessinPlat; readonly pertes: readonly string[]; readonly perdus: readonly string[]; readonly scene?: Scene }
 
-/** La regle d'une fonction : rend le dessin sans elle, au niveau que l'exporteur declare, et ce qu'elle a approche. */
+/**
+ * La regle d'une fonction : rend le dessin sans elle, au niveau que l'exporteur declare, et ce qu'elle a approche ; `perdus`, parmi
+ * ces phrases, celles de ce qui part tout a fait.
+ */
 export interface RegleDescente {
   readonly fonction: FonctionV2;
-  descendre(d: DessinSvg, niveau: Niveau): { readonly dessin: DessinSvg; readonly pertes: readonly string[] };
+  descendre(d: DessinSvg, niveau: Niveau): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus?: readonly string[] };
 }
 
 /**
@@ -69,6 +80,7 @@ const FILET = {
   effets: 'le flou et l’ombre portée',
   images: 'les images'
 } as const;
+const FILET_PERDUS: readonly string[] = [FILET.effets, FILET.images];
 
 function filet(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[] } {
   const pertes = new Set<string>();
@@ -90,22 +102,44 @@ function filet(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: rea
 
 /**
  * Le dessin pour un exporteur de ces capacites. Plat : le meme objet, aucune perte. Sinon chaque regle descend sa fonction au niveau
- * declare, puis le filet retire ce qui resterait. Pur.
+ * declare, puis le filet retire ce qui resterait. Juste avant la regle des groupes (la derniere), ce que l'exporteur ecrit lui-meme
+ * (ses fonctions « natif ») devient sa scene et quitte le dessin (`sceneNative`) ; rien de natif, pas de scene. Pur.
  */
 export function aplatirPour(d: DessinSvg, capacites: Capacites, regles: readonly RegleDescente[] = REGLES_DESCENTE): Descente {
-  if (estPlat(d)) return { dessin: d as DessinPlat, pertes: AUCUNE_PERTE };
-  let courant = d;
-  const pertes: string[] = [];
+  if (estPlat(d)) return { dessin: d as DessinPlat, pertes: AUCUNE_PERTE, perdus: AUCUNE_PERTE };
+  let courant = d, scene: Scene | undefined, vue = false;
+  const pertes: string[] = [], perdus: string[] = [];
+  const ajouter = (x: { readonly pertes: readonly string[]; readonly perdus?: readonly string[] }) => {
+    for (const p of x.pertes) if (!pertes.includes(p)) pertes.push(p);
+    for (const p of x.perdus ?? []) if (!perdus.includes(p)) perdus.push(p);
+  };
+  const natif = () => {
+    vue = true;
+    const s = sceneNative(courant, capacites, c => aplatirPour(c, capacites, regles));
+    if (s) { scene = s.scene ?? undefined; courant = s.reste; ajouter(s); }
+  };
   for (const r of regles) {
+    if (r.fonction === 'groupes' && !vue) natif();
     const x = r.descendre(courant, capacites[r.fonction]);
     courant = x.dessin;
-    for (const p of x.pertes) if (!pertes.includes(p)) pertes.push(p);
+    ajouter(x);
   }
-  if (estPlat(courant)) return { dessin: courant as DessinPlat, pertes };
+  if (!vue) natif();
+  const fin = (dessin: DessinSvg): Descente => ({ dessin: dessin as DessinPlat, pertes, perdus, ...(scene ? { scene } : {}) });
+  if (estPlat(courant)) return fin(courant);
   const reste = filet(courant);
-  for (const p of reste.pertes) if (!pertes.includes(p)) pertes.push(p);
-  return { dessin: reste.dessin as DessinPlat, pertes };
+  ajouter({ pertes: reste.pertes, perdus: reste.pertes.filter(p => FILET_PERDUS.includes(p)) });
+  return fin(reste.dessin);
 }
 
-/** La phrase des pertes a ajouter au message d'un export ; vide quand rien n'a ete approche (tout dessin plat). */
-export const phrasePertes = (pertes: readonly string[]): string => (pertes.length ? 'Approché par ce format : ' + pertes.join(' ; ') + '.' : '');
+/**
+ * La phrase des pertes a ajouter au message d'un export ; vide quand rien n'a ete approche (tout dessin plat). Ce qui est aussi dans
+ * `perdus` se dit a part : approchee, la chose est dans le fichier, autrement ; perdue, elle n'y est pas.
+ */
+export const phrasePertes = (pertes: readonly string[], perdus: readonly string[] = []): string => {
+  const approches = pertes.filter(p => !perdus.includes(p)), partis = pertes.filter(p => perdus.includes(p));
+  return [
+    ...(approches.length ? ['Approché par ce format : ' + approches.join(' ; ') + '.'] : []),
+    ...(partis.length ? ['Perdu dans ce format : ' + partis.join(' ; ') + '.'] : [])
+  ].join(' ');
+};

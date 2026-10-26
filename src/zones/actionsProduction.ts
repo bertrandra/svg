@@ -107,7 +107,7 @@ const remettre = (nom: string, donnees: Uint8Array | Blob, dire: (t: string) => 
 function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, direSeul: (t: string) => void): boolean {
   // Le dessin tel que la machine le recoit (ADR-0012 §6) : le meme objet pour un dessin plat ; sinon descendu, et ce qui a ete
   // approche s'ajoute au message.
-  const { dessin: plat, pertes } = aplatirPour(dessin, CAPACITES_PRODUCTION), approche = phrasePertes(pertes);
+  const { dessin: plat, pertes, perdus } = aplatirPour(dessin, CAPACITES_PRODUCTION), approche = phrasePertes(pertes, perdus);
   const dire = (t: string) => direSeul(approche ? t + ' ' + approche : t);
   if (operationsApplicables(p.procede)) {
     const r = exportParOperation(plat, p);

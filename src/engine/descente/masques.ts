@@ -12,7 +12,7 @@ import type { RegleDescente } from '../aplatir.js';
 export const MSG_DESCENTE_MASQUES = 'les masques d’opacité (ignorés : ce qu’ils masquaient est exporté entier)';
 
 /** Le dessin sans masques ; le meme objet s'il n'en porte pas. La perte n'est dite que pour un groupe masque qui s'exporte. */
-export function descendreMasques(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[] } {
+export function descendreMasques(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus?: readonly string[] } {
   const table = d.groupes;
   if (!table || !Object.values(table).some(g => g.masque)) return { dessin: d, pertes: [] };
   let vu = false;
@@ -25,7 +25,8 @@ export function descendreMasques(d: DessinSvg): { readonly dessin: DessinSvg; re
     void _m;
     groupes[id] = reste;
   }
-  return { dessin: { ...d, groupes }, pertes: vu ? [MSG_DESCENTE_MASQUES] : [] };
+  const p = vu ? [MSG_DESCENTE_MASQUES] : [];
+  return { dessin: { ...d, groupes }, pertes: p, perdus: p };
 }
 
 export const descenteMasques: RegleDescente = {

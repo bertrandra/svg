@@ -1,0 +1,158 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 240 160] /Contents 4 0 R /Resources 6 0 R >>
+endobj
+4 0 obj
+<< /Length 848 >>
+stream
+q
+10 150 m
+80 150 l
+80 90 l
+10 90 l
+h
+W n
+70 0 0 -60 10 150 cm
+/Sh0 sh
+Q
+q
+95 120 m
+95 103.431 108.431 90 125 90 c
+141.569 90 155 103.431 155 120 c
+155 136.569 141.569 150 125 150 c
+108.431 150 95 136.569 95 120 c
+h
+W n
+60 0 0 -60 95 150 cm
+/Sh1 sh
+Q
+q
+1 0.973 0.878 rg
+173 147 m
+227 147 l
+227 93 l
+173 93 l
+h
+f
+Q
+q
+/Pattern CS /P0 SCN
+6 w
+1 j
+173 147 m
+227 147 l
+227 93 l
+173 93 l
+h
+S
+Q
+q
+/GS0 gs
+10 70 m
+60 70 l
+60 10 l
+10 10 l
+h
+W n
+50 0 0 -60 10 70 cm
+/Sh3 sh
+Q
+q
+/GS1 gs
+40 60 m
+90 60 l
+90 20 l
+40 20 l
+h
+W n
+50 0 0 -40 40 60 cm
+/Sh4 sh
+Q
+q
+100 70 m
+120 70 l
+120 10 l
+100 10 l
+h
+W n
+1 0 0 -1 0 160 cm
+/Sh5 sh
+Q
+q
+125 65 m
+170 65 l
+170 5 l
+125 5 l
+h
+W n
+1 0 0 -1 0 160 cm
+/Sh6 sh
+Q
+q
+180 70 m
+230 70 l
+230 10 l
+180 10 l
+h
+W n
+43.30127 -30 -25 -51.961524 195.8494 80.9808 cm
+/Sh7 sh
+Q
+q
+0 0 0 RG
+1 w
+1 j
+180 70 m
+230 70 l
+230 10 l
+180 10 l
+h
+S
+Q
+endstream
+endobj
+5 0 obj
+<< /Producer (svg) >>
+endobj
+6 0 obj
+<< /ExtGState << /GS0 << /SMask << /Type /Mask /S /Luminosity /G 7 0 R >> >> /GS1 << /ca 0.4 >> >> /Shading << /Sh0 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 1 0] /Function << /FunctionType 3 /Domain [0 1] /Functions [<< /FunctionType 2 /Domain [0 1] /C0 [0.0392 0.1647 0.5412] /C1 [0.949 0.7176 0.0196] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [0.1216 0.5608 0.3098] /C1 [0.7843 0.1176 0.1569] /N 1 >>] /Bounds [0.5] /Encode [0 1 0 1] >> /Extend [true true] >> /Sh1 << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [0.3 0.3 0 0.5 0.5 0.5] /Function << /FunctionType 3 /Domain [0 1] /Functions [<< /FunctionType 2 /Domain [0 1] /C0 [1 1 1] /C1 [0.8784 0.3529 0.0627] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [0.8784 0.3529 0.0627] /C1 [0.3529 0.0627 0] /N 1 >>] /Bounds [0.6] /Encode [0 1 0 1] >> /Extend [true true] >> /Sh2 << /ShadingType 2 /ColorSpace /DeviceGray /Coords [0 0 0 1] /Function << /FunctionType 2 /Domain [0 1] /C0 [1] /C1 [0] /N 1 >> /Extend [true true] >> /Sh3 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 0 1] /Function << /FunctionType 2 /Domain [0 1] /C0 [0.1255 0.3137 0.8157] /C1 [0.1255 0.3137 0.8157] /N 1 >> /Extend [true true] >> /Sh4 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 1 1] /Function << /FunctionType 3 /Domain [0 1] /Functions [<< /FunctionType 2 /Domain [0 1] /C0 [0.8157 0.1255 0.3765] /C1 [0.8157 0.1255 0.3765] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [0.8157 0.1255 0.3765] /C1 [0.1255 0.6275 0.8157] /N 1 >> << /FunctionType 2 /Domain [0 1] /C0 [0.1255 0.6275 0.8157] /C1 [0.1255 0.6275 0.8157] /N 1 >>] /Bounds [0.2 0.8] /Encode [0 1 0 1 0 1] >> /Extend [true true] >> /Sh5 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [100 0 130 0] /Domain [6 8] /Function << /FunctionType 3 /Domain [6 8] /Functions [8 0 R 8 0 R] /Bounds [7] /Encode [0 1 0 1] >> /Extend [true true] >> /Sh6 << /ShadingType 3 /ColorSpace /DeviceRGB /Coords [140 125 0 140 125 48] /Domain [0 4] /Function << /FunctionType 3 /Domain [0 4] /Functions [9 0 R 9 0 R 9 0 R 9 0 R] /Bounds [1 2 3] /Encode [0 1 1 0 0 1 1 0] >> /Extend [true true] >> /Sh7 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 1 0] /Function << /FunctionType 2 /Domain [0 1] /C0 [0.0627 0.1882 0.0627] /C1 [0.6275 0.9412 0.6275] /N 1 >> /Extend [true true] >> >> /Pattern << /P0 << /PatternType 2 /Shading << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [170 10 230 70] /Function << /FunctionType 2 /Domain [0 1] /C0 [0.4784 0 0.7529] /C1 [0 0.6902 0.7529] /N 1 >> /Extend [true true] >> /Matrix [1 0 0 -1 0 160] >> >> >>
+endobj
+7 0 obj
+<< /Type /XObject /Subtype /Form /BBox [9 9 61 71] /Group << /S /Transparency /CS /DeviceGray >> /Resources 6 0 R /Length 31 >>
+stream
+q
+50 0 0 -60 10 70 cm
+/Sh2 sh
+Q
+endstream
+endobj
+8 0 obj
+<< /FunctionType 2 /Domain [0 1] /C0 [0.1255 0.1255 0.1255] /C1 [0.8784 0.8784 0.8784] /N 1 >>
+endobj
+9 0 obj
+<< /FunctionType 2 /Domain [0 1] /C0 [0.9412 0.8157 0.1255] /C1 [0.1255 0.3765 0.6275] /N 1 >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000225 00000 n 
+0000001124 00000 n 
+0000001161 00000 n 
+0000003734 00000 n 
+0000003926 00000 n 
+0000004036 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R /Info 5 0 R >>
+startxref
+4146
+%%EOF
