@@ -211,6 +211,21 @@ export function attend<T>(lire: () => Promise<T>, delai = DELAI) {
  * d'une section repliee reste dans le DOM avec son animation d'entree, que Chromium fait avancer et que ces moteurs, qui ne
  * le rendent pas, laissent en suspens.
  */
+/**
+ * Agrandit la fenetre jusqu'a la hauteur de toute la page, sans toucher a sa largeur : axe laisse « a relire » le contraste d'un
+ * texte que le bord de la fenetre coupe (il ne fait pas defiler). Une hauteur fixe ne suffit pas : une page qui gagne quelques
+ * pixels (une police, une note) repousse son dernier texte sous le bord. La hauteur se reprend tant qu'elle change (une regle en
+ * `vh` peut la faire bouger), trois fois au plus.
+ */
+export async function toutAEcran(page: Page): Promise<void> {
+  for (let i = 0; i < 3; i++) {
+    const largeur = page.viewportSize()?.width ?? 1280, avant = page.viewportSize()?.height ?? 0;
+    const hauteur = await page.evaluate(() => Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)));
+    if (hauteur <= avant) return;
+    await page.setViewportSize({ width: largeur, height: hauteur });
+  }
+}
+
 export async function attendreAnimations(page: Page): Promise<void> {
   // Une animation peut repartir apres l'attente (un panneau recalcule 200 ms apres un geste remonte sa section) :
   // on sonde jusqu'a trois fois de suite sans animation en cours, dans la limite de 3 s pour les moteurs qui

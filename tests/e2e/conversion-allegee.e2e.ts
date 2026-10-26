@@ -7,14 +7,16 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, imageDeTest, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, toutAEcran, imageDeTest, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const TRACE = 60_000;
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
 /** axe-core sur la page : aucune violation, de quelque gravite que ce soit, et aucun doute laisse « a relire ». */
-async function auditer(page: Page): Promise<string[]> {
+/** `entier` : la fenetre prend d'abord toute la hauteur de la page (toutAEcran), pour un audit au doigt sur une page longue. */
+async function auditer(page: Page, entier = false): Promise<string[]> {
   await attendreAnimations(page);
+  if (entier) await toutAEcran(page);
   await page.addScriptTag({ content: AXE });
   return page.evaluate(async () => {
     const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
@@ -105,23 +107,24 @@ describe('convertir une image : le premier resultat, allege', () => {
   });
 
   it('au doigt (390 px) : des cibles de 40 px, rien ne deborde, axe sans remarque, sections ouvertes comprises', async () => {
-    // Une fenetre haute : axe laisse « a relire » le contraste d'un texte que le bord de la fenetre coupe (il ne fait pas
-    // defiler) ; tout l'atelier a l'ecran, l'audit ne depend plus de la place d'un libelle. La largeur, elle, est celle du telephone.
+    // axe laisse « a relire » le contraste d'un texte que le bord de la fenetre coupe (il ne fait pas defiler) : chaque audit met
+    // d'abord tout l'atelier a l'ecran (`auditer(page, true)`), une hauteur fixe ne suffisant pas (en CI, la note de premiere
+    // rencontre finissait sous le bord). La largeur, elle, est celle du telephone.
     const page = await atelier({ largeur: 390, hauteur: 2400, tactile: true });
     const petites = () => page.locator('.vectoriser button:visible, .vectoriser select:visible, .vectoriser summary:visible').evaluateAll(l => l
       .map(e => ({ nom: (e.getAttribute('aria-label') ?? (e as HTMLElement).innerText).slice(0, 30), h: Math.round(e.getBoundingClientRect().height) }))
       .filter(c => c.h < 40));
     expect(await petites()).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-    expect(await auditer(page)).toEqual([]);
+    expect(await auditer(page, true)).toEqual([]);
     for (const titre of ['Réglages fins', 'Prétraitement']) await section(page, titre).locator('summary').tap();
     await attend(() => page.locator('.reglages-vecto details.section[open]').count()).toBe(2);
     expect(await petites()).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-    expect(await auditer(page)).toEqual([]);
+    expect(await auditer(page, true)).toEqual([]);
     await page.locator('.barre-visionneuse .vue-plus .menu-bouton').tap();
     await page.getByRole('menu', { name: 'Vue' }).waitFor();
     expect(await page.locator('.menu-panneau [role=menuitemradio]').evaluateAll(l => l.map(e => e.getBoundingClientRect().height).filter(h => h < 40))).toEqual([]);
-    expect(await auditer(page)).toEqual([]);
+    expect(await auditer(page, true)).toEqual([]);
   });
 });

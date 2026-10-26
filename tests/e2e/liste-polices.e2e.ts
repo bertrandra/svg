@@ -151,8 +151,8 @@ describe('la liste deroulante des polices', () => {
     // Fin : la derniere famille du catalogue, dessinee meme loin dans la liste fenetree, et visible.
     await page.keyboard.press('End');
     await attend(nomActif).toMatch(/^Série 399/);
-    // La ligne active est dessinee et visible dans la liste qui defile.
-    expect(await page.evaluate(() => {
+    // La ligne active est dessinee et visible dans la liste qui defile (le defilement suit le rendu qui la dessine : on le sonde).
+    await attend(() => page.evaluate(() => {
       const id = document.querySelector('[aria-activedescendant]')?.getAttribute('aria-activedescendant') ?? '';
       const l = document.getElementById(id), r = l?.closest('[role="listbox"]');
       if (!l || !r) return false;

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, choisirVue, encoderPng, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, toutAEcran, choisirVue, encoderPng, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const TRACE = 60_000;
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
@@ -26,8 +26,10 @@ function dessinAuTrait() {
   return { name: 'dessin.png', mimeType: 'image/png', buffer: png };
 }
 
-async function auditer(page: Page): Promise<string[]> {
+/** `entier` : la fenetre prend d'abord toute la hauteur de la page (toutAEcran), pour un audit au doigt sur une page longue. */
+async function auditer(page: Page, entier = false): Promise<string[]> {
   await attendreAnimations(page);
+  if (entier) await toutAEcran(page);
   await page.addScriptTag({ content: AXE });
   return page.evaluate(async () => {
     const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: Array<{ target: unknown[] }> }> }> } };
@@ -120,6 +122,6 @@ describe('convertir une image en ligne mediane', () => {
       .filter(c => c.h < 40));
     expect(petites).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-    expect(await auditer(page)).toEqual([]);
+    expect(await auditer(page, true)).toEqual([]);
   });
 });
