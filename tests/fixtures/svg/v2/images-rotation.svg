@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 80">
+  <!-- Une rotation autour du centre, un miroir, une inclinaison : la matrice reste ecrite ; une echelle non uniforme sous meet aussi -->
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAGUlEQVR42mMQ0VhwQk4DQjLAWSIaCxiQZQDf+wt9qZvCzAAAAABJRU5ErkJggg==" x="30" y="25" width="40" height="30" transform="rotate(30 50 40)"/>
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC" x="0" y="0" width="10" height="10" transform="translate(90 0) scale(-1 1)"/>
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC" x="0" y="60" width="10" height="10" transform="skewX(20)"/>
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAGUlEQVR42mMQ0VhwQk4DQjLAWSIaCxiQZQDf+wt9qZvCzAAAAABJRU5ErkJggg==" x="0" y="0" width="8" height="6" transform="translate(70 60) scale(2 1)"/>
+</svg>

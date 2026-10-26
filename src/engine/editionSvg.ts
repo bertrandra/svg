@@ -142,3 +142,8 @@ export {
   REPETITION_MAX, copierPar, matricesGrille, pasGrilleParDefaut, dupliquerEnGrille, pasRadial, matricesRadiales, repetitionRadiale,
   matriceSymetrie, axeParDefaut, symetrie, type ResultatRepetition, type ReglageGrille, type ReglageRadial, type ReglageSymetrie
 } from './edition/repetition.js';
+export {
+  IMAGE_OCTETS_MAX, IMAGES_OCTETS_MAX, IMAGE_PIXELS_MAX, MSG_POINTS_IMAGE, DONNEES_IMAGE, ASPECT_IMAGE, verifierDonneesImage, rectangleImage,
+  lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
+} from './edition/fonctions/images.js';
+export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';

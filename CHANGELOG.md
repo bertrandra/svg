@@ -199,6 +199,11 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se
+  lit en mode riche, vérifiée sur ses octets (une « image » qui est un SVG ou une adresse extérieure sont refusées en le nommant ;
+  4 Mo par image, 16 Mo par dessin, 64 millions de pixels lus dans l'en-tête), s'écrit en `xlink:href` à l'identique, suit ses
+  transformations, et les exports de tracés (PDF, DXF, EPS, découpe) l'abandonnent en le disant.
+
 - **Règles et repères** (ADR-0038) : règles en haut et à gauche de la toile (unités du plan, ou mm et pouces d'un contexte de
   production), repères qu'on tire d'une règle, qu'on déplace, verrouille, retire (glisser hors de la toile ou Suppr) et pose à
   une valeur exacte (double-clic, ou le panneau « Repères ») ; les aimants s'y accrochent ; menu Vue : Maj+R, Ctrl+;, Ctrl+Alt+;,

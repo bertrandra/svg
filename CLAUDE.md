@@ -148,6 +148,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `data-ed-reperes` sur la racine par `svgDocument` seulement s'il y en a, se garde dans le projet, jamais dans un export ; règles,
   visibilité et verrou sont de la session ; grille, radiale et symétrie sont pures (`engine/edition/repetition.ts`) ; la largeur
   variable est une conversion (`engine/contour/largeur.ts`), pas un style.
+- **Une image intégrée est une feuille, vérifiée sur ses octets** (ADR-0012, étape 12) : `edition/fonctions/images.ts` ne lit qu'un
+  `data:image/(png|jpeg|gif|webp);base64` en mode `riche`, nature et dimensions prises sur les octets ; une « image » SVG ou une
+  adresse extérieure sont refusées en le nommant ; 4 Mo, 16 Mo par dessin, 64 millions de pixels ; la descente l'abandonne et le
+  dit ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-images-*`.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
