@@ -5,6 +5,7 @@ import { nombreReperes } from '../engine/editionSvg.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { operationsApplicables } from '../engine/preparation.js';
 import { TITRE_FEUILLE } from './PanneauFeuille.js';
+import { TITRE_LIENS } from './PanneauLiens.js';
 import { useActionsRegles, useRegles } from './contexteRegles.js';
 import type { ElementMenu } from './commun/Menu.js';
 import { TITRES_REPETITION } from './PanneauRepetition.js';
@@ -24,14 +25,18 @@ export function useElementsReperes(): ElementMenu[] {
 
 /**
  * Repeter la selection : chaque element ouvre son panneau sur la toile, apercu compris. En contexte Cricut qui coupe ou ecrit,
- * « Dupliquer sur la feuille » range des copies sur la feuille du tapis (ADR-0039).
+ * « Dupliquer sur la feuille » range des copies sur la feuille du tapis (ADR-0039), et « Ajouter des liens » retient les ilots des
+ * formes a couper (ADR-0040) : deux gestes de la machine sur la selection, qui viennent avec elle dans les deux menus.
  */
 export function useElementsRepetition(separateur = false): ElementMenu[] {
   const { sel } = useDessin(), arg = useActionsRegles(), { profil } = useInterface();
   const rien = !sel.length;
   const feuille = !!profil && operationsApplicables(profil.procede);
   return [
-    ...(feuille ? [{ id: 'dupliquer-feuille', libelle: TITRE_FEUILLE + '…', icone: 'repeter', separateur, desactive: rien, onClick: () => arg.ouvrir('feuille') } satisfies ElementMenu] : []),
+    ...(feuille ? [
+      { id: 'dupliquer-feuille', libelle: TITRE_FEUILLE + '…', icone: 'repeter', separateur, desactive: rien, onClick: () => arg.ouvrir('feuille') },
+      { id: 'ajouter-liens', libelle: TITRE_LIENS + '…', desactive: rien, onClick: () => arg.ouvrir('liens') }
+    ] satisfies ElementMenu[] : []),
     { id: 'repeter-grille', libelle: TITRES_REPETITION.grille + '…', icone: 'repeter', separateur: separateur && !feuille, desactive: rien, onClick: () => arg.ouvrir('grille') },
     { id: 'repeter-radiale', libelle: TITRES_REPETITION.radiale + '…', icone: 'radiale', desactive: rien, onClick: () => arg.ouvrir('radiale') },
     { id: 'repeter-symetrie', libelle: TITRES_REPETITION.symetrie + '…', icone: 'symetrie', desactive: rien, onClick: () => arg.ouvrir('symetrie') }

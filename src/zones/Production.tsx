@@ -17,6 +17,7 @@ import { operationsPeintes } from '../export/operations.js';
 import { libelleSelecteur, phraseCouches } from './parcoursCricut.js';
 import { Repere } from './Repere.js';
 import { ReglagesTapis } from './ReglagesTapis.js';
+import { useActionsRegles, useRegles } from './contexteRegles.js';
 
 const NOMS_GRAVITE: Readonly<Record<Gravite, string>> = { bloquant: 'Bloquant', 'a-corriger': 'À corriger', conseil: 'Conseil' };
 // Le millimetre d'abord : c'est l'unite par defaut d'une interface francaise ; le pouce (celle de Design Space) reste au choix.
@@ -83,14 +84,16 @@ export const SelecteurContexte = memo(function SelecteurContexte() {
 
 /** Une ligne de constat : la phrase, et ses gestes (corriger, choisir les formes, changer de tapis). */
 function LigneConstat({ c }: { c: Constat }) {
-  const ac = useActions(), { production } = useInterface();
+  const ac = useActions(), { production } = useInterface(), rg = useRegles(), arg = useActionsRegles();
   const dit = /à vérifier|à tester/.test(c.message);
   return (
     <li className={'constat constat-' + c.gravite}>
       <p>{c.message}{c.aVerifier && !dit ? <span className="a-verifier"> (à vérifier)</span> : null}</p>
       {c.correction || c.formes.length || c.tapis ? (
         <div className="boutons">
-          {c.correction ? <button type="button" onClick={() => ac.corrigerConstat(c.code)}>{LIBELLES_CORRECTION[c.correction]}</button> : null}
+          {/* Les liens des ilots (ADR-0040) suivent les reglages de la session ; « Régler les liens… » les montre, les formes choisies. */}
+          {c.correction ? <button type="button" onClick={() => (c.code === 'ilot' ? ac.ajouterLiens(rg.liens, c.formes) : ac.corrigerConstat(c.code))}>{LIBELLES_CORRECTION[c.correction]}</button> : null}
+          {c.code === 'ilot' ? <button type="button" onClick={() => { ac.choisir([...c.formes]); arg.ouvrir('liens'); }}>Régler les liens…</button> : null}
           {(c.autres ?? []).map(k => <button key={k} type="button" onClick={() => ac.corrigerConstat(c.code, k)}>{LIBELLES_CORRECTION[k]}</button>)}
           {c.tapis && production.contexte === 'cricut' ? <button type="button" onClick={() => ac.poserProduction({ ...production, tapis: c.tapis ?? production.tapis })}>Passer au {nomTapis(c.tapis)}</button> : null}
           {c.formes.length ? <button type="button" className="discret" aria-label={'Choisir les formes en cause (' + pluriel(c.formes.length, 'forme') + ')'} onClick={() => { ac.choisir([...c.formes]); ac.dire(pluriel(c.formes.length, 'forme') + ' choisie' + (c.formes.length > 1 ? 's' : '') + '.'); }}>Choisir les formes</button> : null}

@@ -21,6 +21,10 @@ export {
   operationsAEcrire, sansOperation, type Operations, type ResultatOperation
 } from './preparation/operations.js';
 export {
+  ajouterLiens, ilotsDe, ilotsQuiTombent, bornerLiens, phraseLiens, LIENS_DEFAUT, LARGEUR_LIEN_DEFAUT, LARGEUR_LIEN_MIN, LARGEUR_LIEN_MAX, NOMBRE_LIENS_DEFAUT, NOMBRE_LIENS_MIN, NOMBRE_LIENS_MAX,
+  ILOT_AIRE_MIN, type OptionsLiens, type Ilot, type ResultatLiens
+} from './preparation/liens.js';
+export {
   placerSurFeuille, preparerPlacement, avancerPlacement, finirPlacement, posesDe, phrasePlacement, matriceQuart, PLACEMENT_MAX, ESPACEMENT_DEFAUT, MARGE_DEFAUT,
   type OptionsPlacement, type Optimisation, type EtatPlacement, type ResultatPlacement, type Pose, type QuartDeTour
 } from './preparation/placement.js';

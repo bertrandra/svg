@@ -185,10 +185,11 @@ describe('couper ou ecrire, forme par forme', () => {
 
   it('exporte une archive qui separe les operations, et la carte « Dans Design Space » dit les deux fichiers', async () => {
     const page = await editeur();
-    const exporter = panneau(page).getByRole('button', { name: 'Exporter pour Cricut' });
-    // L'anneau en pair-impair est un conseil : il ne demande rien.
-    await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
-    const f = await telecharger(page, () => exporter.click());
+    // Le centre de l'anneau tombera a la decoupe (ADR-0040) : un point a corriger, que l'export fait confirmer.
+    const exporter = panneau(page).locator('.export-cricut button.primaire');
+    await attend(() => texteDe(exporter)).toBe('Exporter quand même (1 point à corriger)');
+    await exporter.click();
+    const f = await telecharger(page, () => panneau(page).locator('.confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click());
     expect(f.nom).toBe('dessin-cricut.zip');
     const zip = entreesZip(f.octets);
     expect([...zip.keys()]).toEqual(['LISEZMOI.txt', 'dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']);

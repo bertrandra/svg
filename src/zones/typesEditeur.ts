@@ -7,7 +7,7 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
-import type { CodeConstat, CodeCorrection, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
+import type { CodeConstat, CodeCorrection, Constat, Couche, OptionsLiens, ProfilProduction } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
@@ -285,6 +285,11 @@ export interface ActionsEditeur {
    * haute. Hors d'un contexte Cricut qui coupe ou ecrit, ne change rien et le dit.
    */
   poserOperation: (operation: Operation, ids?: readonly string[]) => void;
+  /**
+   * Les liens des ilots (ADR-0040) : pose `nombre` liens de `largeur` (unites du plan) sur chaque ilot des formes nommees, ou de la
+   * selection ; une entree d'historique, dite a voix haute. Vrai si des liens ont ete poses.
+   */
+  ajouterLiens: (reglages: OptionsLiens, ids?: readonly string[]) => boolean;
   /** Montre ou retire l'apercu de la machine sur la toile, et le dit. */
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
   /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */

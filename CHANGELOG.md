@@ -282,6 +282,16 @@ empreintes.
 
 ### Ajouté
 
+- Contexte Cricut : **les liens des îlots** (ADR-0040). Le centre d'un O, d'un A, d'un D (un trou d'une forme pleine à couper)
+  tombe à la découpe d'un pochoir ; le panneau « Prêt pour Cricut » le dit désormais (« Le centre de cette forme tombera à la
+  découpe », à corriger, jamais bloquant ; en autocollant, on peut l'ignorer) et propose **« Ajouter des liens »** : sur chaque îlot,
+  3 bandes de feuille de 2 mm laissées en travers de la forme, réparties autour de l'îlot, courtes et perpendiculaires aux bords,
+  loin des coins. Tous les îlots d'une forme en une fois, îlots imbriqués compris (le centre du R d'un ®), chaque forme choisie
+  traitée, en une seule entrée d'historique (Ctrl+Z les retire d'un coup). « Régler les liens… », ou « Ajouter des liens… » dans le
+  menu Édition et le menu de la sélection, ouvre une boîte : largeur (0,5 à 10 mm, en millimètres ou en pouces selon l'unité
+  retenue) et nombre par îlot (1 à 12), réglages de la session, jamais écrits. La forme garde son style et son opération ; ses
+  courbes sont rebâties comme après un booléen. Aucun octet ne change tant qu'on n'ajoute pas de liens ; deux références
+  d'écriture neuves, aucune existante ne bouge. La largeur qui tient selon la matière reste à vérifier sur la machine.
 - Éditeur : **« Conserver les proportions »**, un bouton bascule (une chaîne) entre les champs L et H de la section « Position et
   taille ». Posé, la hauteur suit la largeur tapée et l'inverse (une seule entrée d'historique, la taille entière dite à voix
   haute), glisser un coin garde les proportions et **Maj redimensionne librement** le temps du geste, Alt et flèches les gardent

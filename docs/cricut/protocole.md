@@ -61,7 +61,8 @@ tracé composé : à gauche en **pair-impair** (`fill-rule="evenodd"`, les deux 
 droite **selon le sens du tracé** (`nonzero`, le cercle intérieur tourne à l’envers).
 
 Ce qu’on vérifie : le constat « pair-impair » du panneau (aujourd’hui un conseil marqué « à tester ») et la
-correction « Réécrire les trous ».
+correction « Réécrire les trous ». Depuis l’ADR-0040, le panneau dit aussi « Le centre de 2 formes tombera à la
+découpe » (le constat des îlots) : c’est attendu, le centre de chaque anneau tombe.
 
 À observer : dans Design Space, chaque anneau est-il un anneau (le trou vide, découpé) ? Ou l’anneau de gauche
 devient-il un disque plein, ou deux disques ? Faire la coupe : le trou tombe-t-il ?
