@@ -32,7 +32,9 @@ export type NomIcone =
   // Les decoupes, les masques et les effets du modele riche (ADR-0012, etape 8) : commandes et pastilles des calques.
   | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite'
   // Le verrou des proportions de « Position et taille » : une chaine fermee, ou rompue.
-  | 'proportions-liees' | 'proportions-libres';
+  | 'proportions-liees' | 'proportions-libres'
+  // Le menu Aide de la barre, une icone, et ses documentations.
+  | 'aide' | 'documentation';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -92,6 +94,10 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   enregistrer: [t('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'), t('M17 21v-8H7v8'), t('M7 3v5h8')],
   // Une feuille au coin replie et deux lignes de texte : le menu Fichier de la barre, ou l'on telecharge, exporte et ferme.
   fichier: [t('M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'), t('M14 3v6h6'), t('M8 13h8'), t('M8 17h5')],
+  // Un point d'interrogation dans un cercle : le menu Aide de la barre (visite, raccourcis, documentations).
+  aide: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5'), t('M11.9 17.5h.01')],
+  // Un livre ouvert : une documentation, qui s'ouvre dans un nouvel onglet.
+  documentation: [t('M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z'), t('M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z')],
   'aligner-gauche': [t('M4 3v18'), t('M8 7h11v4H8z'), t('M8 13h7v4H8z')],
   'aligner-centre-h': [t('M12 3v18'), t('M6 7h12v4H6z'), t('M8 13h8v4H8z')],
   'aligner-droite': [t('M20 3v18'), t('M5 7h11v4H5z'), t('M9 13h7v4H9z')],

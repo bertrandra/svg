@@ -681,7 +681,7 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('avec la boîte « Raccourcis clavier » du menu Aide', async () => {
       const page = await editeur();
-      await page.locator('.menu-bouton', { hasText: 'Aide' }).click();
+      await page.locator('.editeur-barre .menu-aide .menu-bouton').click();
       await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
       await page.getByRole('dialog', { name: 'Raccourcis clavier' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, boîte Raccourcis clavier'));

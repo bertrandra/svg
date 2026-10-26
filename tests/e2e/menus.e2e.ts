@@ -17,13 +17,19 @@ describe('menus de la barre', () => {
   // l'aide par son nom en haut de l'editeur. Sept avec la fin du parcours : « Autres formats », le chevron accole a « Télécharger le
   // SVG ». Huit avec les outils de selection (ADR-0035) : le chevron du bouton Selection liste Selection, Cadre et Lasso. Sept de
   // nouveau depuis que « Télécharger le SVG » et ses autres formats sont rentres dans le menu Fichier, devenu une icone (26 octobre
-  // 2026). La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
+  // 2026). L'Aide est devenue une icone a droite, avant Fichier, le meme jour : elle y ouvre aussi les documentations. La liste reste
+  // exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
   it('annonce ses sept menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019), les outils de selection et Fichier', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir un outil de sélection', 'Formes (F)', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Fichier']);
+    expect(noms).toEqual(['Choisir un outil de sélection', 'Formes (F)', 'Vue', 'Édition', 'Machine : Générique', 'Aide', 'Fichier']);
+    // L'Aide aussi n'est qu'une icone, a droite, juste avant Fichier.
+    const aide = page.locator('.editeur-barre .menu-aide .menu-bouton');
+    expect(await aide.getAttribute('aria-label')).toBe('Aide');
+    expect(await aide.getAttribute('title')).toBe('Aide');
+    expect((await aide.innerText()).trim()).toBe('');
     // Fichier n'est qu'une icone : son nom accessible et son infobulle le disent, aucun texte visible.
     const fichier = page.locator('.editeur-barre .menu-fichier .menu-bouton');
     expect(await fichier.getAttribute('aria-label')).toBe('Fichier');

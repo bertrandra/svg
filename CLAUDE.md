@@ -309,6 +309,18 @@ npm run test:php     # les tests du site PHP (tests/php/)
   à attacher puis passer en « Guide » (`DESIGN_SPACE_POSITION`, témoin 10, le cas par défaut, `aVerifier`) ; « Dupliquer sur la
   feuille » est pur (`engine/preparation/placement.ts` : simple par boîtes, avancée sur les contours réels qui rend le meilleur des
   deux), par tranches d'essais dont `io/placement.ts` mesure le temps, une seule entrée d'historique.
+- **Les liens des îlots se calculent, ils ne se dessinent pas** (ADR-0040) : un îlot est un anneau intérieur de la région peinte d'une
+  forme pleine à couper (ni à écrire, ni miette sous 0,5 mm, ni trou bouché par une forme de même couleur) ; `engine/preparation/liens.ts`
+  (pur, mémorisé par forme) pose `nombre` liens de `largeur` (2 mm et 3 par défaut, de 0,5 à 10 mm et de 1 à 12) au plus court, loin
+  des coins, rognés à la seule matière de leur polygone ; `ajouterLiens` est une entrée d'historique sur toutes les formes choisies ;
+  le constat `ilot` (à corriger, « Ajouter des liens » ou « Régler les liens… », `zones/PanneauLiens.tsx`) dit aussi qu'un autocollant
+  peut l'ignorer ; tant qu'on n'ajoute pas de lien, aucun octet ne bouge.
+- **L'aide est une icône, les documentations des pages livrées** : le menu Aide (`zones/AideEditeur.tsx`) est un point d'interrogation à
+  droite, avant Fichier ; il porte la visite, les raccourcis et les documentations que l'hôte pose (`zones/documentation.ts`,
+  `definirDocumentation` : la page et le site seulement, jamais l'embarquement), ouvertes dans un nouvel onglet (`noopener`) ; le guide
+  et le mode Cricut s'écrivent dans `outils/aide/` (texte, `src="img:<nom>"`, captures `images/*.webp` refaites à la main sur
+  l'application), `scripts/documentation.mjs` les rend d'un seul tenant dans `dist/aide/` (images et fontes en data: URI, aucune
+  requête), le site les sert dans `public/aide/` ; chaque page passe axe-core sans violation (`tests/e2e/documentation.e2e.ts`).
 - **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
   pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
   se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin

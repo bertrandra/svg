@@ -91,6 +91,10 @@ empreintes.
 
 ### Modifié
 
+- **Le menu Aide devient une icône**, un point d’interrogation à droite de la barre, juste avant Fichier (là où l’on cherche l’aide
+  d’habitude) ; il garde la visite guidée et les raccourcis, et ouvre désormais les deux documentations. Sur un téléphone, l’Aide
+  reste la première rubrique de « Plus ».
+
 - **La barre de l'éditeur, plus calme** (demande du propriétaire, 26 octobre 2026) : « Fichier » devient un bouton à icône (une
   feuille au coin replié), nommé et titré « Fichier », qui ouvre le même menu, désormais en trois rubriques : « Insérer », puis
   « Récupérer le dessin » (« Télécharger le SVG » en tête, « Télécharger le SVG à plat » en modèle riche, en contexte Cricut
@@ -310,6 +314,13 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Deux documentations dans le menu Aide** : « Guide de l’éditeur » (seize fonctions en six chapitres, chacune en une capture
+  et quelques étapes, avec un sommaire qui suit la lecture, Précédent / Suivant, et un tiroir au téléphone) et « La Cricut, c’est
+  simple » (sept étapes en images : la machine, le tapis, la feuille, les copies, les liens, couper ou écrire, l’export). Elles
+  s’ouvrent dans un nouvel onglet, dans la page autonome (`aide/` à côté de `editeur-svg.html`) comme sur le site PHP
+  (`public/aide/`), sans contacter aucun serveur ; un hôte qui embarque l’éditeur ne les propose pas. Sources dans `outils/aide/`,
+  construites par `scripts/documentation.mjs`.
 
 - Contexte Cricut : **les liens des îlots** (ADR-0040). Le centre d'un O, d'un A, d'un D (un trou d'une forme pleine à couper)
   tombe à la découpe d'un pochoir ; le panneau « Prêt pour Cricut » le dit désormais (« Le centre de cette forme tombera à la

@@ -1,5 +1,6 @@
 // L'aide de l'editeur (ADR-0019) : un menu « Aide » dans la barre (une rubrique de « Plus » sur un telephone) qui rejoue la visite
-// guidee et ouvre la liste des raccourcis. Un debutant qui cherche de l'aide la trouve par son nom, en haut, sans rien deplier.
+// guidee, ouvre la liste des raccourcis et, dans la page et le site, les documentations (`documentation.ts`). Au bureau, c'est une
+// icone a droite, avant Fichier : un point d'interrogation, ou l'on cherche l'aide d'habitude, nomme « Aide » par son infobulle.
 
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -9,6 +10,7 @@ import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { dessinComplet } from './lentille.js';
+import { documentationsPosees } from './documentation.js';
 
 /** Les raccourcis de l'editeur, tels qu'on les dit : la meme liste dans le panneau du dessin et dans la boite de l'aide. */
 export function ListeRaccourcis() {
@@ -63,12 +65,19 @@ function DialogueRaccourcis({ fermer }: { fermer: () => void }) {
   );
 }
 
-/** Les elements du menu Aide : la visite (quand l'editeur l'a), les raccourcis. */
+/**
+ * Les elements du menu Aide : la visite (quand l'editeur l'a), les raccourcis, puis les documentations que l'hote a posees, chacune
+ * dans un nouvel onglet (`noopener` : la documentation ne tient aucune poignee sur l'editeur).
+ */
 export function useElementsAide(ouvrirRaccourcis: () => void): ElementMenu[] {
   const v = useVisite();
   return [
     ...(v ? [{ id: 'visite', libelle: 'Visite guidée', icone: 'reprendre', onClick: v.demarrer } satisfies ElementMenu] : []),
-    { id: 'raccourcis', libelle: 'Raccourcis clavier', onClick: ouvrirRaccourcis }
+    { id: 'raccourcis', libelle: 'Raccourcis clavier', onClick: ouvrirRaccourcis },
+    ...documentationsPosees().map((d, i): ElementMenu => ({
+      id: 'documentation-' + d.id, libelle: d.libelle, icone: 'documentation', separateur: i === 0,
+      onClick: () => { window.open(d.adresse, '_blank', 'noopener'); }
+    }))
   ];
 }
 
@@ -78,12 +87,12 @@ export function useBoiteRaccourcis(): { ouvrir: () => void; boite: ReactNode } {
   return { ouvrir: () => poserOuverte(true), boite: ouverte ? <DialogueRaccourcis fermer={() => poserOuverte(false)} /> : null };
 }
 
-/** Le menu Aide de la barre (bureau). */
+/** Le menu Aide de la barre (bureau) : une icone, a droite, avant Fichier. */
 export function MenuAide() {
   const raccourcis = useBoiteRaccourcis();
   return (
     <>
-      <MenuDeroulant etiquette="Aide" libelle="Aide" elements={useElementsAide(raccourcis.ouvrir)} />
+      <MenuDeroulant etiquette="Aide" icone="aide" chevron={false} alignement="droite" className="menu-aide" elements={useElementsAide(raccourcis.ouvrir)} />
       {raccourcis.boite}
     </>
   );

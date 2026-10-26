@@ -10,6 +10,7 @@ import { definirServeurPolices } from '../io/policesEnLigne.js';
 import { creerServeur } from '../io/serveur.js';
 import { manquantes } from '../util/capacites.js';
 import { PageIncompatible } from '../zones/Incompatible.js';
+import { DOCUMENTATIONS_LIVREES, definirDocumentation } from '../zones/documentation.js';
 import { Site } from './Site.js';
 
 export function demarrerSite(conteneur: HTMLElement): void {
@@ -28,5 +29,7 @@ export function demarrerSite(conteneur: HTMLElement): void {
   definirOuvertureAdresse(conteneur.dataset['adresse'] === '0' ? null : {
     serveur: serveur.telechargerAdresse, http: conteneur.dataset['adresseHttp'] === '1', qui: 'Le site va chercher le fichier quand vous choisissez « Ouvrir ».'
   });
+  // Les documentations sont servies avec la page, dans public/aide/ : le menu Aide de l'editeur les ouvre.
+  definirDocumentation(DOCUMENTATIONS_LIVREES);
   racine.render(<Site serveur={serveur} csrf={csrf} />);
 }

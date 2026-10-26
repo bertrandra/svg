@@ -176,8 +176,9 @@ export function BoutonEnregistrer() {
 }
 
 /**
- * La barre principale : outils, couleurs, historique, zoom, les menus Vue, Edition et Aide, la machine, puis a droite le menu
- * Fichier (une icone ; il porte « Télécharger le SVG », l'export Cricut et les autres formats) et le geste de fin (une icone pleine).
+ * La barre principale : outils, couleurs, historique, zoom, les menus Vue et Edition, la machine, puis a droite l'Aide (une icone ;
+ * visite, raccourcis, documentations), le menu Fichier (une icone ; il porte « Télécharger le SVG », l'export Cricut et les autres
+ * formats) et le geste de fin (une icone pleine).
  * Sur un telephone, elle ne garde que les outils, les couleurs et l'historique, plus « Plus » qui porte tout le reste, zoom compris
  * (le geste de fin passe dans la barre d'etat) : rien ne depend d'un defilement horizontal qu'on ne devine pas.
  */
@@ -204,11 +205,11 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       <div className="groupe menus" role="group" aria-label="Menus">
         <MenuVue />
         <MenuEdition />
-        <MenuAide />
       </div>
       <SelecteurContexte />
       <span className="espace" />
-      {/* Le fichier, d'un seul tenant : le menu Fichier et le geste de fin, deux icones, a droite. */}
+      {/* L'aide, puis le fichier d'un seul tenant (le menu Fichier et le geste de fin) : trois icones, a droite. */}
+      <div className="groupe aide" role="group" aria-label="Aide"><MenuAide /></div>
       <div className="groupe fin" role="group" aria-label="Fichier">
         <MenuFichier nom={nom} />
         <BoutonEnregistrer />

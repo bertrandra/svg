@@ -388,6 +388,9 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
    passe a la ligne. Le geste de fin est un carre plein de la taille d'un bouton d'outil (30 px, 40 au doigt) : l'icone seule, sur la
    couleur d'outil (--sur-cyan sur --cyan tient 4,5:1, au-dela des 3:1 d'un objet graphique). */
 .editeur-barre .groupe.fin { margin-left: auto; gap: var(--esp-xs); }
+/* L'aide (une icone) se range juste avant le fichier, a droite elle aussi : c'est elle qui prend la marge, le fichier la suit. */
+.editeur-barre .groupe.aide { margin-left: auto; border-right: 0; padding-right: 0; }
+.editeur-barre .groupe.aide + .groupe.fin { margin-left: 0; }
 .editeur-barre button.bouton-fin, .editeur-etat button.bouton-fin { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; flex: none; }
 .autres-formats-repli > summary { display: flex; align-items: center; gap: var(--esp-xs); min-height: 24px; font-size: var(--texte-compact); font-weight: 600; color: var(--cyan); cursor: pointer; }
 .autres-formats-repli > summary .icone { transform: rotate(-90deg); }

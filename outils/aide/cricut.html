@@ -1,0 +1,197 @@
+<title>La Cricut, c’est simple</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Mise en page : une colonne, une grande carte par etape, une phrase et une image ; la couleur de chaque etape vient des formes du dessin d'exemple. */
+:root {
+  --fond: #fff8ec;
+  --carte: #ffffff;
+  --encre: #1d1b26;
+  --douce: #57536a;
+  --filet: #ecdcc2;
+  --jaune: #f2b705;
+  --rose: #e0457b;
+  --bleu: #1f6fd1;
+  --vert: #1e9e6a;
+  --sur-couleur: #ffffff;
+  --titre: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --texte: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fond: #17151f; --carte: #221f2c; --encre: #f4f1fa; --douce: #c2bdd3; --filet: #3a3548;
+  --jaune: #f5c63a; --rose: #f06b97; --bleu: #5b9cf0; --vert: #3fc08a; --sur-couleur: #17151f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --fond: #17151f; --carte: #221f2c; --encre: #f4f1fa; --douce: #c2bdd3; --filet: #3a3548;
+  --jaune: #f5c63a; --rose: #f06b97; --bleu: #5b9cf0; --vert: #3fc08a; --sur-couleur: #17151f; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--fond); color: var(--encre); font: 400 1.1875rem/1.5 var(--texte) }
+.page { max-width: 860px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px }
+
+header { text-align: center; display: grid; gap: 12px; justify-items: center }
+.formes { display: flex; gap: 14px; align-items: center }
+h1 { font: 700 clamp(2.25rem, 7vw, 3.5rem)/1.05 var(--titre); margin: 0; text-wrap: balance }
+h1 span { color: var(--rose) }
+.chapo { font-size: 1.3125rem; color: var(--douce); max-width: 34ch; margin: 0 }
+
+.carte { background: var(--carte); border: 2px solid var(--filet); border-radius: 24px; padding: 24px; display: grid; gap: 16px; position: relative }
+.etape-tete { display: flex; align-items: center; gap: 14px }
+.rond { flex: none; width: 52px; height: 52px; border-radius: 50%; color: var(--sur-couleur); font: 700 1.75rem/52px var(--titre); text-align: center }
+h2 { font: 600 clamp(1.5rem, 4.5vw, 2rem)/1.15 var(--titre); margin: 0; text-wrap: balance }
+.carte p { margin: 0; max-width: 52ch }
+.grand { font-size: 1.3125rem }
+.jaune .rond { background: var(--jaune) } .rose .rond { background: var(--rose) } .bleu .rond { background: var(--bleu) } .vert .rond { background: var(--vert) }
+.jaune { border-color: color-mix(in srgb, var(--jaune) 45%, var(--filet)) }
+.rose { border-color: color-mix(in srgb, var(--rose) 45%, var(--filet)) }
+.bleu { border-color: color-mix(in srgb, var(--bleu) 45%, var(--filet)) }
+.vert { border-color: color-mix(in srgb, var(--vert) 45%, var(--filet)) }
+
+figure { margin: 0 }
+figure img { display: block; max-width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--filet) }
+figcaption { font: 600 1.0625rem var(--titre); margin-top: 8px; text-align: center }
+.images { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); align-items: start }
+.fleche { font: 700 2.5rem/1 var(--titre); color: var(--douce); align-self: center; text-align: center }
+.avant-apres { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center }
+@media (max-width: 560px) { .avant-apres { grid-template-columns: minmax(0, 1fr) } .avant-apres .fleche { transform: rotate(90deg) } }
+
+.bouton { display: inline-block; font: 700 1rem var(--texte); background: #00719c; color: #fff; border-radius: 8px; padding: 2px 10px; white-space: nowrap }
+.mot { font-weight: 700; background: color-mix(in srgb, var(--jaune) 30%, transparent); border-radius: 6px; padding: 0 5px }
+kbd { font: 700 .95rem var(--texte); border: 2px solid var(--filet); border-bottom-width: 4px; border-radius: 8px; padding: 0 8px; background: var(--carte) }
+
+.bulle { display: flex; gap: 14px; align-items: flex-start; background: color-mix(in srgb, var(--bleu) 10%, var(--carte)); border-radius: 18px; padding: 14px 18px }
+.bulle svg { flex: none }
+.compte { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px }
+@media (max-width: 560px) { .compte { grid-template-columns: minmax(0, 1fr) } }
+.compte figure { background: color-mix(in srgb, var(--jaune) 10%, var(--carte)); border-radius: 18px; padding: 12px }
+.score { font: 700 1.5rem var(--titre); text-align: center; margin-top: 6px }
+.score small { font: 400 1rem var(--texte); color: var(--douce) }
+
+.lexique { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px }
+.lexique div { display: flex; gap: 12px; align-items: center; background: var(--carte); border: 2px solid var(--filet); border-radius: 18px; padding: 12px 14px; font-size: 1.0625rem }
+.lexique b { font-family: var(--titre); font-weight: 600 }
+
+details.grands { background: var(--carte); border: 2px dashed var(--filet); border-radius: 20px; padding: 16px 20px; font-size: 1rem }
+details.grands summary { font: 600 1.25rem var(--titre); cursor: pointer }
+details.grands summary:focus-visible { outline: 3px solid var(--bleu); outline-offset: 3px; border-radius: 6px }
+details.grands ul { display: grid; gap: 8px; padding-left: 1.2em; margin: 12px 0 0 }
+footer { text-align: center; color: var(--douce); font-size: .9375rem }
+</style>
+
+<main class="page">
+<header>
+  <div class="formes" aria-hidden="true">
+    <svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="24" fill="#f2b705"/></svg>
+    <svg width="54" height="54" viewBox="0 0 54 54"><rect x="4" y="4" width="46" height="46" rx="10" fill="#e0457b"/></svg>
+    <svg width="54" height="54" viewBox="0 0 54 54"><path fill="#1f6fd1" fill-rule="evenodd" d="M27 3a24 24 0 1 1 0 48a24 24 0 1 1 0-48Zm0 12a12 12 0 1 0 0 24a12 12 0 1 0 0-24Z"/></svg>
+  </div>
+  <h1>La Cricut, <span>c’est simple !</span></h1>
+  <p class="chapo">La Cricut, c’est une machine qui découpe le papier, comme des ciseaux magiques. Voici comment lui préparer ton dessin.</p>
+</header>
+
+<section class="lexique" aria-label="Les mots à connaître">
+  <div><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="4" fill="none" stroke="#1f6fd1" stroke-width="3"/><rect x="8" y="8" width="24" height="24" fill="none" stroke="#1f6fd1" stroke-width="2" stroke-dasharray="4 3"/></svg><span><b>Le tapis</b> : la planche collante où on pose le papier.</span></div>
+  <div><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><defs><pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#c84a1e" stroke-width="2"/></pattern></defs><circle cx="20" cy="20" r="16" fill="url(#h)" stroke="#c84a1e" stroke-width="2.5"/></svg><span><b>Les rayures</b> : la forme que la machine va découper.</span></div>
+  <div><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32 28 12l4 4-20 20H8z" fill="#f2b705"/><path d="M28 12l3-3 4 4-3 3z" fill="#e0457b"/></svg><span><b>Le stylo</b> : la machine peut aussi dessiner.</span></div>
+</section>
+
+<article class="carte jaune">
+  <div class="etape-tete"><span class="rond">1</span><h2>Dis que tu as une Cricut</h2></div>
+  <p class="grand">Clique sur <span class="mot">Machine</span> en haut, puis choisis ta Cricut.</p>
+  <figure><img src="img:k-menu-machine" alt="Le menu Machine ouvert : Générique, Cricut Joy, Cricut Explore, Cricut Maker"></figure>
+</article>
+
+<article class="carte rose">
+  <div class="etape-tete"><span class="rond">2</span><h2>Pose tes formes sur le tapis</h2></div>
+  <p class="grand">Le grand carré, c’est le tapis. Pose tes formes où tu veux : elles ne bougent plus.</p>
+  <figure><img src="img:k-tapis" alt="Le tapis sur l’écran : un rond, un carré et un anneau rayés, le panneau Prêt pour Cricut à droite"></figure>
+  <div class="bulle">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="3" width="28" height="28" fill="none" stroke="#1f6fd1" stroke-width="2.5" stroke-dasharray="5 4"/></svg>
+    <p>La machine coupe seulement <b>dans les pointillés</b>. Garde tes formes dedans.</p>
+  </div>
+</article>
+
+<article class="carte bleu">
+  <div class="etape-tete"><span class="rond">3</span><h2>Ta feuille est petite ?</h2></div>
+  <p class="grand">Écris la taille de ta feuille, et où tu la colles sur le tapis. Un cadre la montre.</p>
+  <div class="images">
+    <figure><img src="img:k-feuille-champs" alt="Les champs Feuille sur le tapis : largeur, hauteur, depuis la gauche, depuis le haut"><figcaption>Les mesures</figcaption></figure>
+    <figure><img src="img:k-feuille-toile" alt="Le tapis avec le cadre de la petite feuille, en bas à droite"><figcaption>Le cadre de ta feuille</figcaption></figure>
+  </div>
+</article>
+
+<article class="carte vert">
+  <div class="etape-tete"><span class="rond">4</span><h2>Fais plein de copies</h2></div>
+  <p class="grand">Choisis ta forme. Menu <span class="mot">Édition</span>, puis <span class="mot">Dupliquer sur la feuille…</span></p>
+  <div class="images">
+    <figure><img src="img:k-dupliquer-remplir" alt="La fenêtre Dupliquer sur la feuille : Quantité ou Remplir la feuille, optimisation Simple ou Avancée"></figure>
+    <div style="display:grid;gap:12px;font-size:1.125rem">
+      <p><span class="mot">Quantité</span> : tu dis combien.</p>
+      <p><span class="mot">Remplir la feuille</span> : la machine en met le plus possible.</p>
+      <p><span class="mot">Avancée</span> : les formes s’emboîtent comme un puzzle.</p>
+    </div>
+  </div>
+  <div class="compte">
+    <figure><img src="img:k-rempli-simple" alt="La feuille remplie en rangées : 20 étoiles"><p class="score">20 étoiles <small>Simple : en rangées</small></p></figure>
+    <figure><img src="img:k-rempli-avancee" alt="La feuille remplie en puzzle : 22 étoiles"><p class="score">22 étoiles <small>Avancée : en puzzle</small></p></figure>
+  </div>
+  <p>Oups, trop de copies ? <kbd>Ctrl</kbd> + <kbd>Z</kbd> les enlève toutes d’un coup.</p>
+</article>
+
+<article class="carte jaune">
+  <div class="etape-tete"><span class="rond">5</span><h2>Des petits ponts pour le milieu</h2></div>
+  <p class="grand">Quand on découpe un O, le rond du milieu tombe. Des <b>liens</b>, ce sont des petits ponts qui le retiennent.</p>
+  <div class="avant-apres">
+    <figure><img src="img:k-anneau-avant" alt="L’anneau sans liens"><figcaption>Sans pont</figcaption></figure>
+    <span class="fleche" aria-hidden="true">→</span>
+    <figure><img src="img:k-anneau-apres" alt="L’anneau coupé par trois liens"><figcaption>3 petits ponts</figcaption></figure>
+    <span class="fleche" aria-hidden="true">→</span>
+    <figure><img src="img:k-anneau-machine" alt="Ce que la machine coupera : l’anneau en trois morceaux, le milieu tenu par les ponts"><figcaption>Ce que coupe la machine</figcaption></figure>
+  </div>
+  <div class="images">
+    <figure><img src="img:k-constat-ilot" alt="Le message orange : Le centre de cette forme tombera à la découpe, avec le bouton Ajouter des liens"><figcaption>Le message orange</figcaption></figure>
+    <figure><img src="img:k-dialogue-liens" alt="La fenêtre Ajouter des liens : largeur 2 mm, 3 liens par îlot"><figcaption>2 mm, 3 ponts</figcaption></figure>
+  </div>
+  <p class="grand">Clique sur <span class="bouton">Ajouter des liens</span>. C’est fait pour toutes les formes qui en ont besoin.</p>
+  <p>Pour un autocollant, pas besoin de ponts : le milieu s’enlève à la main.</p>
+</article>
+
+<article class="carte rose">
+  <div class="etape-tete"><span class="rond">6</span><h2>Couper ou dessiner ?</h2></div>
+  <div class="images">
+    <figure><img src="img:k-calques" alt="La liste À couper avec trois formes, et la liste À écrire, vide"></figure>
+    <div style="display:grid;gap:14px;font-size:1.125rem">
+      <p>✂️ <b>À couper</b> : la lame découpe la forme.</p>
+      <p>✏️ <b>À écrire</b> : le stylo dessine le trait.</p>
+      <p>Le petit crayon d’une forme la fait passer dans « À écrire ». Ou choisis-la et appuie sur <kbd>Maj</kbd> + <kbd>E</kbd> pour écrire, <kbd>Maj</kbd> + <kbd>X</kbd> pour couper.</p>
+    </div>
+  </div>
+</article>
+
+<article class="carte bleu">
+  <div class="etape-tete"><span class="rond">7</span><h2>Envoie à la machine</h2></div>
+  <div class="images">
+    <figure><img src="img:k-fichier-cricut" alt="Le menu Fichier ouvert, avec Exporter pour Cricut"></figure>
+    <div style="display:grid;gap:14px;font-size:1.125rem">
+      <p>Clique sur l’icône <b>Fichier</b> en haut à droite.</p>
+      <p>Puis <span class="mot">Exporter pour Cricut</span>.</p>
+      <p>Ouvre le fichier dans <b>Design Space</b>, le programme de la Cricut.</p>
+      <p style="font:600 1.5rem var(--titre)">Et c’est parti ! 🎉</p>
+    </div>
+  </div>
+</article>
+
+<details class="grands">
+  <summary>Pour aller plus loin : les détails</summary>
+  <ul>
+    <li><b>Recalage automatique</b> (décochée par défaut) : le plan de travail est le tapis, l’export garde la place des formes. Cochée, le tapis suit le dessin et Design Space pose les formes dans le coin haut gauche.</li>
+    <li><b>Dans Design Space</b> : l’export ajoute un cadre de repérage de la taille de la zone utile. Sélectionnez tout, <b>Attacher</b>, puis passez le cadre en <b>Guide</b> pour qu’il ne soit pas coupé. Comportement documenté mais pas encore essayé sur une machine : vérifiez sur une chute.</li>
+    <li><b>Liens</b> : largeur de 0,5 à 10 mm, de 1 à 12 par îlot. La bonne largeur dépend de la matière ; le menu <span class="mot">Édition → Ajouter des liens…</span> les applique à la sélection.</li>
+    <li><b>Optimisation avancée</b> : elle suit les vrais contours (étoiles, lettres, cœurs). Plus longue, jamais moins de copies que la simple. La rotation d’un quart de tour est permise par défaut.</li>
+    <li><b>Constats</b> : « À corriger » en orange (l’export demande alors une confirmation), « Conseil » à lire. Chaque correction s’annule par <kbd>Ctrl</kbd> + <kbd>Z</kbd>.</li>
+    <li><b>Aperçu de la machine</b> : <kbd>Maj</kbd> + <kbd>O</kbd> montre exactement ce qui sera coupé.</li>
+  </ul>
+</details>
+
+<footer>Éditeur SVG · mode Cricut, version du 26 octobre 2026. Images faites sur l’application elle-même.</footer>
+</main>

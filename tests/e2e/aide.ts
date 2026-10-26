@@ -368,7 +368,10 @@ export async function ouvrirMenu(page: Page, nom: string) {
   // Dans l'editeur, « Autres formats » est replie dans le menu Fichier (au bureau, un bouton a icone, nomme par aria-label) ;
   // sur un telephone, Fichier n'est plus que des rubriques de « Plus ».
   const cherche = editeur && nom === 'Autres formats' ? 'Fichier' : nom;
-  const direct = cherche === 'Fichier' && editeur ? boutonFichier(page) : racine.locator('.menu-bouton', { hasText: cherche });
+  // Fichier et Aide ne sont que des icones au bureau (nommees par aria-label) : on les prend par leur classe.
+  const direct = cherche === 'Fichier' && editeur ? boutonFichier(page)
+    : cherche === 'Aide' && editeur ? page.locator('.editeur-barre .menu-aide .menu-bouton')
+      : racine.locator('.menu-bouton', { hasText: cherche });
   const bouton = (await direct.count()) ? direct : racine.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
   await bouton.click();
   // Les autres formats sont repliees sous les elements qui recuperent le fichier : on les deplie.

@@ -6,6 +6,7 @@ import { definirOuvertureAdresse } from '../io/adresse.js';
 import { sonderNavigateur } from '../io/capacites.js';
 import { manquantes } from '../util/capacites.js';
 import { Application } from './Application.js';
+import { DOCUMENTATIONS_LIVREES, definirDocumentation } from './documentation.js';
 import { PageIncompatible } from './Incompatible.js';
 
 export function demarrer(conteneur: HTMLElement): void {
@@ -14,5 +15,7 @@ export function demarrer(conteneur: HTMLElement): void {
   // Ouvrir depuis une adresse (ADR-0036) : la page autonome demande le fichier elle-meme, au seul geste de la personne. Un hote
   // qui embarque l'editeur ne passe pas ici : chez lui, aucun champ d'adresse.
   definirOuvertureAdresse({ qui: 'Votre navigateur va chercher le fichier quand vous choisissez « Ouvrir » ; rien ne part avant.' });
+  // Les documentations (guide complet, mode Cricut) sont livrees a cote de la page, dans aide/ : le menu Aide les ouvre.
+  definirDocumentation(DOCUMENTATIONS_LIVREES);
   createRoot(conteneur).render(absentes.length ? <PageIncompatible manquantes={absentes} /> : <Application />);
 }
