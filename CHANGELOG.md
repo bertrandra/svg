@@ -200,6 +200,13 @@ empreintes.
 
 ### Corrigé
 
+- Les tests du site PHP sous Firefox ne tombent plus une fois sur deux sur le premier chargement (`page.goto` à 10 s). Ni le site
+  ni Firefox : la page est chargée (`readyState` à `complete`, mesuré), mais quand elle pose `Cross-Origin-Opener-Policy:
+  same-origin`, Firefox change de groupe de contextes depuis l'`about:blank` d'une page neuve, et Playwright 1.56.1 perd alors
+  environ un chargement sur vingt (reproduit sur une page minimale : 0 sur 30 sans l'en-tête, 2 sur 30 et 2 sur 40 avec).
+  Firefox y ignore désormais la politique (`pilote({ coopIgnoreeParFirefox: true })`, `tests/e2e/aide.ts`) ; le test vérifie
+  que le site pose toujours l'en-tête, que Chromium et WebKit appliquent.
+
 - Les boutons radio Uni / Dégradé linéaire / Dégradé radial de l'inspecteur et les cases Flou et Ombre portée de la section Effets
   font 24 px de haut à la souris (18,8 et 19 px) : les tests de cibles, joués en riche, les ont trouvés.
 

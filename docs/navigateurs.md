@@ -228,6 +228,15 @@ rejoués verts dans les trois). En route, sous Firefox seul : un clic synthétiq
 test la touche), et Firefox tronque au pixel les coordonnées du pointeur (un geste peut perdre un pixel : le test de l'aimant des repères
 visait 5,8 px pour une attraction à 6). Le détail est à l'annexe 8 de l'ADR-0012, « Ce que l'étape 14 a posé ».
 
+Le site PHP sous Firefox (26 octobre 2026) : le premier `goto` d'une session tombait une fois sur deux à 10 s, un test différent
+à chaque passage. **Défaut de Playwright 1.56.1 sous Firefox 142, pas du site** : la page pose `Cross-Origin-Opener-Policy:
+same-origin`, et son premier chargement depuis l'`about:blank` d'une page neuve fait changer Firefox de groupe de contextes de
+navigation ; pendant ce changement, Playwright perd les évènements de cycle de vie du nouveau document (`load`, parfois `commit`)
+alors que la page est chargée (`readyState` à `complete`, relevé pendant l'échec ; toutes les requêtes finies des deux côtés). Une
+page minimale le reproduit (2 sur 30 avec l'en-tête, 0 sur 30 sans). Le fichier du site lance Firefox avec la politique ignorée
+(`pilote({ coopIgnoreeParFirefox: true })`) ; l'en-tête reste exigé par le test, et Chromium et WebKit l'appliquent. Un vrai
+visiteur sous Firefox n'est pas touché.
+
 Trouvé en levant le saut du contraste forcé, **défaut de la page sous WebKit** : un focus posé par script pendant un `keydown`
 dont le geste par défaut est empêché (`preventDefault`, pour que la flèche ne fasse pas défiler la page) n’y reçoit pas
 `:focus-visible`. Un menu ouvert à la souris puis parcouru aux flèches ne montrait donc aucun élément atteint, pas plus que

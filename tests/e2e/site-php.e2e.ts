@@ -75,10 +75,10 @@ beforeAll(async () => {
   // Aucun mot de passe : le premier test le pose comme l'administrateur, par FTP (data/password).
   const port = await portLibre();
   site = 'http://127.0.0.1:' + port;
-  // Plusieurs travailleurs : sous Firefox, une connexion gardee ouverte par la page d'un test precedent occupait le seul
-  // travailleur de `php -S`, et le chargement suivant attendait jusqu'a son delai (une fois sur deux en local, tous les tests).
-  // Le routeur refuse data/ et inc/ comme le feraient les .htaccess, que `php -S` ignore ; le site, qui se demande a lui-meme si
-  // data/pwd se lit, doit voir ce refus (sinon il avertit).
+  // Plusieurs travailleurs : pendant la page de l'application, le site se demande a lui-meme si data/pwd se lit (index.php,
+  // http_lisible) ; sous un seul travailleur, `php -S` ne servirait cette requete qu'apres la page, qui attendrait les 3 s de son
+  // delai et avertirait faute de reponse (mesure). Le routeur refuse data/ et inc/ comme le feraient les .htaccess, que `php -S`
+  // ignore ; le site, qui se demande a lui-meme si data/pwd se lit, doit voir ce refus (sinon il avertit).
   php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public'), join(racine, 'public/inc/serveur-local.php')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
   await attendrePort(site);
 });
@@ -105,7 +105,8 @@ async function ouvrirSite(navigateur: ReturnType<typeof pilote>, poserMotDePasse
   const s = await navigateur.ouvrir({ naviguer: false });
   const requetes: string[] = [];
   s.page.on('request', r => { if (!r.url().startsWith('data:') && !r.url().startsWith('blob:')) requetes.push(r.url()); });
-  await s.page.goto(site + '/');
+  // La politique d'ouverture est posee, meme si Firefox l'ignore ici (voir `coopIgnoreeParFirefox`).
+  expect((await s.page.goto(site + '/'))?.headers()['cross-origin-opener-policy']).toBe('same-origin');
   return { page: s.page, requetes, erreurs: s.erreurs };
 }
 
@@ -150,7 +151,9 @@ async function enregistrerSous(page: Page, nom: string): Promise<void> {
 }
 
 describe('le site PHP', () => {
-  const navigateur = pilote();
+  // Le site pose `Cross-Origin-Opener-Policy: same-origin` : sous Firefox, Playwright perd parfois le chargement qui change de
+  // groupe de contextes (aide.ts, `coopIgnoreeParFirefox`).
+  const navigateur = pilote({ coopIgnoreeParFirefox: true });
 
   it('sans mot de passe, la page dit de creer data/password ; le fichier depose devient le mot de passe, disparait, et data/ ne se lit pas', async () => {
     rmSync(donnees('pwd'), { force: true });

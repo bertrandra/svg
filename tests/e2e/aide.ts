@@ -50,8 +50,22 @@ export function sauteSauf(moteurs: readonly NomNavigateur[], raison: string): bo
   return !moteurs.includes(NAVIGATEUR);
 }
 
+/** Ce qu'une spec demande au lancement du navigateur, avant toute page. */
+export interface OptionsPilote {
+  /**
+   * Firefox ignore `Cross-Origin-Opener-Policy`. Le premier chargement d'une page qui la pose (le site PHP, `same-origin`)
+   * fait changer Firefox de groupe de contextes de navigation, depuis l'about:blank d'une page neuve. Pendant ce changement,
+   * Playwright 1.56.1 (Firefox 142) perd environ un chargement sur vingt : `goto` attend un `load` (parfois meme un `commit`)
+   * qu'il ne verra jamais, alors que la page est chargee (`readyState` vaut `complete`, mesure). Le defaut est dans le suivi
+   * de Playwright, pas dans la page : la meme page sans l'en-tete ne tombe jamais. Sans effet sous Chromium et WebKit, qui
+   * gardent la politique ; la presence de l'en-tete reste verifiee par le test du site.
+   */
+  coopIgnoreeParFirefox?: boolean;
+}
+
 /** Les options de lancement : `--no-sandbox` et `CHROMIUM_PATH` sont a Chromium seul, Firefox et WebKit refuseraient l'argument. */
-function optionsLancement(nom: NomNavigateur): LaunchOptions {
+function optionsLancement(nom: NomNavigateur, options: OptionsPilote = {}): LaunchOptions {
+  if (nom === 'firefox' && options.coopIgnoreeParFirefox) return { firefoxUserPrefs: { 'browser.tabs.remote.useCrossOriginOpenerPolicy': false } };
   if (nom !== 'chromium') return {};
   const chemin = process.env['CHROMIUM_PATH'];
   return { ...(chemin ? { executablePath: chemin } : {}), args: ['--no-sandbox'] };
@@ -100,13 +114,13 @@ export interface OptionsSession {
  * Le navigateur : pour Chromium, `CHROMIUM_PATH` s'il est donne (le bac a sable n'a pas celui de Playwright),
  * sinon celui que `npx playwright install chromium` a pose ; Firefox et WebKit, ceux de `npx playwright install`.
  */
-export function pilote() {
+export function pilote(reglages: OptionsPilote = {}) {
   let navigateur: Browser | undefined;
   const ouvertes: Session[] = [];
 
   beforeAll(async () => {
     if (!existsSync(PAGE)) throw new Error('dist/editeur-svg.html manque : lancer `npm run construire` avant `npm run e2e`.');
-    navigateur = await MOTEURS[NAVIGATEUR].launch(optionsLancement(NAVIGATEUR));
+    navigateur = await MOTEURS[NAVIGATEUR].launch(optionsLancement(NAVIGATEUR, reglages));
   });
 
   afterAll(async () => {
