@@ -17,6 +17,10 @@ import { lireProduction, type MarqueProduction } from './production.js';
 import { resoudreLiens } from './texteVivant.js';
 import { prisesDe, type Fonctionnalite } from './fonctionnalites.js';
 import { FONCTIONNALITES } from './catalogue.js';
+import { ATTRIBUT_REPERES, lireReperes } from './reperes.js';
+
+/** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038). */
+export const MSG_REPERES_ILLISIBLES = 'les repères du document (illisibles)';
 
 /**
  * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
@@ -96,5 +100,12 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const formes = resoudreLiens(p.formes, p.liens ?? []).filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
   const production = lireProduction(racine.attributs);
-  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };
+  // Les reperes du document (ADR-0038) : un attribut de la racine ; illisible, il est laisse de cote, et c'est dit.
+  const texteReperes = racine.attributs[ATTRIBUT_REPERES];
+  const reperes = texteReperes === undefined ? null : lireReperes(texteReperes);
+  const perdus = texteReperes !== undefined && texteReperes.trim() !== '' && !reperes ? [MSG_REPERES_ILLISIBLES] : [];
+  return {
+    dessin: { vb: plan, formes, ...(reperes ? { reperes } : {}) },
+    ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : []), ...perdus], ...(production ? { production } : {})
+  };
 }

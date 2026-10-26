@@ -2,7 +2,8 @@
 // perdrait en silence ce que le modele v2 ajoute. Les tables ci-dessous classent chaque champ ; le typage force a classer un champ
 // nouveau (une cle manquante ne compile pas), et le test verifie que les champs dits « porte » font l'aller-retour exact. Une etape
 // qui livre un champ v2 le porte (une ligne de model/projetV2/champs.ts et de engine/projetV2/champs.ts, son lecteur et son
-// aller-retour dans ses fichiers), puis le passe ici a « porte » (ADR-0012, annexe 8).
+// aller-retour dans ses fichiers), puis le passe ici a « porte » (ADR-0012, annexe 8). Les champs du dessin (nuancier, reperes) ne
+// rendent pas le dessin non plat : un projet plat qui les porte reste au format 1.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -19,10 +20,10 @@ const CHAMPS_FORME: Readonly<Record<keyof Forme, Portage>> = {
   id: 'porte', d: 'porte', remplissage: 'porte', contour: 'porte', epaisseur: 'porte', opacite: 'porte', opaciteRemplissage: 'porte',
   opaciteContour: 'porte', pointilles: 'porte', decalagePointilles: 'porte', bout: 'porte', jonction: 'porte', limiteMitre: 'porte',
   origine: 'porte', texte: 'porte', operation: 'porte', regle: 'porte', visible: 'porte', verrouille: 'porte',
-  parent: 'etape 1', peintureRemplissage: 'porte', peintureContour: 'porte', effets: 'etape 7', image: 'etape 12'
+  parent: 'etape 1', peintureRemplissage: 'porte', peintureContour: 'porte', effets: 'etape 7', image: 'porte'
 };
 
-const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', groupes: 'etape 1' };
+const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', reperes: 'porte', groupes: 'etape 1' };
 
 const lire = (nom: string, modele: 'plat' | 'riche' = 'plat'): DessinSvg => {
   const r = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg', nom), 'utf8'), { modele });
@@ -54,8 +55,11 @@ describe('le projet porte tout le modele', () => {
   it('chaque champ dit porte fait l aller-retour exact, et le projet n en ecrit pas d autre', () => {
     const avecTexte = lire('texte-sur-forme.attendu.svg').formes.find(f => f.texte?.disposition);
     if (!avecTexte) throw new Error('aucun texte pose dans la reference');
+    // Une forme qui porte tous les champs a la fois : le trace est alors le rectangle de l'image (le projet le recalcule au retour).
+    const image = lire('v2/images-rotation.svg', 'riche').formes.find(f => f.image);
+    if (!image?.image) throw new Error('aucune image dans la reference');
     const pleine: Forme = {
-      ...avecTexte, contour: '#1f4e8c', epaisseur: 2, opacite: 0.5, opaciteRemplissage: 0.4, opaciteContour: 0.3, pointilles: [4, 2], decalagePointilles: 1,
+      ...avecTexte, d: image.d, image: image.image, contour: '#1f4e8c', epaisseur: 2, opacite: 0.5, opaciteRemplissage: 0.4, opaciteContour: 0.3, pointilles: [4, 2], decalagePointilles: 1,
       bout: 'round', jonction: 'bevel', limiteMitre: 6, origine: ['game-icons:a'], operation: 'ecriture', regle: 'evenodd', visible: false, verrouille: true,
       peintureRemplissage: lineaire, peintureContour: radial
     };
@@ -67,7 +71,46 @@ describe('le projet porte tout le modele', () => {
 
   it('les champs du modele v2 attendent l etape qui les livre', () => {
     const attendus = Object.entries({ ...CHAMPS_FORME, ...CHAMPS_DESSIN }).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
-    expect(attendus).toEqual(['parent : etape 1', 'effets : etape 7', 'image : etape 12', 'groupes : etape 1']);
+    expect(attendus).toEqual(['parent : etape 1', 'effets : etape 7', 'groupes : etape 1']);
+  });
+
+  it('un dessin plat garde son nuancier et ses reperes, au format 1', () => {
+    const d: DessinSvg = { ...lire('chemins.svg'), nuancier: { provenance: 'dessin', teintes: [{ hex: '#c81e28' }, { hex: '#1f5fb0', opacite: 0.5 }] }, reperes: { h: [10.5], v: [3, 40] } };
+    const { texte, rouvert } = allerRetour(etat(d));
+    expect(JSON.parse(texte).version).toBe(VERSION_PROJET_PLAT);
+    expect(rouvert.dessin).toEqual(d);
+    expect(texteDuProjet(projetDe(rouvert))).toBe(texte);
+  });
+});
+
+describe('les images dans le projet (etape 12)', () => {
+  it('un dessin a images s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+    for (const nom of ['images-png', 'images-jpeg', 'images-gif-webp', 'images-rotation', 'images-type-corrige']) {
+      const d = lire('v2/' + nom + '.svg', 'riche');
+      expect(d.formes.some(f => f.image), nom).toBe(true);
+      const tourne = transformer(d, d.formes.map(f => f.id), rotation(17, 40, 30));
+      for (const x of [d, tourne]) {
+        const { texte, rouvert } = allerRetour(etat(x));
+        expect(JSON.parse(texte).version, nom).toBe(VERSION_PROJET);
+        expect(rouvert.dessin, nom).toEqual(x);
+        expect(texteDuProjet(projetDe(rouvert)), nom).toBe(texte);
+        expect(ecrireDessin(rouvert.dessin, 3), nom).toBe(ecrireDessin(x, 3));
+      }
+    }
+  });
+
+  it('refuse en le nommant une image mal formee, aux octets menteurs, ou qui porte une couleur', () => {
+    const d = lire('v2/images-png.svg', 'riche');
+    const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { version: number; dessin: { formes: Array<Record<string, unknown>> } };
+    const i = base.dessin.formes.findIndex(f => f.image !== undefined);
+    const img = base.dessin.formes[i]?.image as Record<string, unknown>;
+    const avec = (champs: Record<string, unknown>) => ({ ...base, dessin: { ...base.dessin, formes: base.dessin.formes.map((f, k) => (k === i ? { ...f, ...champs } : f)) } });
+    const ouvrir = (x: unknown): string => { const r = lireProjet(x); if ('erreur' in r) return r.erreur; const e = etatDuProjet(r.projet); return 'erreur' in e ? e.erreur : ''; };
+    expect(ouvrir(avec({ image: { ...img, donnees: 'https://x.invalid/a.png' } }))).toMatch(/PNG, JPEG, GIF ou WebP/);
+    expect(ouvrir(avec({ image: { ...img, l: 0 } }))).toMatch(/taille d’une image/);
+    expect(ouvrir(avec({ remplissage: '#000000' }))).toMatch(/remplissage ou un contour/);
+    expect(ouvrir(avec({ image: { ...img, donnees: String(img['donnees']).replace('image/png', 'image/gif') } }))).toMatch(/Ce projet contient/);
+    expect(ouvrir(avec({}))).toBe('');
   });
 });
 

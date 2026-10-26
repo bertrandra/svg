@@ -116,6 +116,9 @@ export function nettoyerCss(css: string): string {
 }
 
 // Les caracteres interdits en XML 1.0 (controles, U+FFFE, U+FFFF) et les references numeriques qui les designent.
+/** Les blancs et les invisibles qu'un navigateur saute dans un schema d'adresse (controles, espace, trait d'union conditionnel, largeur nulle, separateurs de ligne, BOM). */
+const INVISIBLES = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(0x20) + String.fromCharCode(0x7f) + '-' + String.fromCharCode(0x9f) + String.fromCharCode(0xad)
+  + String.fromCharCode(0x200b) + '-' + String.fromCharCode(0x200f) + String.fromCharCode(0x2028) + String.fromCharCode(0x2029) + String.fromCharCode(0xfeff) + ']', 'g');
 const INTERDITS = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(8) + String.fromCharCode(11) + String.fromCharCode(12) + String.fromCharCode(14) + '-' + String.fromCharCode(31) + String.fromCharCode(0xfffe) + String.fromCharCode(0xffff) + ']', 'g');
 const REF_NUM = /&#(x[0-9a-fA-F]+|[0-9]+);/g;
 
@@ -166,7 +169,11 @@ function emettreHref(a: AttributBrut, c: ContexteBalise): string {
   if (c.nom === 'use') {
     if (c.externeGarde) return '';
     c.externeGarde = true;
-    const retire = dec.replace(SCHEMAS, '').slice(0, 300);
+    // Un navigateur ignore blancs et invisibles dans un schema (« d<TAB>ata: » se lit « data: ») : ils partent d'abord, puis les schemas,
+    // jusqu'a ce que rien ne bouge (retirer l'un peut en recomposer un autre). L'attribut est inerte, il ne sert qu'a nommer le refus.
+    let retire = dec.replace(INVISIBLES, '');
+    for (let i = 0; i < 8; i++) { const suite = retire.replace(SCHEMAS, ''); if (suite === retire) break; retire = suite; }
+    retire = UN_SCHEMA.test(retire) ? '' : retire.slice(0, 300);
     return a.blancs + ATTRIBUT_HREF_EXTERNE + '="' + rendreBienForme(echapperAttribut(retire)) + '"';
   }
   if ((c.nom === 'image' || c.nom === 'feImage') && !a.valeur.includes('&') && IMAGE_EN_LIGNE.test(dec)) return emis(a, rendreBienForme(a.valeur));

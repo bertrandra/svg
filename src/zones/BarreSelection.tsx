@@ -16,6 +16,7 @@ import { phraseRotation } from './annonces.js';
 import { useRangeeCompacte } from './Vue.js';
 import { OperationSelection } from './OperationSelection.js';
 import { DispositionSelection, useSectionDisposition } from './ChoixDisposition.js';
+import { useElementsRepetition } from './menusOutilsPro.js';
 import { MenuNuancierSelection } from './SectionNuancier.js';
 import { useSectionNuancier } from './actionsNuancier.js';
 
@@ -60,7 +61,7 @@ export const BarreSelection = memo(function BarreSelection() {
 export const libelleSelection = (n: number) => n + ' sélectionnée' + (n > 1 ? 's' : '');
 
 function RangeeEntiere() {
-  const g = useGestes(), { sel, ac, surPlan } = g;
+  const g = useGestes(), { sel, ac, surPlan } = g, repetition = useElementsRepetition();
   return (
     <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
       <span className="aide">{libelleSelection(sel.length)}</span>
@@ -74,6 +75,8 @@ function RangeeEntiere() {
         <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => g.miroir('v')} />
         <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => g.tourner(-90)} />
         <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => g.tourner(90)} />
+        {/* Repeter la selection (ADR-0038) : grille, radiale, symetrie, chacune dans son panneau sur la toile. */}
+        <MenuDeroulant etiquette="Répéter : grille, radiale, symétrie" icone="repeter" chevron={false} elements={repetition} />
       </div>
       <div className="groupe" role="group" aria-label="Empiler">
         {ORDRES_ICONES.map(([o, icone, nom, raccourci]) => <Bouton key={o} icone={icone} aide={nom + ' (' + raccourci + ')'} onClick={() => g.empiler(o)} />)}
@@ -102,7 +105,7 @@ function RangeeEntiere() {
  */
 export function useSectionsSelection(complet: boolean): SectionMenu[] {
   const g = useGestes(), { sel, ac, surPlan } = g;
-  const disposition = useSectionDisposition();
+  const disposition = useSectionDisposition(), repetition = useElementsRepetition();
   const nuancier = useSectionNuancier();
   const transformer: ElementMenu[] = [
     ...(complet ? [{ id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: 'Miroir horizontal', icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
@@ -113,6 +116,7 @@ export function useSectionsSelection(complet: boolean): SectionMenu[] {
   return [
     ...(disposition ? [disposition] : []),
     { id: 'transformer', titre: 'Transformer', elements: transformer },
+    { id: 'repeter', titre: 'Répéter', elements: repetition },
     { id: 'aligner', titre: 'Aligner' + surPlan, elements: ALIGNEMENTS_ICONES.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
     { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
     { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },

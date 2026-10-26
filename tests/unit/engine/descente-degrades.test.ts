@@ -21,7 +21,7 @@ const riche = (nom: string): DessinSvg => {
 const EXPORTEURS = { 'SVG à plat': CAPACITES_PLAT, PDF: CAPACITES_PDF, 'SVG de découpe': CAPACITES_SVG_DECOUPE, DXF: CAPACITES_DXF, EPS: CAPACITES_EPS, production: CAPACITES_PRODUCTION };
 
 describe('la descente des degrades', () => {
-  it('est inscrite, avant les groupes (elle est seule a l etape 3)', () => {
+  it('est inscrite la premiere, avant les images et les groupes', () => {
     expect(REGLES_DESCENTE[0]).toBe(degrades);
   });
 

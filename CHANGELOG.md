@@ -199,6 +199,20 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se
+  lit en mode riche, vérifiée sur ses octets (une « image » qui est un SVG ou une adresse extérieure sont refusées en le nommant ;
+  4 Mo par image, 16 Mo par dessin, 64 millions de pixels lus dans l'en-tête), s'écrit en `xlink:href` à l'identique, suit ses
+  transformations, et les exports de tracés (PDF, DXF, EPS, découpe) l'abandonnent en le disant.
+
+- **Règles et repères** (ADR-0038) : règles en haut et à gauche de la toile (unités du plan, ou mm et pouces d'un contexte de
+  production), repères qu'on tire d'une règle, qu'on déplace, verrouille, retire (glisser hors de la toile ou Suppr) et pose à
+  une valeur exacte (double-clic, ou le panneau « Repères ») ; les aimants s'y accrochent ; menu Vue : Maj+R, Ctrl+;, Ctrl+Alt+;,
+  Ctrl+Maj+;. Le document les garde en `data-ed-reperes` sur la racine, seulement s'il y en a, et le projet aussi ; aucun export.
+- **Répéter la sélection** : dupliquer en grille, répétition radiale, symétrie autour du centre ou d'un repère, en gardant ou non
+  l'original, avec aperçu en direct (menu Édition et menu « Répéter » de la sélection). Coins arrondis en direct (un curseur) et
+  « Arrondir ce coin » en mode points. Largeur variable du trait : le trait devient une surface qui suit un profil début, milieu,
+  fin. Aucune référence d'écriture ne change ; six références neuves.
+
 - **Les outils de sélection** (ADR-0035) : le cadre prend toute forme dont le tracé réel (surface remplie selon sa règle, ou encre
   du trait) touche le rectangle, même en partie — plus le trou d'un anneau, ni le coin vide de la boîte d'une diagonale ; « Les
   formes entièrement dedans » se choisit au menu de l'outil (zone en trait plein, tirets pour « touchées ») ; un bouton de la barre

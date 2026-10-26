@@ -31,6 +31,12 @@ la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de v
   qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux
   groupes « À couper / À écrire » de l'ADR-0028 dans les calques ; la vignette du site PHP), les vagues revues (vague 1 : étapes
   1, 3, 12 ; vague 2 : 2, 4, 5, 7) et les consignes de chaque paquet d'agent (annexe 8 §5). Les autres étapes restent proposées.
+- **L'étape 12, images, est faite pour le moteur** (26 octobre 2026, annexe 8 §5.3) : `<image>` en `data:` lue en mode `riche`
+  en une feuille (son rectangle en `d`), vérifiée sur ses octets (nature, en-tête, 4 Mo, 16 Mo, 64 millions de pixels ; une
+  « image » SVG ou une adresse extérieure refusées en les nommant), écrite en `xlink:href` (mêmes entrées, mêmes octets), qui suit
+  ses transformations, abandonnée et dite par la descente des exporteurs de tracés. Restent, chacun à son étape : l'affichage sur la
+  toile et le refus des points (étape 2), le branchement dans le projet JSON (après l'étape 1, fonctions prêtes), l'image native du
+  PDF (13a), et une interface d'insertion qu'aucune étape ne prévoit encore (annexe 8 §0).
 
 Les annexes, dans [`0012-annexes/`](0012-annexes/), portent les types, les tables et le plan ; cette page porte
 les décisions et leurs raisons.

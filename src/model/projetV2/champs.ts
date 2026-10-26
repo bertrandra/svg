@@ -6,6 +6,7 @@
 // comme le ferait un programme d'avant lui. Pur ; un lecteur refuse par `o.refuser`, qui remonte jusqu'a `lireProjet` sans lever.
 
 import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
+import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
 
 /** Ce que la validation du projet prete a un lecteur de champ : ses gardes, qui refusent en nommant (jamais une exception visible). */
 export interface OutilsProjet {
@@ -22,6 +23,7 @@ export interface OutilsProjet {
 export interface ChampsFormeV2 {
   readonly peintureRemplissage?: PeintureProjet;
   readonly peintureContour?: PeintureProjet;
+  readonly image?: ImageIntegreeProjet;
 }
 
 /** Une ligne : la cle du champ, son lecteur, et la garde qui le confronte au reste de la forme (deja lue). */
@@ -41,6 +43,12 @@ export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
   {
     cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du contour'),
     verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé de contour n’a pas de couleur de repli'); }
+  },
+  // Etape 12 : l'image integree. Sa forme est validee ici ; ses octets (nature, dimensions, pixels, 16 Mo par dessin) le sont par le
+  // moteur a l'ouverture (engine/projetV2/champs.ts, `refusChampsV2`). Une image ne porte ni remplissage ni contour.
+  {
+    cle: 'image', lire: (v, o) => { const r = lireImageProjet(v); return 'erreur' in r ? o.refuser(r.erreur) : r.image; },
+    verifier: (f, o) => { if (f.remplissage !== null || f.contour !== null) o.refuser('une image porte un remplissage ou un contour'); }
   }
 ];
 

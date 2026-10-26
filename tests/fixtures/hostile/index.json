@@ -1024,6 +1024,36 @@
       "attendu": "ouvre"
     },
     {
+      "fichier": "v2-images-bombe-pixels.svg",
+      "famille": "image",
+      "vecteur": "Bombe de decompression (modele v2, images) : un PNG de 177 octets, un GIF et un WebP etendu (VP8X) qui annoncent 65 000 x 65 000 pixels et plus ; la lecture riche refuse sur l'en-tete, avant tout decodeur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-octets-mensongers.svg",
+      "famille": "image",
+      "vecteur": "Type annonce mensonger (modele v2, images) : un RIFF/WAVE annonce WebP, un BMP annonce PNG, un SVG a script annonce JPEG (marque d'ordre et blancs devant), un PNG sans IHDR, un GIF de 0 x 0 ; la nature se lit sur les octets",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-adresses-actives.svg",
+      "famille": "image",
+      "vecteur": "Adresses d'image actives (modele v2, images) : javascript: en casse mixte et blancs devant, data:text/html, donnees non base64, data:image/svg+xml qui charge une image distante, href distant qui l'emporte sur un xlink:href en ligne",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-base64-abime.svg",
+      "famille": "image",
+      "vecteur": "Base64 abime dans une image en ligne (modele v2, images) : un = au milieu, des caracteres de l'alphabet d'URL, une longueur qui n'est pas un multiple de 4, un echappement pour-cent",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-jpeg-segments-pieges.svg",
+      "famille": "image",
+      "vecteur": "Segments JPEG pieges (modele v2, images) : longueur nulle, remplissage 0xFF sans fin, trame SOF coupee, segment qui pointe au-dela du fichier, donnees SOS sans trame ; la lecture des dimensions termine et refuse",
+      "attendu": "refus"
+    },
+    {
       "fichier": "v2-degrades-cycle-href.svg",
       "famille": "v2-degrades",
       "vecteur": "Degrades dont le href boucle (a -> b -> a) : refuse en mode riche, « un cycle de dégradés »",
@@ -1105,6 +1135,12 @@
       "fichier": "v2-degrades-unite-inconnue.svg",
       "famille": "v2-degrades",
       "vecteur": "Coordonnees de degrade en mm et en em : ni nombre, ni pixels, ni pourcentage, refusees",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-href-schema-coupe.svg",
+      "famille": "use",
+      "vecteur": "Renvoi externe d un <use> dont le schema est coupe par un blanc ou un invisible (d<TAB>ata:, java&#10;script:) : rien ne le recompose dans data-href-externe",
       "attendu": "refus"
     }
   ]

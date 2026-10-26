@@ -22,6 +22,7 @@ export function ListeRaccourcis() {
       <li>Ctrl+C copier · Ctrl+X couper · Ctrl+V coller · Ctrl+D dupliquer · Ctrl+A tout sélectionner · Suppr supprimer</li>
       <li>Ctrl+G combiner · Ctrl+Maj+G séparer · Ctrl+] avancer, Ctrl+[ reculer (Maj : premier ou arrière-plan)</li>
       <li>G grille magnétique · Z zoom sur la sélection · Ctrl+S enregistrer</li>
+      <li>Maj+R règles (glissez depuis une règle : un repère ; Entrée sur une règle : un repère au milieu de la vue) · Ctrl+; repères · Ctrl+Alt+; verrouiller les repères · Ctrl+Maj+; les effacer · un repère choisi : Suppr le retire, les flèches le déplacent, Entrée ouvre son champ, double-clic aussi</li>
       <li>I inverser la sélection · C même couleur de fond (de contour pour une forme sans fond) · Alt+C même couleur de contour · Y même type (texte, trait, forme pleine)</li>
       <li>Maj+N : le nuancier du dessin devient les couleurs de la sélection · Alt+Maj+N les y ajoute · dans le nuancier, Maj+clic (ou Maj+Entrée) pose la couleur sur le contour</li>
       <li>En contexte Cricut, découpe ou stylo : Maj+X range la sélection à couper, Maj+E à écrire au stylo · Maj+O montre ou retire l’aperçu de la machine · Alt+Maj+X choisit tout ce qui est à couper, Alt+Maj+E tout ce qui est à écrire</li>

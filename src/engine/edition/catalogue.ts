@@ -8,7 +8,9 @@
 
 import type { Fonctionnalite } from './fonctionnalites.js';
 import { degrades } from './fonctions/degrades.js';
+import { images } from './fonctions/images.js';
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
-  degrades
+  degrades,
+  images
 ];

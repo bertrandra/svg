@@ -46,6 +46,8 @@ export const BORNES_PROJET = {
   images: 4,
   /** Une image source : 16 Mo, en base64. */
   base64Image: Math.ceil((16 * 1024 * 1024) / 3) * 4,
+  /** Les reperes par axe (ADR-0038) : la borne de la lecture d'un SVG (engine/edition/reperes.ts). */
+  reperes: 200,
   coordonnee: 1e9
 } as const;
 
@@ -104,11 +106,20 @@ export interface FormeProjet extends ChampsFormeV2 {
   readonly verrouille: boolean;
 }
 
+/** Les reperes du document (ADR-0038) : les ordonnees des horizontaux, les abscisses des verticaux, en unites du plan. */
+export interface ReperesProjet { readonly h: readonly number[]; readonly v: readonly number[] }
+
 /**
  * Le dessin du projet : le plan, les formes, et le nuancier du dessin (ADR-0037 : les couleurs tirees du fichier ou d'une
  * selection, et leur provenance), absent d'un projet d'avant lui ; l'editeur le tire alors des couleurs du dessin a l'ouverture.
+ * Les reperes (ADR-0038) sont absents d'un dessin sans repere : un projet d'avant reste le meme texte.
  */
-export interface DessinProjet { readonly vb: readonly [number, number, number, number]; readonly formes: readonly FormeProjet[]; readonly nuancier?: NuancierDessin }
+export interface DessinProjet {
+  readonly vb: readonly [number, number, number, number];
+  readonly formes: readonly FormeProjet[];
+  readonly nuancier?: NuancierDessin;
+  readonly reperes?: ReperesProjet;
+}
 
 /** Une fonte deposee par la personne, incluse : son identifiant est l'empreinte de ses octets (`u-…`, ADR-0022). */
 export interface PoliceProjet { readonly id: string; readonly famille: string; readonly donnees: string }
@@ -369,7 +380,7 @@ function lireDessinProjet(v: unknown, version: number): DessinProjet {
     vus.add(forme.id);
     return forme;
   });
-  return { vb: plan, formes, ...facultatif(o, 'nuancier', lireNuancierDessin) };
+  return { vb: plan, formes, ...facultatif(o, 'nuancier', lireNuancierDessin), ...facultatif(o, 'reperes', lireReperesProjet) };
 }
 
 /** Le nuancier du dessin (ADR-0037) : une provenance admise, des teintes `#rrggbb` et leur opacite si elle n'est pas pleine. */
@@ -385,6 +396,15 @@ function lireNuancierDessin(v: unknown): NuancierDessin {
     return opacite === undefined ? { hex } : { hex, opacite };
   });
   return { provenance, teintes };
+}
+
+/** Les reperes du document (ADR-0038) : deux listes de nombres bornees, dont l'une au moins porte un repere. */
+function lireReperesProjet(v: unknown): ReperesProjet {
+  const o = objet(v, 'les repères');
+  const axe = (cle: 'h' | 'v') => tableau(o[cle], 'les repères', BORNES_PROJET.reperes).map(x => nombre(x, 'un repère'));
+  const h = axe('h'), v2 = axe('v');
+  if (!h.length && !v2.length) refuser('les repères sont vides');
+  return { h, v: v2 };
 }
 
 /** Le contexte de production tel que le projet le garde : Generique, ou les choix d'une Cricut en identifiants. */

@@ -20,9 +20,17 @@ export interface ExtensionEcriture {
   readonly attribut?: (e: ElementEcrit, nom: string, valeur: string) => boolean | undefined;
 }
 
-const NOMBRE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
-const UN_NOMBRE = new RegExp('^' + NOMBRE + '$', 'i');
-const MATRICE = new RegExp('^matrix\\(' + NOMBRE + '(?: ' + NOMBRE + '){5}\\)$', 'i');
+/** Un nombre tel que `nb` l'ecrit (chemins.ts) : jamais d'exposant, les coordonnees etant bornees. */
+const NOMBRE_ECRIT = '-?\\d+(?:\\.\\d+)?';
+const NOMBRE = new RegExp('^' + NOMBRE_ECRIT + '$');
+const MATRICE = new RegExp('^matrix\\(' + NOMBRE_ECRIT + '(?: ' + NOMBRE_ECRIT + '){5}\\)$');
+
+/** Le modele v2 sur la racine : son marqueur, a la seule valeur que ce programme ecrit (ecritureRiche.ts, `VERSION_MODELE`). Une fois pour toutes les etapes. */
+const racine: ExtensionEcriture = {
+  nom: 'modele v2 : racine',
+  attribut: (e, nom, valeur) => (nom === 'data-ed-modele' ? e.profondeur === 0 && valeur === '2' : undefined)
+};
+
 const ID_DEGRADE = /^ed-d-[0-9a-f]{14}(?:-\d+)?$/;
 const URL_DEGRADE = /^url\(#ed-d-[0-9a-f]{14}(?:-\d+)?\)$/;
 const COORDONNEES_DEGRADE: Readonly<Record<string, readonly string[]>> = { linearGradient: ['x1', 'y1', 'x2', 'y2'], radialGradient: ['cx', 'cy', 'r', 'fx', 'fy', 'fr'] };
@@ -41,19 +49,17 @@ const degrades: ExtensionEcriture = {
     return undefined;
   },
   attribut: (e, nom, valeur) => {
-    // Le marqueur du modele v2, sur la racine seule, a la seule valeur que ce programme ecrit (ecritureRiche.ts, VERSION_MODELE).
-    if (nom === 'data-ed-modele') return e.profondeur === 0 && valeur === '2';
     if (e.nom === 'defs') return false;
     if (e.nom === 'linearGradient' || e.nom === 'radialGradient') {
       if (nom === 'id') return ID_DEGRADE.test(valeur);
       if (nom === 'gradientUnits') return valeur === 'userSpaceOnUse';
       if (nom === 'gradientTransform') return MATRICE.test(valeur);
       if (nom === 'spreadMethod') return valeur === 'reflect' || valeur === 'repeat';
-      return (COORDONNEES_DEGRADE[e.nom] ?? []).includes(nom) && UN_NOMBRE.test(valeur);
+      return (COORDONNEES_DEGRADE[e.nom] ?? []).includes(nom) && NOMBRE.test(valeur);
     }
     if (e.nom === 'stop') {
       if (nom === 'stop-color') return /^#[0-9a-f]{6}$/.test(valeur);
-      if (nom === 'offset' || nom === 'stop-opacity') return UN_NOMBRE.test(valeur) && Number(valeur) >= 0 && Number(valeur) <= 1;
+      if (nom === 'offset' || nom === 'stop-opacity') return NOMBRE.test(valeur) && Number(valeur) >= 0 && Number(valeur) <= 1;
       return false;
     }
     if (e.nom === 'path' && (nom === 'fill' || nom === 'stroke') && valeur.startsWith('url(')) return URL_DEGRADE.test(valeur);
@@ -61,7 +67,32 @@ const degrades: ExtensionEcriture = {
   }
 };
 
+/**
+ * Etape 12 : une <image> integree, sous la racine ou un groupe (jamais dans <defs> ni <metadata>), et ses seuls attributs, chacun de
+ * sa forme exacte : les donnees en ligne d'un PNG, JPEG, GIF ou WebP, un cadre numerique, une matrice, un aspect, une opacite.
+ * Sur la racine, `xmlns:xlink` (l'espace de noms de `xlink:href`) ; le marqueur du modele est a l'extension `racine`.
+ */
+const images: ExtensionEcriture = {
+  nom: 'etape 12 : images',
+  element: e => (e.nom === 'image' ? e.profondeur >= 1 && e.parent !== 'defs' && e.parent !== 'metadata' : undefined),
+  attribut: (e, nom, valeur) => {
+    if (e.profondeur === 0) return nom === 'xmlns:xlink' ? valeur === 'http://www.w3.org/1999/xlink' : undefined;
+    if (e.nom !== 'image') return undefined;
+    switch (nom) {
+      case 'xlink:href': return /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(valeur);
+      case 'x': case 'y': return NOMBRE.test(valeur);
+      case 'width': case 'height': return NOMBRE.test(valeur) && Number(valeur) > 0;
+      case 'transform': return MATRICE.test(valeur);
+      case 'preserveAspectRatio': return /^(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max))(?: slice)?$/.test(valeur);
+      case 'opacity': return NOMBRE.test(valeur) && Number(valeur) < 1;
+      default: return false;
+    }
+  }
+};
+
 /** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images) ; vide a l'etape 0. */
 export const EXTENSIONS_ECRITURE: readonly ExtensionEcriture[] = [
-  degrades
+  racine,
+  degrades,
+  images
 ];
