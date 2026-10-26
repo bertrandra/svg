@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ecrireDessin, marquerProduction, marquerReperes, type DessinSvg } from '../engine/editionSvg.js';
 import {
-  cadreFixe, cadreTapis, constatsPreparation, feuillePartielle, gabaritDuTapis, planDuTapis, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
+  ajouterLiens, constatsPreparation, feuillePartielle, gabaritDuTapis, planPourChoix, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
   resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { archiveOperations, exportParOperation, nomsOperations, operationsPeintes } from '../export/operations.js';
@@ -69,7 +69,7 @@ export function usePreparation(dessin: DessinSvg, profil: ProfilProduction | nul
   return profil && etat?.profil === profil ? etat : null;
 }
 
-type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut' | 'poserOperation' | 'poserApercuMachine'>;
+type ActionsProduction = Pick<ActionsEditeur, 'poserProduction' | 'corrigerConstat' | 'exporterPourCricut' | 'fermerSuiteCricut' | 'poserOperation' | 'ajouterLiens' | 'poserApercuMachine'>;
 
 /**
  * Ce que « Ajuster » cadre en contexte de decoupe : le tapis entier tel que la toile le dessine, et le dessin s'il en deborde ; null
@@ -83,29 +83,30 @@ export function cadreDeVue(dessin: DessinSvg, production: ChoixProduction): Cadr
   return unionCadres(gabaritDuTapis(p, dessin, etendue).tapis, etendue);
 }
 
+/**
+ * Ce que « Ajuster au dessin » cadre : sur le tapis fixe (ADR-0039, le defaut depuis sa revision du 26 octobre 2026), le plan est le
+ * tapis, et le dessin seul est l'etendue de ses formes visibles ; null ailleurs (et pour un dessin vide), ou la vue cadre le plan
+ * comme avant.
+ */
+export function cadreDuDessin(dessin: DessinSvg, production: ChoixProduction): CadreTapis | null {
+  const p = resoudreProfil(production);
+  if (!p || p.recalage || p.procede === 'imprimer-decouper') return null;
+  return etendueVisible(dessin);
+}
+
 /** Ce que dit la feuille quand on la change : sa taille et sa place depuis le coin haut gauche du tapis. */
 export const phraseFeuille = (p: ProfilProduction): string => (feuillePartielle(p)
   ? 'Feuille de ' + texteTaille(p.feuille.l, p.feuille.h, p.unite) + ', à ' + texteMesure(p.feuille.x, p.unite) + ' du bord gauche et ' + texteMesure(p.feuille.y, p.unite) + ' du bord haut du tapis.'
   : 'Feuille : le tapis entier.');
 
 /** Ce que dit le recalage automatique quand on le change (ADR-0039). */
-export const phraseRecalage = (actif: boolean): string => (actif
-  ? 'Recalage automatique activé : le tapis suit le dessin, que Design Space posera dans son coin haut gauche.'
-  : 'Recalage automatique désactivé : le plan de travail est le tapis, les formes restent où vous les posez, et l’export garde leur place. Ctrl+Z rend l’ancien plan.');
+export const phraseRecalage = (actif: boolean, planPose = false): string => (actif
+  ? 'Recalage automatique activé : le tapis suit le dessin, que Design Space posera dans son coin haut gauche. Le plan de travail reste le tapis : « Ajuster le plan de travail » le ramène au dessin.'
+  // Ctrl+Z ne rend un ancien plan que si decocher en a pose un : un plan deja de la taille du tapis reste tel quel.
+  : 'Recalage automatique désactivé : le plan de travail est le tapis, les formes restent où vous les posez, et l’export garde leur place.' + (planPose ? ' Ctrl+Z rend l’ancien plan.' : ''));
 
-/**
- * Le plan de travail que demande un nouveau choix (ADR-0039), ou null quand il ne change pas. Desactiver le recalage pose le plan sur
- * le tapis tel que la toile le montrait (rien ne bouge a l'ecran) ; sans recalage, changer de tapis lui donne la taille du nouveau, au
- * meme coin. Print Then Cut n'a pas de tapis a l'ecran : le plan reste.
- */
-export function planPourChoix(dessin: DessinSvg, avant: ChoixProduction, apres: ChoixProduction): DessinSvg | null {
-  const p = resoudreProfil(apres);
-  if (!p || p.recalage || p.procede === 'imprimer-decouper') return null;
-  const avantFixe = avant.contexte === 'cricut' && avant.recalage === false;
-  const cadre = avantFixe ? cadreFixe(p, dessin.vb) : cadreTapis(p, etendueVisible(dessin) ?? { x: dessin.vb[0], y: dessin.vb[1] });
-  const d = planDuTapis(dessin, cadre);
-  return d === dessin ? null : d;
-}
+// Le plan de travail que demande un nouveau choix vit dans le moteur (engine/preparation/tapis.ts) : l'ouverture s'en sert aussi.
+export { planPourChoix } from '../engine/preparation.js';
 
 // L'unite choisie se retient d'une ouverture a l'autre : dans le stockage injecte s'il y en a un, sinon le temps de la page.
 let uniteDeSession: UniteLongueur | null = null;
@@ -192,8 +193,8 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       s.poserSuiteCricut(null);
       if (plan) appliquer(d => planPourChoix(d, avant, n) ?? d);
       if (n.contexte === 'cricut') retenirUnite(lire().stockage, n.unite);
-      const recalageAvant = avant.contexte === 'cricut' && avant.recalage !== false, recalageApres = n.contexte === 'cricut' && n.recalage !== false;
-      if (avant.contexte === 'cricut' && n.contexte === 'cricut' && recalageAvant !== recalageApres && avant.tapis === n.tapis && avant.procede === n.procede) { dire(phraseRecalage(recalageApres)); return; }
+      const recalageAvant = avant.contexte === 'cricut' && avant.recalage === true, recalageApres = n.contexte === 'cricut' && n.recalage === true;
+      if (avant.contexte === 'cricut' && n.contexte === 'cricut' && recalageAvant !== recalageApres && avant.tapis === n.tapis && avant.procede === n.procede) { dire(phraseRecalage(recalageApres, plan !== null)); return; }
       if (avant.contexte === 'cricut' && n.contexte === 'cricut' && avant.tapis === n.tapis && JSON.stringify(avant.feuille) !== JSON.stringify(n.feuille)) {
         const p = resoudreProfil(n);
         if (p) { dire(phraseFeuille(p)); return; }
@@ -251,6 +252,19 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
       if (!r.changees) { dire(r.phrase); return; }
       appliquer(d => poserOperation(d, cibles, operation, p.procede).dessin);
       dire(r.phrase + ' Ctrl+Z annule.');
+    },
+    ajouterLiens: (reglages, ids) => {
+      const { dessin, production, sel, lisserBooleens } = lire();
+      const p = resoudreProfil(production);
+      if (!p || !operationsApplicables(p.procede)) { dire('Les liens se posent en contexte Cricut, sur les formes à couper.'); return false; }
+      const cibles = ids ?? sel;
+      if (!cibles.length) { dire('Choisissez d’abord une forme à couper.'); return false; }
+      const r = ajouterLiens(dessin, cibles, { ...reglages, lisser: lisserBooleens }, p.procede);
+      // Une forme sans ilot ne change pas : pas d'entree d'historique pour rien, mais la raison dite.
+      if (!r.liens) { dire(r.phrase); return false; }
+      appliquer(() => r.dessin);
+      dire(r.phrase + ' Ctrl+Z les retire.');
+      return true;
     },
     poserApercuMachine: a => {
       const avant = lire().apercuMachine;

@@ -11,16 +11,21 @@ interface Proprietes {
   raison?: string | null;
   /** L'infobulle quand le bouton est actif (le geste et son raccourci). */
   aide?: string;
+  /**
+   * Le nom accessible d'un bouton sans texte visible (une icone seule). Inactif, son infobulle le redit avant la raison : a la
+   * souris, l'infobulle est le seul endroit ou le libelle se lit.
+   */
+  etiquette?: string;
   className?: string;
   onClick: () => void;
   children: ReactNode;
 }
 
-export function BoutonRaison({ raison, aide, className, onClick, children }: Proprietes) {
+export function BoutonRaison({ raison, aide, etiquette, className, onClick, children }: Proprietes) {
   const ac = useActions(), idRaison = useId();
   return (
     <>
-      <button type="button" className={className} title={raison ?? aide} aria-disabled={raison ? true : undefined} aria-describedby={raison ? idRaison : undefined}
+      <button type="button" className={className} title={raison ? (etiquette ? etiquette + ' — ' + raison : raison) : aide} aria-label={etiquette} aria-disabled={raison ? true : undefined} aria-describedby={raison ? idRaison : undefined}
         onClick={() => { if (raison) ac.dire(raison + '.'); else onClick(); }}>{children}</button>
       {raison ? <span id={idRaison} className="sr-only">{raison}</span> : null}
     </>

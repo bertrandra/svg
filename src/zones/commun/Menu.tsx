@@ -176,7 +176,13 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(true); }
     // Tab sort d'un menu d'elements ; dans un contenu libre (les autres formats, leurs options), il va d'un controle a l'autre, et le
     // menu ne se ferme que quand le focus le quitte (ci-dessous). Avant, Tab fermait tout : ce contenu ne s'atteignait pas au clavier.
-    else if (e.key === 'Tab' && (e.target as HTMLElement).closest('[role="menu"]')) fermer(false);
+    // Un menu a rubriques peut porter un contenu libre entre deux rubriques (les autres formats du menu Fichier) : Tab, depuis un
+    // element, y entre s'il en vient un apres lui, au lieu de fermer ; sans lui, ce contenu ne s'atteignait qu'a la souris.
+    else if (e.key === 'Tab' && (e.target as HTMLElement).closest('[role="menu"]')) {
+      const libre = e.shiftKey ? null : premierLibreApres(panneau.current, e.target as HTMLElement);
+      if (libre) { e.preventDefault(); focusAuClavier(libre); }
+      else fermer(false);
+    }
   };
   const quitte = (e: FocusEvent<HTMLDivElement>) => {
     const vers = e.relatedTarget as Node | null;
@@ -259,4 +265,16 @@ function ListeElements({ titre, elements, fermer }: { titre: string; elements: r
       </div>
     ))}</div>
   );
+}
+
+/** Le premier controle tabulable d'un contenu libre qui suit `depuis` dans le panneau (ordre du document), ou null. */
+function premierLibreApres(panneau: HTMLElement | null, depuis: HTMLElement): HTMLElement | null {
+  const candidats = panneau?.querySelectorAll<HTMLElement>('.menu-libre :is(button, summary, select, input, a[href]):not([disabled]):not([tabindex="-1"])') ?? [];
+  for (const c of candidats) {
+    // Un controle d'un <details> ferme n'est pas visible : seul son resume se tabule.
+    const ferme = c.closest('details:not([open])');
+    if (ferme && c.parentElement !== ferme) continue;
+    if (depuis.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING) return c;
+  }
+  return null;
 }

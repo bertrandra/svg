@@ -11,6 +11,12 @@ Les témoins sont fabriqués par les mêmes fonctions que l’éditeur (export C
 ordinaire quand l’essai porte sur ce que l’export refuse) et un test vérifie qu’ils ne dérivent pas
 (`tests/unit/export/temoins-cricut.test.ts`).
 
+**Le tapis fixe est le défaut** (ADR-0039, révision du 26 octobre 2026) : « Exporter pour Cricut », sans rien régler, écrit
+un fichier à la taille du tapis avec un cadre de repérage par couleur, comme le **témoin 10**, qui est donc le cas que la
+plupart des fichiers suivront et l’essai à faire en premier. Les témoins 1 à 9 jugent autre chose que la place sur le tapis
+(taille, trous, couleurs, trait, stylo) : ils sont écrits la case **« Recalage automatique » cochée**, à la taille du dessin et
+sans cadre, comme avant la révision, et leurs octets n’ont pas changé.
+
 ## Ce qu’il faut
 
 - Une Cricut Maker, Maker 3, Explore Air 2 ou Explore 3 (la Joy pour les valeurs de ses tapis), un tapis
@@ -61,7 +67,8 @@ tracé composé : à gauche en **pair-impair** (`fill-rule="evenodd"`, les deux 
 droite **selon le sens du tracé** (`nonzero`, le cercle intérieur tourne à l’envers).
 
 Ce qu’on vérifie : le constat « pair-impair » du panneau (aujourd’hui un conseil marqué « à tester ») et la
-correction « Réécrire les trous ».
+correction « Réécrire les trous ». Depuis l’ADR-0040, le panneau dit aussi « Le centre de 2 formes tombera à la
+découpe » (le constat des îlots) : c’est attendu, le centre de chaque anneau tombe.
 
 À observer : dans Design Space, chaque anneau est-il un anneau (le trou vide, découpé) ? Ou l’anneau de gauche
 devient-il un disque plein, ou deux disques ? Faire la coupe : le trou tombe-t-il ?
@@ -114,7 +121,8 @@ de large.
 
 Ce qu’on vérifie : `cricut.tapis.12x12.zoneUtile.largeur` et `cricut.tapis.12x12.zoneUtile.hauteur` (aujourd’hui
 11,5 po), `cricut.tapis.12x24.zoneUtile.largeur`, `cricut.tapis.12x24.zoneUtile.hauteur`, et ce que Design Space fait
-d’un dessin dont les pièces tiennent mais pas l’ensemble (constat « dépassement », marqué « à vérifier »).
+d’un dessin dont les pièces tiennent mais pas l’ensemble (constat « dépassement », marqué « à vérifier », la case « Recalage
+automatique » cochée ; sur le tapis fixe du défaut, c’est le constat « hors du tapis » qui dit les pièces hors de la zone utile).
 
 À observer : au moment de « Créer », sur le tapis 12 × 12 po, quelles bandes Design Space accepte-t-il ? Refuse-t-il
 avec un message (lequel) ? Sur le tapis 12 × 24 po, même question. Essayez aussi une bande de 11,5 po **debout** si
@@ -226,16 +234,18 @@ Ce qu’on vérifie : `designSpace.operations.superposition`, `designSpace.opera
 >
 >
 
-## Témoin 10 — une feuille partielle, sans recalage automatique
+## Témoin 10 — une feuille partielle, le tapis fixe (le cas par défaut)
 
-Fichier : `temoin-10-feuille-partielle.svg` (12 × 12 po, le tapis entier), écrit par « Exporter pour Cricut » avec la case
-**« Recalage automatique » décochée** (ADR-0039) : un carré rouge de 1 po à 8 po du bord gauche et 6 po du bord haut du tapis, un
+Fichier : `temoin-10-feuille-partielle.svg` (12 × 12 po, le tapis entier), écrit par « Exporter pour Cricut » tel qu’il sort sans
+rien régler, la case **« Recalage automatique » décochée** (le défaut depuis la révision du 26 octobre 2026 de l’ADR-0039) : un
+carré rouge de 1 po à 8 po du bord gauche et 6 po du bord haut du tapis, un
 disque bleu de 1/2 po dont le bord gauche est à 2 po et le bord haut à 9 po. Sous les formes, **un cadre de repérage par couleur**
 (rouge, bleu), de la taille de la zone utile (11,5 × 11,5 po), un anneau fin d’environ 0,5 mm.
 
 Ce qu’on vérifie : `designSpace.position.rognage`, `designSpace.position.coin`, `designSpace.position.guide` et
 `designSpace.position.glisser` (le tableau des comportements ci-dessous), soit **la façon de couper à un endroit précis du
-tapis**, pour une feuille posée ailleurs qu’en haut à gauche.
+tapis**, pour une feuille posée ailleurs qu’en haut à gauche. C’est ce que fait tout export Cricut par défaut : si l’essai échoue,
+la carte « Dans Design Space » et le mode d’emploi de l’archive sont à revoir avant tout le reste.
 
 À observer :
 
@@ -297,7 +307,7 @@ Ils ne sont pas des nombres, mais le panneau s’appuie sur eux ; chacun est dit
 | Design Space ignore l’opacité (le papier est opaque de toute façon) | « opacité » (bloquant) | — | |
 | `fill-rule="evenodd"` est lu comme dans un navigateur | « pair-impair » (conseil) | 2 | |
 | Un tracé plein non fermé se coupe mal (la lame ne revient pas au départ) | « tracé ouvert » | — | |
-| Des pièces qui tiennent mais un ensemble qui déborde : Design Space les répartit | « dépassement » | 5 | |
+| Des pièces qui tiennent mais un ensemble qui déborde : Design Space les répartit | « dépassement » (case « Recalage automatique » cochée) | 5 | |
 | Une forme blanche posée sur une autre est découpée dans du papier blanc, pas comme un trou | « trou superposé » | — | |
 | Les attributs `data-ed-*` de la racine sont ignorés sans gêne | — | tous | |
 | Le type de ligne (couper, dessiner, rainer) ne se lit pas dans le SVG : il se règle après l’import | aide du panneau | — | |
@@ -309,8 +319,8 @@ Ils ne sont pas des nombres, mais le panneau s’appuie sur eux ; chacun est dit
 | `designSpace.operations.attacher` : « Attacher » garde le trait du stylo à sa place sur la pièce découpée | carte « Dans Design Space » | 9 | |
 | `designSpace.operations.groupes` : les groupes « a-couper » et « a-ecrire » du fichier combiné restent des groupes nommés | fichier combiné | 9 | |
 | Les attributs `data-ed-operation` d’un `<path>` (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |
-| `designSpace.position.rognage` : à l’import, Design Space rogne le SVG à ses formes (le blanc autour ne compte pas) | export sans recalage : le cadre de repérage | 10 | |
-| `designSpace.position.coin` : un ensemble attaché se pose dans le coin haut gauche de la zone de coupe, à sa place relative | export sans recalage, carte « Dans Design Space » | 10 | |
+| `designSpace.position.rognage` : à l’import, Design Space rogne le SVG à ses formes (le blanc autour ne compte pas) | export par défaut (tapis fixe) : le cadre de repérage | 10 | |
+| `designSpace.position.coin` : un ensemble attaché se pose dans le coin haut gauche de la zone de coupe, à sa place relative | export par défaut (tapis fixe), carte « Dans Design Space » | 10 | |
 | `designSpace.position.guide` : un cadre passé en « Guide » et attaché garde la place des formes sans être découpé | carte « Dans Design Space » | 10 | |
 | `designSpace.position.glisser` : faire glisser le dessin sur l’aperçu du tapis le fait couper à cet endroit | carte « Dans Design Space » (le repli) | 10 | |
-| Les attributs `data-ed-recalage` et `data-ed-feuille` de la racine (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |
+| Les attributs `data-ed-recalage` (« oui », la case cochée) et `data-ed-feuille` de la racine (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |

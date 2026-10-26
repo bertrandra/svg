@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { lireDessin, modifier, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
+import { boiteDe, lireDessin, modifier, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { stockageMemoire, type Stockage } from '../../../src/io/stockage.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
 import { CLE_VERSIONS, type Version } from '../../../src/zones/session.js';
+import { etendueVisible } from '../../../src/engine/preparation.js';
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
   + '<path d="M0 0L10 0L10 10Z" fill="#c81e28"/><path d="M20 20L40 20L40 40Z" fill="#1428a0"/></svg>';
@@ -32,6 +33,7 @@ function monter(stockage: Stockage | null = null, svg = SVG, modele: 'plat' | 'r
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
     poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(),
+    poserVerrouProportions: u => { etat.verrouProportions = typeof u === 'function' ? u(etat.verrouProportions ?? false) : u; },
     poserModele: u => { etat.modele = typeof u === 'function' ? u(etat.modele ?? 'plat') : u; },
     poserContexte: u => { etat.contexte = typeof u === 'function' ? u(etat.contexte ?? null) : u; },
     poserDeplies: u => { deplies = typeof u === 'function' ? u(deplies) : u; },
@@ -217,10 +219,18 @@ describe('creerActions : le geste de fin et Ctrl+S', () => {
     const m = monter();
     m.actions.ajuster();
     expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(1);
+    // Le tapis fixe, le defaut (ADR-0039, revision du 26 octobre 2026) : « Ajuster » cadre le tapis, pose au coin du plan.
     m.etat.production = { contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' };
     m.actions.ajuster();
-    // Le tapis de 12 po (1 152 unites) cale sa zone utile de 11,5 po sur le coin du dessin : 24 unites de marge.
-    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[0]?.[0]).toMatchObject({ l: 1152, h: 1152 });
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[0]?.[0]).toMatchObject({ x: m.etat.dessin.vb[0], y: m.etat.dessin.vb[1], l: 1152, h: 1152 });
+    // Le plan etant le tapis, « Ajuster au dessin » cadre les formes visibles.
+    m.actions.ajusterAuDessin();
+    expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[1]?.[0]).toEqual(etendueVisible(m.etat.dessin));
+    // Avec le recalage coche, le tapis cale sa zone utile de 11,5 po sur le coin du dessin ; « Ajuster au dessin » cadre le plan.
+    m.etat.production = { ...m.etat.production, recalage: true };
+    m.actions.ajuster();
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[2]?.[0]).toMatchObject({ l: 1152, h: 1152 });
     m.actions.ajusterAuDessin();
     expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(2);
   });
@@ -511,5 +521,41 @@ describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)'
     etat.formeSeule = forme;
     actions.poserOutil('points');
     expect(setters.poserOutilBrut).toHaveBeenCalledWith('points');
+  });
+});
+
+describe('creerActions : conserver les proportions', () => {
+  it('coupe par defaut : aucune proportion a garder ; pose ou coupe, le dit', () => {
+    const { actions, etat, messages, annonces } = monter();
+    etat.sel = ['f2'];
+    expect(actions.proportionsDe(etat.sel, boiteDe(etat.dessin, etat.sel))).toBeNull();
+    actions.poserVerrouProportions(true);
+    expect(etat.verrouProportions).toBe(true);
+    expect(messages.at(-1)).toBe('Proportions conservées.');
+    expect(annonces.at(-1)).toBe('Proportions conservées.');
+    actions.poserVerrouProportions(false);
+    expect(etat.verrouProportions).toBe(false);
+    expect(messages.at(-1)).toBe('Proportions libres.');
+    expect(actions.proportionsDe(etat.sel, boiteDe(etat.dessin, etat.sel))).toBeNull();
+  });
+
+  it('garde la proportion du moment ou le verrou a ete pose, puis celle d une nouvelle selection', () => {
+    const { actions, etat } = monter();
+    etat.sel = ['f2'];
+    actions.poserVerrouProportions(true);
+    const ref = actions.proportionsDe(['f2'], boiteDe(etat.dessin, ['f2']));
+    expect(ref).toMatchObject({ l: 20, h: 20 });
+    // Une taille de la meme proportion : la meme reference, pas une nouvelle tiree de la boite qu'a laissee l'arrondi.
+    expect(actions.proportionsDe(['f2'], { x: 20, y: 20, l: 60, h: 60 })).toBe(ref);
+    expect(actions.proportionsDe(['f1', 'f2'], boiteDe(etat.dessin, ['f1', 'f2']))).toMatchObject({ l: 40, h: 40 });
+  });
+
+  it('ne s applique pas a une ligne (un cote nul) et ne leve rien', () => {
+    const LIGNE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 50H80" stroke="#000" fill="none"/></svg>';
+    const { actions, etat } = monter(null, LIGNE);
+    etat.sel = ['f1'];
+    expect(() => actions.poserVerrouProportions(true)).not.toThrow();
+    expect(actions.proportionsDe(['f1'], boiteDe(etat.dessin, ['f1']))).toBeNull();
+    expect(actions.proportionsDe([], null)).toBeNull();
   });
 });

@@ -33,8 +33,8 @@ export interface ProfilProduction {
   /** La largeur du trait du stylo, en unites du plan (ADR-0022) : l'ecart des hachures, l'epaisseur d'un pourtour. */
   readonly largeurStylo: number;
   /**
-   * Le recalage automatique (ADR-0039) : vrai, le tapis suit le coin haut gauche du dessin (le comportement d'avant) ; faux, le plan
-   * est le tapis, fixe, et l'export garde la place des formes sur lui.
+   * Le recalage automatique (ADR-0039) : vrai, le tapis suit le coin haut gauche du dessin (le comportement d'avant l'ADR-0039) ;
+   * faux, le defaut depuis sa revision du 26 octobre 2026, le plan est le tapis, fixe, et l'export garde la place des formes sur lui.
    */
   readonly recalage: boolean;
   /** La feuille sur le tapis, depuis son coin haut gauche, en unites du plan : le tapis entier quand on n'en a pas choisi. */
@@ -94,14 +94,15 @@ export function normaliserChoix(choix: ChoixProduction): ChoixProduction {
   const materiau = materiauChoisi?.disponible ? materiauChoisi.id : premierDisponible(CRICUT)?.id ?? choix.materiau;
   const procede = machine.procedes.includes(choix.procede) ? choix.procede : 'decoupe';
   const unite: UniteLongueur = choix.unite === 'mm' ? 'mm' : 'in';
-  // Seul `false` dit quelque chose (ADR-0039) : toute autre valeur est le recalage d'avant, et ne se garde pas.
-  const fixe = choix.recalage === false;
+  // Seul `true` dit quelque chose (ADR-0039, revision du 26 octobre 2026) : toute autre valeur, l'ancien `false` compris, est le
+  // tapis fixe du defaut, et ne se garde pas.
+  const recale = choix.recalage === true;
   // La feuille tient sur le tapis choisi, au centieme ; le tapis entier ne s'ecrit pas.
   const support = CRICUT.tapis.find(t => t.id === tapis);
   const feuille = support && choix.feuille ? feuilleSur(choix.feuille, unitesDePouces(support.largeur.valeur), unitesDePouces(support.hauteur.valeur)) : null;
   const memeFeuille = feuille === null ? !('feuille' in choix) : choix.feuille !== undefined && memesFeuilles(feuille, choix.feuille);
-  if (machine.id === choix.machine && tapis === choix.tapis && materiau === choix.materiau && procede === choix.procede && unite === choix.unite && ('recalage' in choix) === fixe && memeFeuille) return choix;
-  return { contexte: 'cricut', machine: machine.id, tapis, materiau, procede, unite, ...(fixe ? { recalage: false as const } : {}), ...(feuille ? { feuille } : {}) };
+  if (machine.id === choix.machine && tapis === choix.tapis && materiau === choix.materiau && procede === choix.procede && unite === choix.unite && ('recalage' in choix) === recale && memeFeuille) return choix;
+  return { contexte: 'cricut', machine: machine.id, tapis, materiau, procede, unite, ...(recale ? { recalage: true as const } : {}), ...(feuille ? { feuille } : {}) };
 }
 
 /** Le profil resolu d'un choix, ou null pour « Generique » (qui ne juge rien). */
@@ -124,7 +125,7 @@ export function resoudreProfil(brut: ChoixProduction): ProfilProduction | null {
     noeudsParForme: seuils.noeudsParForme.valeur,
     printThenCut: ptc ? { l: unitesDePouces(ptc.largeurMax.valeur), h: unitesDePouces(ptc.hauteurMax.valeur), fondPerdu: unitesDePouces(ptc.fondPerdu.valeur), resolution: ptc.resolution.valeur } : null,
     largeurStylo: unitesDePouces(CRICUT.stylo?.largeur.valeur ?? 0.4 / 25.4),
-    recalage: choix.recalage !== false,
+    recalage: choix.recalage === true,
     feuille: choix.feuille ?? { x: 0, y: 0, l: unitesDePouces(tapis.largeur.valeur), h: unitesDePouces(tapis.hauteur.valeur) }
   };
 }
@@ -133,8 +134,8 @@ export function resoudreProfil(brut: ChoixProduction): ProfilProduction | null {
 export function marqueDeChoix(brut: ChoixProduction): MarqueProduction | null {
   const choix = normaliserChoix(brut);
   if (choix.contexte !== 'cricut') return null;
-  // Le recalage desactive (ADR-0039) s'ecrit dans le document, seulement hors du defaut : un dessin d'avant garde ses octets.
-  return { contexte: 'cricut', machine: choix.machine, tapis: choix.tapis, materiau: choix.materiau, procede: choix.procede, unite: choix.unite, ...(choix.recalage === false ? { recalage: 'non' } : {}), ...(choix.feuille ? { feuille: texteFeuille(choix.feuille) } : {}) };
+  // Le recalage actif (ADR-0039, revision du 26 octobre 2026) s'ecrit dans le document, seulement hors du defaut (le tapis fixe).
+  return { contexte: 'cricut', machine: choix.machine, tapis: choix.tapis, materiau: choix.materiau, procede: choix.procede, unite: choix.unite, ...(choix.recalage === true ? { recalage: 'oui' } : {}), ...(choix.feuille ? { feuille: texteFeuille(choix.feuille) } : {}) };
 }
 
 /** La marque d'un profil resolu (celle que porte un fichier exporte pour la machine) : jamais le recalage, propre au document. */
@@ -149,8 +150,9 @@ export function choixDeMarque(marque: MarqueProduction | null | undefined): { ch
   const brut: ChoixMachine = {
     machine: marque.machine ?? CHOIX_CRICUT_DEFAUT.machine, tapis: marque.tapis ?? CHOIX_CRICUT_DEFAUT.tapis, materiau: marque.materiau ?? CHOIX_CRICUT_DEFAUT.materiau,
     procede: marque.procede === 'imprimer-decouper' || marque.procede === 'dessin-stylo' ? marque.procede : 'decoupe', unite: marque.unite === 'mm' ? 'mm' : 'in',
-    // Seule la valeur exacte « non » desactive le recalage (ADR-0039) ; toute autre se lit comme absente.
-    ...(marque.recalage === 'non' ? { recalage: false as const } : {})
+    // Seule la valeur exacte « oui » active le recalage (ADR-0039, revision du 26 octobre 2026) ; toute autre, l'ancienne « non »
+    // comprise, se lit comme absente : le tapis fixe du defaut, qui ne se reecrit pas.
+    ...(marque.recalage === 'oui' ? { recalage: true as const } : {})
   };
   const feuille = lireFeuille(marque.feuille);
   if (feuille) return { choix: normaliserChoix({ contexte: 'cricut', ...brut, feuille }) };

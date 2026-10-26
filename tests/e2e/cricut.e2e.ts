@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, boutonTelecharger, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, elementFichier, telechargerParFichier, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
@@ -112,20 +112,23 @@ describe('le contexte Cricut', () => {
     const page = await editeur();
     await choisirCricut(page);
     await attend(() => nombreDeConstats(page)).toBe(5);
-    const etapes: Array<[string, string]> = [
-      ['Contour en forme', '1 contour transformé en forme.'],
-      ['Redimensionner à la zone utile', 'Dessin réduit à'],
-      ['Fermer les tracés', '1 tracé fermé.'],
-      ['Fusionner les nuances', '1 nuance fusionnée'],
-      ['Épaissir', 'de 0,79 mm de chaque côté.']
+    // Le contour devenu forme est un anneau d'une autre couleur que son carre : son centre est un ilot (ADR-0040), un constat de
+    // plus que « Ajouter des liens » corrige a son tour.
+    const etapes: Array<[string, string, number]> = [
+      ['Contour en forme', '1 contour transformé en forme.', 0],
+      ['Redimensionner à la zone utile', 'Dessin réduit à', 1],
+      ['Fermer les tracés', '1 tracé fermé.', 1],
+      ['Fusionner les nuances', '1 nuance fusionnée', 1],
+      ['Ajouter des liens', '3 liens posés sur 1 îlot.', 1],
+      ['Épaissir', 'de 0,79 mm de chaque côté.', 1]
     ];
     let restant = 5;
-    for (const [bouton, phrase] of etapes) {
+    for (const [bouton, phrase, retires] of etapes) {
       const avant = await modifications(page);
       await corriger(page, bouton);
       await attend(() => dit(page)).toContain(phrase);
       expect(await modifications(page), bouton).toBe(avant + 1);
-      restant--;
+      restant -= retires;
       await attend(() => nombreDeConstats(page), 5000).toBe(restant);
     }
     await attend(() => dit(page)).toContain('Prêt à découper.');
@@ -141,6 +144,21 @@ describe('le contexte Cricut', () => {
   it('exporte un SVG a taille physique, sans trait ni opacite, une couleur par couche, qui se rouvre dans son contexte', async () => {
     const page = await editeur(PROPRE);
     await choisirCricut(page);
+    await panneau(page).locator('.pret').waitFor();
+    // Par defaut, le tapis est fixe (ADR-0039, revision du 26 octobre 2026) : le fichier a la taille du tapis, un cadre de reperage par
+    // couleur sous les formes, qui gardent leur place.
+    const fixe = (await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click())).octets.toString('utf8');
+    expect(/^<svg[^>]*>/.exec(fixe)?.[0]).toContain('viewBox="16.441 16.441 1152 1152" width="304.8mm" height="304.8mm"');
+    expect([...fixe.matchAll(/<path d="([^"]*)"/g)].map(m => m[1])).toEqual(['M40.441 40.441L1144.441 40.441L1144.441 1144.441L40.441 1144.441ZM42.441 42.441L42.441 1142.441L1142.441 1142.441L1142.441 42.441Z', 'M40.441 40.441L1144.441 40.441L1144.441 1144.441L40.441 1144.441ZM42.441 42.441L42.441 1142.441L1142.441 1142.441L1142.441 42.441Z', 'M48 48L240 48L240 240L48 240Z', 'M288 48L432 48L432 240L288 240Z']);
+    // La case cochee : plus de cadre ; le plan reste le tapis (cocher ne touche pas au dessin), et Ctrl+Z rend l'ancien plan : le
+    // fichier a alors la taille du dessin, l'export d'avant la revision.
+    await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).check();
+    await panneau(page).locator('.pret').waitFor();
+    const coche = (await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click())).octets.toString('utf8');
+    expect(/^<svg[^>]*>/.exec(coche)?.[0]).toContain('viewBox="16.441 16.441 1152 1152" width="304.8mm" height="304.8mm"');
+    expect(coche.match(/<path /g)).toHaveLength(2);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
     await panneau(page).locator('.pret').waitFor();
     const f = await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click());
     expect(f.nom).toBe('dessin-cricut.svg');
@@ -164,14 +182,22 @@ describe('le contexte Cricut', () => {
 
   it('garde le contexte dans le SVG telecharge ; en Generique, rien de plus', async () => {
     const page = await editeur(PROPRE);
-    const generique = await telecharger(page, () => boutonTelecharger(page).click());
+    const generique = await telecharger(page, () => telechargerParFichier(page));
     expect(generique.octets.toString('utf8')).not.toContain('data-ed-');
     await choisirCricut(page);
-    // En contexte Cricut, le bouton de la barre exporte pour la machine ; le SVG du dessin (avec son contexte) est sous « Autres formats ».
-    expect(await texteDe(boutonTelecharger(page))).toBe('Exporter pour Cricut');
-    const cricut = await telecharger(page, async () => { await ouvrirMenu(page, 'Autres formats'); await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click(); });
+    // En contexte Cricut, le menu Fichier ajoute l'export pour la machine apres « Télécharger le SVG », qui garde le contexte.
+    const elements = page.getByRole('menu', { name: 'Récupérer le dessin' }).getByRole('menuitem');
+    expect(await texteDe(await elementFichier(page, 'Exporter pour Cricut'))).toBe('Exporter pour Cricut');
+    const noms = await textesDe(elements);
+    expect([noms[0], noms.at(-1)]).toEqual(['Télécharger le SVG', 'Exporter pour Cricut']);
+    // Les autres formats n'ont plus de ligne « SVG » : le SVG du dessin a son element, en tete.
+    await page.locator('.menu-panneau details.autres-formats-repli > summary').click();
+    expect(await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).count()).toBe(0);
+    const cricut = await telecharger(page, () => page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click());
     const texte = cricut.octets.toString('utf8');
-    expect(texte).toContain(' width="480" height="288" data-ed-contexte="cricut"');
+    // Le plan est le tapis des le choix du contexte (ADR-0039, revision du 26 octobre 2026) ; la case decochee ne s'ecrit pas.
+    expect(texte).toContain(' viewBox="16.441 16.441 1152 1152" width="1152" height="1152" data-ed-contexte="cricut"');
+    expect(texte).not.toContain('data-ed-recalage');
     // Changer de contexte suffit a rendre le dessin : « Terminer » le rend (la fiche dit qu'il est pret) au lieu de fermer sans rien.
     await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await attend(() => page.locator('.accueil .message.neutre').count()).toBe(1);

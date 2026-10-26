@@ -64,6 +64,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   la boîte du tracé à deux coins, avec des réglages bornés qui ne sont que de la session ; la forme posée ne garde pas ses réglages ;
   le nom se lit sur la géométrie ; une forme neuve ajoute un modèle, une icône, une place dans `GROUPES_FORMES` et une ligne à la
   référence `formes-de-base`, jamais un nouveau SVG d'entrée (il changerait le corpus du fuzzing).
+- **Les proportions se verrouillent pour la session** : un bouton « Conserver les proportions » entre L et H (`zones/SectionPositionTaille.tsx`),
+  coupé par défaut et retenu jusqu'à la fermeture (`etatEditeur.ts`, jamais écrit) ; posé, le coin, les champs et Alt+flèches gardent la
+  proportion de la référence (`engine/proportions.ts`, pur : la boîte au moment du verrou ou du changement de sélection, gardée tant
+  que la boîte la respecte, pour qu'une suite de frappes ne dérive pas) et Maj libère le temps du geste ; coupé, Maj garde les
+  proportions comme avant ; une ligne (un côté nul) n'est pas contrainte.
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
 - **Une forme se prend par le calcul, pas par le DOM** (ADR-0029) : `engine/prise.ts` (pur, mémorisé par forme) rend les
@@ -292,15 +297,30 @@ npm run test:php     # les tests du site PHP (tests/php/)
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
   le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques. Millimètre par défaut, pouce retenu ;
   un point « à corriger » demande une confirmation, jamais un bloquant de plus.
-- **Le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039) : `ChoixMachine.recalage?: false` (case « Recalage
-  automatique », cochée par défaut : le gabarit suit le dessin, l'export d'avant à l'octet) ; décochée, le plan devient le tapis
-  (`planPourChoix`, une entrée d'historique), le tapis se fixe au coin du plan (`cadreFixe`, `gabaritDuTapis`), `hors-tapis` dit une
-  forme hors de la feuille ; `ChoixMachine.feuille?` (depuis le coin du tapis, absente pour le tapis entier, jeton `--feuille-tapis`) ;
-  `data-ed-recalage="non"` et `data-ed-feuille` sur la racine seulement hors du défaut, dans le projet, jamais dans un export ; sans
-  recalage, l'export pose le tapis pour plan et un cadre de repérage par couleur (`export/reperage.ts`), à attacher puis passer en
-  « Guide » (`DESIGN_SPACE_POSITION`, témoin 10, `aVerifier`) ; « Dupliquer sur la feuille » est pur (`engine/preparation/placement.ts` :
-  simple par boîtes, avancée sur les contours réels qui rend le meilleur des deux), par tranches d'essais dont `io/placement.ts`
-  mesure le temps, une seule entrée d'historique.
+- **Le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039, révisé le 26 octobre 2026 : le tapis fixe est le défaut) :
+  `ChoixMachine.recalage?: true` (case « Recalage automatique », décochée par défaut ; cochée, le gabarit suit le dessin et l'export est
+  celui d'avant à l'octet) ; sans recalage, le plan est le tapis (`engine/preparation/tapis.ts` : `planPourChoix` au choix du contexte,
+  une entrée d'historique ; `planDOuverture` dans l'état initial d'un fichier ouvert en Cricut, pas une modification ; un plan déjà de
+  la taille du tapis est gardé, sinon le dessin à 2 mm du coin de la zone utile ; Générique ne change rien), le tapis se fixe au coin
+  du plan (`cadreFixe`, `gabaritDuTapis`), `hors-tapis` dit une forme hors de la feuille, jamais déplacée en silence ;
+  `ChoixMachine.feuille?` (depuis le coin du tapis, absente pour le tapis entier, jeton `--feuille-tapis`) ; `data-ed-recalage="oui"`
+  (un ancien « non » se lit décoché et ne se réécrit pas) et `data-ed-feuille` sur la racine seulement hors du défaut, dans le projet,
+  jamais dans un export ; sans recalage, l'export pose le tapis pour plan et un cadre de repérage par couleur (`export/reperage.ts`),
+  à attacher puis passer en « Guide » (`DESIGN_SPACE_POSITION`, témoin 10, le cas par défaut, `aVerifier`) ; « Dupliquer sur la
+  feuille » est pur (`engine/preparation/placement.ts` : simple par boîtes, avancée sur les contours réels qui rend le meilleur des
+  deux), par tranches d'essais dont `io/placement.ts` mesure le temps, une seule entrée d'historique.
+- **Les liens des îlots se calculent, ils ne se dessinent pas** (ADR-0040) : un îlot est un anneau intérieur de la région peinte d'une
+  forme pleine à couper (ni à écrire, ni miette sous 0,5 mm, ni trou bouché par une forme de même couleur) ; `engine/preparation/liens.ts`
+  (pur, mémorisé par forme) pose `nombre` liens de `largeur` (2 mm et 3 par défaut, de 0,5 à 10 mm et de 1 à 12) au plus court, loin
+  des coins, rognés à la seule matière de leur polygone ; `ajouterLiens` est une entrée d'historique sur toutes les formes choisies ;
+  le constat `ilot` (à corriger, « Ajouter des liens » ou « Régler les liens… », `zones/PanneauLiens.tsx`) dit aussi qu'un autocollant
+  peut l'ignorer ; tant qu'on n'ajoute pas de lien, aucun octet ne bouge.
+- **L'aide est une icône, les documentations des pages livrées** : le menu Aide (`zones/AideEditeur.tsx`) est un point d'interrogation à
+  droite, avant Fichier ; il porte la visite, les raccourcis et les documentations que l'hôte pose (`zones/documentation.ts`,
+  `definirDocumentation` : la page et le site seulement, jamais l'embarquement), ouvertes dans un nouvel onglet (`noopener`) ; le guide
+  et le mode Cricut s'écrivent dans `outils/aide/` (texte, `src="img:<nom>"`, captures `images/*.webp` refaites à la main sur
+  l'application), `scripts/documentation.mjs` les rend d'un seul tenant dans `dist/aide/` (images et fontes en data: URI, aucune
+  requête), le site les sert dans `public/aide/` ; chaque page passe axe-core sans violation (`tests/e2e/documentation.e2e.ts`).
 - **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
   pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
   se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin

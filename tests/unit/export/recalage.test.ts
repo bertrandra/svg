@@ -1,6 +1,6 @@
-// L'export Cricut sans recalage automatique (ADR-0039) : le plan est le tapis, un cadre de reperage par couleur passe sous les formes,
-// les formes gardent leurs coordonnees. Avec le recalage (le defaut), l'export d'avant a l'octet. Les references neuves vivent dans
-// tests/fixtures/cricut-recalage/ ; elles se refont, relues, par :
+// L'export Cricut sans recalage automatique (ADR-0039), le defaut depuis sa revision du 26 octobre 2026 : le plan est le tapis, un
+// cadre de reperage par couleur passe sous les formes, les formes gardent leurs coordonnees. Avec le recalage coche, l'export d'avant
+// a l'octet. Les references du tapis fixe vivent dans tests/fixtures/cricut-recalage/ ; elles se refont, relues, par :
 //
 //   ACTUALISER_REFERENCES=1 npx vitest run tests/unit/export/recalage.test.ts
 
@@ -18,7 +18,8 @@ const DOSSIER = resolve(__dirname, '../../fixtures/cricut-recalage'), SVG = reso
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
 const lire = (t: string): DessinSvg => { const r = lireDessin(t); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const profil = (c: Partial<ChoixMachine> = {}): ProfilProduction => { const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', ...c }); if (!p) throw new Error('profil'); return p; };
-const FIXE = profil({ recalage: false });
+// Le defaut : le tapis fixe. Le recalage coche est l'ancien defaut, dont l'export ne change pas d'un octet.
+const FIXE = profil(), RECALE = profil({ recalage: true });
 
 /** Un dessin pose au milieu d'un tapis de 12 po (le plan est le tapis) : un carre rouge, un disque bleu, et un trait a ecrire. */
 const MILIEU = lire('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152">'
@@ -36,21 +37,22 @@ const reference = (nom: string, obtenu: string) => {
 const coupe = (d: DessinSvg, p: ProfilProduction): string => { const r = svgCricut(d, p); if ('erreur' in r) throw new Error(r.erreur); return r.svg; };
 const chemins = (s: string): string[] => [...s.matchAll(/<path d="([^"]*)"/g)].map(m => m[1] ?? '');
 
-describe('l export Cricut avec le recalage automatique', () => {
+describe('l export Cricut avec le recalage automatique coche', () => {
   it('est celui d avant, a l octet (la reference cricut-export, sans la regenerer)', () => {
     const entree = lire(readFileSync(resolve(SVG, 'cricut.svg'), 'utf8'));
-    expect(coupe(entree, profil())).toBe(readFileSync(resolve(SVG, 'cricut-export.attendu.svg'), 'utf8'));
+    expect(coupe(entree, RECALE)).toBe(readFileSync(resolve(SVG, 'cricut-export.attendu.svg'), 'utf8'));
+    expect(coupe(entree, profil({ recalage: true, unite: 'mm', machine: 'explore', tapis: '12x24' }))).toBe(readFileSync(resolve(SVG, 'cricut-export-mm.attendu.svg'), 'utf8'));
   });
 
   it('ne depend pas de la feuille : elle n est jamais ecrite dans un export', () => {
-    expect(coupe(SANS_TRAIT, profil({ feuille: { x: 96, y: 96, l: 480, h: 480 } }))).toBe(coupe(SANS_TRAIT, profil()));
-    expect(coupe(SANS_TRAIT, profil({ recalage: false, feuille: { x: 96, y: 96, l: 480, h: 480 } }))).toBe(coupe(SANS_TRAIT, FIXE));
+    expect(coupe(SANS_TRAIT, profil({ recalage: true, feuille: { x: 96, y: 96, l: 480, h: 480 } }))).toBe(coupe(SANS_TRAIT, RECALE));
+    expect(coupe(SANS_TRAIT, profil({ feuille: { x: 96, y: 96, l: 480, h: 480 } }))).toBe(coupe(SANS_TRAIT, FIXE));
   });
 });
 
-describe('l export Cricut sans recalage automatique', () => {
+describe('l export Cricut sans recalage automatique (le defaut)', () => {
   it('garde le tapis pour plan, un cadre de reperage par couleur sous les formes, et les coordonnees des formes', () => {
-    const avec = coupe(SANS_TRAIT, profil()), sans = coupe(SANS_TRAIT, FIXE);
+    const avec = coupe(SANS_TRAIT, RECALE), sans = coupe(SANS_TRAIT, FIXE);
     expect(sans).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 1152 1152" width="12in" height="12in" data-ed-contexte="cricut"/);
     expect(sans).not.toContain('data-ed-recalage');
     expect(sans).not.toContain('data-ed-feuille');
@@ -67,7 +69,7 @@ describe('l export Cricut sans recalage automatique', () => {
   });
 
   it('pose au stylo un cadre en trait par couleur de stylo', () => {
-    const r = svgPourStylo(MILIEU, profil({ recalage: false, procede: 'dessin-stylo' }));
+    const r = svgPourStylo(MILIEU, profil({ procede: 'dessin-stylo' }));
     if (r.erreur !== undefined) throw new Error(r.erreur);
     expect(r.svg).toContain('viewBox="0 0 1152 1152" width="12in" height="12in"');
     expect(chemins(r.svg)[0]).toBe('M24 24L1128 24L1128 1128L24 1128Z');
@@ -80,8 +82,15 @@ describe('l export Cricut sans recalage automatique', () => {
     if ('erreur' in r || r.genre !== 'mixte') throw new Error('mixte attendu');
     expect(r.combine).toMatch(/<g id="a-couper"><path d="M24 24L1128 24/);
     const lisezmoi = modeDEmploiOperations('essai', plat(d), FIXE, r);
-    expect(lisezmoi).toContain('Recalage automatique désactivé');
+    expect(lisezmoi).toContain('3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut)');
+    expect(lisezmoi).toContain('cochez « Recalage automatique » dans « Prêt pour Cricut »');
     expect(lisezmoi).toContain('font 12 × 12 po');
+    // Avec la case cochee, le mode d'emploi d'avant : ni cadre ni tapis fixe.
+    const coche = exportParOperation(d, RECALE);
+    if ('erreur' in coche || coche.genre !== 'mixte') throw new Error('mixte attendu');
+    const avant = modeDEmploiOperations('essai', plat(d), RECALE, coche);
+    expect(avant).toContain('3. Sélectionnez les deux et « Attachez »-les');
+    expect(avant).not.toMatch(/Tapis fixe|Recalage automatique/);
     reference('couper-ecrire-fixe-combine.attendu.svg', r.combine);
     reference('couper-ecrire-fixe-lisezmoi.attendu.txt', lisezmoi);
   });

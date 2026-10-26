@@ -109,16 +109,16 @@ function Voile() {
   return tiroir ? <div className="voile" aria-hidden="true" onClick={() => ac.poserTiroir(null)} /> : null;
 }
 
-function etatParDefaut(outil: Outil, nTrace: number, nSel: number, regle: RegleZone): string {
+function etatParDefaut(outil: Outil, nTrace: number, nSel: number, regle: RegleZone, verrouProportions: boolean): string {
   if (estOutilZone(outil)) return etatOutilZone(outil, regle, nTrace);
   if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.';
   if (FORMES.has(outil)) return nomOutilForme(outil as OutilForme) + ' : glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée · F : autres formes.';
-  if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : proportions)' : '');
+  if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : ' + (verrouProportions ? 'librement' : 'proportions') + ')' : '');
   return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.';
 }
 
 function BarreEtat() {
-  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement, regleZone } = useInterface(), ac = useActions();
+  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement, regleZone, verrouProportions } = useInterface(), ac = useActions();
   const telephone = useTelephone(), doigt = useTactile();
   return (
     <footer className="editeur-etat">
@@ -128,7 +128,7 @@ function BarreEtat() {
       </span>
       {/* Le fil d'Ariane, seulement dans un groupe (ADR-0012, annexe 6 §2) : il vient avant le message, qui peut passer a la ligne. */}
       <FilAriane />
-      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length, regleZone), doigt)}</span>
+      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length, regleZone, verrouProportions), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
       {/* L'etat que l'hote annonce (le site, ADR-0030) : pas une region vocale, la phrase qui l'accompagne passe par la region unique. */}

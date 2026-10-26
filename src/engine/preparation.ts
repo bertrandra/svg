@@ -12,6 +12,7 @@ export {
   type Constat, type CodeConstat, type CodeCorrection, type Gravite
 } from './preparation/constats.js';
 export { corrigerPreparation, type ResultatCorrection } from './preparation/corrections.js';
+export { planPourChoix, planDOuverture } from './preparation/tapis.js';
 export { couchesDe, etendueVisible, formesPeintes, tientDans, type Couche } from './preparation/mesures.js';
 export { finesseDe, AIRE_MIN, POINTS_MAX_MESURE, type Finesse } from './preparation/finesse.js';
 export { silhouetteDe, regionPeinte, unirRegions } from './preparation/silhouette.js';
@@ -20,6 +21,10 @@ export {
   operationProposee, operationDe, operationsApplicables, partagerOperations, compterOperations, operationsMelees, poserOperation, phraseOperation,
   operationsAEcrire, sansOperation, type Operations, type ResultatOperation
 } from './preparation/operations.js';
+export {
+  ajouterLiens, ilotsDe, ilotsQuiTombent, bornerLiens, phraseLiens, LIENS_DEFAUT, LARGEUR_LIEN_DEFAUT, LARGEUR_LIEN_MIN, LARGEUR_LIEN_MAX, NOMBRE_LIENS_DEFAUT, NOMBRE_LIENS_MIN, NOMBRE_LIENS_MAX,
+  ILOT_AIRE_MIN, type OptionsLiens, type Ilot, type ResultatLiens
+} from './preparation/liens.js';
 export {
   placerSurFeuille, preparerPlacement, avancerPlacement, finirPlacement, posesDe, phrasePlacement, matriceQuart, PLACEMENT_MAX, ESPACEMENT_DEFAUT, MARGE_DEFAUT,
   type OptionsPlacement, type Optimisation, type EtatPlacement, type ResultatPlacement, type Pose, type QuartDeTour

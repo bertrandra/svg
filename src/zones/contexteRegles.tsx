@@ -9,13 +9,14 @@ import { ajouterRepere, deplacerRepere, effacerReperes, nombreReperes, supprimer
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { texteValeur, uniteRegle, type UniteRegle } from './graduations.js';
 import { pluriel } from '../util/texte.js';
+import { bornerLiens, LIENS_DEFAUT, type OptionsLiens } from '../engine/preparation.js';
 
 /** Un repere designe : son axe et sa valeur (au millieme, celle du dessin). */
 export interface RepereDesigne { readonly axe: AxeRepere; readonly valeur: number }
 
 /** Le panneau flottant ouvert sur la toile : les reperes, ou une repetition de la selection. */
-/** `feuille` : dupliquer la selection sur la feuille du tapis, en contexte Cricut (ADR-0039). */
-export type PanneauOutils = 'reperes' | 'grille' | 'radiale' | 'symetrie' | 'feuille' | null;
+/** `feuille` : dupliquer la selection sur la feuille du tapis, en contexte Cricut (ADR-0039) ; `liens` : les liens des ilots (ADR-0040). */
+export type PanneauOutils = 'reperes' | 'grille' | 'radiale' | 'symetrie' | 'feuille' | 'liens' | null;
 
 export interface EtatRegles {
   /** Les regles en haut et a gauche de la toile (un reglage de la session, cache par defaut). */
@@ -35,6 +36,8 @@ export interface EtatRegles {
   readonly unite: UniteRegle;
   /** La valeur d'un repere qu'on tire ou qu'on glisse, ecrite pres du pointeur (en px depuis le coin de la toile). */
   readonly etiquette: EtiquetteRepere | null;
+  /** Les reglages des liens des ilots (ADR-0040) : de la session, jamais ecrits ; 2 mm et 3 par ilot au depart. */
+  readonly liens: OptionsLiens;
 }
 
 export interface EtiquetteRepere { readonly x: number; readonly y: number; readonly texte: string }
@@ -56,6 +59,7 @@ export interface ActionsRegles {
   poserTirage: (r: RepereDesigne | null) => void;
   ouvrir: (p: PanneauOutils, focus?: RepereDesigne | null) => void;
   poserEtiquette: (e: EtiquetteRepere | null) => void;
+  poserLiens: (o: OptionsLiens) => void;
 }
 
 const ContexteEtat = createContext<EtatRegles | null>(null);
@@ -90,6 +94,7 @@ export function FournisseurRegles({ children }: { children: ReactNode }) {
   const [panneau, poserPanneau] = useState<PanneauOutils>(null);
   const [focusRepere, poserFocus] = useState<RepereDesigne | null>(null);
   const [etiquette, poserEtiquette] = useState<EtiquetteRepere | null>(null);
+  const [liens, poserLiens] = useState<OptionsLiens>(LIENS_DEFAUT);
   const unite = useMemo(() => uniteRegle(ui.profil?.unite ?? null), [ui.profil]);
   // Un repere choisi qui n'existe plus (annule, efface) ne l'est plus.
   const reperes = mo.dessin.reperes;
@@ -129,12 +134,13 @@ export function FournisseurRegles({ children }: { children: ReactNode }) {
       choisir: r => poserChoisi(r),
       poserTirage: r => poserTirage(r),
       ouvrir: (p, focus = null) => { poserPanneau(p); poserFocus(focus); },
-      poserEtiquette
+      poserEtiquette,
+      poserLiens: o => poserLiens(bornerLiens(o))
     };
   });
   const etat = useMemo<EtatRegles>(
-    () => ({ regles, reperesVisibles, verrouilles, choisi: choisiValide, tirage, panneau, focusRepere, unite, etiquette }),
-    [regles, reperesVisibles, verrouilles, choisiValide, tirage, panneau, focusRepere, unite, etiquette]
+    () => ({ regles, reperesVisibles, verrouilles, choisi: choisiValide, tirage, panneau, focusRepere, unite, etiquette, liens }),
+    [regles, reperesVisibles, verrouilles, choisiValide, tirage, panneau, focusRepere, unite, etiquette, liens]
   );
   return (
     <ContexteVerbes.Provider value={verbes}>

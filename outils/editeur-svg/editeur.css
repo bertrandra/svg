@@ -73,7 +73,7 @@ button.pastille-evenement[aria-pressed="true"]:hover:not(:disabled), button.past
 .editeur-barre .groupe, .editeur-barre-selection .groupe { display: flex; align-items: center; gap: 1px; padding: 0 var(--esp-s); border-right: 1px solid var(--filet); }
 .editeur-barre .groupe.fin, .editeur-barre-selection .groupe:last-child { border-right: 0; }
 /* Sous 1 440 px, la barre se resserre (groupes et menus plus serres, titre plus court) pour tenir sur une ligne a 1 280 px avec
-   « Télécharger le SVG » et le choix de machine ; au-dessous de 1 280, elle passe a la ligne comme avant. */
+   le choix de machine ; au-dessous de 1 280, elle passe a la ligne comme avant. */
 @media (max-width: 1439px) {
   .editeur-barre .groupe { padding: 0 var(--esp-xs); }
   .editeur-barre .menu-bouton.texte { padding: 0 var(--esp-s); }
@@ -276,6 +276,8 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .champs-feuille .champ-ligne > span:first-child { min-width: 9.5em; }
 .grille-2 .champ-ligne > span:first-child { min-width: 14px; }
 .grille-2 .champ-ligne input { width: 100%; min-width: 0; }
+/* Position et taille : X et Y, puis L, le verrou des proportions et H ; la colonne du milieu garde X au-dessus de L, Y de H. */
+.grille-taille { grid-template-columns: 1fr auto 1fr; align-items: center; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
 .nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet-fort); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
@@ -382,12 +384,17 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .ligne-export-geste { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs); }
 .ligne-export .aide { margin: 0; font-size: var(--texte-petit); color: var(--encre-douce); }
 @media (max-width: 480px) { .ligne-export { grid-template-columns: minmax(0, 1fr); } }
-/* Recuperer le fichier (la fin du parcours) : le geste du moment et son chevron « Autres formats », en tete du groupe Fichier,
-   qui se range a droite meme quand il passe a la ligne. */
-.editeur-barre .groupe.fin { margin-left: auto; }
-.editeur-barre .recuperer { display: inline-flex; align-items: center; padding-right: var(--esp-s); margin-right: var(--esp-xs); border-right: 1px solid var(--filet); }
-.editeur-barre .recuperer-principal { margin-left: 0; }
-.autres-formats-repli > summary { display: flex; align-items: center; min-height: 24px; font-size: var(--texte-compact); font-weight: 600; color: var(--cyan); cursor: pointer; }
+/* Le groupe du fichier (la fin du parcours) : le menu Fichier et le geste de fin, deux icones, ranges a droite meme quand la barre
+   passe a la ligne. Le geste de fin est un carre plein de la taille d'un bouton d'outil (30 px, 40 au doigt) : l'icone seule, sur la
+   couleur d'outil (--sur-cyan sur --cyan tient 4,5:1, au-dela des 3:1 d'un objet graphique). */
+.editeur-barre .groupe.fin { margin-left: auto; gap: var(--esp-xs); }
+/* L'aide (une icone) se range juste avant le fichier, a droite elle aussi : c'est elle qui prend la marge, le fichier la suit. */
+.editeur-barre .groupe.aide { margin-left: auto; border-right: 0; padding-right: 0; }
+.editeur-barre .groupe.aide + .groupe.fin { margin-left: 0; }
+.editeur-barre button.bouton-fin, .editeur-etat button.bouton-fin { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; flex: none; }
+.autres-formats-repli > summary { display: flex; align-items: center; gap: var(--esp-xs); min-height: 24px; font-size: var(--texte-compact); font-weight: 600; color: var(--cyan); cursor: pointer; }
+.autres-formats-repli > summary .icone { transform: rotate(-90deg); }
+.autres-formats-repli[open] > summary .icone { transform: none; }
 .autres-formats-repli[open] > summary { margin-bottom: var(--esp-s); }
 .ligne-export select { width: auto; font-size: var(--texte-petit); }
 .ligne-export input[type="color"] { width: 28px; height: 26px; }
@@ -466,7 +473,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
   .editeur-etat .tiroirs { order: 1; }
   .editeur-etat .espace { order: 2; }
   .editeur-etat .compte-modifications, .editeur-etat .etat-enregistrement { order: 3; }
-  .editeur-etat button.texte { order: 4; }
+  .editeur-etat button.texte, .editeur-etat button.bouton-fin { order: 4; }
   .editeur-etat .fil-ariane, .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
   /* Un tiroir ouvert couvre presque toute la toile d'un telephone, sous un voile qui recoit les touchers : le dessin y est
      masque (la toile reste focalisable). Le tiroir ne se lit plus par-dessus des formes qu'on ne voit ni ne touche : un audit
@@ -601,7 +608,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 }
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
-  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
+  .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit, .editeur-barre button.bouton-fin, .editeur-etat button.bouton-fin { width: 40px; height: 40px; }
   .editeur-cale-selection::before { height: 40px; }
   .chevron-seul .icone-bouton { width: 40px; margin-left: calc(-1 * var(--esp-2xs)); }
   button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }

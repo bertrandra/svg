@@ -61,12 +61,13 @@ s'embarque aussi comme composant React dans un autre produit.
     scène prête par événement ;
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
-- **Récupérer le résultat** : « Télécharger le SVG », d'un geste, dans la barre de l'éditeur ; « Autres formats » à côté
-  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. Le SVG écrit garde les groupes et
+- **Récupérer le résultat** : « Télécharger le SVG », en tête du menu Fichier de l'éditeur (le bouton à icône de feuille, à
+  droite de la barre ; en contexte Cricut, « Exporter pour Cricut » le suit) ; « Autres formats » dessous, replié (PDF, PNG,
+  JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. Le SVG écrit garde les groupes et
   les définitions (dégradés, motifs, découpes, masques, filtres, nommés par l'empreinte de leur contenu) ; « Télécharger le SVG
-  à plat » (menu Fichier) rend les octets d'avant le modèle riche, sans groupe ni définition. Le PDF écrit nativement dégradés,
-  motifs, découpes, masques et images ; les formats qui ne les connaissent pas (EPS, DXF, SVG de découpe) les approchent et le disent. « Terminer » ramène à la
-  fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
+  à plat » (même rubrique) rend les octets d'avant le modèle riche, sans groupe ni définition. Le PDF écrit nativement dégradés,
+  motifs, découpes, masques et images ; les formats qui ne les connaissent pas (EPS, DXF, SVG de découpe) les approchent et le disent. « Terminer » (l'icône pleine,
+  seule action pleine de la barre) ramène à la fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur d'elle-même (un test en navigateur, réseau coupé, le vérifie) ; seule une police libre que
   vous choisissez se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
 - **Préparer pour une Cricut** : la machine se choisit dans la barre (« Machine : Générique », puis Joy, Explore, Maker ;

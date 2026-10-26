@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, contenuEnDessin, dessinableEnPoints, reposerContenu, garderTextes, MSG_POINTS_IMAGE, poidsDessin, rangerDansLeContexte, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { boiteDe, bornerParametres, contenuEnDessin, dessinableEnPoints, reposerContenu, garderTextes, MSG_POINTS_IMAGE, poidsDessin, rangerDansLeContexte, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -11,7 +11,7 @@ import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
 import { actionsGroupes } from './actionsGroupes.js';
 import { actionsContenus } from './actionsContenus.js';
-import { actionsProduction, cadreDeVue, svgDocument } from './actionsProduction.js';
+import { actionsProduction, cadreDeVue, cadreDuDessin, svgDocument } from './actionsProduction.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
@@ -25,6 +25,7 @@ import { actionsContexte } from './actionsContexte.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { RegleZone } from '../engine/selection.js';
+import { cleSelection, referenceProportions, type ReferenceProportions } from '../engine/proportions.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
 export interface EtatDuMoment extends EtatLu {
@@ -36,6 +37,8 @@ export interface EtatDuMoment extends EtatLu {
   modeleFixe?: boolean | undefined;
   /** Le contexte d'edition du moment (ADR-0012, annexe 6 §2). Absent : la racine. */
   contexte?: ContexteEdition | null | undefined;
+  /** « Conserver les proportions » est pose. Absent : coupe. */
+  verrouProportions?: boolean | undefined;
 }
 
 /** Les setters de l'editeur (React les garde d'une identite stable). */
@@ -52,6 +55,7 @@ export interface Setters {
   poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
   poserApercuMachine: Dispatch<SetStateAction<boolean>>;
   poserRegleZone: Dispatch<SetStateAction<RegleZone>>;
+  poserVerrouProportions: Dispatch<SetStateAction<boolean>>;
   poserModele: Dispatch<SetStateAction<Modele>>; poserContexte: Dispatch<SetStateAction<ContexteEdition | null>>;
   poserDeplies: Dispatch<SetStateAction<ReadonlySet<string>>>;
   toile: RefObject<HTMLDivElement | null>;
@@ -61,6 +65,9 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   let compteur = 0;
   // Les glyphes des polices chargees (posees par le contexte du texte) : de quoi recomposer un texte pose sur une forme qui change.
   let glyphesDe: ((p: PoliceTexte) => Glyphes | null) | null = null;
+  // La proportion que le verrou garde (engine/proportions.ts) : une memoire des verbes, pas un etat a afficher ; elle ne se lit que
+  // par `proportionsDe`, qui la refait quand la selection ou sa proportion ont change.
+  let reference: ReferenceProportions | null = null;
   // La garde du texte vivant (ADR-0022) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
   // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts). Puis le lien des textes poses (ADR-0031) :
   // un texte dont la forme a change se recompose sur elle, dans la meme entree d'historique ; sans forme, il redevient libre.
@@ -158,7 +165,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire(e.brouillon(svgDocument(e.complet ?? e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
     },
     ajuster: () => { const e = lire(), cadre = cadreDeVue(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
-    ajusterAuDessin: () => lire().vues.ajuster(),
+    ajusterAuDessin: () => { const e = lire(), cadre = cadreDuDessin(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
     continuerEdition: () => s.poserQuitter(false),
     garderVersion: (nom, svg) => {
       const quand = Date.now(), { versions } = lire();
@@ -175,6 +182,18 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     poserRegleZone: r => {
       s.poserRegleZone(r);
       dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
+    },
+    poserVerrouProportions: v => {
+      const e = lire();
+      // Pose, la proportion du moment devient la reference : c'est celle que les frappes et les pas qui suivent gardent.
+      reference = v ? referenceProportions(null, cleSelection(e.sel), e.sel.length ? boiteDe(e.dessin, e.sel) : null) : null;
+      s.poserVerrouProportions(v);
+      dire(v ? 'Proportions conservées.' : 'Proportions libres.');
+    },
+    proportionsDe: (ids, b) => {
+      if (!lire().verrouProportions) return null;
+      reference = referenceProportions(reference, cleSelection(ids), b);
+      return reference;
     },
     ...metier, ...trace, ...production, ...groupes, ...contexte,
     // Les contenus (ADR-0012, etape 8) : decoupes, masques, effets, images inserees ; modifier une decoupe ou un masque (paquet 8-D).

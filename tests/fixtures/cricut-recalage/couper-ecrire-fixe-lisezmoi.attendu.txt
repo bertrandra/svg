@@ -10,7 +10,8 @@ Tailles : les trois fichiers font 12 × 12 po (même cadre : posés au même end
 Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 9) :
 1. Importez essai-a-couper.svg, puis essai-a-ecrire.svg, sans changer leur taille.
 2. Sélectionnez les calques de essai-a-ecrire.svg et choisissez « Dessiner » (une couleur, un stylo) ; les autres restent sur « Couper ».
-3. Recalage automatique désactivé : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (11,5 × 11,5 po). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).
+3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut) : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (11,5 × 11,5 po). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).
+   Pour que Design Space pose plutôt les formes dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut » et exportez à nouveau : les fichiers n’ont alors plus de cadre.
 Ou importez essai-cricut.svg seul : si Design Space garde ses groupes, le groupe « a-ecrire » passe en « Dessiner » d’un coup.
 
 Ce qui n’a pas été essayé sur une machine :

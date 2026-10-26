@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, imageDeTest, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { attend, attendreAnimations, imageDeTest, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
 import { champPolice, valeurPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
@@ -225,6 +225,20 @@ describe('le site PHP', () => {
     await connecter(page);
     await sansViolationGrave(page, 'projets (vide)');
     expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+  });
+
+  it('le menu Aide de l editeur ouvre les documentations servies par le site (public/aide)', async () => {
+    const { page } = await ouvrirSite(navigateur);
+    await connecter(page);
+    await page.getByRole('button', { name: 'Ouvrir l’exemple' }).click();
+    await page.locator('.editeur-cadre').waitFor();
+    await ouvrirMenu(page, 'Aide');
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier', 'Guide de l’éditeur', 'La Cricut, c’est simple']);
+    const [onglet] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('menuitem', { name: 'La Cricut, c’est simple' }).click()]);
+    await onglet.waitForLoadState('load');
+    expect(onglet.url()).toBe(site + '/aide/cricut.html');
+    expect(await onglet.title()).toBe('La Cricut, c’est simple');
+    await onglet.close();
   });
 
   it('cree, enregistre (Ctrl+S), rouvre a l identique avec un texte vivant ; renomme, duplique, supprime ; se deconnecte', async () => {

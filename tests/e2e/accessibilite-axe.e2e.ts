@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, permettrePressePapiers, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { attend, boutonFichier, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, permettrePressePapiers, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
 import { champPolice, choisirPolice } from './polices.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
@@ -243,6 +243,21 @@ describe('axe-core : accessibilite automatique', () => {
         await page.mouse.move(centre.x, centre.y);
         await attend(() => page.locator('.editeur-svg-toile .lisere-survol').count()).toBe(1);
         exigerSansViolationGrave(await auditer(page, 'éditeur, liseré de survol (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
+      });
+    }
+
+    // « Conserver les proportions » pose, puis coupe : le bouton bascule de « Position et taille » dans ses deux etats, clair et sombre.
+    for (const schema of ['light', 'dark'] as const) {
+      it('avec le verrou des proportions de « Position et taille » (' + schema + ')', async () => {
+        const page = await editeur({ schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        const verrou = page.getByRole('button', { name: 'Conserver les proportions' });
+        await verrou.click();
+        await attend(() => verrou.getAttribute('aria-pressed')).toBe('true');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, proportions conservées (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
+        await verrou.click();
+        await attend(() => verrou.getAttribute('aria-pressed')).toBe('false');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, proportions libres (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
       });
     }
 
@@ -601,14 +616,14 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('dans le thème sombre, avec un menu ouvert', async () => {
       const page = await editeur({ schema: 'dark' });
-      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await boutonFichier(page).click();
       await page.getByRole('menu', { name: 'Fichier' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, menu Fichier ouvert'));
     });
 
     it('avec la boîte « À propos et crédits » ouverte depuis le menu Fichier', async () => {
       const page = await editeur();
-      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await boutonFichier(page).click();
       await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
       await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, boîte À propos et crédits'));
@@ -616,7 +631,7 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('dans le thème sombre, avec la boîte « À propos et crédits »', async () => {
       const page = await editeur({ schema: 'dark' });
-      await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+      await boutonFichier(page).click();
       await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
       await page.getByRole('dialog', { name: 'À propos et crédits' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, thème sombre, boîte À propos et crédits'));
@@ -644,7 +659,10 @@ describe('axe-core : accessibilite automatique', () => {
       await page.locator('.bulle-visite').getByRole('button', { name: 'Suivant' }).click();
       await etape(4);
       exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 4'));
-      await Promise.all([page.waitForEvent('download'), page.locator('.editeur-barre .recuperer-principal').click()]);
+      // L'etape 4 vise le bouton Fichier ; le menu ouvert, « Télécharger le SVG » en tete, est audite aussi.
+      await boutonFichier(page).click();
+      exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 4, menu Fichier ouvert'));
+      await Promise.all([page.waitForEvent('download'), page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click()]);
       await etape(5);
       exigerSansViolationGrave(await auditer(page, 'éditeur, visite guidée, étape 5'));
     });
@@ -663,7 +681,7 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('avec la boîte « Raccourcis clavier » du menu Aide', async () => {
       const page = await editeur();
-      await page.locator('.menu-bouton', { hasText: 'Aide' }).click();
+      await page.locator('.editeur-barre .menu-aide .menu-bouton').click();
       await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
       await page.getByRole('dialog', { name: 'Raccourcis clavier' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, boîte Raccourcis clavier'));

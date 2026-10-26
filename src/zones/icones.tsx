@@ -12,7 +12,7 @@ export type NomIcone =
   | 'annuler' | 'retablir' | 'copier' | 'couper' | 'coller'
   | 'zoom-moins' | 'zoom-plus' | 'ajuster' | 'zoom-selection' | 'taille-reelle'
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
-  | 'telecharger' | 'fermer' | 'enregistrer'
+  | 'telecharger' | 'fermer' | 'enregistrer' | 'fichier'
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
   | 'texte-gauche' | 'texte-centre' | 'texte-droite' | 'texte-justifie' | 'texte-libre' | 'texte-sur' | 'texte-dans'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
@@ -30,7 +30,11 @@ export type NomIcone =
   // Les groupes du modele riche (ADR-0012, etape 2).
   | 'grouper' | 'degrouper'
   // Les decoupes, les masques et les effets du modele riche (ADR-0012, etape 8) : commandes et pastilles des calques.
-  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite';
+  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite'
+  // Le verrou des proportions de « Position et taille » : une chaine fermee, ou rompue.
+  | 'proportions-liees' | 'proportions-libres'
+  // Le menu Aide de la barre, une icone, et ses documentations.
+  | 'aide' | 'documentation';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -88,6 +92,12 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   telecharger: [t('M12 3v12'), t('M7 10l5 5 5-5'), t('M4 20h16')],
   fermer: [t('M6 6l12 12'), t('M18 6L6 18')],
   enregistrer: [t('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'), t('M17 21v-8H7v8'), t('M7 3v5h8')],
+  // Une feuille au coin replie et deux lignes de texte : le menu Fichier de la barre, ou l'on telecharge, exporte et ferme.
+  fichier: [t('M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'), t('M14 3v6h6'), t('M8 13h8'), t('M8 17h5')],
+  // Un point d'interrogation dans un cercle : le menu Aide de la barre (visite, raccourcis, documentations).
+  aide: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4.5'), t('M11.9 17.5h.01')],
+  // Un livre ouvert : une documentation, qui s'ouvre dans un nouvel onglet.
+  documentation: [t('M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z'), t('M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z')],
   'aligner-gauche': [t('M4 3v18'), t('M8 7h11v4H8z'), t('M8 13h7v4H8z')],
   'aligner-centre-h': [t('M12 3v18'), t('M6 7h12v4H6z'), t('M8 13h8v4H8z')],
   'aligner-droite': [t('M20 3v18'), t('M5 7h11v4H5z'), t('M9 13h7v4H9z')],
@@ -178,7 +188,11 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Une forme au trait devant son ombre pleine, decalee vers le bas et la droite.
   ombre: [t('M9 9h12v12H9z', true), t('M3 3h12v12H3z')],
   // Un carre coupe en diagonale, une moitie pleine.
-  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)]
+  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)],
+  // Deux demi-maillons tenus par une barre : la largeur et la hauteur vont ensemble.
+  'proportions-liees': [t('M10 8H7a4 4 0 0 0 0 8h3'), t('M14 8h3a4 4 0 0 1 0 8h-3'), t('M8 12h8')],
+  // Les memes, ecartes et sans barre, deux traits de cassure entre eux : chaque cote va seul.
+  'proportions-libres': [t('M9 8H7a4 4 0 0 0 0 8h2'), t('M15 8h2a4 4 0 0 1 0 8h-2'), t('M12 4v2'), t('M12 18v2')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

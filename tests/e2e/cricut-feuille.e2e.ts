@@ -1,5 +1,6 @@
-// Le tapis fixe et la feuille en contexte Cricut (ADR-0039), dans le navigateur : decocher « Recalage automatique » garde la place des
-// formes a l'export (cadre de reperage, coordonnees inchangees), le laisser coche rend l'export d'avant ; « Dupliquer sur la feuille »
+// Le tapis fixe et la feuille en contexte Cricut (ADR-0039), dans le navigateur : la case « Recalage automatique », decochee par
+// defaut depuis la revision du 26 octobre 2026, garde la place des formes a l'export (le plan est le tapis des le depart, cadre de
+// reperage, coordonnees inchangees) ; la cocher rend l'export d'avant ; « Dupliquer sur la feuille »
 // remplit la feuille et Ctrl+Z retire toutes les copies d'un coup, pose une quantite, range tout dans une feuille partielle decalee,
 // et l'optimisation avancee emboite des etoiles sans chevauchement, plus que la simple.
 
@@ -14,17 +15,22 @@ interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[]
 
 /** Un tapis de 12 po en plan (96 unites par pouce) et un rectangle pose au milieu. */
 const MILIEU = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152"><path d="M480 528L672 528L672 624L480 624Z" fill="#c81e28"/></svg>';
-/** Le meme, ouvert deja en Cricut sans recalage, avec une feuille de 4 x 3 po a 6 po et 5 po du coin du tapis. */
-const FIXE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm" data-ed-recalage="non" data-ed-feuille="57600-48000-38400-28800">'
+/** Le meme, ouvert deja en Cricut (le tapis fixe, le defaut), avec une feuille de 4 x 3 po a 6 po et 5 po du coin du tapis. */
+const FIXE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm" data-ed-feuille="57600-48000-38400-28800">'
   + '<path d="M40 40L136 40L136 112L40 112Z" fill="#c81e28"/></svg>';
 const etoile = (cx: number, cy: number, R: number, r: number) => {
   const p: string[] = [];
   for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, k = i % 2 ? r : R; p.push((cx + k * Math.cos(a)).toFixed(3) + ' ' + (cy + k * Math.sin(a)).toFixed(3)); }
   return 'M' + p.join('L') + 'Z';
 };
-/** Une etoile, en Cricut sans recalage, avec une feuille de 6 x 6 po au coin du tapis. */
-const ETOILES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm" data-ed-recalage="non" data-ed-feuille="2400-2400-57600-57600">'
+/** Une etoile, en Cricut (le tapis fixe), avec une feuille de 6 x 6 po au coin du tapis. */
+const ETOILES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm" data-ed-feuille="2400-2400-57600-57600">'
   + '<path d="' + etoile(100, 100, 60, 24) + '" fill="#1428a0"/></svg>';
+/** Un dessin marque Cricut, sans recalage ecrit, dont le plan n'est pas le tapis : un rectangle a (100, 50) dans un plan de 5 x 3 po. */
+const MARQUE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm">'
+  + '<path d="M100 50L300 50L300 150L100 150Z" fill="#c81e28"/></svg>';
+/** L'export d'avant la revision (recalage coche) du rectangle pose au milieu du tapis : le plan tel quel, sans cadre. */
+const EXPORT_RECALE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" width="304.8mm" height="304.8mm" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm"><path d="M480 528L672 528L672 624L480 624Z" fill="#c81e28"/></svg>';
 
 interface Boite { x: number; y: number; l: number; h: number }
 
@@ -67,29 +73,60 @@ describe('le tapis fixe et la feuille, en Cricut', () => {
     await dialogue.waitFor({ state: 'detached', timeout: 20_000 });
   }
 
-  it('recalage desactive : la forme posee au milieu du tapis garde sa place a l export, avec un cadre de reperage', async () => {
+  /** Le plan de travail sur la toile, en unites du plan. */
+  const plan = (page: Page): Promise<number[]> => page.locator('.plan-travail').evaluate(e => ['x', 'y', 'width', 'height'].map(a => Number(e.getAttribute(a))));
+
+  it('par defaut, le tapis est fixe : la forme posee au milieu du tapis garde sa place a l export, avec un cadre ; cochee, l export d avant', async () => {
     const page = await editeur(MILIEU);
     await choisirCricut(page);
     const recalage = panneau(page).getByRole('checkbox', { name: 'Recalage automatique' });
-    expect(await recalage.isChecked()).toBe(true);
-    // Coche (le defaut) : l'export d'avant, sans cadre.
-    const avant = await exporter(page);
-    expect(avant).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" width="304.8mm" height="304.8mm" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm"><path d="M480 528L672 528L672 624L480 624Z" fill="#c81e28"/></svg>');
+    expect(await recalage.isChecked()).toBe(false);
+    expect(await page.locator('.gabarit').getAttribute('data-recalage')).toBe('non');
+    // Le plan est le tapis des le depart (ici il en avait deja la taille : rien ne bouge).
+    expect(await plan(page)).toEqual([0, 0, 1152, 1152]);
+    const fixe = await exporter(page);
+    expect(fixe).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 1152" width="304.8mm" height="304.8mm" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm">'
+      + '<path d="M24 24L1128 24L1128 1128L24 1128ZM26 26L26 1126L1126 1126L1126 26Z" fill="#c81e28"/><path d="M480 528L672 528L672 624L480 624Z" fill="#c81e28"/></svg>');
+    // La carte dit comment revenir au recalage d'avant.
+    await attend(() => panneau(page).locator('.carte-design-space').textContent()).toContain('cochez « Recalage automatique »');
+    // Cochee : l'export d'avant la revision, a l'octet, sans cadre.
+    await recalage.check();
+    await attend(() => dit(page)).toMatch(/^Recalage automatique activé/);
+    expect(await page.locator('.gabarit').getAttribute('data-recalage')).toBeNull();
+    expect(await exporter(page)).toBe(EXPORT_RECALE);
+    // Decochee de nouveau : le plan deja pose garde son coin, le cadre revient.
     await recalage.uncheck();
     await attend(() => dit(page)).toMatch(/^Recalage automatique désactivé/);
-    expect(await page.locator('.gabarit').getAttribute('data-recalage')).toBe('non');
-    const apres = await exporter(page);
-    // Le plan est le tapis tel que la toile le montrait ; un cadre de reperage (la zone utile) sous la forme, qui ne bouge pas.
-    expect(apres).toMatch(/viewBox="456 504 1152 1152" width="304.8mm" height="304.8mm"/);
-    const chemins = [...apres.matchAll(/<path d="([^"]*)"/g)].map(m => m[1]);
-    expect(chemins).toEqual(['M480 528L1584 528L1584 1632L480 1632ZM482 530L482 1630L1582 1630L1582 530Z', 'M480 528L672 528L672 624L480 624Z']);
-    expect(apres).not.toContain('data-ed-recalage');
-    // Recoche : l'export redevient celui d'un plan ordinaire, sans cadre.
-    await recalage.check();
-    expect([...(await exporter(page)).matchAll(/<path /g)].length).toBe(1);
+    expect(await exporter(page)).toBe(fixe);
   });
 
-  it('un dessin rouvert sans recalage garde au milieu du tapis la forme qu on y a posee', async () => {
+  it('ouvre un fichier marque Cricut avec le plan du tapis dans son etat initial : pas une modification, Ctrl+Z n y touche pas', async () => {
+    const page = await editeur(MARQUE);
+    await panneau(page).locator('.constat, .pret').first().waitFor();
+    expect(await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).isChecked()).toBe(false);
+    // La zone utile a 2 mm du coin du dessin (100, 50), le tapis d'un quart de pouce autour : les formes ne bougent pas.
+    expect(await plan(page)).toEqual([68.441, 18.441, 1152, 1152]);
+    expect(await boites(page)).toEqual([{ x: 100, y: 50, l: 200, h: 100 }]);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await attendreAnimations(page);
+    expect(await plan(page)).toEqual([68.441, 18.441, 1152, 1152]);
+    const f = await exporter(page);
+    expect(f).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="68.441 18.441 1152 1152" width="304.8mm" height="304.8mm"/);
+    expect([...f.matchAll(/<path d="([^"]*)"/g)].map(m => m[1])).toEqual(['M92.441 42.441L1196.441 42.441L1196.441 1146.441L92.441 1146.441ZM94.441 44.441L94.441 1144.441L1194.441 1144.441L1194.441 44.441Z', 'M100 50L300 50L300 150L100 150Z']);
+  });
+
+  it('pose le plan du tapis quand on choisit Cricut, en une entree d historique', async () => {
+    const page = await editeur(MARQUE.replace(/ data-ed-[a-z]+="[^"]*"/g, ''));
+    expect(await plan(page)).toEqual([0, 0, 480, 288]);
+    await choisirCricut(page);
+    expect(await plan(page)).toEqual([68.441, 18.441, 1152, 1152]);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await attend(() => plan(page)).toEqual([0, 0, 480, 288]);
+  });
+
+  it('un dessin d avant la revision, marque « non », se rouvre decoche et garde au milieu du tapis la forme qu on y a posee', async () => {
     const page = await editeur(MILIEU.replace('viewBox="0 0 1152 1152"', 'viewBox="0 0 1152 1152" data-ed-contexte="cricut" data-ed-machine="maker" data-ed-tapis="12x12" data-ed-materiau="papier-cartonne" data-ed-procede="decoupe" data-ed-unite="mm" data-ed-recalage="non"'));
     await panneau(page).locator('.constat, .pret').first().waitFor();
     expect(await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).isChecked()).toBe(false);
@@ -155,9 +192,30 @@ describe('le tapis fixe et la feuille, en Cricut', () => {
     };
     await axe();
     await toutChoisir(page);
-    await ouvrirMenu(page, 'Édition');
-    await page.getByRole('menuitem', { name: 'Dupliquer sur la feuille…' }).click();
-    await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor();
+    // Le panneau flottant se pose sur la toile, en haut a droite. Quand une forme de la toile (le bord de la feuille, un gabarit) passe
+    // en partie sous un texte du panneau, axe doute du fond de ce texte (« partially overlaps »), bien que le panneau soit opaque : un
+    // doute de mesure, qu'on n'admet pas. Le cadrage de la vue depend de la mise en page (la barre, le tapis fixe) : plutot qu'un nombre
+    // de crans, on mesure la place du panneau, puis la vue se dezoome (-) jusqu'a ce qu'aucune forme de la toile ne passe dessous.
+    const ouvrirDuplication = async () => {
+      await ouvrirMenu(page, 'Édition');
+      await page.getByRole('menuitem', { name: 'Dupliquer sur la feuille…' }).click();
+      await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor();
+    };
+    await ouvrirDuplication();
+    const place = await page.locator('.panneau-flottant').boundingBox();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor({ state: 'detached' });
+    const sousLePanneau = () => page.evaluate(p => p ? [...document.querySelectorAll('.editeur-svg-toile *:not(g):not(defs):not(.fond-prise)')].filter(e => {
+      const b = e.getBoundingClientRect();
+      return b.width > 0 && b.height > 0 && b.left < p.x + p.width && b.right > p.x && b.top < p.y + p.height && b.bottom > p.y;
+    }).length : 0, place);
+    for (let i = 0; i < 12 && (await sousLePanneau()) > 0; i++) {
+      await page.locator('.editeur-svg-toile').focus();
+      await page.keyboard.press('-');
+      await attendreAnimations(page);
+    }
+    expect(await sousLePanneau()).toBe(0);
+    await ouvrirDuplication();
     await axe();
   });
 

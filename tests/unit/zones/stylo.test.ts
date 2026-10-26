@@ -9,7 +9,9 @@ import { etapesDesignSpace, etatExport, libelleExport, libelleSelecteur } from '
 import { modeParDefaut } from '../../../src/zones/actionsTexte.js';
 import { svgPourStylo } from '../export/plats.js';
 
-const STYLO = { contexte: 'cricut' as const, ...CHOIX_CRICUT_DEFAUT, procede: 'dessin-stylo' as const };
+// Recalage automatique coche (ADR-0039) : ces essais datent du defaut d'avant sa revision du 26 octobre 2026 et jugent autre chose
+// que la place sur le tapis ; le tapis fixe, defaut depuis, a ses tests (recalage.test.ts).
+const STYLO = { contexte: 'cricut' as const, ...CHOIX_CRICUT_DEFAUT, recalage: true as const, procede: 'dessin-stylo' as const };
 const profil = (): ProfilProduction => { const p = resoudreProfil(STYLO); if (!p) throw new Error('profil'); return p; };
 const lire = (corps: string, l = 480, h = 288): DessinSvg => {
   const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + l + ' ' + h + '">' + corps + '</svg>');

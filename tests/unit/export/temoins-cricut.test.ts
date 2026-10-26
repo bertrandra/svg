@@ -30,7 +30,9 @@ const lire = (corps: string, l: number, h: number): DessinSvg => {
 };
 const profilDe = (procede: 'decoupe' | 'imprimer-decouper' | 'dessin-stylo'): ProfilProduction => {
   // Les temoins sont en pouces, l'unite de Design Space et du protocole : le millimetre par defaut de l'interface ne les touche pas.
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', procede });
+  // Les temoins 1 a 9 jugent la taille, les trous, les couleurs, le trait : ils gardent le recalage automatique coche, le defaut
+  // quand ils ont ete faits (ADR-0039, revision du 26 octobre 2026), et leurs octets. Le temoin 10 est le tapis fixe, le defaut.
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: true, procede });
   if (!p) throw new Error('profil');
   return p;
 };
@@ -130,13 +132,13 @@ const TEMOINS: ReadonlyArray<{ nom: string; fabriquer: () => string }> = [
       return fichier === 'a-couper' ? r.aCouper : fichier === 'a-ecrire' ? r.aEcrire : r.combine;
     }
   })),
-  // 10. Sans recalage automatique (ADR-0039) : sur un plan de 12 x 12 po (le tapis), un carre de 1 po a 8 po du bord gauche et 6 po du
+  // 10. Le tapis fixe, sans recalage automatique (ADR-0039 ; le defaut depuis sa revision du 26 octobre 2026) : sur un plan de 12 x 12 po (le tapis), un carre de 1 po a 8 po du bord gauche et 6 po du
   //    bord haut, et un disque de 1/2 po a 2 po et 9 po, deux couleurs. L'export pose un cadre de reperage par couleur, de la taille de
   //    la zone utile. Attache et passe en « Guide », le cadre fait-il couper chaque forme a sa place sur une feuille posee la ?
   {
     nom: 'temoin-10-feuille-partielle.svg',
     fabriquer: () => {
-      const fixe = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: false });
+      const fixe = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in' });
       if (!fixe) throw new Error('profil');
       const d = lire(rect(8, 6, 1, 1, '#c81e28') + '<circle cx="' + 2.25 * P + '" cy="' + 9.25 * P + '" r="' + P / 4 + '" fill="#1f4e8c"/>', 12, 12);
       const r = svgCricut(d, fixe);
@@ -170,7 +172,8 @@ describe('les temoins du protocole Cricut', () => {
       return constatsPreparation(r.dessin, p).map(c => c.code);
     };
     expect(constats('temoin-1-taille.svg')).toEqual([]);
-    expect(constats('temoin-2-trou.svg')).toEqual(['pair-impair']);
+    // Les deux anneaux ont chacun un ilot (ADR-0040) : en pochoir, leur centre tomberait.
+    expect(constats('temoin-2-trou.svg')).toEqual(['ilot', 'pair-impair']);
     expect(constats('temoin-3-couleurs-proches.svg')).toEqual(['nuances-proches']);
     expect(constats('temoin-4-trait.svg')).toEqual(['trait', 'detail-fin']);
     expect(constats('temoin-5-depasse-le-tapis.svg')).toEqual(['piece-trop-grande']);
@@ -189,7 +192,7 @@ describe('les temoins du protocole Cricut', () => {
     expect(constats('temoin-9-couper-ecrire-a-ecrire.svg', STYLO)).toEqual([]);
     expect(constats('temoin-9-couper-ecrire-combine.svg')).toEqual([]);
     // 10 : rouvert (sans la marque du recalage, qu'aucun export ne porte), seuls les cadres de reperage se disent trop fins pour la
-    // lame : ce sont des guides, qu'on ne coupe pas.
-    expect(constats('temoin-10-feuille-partielle.svg')).toEqual(['detail-fin']);
+    // lame : ce sont des guides, qu'on ne coupe pas. Anneaux, ils ont aussi leur ilot (ADR-0040) : le constat le dit, sans plus.
+    expect(constats('temoin-10-feuille-partielle.svg')).toEqual(['detail-fin', 'ilot']);
   });
 });

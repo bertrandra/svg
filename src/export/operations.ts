@@ -100,7 +100,8 @@ export const nomsOperations = (nom: string): { readonly archive: string; readonl
 
 /** Le mode d'emploi de l'archive : ce qu'on y trouve, la taille, et la marche dans Design Space, ce qui n'est pas verifie marque. */
 export function modeDEmploiOperations(nom: string, dessin: DessinSvg, p: ProfilProduction, r: Extract<ExportParOperation, { genre: 'mixte' }>): string {
-  // Sans recalage automatique (ADR-0039), les fichiers ont la taille du tapis et portent des cadres de reperage.
+  // Sans recalage automatique (ADR-0039, le defaut depuis sa revision du 26 octobre 2026), les fichiers ont la taille du tapis et
+  // portent des cadres de reperage ; avec, le mode d'emploi d'avant, a l'octet.
   const tapis = p.recalage ? null : cadreFixe(p, dessin.vb);
   const f = nomsOperations(nom), taille = tapis ? texteTaille(tapis.l, tapis.h, p.unite) : texteTaille(dessin.vb[2], dessin.vb[3], p.unite);
   const formes = (k: number) => k + ' forme' + (k > 1 ? 's' : '');
@@ -118,7 +119,8 @@ export function modeDEmploiOperations(nom: string, dessin: DessinSvg, p: ProfilP
     '1. Importez ' + f.aCouper + ', puis ' + f.aEcrire + ', sans changer leur taille.',
     '2. Sélectionnez les calques de ' + f.aEcrire + ' et choisissez « Dessiner » (une couleur, un stylo) ; les autres restent sur « Couper ».',
     ...(tapis ? [
-      '3. Recalage automatique désactivé : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (' + texteTaille(p.zoneUtile.l, p.zoneUtile.h, p.unite) + '). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).'
+      '3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut) : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (' + texteTaille(p.zoneUtile.l, p.zoneUtile.h, p.unite) + '). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).',
+      '   Pour que Design Space pose plutôt les formes dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut » et exportez à nouveau : les fichiers n’ont alors plus de cadre.'
     ] : ['3. Sélectionnez les deux et « Attachez »-les : le stylo écrit alors à sa place sur la pièce découpée.']),
     'Ou importez ' + f.combine + ' seul : si Design Space garde ses groupes, le groupe « ' + GROUPE_A_ECRIRE + ' » passe en « Dessiner » d’un coup.',
     '',

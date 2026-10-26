@@ -18,7 +18,7 @@ import { resolve } from 'node:path';
 import {
   type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, type FormeDeBase, type ParametresFormes, ajouterForme, ellipse, formeDeBase, FORMES_DE_BASE, FICHES_FORMES, PARAMETRES_FORMES_DEFAUT, regleDeForme, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg, polygone,
 } from '../../../src/engine/editionSvg.js';
-import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
+import { ajouterLiens, marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, LARGEUR_LIEN_DEFAUT, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
@@ -214,11 +214,14 @@ const palette = (id: string) => au(PALETTES.filter(p => p.id === id), 0).couleur
 /**
  * Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), en pouces, avec des choix en plus. Les references ont ete
  * ecrites en pouces avant que le millimetre devienne l'unite par defaut de l'interface : elles le restent (cricut-export-mm couvre
- * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference.
+ * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference. De meme, les exports se font avec le recalage
+ * automatique coche (ADR-0039) : c'etait le defaut quand ils ont ete ecrits, et la case cochee redonne l'export d'avant a l'octet ;
+ * le tapis fixe, defaut depuis la revision du 26 octobre 2026, a ses references dans tests/fixtures/cricut-recalage/. Le document
+ * (cricut-marque, cricut-operations) garde le choix par defaut : il n'ecrit pas le recalage.
  */
 const CRICUT_POUCES: ChoixMachine = { ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
 const profilCricut = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, recalage: true, ...choix });
   if (!p) throw new Error('profil Cricut introuvable');
   return p;
 };
@@ -416,6 +419,10 @@ const CAS: readonly Cas[] = [
   { nom: 'cricut-marque', entree: 'cricut', produire: t => nettoyerSvg(marquerProduction(ecrireDessin(lire(t), 3), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES })))?.svg ?? 'REFUSE' },
   { nom: 'cricut-export', entree: 'cricut', produire: pourCricut({}) },
   { nom: 'cricut-export-mm', entree: 'cricut', produire: pourCricut({ unite: 'mm', machine: 'explore', tapis: '12x24' }) },
+  // Les liens des ilots (ADR-0040) : des cas NEUFS. L'anneau courbe recoit ses 3 liens de 2 mm (courbes rebaties) ; les carres
+  // pair-impair 2 liens de 3 mm (segments droits), la forme pleine du meme trace ne change pas.
+  { nom: 'liens-anneau', entree: 'cricut', operation: d => ajouterLiens(d, ['f1', 'f2', 'f3'], { largeur: LARGEUR_LIEN_DEFAUT, nombre: 3 }, 'decoupe').dessin },
+  { nom: 'liens-pair-impair', entree: 'evenodd-opacite', operation: d => ajouterLiens(d, ['f1', 'f2', 'f3'], { largeur: LARGEUR_LIEN_DEFAUT * 1.5, nombre: 2 }, 'decoupe').dessin },
   { nom: 'print-then-cut-impression', entree: 'print-then-cut', produire: pourPrintThenCut('impression') },
   { nom: 'print-then-cut-coupe', entree: 'print-then-cut', produire: pourPrintThenCut('coupe') },
   // Le texte vivant et sa vectorisation (ADR-0022) : des cas NEUFS. Un dessin sans texte vivant n'ecrit aucun attribut de plus

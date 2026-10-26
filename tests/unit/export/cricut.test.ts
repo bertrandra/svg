@@ -21,8 +21,10 @@ const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const fixture = (nom: string): DessinSvg => lire(readFileSync(resolve(DOSSIER, nom + '.svg'), 'utf8'));
 const svg = (corps: string, vb = '0 0 480 288') => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '">' + corps + '</svg>';
+// Recalage automatique coche (ADR-0039) : ces essais datent du defaut d'avant sa revision du 26 octobre 2026 et jugent autre chose
+// que la place sur le tapis ; le tapis fixe, defaut depuis, a ses tests (recalage.test.ts).
 const profil = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: true, ...choix });
   if (!p) throw new Error('profil');
   return p;
 };

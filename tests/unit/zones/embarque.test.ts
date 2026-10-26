@@ -95,6 +95,6 @@ describe('verifierOptions : le libelle du bouton de fin', () => {
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: '   ' })).toBe('L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».');
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'Deux\nlignes' })).toBe('L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.');
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'a\u0000b' })).toMatch(/sur une ligne/);
-    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'x'.repeat(41) })).toBe('L’option « libelleEnregistrer » dépasse 40 caractères : le bouton ne tiendrait plus dans la barre.');
+    expect(verifierOptions({ svg: SVG, onEnregistrer: ok, libelleEnregistrer: 'x'.repeat(41) })).toBe('L’option « libelleEnregistrer » dépasse 40 caractères : le libellé ne tiendrait plus dans le menu Fichier ni dans la confirmation.');
   });
 });

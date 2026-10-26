@@ -185,10 +185,27 @@ describe('couper ou ecrire, forme par forme', () => {
 
   it('exporte une archive qui separe les operations, et la carte « Dans Design Space » dit les deux fichiers', async () => {
     const page = await editeur();
-    const exporter = panneau(page).getByRole('button', { name: 'Exporter pour Cricut' });
-    // L'anneau en pair-impair est un conseil : il ne demande rien.
-    await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
-    const f = await telecharger(page, () => exporter.click());
+    // Le centre de l'anneau tombera a la decoupe (ADR-0040) : un point a corriger, que l'export fait confirmer.
+    const exporter = panneau(page).locator('.export-cricut button.primaire');
+    await attend(() => texteDe(exporter)).toBe('Exporter quand même (1 point à corriger)');
+    const exporterQuandMeme = async () => {
+      await exporter.click();
+      return telecharger(page, () => panneau(page).locator('.confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click());
+    };
+    // Par defaut, le tapis est fixe (ADR-0039, revision du 26 octobre 2026) : trois fichiers a la taille du tapis, un cadre de reperage
+    // par couleur sous les formes de la lame et sous les traits du stylo, et le mode d'emploi le dit.
+    const fixe = entreesZip((await exporterQuandMeme()).octets);
+    expect(fixe.get('dessin-a-couper.svg')?.match(/<path /g)).toHaveLength(4);
+    expect([...(fixe.get('dessin-a-ecrire.svg') ?? '').matchAll(/ fill="([^"]*)"/g)].map(m => m[1])).toEqual(['none', 'none', 'none', 'none']);
+    for (const s of ['dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']) expect(fixe.get(s)).toMatch(/ width="304.8mm" height="304.8mm"/);
+    expect(fixe.get('LISEZMOI.txt')).toContain('3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut)');
+    // La case cochee, puis Ctrl+Z qui rend l'ancien plan (cocher ne touche pas au dessin) : l'archive d'avant la revision, a la taille
+    // du dessin, sans cadre.
+    await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).check();
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await attend(() => texteDe(exporter)).toBe('Exporter quand même (1 point à corriger)');
+    const f = await exporterQuandMeme();
     expect(f.nom).toBe('dessin-cricut.zip');
     const zip = entreesZip(f.octets);
     expect([...zip.keys()]).toEqual(['LISEZMOI.txt', 'dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']);
@@ -213,10 +230,10 @@ describe('couper ou ecrire, forme par forme', () => {
     await attend(() => page.locator('.editeur-calques .groupe-operation').count()).toBe(2);
     await ligne(page, 'f2').getByRole('button', { name: /^Écrire au stylo : Cercle 2/ }).click();
     await attend(() => lignes(page, 'ecriture')).toEqual(['f4', 'f3', 'f2']);
-    // Le SVG du document (« Autres formats » > SVG, options neutres : ce que « Terminer » rend a la page).
+    // Le SVG du document (Fichier > « Télécharger le SVG », options neutres : ce que « Terminer » rend a la page).
     const f = await telecharger(page, async () => {
-      await ouvrirMenu(page, 'Autres formats');
-      await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click();
+      await ouvrirMenu(page, 'Fichier');
+      await page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click();
     });
     const svg = f.octets.toString('utf8');
     expect(svg.match(/data-ed-operation="[a-z]+"/g)).toEqual(['data-ed-operation="ecriture"']);

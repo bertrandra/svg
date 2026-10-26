@@ -60,7 +60,8 @@ describe('les phrases de la fin du parcours', () => {
   });
 
   it('donne les etapes de Design Space pour la decoupe, taille en millimetres, ce qui n est pas verifie marque', () => {
-    const e = etapesDesignSpace(profil(), 'bonhomme-de-neige', { l: 192, h: 96 });
+    // Avec le recalage coche (ADR-0039) : la taille du dessin ; le tapis fixe du defaut a ses etapes (zones/recalage.test.ts).
+    const e = etapesDesignSpace(profil({ recalage: true }), 'bonhomme-de-neige', { l: 192, h: 96 });
     expect(e.map(x => x.texte)).toEqual([
       'Dans Design Space, « Nouveau projet », puis « Importer ».',
       'Choisissez le fichier bonhomme-de-neige-cricut.svg, importez-le, puis ajoutez-le au projet.',

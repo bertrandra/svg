@@ -7,6 +7,23 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Version majeure : des octets écrits changent
 
+- **Cricut : le tapis fixe par défaut** (ADR-0039, révision du 26 octobre 2026 ; décision du propriétaire : « le tapis est fixe dès
+  le départ, les objets restent là où on les pose, et l'on coche la case pour revenir au recalage sur le coin haut gauche »). La case
+  **« Recalage automatique »** du panneau « Prêt pour Cricut » est désormais **décochée par défaut**. Choisir le contexte Cricut pose
+  le plan de travail sur le tapis (une seule annulation), et un fichier ouvert directement en Cricut (sa marque, le public
+  « machine » de l'accueil, un projet du site) le reçoit dans son état initial, sans que ce soit une modification ; le tapis se pose
+  là où Design Space aurait posé les pièces, le dessin à 2 mm du coin de la zone utile, et les formes ne bougent pas d'une
+  coordonnée. Un dessin plus grand que le tapis n'est jamais déplacé : le
+  constat « hors du tapis » le dit, « Ramener dans la zone utile » le corrige. **Ce qui change dans les fichiers écrits** : l'export
+  Cricut par défaut (la lame, le stylo, l'archive « couper et écrire ») a la taille du tapis et porte un cadre de repérage par
+  couleur, les formes à leur place ; le mode d'emploi de l'archive dit « Tapis fixe » et comment cocher la case ; le SVG d'un dessin
+  préparé en Cricut a le tapis pour plan ; `data-ed-recalage="oui"` s'écrit sur la racine seulement quand la case est cochée, et un
+  fichier qui portait `data-ed-recalage="non"` se relit décoché et ne le réécrit plus (le projet JSON suit la même règle, l'ancienne
+  valeur se lit sans refus). **La case cochée redonne l'export d'avant à l'octet** pour un même plan (références `cricut-export`,
+  `cricut-export-mm`, `couper-ecrire-*`, témoins 1 à 9 inchangés) ; cocher ne rend pas l'ancien plan, Ctrl+Z ou « Ajuster le plan de
+  travail » le font. « Générique » n'écrit aucun octet de plus. « Ajuster au dessin » (D) cadre, sur le tapis fixe, les formes
+  visibles. Référence refaite et relue : `tests/fixtures/cricut-recalage/couper-ecrire-fixe-lisezmoi.attendu.txt` ; le témoin 10 du
+  protocole est désormais le cas par défaut.
 - **La bascule : le modèle riche est celui de la page** (ADR-0012, étape 14 ; l'ADR-0012 passe à « acceptée » ; le paquet passe en
   0.2.0). Dans la page autonome et sur le site PHP, un SVG à `<g>`, à dégradés, à motifs, à découpes (`clip-path`), à masques, à
   flou ou à ombre portée, à image `data:` ou à `<svg>` imbriqué s'ouvre désormais en modèle riche et **se réécrit avec ses groupes
@@ -74,6 +91,22 @@ empreintes.
 
 ### Modifié
 
+- **Le menu Aide devient une icône**, un point d’interrogation à droite de la barre, juste avant Fichier (là où l’on cherche l’aide
+  d’habitude) ; il garde la visite guidée et les raccourcis, et ouvre désormais les deux documentations. Sur un téléphone, l’Aide
+  reste la première rubrique de « Plus ».
+
+- **La barre de l'éditeur, plus calme** (demande du propriétaire, 26 octobre 2026) : « Fichier » devient un bouton à icône (une
+  feuille au coin replié), nommé et titré « Fichier », qui ouvre le même menu, désormais en trois rubriques : « Insérer », puis
+  « Récupérer le dessin » (« Télécharger le SVG » en tête, « Télécharger le SVG à plat » en modèle riche, en contexte Cricut
+  « Exporter pour Cricut » — ou pour Print Then Cut, ou pour le stylo —, grisé avec sa raison tant qu'un constat le bloque, puis
+  « Autres formats », replié), puis « Fichier » (le geste de fin, le brouillon, les crédits, fermer). « Télécharger le SVG » et
+  son chevron « Autres formats » ne sont plus des boutons de la barre. Le geste de fin (« Terminer » dans la page,
+  « Enregistrer » ou le libellé de l'hôte) n'est plus qu'une icône, un carré plein, toujours la seule action pleine : le libellé
+  est son nom accessible et son infobulle (avec Ctrl+S sur le site) ; de même dans la barre d'état du téléphone. Le menu « Plus »
+  du téléphone range les mêmes trois rubriques après Édition. Tab, depuis un élément d'un menu, entre dans un contenu libre qui le
+  suit (« Autres formats ») au lieu de fermer le menu. La visite guidée mène au bouton Fichier (« Cliquez « Fichier », l'icône de
+  feuille en haut à droite, puis « Télécharger le SVG ». ») et dit où est le bouton plein chez un hôte. Aucun octet écrit ne
+  change : les éléments du menu appellent les mêmes exports qu'avant.
 - Site PHP : un seul dossier à envoyer par FTP (ADR-0030, révision) : `dist/php/public/` contient tout, `data/` compris, sans
   réglage. Le mot de passe se choisit dans la page à la première visite, ou se dépose dans `data/password` (converti en empreinte
   puis supprimé, il remplace l'ancien). Le changer ferme les sessions ouvertes. L'outil en ligne de commande devient
@@ -282,8 +315,37 @@ empreintes.
 
 ### Ajouté
 
-- Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »**, cochée
-  par défaut (le comportement d'avant, export inchangé à l'octet), dans le panneau « Prêt pour Cricut » ; décochée, le plan de
+- **Deux documentations dans le menu Aide** : « Guide de l’éditeur » (seize fonctions en six chapitres, chacune en une capture
+  et quelques étapes, avec un sommaire qui suit la lecture, Précédent / Suivant, et un tiroir au téléphone) et « La Cricut, c’est
+  simple » (sept étapes en images : la machine, le tapis, la feuille, les copies, les liens, couper ou écrire, l’export). Elles
+  s’ouvrent dans un nouvel onglet, dans la page autonome (`aide/` à côté de `editeur-svg.html`) comme sur le site PHP
+  (`public/aide/`), sans contacter aucun serveur ; un hôte qui embarque l’éditeur ne les propose pas. Sources dans `outils/aide/`,
+  construites par `scripts/documentation.mjs`.
+
+- Contexte Cricut : **les liens des îlots** (ADR-0040). Le centre d'un O, d'un A, d'un D (un trou d'une forme pleine à couper)
+  tombe à la découpe d'un pochoir ; le panneau « Prêt pour Cricut » le dit désormais (« Le centre de cette forme tombera à la
+  découpe », à corriger, jamais bloquant ; en autocollant, on peut l'ignorer) et propose **« Ajouter des liens »** : sur chaque îlot,
+  3 bandes de feuille de 2 mm laissées en travers de la forme, réparties autour de l'îlot, courtes et perpendiculaires aux bords,
+  loin des coins. Tous les îlots d'une forme en une fois, îlots imbriqués compris (le centre du R d'un ®), chaque forme choisie
+  traitée, en une seule entrée d'historique (Ctrl+Z les retire d'un coup). « Régler les liens… », ou « Ajouter des liens… » dans le
+  menu Édition et le menu de la sélection, ouvre une boîte : largeur (0,5 à 10 mm, en millimètres ou en pouces selon l'unité
+  retenue) et nombre par îlot (1 à 12), réglages de la session, jamais écrits. La forme garde son style et son opération ; ses
+  courbes sont rebâties comme après un booléen. Aucun octet ne change tant qu'on n'ajoute pas de liens ; deux références
+  d'écriture neuves, aucune existante ne bouge. La largeur qui tient selon la matière reste à vérifier sur la machine.
+- Éditeur : **« Conserver les proportions »**, un bouton bascule (une chaîne) entre les champs L et H de la section « Position et
+  taille ». Posé, la hauteur suit la largeur tapée et l'inverse (une seule entrée d'historique, la taille entière dite à voix
+  haute), glisser un coin garde les proportions et **Maj redimensionne librement** le temps du geste, Alt et flèches les gardent
+  aussi ; plusieurs formes ou un groupe gardent la proportion de leur boîte commune. La proportion gardée est celle de la boîte
+  au moment où le verrou est posé (ou où la sélection change) : une suite de frappes ou de pas ne dérive pas ; une rotation ou
+  un étirement libre la refont. Une ligne droite (un côté nul) n'a pas de proportion : le verrou ne s'y applique pas. Le
+  basculement est dit (« Proportions conservées. », « Proportions libres. »), la barre d'état et l'aide des raccourcis disent ce
+  que devient Maj. **Coupé par défaut, retenu pour la session** : couper par défaut garde au coin et à Maj le sens qu'ils ont
+  toujours eu (Maj garde les proportions), comme la plupart des éditeurs pour une forme ; une fois posé, il le reste jusqu'à la
+  fermeture de l'éditeur, quelle que soit la sélection, ce qui en fait l'usage courant demandé sans surprendre à l'ouverture.
+  Rien ne s'écrit : aucun octet ni aucune référence ne change.
+- Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »** dans le
+  panneau « Prêt pour Cricut » (décochée par défaut depuis la révision du même jour, voir « Version majeure » ; cochée, le
+  comportement et l'export d'avant à l'octet) ; décochée, le plan de
   travail devient le tapis, fixe, les formes restent où vous les posez, et l'export garde leur place grâce à un **cadre de repérage
   par couleur** de la taille de la zone utile, à attacher aux formes puis à passer en « Guide » dans Design Space (à vérifier,
   témoin 10) ; un constat dit une forme qui sort de la feuille, « Ramener dans la zone utile » la corrige. Une **feuille** se règle
@@ -291,7 +353,7 @@ empreintes.
   sur la feuille… »** (menu Édition, menu « Répéter » de la sélection) copie la sélection sur la feuille sans chevaucher ce qui y
   est déjà, en quantité ou jusqu'à la remplir, avec espacement, marge et rotation d'un quart de tour ; l'optimisation **Avancée**
   emboîte les contours réels (étoiles, lettres, cœurs) et pose toujours au moins autant que la **Simple**, par tranches qu'on peut
-  arrêter. Une seule annulation retire toutes les copies. Le document garde le recalage et la feuille (`data-ed-recalage`,
+  arrêter. Une seule annulation retire toutes les copies. Le document garde le recalage coché et la feuille (`data-ed-recalage`,
   `data-ed-feuille`, seulement hors du défaut), jamais un export.
 - Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
   menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le

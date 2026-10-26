@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page, Request } from 'playwright';
-import { attend, boutonTelecharger, nombreDeCalques, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION, URL_PAGE, type Session } from './aide.js';
+import { attend, boutonFichier, telechargerParFichier, nombreDeCalques, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION, URL_PAGE, type Session } from './aide.js';
 import { champPolice, choisirPolice, listePolices, ouvrirPolices, valeurPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
@@ -95,7 +95,7 @@ describe('les polices libres en ligne', () => {
 
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await attend(() => nombreDeCalques(page)).toBe(2);
-    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     const svg = readFileSync(await telechargement.path(), 'utf8');
     expect(svg).toContain('data-ed-police="' + ID_ESSAI + '"');
     expect(svg).toContain('data-ed-famille="Police%20Essai"');
@@ -124,7 +124,7 @@ describe('les polices libres en ligne', () => {
     // Les credits nomment la licence de la police employee (Ctrl+Z ramene le texte en Police Essai).
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('Control+z');
-    await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+    await boutonFichier(page).click();
     await page.getByRole('menuitem', { name: 'À propos et crédits' }).click();
     const credits = await texteDe(page.getByRole('dialog', { name: 'À propos et crédits' }));
     expect(credits).toContain('Polices téléchargées employées dans ce dessin');

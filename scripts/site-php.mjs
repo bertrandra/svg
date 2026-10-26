@@ -10,6 +10,7 @@
 //       assets/site.css        les styles de la page autonome (jetons, base, page, editeur, fontes de l'interface) et ceux du site
 //       assets/vtracer.js      le traceur, charge a la demande comme dans la page
 //       MENTIONS.txt           les licences des composants redistribues
+//       aide/                  les documentations du menu Aide (scripts/documentation.mjs), reprises de dist/aide
 //       data/                  les donnees, sous la racine web : config.php le prend par defaut
 //         .htaccess            « Require all denied » : tout acces direct refuse (pwd et password compris)
 //         json/                les annexes de donnees en JSON : bibliotheques, index et apercus des polices, liste des fontes livrees
@@ -81,7 +82,7 @@ function construirePolicesSite() {
 }
 
 export async function construireSitePhp() {
-  for (const a of ['vtracer.js', 'MENTIONS.txt', ...ANNEXES_JSON.map(n => n + '.js')]) {
+  for (const a of ['vtracer.js', 'MENTIONS.txt', 'aide/guide.html', 'aide/cricut.html', ...ANNEXES_JSON.map(n => n + '.js')]) {
     if (!existsSync(join(DIST, a))) throw new Error('dist/' + a + ' manque : lancez « npm run construire » (le site se construit après la page et ses annexes).');
   }
   rmSync(SORTIE, { recursive: true, force: true });
@@ -93,6 +94,7 @@ export async function construireSitePhp() {
   const styles = ecrire(join(SORTIE, 'public/assets/site.css'), await construireStyles());
   copyFileSync(join(DIST, 'vtracer.js'), join(SORTIE, 'public/assets/vtracer.js'));
   copyFileSync(join(DIST, 'MENTIONS.txt'), join(SORTIE, 'public/MENTIONS.txt'));
+  cpSync(join(DIST, 'aide'), join(SORTIE, 'public/aide'), { recursive: true });
   let donnees = 0;
   for (const nom of ANNEXES_JSON) donnees += ecrire(join(DONNEES, 'json', nom + '.json'), jsonDeAnnexe(readFileSync(join(DIST, nom + '.js'), 'utf8'), nom + '.js'));
   donnees += construirePolicesSite();

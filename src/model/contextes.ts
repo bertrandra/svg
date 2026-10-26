@@ -287,11 +287,12 @@ export interface ChoixMachine {
   readonly procede: Procede;
   readonly unite: UniteLongueur;
   /**
-   * Faux : le recalage automatique est desactive (ADR-0039). Le plan de travail est alors le tapis, fixe ; les formes restent ou on
-   * les a posees et l'export garde leur place (une feuille partielle posee ailleurs qu'en haut a gauche). Absent : le recalage
-   * d'avant, le tapis cale sur le coin haut gauche du dessin, la ou Design Space pose les pieces. Seul `false` s'ecrit.
+   * Vrai : le recalage automatique est actif (ADR-0039, revision du 26 octobre 2026) ; le tapis suit alors le coin haut gauche du
+   * dessin, la ou Design Space pose les pieces, et l'export est celui d'avant l'ADR-0039. Absent, le defaut : le plan de travail est
+   * le tapis, fixe ; les formes restent ou on les a posees et l'export garde leur place (une feuille partielle posee ailleurs qu'en
+   * haut a gauche). Seul `true` s'ecrit ; l'ancienne valeur `false` (le tapis fixe quand il n'etait pas le defaut) se lit comme absente.
    */
-  readonly recalage?: false;
+  readonly recalage?: true;
   /**
    * La feuille posee sur le tapis (ADR-0039) : une boite en unites du plan, depuis le coin haut gauche du tapis. Absente : le tapis
    * entier. C'est la feuille partielle de la decoupe sans recalage, et la place ou « Dupliquer sur la feuille » range les copies.

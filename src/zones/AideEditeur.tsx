@@ -1,5 +1,6 @@
 // L'aide de l'editeur (ADR-0019) : un menu « Aide » dans la barre (une rubrique de « Plus » sur un telephone) qui rejoue la visite
-// guidee et ouvre la liste des raccourcis. Un debutant qui cherche de l'aide la trouve par son nom, en haut, sans rien deplier.
+// guidee, ouvre la liste des raccourcis et, dans la page et le site, les documentations (`documentation.ts`). Au bureau, c'est une
+// icone a droite, avant Fichier : un point d'interrogation, ou l'on cherche l'aide d'habitude, nomme « Aide » par son infobulle.
 
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -9,6 +10,7 @@ import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { dessinComplet } from './lentille.js';
+import { documentationsPosees } from './documentation.js';
 
 /** Les raccourcis de l'editeur, tels qu'on les dit : la meme liste dans le panneau du dessin et dans la boite de l'aide. */
 export function ListeRaccourcis() {
@@ -34,6 +36,7 @@ export function ListeRaccourcis() {
       <li>Maj+N : le nuancier du dessin devient les couleurs de la sélection · Alt+Maj+N les y ajoute · dans le nuancier, Maj+clic (ou Maj+Entrée) pose la couleur sur le contour</li>
       <li>En contexte Cricut, découpe ou stylo : Maj+X range la sélection à couper, Maj+E à écrire au stylo · Maj+O montre ou retire l’aperçu de la machine · Alt+Maj+X choisit tout ce qui est à couper, Alt+Maj+E tout ce qui est à écrire</li>
       <li>Flèches : déplacer (Maj : ×10) · Alt+flèches : redimensionner, coin haut gauche fixe (Maj : ×10) · Ctrl+flèche gauche ou droite : tourner de 15° (Maj : 1°) · Maj en glissant : contraindre</li>
+      <li>Coins de la sélection : glisser redimensionne librement, Maj garde les proportions · « Conserver les proportions » (la chaîne entre L et H, section Position et taille) : glisser un coin les garde et Maj redimensionne librement le temps du geste ; les champs L et H et Alt+flèches les gardent aussi · une ligne droite n’a pas de proportion à garder</li>
       <li>Au clavier, sur la toile : Tab et Maj+Tab passent à la forme suivante ou précédente (en mode points, au point suivant ou précédent) ; après la dernière, Tab quitte la toile · Page suivante et Page précédente : forme suivante ou précédente, en boucle · Entrée sur une forme : ses points</li>
       <li>Outils de tracé au clavier : les flèches déplacent le réticule (Maj : ×10), Entrée pose la forme à sa taille par défaut au réticule, ou un point avec la plume (Maj+Entrée termine le tracé) · Échap puis Tab quittent la toile · « Aller à la toile » est le premier arrêt de Tab</li>
       <li>Une forme à deux coins au clavier : Espace (ou Maj+Entrée) pose le premier coin au réticule, les flèches déplacent l’autre coin (un aperçu en pointillés suit), Espace ou Entrée le pose ; Échap annule le premier coin</li>
@@ -62,12 +65,19 @@ function DialogueRaccourcis({ fermer }: { fermer: () => void }) {
   );
 }
 
-/** Les elements du menu Aide : la visite (quand l'editeur l'a), les raccourcis. */
+/**
+ * Les elements du menu Aide : la visite (quand l'editeur l'a), les raccourcis, puis les documentations que l'hote a posees, chacune
+ * dans un nouvel onglet (`noopener` : la documentation ne tient aucune poignee sur l'editeur).
+ */
 export function useElementsAide(ouvrirRaccourcis: () => void): ElementMenu[] {
   const v = useVisite();
   return [
     ...(v ? [{ id: 'visite', libelle: 'Visite guidée', icone: 'reprendre', onClick: v.demarrer } satisfies ElementMenu] : []),
-    { id: 'raccourcis', libelle: 'Raccourcis clavier', onClick: ouvrirRaccourcis }
+    { id: 'raccourcis', libelle: 'Raccourcis clavier', onClick: ouvrirRaccourcis },
+    ...documentationsPosees().map((d, i): ElementMenu => ({
+      id: 'documentation-' + d.id, libelle: d.libelle, icone: 'documentation', separateur: i === 0,
+      onClick: () => { window.open(d.adresse, '_blank', 'noopener'); }
+    }))
   ];
 }
 
@@ -77,12 +87,12 @@ export function useBoiteRaccourcis(): { ouvrir: () => void; boite: ReactNode } {
   return { ouvrir: () => poserOuverte(true), boite: ouverte ? <DialogueRaccourcis fermer={() => poserOuverte(false)} /> : null };
 }
 
-/** Le menu Aide de la barre (bureau). */
+/** Le menu Aide de la barre (bureau) : une icone, a droite, avant Fichier. */
 export function MenuAide() {
   const raccourcis = useBoiteRaccourcis();
   return (
     <>
-      <MenuDeroulant etiquette="Aide" libelle="Aide" elements={useElementsAide(raccourcis.ouvrir)} />
+      <MenuDeroulant etiquette="Aide" icone="aide" chevron={false} alignement="droite" className="menu-aide" elements={useElementsAide(raccourcis.ouvrir)} />
       {raccourcis.boite}
     </>
   );

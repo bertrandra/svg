@@ -85,7 +85,8 @@ describe('l apercu de la machine', () => {
 });
 
 describe('la fin du parcours d un dessin mele', () => {
-  const p = resoudreProfil({ ...CRICUT, procede: 'dessin-stylo' });
+  // Avec le recalage coche (ADR-0039) : la taille du dessin ; le tapis fixe du defaut a ses etapes (zones/recalage.test.ts).
+  const p = resoudreProfil({ ...CRICUT, recalage: true, procede: 'dessin-stylo' });
   if (!p) throw new Error('profil');
 
   it('s exporte « pour Cricut », meme au stylo : l archive porte la lame et le stylo', () => {

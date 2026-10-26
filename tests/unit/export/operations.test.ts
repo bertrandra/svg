@@ -10,8 +10,10 @@ import { CHOIX_CRICUT_DEFAUT, DESIGN_SPACE_OPERATIONS, type Procede } from '../.
 import { archiveOperations, exportParOperation, svgCricut, svgPourStylo } from './plats.js';
 
 const lire = (corps: string): DessinSvg => { const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288">' + corps + '</svg>'); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
+// Recalage automatique coche (ADR-0039) : ces essais datent du defaut d'avant sa revision du 26 octobre 2026 et jugent autre chose
+// que la place sur le tapis ; le tapis fixe, defaut depuis, a ses tests (recalage.test.ts).
 const profil = (procede: Procede): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', procede });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: true, procede });
   if (!p) throw new Error('profil');
   return p;
 };

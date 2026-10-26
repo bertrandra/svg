@@ -18,8 +18,10 @@ const lire = (corps: string, vb = '0 0 1200 1200'): DessinSvg => {
   if ('erreur' in r) throw new Error(r.erreur);
   return r.dessin;
 };
+// Recalage automatique coche (ADR-0039) : ces constats datent du defaut d'avant sa revision du 26 octobre 2026 (le tapis suit le
+// dessin, « depassement » se pose) ; le tapis fixe, defaut depuis, a ses constats dans recalage.test.ts (« hors-tapis »).
 const profil = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: true, ...choix });
   if (!p) throw new Error('profil');
   return p;
 };

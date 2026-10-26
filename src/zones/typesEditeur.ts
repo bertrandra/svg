@@ -7,13 +7,14 @@ import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
-import type { CodeConstat, CodeCorrection, Constat, Couche, ProfilProduction } from '../engine/preparation.js';
+import type { CodeConstat, CodeCorrection, Constat, Couche, OptionsLiens, ProfilProduction } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
 import type { Version } from './session.js';
 import type { RegleZone } from '../engine/selection.js';
+import type { Cotes } from '../engine/proportions.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
@@ -161,6 +162,11 @@ export interface EtatInterface {
   enregistrement?: EtatEnregistrement | null;
   /** Ce que le cadre et le lasso prennent (ADR-0035) : les formes touchees (defaut) ou entierement dedans. Un reglage de la session. */
   regleZone: RegleZone;
+  /**
+   * « Conserver les proportions » : redimensionner garde la proportion de la selection (le coin, Maj l'inversant le temps du geste ;
+   * les champs L et H ; Alt et fleches). Un reglage de la session, coupe a l'ouverture ; sans effet sur une ligne (un cote nul).
+   */
+  verrouProportions: boolean;
   /** Le modele de lecture du moment : celui de l'hote, ou le reglage du menu Edition (garde par le stockage injecte). */
   modele: Modele;
   /** L'hote a fixe le modele (`modele` donne a l'editeur) : le reglage du menu Edition ne se montre pas. */
@@ -279,10 +285,22 @@ export interface ActionsEditeur {
    * haute. Hors d'un contexte Cricut qui coupe ou ecrit, ne change rien et le dit.
    */
   poserOperation: (operation: Operation, ids?: readonly string[]) => void;
+  /**
+   * Les liens des ilots (ADR-0040) : pose `nombre` liens de `largeur` (unites du plan) sur chaque ilot des formes nommees, ou de la
+   * selection ; une entree d'historique, dite a voix haute. Vrai si des liens ont ete poses.
+   */
+  ajouterLiens: (reglages: OptionsLiens, ids?: readonly string[]) => boolean;
   /** Montre ou retire l'apercu de la machine sur la toile, et le dit. */
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
   /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */
   poserRegleZone: (r: RegleZone) => void;
+  /** Pose ou coupe « Conserver les proportions », et le dit ; pose, la proportion de la selection du moment devient la reference. */
+  poserVerrouProportions: (v: boolean) => void;
+  /**
+   * La proportion a garder pour ces formes et leur boite : la reference du verrou (prise quand il a ete pose, ou quand la selection
+   * ou sa proportion ont change ; voir engine/proportions.ts), ou null quand le verrou est coupe ou que la boite n'a pas de proportion.
+   */
+  proportionsDe: (ids: readonly string[], b: Boite | null) => Cotes | null;
   /** Change le reglage du modele (menu Edition), le garde dans le stockage injecte et le dit ; sans effet si l'hote l'a fixe. */
   poserModele: (m: Modele) => void;
   /** Pose le contexte d'edition tel quel (null : la racine) ; un groupe qui n'existe pas fait revenir a la racine. */

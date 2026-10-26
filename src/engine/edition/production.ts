@@ -11,7 +11,10 @@ export interface MarqueProduction {
   readonly materiau?: string;
   readonly procede?: string;
   readonly unite?: string;
-  /** « non » quand le recalage automatique est desactive (ADR-0039) ; absent sinon. Le document seul le porte, jamais un export. */
+  /**
+   * « oui » quand le recalage automatique est actif (ADR-0039, revision du 26 octobre 2026) ; absent sinon (le tapis fixe, le defaut).
+   * Le document seul le porte, jamais un export. Un fichier d'avant la revision peut porter « non » : il se lit comme le defaut.
+   */
   readonly recalage?: string;
   /** La feuille sur le tapis (ADR-0039), « x-y-l-h » en centiemes d'unite du plan ; absente pour le tapis entier. */
   readonly feuille?: string;
