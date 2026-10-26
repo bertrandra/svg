@@ -45,8 +45,9 @@ export interface OptionsFin {
 }
 
 /**
- * Le modele de lecture (ADR-0012, annexe 5 §3) : `plat` (defaut, le contrat de l'ADR-0001) ou `riche` (groupes, degrades, effets,
- * en beta). Il ne decide que de la lecture d'un SVG ; un dessin lu s'affiche et s'ecrit selon ce qu'il porte.
+ * Le modele de lecture (ADR-0012, annexe 5 §3) : `plat` (defaut de l'API et de l'embarquement, le contrat de l'ADR-0001) ou `riche`
+ * (groupes, degrades, decoupes, masques, effets, images). Il ne decide que de la lecture d'un SVG ; un dessin lu s'affiche et
+ * s'ecrit selon ce qu'il porte.
  */
 export type Modele = 'plat' | 'riche';
 

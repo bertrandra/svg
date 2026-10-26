@@ -100,7 +100,7 @@ function useElementsEdition(): ElementMenu[] {
     ] satisfies ElementMenu[] : []),
     { id: 'lisser-booleens', libelle: 'Booléens : rebâtir les courbes', coche: ui.lisserBooleens, separateur: true, onClick: () => ac.poserLisserBooleens(!ui.lisserBooleens) },
     // Le modele de lecture (ADR-0012, annexe 5 §3) : garde par le stockage injecte, absent sans lui ou quand l'hote l'a fixe.
-    ...(stockage && !ui.modeleFixe ? [{ id: 'modele-riche', libelle: 'Groupes, dégradés, effets (bêta)', coche: ui.modele === 'riche', onClick: () => ac.poserModele(ui.modele === 'riche' ? 'plat' : 'riche') } satisfies ElementMenu] : []),
+    ...(stockage && !ui.modeleFixe ? [{ id: 'modele-riche', libelle: 'Groupes, dégradés, effets', coche: ui.modele === 'riche', onClick: () => ac.poserModele(ui.modele === 'riche' ? 'plat' : 'riche') } satisfies ElementMenu] : []),
     ...vectoriser,
     { id: 'contour-en-forme', libelle: 'Contour en forme', separateur: true, desactive: rien, onClick: ac.contourEnForme },
     { id: 'decaler-contour', libelle: 'Décaler le contour…', desactive: rien, onClick: () => allerAuChamp(ac, 'decalage') },

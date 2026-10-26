@@ -101,7 +101,7 @@ export interface ProprietesEditeur {
   actionsHote?: readonly ActionHote[] | undefined;
   /**
    * Le modele de lecture du SVG (ADR-0012, annexe 5 §3) : `plat` (le contrat d'avant : les groupes se fondent) ou `riche` (groupes,
-   * degrades, effets, en beta). Donne, il est fixe : le reglage du menu Edition ne se montre pas. Absent : le reglage garde dans
+   * degrades, decoupes, masques, effets, images). Donne, il est fixe : le reglage du menu Edition ne se montre pas. Absent : le reglage garde dans
    * `stockage` (cle `svg.modele`), `modeleParDefaut` sans lui.
    */
   modele?: Modele | undefined;

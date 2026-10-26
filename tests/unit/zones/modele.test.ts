@@ -59,7 +59,7 @@ describe('un brouillon ou une version ecrits en riche, rouverts a plat', () => {
   });
 
   it('le dit sans rien effacer, et laisse passer tout le reste', () => {
-    expect(refusModele(ecritRiche(), 'plat', 'version')).toBe('Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets (bêta) », menu Édition) pour l’ouvrir.');
+    expect(refusModele(ecritRiche(), 'plat', 'version')).toBe('Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets », menu Édition) pour l’ouvrir.');
     expect(refusModele(ecritRiche(), 'plat', 'brouillon')).toMatch(/^Ce brouillon emploie des groupes/);
     expect(refusModele(ecritRiche(), 'riche', 'version')).toBeNull();
     expect(refusModele(GROUPE, 'plat', 'version')).toBeNull();

@@ -66,7 +66,7 @@ export interface OptionsEmbarquees {
   /**
    * Le modele de lecture (ADR-0012, annexe 5 §3) : « plat » par defaut, le contrat d'avant (les groupes se fondent, les degrades et
    * les images sont refuses) et la promesse qu'un SVG reecrit aujourd'hui le sera a l'identique demain ; « riche » garde les groupes,
-   * les degrades et les images (beta). Fixe pour la duree de l'edition : la personne ne le change pas.
+   * les degrades, les decoupes, les masques, les effets et les images. Fixe pour la duree de l'edition : la personne ne le change pas.
    */
   modele?: 'plat' | 'riche';
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */

@@ -1,5 +1,5 @@
 // Le reglage du modele (ADR-0012, annexe 5 §3) : `plat`, le defaut et le contrat de l'ADR-0001 (les groupes se fondent ; degrades,
-// images, decoupes refuses en les nommant), ou `riche`, la beta des groupes, degrades et effets. Il dit comment se LIT un SVG : un
+// images, decoupes refuses en les nommant), ou `riche`, les groupes, degrades, decoupes, masques, effets et images (ADR-0012). Il dit comment se LIT un SVG : un
 // dessin deja lu s'affiche et s'ecrit selon ce qu'il porte (estPlat), quel que soit le reglage.
 //
 // La page et le site le gardent dans le stockage injecte (cle `svg.modele`) ; sans reglage lisible, c'est le defaut de la page
@@ -57,14 +57,14 @@ export type Garde = 'version' | 'brouillon';
 export function refusModele(svg: string, m: Modele, garde: Garde): string | null {
   if (m === 'riche' || !porteModeleRiche(svg)) return null;
   return garde === 'version'
-    ? 'Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets (bêta) », menu Édition) pour l’ouvrir.'
-    : 'Ce brouillon emploie des groupes, des dégradés ou des effets ; activez le modèle riche (bêta) pour le reprendre.';
+    ? 'Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets », menu Édition) pour l’ouvrir.'
+    : 'Ce brouillon emploie des groupes, des dégradés ou des effets ; activez le modèle riche pour le reprendre.';
 }
 
 /** Ce que dit le reglage quand il change : il vaut pour les fichiers ouverts ensuite, le dessin ouvert reste tel qu'il a ete lu. */
 export function phraseModele(m: Modele, garde: boolean): string {
   const quoi = m === 'riche'
-    ? 'Groupes, dégradés et effets activés (bêta) : les prochains fichiers ouverts gardent leurs groupes.'
+    ? 'Groupes, dégradés et effets activés : les prochains fichiers ouverts gardent leurs groupes.'
     : 'Groupes, dégradés et effets désactivés : les prochains fichiers s’ouvrent à plat.';
   return garde ? quoi : quoi + ' Ce navigateur ne garde pas ce réglage : il ne vaut que pour cette édition.';
 }

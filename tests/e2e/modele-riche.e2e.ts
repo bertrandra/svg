@@ -71,11 +71,11 @@ describe('le modele riche sur la toile', () => {
     expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
     expect(await p.locator('.editeur-svg-toile path[data-id]').count()).toBe(3);
     await ouvrirMenu(p, 'Édition');
-    const reglage = p.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets (bêta)' });
+    const reglage = p.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets' });
     expect(await reglage.getAttribute('aria-checked')).toBe('false');
     await reglage.click();
     await attend(() => p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'riche' }));
-    await attend(() => annonce(p)).toMatch(/Groupes, dégradés et effets activés \(bêta\)/);
+    await attend(() => annonce(p)).toMatch(/Groupes, dégradés et effets activés :/);
     // Le dessin ouvert reste tel qu'il a ete lu : le reglage vaut pour les prochains fichiers.
     expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
   });
