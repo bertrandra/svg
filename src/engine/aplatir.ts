@@ -9,6 +9,7 @@
 
 import { estPlat, visibleEffectif, type DessinSvg, type Forme } from './editionSvg.js';
 import { degrades } from './descente/degrades.js';
+import { motifs } from './descente/motifs.js';
 import { images } from './descente/images.js';
 import { descenteDecoupes } from './descente/decoupes.js';
 import { descenteMasques } from './descente/masques.js';
@@ -47,6 +48,7 @@ export interface RegleDescente {
  */
 export const REGLES_DESCENTE: readonly RegleDescente[] = [
   degrades,
+  motifs,
   images,
   descenteDecoupes,
   descenteMasques,

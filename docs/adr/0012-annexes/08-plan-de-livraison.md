@@ -21,7 +21,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 4, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
+| 4, 8, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -537,6 +538,76 @@ réglage à `riche`, **ou un dessin déjà riche** (un projet du site s'ouvre te
   de `degrouper` sur un groupe masqué (`porteurs` le dit déjà), jeton `contour-masque`, pastille « masque d'opacité » dans les calques ;
   la phrase d'une région élargie à la transformation.
 
+### Ce que l'étape 9 a posé (26 octobre 2026, moteur)
+
+Aucun octet d'un dessin plat ne bouge (manifeste v1 intact, aucune référence v2 existante réécrite), la lecture `plat` refuse comme
+avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'ont pas changé (`Motif` existait depuis l'étape 0).
+
+- **Le repère d'un motif** (décision) : `x y l h` sont la tuile dans le repère du motif, `matrice` porte ce repère dans le plan
+  (`patternTransform` composé avec tout ce qui pose la forme), et le **contenu est dans le repère de la tuile, son origine au coin
+  (x, y)** — ce qu'un navigateur dessine (mesuré dans Chromium et Firefox : chaque répétition translate le contenu avec la tuile ; SVG
+  1.1 laissait croire l'inverse). L'écriture recopie donc la tuile telle quelle. Une translation (lue sur la forme ou appliquée ensuite)
+  déplace la tuile au lieu de poser une matrice : un motif déplacé s'écrit sans `patternTransform`, et l'écriture plie de même toute
+  matrice qui, arrondie, n'est qu'une translation (forme canonique, point fixe).
+- **Lecture** (`edition/fonctions/motifs.ts`, une ligne de `catalogue.ts` après les effets ; crochet `lecture.peinture`, que les dégradés
+  laissent passer pour un `<pattern>`) : chaîne `href`/`xlink:href` (attributs et contenu hérités, `CHAINE_HREF_MAX`, `href` l'emporte),
+  `patternUnits` (parts de la boîte locale de la forme par défaut, pourcentages du plan en unités du plan), `patternContentUnits`, `viewBox`
+  et `preserveAspectRatio` (cadrés dans la tuile par `matriceCadre`, le `viewBox` l'emportant sur les unités du contenu), `patternTransform`
+  composé avec `pret.m`. Le contenu se lit par **`lireContenu`** (`edition/contenus.ts`, pile, tables et budget communs) : feuilles,
+  groupes, dégradés, découpes, masques, effets et **motifs imbriqués** (bornés par `PROFONDEUR_DEFS_MAX`, un cycle refusé), hérités de
+  l'endroit où le `<pattern>` est écrit. Mémoire par lecture : une tuile se lit une fois par source et par repère, une peinture se
+  partage entre les formes posées pareil (mille formes, un objet). Refus nommés (`REFUS_MOTIFS`) : renvoi extérieur, cycle, chaîne trop
+  longue, imbrication, plus de `NOEUDS_DEFS_MAX` formes (compté au fil de la lecture, refus dit — la lecture s'arrêtait avant en silence :
+  les places vides des contenus imbriqués comptaient deux fois), plus de 20 000 motifs distincts, **tuile vide, nulle ou plus petite que
+  `TUILE_MIN` = 0,01** (décision : refusée, pas peinte « rien »), longueur dans une autre unité, transformation illisible ou dégénérée,
+  coordonnées démesurées, **une image dans une tuile** (l'écriture riche ne déclare `xmlns:xlink` que pour une image du dessin même : à
+  lever dans `ecritureRiche.ts`, propriétaire S1). Dit (`MSG_MOTIFS`) : une tuile qui déborde (`overflow: visible`) est rognée.
+- **Couleur de repli** (décision, `couleurDeRepliMotif`) : la moyenne OKLab des couleurs de la tuile, pondérée par ce que chacune couvre
+  (aire d'un fond, longueur d'un trait par son épaisseur, comme le nuancier, `nuancier/surfaces.ts`) et par son opacité ; le transparent
+  de la tuile ne compte pas ; un motif ou un dégradé de la tuile par leur repli ; rien de peint : le noir. Mémorisée par tuile.
+- **Écriture** (`ecriture.peindreFeuille`) : `<pattern id="ed-p-…" patternUnits="userSpaceOnUse" x y width height
+  [patternTransform="matrix(…)"]>` puis le contenu par `ContexteEcriture.contenu` (ses définitions déposées avant le `<pattern>`) ;
+  `url(#ed-p-…)` à la place de la couleur ; dédoublonné par empreinte, posé une fois par recueil (mille formes, une définition).
+- **Identifiants** (décision) : la tuile est **un espace à part** (l'annexe 1 §2 ne range dans l'espace unique que découpes et masques).
+  Une peinture se partage comme un dégradé (dupliquer, répéter en grille, scinder une forme gardent le même objet), un projet rouvert en
+  porte des copies égales, et rien n'a besoin d'être renuméroté : **`renumeroterContenus` ne porte pas la tuile, à dessein**.
+  `verifierDessin` juge chaque tuile pour elle-même (une tuile partagée une fois) ; `parcourirContenus` ne voit qu'une fois un contenu
+  partagé (le même objet), donc `poidsDessin` aussi ; `prochainNumero` compte toujours les feuilles de tuile.
+- **Transformation** (`transformation.feuille`) : `transformerMotif` (translation : la tuile bouge ; le reste compose la matrice, exact) ;
+  le contenu reste le même objet ; un même motif au fond et au trait reste un seul objet.
+- **Opération** (`edition/motifs.ts`, bloc « étape 9 » de la façade) : `creerMotif(d, ids, cible?)` — décision : la sélection (visible,
+  déverrouillée, sans image) devient la tuile, exactement sa boîte visuelle (trait et effets compris : elle se pave bord à bord), ramenée
+  au coin de la tuile par les crochets de transformation, et quitte le dessin ; le motif peint la `cible` (son remplissage, la couleur de
+  repli en couleur ; elle garde sa place), sinon **un rectangle neuf de trois tuiles sur trois centré sur la sélection**, sans trait, à la
+  place du plus haut élément choisi, dans son groupe ; `MSG_MOTIF` (vouvoiement).
+- **Interface minimale** : « Créer un motif depuis la sélection » au menu Édition, en riche seulement (`zones/commandesGroupes.ts`,
+  `creerMotifDepuisSelection`, une entrée d'`elementsGroupes` : le rectangle neuf, choisi, dit ; Ctrl+Z défait). La toile n'a rien eu à
+  changer (rendu générique : test dans `rendu.test.ts`, définitions de la toile égales à celles de l'écriture).
+- **Descente** (`engine/descente/motifs.ts`, une ligne de `REGLES_DESCENTE` après les dégradés) : la couleur de repli reste, « les motifs
+  (remplacés par leur couleur moyenne) » ; une forme qui ne s'exporte pas part sans phrase ; `natif` garde le motif (le PDF à 13a).
+- **Nuancier** (décision) : les couleurs de la tuile, chacune pour sa part de ce que la tuile peint, à son opacité par celle de la
+  peinture ; jamais la couleur de repli (comme les arrêts d'un dégradé).
+- **Projet JSON** (format 2) : `model/projetV2/motif.ts` (`lireMotifProjet` : tuile ≥ 0,01, matrice de six nombres, formes et groupes
+  entiers validés comme ceux du dessin par `OutilsProjet.forme`/`groupes`, identifiants uniques dans la tuile, pas d'image, pas vide,
+  huit niveaux au plus) appelé par `lirePeintureProjet` (le genre `motif` n'est plus refusé) ; `engine/projetV2/motif.ts` ; une ligne
+  d'`ALLERS_RETOURS` (et les dégradés ignorent un motif) ; les allers-retours d'une forme reçoivent désormais la conversion d'un contenu
+  (`champsV2VersProjet(f, CONVERSION)`, `champsV2VersModele(f, CONVERSION)`, deux lignes d'`engine/projet.ts`), comme ceux d'un groupe.
+  Un même motif au fond et au trait redevient un seul objet. Aller-retour exact vérifié (modèle, texte JSON, SVG écrit), copies et
+  rotations comprises.
+- **Tests** : `motifs.test.ts`, `v2/cas-motifs.ts` (8 entrées `v2/motifs-*`, déplacer, tourner, étirer, dupliquer, créer sur une cible et
+  en rectangle, le corpus `motif-hachures` — idiome Inkscape « Stripes 1:1 » hérité et pivoté), point fixe aléatoire (200 motifs, deux
+  précisions, graine imprimée), 11 hostiles `v2-motifs-*` et `securite/motifs-hostiles.test.ts` (plus une tuile de 30 000 formes et
+  mille formes à une tuile de 5 000, engendrées), l'extension d'écriture « étape 9 : motifs » (avant les groupes et les dégradés), les
+  motifs dans `projet-v2.test.ts` et `rendu.test.ts`, la commande dans `commandesGroupes.test.ts`. **Rendu** : entrée et référence
+  comparées à la main dans Chromium, Firefox et WebKit (moins de 0,25 % de pixels à plus de 200/255 d'écart, l'anticrénelage des tuiles
+  tournées).
+- **Reste** : l'interface (étape 8 : contexte `motif` pour éditer la tuile — `ContexteEdition.dans: 'motif'` existe —, dimensions
+  numériques, choix de la cible au lieu du rectangle, section Remplissage « Motif » de l'étape 4) ; les images dans une tuile (et dans un
+  masque : le même `xmlns:xlink` manque à l'écriture d'une image de contenu, trouvé ici) ; la vignette du site PHP refuse
+  `url(#ed-p-…)` : un projet à motif n'a pas de vignette (rien ne casse) ; le motif de pavage du PDF (13a) ; la boucle de lecture des
+  masques (`fonctions/masques.ts`) compte deux fois les places vides d'un contenu imbriqué et s'arrête alors en silence sous la borne
+  (corrigé ici pour les motifs seulement : à reprendre pour les masques).
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -763,7 +834,7 @@ corpus `inkscape-flou`. Paquets : **A** moteur (G) ; **B** toile + brouillon + m
 Menu Objet, contextes `decoupe`/`masque`, section Effets, phrases, jetons, axe, e2e. Après 5, 6, 7 et 2.
 Paquets : **A** menus + contextes (M) ; **B** section Effets (M) ; **C** e2e/axe (M).
 
-### Étape 9 — Motifs · taille M
+### Étape 9 — Motifs · taille M · **faite pour le moteur le 26 octobre 2026** (§0, « Ce que l'étape 9 a posé »)
 
 `Motif` (unités, viewBox, `patternTransform`, `href`), lecture/écriture, rendu, descente « repli », « Créer un
 motif depuis la sélection » (contexte `motif`), corpus `motif-hachures`. Après 5.

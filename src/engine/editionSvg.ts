@@ -164,6 +164,8 @@ export {
 } from './edition/fonctions/effets.js';
 
 // ---- etape 9 : motifs
+export { motifs, REFUS_MOTIFS, MSG_MOTIFS, TUILE_MIN, estMotif, couleurDeRepliMotif, transformerMotif } from './edition/fonctions/motifs.js';
+export { creerMotif, MSG_MOTIF } from './edition/motifs.js';
 
 // ---- etape 12 : images
 // Les reperes du document et la repetition d'une selection (ADR-0038).

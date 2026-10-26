@@ -108,3 +108,26 @@ describe('le rendu des effets et des images a effets', () => {
     expect(renduDe(bouge).definitions).not.toBe(renduDe(d).definitions);
   });
 });
+
+describe('le rendu des motifs (etape 9)', () => {
+  it('rend les definitions d un dessin a motifs comme l ecriture (tuiles, motifs et degrades imbriques, transformations)', () => {
+    for (const nom of ['v2/motifs-plan.svg', 'v2/motifs-imbriques.svg', 'v2/motifs-transformes.svg', 'v2/motifs-contour.svg', 'corpus/motif-hachures.svg']) {
+      const d = riche(nom);
+      const r = renduDe(d);
+      expect(r.definitions, nom).toMatch(/<pattern id="ed-p-/);
+      expect(r.definitions, nom).toBe(defsEcrites(d));
+      // La feuille peinte telle que la toile la rend cite le motif ecrit.
+      const f = d.formes.find(x => x.peintureRemplissage?.genre === 'motif');
+      const rf = f ? r.feuille(f) : null;
+      expect(rf?.genre === 'chemin' ? rf.forme.remplissage : '', nom).toMatch(/^url\(#ed-p-[0-9a-f]{14}\)$/);
+    }
+  });
+
+  it('suit une forme deplacee : la tuile bouge avec elle, la definition se recalcule', () => {
+    const d = riche('v2/motifs-plan.svg');
+    renduDe(d);
+    const bouge = deplacer(d, [d.formes[0]?.id ?? ''], 7, 3);
+    expect(renduDe(bouge).definitions).toBe(defsEcrites(bouge));
+    expect(renduDe(bouge).definitions).not.toBe(renduDe(d).definitions);
+  });
+});

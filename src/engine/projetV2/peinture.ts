@@ -2,13 +2,13 @@
 // pleine precision, chaque champ facultatif absent quand il l'etait. La meme copie sert dans les deux sens, ce qui garde l'ordre et
 // l'absence a l'identique : projet -> modele -> projet rend le meme texte JSON.
 
-import type { ArretProjet, PeintureProjet } from '../../model/projetV2/peinture.js';
+import type { ArretProjet, DegradeProjet } from '../../model/projetV2/peinture.js';
 import type { ArretDegrade, Degrade } from '../editionSvg.js';
 
 const arret = <A extends ArretDegrade | ArretProjet>(a: A): A => ({ position: a.position, couleur: a.couleur, ...(a.opacite !== undefined ? { opacite: a.opacite } : {}) }) as A;
 
 /** Un degrade (du modele ou du projet), recopie dans l'ordre du format. */
-export function copieDegrade<D extends Degrade | PeintureProjet>(d: D): D {
+export function copieDegrade<D extends Degrade | DegradeProjet>(d: D): D {
   const commun = {
     arrets: d.arrets.map(arret),
     ...(d.matrice !== undefined ? { matrice: [d.matrice[0], d.matrice[1], d.matrice[2], d.matrice[3], d.matrice[4], d.matrice[5]] } : {}),
@@ -23,5 +23,5 @@ export function copieDegrade<D extends Degrade | PeintureProjet>(d: D): D {
     }) as unknown as D;
 }
 
-export const peintureProjet = (d: Degrade): PeintureProjet => copieDegrade(d) as unknown as PeintureProjet;
-export const peintureDuProjet = (p: PeintureProjet): Degrade => copieDegrade(p) as unknown as Degrade;
+export const peintureProjet = (d: Degrade): DegradeProjet => copieDegrade(d) as unknown as DegradeProjet;
+export const peintureDuProjet = (p: DegradeProjet): Degrade => copieDegrade(p) as unknown as Degrade;

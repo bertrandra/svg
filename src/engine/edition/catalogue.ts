@@ -12,6 +12,7 @@ import { degrades } from './fonctions/degrades.js';
 import { decoupes } from './fonctions/decoupes.js';
 import { masques } from './fonctions/masques.js';
 import { effets } from './fonctions/effets.js';
+import { motifs } from './fonctions/motifs.js';
 import { images } from './fonctions/images.js';
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
@@ -20,5 +21,6 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
   decoupes,
   masques,
   effets,
+  motifs,
   images
 ];
