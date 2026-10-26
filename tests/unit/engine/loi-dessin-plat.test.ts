@@ -33,6 +33,8 @@ import {
 } from './anciennes/couleurs.js';
 import { couleursProchesAncien, fusionnerCouleursProchesAncien, idsDeNuancesProchesAncien } from './anciennes/couleursProches.js';
 import { apportsDeAncien } from './anciennes/nuancier.js';
+import { peintureDite } from '../../../src/engine/description.js';
+import { peintureDiteAncienne } from './anciennes/etape4.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const textes = readdirSync(DOSSIER).filter(n => n.endsWith('.svg')).sort().map(nom => ({ nom, svg: readFileSync(resolve(DOSSIER, nom), 'utf8').replace(/\r\n/g, '\n') }));
@@ -141,6 +143,10 @@ describe('la loi du dessin plat', () => {
       expect(memesCouleurs(d.formes, d.formes.map(f => ({ ...f }))), nom).toBe(memesCouleursAncien(d.formes, d.formes.map(f => ({ ...f }))));
       for (const f of d.formes) expect(apportsDe(f), nom + ' ' + f.id).toEqual(apportsDeAncien(f));
     }
+  });
+
+  it('etape 4 : peintureDite dit ce que disait l ancienne', () => {
+    for (const { nom, d } of corpus) for (const f of d.formes) expect(peintureDite(f), nom + ' ' + f.id).toBe(peintureDiteAncienne(f));
   });
 
   it('refusDe sans fonctionnalite refuse exactement comme avant', () => {

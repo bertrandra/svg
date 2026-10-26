@@ -14,6 +14,7 @@ import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { ListeCouleurs } from './ListeCouleurs.js';
+import { LigneDegrades } from './LigneDegrades.js';
 import { useActionsCouleur } from './actionsCouleur.js';
 
 const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
@@ -68,6 +69,7 @@ export function ParCouleur() {
       ) : sur === 'tout'
         ? <EtatVide genre="aucun-resultat" titre="Aucune forme n’a de couleur." />
         : <EtatVide genre="aucun-resultat" titre={'Aucune forme n’a de ' + (sur === 'contour' ? 'contour' : 'remplissage') + '.'} action={{ libelle: 'Lire le fond et le trait', onClick: () => poserSur('tout') }} />}
+      <LigneDegrades dessin={dessin} sur={sur} />
       <div className="nuances-proches">
         <label className="champ-ligne">
           <span>Tolérance</span>

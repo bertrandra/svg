@@ -23,6 +23,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--filet` | `#cfd4da` | `#2f353c` | Les bordures et séparations ; décoratif, il ne porte jamais seul une information |
 | `--filet-fort` | `#7d848d` | `#69717b` | Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement |
+| `--poignee-degrade` | `#9c2a7a` | `#e07ac0` | Les poignées de dégradé sur la toile (ADR-0012, étape 4) : l’axe, le rail et le cerne des arrêts, posés sur leur halo de panneau ; une teinte à part du cyan de la sélection |
+| `--arret-selectionne` | `#15181d` | `#e6e9ec` | L’arrêt de dégradé choisi : le bord de son option dans la liste des arrêts, l’anneau de la poignée qui a le focus (sur son halo de panneau) |
 
 ### La couleur d’outil : une seule, pour l’action et l’état actif
 
@@ -101,6 +103,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
 | `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
 | `--cyan` sur `--panneau` | 5.14 | 7.04 | le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029) |
+| `--poignee-degrade` sur `--panneau` | 6.53 | 6.16 | l’axe et les poignées d’un dégradé sur la toile, filet sur son halo de panneau (ADR-0012, étape 4) |
+| `--arret-selectionne` sur `--panneau` | 16.73 | 13.76 | le bord de l’arrêt choisi dans la liste, l’anneau de la poignée focalisée sur son halo de panneau |
 | `--apercu-coupe` sur `--toile-blanc` | 4.60 | 4.60 | hachures et contour de coupe de l’aperçu de la machine sur le plan blanc |
 | `--apercu-coupe` sur `--toile-sombre` | 3.67 | 3.67 | hachures et contour de coupe de l’aperçu de la machine sur le plan sombre |
 | `--apercu-coupe` sur `--damier-b` | 3.69 | 3.69 | hachures et contour de coupe de l’aperçu de la machine sur la case grise du damier |

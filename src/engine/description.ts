@@ -3,7 +3,7 @@
 // (« Forme 3 sélectionnée : … ») sont composees dans zones/annonces.ts avec ces briques.
 
 import { lireHex, type Rgb } from '../util/couleur.js';
-import { ancre, boiteForme, estEllipseChemin, reconnaitreFormeDeBase, type Chemin, type Forme } from './editionSvg.js';
+import { ancre, boiteForme, estDegrade, estEllipseChemin, reconnaitreFormeDeBase, type Chemin, type Degrade, type Forme } from './editionSvg.js';
 
 /**
  * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
@@ -104,11 +104,26 @@ export const couleurDite = (code: string): string => {
   return nom ? nom + ' ' + code.toLowerCase() : code.toLowerCase();
 };
 
-/** « fond rouge #c81e28, contour noir #000000 », ou « sans fond ni contour ». */
+/**
+ * « dégradé linéaire du rouge #c81e28 au bleu #1f5fb0 » (ADR-0012, annexe 6 §7) : le genre, puis la couleur du premier et du dernier
+ * arret, nom avant code ; « , 3 arrêts » au-dela de deux.
+ */
+export function degradeDit(g: Degrade): string {
+  const premier = g.arrets[0], dernier = g.arrets[g.arrets.length - 1];
+  const de = premier ? ' du ' + couleurDite(premier.couleur) : '', a = dernier ? ' au ' + couleurDite(dernier.couleur) : '';
+  return 'dégradé ' + (g.genre === 'lineaire' ? 'linéaire' : 'radial') + de + a + (g.arrets.length > 2 ? ', ' + g.arrets.length + ' arrêts' : '');
+}
+
+/**
+ * « fond rouge #c81e28, contour noir #000000 », ou « sans fond ni contour ». Un cote peint d'un degrade (modele v2) le dit, plutot que
+ * sa couleur de repli : « fond dégradé linéaire du rouge #c81e28 au bleu #1f5fb0 ». Une forme plate n'en porte jamais.
+ */
 export function peintureDite(f: Forme): string {
   const morceaux: string[] = [];
-  morceaux.push(f.remplissage ? 'fond ' + couleurDite(f.remplissage) : 'sans fond');
-  if (f.contour) morceaux.push('contour ' + couleurDite(f.contour));
+  const fond = estDegrade(f.peintureRemplissage) ? f.peintureRemplissage : null, trait = estDegrade(f.peintureContour) ? f.peintureContour : null;
+  morceaux.push(fond ? 'fond ' + degradeDit(fond) : f.remplissage ? 'fond ' + couleurDite(f.remplissage) : 'sans fond');
+  if (trait) morceaux.push('contour ' + degradeDit(trait));
+  else if (f.contour) morceaux.push('contour ' + couleurDite(f.contour));
   return morceaux.join(', ');
 }
 
