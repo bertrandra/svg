@@ -56,6 +56,11 @@ empreintes.
 
 ### Modifié
 
+- Le projet du site n'a plus qu'un format, la version 1, qui porte tout le modèle (groupes, dégradés, motifs, images, découpes,
+  masques, effets) : les champs du modèle v2 se lisent et se valident toujours, et une autre version est refusée en la nommant. Le
+  projet d'un dessin plat reste le même texte, octet pour octet ; aucun projet n'existait à conserver (ADR-0030, révision du
+  26 octobre 2026).
+
 - La section de l'inspecteur qui change une couleur partout s'appelle « Recolorer le dessin » (elle s'appelait « Couleurs du
   dessin », comme le groupe du nuancier tiré du dessin) ; la section des palettes qui la suit s'appelle « Palettes » (elle
   s'appelait « Recolorer »).
@@ -288,7 +293,7 @@ empreintes.
 - Modèle v2, étape 6 (moteur, mode riche seulement) : les masques d'opacité. Un `mask` vers un `<mask>` (luminance ou alpha,
   région et unités résolues, contenu peint avec ses dégradés, images, groupes et `<use>`) se lit, s'écrit en `<mask id="ed-m-…">`
   par empreinte et se relit à l'identique ; le masque suit son groupe et rogne sa boîte visuelle ; créer, libérer et inverser un
-  masque (moteur) ; les exports qui ne savent pas masquer l'ignorent et le disent ; le projet le garde au format 2. Un masque CSS,
+  masque (moteur) ; les exports qui ne savent pas masquer l'ignorent et le disent ; le projet le garde. Un masque CSS,
   un renvoi extérieur, un cycle ou une imbrication trop profonde sont refusés en les nommant. Le mode plat ne change pas.
 
 - Modèle v2, étape 7 (moteur, mode riche seulement) : le flou gaussien et l'ombre portée d'une forme ou d'un groupe se lisent,
@@ -303,18 +308,17 @@ empreintes.
   8 niveaux ou plus de 20 000 formes de définitions sont refusés en les nommant. Les découpes s'écrivent en
   `<clipPath id="ed-c-…">` par empreinte et suivent leur groupe quand il se transforme. « Créer une découpe » et « Libérer »
   (moteur) ; la descente vers le PDF, le DXF, l'EPS et le SVG de découpe rogne les remplissages (un trait est gardé entier et
-  c'est dit) ; le projet JSON garde les découpes au format 2. Le mode plat ne change pas.
+  c'est dit) ; le projet JSON garde les découpes. Le mode plat ne change pas.
 
 - Modèle v2, étape 1 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les `<g>` restent des groupes
   (nom, opacité ; la transformation est cuite dans les formes) et se réécrivent à l'identique ; quatre opérations pures (grouper, dégrouper, déplacer dans un
-  groupe, renommer). Une image ou un dégradé sous un groupe transformé suivent le groupe ; les exports à plat multiplient l'opacité du groupe. Le projet du site garde la table des groupes au format 2 ; au format 1, un
-  champ de groupe est ignoré comme tout champ v2.
+  groupe, renommer). Une image ou un dégradé sous un groupe transformé suivent le groupe ; les exports à plat multiplient l'opacité du groupe. Le projet du site garde la table des groupes.
 
 - Modèle v2, étape 3 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les dégradés linéaires et radiaux
   sont lus (unités de boîte, pourcentages, transformation, chaîne `href`, 64 arrêts au plus), réécrits sous un identifiant
   d'empreinte, une seule définition par dégradé, et suivent leur forme. Les exports qui ne savent pas peindre un dégradé (PDF, SVG
   de découpe, DXF, EPS, fichiers Cricut) reçoivent sa couleur moyenne et le disent ; le nuancier lit les couleurs des arrêts. Le
-  projet du site garde dégradés et images au format 2 ; un dessin plat reste au format 1, octet pour octet. La vignette du site
+  projet du site garde dégradés et images ; celui d'un dessin plat ne change pas d'un octet. La vignette du site
   montre les dégradés.
 
 - Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se

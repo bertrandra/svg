@@ -125,7 +125,8 @@ npm run test:php     # les tests du site PHP (tests/php/)
 - **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/` (`public/` racine web, `data/` à côté,
   `DATA_DIR` dans `config.local.php`) ; un seul mot de passe en empreinte dans `data/pwd` ; `src/site/` monte l'éditeur, qui ne
   connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet (`model/projet.ts`,
-  `engine/projet.ts`) garde tout le modèle à pleine précision, se migre, se valide sans lever et réécrit le même SVG à l'octet ;
+  `engine/projet.ts`) garde tout le modèle à pleine précision en un seul format (`VERSION_PROJET = 1`, migrations vides, toute autre version
+  refusée en la nommant), se valide sans lever et réécrit le même SVG à l'octet ;
   les annexes de données passent par `definirSourceDonnees`, les polices du catalogue par le serveur, qui les vérifie ; toute
   route sous session, toute écriture sous jeton CSRF et révision.
 - **Ouvrir depuis une adresse, le type sur les octets** (ADR-0036) : rien ne part sans « Ouvrir », un lien glissé ou une adresse
@@ -149,9 +150,9 @@ npm run test:php     # les tests du site PHP (tests/php/)
   visibilité et verrou sont de la session ; grille, radiale et symétrie sont pures (`engine/edition/repetition.ts`) ; la largeur
   variable est une conversion (`engine/contour/largeur.ts`), pas un style.
 - **Les groupes sont des feuilles à `parent` et une table** (ADR-0012, étape 1) : `Forme.parent` nomme le groupe, `Dessin.groupes`
-  porte nom, visibilité, verrou et opacité, sans matrice vivante (la transformation est cuite dans les feuilles) ; l'arbre se vérifie (`verifierDessin`) et `normaliser` le garde contigu ; les groupes
-  descendent en dernier dans `REGLES_DESCENTE` (opacité multipliée) ; au format 1 du projet, un champ de
-  groupe est ignoré comme tout champ v2.
+  porte nom, visibilité, verrou et opacité, sans matrice vivante (la transformation est cuite dans les feuilles) ; l'arbre se
+  vérifie (`verifierDessin`) et `normaliser` le garde contigu ; les groupes descendent en dernier dans `REGLES_DESCENTE` (opacité
+  multipliée) ; le projet les porte comme tout champ v2.
 - **Une découpe est de la géométrie, rangée sur un groupe** (ADR-0012, étape 5) : `Groupe.decoupe` garde des feuilles canoniques
   (`feuilleDeDecoupe`) dans le repère du plan, une feuille découpée s'enveloppe dans un groupe ; l'écriture pose
   `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
@@ -226,8 +227,8 @@ npm run test:php     # les tests du site PHP (tests/php/)
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente
-  rend la couleur de repli ; le projet passe au format 2 seulement pour un dessin non plat (`VERSION_PROJET_PLAT`), un champ v2 s'y
-  ajoute par une ligne de `model|engine/projetV2/champs.ts`.
+  rend la couleur de repli ; le projet le porte comme tout champ v2, ajouté par une ligne de
+  `model|engine/projetV2/champs.ts`.
 - **Une image intégrée est une feuille, vérifiée sur ses octets** (ADR-0012, étape 12) : `edition/fonctions/images.ts` ne lit qu'un
   `data:image/(png|jpeg|gif|webp);base64` en mode `riche`, nature et dimensions prises sur les octets ; une « image » SVG ou une
   adresse extérieure sont refusées en le nommant ; 4 Mo, 16 Mo par dessin, 64 millions de pixels ; la descente l'abandonne et le
