@@ -1,8 +1,8 @@
 // L'image integree entre le modele et le projet JSON (ADR-0030, ADR-0012 etape 12), dans les deux sens. L'aller-retour est exact :
 // chaque nombre garde sa pleine precision (JSON porte les doubles tels quels), un champ facultatif reste absent quand il l'etait.
 // Au retour, les octets se verifient comme a la lecture d'un SVG (`verifierDonneesImage` : nature, dimensions, pixels, 4 Mo par
-// image, 16 Mo par dessin), et `d` redevient exactement le rectangle de l'image. Pret pour le cadre des champs v2 que pose l'etape 1
-// (une ligne d'aller-retour par champ) : il n'y est pas encore branche. Pur.
+// image, 16 Mo par dessin), et `d` redevient exactement le rectangle de l'image. Branche par une ligne du cadre des champs v2
+// (engine/projetV2/champs.ts). Pur.
 
 import type { ImageIntegreeProjet } from '../../model/projetV2/image.js';
 import { IMAGES_OCTETS_MAX, rectangleImage, verifierDonneesImage, type Chemin, type ImageIntegree } from '../editionSvg.js';

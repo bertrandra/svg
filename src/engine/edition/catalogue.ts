@@ -7,8 +7,10 @@
 // motifs (9), images (12).
 
 import type { Fonctionnalite } from './fonctionnalites.js';
+import { degrades } from './fonctions/degrades.js';
 import { images } from './fonctions/images.js';
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
+  degrades,
   images
 ];

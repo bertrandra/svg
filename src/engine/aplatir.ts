@@ -8,6 +8,7 @@
 // cout et sans un octet de difference.
 
 import { estPlat, visibleEffectif, type DessinSvg, type Forme } from './editionSvg.js';
+import { degrades } from './descente/degrades.js';
 import { images } from './descente/images.js';
 
 /** Ce qu'un exporteur fait d'une fonction du modele : il la sait, il l'approche, il la rend en image, ou il la refuse. */
@@ -40,6 +41,7 @@ export interface RegleDescente {
  * decoupes et les masques, les groupes en dernier). Vide a l'etape 0.
  */
 export const REGLES_DESCENTE: readonly RegleDescente[] = [
+  degrades,
   images
 ];
 

@@ -9,7 +9,7 @@
 import { lireHex, versOklab, type Oklab } from '../../util/couleur.js';
 import { au } from '../../util/tableaux.js';
 import { creerIndexVoisins, ecartOklab } from '../../util/voisinsOklab.js';
-import type { SurCouleur } from './couleurs.js';
+import { fondUni, traitUni, type SurCouleur } from './couleurs.js';
 import type { DessinSvg, Forme } from './types.js';
 
 /** Un groupe de nuances ramenees a `cible` : la couleur la plus employee, et celles qui s'y fondent. */
@@ -25,9 +25,13 @@ export interface FusionCouleurs {
   conservees: number;
 }
 
-/** Les couleurs d'une forme lues sur le remplissage, le contour, ou les deux (une seule fois si elles sont egales). */
+/**
+ * Les couleurs d'une forme lues sur le remplissage, le contour, ou les deux (une seule fois si elles sont egales). Un cote peint d'un
+ * degrade n'en a pas (couleurs.ts, `fondUni`) : il ne se regroupe ni ne se fond.
+ */
 function lues(f: Forme, sur: SurCouleur): string[] {
-  const l = sur === 'remplissage' ? [f.remplissage] : sur === 'contour' ? [f.contour] : f.remplissage === f.contour ? [f.remplissage] : [f.remplissage, f.contour];
+  const fond = fondUni(f), trait = traitUni(f);
+  const l = sur === 'remplissage' ? [fond] : sur === 'contour' ? [trait] : fond === trait ? [fond] : [fond, trait];
   return l.filter((c): c is string => !!c);
 }
 
@@ -96,8 +100,9 @@ export function fusionnerCouleursProches(dessin: DessinSvg, tolerance: number, s
   let recolorees = 0;
   const formes = dessin.formes.map(f => {
     if (f.verrouille) return f;
-    const r = sur !== 'contour' && f.remplissage ? cibles.get(f.remplissage) : undefined;
-    const c = sur !== 'remplissage' && f.contour ? cibles.get(f.contour) : undefined;
+    const fond = fondUni(f), trait = traitUni(f);
+    const r = sur !== 'contour' && fond ? cibles.get(fond) : undefined;
+    const c = sur !== 'remplissage' && trait ? cibles.get(trait) : undefined;
     if (r === undefined && c === undefined) return f;
     recolorees++;
     return { ...f, remplissage: r ?? f.remplissage, contour: c ?? f.contour };

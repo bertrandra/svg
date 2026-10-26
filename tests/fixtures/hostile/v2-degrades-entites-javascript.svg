@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" x2="100" gradientTransform="&#106;&#97;vascript:alert(1)"><stop offset="0" stop-color="#c81e28"/><stop offset="1" stop-color="#1f5fb0"/></linearGradient><rect width="100" height="100" fill="url(#g)"/></svg>

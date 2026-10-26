@@ -122,6 +122,14 @@ export { transformerFeuille, transformerGroupe } from './edition/transformation.
 // ---- etape 1 : groupes (moteur)
 
 // ---- etape 3 : definitions et degrades
+export {
+  ARRETS_MAX, estDegrade, poidsArrets, couleurDeRepli, transformerDegrade, definitionDegrade
+} from './edition/degrades.js';
+export {
+  CHAINE_HREF_MAX, PROFONDEUR_DEFS_MAX, NOEUDS_DEFS_MAX, lireReference, chaineHref, attributHerite, hrefDe, lireLongueur, lireFraction,
+  type Reference, type Chaine, type Longueur
+} from './edition/resolution.js';
+export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degrades.js';
 
 // ---- etape 5 : decoupes
 

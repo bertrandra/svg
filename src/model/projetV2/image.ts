@@ -2,7 +2,7 @@
 // pleine precision, les donnees en ligne (`data:`) dans le projet lui-meme. Un projet vient d'un fichier, d'un serveur ou d'un autre
 // onglet : il ne se croit pas sur parole. Cette validation-ci porte sur la forme (types, bornes, alphabet) ; les octets eux-memes
 // (nature, dimensions, pixels) se verifient a cote, dans le moteur (`engine/projetV2/image.ts`), par la fonction de la lecture d'un
-// SVG. Pret pour le cadre des champs v2 que pose l'etape 1 (une ligne de validateur par champ) : il n'y est pas encore branche.
+// SVG. Branche par une ligne du cadre des champs v2 (model/projetV2/champs.ts).
 // Pur ; ne leve jamais.
 
 /** Ce que le projet garde d'une image integree : les donnees, le cadre, la matrice composee et l'aspect, s'ils existent. */

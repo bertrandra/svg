@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <linearGradient id="ciel" gradientUnits="userSpaceOnUse" x1="10" y1="10" x2="190" y2="10">
+      <stop offset="0" stop-color="#c81e28"/>
+      <stop offset="0.5" stop-color="#f2b705"/>
+      <stop offset="1" stop-color="#1f5fb0"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="180" height="100" fill="url(#ciel)"/>
+</svg>
