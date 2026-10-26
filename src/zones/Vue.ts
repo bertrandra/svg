@@ -25,11 +25,12 @@ export function useTactile(): boolean {
 }
 
 /**
- * Vrai quand le pointeur principal survole finement (une souris, un stylet) : l'arbre des calques n'y dessine les boutons d'une ligne
- * qu'a la ligne active, survolee, ou dont l'etat n'est pas celui de repos (ArbreCalques.tsx). Faux au doigt et hors navigateur.
+ * Vrai quand le pointeur principal n'est pas un doigt (une souris, un stylet, ou aucun : le clavier seul) : l'arbre des calques n'y
+ * dessine les boutons d'une ligne qu'a la ligne active, survolee, ou dont l'etat n'est pas celui de repos (ArbreCalques.tsx). Faux au
+ * doigt, ou rien ne survole, et hors navigateur. (Pas `(hover: hover)` : Firefox sans ecran annonce `pointer: none`, sans survol.)
  */
 export function useSurvolFin(): boolean {
-  return useMedia('(hover: hover) and (pointer: fine)');
+  return useMedia('not all and (pointer: coarse)');
 }
 
 /**

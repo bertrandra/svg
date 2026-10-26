@@ -846,6 +846,9 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .outil-selection .editeur-svg-toile .hors-contexte [data-id] { cursor: auto; }
 @media (forced-colors: active) {
   .editeur-svg-toile .contour-groupe-fond { stroke: Canvas; }
+  /* Le fil d'Ariane se redit lui-meme (WebKit ne force aucune couleur d'auteur) : un bouton borde du systeme, le niveau courant en texte. */
+  .fil-ariane button.discret { color: ButtonText; border: 1px solid ButtonText; }
+  .fil-ariane [aria-current], .fil-ariane .separateur { color: CanvasText; }
   .editeur-svg-toile .contour-groupe { stroke: Highlight; }
 }
 

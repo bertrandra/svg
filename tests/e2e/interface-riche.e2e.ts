@@ -49,11 +49,12 @@ const MODES: readonly Mode[] = [
 describe('l interface riche, parcours et ecrans (paquet 2-D)', () => {
   const navigateur = pilote();
 
+  /** Une page en modele riche (pose par la page, lu a l'ouverture d'un dessin : voir modele-riche.e2e.ts), en contraste force si demande. */
   async function page(options: OptionsSession = {}, force = false): Promise<Page> {
     const s = await navigateur.ouvrir({ ...options, naviguer: false });
-    await s.contexte.addInitScript(() => { try { if (localStorage.getItem('svg.modele') === null) localStorage.setItem('svg.modele', JSON.stringify({ modele: 'riche' })); } catch { /* sans stockage */ } });
     if (force) await s.page.emulateMedia({ forcedColors: 'active' });
     await s.page.goto(URL_PAGE);
+    await s.page.evaluate(() => { localStorage.setItem('svg.modele', JSON.stringify({ modele: 'riche' })); });
     return s.page;
   }
 
@@ -88,15 +89,31 @@ describe('l interface riche, parcours et ecrans (paquet 2-D)', () => {
     await attend(() => element.count()).toBe(0);
   }
 
+  /**
+   * axe-core, violations graves et « à relire ». En contraste force, un contraste entre deux couleurs du systeme (HighlightText sur
+   * Highlight…) n'est pas le notre : c'est la palette que la personne a choisie, et celle que Firefox et WebKit emulent sans ecran (un
+   * Highlight a 2,9:1 et 4:1 sous son texte) ne dit rien de la page. Ces noeuds-la seuls sont laisses ; tout autre contraste compte.
+   */
   async function auditAxe(p: Page): Promise<string[]> {
     await attendreAnimations(p);
     await p.addScriptTag({ content: AXE });
     return p.evaluate(async () => {
-      const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; impact: string | null; nodes: Array<{ target: unknown[] }> }>; incomplete: Array<{ id: string; nodes: unknown[] }> }> } };
+      type Noeud = { target: unknown[]; any: Array<{ data?: { fgColor?: string; bgColor?: string } | null }> };
+      const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: Array<{ id: string; impact: string | null; nodes: Noeud[] }>; incomplete: Array<{ id: string; nodes: Noeud[] }> }> } };
+      const force = matchMedia('(forced-colors: active)').matches;
+      const hex = (mot: string): string => {
+        const x = document.createElement('span'); x.style.color = mot; document.body.appendChild(x);
+        const [r = 0, v = 0, b = 0] = (getComputedStyle(x).color.match(/\d+(\.\d+)?/g) ?? []).map(Number); x.remove();
+        return '#' + [r, v, b].map(c => Math.round(c).toString(16).padStart(2, '0')).join('');
+      };
+      const systeme = new Set(force ? ['Highlight', 'HighlightText', 'Canvas', 'CanvasText', 'ButtonText', 'ButtonFace', 'GrayText', 'LinkText'].map(hex) : []);
+      const choisi = (n: Noeud) => { const d = n.any[0]?.data; return !(d?.fgColor && d.bgColor && systeme.has(d.fgColor) && systeme.has(d.bgColor)); };
       const r = await w.axe.run(document, { resultTypes: ['violations', 'incomplete'] });
       return [
-        ...r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target))),
-        ...r.incomplete.map(v => 'à relire : ' + v.id + ' ×' + v.nodes.length)
+        ...r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical').map(v => ({ ...v, nodes: v.id === 'color-contrast' ? v.nodes.filter(choisi) : v.nodes }))
+          .filter(v => v.nodes.length).map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target))),
+        ...r.incomplete.map(v => ({ ...v, nodes: v.id === 'color-contrast' ? v.nodes.filter(choisi) : v.nodes })).filter(v => v.nodes.length)
+          .map(v => 'à relire : ' + v.id + ' ×' + v.nodes.length + ' ' + JSON.stringify(v.nodes.map(n => n.target)))
       ];
     });
   }
