@@ -4,6 +4,7 @@
 // police de l'interface.
 
 import { validerApercus, type AnnexeApercus } from '../model/apercusPolices.js';
+import { t } from '../util/i18n.js';
 import { fabriquerChargeurAnnexe, navigateur, type Amenees, type Annexe } from './annexes.js';
 
 export const FICHIER_APERCUS = 'polices-apercus.js';
@@ -11,8 +12,8 @@ export const FICHIER_APERCUS = 'polices-apercus.js';
 export const ANNEXE_APERCUS: Annexe<AnnexeApercus> = {
   fichier: FICHIER_APERCUS,
   globale: '__apercusPolicesSvg',
-  contenu: 'les aperçus des polices',
-  consigne: 'lancez « npm run construire »',
+  get contenu() { return t('les aperçus des polices'); },
+  get consigne() { return t('lancez « npm run construire »'); },
   donnees: true,
   // Une valeur malformee ou trop grosse se lit comme absente : la validation rend une erreur, elle ne leve jamais.
   valider: v => { if (v === undefined) return undefined; const a = validerApercus(v); return 'erreur' in a ? undefined : a; }

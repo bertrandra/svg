@@ -6,6 +6,8 @@
 // ici, seulement le canevas qui decode et le traceur qu'on charge.
 
 import { nettoyerSvg } from '../util/svg.js';
+import { t } from '../util/i18n.js';
+import { pluriel } from '../util/texte.js';
 import { couleursPixels, type CouleurExtraite } from '../engine/extraction.js';
 import { couleurDuBord, detourer, type Detourage } from '../engine/detourage.js';
 import { tracerLigneMediane, type MesureLigne } from '../engine/lignemediane.js';
@@ -60,17 +62,17 @@ export function chargerImage(fichier: Blob): Promise<HTMLImageElement> {
   return new Promise((ok, ko) => {
     const url = URL.createObjectURL(fichier), img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); ok(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('image illisible')); };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error(t('image illisible'))); };
     img.src = url;
   });
 }
 
 export function toile(l: number, h: number): { t: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
-  const t = document.createElement('canvas');
-  t.width = Math.max(1, l); t.height = Math.max(1, h);
-  const ctx = t.getContext('2d', { willReadFrequently: true });
-  if (!ctx) throw new Error('Canevas indisponible');
-  return { t, ctx };
+  const canevas = document.createElement('canvas');
+  canevas.width = Math.max(1, l); canevas.height = Math.max(1, h);
+  const ctx = canevas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error(t('Canevas indisponible'));
+  return { t: canevas, ctx };
 }
 
 function envelopper(png: string, l: number, h: number): string {
@@ -127,40 +129,40 @@ export async function traiterImage(source: SourceImage, traitement: Traitement, 
   const { largeur: l, hauteur: h } = pre.image;
   const pixels = new Uint8ClampedArray(pre.image.data);
   const detourage = traitement.detourer ? detourer(pixels, l, h, traitement.tolerance, traitement.portee) : null;
-  const { t, ctx } = toile(l, h);
+  const { t: canevas, ctx } = toile(l, h);
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
   // Une image reduite a N couleurs a des couleurs exactes : on les compte telles quelles (le canevas reduit les melangerait).
   const exactes = pre.palette ? couleursExactes({ data: pixels, largeur: l, hauteur: h }, COULEURS_MAX) : null;
-  const couleurs = exactes ?? couleursDe(t);
+  const couleurs = exactes ?? couleursDe(canevas);
   const pretraite = infoPretraitement(pre, source, pixels);
   const commun = { couleurs, detourage: detourage?.retires ? detourage : null, source, traitement, ...(pretraite ? { pretraite } : {}) };
   const duree = () => Math.max(1, Math.round(performance.now() - debut));
   const taille = (svg: string) => (pre.agrandie ? ramenerATaille(svg, source.largeur, source.hauteur) : svg);
   if (!traitement.vecteurs) {
-    const propre = nettoyerSvg(envelopper(t.toDataURL('image/png'), l, h));
-    if (!propre) return { erreur: 'Cette image ne s’enveloppe pas : déposez un autre PNG ou JPG.' };
+    const propre = nettoyerSvg(envelopper(canevas.toDataURL('image/png'), l, h));
+    if (!propre) return { erreur: t('Cette image ne s’enveloppe pas : déposez un autre PNG ou JPG.') };
     return { ...commun, svg: taille(propre.svg), matriciel: true, traces: null, duree: duree() };
   }
-  if (!aTracer(pixels)) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
+  if (!aTracer(pixels)) return { erreur: t('Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.') };
   if (!parVtracer(traitement.vecteurs.mode)) {
     // La ligne mediane ne charge pas vtracer : tout est du moteur pur. Le fond est la couleur du bord de l'image
     // pretraitee, avant detourage (celle que le detourage a retiree) ; un pixel detoure est du fond.
     const ligne = tracerLigneMediane({ data: pixels, largeur: l, hauteur: h }, couleurDuBord(pre.image.data, l, h), traitement.vecteurs.finesse, traitement.vecteurs.ligne);
     if ('erreur' in ligne) return ligne;
     const propre = nettoyerSvg(ligne.svg);
-    if (!propre) return { erreur: 'La ligne médiane n’a rien donné de lisible : changez de grain.' };
+    if (!propre) return { erreur: t('La ligne médiane n’a rien donné de lisible : changez de grain.') };
     return { ...commun, svg: taille(propre.svg), matriciel: false, traces: ligne.traces, ligne: ligne.mesure, duree: duree() };
   }
   let tracer: Traceur;
-  try { tracer = traceur ?? await chargerTraceur(); } catch (e) { return { erreur: 'Le vectoriseur ne s’est pas chargé dans ce navigateur (' + raison(e) + ').' }; }
+  try { tracer = traceur ?? await chargerTraceur(); } catch (e) { return { erreur: t('Le vectoriseur ne s’est pas chargé dans ce navigateur ({raison}).', { raison: raison(e) }) }; }
   const options = optionsTraceur(traitement.vecteurs.mode, traitement.vecteurs.finesse, couleurs.map(c => c.hex), traitement.vecteurs.fins, exactes ? COULEURS_MAX : COULEURS_PALETTE_MAX);
   let brut: string;
-  try { brut = tracer(new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength), l, h, options); } catch (e) { return { erreur: 'La vectorisation a échoué sur cette image : changez de mode ou de grain (' + raison(e) + ').' }; }
+  try { brut = tracer(new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength), l, h, options); } catch (e) { return { erreur: t('La vectorisation a échoué sur cette image : changez de mode ou de grain ({raison}).', { raison: raison(e) }) }; }
   const propre = nettoyerSvg(svgDuTraceur(brut));
-  if (!propre) return { erreur: 'La vectorisation n’a rien donné de lisible : changez de mode ou de grain.' };
+  if (!propre) return { erreur: t('La vectorisation n’a rien donné de lisible : changez de mode ou de grain.') };
   const traces = compterTraces(propre.svg);
-  if (!traces) return { erreur: 'Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.' };
-  if (traces > TRACES_MAX) return { erreur: traces + ' tracés : c’est une photo plus qu’un dessin. Choisissez un grain plus lisse.' };
+  if (!traces) return { erreur: t('Rien à tracer : le détourage a tout retiré. Réduisez sa tolérance, ou désactivez-le.') };
+  if (traces > TRACES_MAX) return { erreur: t('{n} tracés : c’est une photo plus qu’un dessin. Choisissez un grain plus lisse.', { n: traces }) };
   return { ...commun, svg: taille(propre.svg), matriciel: false, traces, duree: duree() };
 }
 
@@ -176,10 +178,10 @@ export function apercuPretraite(source: SourceImage, traitement: Pick<Traitement
   const { largeur: l, hauteur: h } = pre.image;
   const pixels = new Uint8ClampedArray(pre.image.data);
   if (traitement.detourer) detourer(pixels, l, h, traitement.tolerance, traitement.portee);
-  const { t, ctx } = toile(l, h);
+  const { t: canevas, ctx } = toile(l, h);
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
   return {
-    url: t.toDataURL('image/png'), largeur: l, hauteur: h, etapes: pre.etapes, palette: pre.palette,
+    url: canevas.toDataURL('image/png'), largeur: l, hauteur: h, etapes: pre.etapes, palette: pre.palette,
     couleurs: compterCouleurs({ data: pixels, largeur: l, hauteur: h }), couleursAvant: compterCouleurs({ data: source.pixels, largeur: source.largeur, hauteur: source.hauteur })
   };
 }
@@ -192,15 +194,15 @@ export function apercuDetoure(source: SourceImage, traitement: Pick<Traitement, 
   const { largeur: l, hauteur: h } = source;
   const pixels = new Uint8ClampedArray(source.pixels);
   if (traitement.detourer) detourer(pixels, l, h, traitement.tolerance, traitement.portee);
-  const { t, ctx } = toile(l, h);
+  const { t: canevas, ctx } = toile(l, h);
   ctx.putImageData(new ImageData(pixels, l, h), 0, 0);
-  return t.toDataURL('image/png');
+  return canevas.toDataURL('image/png');
 }
 
 /** Decode une image PNG, JPG, GIF ou WebP, reduite a COTE_MAX : la source sur laquelle tout se rejoue. */
 export async function lireSource(fichier: Blob): Promise<SourceImage | { erreur: string }> {
   let img: HTMLImageElement;
-  try { img = await chargerImage(fichier); } catch { return { erreur: 'Cette image ne se lit pas : déposez un PNG, un JPG, un GIF ou un WebP.' }; }
+  try { img = await chargerImage(fichier); } catch { return { erreur: t('Cette image ne se lit pas : déposez un PNG, un JPG, un GIF ou un WebP.') }; }
   const e = Math.min(1, COTE_MAX / Math.max(img.naturalWidth, img.naturalHeight));
   const l = Math.max(1, Math.round(img.naturalWidth * e)), h = Math.max(1, Math.round(img.naturalHeight * e));
   const { ctx } = toile(l, h);
@@ -210,17 +212,18 @@ export async function lireSource(fichier: Blob): Promise<SourceImage | { erreur:
 
 /** Ce que l'image est devenue, en une ligne. */
 export function resumeConversion(r: ImageConvertie): string {
-  const fond = r.detourage ? 'fond ' + r.detourage.fond.toUpperCase() + ' retiré ' + (r.traitement.portee === 'partout' ? 'partout' : 'depuis le bord') + ' (' + Math.round(r.detourage.part * 100) + ' %)' : r.traitement.detourer ? 'aucun fond à retirer' : 'fond gardé';
-  const s = r.traces !== null && r.traces > 1 ? 's' : '';
-  const forme = r.traces === null ? 'image telle quelle' : r.ligne ? r.traces + ' tracé' + s + ' · une ligne au milieu du trait' : r.traces + ' tracé' + s + ' vectoriel' + s;
-  return fond + ' · ' + forme + ' · ' + Math.max(1, Math.round(r.svg.length / 1024)) + ' Ko';
+  const fond = r.detourage
+    ? t('fond {couleur} retiré {ou} ({part} %)', { couleur: r.detourage.fond.toUpperCase(), ou: r.traitement.portee === 'partout' ? t('partout') : t('depuis le bord'), part: Math.round(r.detourage.part * 100) })
+    : r.traitement.detourer ? t('aucun fond à retirer') : t('fond gardé');
+  const forme = r.traces === null ? t('image telle quelle') : r.ligne ? t('{traces} · une ligne au milieu du trait', { traces: pluriel(r.traces, 'tracé') }) : pluriel(r.traces, 'tracé vectoriel');
+  return t('{fond} · {forme} · {ko} Ko', { fond, forme, ko: Math.max(1, Math.round(r.svg.length / 1024)) });
 }
 
 /** Le dessin en PNG, a la largeur donnee (la hauteur suit le plan), fond transparent. */
 export async function versPng(svg: string, largeur: number): Promise<Blob> {
   const img = await chargerImage(new Blob([svg], { type: 'image/svg+xml' }));
   const l = Math.max(1, Math.round(largeur)), h = Math.max(1, Math.round((img.naturalHeight / Math.max(1, img.naturalWidth)) * l));
-  const { t, ctx } = toile(l, h);
+  const { t: canevas, ctx } = toile(l, h);
   ctx.drawImage(img, 0, 0, l, h);
-  return new Promise((ok, ko) => t.toBlob(b => (b ? ok(b) : ko(new Error('rendu refusé'))), 'image/png'));
+  return new Promise((ok, ko) => canevas.toBlob(b => (b ? ok(b) : ko(new Error(t('rendu refusé')))), 'image/png'));
 }

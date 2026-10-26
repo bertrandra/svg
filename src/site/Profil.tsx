@@ -7,6 +7,7 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { Compte, Langue, Serveur } from '../io/serveur.js';
 import { useFocusDialogue } from '../zones/focusEditeur.js';
+import { t } from '../util/i18n.js';
 import { NOM_MAX, nomDeCompte, validerMotDePasse, validerProfil } from './comptesSite.js';
 import { Champ, ChoixLangue, RetourFormulaire, type Retour } from './Formulaire.js';
 
@@ -32,7 +33,7 @@ function FormulaireIdentite({ compte, serveur, changer }: Pick<Proprietes, 'comp
     poserErreurs(err);
     if (err.nom) { champ.current?.focus(); return; }
     const propre = nomDeCompte(nom), langueChange = langue !== compte.langue;
-    if (propre === compte.nom && !langueChange) { poserRetour({ texte: 'Rien n’a changé.', ton: 'info' }); return; }
+    if (propre === compte.nom && !langueChange) { poserRetour({ texte: t('Rien n’a changé.'), ton: 'info' }); return; }
     poserOccupe(true);
     const r = await serveur.profil({ ...(propre !== compte.nom ? { nom: propre } : {}), ...(langueChange ? { langue } : {}) });
     poserOccupe(false);
@@ -41,17 +42,17 @@ function FormulaireIdentite({ compte, serveur, changer }: Pick<Proprietes, 'comp
     // La langue : les pages PHP et l'interface la lisent au chargement (ADR-0042), la page se recharge donc dans la nouvelle.
     if (langueChange) { window.location.reload(); return; }
     poserNom(r.valeur.nom);
-    poserRetour({ texte: 'Profil enregistré.', ton: 'info' });
+    poserRetour({ texte: t('Profil enregistré.'), ton: 'info' });
   };
   return (
     <form className="formulaire-site" aria-labelledby={idTitre} onSubmit={e => { void envoyer(e); }}>
-      <h3 id={idTitre}>Identité</h3>
-      <Champ libelle="Nom" valeur={nom} poser={poserNom} maxLength={NOM_MAX} autoComplete="name" erreur={erreurs.nom} reference={champ} />
-      <p className="champ-site"><span className="aide">Adresse : {compte.email}. Elle ne se change pas ici : demandez-le à un administrateur.</span></p>
-      <ChoixLangue legende="Langue" valeur={langue} poser={poserLangue} />
+      <h3 id={idTitre}>{t('Identité')}</h3>
+      <Champ libelle={t('Nom')} valeur={nom} poser={poserNom} maxLength={NOM_MAX} autoComplete="name" erreur={erreurs.nom} reference={champ} />
+      <p className="champ-site"><span className="aide">{t('Adresse : {email}. Elle ne se change pas ici : demandez-le à un administrateur.', { email: compte.email })}</span></p>
+      <ChoixLangue legende={t('Langue')} valeur={langue} poser={poserLangue} />
       <RetourFormulaire retour={retour} />
       <div className="actions">
-        <button type="submit" className="primaire" disabled={occupe}>Enregistrer</button>
+        <button type="submit" className="primaire" disabled={occupe}>{t('Enregistrer')}</button>
       </div>
     </form>
   );
@@ -78,17 +79,17 @@ function FormulaireMotDePasse({ serveur }: Pick<Proprietes, 'serveur'>) {
       return;
     }
     poserAncien(''); poserNouveau(''); poserConfirmation('');
-    poserRetour({ texte: 'Mot de passe changé. Vos autres sessions sont fermées.', ton: 'info' });
+    poserRetour({ texte: t('Mot de passe changé. Vos autres sessions sont fermées.'), ton: 'info' });
   };
   return (
     <form className="formulaire-site" aria-labelledby={idTitre} onSubmit={e => { void envoyer(e); }}>
-      <h3 id={idTitre}>Mot de passe</h3>
-      <Champ libelle="Mot de passe actuel" type="password" valeur={ancien} poser={poserAncien} autoComplete="current-password" erreur={erreurs.ancien} />
-      <Champ libelle="Nouveau mot de passe" type="password" valeur={nouveau} poser={poserNouveau} autoComplete="new-password" erreur={erreurs.nouveau} aide="Dix caractères au moins." />
-      <Champ libelle="Nouveau mot de passe, encore" type="password" valeur={confirmation} poser={poserConfirmation} autoComplete="new-password" erreur={erreurs.confirmation} />
+      <h3 id={idTitre}>{t('Mot de passe')}</h3>
+      <Champ libelle={t('Mot de passe actuel')} type="password" valeur={ancien} poser={poserAncien} autoComplete="current-password" erreur={erreurs.ancien} />
+      <Champ libelle={t('Nouveau mot de passe')} type="password" valeur={nouveau} poser={poserNouveau} autoComplete="new-password" erreur={erreurs.nouveau} aide={t('Dix caractères au moins.')} />
+      <Champ libelle={t('Nouveau mot de passe, encore')} type="password" valeur={confirmation} poser={poserConfirmation} autoComplete="new-password" erreur={erreurs.confirmation} />
       <RetourFormulaire retour={retour} />
       <div className="actions">
-        <button type="submit" disabled={occupe}>Changer le mot de passe</button>
+        <button type="submit" disabled={occupe}>{t('Changer le mot de passe')}</button>
       </div>
     </form>
   );
@@ -101,10 +102,10 @@ export function DialogueProfil({ compte, serveur, fermer, changer }: Proprietes)
   return createPortal(
     <div className="credits-voile" ref={voile}>
       <div className="credits-dialogue profil-dialogue" role="dialog" aria-modal="true" aria-labelledby={idTitre} tabIndex={-1} ref={boite}>
-        <h2 id={idTitre}>Mon profil</h2>
+        <h2 id={idTitre}>{t('Mon profil')}</h2>
         <FormulaireIdentite compte={compte} serveur={serveur} changer={changer} />
         <FormulaireMotDePasse serveur={serveur} />
-        <div className="actions"><button type="button" className="discret" onClick={fermer}>Fermer</button></div>
+        <div className="actions"><button type="button" className="discret" onClick={fermer}>{t('Fermer')}</button></div>
       </div>
     </div>,
     document.body

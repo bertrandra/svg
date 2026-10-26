@@ -7,6 +7,7 @@
 
 import { BORNES_PROJET, lireProjet, type Projet } from '../model/projet.js';
 import type { PoliceEmbarquee } from './polices.js';
+import { t } from '../util/i18n.js';
 import { DELAI_MS, lireFluxBorne, OCTETS_MAX, PHRASES_TELECHARGEMENT, type CodeTelechargement, type Telechargement } from './adresse.js';
 
 /** Ce que le serveur dit d'un projet enregistre, sans l'ouvrir : de quoi le lister. */
@@ -130,25 +131,26 @@ export interface Serveur {
   readonly courrierEssai: (destinataire?: string) => Promise<Reponse<null>>;
 }
 
-const MESSAGES: Readonly<Record<string, string>> = {
-  session: 'Votre session a expiré : reconnectez-vous dans un autre onglet, puis enregistrez de nouveau ici (le travail ouvert reste dans cet onglet).',
-  reseau: 'Le serveur ne répond pas : vérifiez la connexion, puis réessayez.',
-  conflit: 'Ce projet a été enregistré ailleurs (un autre onglet ?) depuis que vous l’avez ouvert : « Enregistrer sous… » le garde sous un autre nom, sans rien écraser.',
-  introuvable: 'Ce projet n’existe plus sur le serveur.',
-  trop_gros: 'Ce projet dépasse la taille que le serveur accepte.',
-  invalide: 'Le serveur a refusé ce projet : il ne le reconnaît pas comme un projet de l’éditeur.',
-  csrf: 'La page est trop ancienne pour écrire sur le serveur : rechargez-la, puis réessayez.',
-  serveur: 'Le serveur a rencontré une erreur. Réessayez ; si elle persiste, l’administrateur la trouvera dans son journal.',
-  // Les comptes (ADR-0041) : le serveur dit sa phrase ; celles-ci servent s'il n'en donne pas.
-  role: 'Cette action est réservée à un administrateur.',
-  existe: 'Un compte porte déjà cette adresse.',
-  'dernier-admin': 'Ce compte est le dernier administrateur actif : il ne peut être ni rétrogradé, ni suspendu, ni supprimé.',
-  'soi-meme': 'Vous ne pouvez pas faire cela sur votre propre compte.',
-  courrier: 'Le mail n’a pas pu partir : vérifiez les réglages du courrier.',
-  limite: 'Trop de tentatives : patientez quelques minutes, puis réessayez.'
+// Les phrases de chaque code, lues au moment de l'echec, jamais au chargement du module (le dictionnaire d'une autre langue n'est
+// pas encore la, ADR-0042). Les comptes (ADR-0041) : le serveur dit sa phrase ; celles-ci servent s'il n'en donne pas.
+const MESSAGES: Readonly<Record<string, () => string>> = {
+  session: () => t('Votre session a expiré : reconnectez-vous dans un autre onglet, puis enregistrez de nouveau ici (le travail ouvert reste dans cet onglet).'),
+  reseau: () => t('Le serveur ne répond pas : vérifiez la connexion, puis réessayez.'),
+  conflit: () => t('Ce projet a été enregistré ailleurs (un autre onglet ?) depuis que vous l’avez ouvert : « Enregistrer sous… » le garde sous un autre nom, sans rien écraser.'),
+  introuvable: () => t('Ce projet n’existe plus sur le serveur.'),
+  trop_gros: () => t('Ce projet dépasse la taille que le serveur accepte.'),
+  invalide: () => t('Le serveur a refusé ce projet : il ne le reconnaît pas comme un projet de l’éditeur.'),
+  csrf: () => t('La page est trop ancienne pour écrire sur le serveur : rechargez-la, puis réessayez.'),
+  serveur: () => t('Le serveur a rencontré une erreur. Réessayez ; si elle persiste, l’administrateur la trouvera dans son journal.'),
+  role: () => t('Cette action est réservée à un administrateur.'),
+  existe: () => t('Un compte porte déjà cette adresse.'),
+  'dernier-admin': () => t('Ce compte est le dernier administrateur actif : il ne peut être ni rétrogradé, ni suspendu, ni supprimé.'),
+  'soi-meme': () => t('Vous ne pouvez pas faire cela sur votre propre compte.'),
+  courrier: () => t('Le mail n’a pas pu partir : vérifiez les réglages du courrier.'),
+  limite: () => t('Trop de tentatives : patientez quelques minutes, puis réessayez.')
 };
 
-const echec = <T>(code: string, message?: string, meta?: MetaProjet): Reponse<T> => ({ ok: false, code, message: message || MESSAGES[code] || MESSAGES['serveur'] || '', ...(meta ? { meta } : {}) });
+const echec = <T>(code: string, message?: string, meta?: MetaProjet): Reponse<T> => ({ ok: false, code, message: message || (MESSAGES[code] ?? MESSAGES['serveur'])?.() || '', ...(meta ? { meta } : {}) });
 
 const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 
@@ -203,11 +205,14 @@ export function lireSite(x: unknown): InfosSite | null {
   return { nom, langue: x['langue'], inscriptions: x['inscriptions'] };
 }
 
-/** Les reglages par defaut (ADR-0041 §7) : ce que vaut un fichier absent, et ce que prend un champ qui manque ou n'a pas la bonne forme. */
+/**
+ * Les reglages par defaut (ADR-0041 §7) : ce que vaut un fichier absent, et ce que prend un champ qui manque ou n'a pas la bonne forme.
+ * Les deux noms sont des textes d'interface, lus par un accesseur au moment ou l'on en a besoin (ADR-0042).
+ */
 export const REGLAGES_PAR_DEFAUT: Reglages = {
-  site: { nom: 'Éditeur SVG', langue: 'fr', adresse: '' },
+  site: { get nom() { return t('Éditeur SVG'); }, langue: 'fr', adresse: '' },
   inscriptions: { ouvertes: true },
-  courrier: { expediteur: '', nom: 'Éditeur SVG', mode: 'mail', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '' } },
+  courrier: { expediteur: '', get nom() { return t('Éditeur SVG'); }, mode: 'mail', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '' } },
   sessions: { inactivite: 7200 },
   smtpMotDePassePose: false
 };
@@ -430,10 +435,10 @@ export function creerServeur(options: OptionsServeur): Serveur {
           if (neuf) { csrf = neuf; continue; }
         }
         if (code === 'session') return { erreur: PHRASES_TELECHARGEMENT.session, code: 'session' };
-        const message = estObjet(corps) && typeof corps['message'] === 'string' ? corps['message'].slice(0, 400) : MESSAGES['serveur'] ?? '';
+        const message = estObjet(corps) && typeof corps['message'] === 'string' ? corps['message'].slice(0, 400) : MESSAGES['serveur']?.() ?? '';
         return { erreur: message, code: CODES_ADRESSE[code] ?? 'refuse' };
       }
-      return { erreur: MESSAGES['csrf'] ?? '', code: 'refuse' };
+      return { erreur: MESSAGES['csrf']?.() ?? '', code: 'refuse' };
     } finally {
       clearTimeout(minuteur);
       signal.removeEventListener('abort', relayer);

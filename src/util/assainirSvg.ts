@@ -10,6 +10,7 @@
 //
 // Pur : aucun DOM, aucune horloge.
 
+import { t } from './i18n.js';
 import { decoderEntites, echapperAttribut, ErreurXml, apresDoctype, parcourirXml, phraseErreurXml, type AttributBrut, type Jeton } from './xml.js';
 
 export const ESPACE_SVG = 'http://www.w3.org/2000/svg';
@@ -296,11 +297,11 @@ function debutDeBalise(e: Etat, j: Extract<Jeton, { t: 'debut' }>): void {
   if (r && r.ratio === null) throw new ErreurXml(SANS_PLAN);
   let corps = '';
   for (const a of j.attributs) {
-    if (vus.has(a.nom)) throw new ErreurXml('l’attribut « ' + a.nom.slice(0, 40) + ' » est répété sur la balise « ' + j.nom + ' »');
+    if (vus.has(a.nom)) throw new ErreurXml(t('l’attribut « {attribut} » est répété sur la balise « {balise} »', { attribut: a.nom.slice(0, 40), balise: j.nom }));
     vus.add(a.nom);
     // Un viewBox illisible est remplace par celui des dimensions (plus bas) ; un attribut retire emporte le blanc qui le precedait (un seul).
-    const t = r && a.nom === 'viewBox' && !r.viewBoxValide ? '' : emettreAttribut(a, c);
-    corps += t === '' ? a.blancs.slice(0, -1) : t;
+    const emis = r && a.nom === 'viewBox' && !r.viewBoxValide ? '' : emettreAttribut(a, c);
+    corps += emis === '' ? a.blancs.slice(0, -1) : emis;
   }
   let avant = '';
   if (r?.ratio) {
@@ -368,6 +369,6 @@ export function assainirSvg(texte: string): SvgAssaini | { erreur: string } | nu
       return { erreur: phraseErreurXml(x.message) };
     } else throw x;
   }
-  if (e.racine === null || e.pile.length > 0) return { erreur: 'Ce SVG ne se lit pas : la balise « svg » n’est jamais fermée.' };
+  if (e.racine === null || e.pile.length > 0) return { erreur: t('Ce SVG ne se lit pas : la balise « svg » n’est jamais fermée.') };
   return { svg: e.sortie.join(''), ratio: e.racine.ratio };
 }

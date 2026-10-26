@@ -11,6 +11,7 @@
 import type { Glyphes } from '../engine/texte.js';
 import { estIdCatalogue, trouverVariante, type CataloguePolices, type VariantePolice } from '../model/cataloguePolices.js';
 import { SERVEURS_POLICES } from '../model/sourcesPolices.js';
+import { t } from '../util/i18n.js';
 import { glyphesDe, retenirDeposee, type Police } from './polices.js';
 import type { Stockage } from './stockage.js';
 import { enSfnt } from './woff.js';
@@ -129,20 +130,21 @@ async function fichierVerifie(f: VariantePolice['fichiers'][number], o: OutilsTe
     let octets: Uint8Array | null;
     try {
       const r = await o.chercher(a.url, a.init);
-      if (!r.ok) { raisons.push(hote + ' a répondu ' + r.status); continue; }
+      if (!r.ok) { raisons.push(t('{hote} a répondu {statut}', { hote, statut: r.status })); continue; }
       octets = await lireBorne(r);
     } catch {
-      raisons.push(hote + ' ne répond pas');
+      raisons.push(t('{hote} ne répond pas', { hote }));
       continue;
     }
-    if (!octets) { raisons.push('le fichier de ' + hote + ' dépasse ' + OCTETS_MAX / 1048576 + ' Mo'); continue; }
+    if (!octets) { raisons.push(t('le fichier de {hote} dépasse {mo} Mo', { hote, mo: OCTETS_MAX / 1048576 })); continue; }
     const e = await o.empreinte(octets);
-    if (e === null) return { erreur: 'ce navigateur ne sait pas vérifier l’empreinte d’un fichier (crypto.subtle manque) : rien n’est lu' };
-    if (e !== f.empreinte) { raisons.push('le fichier servi par ' + hote + ' n’a pas l’empreinte attendue : refusé'); continue; }
+    if (e === null) return { erreur: t('ce navigateur ne sait pas vérifier l’empreinte d’un fichier (crypto.subtle manque) : rien n’est lu') };
+    if (e !== f.empreinte) { raisons.push(t('le fichier servi par {hote} n’a pas l’empreinte attendue : refusé', { hote })); continue; }
     await o.cache?.ecrire(a.url, octets).catch(() => undefined);
     return octets;
   }
-  return { erreur: raisons.length ? raisons.join(' ; ') : 'aucun serveur connu ne sert ce fichier' };
+  // Les raisons se joignent par « ; », dans la typographie de la langue : une seule cle a deux valeurs plutot qu'un separateur nu.
+  return { erreur: raisons.length ? raisons.reduce((a, b) => t('{a} ; {b}', { a, b })) : t('aucun serveur connu ne sert ce fichier') };
 }
 
 /**
@@ -168,7 +170,7 @@ export function glyphesComposes(premier: Glyphes, second: Glyphes | null): Glyph
 async function glyphesDuFichier(o: Uint8Array): Promise<Glyphes | { erreur: string }> {
   const sfnt = await enSfnt(o);
   if ('erreur' in sfnt) return sfnt;
-  try { return glyphesDe(parse(sfnt), sfnt); } catch { return { erreur: 'la fonte ne se lit pas' }; }
+  try { return glyphesDe(parse(sfnt), sfnt); } catch { return { erreur: t('la fonte ne se lit pas') }; }
 }
 
 /**
@@ -177,19 +179,19 @@ async function glyphesDuFichier(o: Uint8Array): Promise<Glyphes | { erreur: stri
  */
 export async function telechargerVariante(v: VariantePolice, outils: Partial<OutilsTelechargement> = {}): Promise<Police | { erreur: string }> {
   const o = { ...OUTILS, ...outils };
-  if (!estIdCatalogue(v.id)) return { erreur: 'identifiant de police inconnu' };
+  if (!estIdCatalogue(v.id)) return { erreur: t('identifiant de police inconnu') };
   // Chaque fichier doit avoir au moins une adresse admise ; sinon, pas une seule requete.
-  if (!v.fichiers.length || !v.fichiers.every(f => adressesDe(f).length > 0)) return { erreur: 'aucun serveur connu ne sert cette police' };
+  if (!v.fichiers.length || !v.fichiers.every(f => adressesDe(f).length > 0)) return { erreur: t('aucun serveur connu ne sert cette police') };
   const glyphes: Glyphes[] = [];
   for (const f of v.fichiers) {
     const octets = await fichierVerifie(f, o);
-    if ('erreur' in octets) return { erreur: v.nom + ' : ' + octets.erreur + '.' };
+    if ('erreur' in octets) return { erreur: t('{police} : {raison}.', { police: v.nom, raison: octets.erreur }) };
     const g = await glyphesDuFichier(octets);
-    if ('erreur' in g) return { erreur: v.nom + ' : ' + g.erreur + '.' };
+    if ('erreur' in g) return { erreur: t('{police} : {raison}.', { police: v.nom, raison: g.erreur }) };
     glyphes.push(g);
   }
   const [premier, second] = glyphes;
-  if (!premier) return { erreur: v.nom + ' : aucun fichier.' };
+  if (!premier) return { erreur: t('{police} : aucun fichier.', { police: v.nom }) };
   const p: Police = { id: v.id, nom: v.nom, glyphes: glyphesComposes(premier, second ?? null), nature: 'contour', version: v.version };
   retenirDeposee(p);
   return p;

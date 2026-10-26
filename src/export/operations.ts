@@ -11,6 +11,8 @@ import {
   cadreFixe, compterOperations, constatsBloquants, formesPeintes, marqueDeProfil, partagerOperations, texteTaille, versUnite, type ProfilProduction
 } from '../engine/preparation.js';
 import { DESIGN_SPACE_OPERATIONS, DESIGN_SPACE_POSITION } from '../model/contextes.js';
+import { t } from '../util/i18n.js';
+import { pluriel } from '../util/texte.js';
 import { pleine, phraseRefus, svgCricut } from './cricut.js';
 import { enTrait, svgPourStylo } from './stylo.js';
 import { svgExporte } from './svgs.js';
@@ -98,34 +100,38 @@ export const nomsOperations = (nom: string): { readonly archive: string; readonl
   return { archive: base + '-cricut.zip', aCouper: base + '-a-couper.svg', aEcrire: base + '-a-ecrire.svg', combine: base + '-cricut.svg' };
 };
 
-/** Le mode d'emploi de l'archive : ce qu'on y trouve, la taille, et la marche dans Design Space, ce qui n'est pas verifie marque. */
+/**
+ * Le mode d'emploi de l'archive : ce qu'on y trouve, la taille, et la marche dans Design Space, ce qui n'est pas verifie marque.
+ * Un texte pour la personne : il se traduit par `t` (ADR-0042) ; en francais, le meme a l'octet, et les references restent celles
+ * du francais.
+ */
 export function modeDEmploiOperations(nom: string, dessin: DessinSvg, p: ProfilProduction, r: Extract<ExportParOperation, { genre: 'mixte' }>): string {
   // Sans recalage automatique (ADR-0039, le defaut depuis sa revision du 26 octobre 2026), les fichiers ont la taille du tapis et
   // portent des cadres de reperage ; avec, le mode d'emploi d'avant, a l'octet.
   const tapis = p.recalage ? null : cadreFixe(p, dessin.vb);
   const f = nomsOperations(nom), taille = tapis ? texteTaille(tapis.l, tapis.h, p.unite) : texteTaille(dessin.vb[2], dessin.vb[3], p.unite);
-  const formes = (k: number) => k + ' forme' + (k > 1 ? 's' : '');
   return [
-    'Cricut — ' + nomSur(nom) + ' : couper et écrire',
+    t('Cricut — {nom} : couper et écrire', { nom: nomSur(nom) }),
     '',
-    'Fichiers :',
-    '- ' + f.aCouper + ' : les ' + formes(r.formes.decoupe) + ' à couper, fonds pleins, une couleur par tapis (' + r.couches + ').',
-    '- ' + f.aEcrire + ' : les ' + formes(r.formes.ecriture) + ' à écrire au stylo, des traits sans remplissage, une couleur par stylo (' + r.stylos + ').',
-    '- ' + f.combine + ' : les deux ensemble, en deux groupes, « ' + GROUPE_A_COUPER + ' » puis « ' + GROUPE_A_ECRIRE + ' ».',
+    t('Fichiers :'),
+    t('- {fichier} : les {formes} à couper, fonds pleins, une couleur par tapis ({couches}).', { fichier: f.aCouper, formes: pluriel(r.formes.decoupe, 'forme'), couches: r.couches }),
+    t('- {fichier} : les {formes} à écrire au stylo, des traits sans remplissage, une couleur par stylo ({stylos}).', { fichier: f.aEcrire, formes: pluriel(r.formes.ecriture, 'forme'), stylos: r.stylos }),
+    t('- {fichier} : les deux ensemble, en deux groupes, « {aCouper} » puis « {aEcrire} ».', { fichier: f.combine, aCouper: GROUPE_A_COUPER, aEcrire: GROUPE_A_ECRIRE }),
     '',
-    'Tailles : les trois fichiers font ' + taille + ' (même cadre : posés au même endroit, ils se superposent).',
+    t('Tailles : les trois fichiers font {taille} (même cadre : posés au même endroit, ils se superposent).', { taille }),
     '',
-    'Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 9) :',
-    '1. Importez ' + f.aCouper + ', puis ' + f.aEcrire + ', sans changer leur taille.',
-    '2. Sélectionnez les calques de ' + f.aEcrire + ' et choisissez « Dessiner » (une couleur, un stylo) ; les autres restent sur « Couper ».',
+    t('Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 9) :'),
+    t('1. Importez {aCouper}, puis {aEcrire}, sans changer leur taille.', { aCouper: f.aCouper, aEcrire: f.aEcrire }),
+    t('2. Sélectionnez les calques de {fichier} et choisissez « Dessiner » (une couleur, un stylo) ; les autres restent sur « Couper ».', { fichier: f.aEcrire }),
     ...(tapis ? [
-      '3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut) : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (' + texteTaille(p.zoneUtile.l, p.zoneUtile.h, p.unite) + '). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).',
-      '   Pour que Design Space pose plutôt les formes dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut » et exportez à nouveau : les fichiers n’ont alors plus de cadre.'
-    ] : ['3. Sélectionnez les deux et « Attachez »-les : le stylo écrit alors à sa place sur la pièce découpée.']),
-    'Ou importez ' + f.combine + ' seul : si Design Space garde ses groupes, le groupe « ' + GROUPE_A_ECRIRE + ' » passe en « Dessiner » d’un coup.',
+      t('3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut) : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile ({taille}). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).', { taille: texteTaille(p.zoneUtile.l, p.zoneUtile.h, p.unite) }),
+      t('   Pour que Design Space pose plutôt les formes dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut » et exportez à nouveau : les fichiers n’ont alors plus de cadre.')
+    ] : [t('3. Sélectionnez les deux et « Attachez »-les : le stylo écrit alors à sa place sur la pièce découpée.')]),
+    t('Ou importez {fichier} seul : si Design Space garde ses groupes, le groupe « {aEcrire} » passe en « Dessiner » d’un coup.', { fichier: f.combine, aEcrire: GROUPE_A_ECRIRE }),
     '',
-    'Ce qui n’a pas été essayé sur une machine :',
-    ...[...DESIGN_SPACE_OPERATIONS, ...(tapis ? DESIGN_SPACE_POSITION : [])].map(c => '- ' + c.texte)
+    t('Ce qui n’a pas été essayé sur une machine :'),
+    // Les comportements a verifier sont des donnees du modele : leur traduction est celle du dossier model.
+    ...[...DESIGN_SPACE_OPERATIONS, ...(tapis ? DESIGN_SPACE_POSITION : [])].map(c => '- ' + t(c.texte))
   ].join('\n') + '\n';
 }
 

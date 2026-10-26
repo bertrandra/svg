@@ -3,14 +3,20 @@
 // Reglages) ne font que les appeler ; rien ici ne touche au DOM ni au reseau, tout se teste sans navigateur.
 
 import type { ActionCompte, EtatCompte, FicheCompte, Langue, Reglages, RoleCompte } from '../io/serveur.js';
+import { t } from '../util/i18n.js';
 
 export const NOM_MAX = 120;
 export const MOT_DE_PASSE_MIN = 10;
 
+// Les libelles des tables de ce fichier sont des accesseurs : `t` se lit au moment de l'affichage, jamais au chargement du module,
+// ou le dictionnaire d'une autre langue n'est pas encore la (ADR-0042). Les tables gardent leur forme pour qui les lit.
+
 /** Les trois onglets de l'ecran « Comptes » (ADR-0041 §5). */
 export type Onglet = 'en-attente' | 'actifs' | 'autres';
 export const ONGLETS: readonly Onglet[] = ['en-attente', 'actifs', 'autres'];
-export const TITRES_ONGLETS: Readonly<Record<Onglet, string>> = { 'en-attente': 'En attente', actifs: 'Actifs', autres: 'Autres' };
+export const TITRES_ONGLETS: Readonly<Record<Onglet, string>> = {
+  get 'en-attente'() { return t('En attente'); }, get actifs() { return t('Actifs'); }, get autres() { return t('Autres'); }
+};
 
 /** L'onglet d'un compte selon son etat : les demandes a approuver, les comptes qui se connectent, le reste. */
 export const ongletDe = (etat: EtatCompte): Onglet => (etat === 'en-attente' ? 'en-attente' : etat === 'actif' ? 'actifs' : 'autres');
@@ -57,8 +63,10 @@ export function actionsPour(c: FicheCompte): readonly ActionCompte[] {
 }
 
 export const LIBELLES_ACTIONS: Readonly<Record<ActionCompte, string>> = {
-  approuver: 'Approuver', refuser: 'Refuser…', suspendre: 'Suspendre…', reactiver: 'Réactiver', supprimer: 'Supprimer…',
-  promouvoir: 'Nommer administrateur…', retrograder: 'Retirer l’administration…', renvoyer: 'Renvoyer le mail', email: 'Changer l’adresse…', creer: 'Créer un compte…'
+  get approuver() { return t('Approuver'); }, get refuser() { return t('Refuser…'); }, get suspendre() { return t('Suspendre…'); },
+  get reactiver() { return t('Réactiver'); }, get supprimer() { return t('Supprimer…'); }, get promouvoir() { return t('Nommer administrateur…'); },
+  get retrograder() { return t('Retirer l’administration…'); }, get renvoyer() { return t('Renvoyer le mail'); }, get email() { return t('Changer l’adresse…'); },
+  get creer() { return t('Créer un compte…'); }
 };
 
 /** Les gestes qui se confirment dans la ligne avant de partir ; les autres partent au clic. */
@@ -73,47 +81,48 @@ const GARDES: readonly ActionCompte[] = ['suspendre', 'retrograder', 'supprimer'
  */
 export function raisonRefus(action: ActionCompte, c: FicheCompte, moi: string, comptes: readonly FicheCompte[]): string | null {
   if (!GARDES.includes(action)) return null;
-  if (c.id === moi) return 'C’est votre propre compte.';
-  if (c.role === 'admin' && c.etat === 'actif' && !comptes.some(x => x.id !== c.id && x.role === 'admin' && x.etat === 'actif')) return 'C’est le dernier administrateur actif.';
+  if (c.id === moi) return t('C’est votre propre compte.');
+  if (c.role === 'admin' && c.etat === 'actif' && !comptes.some(x => x.id !== c.id && x.role === 'admin' && x.etat === 'actif')) return t('C’est le dernier administrateur actif.');
   return null;
 }
 
 /** La phrase qui dit qu'un geste a abouti. */
 export function phraseAction(action: ActionCompte, nom: string): string {
-  const n = '« ' + nom + ' »';
   switch (action) {
-    case 'approuver': return 'Compte ' + n + ' approuvé : la personne a reçu un mail.';
-    case 'refuser': return 'Demande de ' + n + ' refusée : la personne a reçu un mail.';
-    case 'suspendre': return 'Compte ' + n + ' suspendu.';
-    case 'reactiver': return 'Compte ' + n + ' réactivé.';
-    case 'supprimer': return 'Compte ' + n + ' supprimé : ses projets sont dans la corbeille des comptes du serveur.';
-    case 'promouvoir': return n + ' est désormais administrateur.';
-    case 'retrograder': return n + ' n’est plus administrateur.';
-    case 'renvoyer': return 'Mail de confirmation renvoyé à ' + n + '.';
-    case 'email': return 'Adresse de ' + n + ' changée.';
-    case 'creer': return 'Compte ' + n + ' créé, actif : donnez-lui son mot de passe provisoire.';
+    case 'approuver': return t('Compte « {nom} » approuvé : la personne a reçu un mail.', { nom });
+    case 'refuser': return t('Demande de « {nom} » refusée : la personne a reçu un mail.', { nom });
+    case 'suspendre': return t('Compte « {nom} » suspendu.', { nom });
+    case 'reactiver': return t('Compte « {nom} » réactivé.', { nom });
+    case 'supprimer': return t('Compte « {nom} » supprimé : ses projets sont dans la corbeille des comptes du serveur.', { nom });
+    case 'promouvoir': return t('« {nom} » est désormais administrateur.', { nom });
+    case 'retrograder': return t('« {nom} » n’est plus administrateur.', { nom });
+    case 'renvoyer': return t('Mail de confirmation renvoyé à « {nom} ».', { nom });
+    case 'email': return t('Adresse de « {nom} » changée.', { nom });
+    case 'creer': return t('Compte « {nom} » créé, actif : donnez-lui son mot de passe provisoire.', { nom });
   }
 }
 
 export const LIBELLES_ETATS: Readonly<Record<EtatCompte, string>> = {
-  'a-confirmer': 'Adresse à confirmer', 'en-attente': 'En attente d’approbation', actif: 'Actif', refuse: 'Refusé', suspendu: 'Suspendu'
+  get 'a-confirmer'() { return t('Adresse à confirmer'); }, get 'en-attente'() { return t('En attente d’approbation'); }, get actif() { return t('Actif'); },
+  get refuse() { return t('Refusé'); }, get suspendu() { return t('Suspendu'); }
 };
-export const LIBELLES_LANGUES: Readonly<Record<Langue, string>> = { fr: 'Français', en: 'English' };
-export const LIBELLES_ROLES: Readonly<Record<RoleCompte, string>> = { admin: 'Administrateur', utilisateur: 'Utilisateur' };
+/** Le nom de chaque langue, dans cette langue (il porte son `lang`) : il ne change pas avec la langue de l'interface. */
+export const LIBELLES_LANGUES: Readonly<Record<Langue, string>> = { get fr() { return t('Français'); }, en: 'English' };
+export const LIBELLES_ROLES: Readonly<Record<RoleCompte, string>> = { get admin() { return t('Administrateur'); }, get utilisateur() { return t('Utilisateur'); } };
 
 /** Les erreurs d'un formulaire, par champ : vide, le formulaire peut partir. */
 export type Erreurs<C extends string> = Partial<Record<C, string>>;
 
 export function validerProfil(nom: string): Erreurs<'nom'> {
-  return nomDeCompte(nom) ? {} : { nom: 'Le nom ne peut pas être vide.' };
+  return nomDeCompte(nom) ? {} : { nom: t('Le nom ne peut pas être vide.') };
 }
 
 export function validerMotDePasse(ancien: string, nouveau: string, confirmation: string): Erreurs<'ancien' | 'nouveau' | 'confirmation'> {
   const e: Erreurs<'ancien' | 'nouveau' | 'confirmation'> = {};
-  if (!ancien) e.ancien = 'Tapez votre mot de passe actuel.';
-  if (nouveau.length < MOT_DE_PASSE_MIN) e.nouveau = 'Le nouveau mot de passe doit faire au moins ' + MOT_DE_PASSE_MIN + ' caractères.';
-  else if (nouveau === ancien) e.nouveau = 'Le nouveau mot de passe est le même que l’ancien.';
-  if (confirmation !== nouveau) e.confirmation = 'Les deux saisies du nouveau mot de passe diffèrent.';
+  if (!ancien) e.ancien = t('Tapez votre mot de passe actuel.');
+  if (nouveau.length < MOT_DE_PASSE_MIN) e.nouveau = t('Le nouveau mot de passe doit faire au moins {min} caractères.', { min: MOT_DE_PASSE_MIN });
+  else if (nouveau === ancien) e.nouveau = t('Le nouveau mot de passe est le même que l’ancien.');
+  if (confirmation !== nouveau) e.confirmation = t('Les deux saisies du nouveau mot de passe diffèrent.');
   return e;
 }
 
@@ -121,14 +130,14 @@ export interface Creation { readonly email: string; readonly nom: string; readon
 
 export function validerCreation(c: Creation): Erreurs<'email' | 'nom' | 'motDePasse'> {
   const e: Erreurs<'email' | 'nom' | 'motDePasse'> = {};
-  if (!emailValide(c.email.trim())) e.email = 'Tapez une adresse de courrier valable.';
-  if (!nomDeCompte(c.nom)) e.nom = 'Le nom ne peut pas être vide.';
-  if (c.motDePasse.length < MOT_DE_PASSE_MIN) e.motDePasse = 'Le mot de passe provisoire doit faire au moins ' + MOT_DE_PASSE_MIN + ' caractères.';
+  if (!emailValide(c.email.trim())) e.email = t('Tapez une adresse de courrier valable.');
+  if (!nomDeCompte(c.nom)) e.nom = t('Le nom ne peut pas être vide.');
+  if (c.motDePasse.length < MOT_DE_PASSE_MIN) e.motDePasse = t('Le mot de passe provisoire doit faire au moins {min} caractères.', { min: MOT_DE_PASSE_MIN });
   return e;
 }
 
 export function validerEmail(email: string): Erreurs<'email'> {
-  return emailValide(email.trim()) ? {} : { email: 'Tapez une adresse de courrier valable.' };
+  return emailValide(email.trim()) ? {} : { email: t('Tapez une adresse de courrier valable.') };
 }
 
 export type ChampReglages = 'nom' | 'adresse' | 'expediteur' | 'hote' | 'port';
@@ -136,12 +145,12 @@ export type ChampReglages = 'nom' | 'adresse' | 'expediteur' | 'hote' | 'port';
 /** Les reglages du site : un nom, une adresse https (ou rien), un expediteur plausible, et un hote SMTP avec un port quand le mode est SMTP. */
 export function validerReglages(r: Reglages): Erreurs<ChampReglages> {
   const e: Erreurs<ChampReglages> = {};
-  if (!r.site.nom.trim()) e.nom = 'Le nom du site ne peut pas être vide.';
-  if (r.site.adresse && !/^https?:\/\/\S+$/.test(r.site.adresse)) e.adresse = 'L’adresse du site commence par https:// (ou reste vide : celle de la page servira).';
-  if (r.courrier.expediteur && !emailValide(r.courrier.expediteur)) e.expediteur = 'Tapez une adresse d’expédition valable.';
+  if (!r.site.nom.trim()) e.nom = t('Le nom du site ne peut pas être vide.');
+  if (r.site.adresse && !/^https?:\/\/\S+$/.test(r.site.adresse)) e.adresse = t('L’adresse du site commence par https:// (ou reste vide : celle de la page servira).');
+  if (r.courrier.expediteur && !emailValide(r.courrier.expediteur)) e.expediteur = t('Tapez une adresse d’expédition valable.');
   if (r.courrier.mode === 'smtp') {
-    if (!r.courrier.smtp.hote.trim()) e.hote = 'Le serveur SMTP est requis pour envoyer par SMTP.';
-    if (!Number.isInteger(r.courrier.smtp.port) || r.courrier.smtp.port < 1 || r.courrier.smtp.port > 65535) e.port = 'Le port est un nombre entre 1 et 65535.';
+    if (!r.courrier.smtp.hote.trim()) e.hote = t('Le serveur SMTP est requis pour envoyer par SMTP.');
+    if (!Number.isInteger(r.courrier.smtp.port) || r.courrier.smtp.port < 1 || r.courrier.smtp.port > 65535) e.port = t('Le port est un nombre entre 1 et 65535.');
   }
   return e;
 }

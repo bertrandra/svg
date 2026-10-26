@@ -4,6 +4,7 @@
 
 import type { EntreeBibliotheque, Evenement } from '../model/bibliotheque.js';
 import { SOURCES_FORMES, sourceFormes, type NatureForme, type SourceFormes } from '../model/sourcesFormes.js';
+import { t } from '../util/i18n.js';
 import { annexePosee, fabriquerChargeurAnnexe, navigateur, type Annexe, type Chargeur } from './annexes.js';
 
 export interface Bibliotheque {
@@ -51,8 +52,8 @@ export function normaliserBibliotheque(v: unknown): Bibliotheque | null {
 const annexe: Annexe<Bibliotheque> = {
   fichier: FICHIER_BIBLIOTHEQUE,
   globale: '__bibliothequeSvg',
-  contenu: 'la bibliothèque',
-  consigne: 'lancez « npm run bibliotheque »',
+  get contenu() { return t('la bibliothèque'); },
+  get consigne() { return t('lancez « npm run bibliotheque »'); },
   donnees: true,
   valider: v => (typeof v === 'object' && v !== null && 'entrees' in v && Array.isArray(v.entrees) ? v as Bibliotheque : undefined)
 };
@@ -92,8 +93,8 @@ export function normaliserSource(attendue: SourceFormes, v: unknown): SourceChar
 export const annexeSource = (s: SourceFormes): Annexe<SourceChargee> => ({
   fichier: s.fichier,
   globale: s.globale,
-  contenu: 'les formes de ' + s.nomCourt,
-  consigne: 'lancez « npm run bibliotheque »',
+  get contenu() { return t('les formes de {source}', { source: s.nomCourt }); },
+  get consigne() { return t('lancez « npm run bibliotheque »'); },
   donnees: true,
   valider: v => normaliserSource(s, v)
 });
@@ -104,7 +105,7 @@ const chargeurs = new Map<string, Chargeur<SourceChargee>>();
 /** Charge l'annexe d'une source libre du registre ; une source inconnue est refusee en la nommant. */
 export function chargerSource(id: string): Promise<SourceChargee> {
   const s = sourceFormes(id);
-  if (!s) return Promise.reject(new Error('Source de formes inconnue : ' + id + '.'));
+  if (!s) return Promise.reject(new Error(t('Source de formes inconnue : {id}.', { id })));
   let c = chargeurs.get(id);
   if (!c) { c = fabriquerChargeurAnnexe(annexeSource(s), navigateur); chargeurs.set(id, c); }
   return c.charger();

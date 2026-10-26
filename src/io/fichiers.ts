@@ -2,6 +2,8 @@
 // moteur n'en sait rien. Publiee comme artefact, la page n'a pas le droit de proposer un lien de
 // telechargement : elle passe alors par la capacite `downloads` de la page hote quand elle existe.
 
+import { t } from '../util/i18n.js';
+
 interface Telechargements { save(o: { filename: string; data: Blob }): Promise<unknown> }
 interface Hote { use(nom: string): Promise<unknown> }
 
@@ -23,10 +25,10 @@ export async function proposer(nom: string, donnees: Uint8Array | Blob): Promise
   if (dl) {
     try {
       await dl.save({ filename: nom, data: blob });
-      return 'Fichier proposé : ' + nom + '.';
+      return t('Fichier proposé : {nom}.', { nom });
     } catch (e) {
       const code = (e as { code?: string } | null)?.code;
-      return code === 'declined' ? 'Téléchargement annulé.' : 'Le téléchargement a échoué (' + (code ?? 'inconnu') + ').';
+      return code === 'declined' ? t('Téléchargement annulé.') : t('Le téléchargement a échoué ({code}).', { code: code ?? t('inconnu') });
     }
   }
   const a = document.createElement('a');
@@ -36,7 +38,7 @@ export async function proposer(nom: string, donnees: Uint8Array | Blob): Promise
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-  return 'Fichier enregistré : ' + nom + '.';
+  return t('Fichier enregistré : {nom}.', { nom });
 }
 
 /** Copie un texte ; rend faux si la page n'en a pas le droit. */
