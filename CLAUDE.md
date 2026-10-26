@@ -64,6 +64,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   la boîte du tracé à deux coins, avec des réglages bornés qui ne sont que de la session ; la forme posée ne garde pas ses réglages ;
   le nom se lit sur la géométrie ; une forme neuve ajoute un modèle, une icône, une place dans `GROUPES_FORMES` et une ligne à la
   référence `formes-de-base`, jamais un nouveau SVG d'entrée (il changerait le corpus du fuzzing).
+- **Les proportions se verrouillent pour la session** : un bouton « Conserver les proportions » entre L et H (`zones/SectionPositionTaille.tsx`),
+  coupé par défaut et retenu jusqu'à la fermeture (`etatEditeur.ts`, jamais écrit) ; posé, le coin, les champs et Alt+flèches gardent la
+  proportion de la référence (`engine/proportions.ts`, pur : la boîte au moment du verrou ou du changement de sélection, gardée tant
+  que la boîte la respecte, pour qu'une suite de frappes ne dérive pas) et Maj libère le temps du geste ; coupé, Maj garde les
+  proportions comme avant ; une ligne (un côté nul) n'est pas contrainte.
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
 - **Une forme se prend par le calcul, pas par le DOM** (ADR-0029) : `engine/prise.ts` (pur, mémorisé par forme) rend les
