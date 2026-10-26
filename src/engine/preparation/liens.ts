@@ -23,6 +23,7 @@ import { aireDeRegion } from '../contour/region.js';
 import { unirRegions } from './silhouette.js';
 import { MM_PAR_POUCE, UNITES_PLAN_PAR_POUCE, type Procede } from '../../model/contextes.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 import { au } from '../../util/tableaux.js';
 import { operationDe } from './operations.js';
 import { POINTS_MAX_MESURE } from './finesse.js';
@@ -367,7 +368,7 @@ function avecLiens(f: Forme, ilots: readonly Ilot[], o: OptionsLiens, tolerance:
 export function ajouterLiens(dessin: DessinSvg, ids: readonly string[], options: OptionsLiens = LIENS_DEFAUT, procede: Procede | null = null, tolerance = toleranceBooleen(dessin)): ResultatLiens {
   const o = bornerLiens(options);
   const visees = formesVisees(dessin, ids, procede);
-  if (!visees.length) return { dessin, liens: 0, ilots: 0, formes: [], incomplets: 0, phrase: 'Choisissez d’abord une forme pleine à couper : une forme à écrire, ou sans fond, n’a pas d’îlot.' };
+  if (!visees.length) return { dessin, liens: 0, ilots: 0, formes: [], incomplets: 0, phrase: t('Choisissez d’abord une forme pleine à couper : une forme à écrire, ou sans fond, n’a pas d’îlot.') };
   const nouvelles = new Map<string, Forme>();
   let liens = 0, ilots = 0, incomplets = 0;
   for (const f of visees) {
@@ -377,15 +378,17 @@ export function ajouterLiens(dessin: DessinSvg, ids: readonly string[], options:
     if (r.liens) { liens += r.liens; nouvelles.set(f.id, r.forme); }
   }
   if (!ilots) {
-    return { dessin, liens: 0, ilots: 0, formes: [], incomplets: 0, phrase: (visees.length > 1 ? 'Ces formes n’ont' : 'Cette forme n’a') + ' pas d’îlot : rien ne tombera à la découpe.' };
+    return { dessin, liens: 0, ilots: 0, formes: [], incomplets: 0, phrase: visees.length > 1 ? t('Ces formes n’ont pas d’îlot : rien ne tombera à la découpe.') : t('Cette forme n’a pas d’îlot : rien ne tombera à la découpe.') };
   }
-  if (!liens) return { dessin, liens: 0, ilots, formes: [], incomplets, phrase: 'Aucun lien ne trouve sa place : un autre trou barre chaque chemin vers l’extérieur.' };
+  if (!liens) return { dessin, liens: 0, ilots, formes: [], incomplets, phrase: t('Aucun lien ne trouve sa place : un autre trou barre chaque chemin vers l’extérieur.') };
   const formes = dessin.formes.map(f => nouvelles.get(f.id) ?? f);
   return { dessin: { ...dessin, formes }, liens, ilots, formes: [...nouvelles.keys()], incomplets, phrase: phraseLiens(liens, ilots, incomplets) };
 }
 
 /** « 3 liens posés sur 1 îlot. », et ce qui manque quand un ilot n'a pas tous les siens. */
 export function phraseLiens(liens: number, ilots: number, incomplets = 0): string {
-  const base = pluriel(liens, 'lien') + ' posé' + (liens > 1 ? 's' : '') + ' sur ' + pluriel(ilots, 'îlot') + '.';
-  return incomplets ? base + ' ' + (incomplets > 1 ? incomplets + ' îlots en ont reçu' : 'Un îlot en a reçu') + ' moins que demandé : la place manquait.' : base;
+  const valeurs = { liens: pluriel(liens, 'lien'), ilots: pluriel(ilots, 'îlot') };
+  const base = liens > 1 ? t('{liens} posés sur {ilots}.', valeurs) : t('{liens} posé sur {ilots}.', valeurs);
+  if (!incomplets) return base;
+  return base + ' ' + (incomplets > 1 ? t('{n} îlots en ont reçu moins que demandé : la place manquait.', { n: incomplets }) : t('Un îlot en a reçu moins que demandé : la place manquait.'));
 }

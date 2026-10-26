@@ -17,6 +17,7 @@ import { pointsArc, pointsDemiTour } from './arcs.js';
 import { polylignesDeChemin, fois, moins, norme, plus, quart, scalaire, unitaire, vectoriel, type Polyligne, type Pt } from './polylignes.js';
 import { cheminDeRegionChoisie, unirAnneaux } from './region.js';
 import { sansContour, silhouette, toleranceDeForme, MSG_SANS_TRAIT } from './etendre.js';
+import { t } from '../../util/i18n.js';
 
 /** Les largeurs du trait (bord a bord), en unites du plan, a son debut, en son milieu et a sa fin. */
 export interface ProfilLargeur { readonly debut: number; readonly milieu: number; readonly fin: number }
@@ -98,7 +99,7 @@ function deroule(l: Polyligne): { pts: Pt[]; coin: boolean[]; abscisses: number[
 
 /** La region peinte par le trait de largeur variable d'une forme, ou le refus dit. */
 export function regionLargeurVariable(f: Forme, profil: ProfilLargeur, tolerance: number): MultiPolygon | { erreur: string } {
-  if (!f.contour || !(f.epaisseur > 0)) return { erreur: MSG_SANS_TRAIT };
+  if (!f.contour || !(f.epaisseur > 0)) return { erreur: MSG_SANS_TRAIT() };
   // Une largeur nulle laisserait des anneaux plats : un rien d'epaisseur, sous la tolerance, garde le bout pointu et sain.
   const plancher = tolerance * 2;
   for (const facteur of [1, 3, 9]) {
@@ -111,12 +112,12 @@ export function regionLargeurVariable(f: Forme, profil: ProfilLargeur, tolerance
       const demis = abscisses.map(s => Math.max(plancher, largeurA(profil, s / total)) / 2);
       anneaux.push(...anneauxVariables(pts, coin, demis, f.bout === 'round' || l.ferme, tol));
     }
-    if (!anneaux.length) return { erreur: 'Ce tracé n’a pas de longueur : il n’y a rien à élargir.' };
+    if (!anneaux.length) return { erreur: t('Ce tracé n’a pas de longueur : il n’y a rien à élargir.') };
     try {
       return unirAnneaux(anneaux);
     } catch { /* un autre aplatissement defait souvent l'incidence qui a fait echouer le balayage (ADR-0015) */ }
   }
-  return { erreur: 'Le tracé est trop enchevêtré pour une largeur variable : simplifiez-le, puis recommencez.' };
+  return { erreur: t('Le tracé est trop enchevêtré pour une largeur variable : simplifiez-le, puis recommencez.') };
 }
 
 /** Un profil sain : trois largeurs finies, positives ou nulles, dont l'une au moins est positive. */
@@ -137,7 +138,7 @@ export interface ResultatLargeur {
  * « Contour en forme » : une forme sans fond devient sa silhouette, une forme avec un fond le garde et la silhouette se pose dessus.
  */
 export function largeurVariable(dessin: DessinSvg, ids: readonly string[], profil: ProfilLargeur): ResultatLargeur {
-  if (!profilValide(profil)) return { dessin, ids: [], elargis: 0, ignorees: 0, erreur: 'Donnez trois largeurs positives ou nulles, dont l’une au moins est positive.' };
+  if (!profilValide(profil)) return { dessin, ids: [], elargis: 0, ignorees: 0, erreur: t('Donnez trois largeurs positives ou nulles, dont l’une au moins est positive.') };
   const voulus = new Set(ids);
   let n = prochainId(dessin), elargis = 0, ignorees = 0, erreur: string | undefined;
   const nouveaux: string[] = [];

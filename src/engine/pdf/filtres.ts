@@ -7,6 +7,7 @@
 import { LIMITES_PDF, RefusPdf, SyntaxePdf, type Decompression, enFrancais } from './limites.js';
 import { estNombre, type Dict } from './objets.js';
 import { estBlanc } from './lexique.js';
+import { t } from '../../util/i18n.js';
 
 /** Le budget de decompression d'une lecture : la sortie de chaque flux, comptee une fois meme si la lecture reprend. */
 export interface Budget { readonly parCle: Map<number, number>; total: number }
@@ -28,14 +29,14 @@ function compter(d: Decodage, cle: number, n: number): void {
   if (d.budget.total > LIMITES_PDF.decompresses) throw refusTrop();
 }
 
-const refusTrop = (): RefusPdf => new RefusPdf('Ce PDF se décompresse en plus de ' + enFrancais(LIMITES_PDF.decompresses / 1048576) + ' Mo : il est trop lourd pour être lu ici (ou c’est une bombe de décompression).');
+const refusTrop = (): RefusPdf => new RefusPdf(t('Ce PDF se décompresse en plus de {n} Mo : il est trop lourd pour être lu ici (ou c’est une bombe de décompression).', { n: enFrancais(LIMITES_PDF.decompresses / 1048576) }));
 
 /**
  * Les octets lisibles d'un flux : chaque filtre dans l'ordre, puis son predicteur. `cle` nomme le flux (sa position dans le
  * fichier) ; chaque etape a sa propre cle derivee, pour que deux FlateDecode enchaines ne se confondent pas.
  */
 export function decoder(brut: Uint8Array, filtres: readonly string[], params: readonly (Dict | null)[], cle: number, d: Decodage): Uint8Array {
-  if (filtres.length > LIMITES_PDF.filtres) throw new RefusPdf('Ce PDF enchaîne plus de ' + LIMITES_PDF.filtres + ' filtres sur un même flux : il ne se lit pas ici.');
+  if (filtres.length > LIMITES_PDF.filtres) throw new RefusPdf(t('Ce PDF enchaîne plus de {n} filtres sur un même flux : il ne se lit pas ici.', { n: LIMITES_PDF.filtres }));
   let octets = brut;
   filtres.forEach((f, i) => {
     const k = cle * 16 + i, p = params[i] ?? null;
@@ -44,11 +45,11 @@ export function decoder(brut: Uint8Array, filtres: readonly string[], params: re
       case 'ASCIIHexDecode': octets = asciiHex(octets); break;
       case 'ASCII85Decode': octets = ascii85(octets); break;
       case 'RunLengthDecode': octets = runLength(octets); break;
-      case 'LZWDecode': throw new RefusPdf('Ce PDF emploie la compression LZW, un format ancien que cette page ne lit pas : réenregistrez-le depuis un logiciel récent, puis rouvrez-le.');
-      case 'Crypt': throw new RefusPdf('Ce PDF est chiffré : il ne s’ouvre pas ici. Enregistrez-en une copie sans protection, puis rouvrez-la.');
+      case 'LZWDecode': throw new RefusPdf(t('Ce PDF emploie la compression LZW, un format ancien que cette page ne lit pas : réenregistrez-le depuis un logiciel récent, puis rouvrez-le.'));
+      case 'Crypt': throw new RefusPdf(t('Ce PDF est chiffré : il ne s’ouvre pas ici. Enregistrez-en une copie sans protection, puis rouvrez-la.'));
       case 'DCTDecode': case 'JPXDecode': case 'JBIG2Decode': case 'CCITTFaxDecode':
-        throw new RefusPdf('Ce PDF dessine sa page avec une compression d’image (' + nomFiltre(f) + ') : il ne contient pas de tracé lisible ici.');
-      default: throw new RefusPdf('Ce PDF emploie un filtre inconnu (« ' + f.slice(0, 40) + ' ») : il ne se lit pas ici.');
+        throw new RefusPdf(t('Ce PDF dessine sa page avec une compression d’image ({filtre}) : il ne contient pas de tracé lisible ici.', { filtre: nomFiltre(f) }));
+      default: throw new RefusPdf(t('Ce PDF emploie un filtre inconnu (« {filtre} ») : il ne se lit pas ici.', { filtre: f.slice(0, 40) }));
     }
     if (nomFiltre(f) !== 'FlateDecode') compter(d, k, octets.length);
   });
@@ -59,8 +60,8 @@ function inflater(brut: Uint8Array, cle: number, d: Decodage): Uint8Array {
   const reste = LIMITES_PDF.decompresses - d.budget.total + (d.budget.parCle.get(cle) ?? 0);
   const r = d.decompresser(brut, Math.max(0, reste), cle);
   if (r === 'trop') throw refusTrop();
-  if (r === 'indisponible') throw new RefusPdf('Ce navigateur ne sait pas décompresser les flux de ce PDF (DecompressionStream manque) : ouvrez-le dans un navigateur récent.');
-  if (r === 'illisible') throw new SyntaxePdf('un flux compressé est illisible');
+  if (r === 'indisponible') throw new RefusPdf(t('Ce navigateur ne sait pas décompresser les flux de ce PDF (DecompressionStream manque) : ouvrez-le dans un navigateur récent.'));
+  if (r === 'illisible') throw new SyntaxePdf(t('un flux compressé est illisible'));
   compter(d, cle, r.length);
   return r;
 }
@@ -71,10 +72,10 @@ function predire(octets: Uint8Array, p: Dict | null): Uint8Array {
   if (!estNombre(predicteur) || predicteur <= 1) return octets;
   const lire = (cle: string, defaut: number) => { const v = p?.get(cle); return estNombre(v) ? Math.floor(v) : defaut; };
   const couleurs = lire('Colors', 1), bits = lire('BitsPerComponent', 8), colonnes = lire('Columns', 1);
-  if (couleurs < 1 || couleurs > 32 || colonnes < 1 || colonnes > 1 << 20 || ![1, 2, 4, 8, 16].includes(bits)) throw new SyntaxePdf('un prédicteur aux paramètres invalides');
+  if (couleurs < 1 || couleurs > 32 || colonnes < 1 || colonnes > 1 << 20 || ![1, 2, 4, 8, 16].includes(bits)) throw new SyntaxePdf(t('un prédicteur aux paramètres invalides'));
   const pixel = Math.max(1, Math.ceil((couleurs * bits) / 8)), ligne = Math.ceil((couleurs * bits * colonnes) / 8);
   if (predicteur === 2) {
-    if (bits !== 8) throw new SyntaxePdf('un prédicteur TIFF sur des composantes de ' + bits + ' bits');
+    if (bits !== 8) throw new SyntaxePdf(t('un prédicteur TIFF sur des composantes de {bits} bits', { bits }));
     const out = Uint8Array.from(octets);
     for (let i = 0; i < out.length; i++) if (i % ligne >= pixel) out[i] = ((out[i] ?? 0) + (out[i - pixel] ?? 0)) & 0xff;
     return out;
@@ -108,7 +109,7 @@ function asciiHex(octets: Uint8Array): Uint8Array {
   for (const c of octets) {
     if (c === 62) break;
     const v = c >= 48 && c <= 57 ? c - 48 : c >= 65 && c <= 70 ? c - 55 : c >= 97 && c <= 102 ? c - 87 : -1;
-    if (v < 0) { if (estBlanc(c)) continue; throw new SyntaxePdf('un flux ASCIIHex porte un caractère étranger'); }
+    if (v < 0) { if (estBlanc(c)) continue; throw new SyntaxePdf(t('un flux ASCIIHex porte un caractère étranger')); }
     if (moitie < 0) moitie = v; else { out[n++] = moitie * 16 + v; moitie = -1; }
   }
   if (moitie >= 0) out[n++] = moitie * 16;
@@ -124,7 +125,7 @@ function ascii85(octets: Uint8Array): Uint8Array {
     if (c === 126) break; // « ~> »
     if (estBlanc(c)) continue;
     if (c === 122 && compte === 0) { out.fill(0, n, n + 4); n += 4; continue; }
-    if (c < 33 || c > 117) throw new SyntaxePdf('un flux ASCII85 porte un caractère étranger');
+    if (c < 33 || c > 117) throw new SyntaxePdf(t('un flux ASCII85 porte un caractère étranger'));
     groupe = groupe * 85 + (c - 33);
     if (++compte === 5) {
       out[n++] = (groupe >>> 24) & 255; out[n++] = (groupe >>> 16) & 255; out[n++] = (groupe >>> 8) & 255; out[n++] = groupe & 255;

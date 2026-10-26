@@ -18,6 +18,7 @@ import type { MultiPolygon } from 'polygon-clipping';
 import { toleranceBooleen } from '../booleens.js';
 import { regionPeinte, unirRegions } from './silhouette.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 
 export type Optimisation = 'simple' | 'avancee';
 export type QuartDeTour = 0 | 90 | 180 | 270;
@@ -295,13 +296,13 @@ function refuser(o: OptionsPlacement, region: Boite, erreur: string): EtatPlacem
 export function preparerPlacement(dessin: DessinSvg, ids: readonly string[], feuille: Boite, o: OptionsPlacement): EtatPlacement {
   const region = reduite(feuille, o.marge);
   if (!(o.espacement >= 0) || !(o.marge >= 0) || o.espacement > PLACEMENT_MAX.ecart || o.marge > PLACEMENT_MAX.ecart) {
-    return refuser(o, region, 'L’espacement et la marge vont de 0 à ' + PLACEMENT_MAX.ecart / 96 * 25.4 + ' mm.');
+    return refuser(o, region, t('L’espacement et la marge vont de 0 à {max} mm.', { max: PLACEMENT_MAX.ecart / 96 * 25.4 }));
   }
   const voulues = copiesVoulues(o.quantite);
-  if (o.quantite !== 'remplir' && !(voulues >= 1)) return refuser(o, region, 'Demandez au moins une copie.');
+  if (o.quantite !== 'remplir' && !(voulues >= 1)) return refuser(o, region, t('Demandez au moins une copie.'));
   const u = uniteDe(dessin, ids);
-  if (!u) return refuser(o, region, 'Choisissez d’abord une forme visible et déverrouillée à dupliquer.');
-  if (!(region.l > 0) || !(region.h > 0)) return refuser(o, region, 'La feuille est trop petite pour sa marge.');
+  if (!u) return refuser(o, region, t('Choisissez d’abord une forme visible et déverrouillée à dupliquer.'));
+  if (!(region.l > 0) || !(region.h > 0)) return refuser(o, region, t('La feuille est trop petite pour sa marge.'));
   const simple = placementSimple(u, region, obstaclesDe(dessin, u, null, feuille), o, voulues);
   const base: EtatPlacement = { unite: u, region, options: o, voulues, pas: 1, ecart: o.espacement, orientations: [], posees: [], pieces: [], essais: 0, fini: true, simple };
   if (o.optimisation === 'simple' || simple.length >= voulues) return base;
@@ -382,9 +383,9 @@ export const posesDe = (e: EtatPlacement): readonly Pose[] => (e.posees.length >
 /** Pose les copies trouvees dans le dessin : une seule operation, que l'historique garde comme une entree. */
 export function finirPlacement(dessin: DessinSvg, e: EtatPlacement): ResultatPlacement {
   const demandees = e.options.quantite === 'remplir' ? null : e.voulues;
-  if (e.erreur || !e.unite) return { dessin, ids: [], copies: 0, demandees, tournees: 0, limite: false, erreur: e.erreur ?? 'Rien à dupliquer.' };
+  if (e.erreur || !e.unite) return { dessin, ids: [], copies: 0, demandees, tournees: 0, limite: false, erreur: e.erreur ?? t('Rien à dupliquer.') };
   const poses = posesDe(e), u = e.unite, limite = !e.fini;
-  if (!poses.length) return { dessin, ids: u.ids, copies: 0, demandees, tournees: 0, limite, erreur: 'Aucune copie ne tient sur la feuille : agrandissez la feuille, réduisez l’espacement ou la marge, ou permettez la rotation.' };
+  if (!poses.length) return { dessin, ids: u.ids, copies: 0, demandees, tournees: 0, limite, erreur: t('Aucune copie ne tient sur la feuille : agrandissez la feuille, réduisez l’espacement ou la marge, ou permettez la rotation.') };
   const tournees = poses.filter(p => p.angle !== 0).length;
   if (!dessin.groupes) {
     const r = copierPar(dessin, u.ids, poses.map(p => p.matrice));
@@ -410,10 +411,13 @@ export function placerSurFeuille(dessin: DessinSvg, ids: readonly string[], feui
 /** La phrase d'un placement fait : combien de copies, et pourquoi pas plus. */
 export function phrasePlacement(r: ResultatPlacement): string {
   if (r.erreur && !r.copies) return r.erreur;
-  const posees = pluriel(r.copies, 'copie') + ' ' + (r.copies > 1 ? 'posées' : 'posée');
-  const tournees = r.tournees ? ' (' + r.tournees + ' tournée' + (r.tournees > 1 ? 's' : '') + ')' : '';
-  const limite = r.limite ? ' Le calcul a atteint sa limite : c’est le meilleur placement trouvé.' : '';
-  if (r.demandees === null) return posees + tournees + ' : la feuille est pleine.' + limite + ' Ctrl+Z les retire.';
-  if (r.copies < r.demandees) return r.copies + ' copie' + (r.copies > 1 ? 's posées' : ' posée') + ' sur ' + r.demandees + tournees + ' : la feuille est pleine.' + limite + ' Ctrl+Z les retire.';
-  return posees + tournees + ' sur la feuille.' + limite + ' Ctrl+Z les retire.';
+  // Chaque morceau est une phrase ou un groupe entier, accorde dans sa cle : rien ne se colle lettre a lettre (ADR-0042).
+  const copies = pluriel(r.copies, 'copie');
+  const posees = r.copies > 1 ? t('{copies} posées', { copies }) : t('{copies} posée', { copies });
+  const tournees = r.tournees ? (r.tournees > 1 ? t(' ({n} tournées)', { n: r.tournees }) : t(' ({n} tournée)', { n: r.tournees })) : '';
+  const limite = r.limite ? t(' Le calcul a atteint sa limite : c’est le meilleur placement trouvé.') : '';
+  const retire = t(' Ctrl+Z les retire.');
+  if (r.demandees === null) return posees + tournees + t(' : la feuille est pleine.') + limite + retire;
+  if (r.copies < r.demandees) return (r.copies > 1 ? t('{n} copies posées sur {demandees}', { n: r.copies, demandees: r.demandees }) : t('{n} copie posée sur {demandees}', { n: r.copies, demandees: r.demandees })) + tournees + t(' : la feuille est pleine.') + limite + retire;
+  return posees + tournees + t(' sur la feuille.') + limite + retire;
 }

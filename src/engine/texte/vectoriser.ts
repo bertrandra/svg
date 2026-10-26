@@ -17,13 +17,15 @@ import { aireSignee, aplatir, cheminDeRegion, cheminLisseDeRegion, regionDeChemi
 import { aireDeRegion } from '../contour/region.js';
 import { natureDuTexte } from './vivant.js';
 import { nomGroupeTexte } from '../edition/texteSvg.js';
+import { t } from '../../util/i18n.js';
 
 export type ModeVectorisation = 'lettres' | 'souder-touchantes' | 'tout';
 export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['lettres', 'souder-touchantes', 'tout'];
+// Des accesseurs : la langue de l'interface est posee apres le chargement du module (ADR-0042).
 export const NOMS_MODES: Readonly<Record<ModeVectorisation, string>> = {
-  lettres: 'Lettres séparées',
-  'souder-touchantes': 'Souder les lettres qui se touchent',
-  tout: 'Tout souder'
+  get lettres() { return t('Lettres séparées'); },
+  get 'souder-touchantes'() { return t('Souder les lettres qui se touchent'); },
+  get tout() { return t('Tout souder'); }
 };
 
 export interface OptionsVectorisation {

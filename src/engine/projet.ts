@@ -14,6 +14,7 @@ import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, r
 import type { DispositionProjet } from '../model/projet.js';
 import { avecReperes, normaliserReperes } from './editionSvg.js';
 import type { NuancierDessin } from '../model/nuancier.js';
+import { t } from '../util/i18n.js';
 
 
 /** Ce que l'editeur et son hote savent d'un travail : de quoi ecrire un projet, et ce qu'un projet rouvert redonne. */
@@ -151,7 +152,7 @@ export function projetDe(e: EtatProjet): Projet {
  */
 export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
   for (const f of p.dessin.formes) {
-    if ((f.remplissage !== null && !peintureSure(f.remplissage)) || (f.contour !== null && !peintureSure(f.contour))) return { erreur: 'Ce projet porte une couleur que l’éditeur n’écrit pas.' };
+    if ((f.remplissage !== null && !peintureSure(f.remplissage)) || (f.contour !== null && !peintureSure(f.contour))) return { erreur: t('Ce projet porte une couleur que l’éditeur n’écrit pas.') };
   }
   // Les champs du modele v2 que la validation du format ne peut pas juger (les octets d'une image) : verifies avant d'ouvrir.
   const refus = refusChampsV2(p.dessin.formes, p.dessin.groupes);
@@ -164,7 +165,7 @@ export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
     p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null
   );
   // L'arbre (cycles, profondeur, contiguite des feuilles d'un groupe) ne se verifie qu'avec le moteur : un arbre abime est refuse.
-  if (dessin.groupes && verifierDessin(dessin).length) return { erreur: 'Ce projet porte des groupes mal formés.' };
+  if (dessin.groupes && verifierDessin(dessin).length) return { erreur: t('Ce projet porte des groupes mal formés.') };
   return {
     nom: p.nom,
     dessin,

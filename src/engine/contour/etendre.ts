@@ -19,6 +19,7 @@ import { decouperEnTirets } from './tirets.js';
 import { anneauxDeTrait, type ReglageBord } from './epaissir.js';
 import { polylignesDeChemin, type Polyligne } from './polylignes.js';
 import { aireDeRegion, cheminDeRegionChoisie, unirAnneaux } from './region.js';
+import { t } from '../../util/i18n.js';
 
 export interface OptionsEtendre {
   /** L'ecart maximal du resultat au trace epaissi ; par defaut un vingt-millieme de la forme. */
@@ -29,8 +30,9 @@ export interface OptionsEtendre {
   separer?: boolean;
 }
 
-export const MSG_SANS_TRAIT = 'Cette forme n’a pas de contour à transformer : donnez-lui une couleur et une épaisseur de contour.';
-export const MSG_TIRETS_TROP_FINS = 'Les tirets sont trop fins pour être transformés en formes : agrandissez le motif.';
+// Des fonctions, pas des constantes : la langue de l'interface est posee apres le chargement du module (ADR-0042).
+export const MSG_SANS_TRAIT = (): string => t('Cette forme n’a pas de contour à transformer : donnez-lui une couleur et une épaisseur de contour.');
+export const MSG_TIRETS_TROP_FINS = (): string => t('Les tirets sont trop fins pour être transformés en formes : agrandissez le motif.');
 
 /** Les polylignes du trait de la forme : le trace tel quel, ou ses tirets. `null` si le motif est trop fin. */
 function traitsDe(f: Forme, tolerance: number): Polyligne[] | null {
@@ -57,17 +59,17 @@ export const reglageDeForme = (f: Forme, tolerance: number): ReglageBord => ({
  * deterministe : les essais se suivent toujours dans le meme ordre.
  */
 export function regionDuTrait(f: Forme, tolerance: number): MultiPolygon | { erreur: string } {
-  if (!f.contour || !(f.epaisseur > 0)) return { erreur: MSG_SANS_TRAIT };
+  if (!f.contour || !(f.epaisseur > 0)) return { erreur: MSG_SANS_TRAIT() };
   for (const facteur of [1, 3, 9]) {
     const tol = tolerance * facteur;
     const traits = traitsDe(f, tol);
-    if (!traits) return { erreur: MSG_TIRETS_TROP_FINS };
+    if (!traits) return { erreur: MSG_TIRETS_TROP_FINS() };
     const r = reglageDeForme(f, tol);
     try {
       return unirAnneaux(traits.flatMap(l => anneauxDeTrait(l, r)));
     } catch { /* un autre aplatissement defait souvent l'incidence qui a fait echouer le balayage */ }
   }
-  return { erreur: 'Le contour est trop enchevêtré pour être transformé : simplifiez le tracé, puis recommencez.' };
+  return { erreur: t('Le contour est trop enchevêtré pour être transformé : simplifiez le tracé, puis recommencez.') };
 }
 
 /** La tolerance d'une forme seule : un vingt-millieme de sa plus grande dimension, trait compris. */
@@ -81,7 +83,7 @@ export function etendreTrait(f: Forme, options: OptionsEtendre = {}): { chemins:
   const tolerance = options.tolerance ?? toleranceDeForme(f);
   const region = regionDuTrait(f, tolerance);
   if ('erreur' in region) return region;
-  if (!region.length) return { erreur: 'Le contour n’a pas d’épaisseur visible : il ne reste rien à transformer.' };
+  if (!region.length) return { erreur: t('Le contour n’a pas d’épaisseur visible : il ne reste rien à transformer.') };
   const lisser = options.lisser === true;
   if (options.separer) return { chemins: region.map(poly => cheminDeRegionChoisie([poly], lisser, tolerance)) };
   return { chemins: [cheminDeRegionChoisie(region, lisser, tolerance)] };

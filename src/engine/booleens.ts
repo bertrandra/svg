@@ -12,6 +12,7 @@ import {
   type Chemin, type Commande, type DessinSvg, type Forme
 } from './editionSvg.js';
 import { reconstruireAnneau } from './edition/ajustement.js';
+import { t } from '../util/i18n.js';
 
 export type Booleen = 'union' | 'soustraction' | 'intersection' | 'exclusion';
 export const BOOLEENS: readonly Booleen[] = ['union', 'soustraction', 'intersection', 'exclusion'];
@@ -156,8 +157,8 @@ function booleenRiche(dessin: DessinSvg, ids: readonly string[], op: Booleen, to
 function booleenDeFormes(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance: number, options: OptionsBooleen): { dessin: DessinSvg; id: string | null; erreur?: string } {
   const voulus = new Set(ids);
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille && f.visible);
-  if (choisies.length < 2) return { dessin, id: null, erreur: 'Choisissez au moins deux formes visibles et déverrouillées.' };
-  if (!choisies.every(pleine)) return { dessin, id: null, erreur: 'Une forme sans remplissage n’a pas d’aire : donnez-lui une couleur, ou retirez-la de la sélection.' };
+  if (choisies.length < 2) return { dessin, id: null, erreur: t('Choisissez au moins deux formes visibles et déverrouillées.') };
+  if (!choisies.every(pleine)) return { dessin, id: null, erreur: t('Une forme sans remplissage n’a pas d’aire : donnez-lui une couleur, ou retirez-la de la sélection.') };
   const regions = choisies.map(f => regionDeForme(f, tolerance));
   const [premiere, ...autres] = regions;
   if (!premiere) return { dessin, id: null };

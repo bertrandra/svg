@@ -16,6 +16,7 @@ import { descenteMasques } from './descente/masques.js';
 import { effets } from './descente/effets.js';
 import { descenteGroupes } from './descente/groupes.js';
 import { sceneNative, type Scene } from './descente/scene.js';
+import { t } from '../util/i18n.js';
 
 export type { Scene, NoeudScene, FeuilleScene, ImageScene, PorteeScene, PeintureScene, MotifScene, DecoupeScene, MasqueScene } from './descente/scene.js';
 
@@ -76,30 +77,33 @@ const AUCUNE_PERTE: readonly string[] = [];
 
 // Le filet : ce qu'aucune regle n'a descendu (une fonctionnalite livree sans la sienne, ce qui ne doit pas arriver) part quand meme,
 // dit, pour que la promesse « un DessinPlat est plat » tienne toujours.
+// Les phrases se traduisent a l'appel (ADR-0042) : la langue est posee apres le chargement du module, jamais avant.
 const FILET = {
-  groupes: 'la structure et l’opacité des groupes (les formes sont gardées à plat)',
-  peintures: 'les dégradés et les motifs (remplacés par une couleur unie)',
-  effets: 'le flou et l’ombre portée',
-  images: 'les images'
+  groupes: () => t('la structure et l’opacité des groupes (les formes sont gardées à plat)'),
+  peintures: () => t('les dégradés et les motifs (remplacés par une couleur unie)'),
+  effets: () => t('le flou et l’ombre portée'),
+  images: () => t('les images')
 } as const;
-const FILET_PERDUS: readonly string[] = [FILET.effets, FILET.images];
+type CleFilet = keyof typeof FILET;
+const FILET_PERDUS: readonly CleFilet[] = ['effets', 'images'];
 
-function filet(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[] } {
-  const pertes = new Set<string>();
-  if (d.groupes) pertes.add(FILET.groupes);
+function filet(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus: readonly string[] } {
+  const cles = new Set<CleFilet>();
+  if (d.groupes) cles.add('groupes');
   const formes: Forme[] = [];
   for (const f of d.formes) {
-    if (f.image) { pertes.add(FILET.images); continue; }
+    if (f.image) { cles.add('images'); continue; }
     const { parent, peintureRemplissage, peintureContour, effets, image: _i, ...reste } = f;
     void _i;
-    if (peintureRemplissage || peintureContour) pertes.add(FILET.peintures);
-    if (effets) pertes.add(FILET.effets);
+    if (peintureRemplissage || peintureContour) cles.add('peintures');
+    if (effets) cles.add('effets');
     // Un groupe masque masque ses formes : elles ne s'exportent pas, comme a l'enregistrement.
     formes.push(parent !== undefined && !visibleEffectif(d, f.id) ? { ...reste, visible: false } : reste);
   }
   const { groupes: _g, ...plan } = d;
   void _g;
-  return { dessin: { ...plan, formes }, pertes: [...pertes] };
+  const pertes = [...cles];
+  return { dessin: { ...plan, formes }, pertes: pertes.map(k => FILET[k]()), perdus: pertes.filter(k => FILET_PERDUS.includes(k)).map(k => FILET[k]()) };
 }
 
 /**
@@ -130,7 +134,7 @@ export function aplatirPour(d: DessinSvg, capacites: Capacites, regles: readonly
   const fin = (dessin: DessinSvg): Descente => ({ dessin: dessin as DessinPlat, pertes, perdus, ...(scene ? { scene } : {}) });
   if (estPlat(courant)) return fin(courant);
   const reste = filet(courant);
-  ajouter({ pertes: reste.pertes, perdus: reste.pertes.filter(p => FILET_PERDUS.includes(p)) });
+  ajouter(reste);
   return fin(reste.dessin);
 }
 
@@ -141,7 +145,7 @@ export function aplatirPour(d: DessinSvg, capacites: Capacites, regles: readonly
 export const phrasePertes = (pertes: readonly string[], perdus: readonly string[] = []): string => {
   const approches = pertes.filter(p => !perdus.includes(p)), partis = pertes.filter(p => perdus.includes(p));
   return [
-    ...(approches.length ? ['Approché par ce format : ' + approches.join(' ; ') + '.'] : []),
-    ...(partis.length ? ['Perdu dans ce format : ' + partis.join(' ; ') + '.'] : [])
+    ...(approches.length ? [t('Approché par ce format : {liste}.', { liste: approches.join(' ; ') })] : []),
+    ...(partis.length ? [t('Perdu dans ce format : {liste}.', { liste: partis.join(' ; ') })] : [])
   ].join(' ');
 };

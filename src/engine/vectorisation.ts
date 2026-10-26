@@ -6,6 +6,7 @@
 import { TOLERANCE_DEFAUT, type PorteeDetourage } from './detourage.js';
 import { resumeLigne, type ReglagesLigne } from './lignemediane.js';
 import type { ReglagesPretraitement } from './pretraitement.js';
+import { t } from '../util/i18n.js';
 
 /**
  * Ce que la vectorisation cherche a garder de l'image. Les trois premiers modes reglent vtracer, qui rend des
@@ -164,13 +165,15 @@ export interface ParametreFin {
 const TOUS: readonly ModeVectorisation[] = ['aplats', 'trait', 'fidele'];
 
 /** Les reglages numeriques, dans l'ordre ou on les propose. Changer un libelle ne change aucune sortie du traceur. */
+// Libelle et aide sont des accesseurs : la langue de l'interface est posee apres le chargement du module (ADR-0042), et chaque
+// lecture rend le texte dans la langue du moment ; les bornes et les modes, eux, ne changent pas.
 export const PARAMETRES_FINS: readonly ParametreFin[] = [
-  { id: 'couleursMax', libelle: 'Nombre de couleurs', aide: 'Au plus N couleurs de l’image, les plus présentes d’abord. Moins : des aplats plus simples. (Palette imposée au traceur.)', min: 1, max: 8, pas: 1, modes: ['aplats'] },
-  { id: 'filterSpeckle', libelle: 'Ignorer les taches de moins de', aide: 'Les taches de moins de N pixels de côté ne deviennent pas des tracés. Plus haut : moins de petits tracés. (filter_speckle de vtracer.)', unite: ' px', min: 0, max: 16, pas: 1, modes: TOUS },
-  { id: 'simplify', libelle: 'Alléger les courbes', aide: 'Lisse les courbes en retirant des points. 0 garde tout ; plus haut : des tracés plus légers, moins fidèles. (Simplification des chemins.)', min: 0, max: 4, pas: 0.1, modes: TOUS },
-  { id: 'cornerThreshold', libelle: 'Arrondir les coins', aide: 'Angle, en degrés, au-delà duquel un coin reste un coin. Plus haut : des coins plus arrondis. (corner_threshold de vtracer.)', unite: '°', min: 0, max: 180, pas: 5, modes: TOUS },
-  { id: 'colorPrecision', libelle: 'Nuances distinguées', aide: 'Plus haut : le traceur sépare des couleurs plus proches, donc plus de nuances. (color_precision de vtracer : bits significatifs par canal.)', min: 1, max: 8, pas: 1, modes: ['aplats', 'fidele'] },
-  { id: 'layerDifference', libelle: 'Regrouper les couleurs proches', aide: 'Plus haut : des couleurs voisines se fondent en une seule couche, donc moins de couches. (layer_difference de vtracer : écart de couleur entre deux couches.)', min: 0, max: 64, pas: 1, modes: ['aplats', 'fidele'] }
+  { id: 'couleursMax', get libelle() { return t('Nombre de couleurs'); }, get aide() { return t('Au plus N couleurs de l’image, les plus présentes d’abord. Moins : des aplats plus simples. (Palette imposée au traceur.)'); }, min: 1, max: 8, pas: 1, modes: ['aplats'] },
+  { id: 'filterSpeckle', get libelle() { return t('Ignorer les taches de moins de'); }, get aide() { return t('Les taches de moins de N pixels de côté ne deviennent pas des tracés. Plus haut : moins de petits tracés. (filter_speckle de vtracer.)'); }, unite: ' px', min: 0, max: 16, pas: 1, modes: TOUS },
+  { id: 'simplify', get libelle() { return t('Alléger les courbes'); }, get aide() { return t('Lisse les courbes en retirant des points. 0 garde tout ; plus haut : des tracés plus légers, moins fidèles. (Simplification des chemins.)'); }, min: 0, max: 4, pas: 0.1, modes: TOUS },
+  { id: 'cornerThreshold', get libelle() { return t('Arrondir les coins'); }, get aide() { return t('Angle, en degrés, au-delà duquel un coin reste un coin. Plus haut : des coins plus arrondis. (corner_threshold de vtracer.)'); }, unite: '°', min: 0, max: 180, pas: 5, modes: TOUS },
+  { id: 'colorPrecision', get libelle() { return t('Nuances distinguées'); }, get aide() { return t('Plus haut : le traceur sépare des couleurs plus proches, donc plus de nuances. (color_precision de vtracer : bits significatifs par canal.)'); }, min: 1, max: 8, pas: 1, modes: ['aplats', 'fidele'] },
+  { id: 'layerDifference', get libelle() { return t('Regrouper les couleurs proches'); }, get aide() { return t('Plus haut : des couleurs voisines se fondent en une seule couche, donc moins de couches. (layer_difference de vtracer : écart de couleur entre deux couches.)'); }, min: 0, max: 64, pas: 1, modes: ['aplats', 'fidele'] }
 ];
 
 export const parametresDuMode = (mode: ModeVectorisation): ParametreFin[] => PARAMETRES_FINS.filter(p => p.modes.includes(mode));
@@ -191,23 +194,47 @@ export function retirerFin(fins: ReglagesFins | undefined, id: keyof ReglagesFin
   return Object.keys(r).length ? r : undefined;
 }
 
-const NOMS_COURTS_MODES: Record<ModeVectorisation, string> = { aplats: 'Aplats', trait: 'Trait', fidele: 'Fidèle', mediane: 'Ligne médiane' };
-const NOMS_COURTS_FINESSES: Record<Finesse, string> = { fine: 'fin', normale: 'normal', lisse: 'lisse' };
-const LIBELLES_FINS: Record<keyof ReglagesFins, string> = {
-  filterSpeckle: 'taches', simplify: 'allègement', cornerThreshold: 'coins', colorPrecision: 'nuances', layerDifference: 'regroupement', couleursMax: 'couleurs', courbes: 'courbes', empilement: 'empilement'
-};
+// Les mots du resume se traduisent a l'appel (ADR-0042) : la langue est posee apres le chargement du module.
+function nomCourtMode(m: ModeVectorisation): string {
+  switch (m) {
+    case 'aplats': return t('Aplats');
+    case 'trait': return t('Trait');
+    case 'fidele': return t('Fidèle');
+    case 'mediane': return t('Ligne médiane');
+  }
+}
+function nomCourtFinesse(f: Finesse): string {
+  switch (f) {
+    case 'fine': return t('fin');
+    case 'normale': return t('normal');
+    case 'lisse': return t('lisse');
+  }
+}
+const ORDRE_FINS: readonly (keyof ReglagesFins)[] = ['filterSpeckle', 'simplify', 'cornerThreshold', 'colorPrecision', 'layerDifference', 'couleursMax', 'courbes', 'empilement'];
+function libelleFin(k: keyof ReglagesFins): string {
+  switch (k) {
+    case 'filterSpeckle': return t('taches');
+    case 'simplify': return t('allègement');
+    case 'cornerThreshold': return t('coins');
+    case 'colorPrecision': return t('nuances');
+    case 'layerDifference': return t('regroupement');
+    case 'couleursMax': return t('couleurs');
+    case 'courbes': return t('courbes');
+    case 'empilement': return t('empilement');
+  }
+}
 
 /** Un reglage en une ligne : « Aplats · normal · taches 8 · segments droits », « Ligne médiane · lisse · épaisseur 4 ». */
 export function resumeReglages(v: ReglageVecteurs): string {
-  if (v.mode === 'mediane') return [NOMS_COURTS_MODES.mediane, NOMS_COURTS_FINESSES[v.finesse], ...resumeLigne(v.ligne)].join(' · ');
+  if (v.mode === 'mediane') return [nomCourtMode('mediane'), nomCourtFinesse(v.finesse), ...resumeLigne(v.ligne)].join(' · ');
   const fins = v.fins ?? {};
-  const touches = (Object.keys(LIBELLES_FINS) as (keyof ReglagesFins)[]).filter(k => fins[k] !== undefined).map(k => {
+  const touches = ORDRE_FINS.filter(k => fins[k] !== undefined).map(k => {
     const val = fins[k];
-    if (k === 'courbes') return val === 'polygon' ? 'segments droits' : 'courbes';
-    if (k === 'empilement') return val === 'cutout' ? 'découpé' : 'empilé';
-    return LIBELLES_FINS[k] + ' ' + String(val);
+    if (k === 'courbes') return val === 'polygon' ? t('segments droits') : t('courbes');
+    if (k === 'empilement') return val === 'cutout' ? t('découpé') : t('empilé');
+    return libelleFin(k) + ' ' + String(val);
   });
-  return [NOMS_COURTS_MODES[v.mode], NOMS_COURTS_FINESSES[v.finesse], ...touches].join(' · ');
+  return [nomCourtMode(v.mode), nomCourtFinesse(v.finesse), ...touches].join(' · ');
 }
 
 const stable = (v: unknown): string => {

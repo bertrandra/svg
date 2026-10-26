@@ -13,6 +13,7 @@ import { estDict, estFlux, estRef, estTableau, type Dict, type Flux } from './ob
 import { listerPages, type PagePdf } from './pages.js';
 import { fluxDePolice, type PolicesPdf } from './polices.js';
 import { phraseRemplacement } from '../../model/polices.js';
+import { t } from '../../util/i18n.js';
 
 /** Les polices lues d'avance au plus pour une page : au-dela, une police se lit a son premier usage. */
 const POLICES_MAX = 500;
@@ -45,19 +46,19 @@ export function lirePdf(octets: Uint8Array, options: OptionsLecturePdf): Lecture
   try {
     const doc = ouvrirDocument(octets, options.decompresser);
     const liste = listerPages(doc);
-    if (!liste.length) return { erreur: 'Ce PDF ne contient aucune page.' };
+    if (!liste.length) return { erreur: t('Ce PDF ne contient aucune page.') };
     pages = liste.length;
     const n = options.page ?? 1;
-    if (!Number.isInteger(n) || n < 1 || n > liste.length) return avecPages('Ce PDF n’a pas de page ' + n + ' : il en compte ' + enFrancais(liste.length) + '.');
+    if (!Number.isInteger(n) || n < 1 || n > liste.length) return avecPages(t('Ce PDF n’a pas de page {n} : il en compte {total}.', { n, total: enFrancais(liste.length) }));
     const lu = lirePage(doc, au(liste, n - 1), options.polices ?? null);
     if ('erreur' in lu) return { ...avecPages(lu.erreur), ...(lu.policesManquantes ? { policesManquantes: true } : {}) };
     return { ...lu, pages: liste.length, page: n };
   } catch (e) {
     if (e instanceof FluxEnAttente) throw e;
     if (e instanceof RefusPdf) return avecPages(e.message);
-    if (e instanceof SyntaxePdf) return avecPages('Ce PDF ne se lit pas : ' + e.message + '.');
+    if (e instanceof SyntaxePdf) return avecPages(t('Ce PDF ne se lit pas : {raison}.', { raison: e.message }));
     // Dernier filet, comme la lecture d'un SVG : une pile qui deborderait malgre les bornes se dit.
-    if (e instanceof RangeError) return avecPages('Ce PDF est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.');
+    if (e instanceof RangeError) return avecPages(t('Ce PDF est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.'));
     throw e;
   }
 }
@@ -71,8 +72,8 @@ export function matricePage(boite: readonly [number, number, number, number], ro
 
 function lirePage(doc: DocumentPdf, page: PagePdf, polices: PolicesPdf | null): { dessin: DessinSvg; ignores: string[]; policesManquantes?: boolean } | { erreur: string; policesManquantes?: boolean } {
   const [x0, y0, x1, y1] = page.boite, l = x1 - x0, h = y1 - y0;
-  if (!(l >= 0.001 && h >= 0.001)) return { erreur: 'Cette page du PDF a une taille nulle.' };
-  if (Math.max(Math.abs(x0), Math.abs(y0), Math.abs(x1), Math.abs(y1)) > LIMITES_PDF.coordonnee) return { erreur: 'Cette page du PDF a une taille démesurée.' };
+  if (!(l >= 0.001 && h >= 0.001)) return { erreur: t('Cette page du PDF a une taille nulle.') };
+  if (Math.max(Math.abs(x0), Math.abs(y0), Math.abs(x1), Math.abs(y1)) > LIMITES_PDF.coordonnee) return { erreur: t('Cette page du PDF a une taille démesurée.') };
   const contenus = fluxDeContenu(doc, page.dict);
   // Les flux de la page et de ses formulaires sont demandes d'un coup : une seule reprise pour tous (voir io/pdf.ts).
   exiger(doc, [...contenus, ...formulaires(doc, page.ressources, polices !== null)]);
@@ -85,7 +86,7 @@ function lirePage(doc: DocumentPdf, page: PagePdf, polices: PolicesPdf | null): 
   const ignores = [...phrasesPertes(ctx.pertes), ...[...ctx.remplacements.values()].map(x => phraseRemplacement(x.textes, x.r))];
   const manquantes = ctx.pertes.textesSansPolice > 0;
   if (!ctx.formes.length) {
-    return { erreur: 'Cette page du PDF ne contient aucun tracé vectoriel à éditer' + (ignores.length ? ' (non repris : ' + ignores.join(' ; ') + ')' : '') + '.', ...(manquantes ? { policesManquantes: true } : {}) };
+    return { erreur: ignores.length ? t('Cette page du PDF ne contient aucun tracé vectoriel à éditer (non repris : {liste}).', { liste: ignores.join(' ; ') }) : t('Cette page du PDF ne contient aucun tracé vectoriel à éditer.'), ...(manquantes ? { policesManquantes: true } : {}) };
   }
   const vb: DessinSvg['vb'] = page.rotation === 90 || page.rotation === 270 ? [0, 0, h, l] : [0, 0, l, h];
   return { dessin: { vb, formes: ctx.formes }, ignores, ...(manquantes ? { policesManquantes: true } : {}) };

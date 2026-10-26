@@ -10,18 +10,20 @@ import { groupesQuiSeTouchent, partiesDe, vectoriserTextes } from '../texte/vect
 import { hachurerFormes } from '../contour/hachures.js';
 import { natureDuTexte } from '../texte/vivant.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 import type { Gravite } from './constats.js';
 
 export type CodeConstatTexte = 'stylo-plein' | 'stylo-double-trait' | 'decoupe-trait-ouvert' | 'lettres-chevauchent';
 export type CodeCorrectionTexte = 'garder-contour' | 'hachurer' | 'police-trait' | 'contour-en-forme' | 'souder' | 'ecrire';
 
+// Des accesseurs : la langue de l'interface est posee apres le chargement du module (ADR-0042).
 export const LIBELLES_CORRECTION_TEXTE: Readonly<Record<CodeCorrectionTexte, string>> = {
-  'garder-contour': 'Garder le contour',
-  hachurer: 'Hachurer',
-  'police-trait': 'Police à trait unique',
-  'contour-en-forme': 'Contour en forme',
-  souder: 'Souder',
-  ecrire: 'Écrire au stylo'
+  get 'garder-contour'() { return t('Garder le contour'); },
+  get hachurer() { return t('Hachurer'); },
+  get 'police-trait'() { return t('Police à trait unique'); },
+  get 'contour-en-forme'() { return t('Contour en forme'); },
+  get souder() { return t('Souder'); },
+  get ecrire() { return t('Écrire au stylo'); }
 };
 
 export interface ConstatTexte {
@@ -35,7 +37,6 @@ export interface ConstatTexte {
 }
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
-const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
 const visibles = (d: DessinSvg): Forme[] => d.formes.filter(f => f.visible);
 /** Un texte vivant compose dans une police a contour : au stylo, chaque lettre sera son pourtour. */
 const texteAContour = (f: Forme): boolean => !!f.texte && natureDuTexte(f.texte) === 'contour';
@@ -53,13 +54,13 @@ export function constatsStylo(dessin: DessinSvg): ConstatTexte[] {
     r.push({
       code: 'stylo-plein', gravite: 'a-corriger', formes: ids(pleines), aVerifier: true,
       corrections: textes.length ? ['garder-contour', 'hachurer', 'police-trait'] : ['garder-contour', 'hachurer'],
-      message: 'Le stylo trace le pourtour des formes pleines : ' + (pleines.length > 1 ? pleines.length + ' formes seront dessinées' : 'une forme sera dessinée') + ' creuse' + accord(pleines.length, '', 's') + '. Gardez le contour, ou hachurez pour remplir.'
+      message: (pleines.length > 1 ? t('Le stylo trace le pourtour des formes pleines : {n} formes seront dessinées creuses. Gardez le contour, ou hachurez pour remplir.', { n: pleines.length }) : t('Le stylo trace le pourtour des formes pleines : une forme sera dessinée creuse. Gardez le contour, ou hachurez pour remplir.'))
     });
   }
   if (textes.length) {
     r.push({
       code: 'stylo-double-trait', gravite: 'conseil', formes: ids(textes), corrections: ['police-trait'],
-      message: 'Double trait : ' + accord(textes.length, 'ce texte à contour sera dessiné', 'ces ' + textes.length + ' textes à contour seront dessinés') + ' en lettres creuses. Une police à trait unique écrit chaque lettre d’une seule ligne.'
+      message: (textes.length > 1 ? t('Double trait : ces {n} textes à contour seront dessinés en lettres creuses. Une police à trait unique écrit chaque lettre d’une seule ligne.', { n: textes.length }) : t('Double trait : ce texte à contour sera dessiné en lettres creuses. Une police à trait unique écrit chaque lettre d’une seule ligne.'))
     });
   }
   return r;
@@ -86,7 +87,7 @@ export function constatTraitsOuverts(dessin: DessinSvg): ConstatTexte | null {
     // Bloquant, comme le constat « trait » qu'il precise pour ces formes : l'export de decoupe ne garde que des fonds.
     // « Écrire au stylo » range ces formes parmi celles a ecrire (ADR-0028) : le reste du dessin garde la lame.
     code: 'decoupe-trait-ouvert', gravite: 'bloquant', formes: ids(ouverts), corrections: ['contour-en-forme', 'ecrire'],
-    message: 'Un trait ouvert ne se découpe pas : ' + pluriel(ouverts.length, 'forme') + ' n’' + accord(ouverts.length, 'est', 'ont') + (ouverts.length > 1 ? ' que des lignes' : ' qu’une ligne') + '. Transformez le contour en forme, ou écrivez-' + accord(ouverts.length, 'la', 'les') + ' au stylo.'
+    message: (ouverts.length > 1 ? t('Un trait ouvert ne se découpe pas : {formes} n’ont que des lignes. Transformez le contour en forme, ou écrivez-les au stylo.', { formes: pluriel(ouverts.length, 'forme') }) : t('Un trait ouvert ne se découpe pas : {formes} n’est qu’une ligne. Transformez le contour en forme, ou écrivez-la au stylo.', { formes: pluriel(ouverts.length, 'forme') }))
   };
 }
 
@@ -99,7 +100,7 @@ export function constatsDecoupeTexte(dessin: DessinSvg): ConstatTexte[] {
   if (chevauchent.length) {
     r.push({
       code: 'lettres-chevauchent', gravite: 'a-corriger', formes: ids(chevauchent), corrections: ['souder'],
-      message: 'Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.'
+      message: t('Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.')
     });
   }
   return r;
@@ -107,7 +108,7 @@ export function constatsDecoupeTexte(dessin: DessinSvg): ConstatTexte[] {
 
 export type ResultatCorrectionTexte = { readonly dessin: DessinSvg; readonly phrase: string } | { readonly erreur: string };
 
-const RIEN = 'Rien à corriger : le dessin a changé depuis le constat.';
+const RIEN = (): string => t('Rien à corriger : le dessin a changé depuis le constat.');
 
 /**
  * Applique une correction qui ne demande que le dessin (« Police a trait unique » demande une fonte : l'interface la
@@ -125,12 +126,12 @@ export function corrigerTexte(dessin: DessinSvg, code: Exclude<CodeCorrectionTex
       void _o;
       return { ...reste, remplissage: null, contour: f.remplissage, epaisseur: largeur };
     });
-    return n ? { dessin: { ...dessin, formes: d }, phrase: pluriel(n, 'forme') + ' dessinée' + (n > 1 ? 's' : '') + ' par ' + accord(n, 'son', 'leur') + ' pourtour, sans fond.' } : { erreur: RIEN };
+    return n ? { dessin: { ...dessin, formes: d }, phrase: (n > 1 ? t('{formes} dessinées par leur pourtour, sans fond.', { formes: pluriel(n, 'forme') }) : t('{formes} dessinée par son pourtour, sans fond.', { formes: pluriel(n, 'forme') })) } : { erreur: RIEN() };
   }
   if (code === 'hachurer') {
     const r = hachurerFormes(dessin, formes, largeur);
-    return r.hachurees ? { dessin: r.dessin, phrase: pluriel(r.hachurees, 'forme') + ' hachurée' + (r.hachurees > 1 ? 's' : '') + ' à la largeur du stylo : le stylo les remplit de lignes.' } : { erreur: r.erreur ?? RIEN };
+    return r.hachurees ? { dessin: r.dessin, phrase: (r.hachurees > 1 ? t('{formes} hachurées à la largeur du stylo : le stylo les remplit de lignes.', { formes: pluriel(r.hachurees, 'forme') }) : t('{formes} hachurée à la largeur du stylo : le stylo les remplit de lignes.', { formes: pluriel(r.hachurees, 'forme') })) } : { erreur: r.erreur ?? RIEN() };
   }
   const r = vectoriserTextes(dessin, formes, 'souder-touchantes', { lisser: true });
-  return r.textes ? { dessin: r.dessin, phrase: pluriel(r.textes, 'texte') + ' soudé' + (r.textes > 1 ? 's' : '') + ' : les lettres qui se touchent ne font qu’une forme, d’un seul tenant.' } : { erreur: RIEN };
+  return r.textes ? { dessin: r.dessin, phrase: (r.textes > 1 ? t('{textes} soudés : les lettres qui se touchent ne font qu’une forme, d’un seul tenant.', { textes: pluriel(r.textes, 'texte') }) : t('{textes} soudé : les lettres qui se touchent ne font qu’une forme, d’un seul tenant.', { textes: pluriel(r.textes, 'texte') })) } : { erreur: RIEN() };
 }

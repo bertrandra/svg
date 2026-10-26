@@ -19,6 +19,7 @@ import { lisserBords } from './pixels/lissage.js';
 import { affuter, corrigerGamma } from './pixels/nettete.js';
 import { COULEURS_MAX, COULEURS_MIN, quantifier } from './pixels/quantification.js';
 import type { ImageRgba } from './pixels/types.js';
+import { t } from '../util/i18n.js';
 
 export type { ImageRgba };
 export { COULEURS_MAX, COULEURS_MIN };
@@ -105,33 +106,45 @@ export interface ParametrePre {
   neutre: number;
 }
 
+// Libelle et aide sont des accesseurs : la langue de l'interface est posee apres le chargement du module (ADR-0042), et chaque
+// lecture rend le texte dans la langue du moment ; les bornes, elles, ne changent pas.
 export const PARAMETRES_PRETRAITEMENT: readonly ParametrePre[] = [
-  { id: 'debruitage', libelle: 'Effacer le grain', aide: 'Débruitage : efface le grain d’un JPEG ou d’un scan en gardant les bords. 1 : médiane, 2 : bilatéral, 3 : les deux.', min: 0, max: 3, pas: 1, neutre: 0 },
-  { id: 'nettete', libelle: 'Netteté', aide: 'Redonne de la tenue à des contours mous. 0 : aucune.', min: 0, max: 3, pas: 1, neutre: 0 },
-  { id: 'gamma', libelle: 'Éclaircir les demi-teintes', aide: 'Gamma : plus haut, des demi-teintes plus claires ; plus bas, plus sombres. 1 : inchangé.', min: GAMMA_MIN, max: GAMMA_MAX, pas: 0.05, neutre: 1 },
-  { id: 'couleurs', libelle: 'Couleurs', aide: 'Réduit l’image à N couleurs avant le tracé : des aplats francs, moins de formes.', min: COULEURS_MIN, max: COULEURS_MAX, pas: 1, neutre: 8 },
-  { id: 'lissage', libelle: 'Lissage des bords', aide: 'Filtre de mode : retire les pixels parasites le long des contours. Nombre de passes.', min: 0, max: 3, pas: 1, neutre: 0 }
+  { id: 'debruitage', get libelle() { return t('Effacer le grain'); }, get aide() { return t('Débruitage : efface le grain d’un JPEG ou d’un scan en gardant les bords. 1 : médiane, 2 : bilatéral, 3 : les deux.'); }, min: 0, max: 3, pas: 1, neutre: 0 },
+  { id: 'nettete', get libelle() { return t('Netteté'); }, get aide() { return t('Redonne de la tenue à des contours mous. 0 : aucune.'); }, min: 0, max: 3, pas: 1, neutre: 0 },
+  { id: 'gamma', get libelle() { return t('Éclaircir les demi-teintes'); }, get aide() { return t('Gamma : plus haut, des demi-teintes plus claires ; plus bas, plus sombres. 1 : inchangé.'); }, min: GAMMA_MIN, max: GAMMA_MAX, pas: 0.05, neutre: 1 },
+  { id: 'couleurs', get libelle() { return t('Couleurs'); }, get aide() { return t('Réduit l’image à N couleurs avant le tracé : des aplats francs, moins de formes.'); }, min: COULEURS_MIN, max: COULEURS_MAX, pas: 1, neutre: 8 },
+  { id: 'lissage', get libelle() { return t('Lissage des bords'); }, get aide() { return t('Filtre de mode : retire les pixels parasites le long des contours. Nombre de passes.'); }, min: 0, max: 3, pas: 1, neutre: 0 }
 ];
 
 /** Un jeu de reglages nomme, qui en pose plusieurs d'un coup : ils se voient ensuite comme des valeurs touchees. */
 export interface PresetPre { id: string; libelle: string; aide: string; reglages: ReglagesPretraitement }
 
 export const PRESETS_PRETRAITEMENT: readonly PresetPre[] = [
-  { id: 'logo', libelle: 'Logo net', aide: 'Un logo en aplats, un peu bruité : débruiter, réduire à 8 couleurs en gardant le fond, lisser les bords.', reglages: { alpha: true, debruitage: 1, couleurs: 8, garderFond: true, lissage: 1 } },
-  { id: 'trait', libelle: 'Dessin au trait', aide: 'Un dessin à l’encre ou au crayon : netteté, deux couleurs (le trait et le papier), bords lissés.', reglages: { alpha: true, debruitage: 1, nettete: 1, couleurs: 2, garderFond: true, lissage: 1 } },
-  { id: 'photo', libelle: 'Photo (aplats)', aide: 'Une photo en aplats : débruitage fort, 12 couleurs, bords lissés.', reglages: { debruitage: 2, couleurs: 12, lissage: 2 } }
+  { id: 'logo', get libelle() { return t('Logo net'); }, get aide() { return t('Un logo en aplats, un peu bruité : débruiter, réduire à 8 couleurs en gardant le fond, lisser les bords.'); }, reglages: { alpha: true, debruitage: 1, couleurs: 8, garderFond: true, lissage: 1 } },
+  { id: 'trait', get libelle() { return t('Dessin au trait'); }, get aide() { return t('Un dessin à l’encre ou au crayon : netteté, deux couleurs (le trait et le papier), bords lissés.'); }, reglages: { alpha: true, debruitage: 1, nettete: 1, couleurs: 2, garderFond: true, lissage: 1 } },
+  { id: 'photo', get libelle() { return t('Photo (aplats)'); }, get aide() { return t('Une photo en aplats : débruitage fort, 12 couleurs, bords lissés.'); }, reglages: { debruitage: 2, couleurs: 12, lissage: 2 } }
 ];
 
-const NOMS_PRE: Record<ClePretraitement, string> = {
-  alpha: 'bords translucides aplatis', debruitage: 'débruitage', agrandir: 'agrandi ×2', nettete: 'netteté', gamma: 'gamma', couleurs: 'couleurs', garderFond: 'fond gardé', lissage: 'lissage'
-};
+/** Le mot court d'une etape, dans la langue du moment. */
+function nomPre(k: ClePretraitement): string {
+  switch (k) {
+    case 'alpha': return t('bords translucides aplatis');
+    case 'debruitage': return t('débruitage');
+    case 'agrandir': return t('agrandi ×2');
+    case 'nettete': return t('netteté');
+    case 'gamma': return t('gamma');
+    case 'couleurs': return t('couleurs');
+    case 'garderFond': return t('fond gardé');
+    case 'lissage': return t('lissage');
+  }
+}
 const ORDRE_PRE: readonly ClePretraitement[] = ['alpha', 'debruitage', 'agrandir', 'nettete', 'gamma', 'couleurs', 'garderFond', 'lissage'];
 
 /** Les reglages en une ligne : « débruitage 1 · couleurs 8 · fond gardé ». Vide quand rien n'est touche. */
 export function resumePretraitement(r: ReglagesPretraitement | undefined): string {
   const n = normaliserPretraitement(r);
   if (!n) return '';
-  return ORDRE_PRE.filter(k => n[k] !== undefined).map(k => (typeof n[k] === 'number' ? NOMS_PRE[k] + ' ' + String(n[k]) : NOMS_PRE[k])).join(' · ');
+  return ORDRE_PRE.filter(k => n[k] !== undefined).map(k => (typeof n[k] === 'number' ? nomPre(k) + ' ' + String(n[k]) : nomPre(k))).join(' · ');
 }
 
 /** Le nombre de couleurs distinctes des pixels presents (alpha d'au moins 128) : un bitmap de 2 Mo, pas de table. */
