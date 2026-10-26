@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { RACINE_DEPOT, attendreAnimations, boutonTelecharger, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { RACINE_DEPOT, attendreAnimations, telechargerParFichier, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 
 const AXE = readFileSync(RACINE_DEPOT + '/node_modules/axe-core/axe.min.js', 'utf8');
 const BOUTONS = '.menu-panneau .contenu-export button';
@@ -121,13 +121,13 @@ describe('exports : formats de fabrication et d\'impression', () => {
   it('ecrit un SVG a la taille voulue et a la precision voulue, le SVG d\'avant sinon', async () => {
     const page = await menuExport();
     // Le SVG a son bouton dans la barre (« Télécharger le SVG ») : il suit les options d'export reglees sous « Autres formats ».
-    const avant = await telecharger(page, () => boutonTelecharger(page).click());
+    const avant = await telecharger(page, () => telechargerParFichier(page));
     await ouvrirMenu(page, 'Autres formats');
     await ouvrirOptions(page);
     await champ(page, 'Unité d’export').selectOption('mm');
     await champ(page, 'Largeur du dessin exporté').fill('80,5');
     await champ(page, 'Décimales des coordonnées du SVG').selectOption('1');
-    const apres = await telecharger(page, () => boutonTelecharger(page).click());
+    const apres = await telecharger(page, () => telechargerParFichier(page));
     const racine = /^<svg[^>]*>/.exec(apres.octets.toString('utf8'))?.[0] ?? '';
     expect(racine).toMatch(/width="80\.5mm" height="[\d.]+mm"/);
     expect(racine).toContain(/viewBox="[^"]*"/.exec(avant.octets.toString('utf8'))?.[0] ?? '?');

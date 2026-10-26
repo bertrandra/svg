@@ -16,7 +16,6 @@ import { MenuAide } from './AideEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { useTelephone } from './Vue.js';
 import { SelecteurContexte } from './Production.js';
-import { RecupererBarre } from './Recuperer.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 import { aEnregistrer, raisonRienAEnregistrer } from './enregistrement.js';
 import { OutilSelectionBarre } from './OutilsSelection.js';
@@ -159,23 +158,28 @@ const GroupeZoom = memo(function GroupeZoom() {
 /**
  * Le geste de fin, sous le libelle que la page ou l'hote a donne : « Terminer » dans la page (il ramene a la fiche du dessin, meme
  * sans modification), « Enregistrer » par defaut (il rend le dessin ; grise tant que rien n'a change, il en dit la raison et reste
- * dans l'ordre de Tab). Plus de Ctrl+S ici : Ctrl+S garde un brouillon, il ne ferme jamais.
+ * dans l'ordre de Tab). Plus de Ctrl+S ici : Ctrl+S garde un brouillon, il ne ferme jamais (sauf sur le site, `ctrlSEnregistre`).
+ * Une icone seule, carree, la seule action pleine de la barre (ADR-0006) : le libelle de l'hote est son nom accessible, l'infobulle
+ * dit le geste et son raccourci. Le texte visible a quitte la barre a la demande du proprietaire (26 octobre 2026) ; le menu
+ * Fichier, la confirmation d'abandon et la visite guidee le disent toujours en toutes lettres.
  */
 export function BoutonEnregistrer() {
   const { h } = useDessin(), ac = useActions(), { productionModifiee, fin, enregistrement } = useInterface(), signaler = useSignalVisite();
   const change = aEnregistrer(h.passe.length > 0, productionModifiee, enregistrement);
   return (
-    <BoutonRaison className="primaire texte" aide={fin.fermerSansModification ? 'Revenir à la page, le dessin prêt à télécharger' : fin.libelle + (fin.ctrlSEnregistre ? ' (Ctrl+S)' : '')}
+    <BoutonRaison className="primaire bouton-fin" etiquette={fin.libelle}
+      aide={fin.fermerSansModification ? fin.libelle + ' : revenir à la page, le dessin prêt à télécharger' : fin.libelle + (fin.ctrlSEnregistre ? ' (Ctrl+S)' : '')}
       raison={change || fin.fermerSansModification ? null : raisonRienAEnregistrer(enregistrement)} onClick={() => { if (change) signaler('recupere'); ac.terminer(); }}>
-      <Icone nom={fin.fermerSansModification ? 'coche' : 'enregistrer'} /> {fin.libelle}
+      <Icone nom={fin.fermerSansModification ? 'coche' : 'enregistrer'} />
     </BoutonRaison>
   );
 }
 
 /**
- * La barre principale : outils, couleurs, historique, zoom, puis les menus Vue, Edition et Fichier. Sur un telephone, elle ne
- * garde que les outils, les couleurs et l'historique, plus « Plus » qui porte tout le reste, zoom compris (Enregistrer passe
- * dans la barre d'etat) : rien ne depend d'un defilement horizontal qu'on ne devine pas.
+ * La barre principale : outils, couleurs, historique, zoom, les menus Vue, Edition et Aide, la machine, puis a droite le menu
+ * Fichier (une icone ; il porte « Télécharger le SVG », l'export Cricut et les autres formats) et le geste de fin (une icone pleine).
+ * Sur un telephone, elle ne garde que les outils, les couleurs et l'historique, plus « Plus » qui porte tout le reste, zoom compris
+ * (le geste de fin passe dans la barre d'etat) : rien ne depend d'un defilement horizontal qu'on ne devine pas.
  */
 export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: string }) {
   const telephone = useTelephone();
@@ -204,9 +208,8 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       </div>
       <SelecteurContexte />
       <span className="espace" />
-      {/* Le fichier, d'un seul tenant : le recuperer, le menu Fichier, et le geste de fin. Sous 1 440 px, il passe a la ligne entier, a droite. */}
+      {/* Le fichier, d'un seul tenant : le menu Fichier et le geste de fin, deux icones, a droite. */}
       <div className="groupe fin" role="group" aria-label="Fichier">
-        <RecupererBarre nom={nom} />
         <MenuFichier nom={nom} />
         <BoutonEnregistrer />
       </div>

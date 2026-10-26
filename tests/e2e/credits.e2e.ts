@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, ouvrirExemple, ouvrirMenu, pilote, URL_INTEGRATION } from './aide.js';
+import { attend, boutonFichier, ouvrirExemple, ouvrirMenu, pilote, URL_INTEGRATION } from './aide.js';
 
 const CHARGEMENT = 60_000;
 
@@ -87,7 +87,7 @@ describe('à propos et crédits', () => {
     it('s’atteint au clavier seul depuis le bouton Fichier', async () => {
       const { page } = await navigateur.ouvrir();
       await ouvrirExemple(page);
-      const bouton = page.locator('.menu-bouton', { hasText: 'Fichier' });
+      const bouton = boutonFichier(page);
       await bouton.focus();
       await page.keyboard.press('ArrowDown');
       const element = page.getByRole('menuitem', { name: 'À propos et crédits' });

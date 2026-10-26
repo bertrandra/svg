@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, telechargerParFichier, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 const CAPTURES = process.env['CAPTURES'] ?? '';
@@ -210,7 +210,7 @@ describe('le texte deforme dans une forme', () => {
     await attend(() => page.locator('.editeur-svg-toile path[data-id="f3"]').getAttribute('fill')).toBe('none');
     const t = await boite(page, 'f3'), c = await boite(page, 'f2');
     expect(t.width).toBeGreaterThan(0.7 * c.width);
-    const [d]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [d]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     const svg = readFileSync(await d.path(), 'utf8');
     expect(svg).not.toMatch(/<text|textPath|font-family/);
     expect(svg).toMatch(/<path d="M[^"]+" fill="none" stroke="[^"]+" stroke-width="[^"]+"[^>]* data-ed-trace="median"[^>]* data-ed-disposition="enveloppe"[^>]* data-ed-forme="2"/);

@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Locator, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, terminer, texteDe } from './aide.js';
+import { aLeFocus, attend, boutonFichier, elementFichier, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, telechargerParFichier, terminer, texteDe } from './aide.js';
 
 const VERT = '#1f8a3a';
 const CHARGEMENT = 60_000;
@@ -29,19 +29,23 @@ function compteur() {
 describe('recuperer son dessin', () => {
   const navigateur = pilote();
 
-  it('change une couleur puis recupere le SVG en quatre gestes, sans quitter l editeur', async () => {
+  it('change une couleur puis recupere le SVG en cinq gestes, par le menu Fichier, sans quitter l editeur', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     const g = compteur();
     await g.geste(() => ouvrirExemple(page));
     await g.geste(() => page.locator('.editeur-svg-toile path[data-id="f2"]').click());
     await g.geste(() => page.locator('.editeur-barre input[type=color][aria-label="Remplissage"]').fill(VERT));
     let fichier = { nom: '', texte: '' };
-    await g.geste(async () => { fichier = await telecharger(page, () => boutonTelecharger(page).click()); });
+    await g.geste(() => boutonFichier(page).click());
+    // « Télécharger le SVG » est le premier element de la rubrique « Récupérer le dessin ».
+    const recuperer = page.getByRole('menu', { name: 'Récupérer le dessin' }).getByRole('menuitem');
+    expect(await texteDe(recuperer.first())).toBe('Télécharger le SVG');
+    await g.geste(async () => { fichier = await telecharger(page, () => recuperer.first().click()); });
     expect(fichier.nom).toBe('exemple.svg');
     expect(fichier.texte).toContain('fill="' + VERT + '"');
-    // Avant : « Enregistrer », puis « Exporter » sur la fiche, puis « SVG » parmi neuf formats (six gestes), ou le menu Fichier puis
-    // « Télécharger le SVG » (cinq). Maintenant : quatre, et l'editeur reste ouvert.
-    expect(g.total()).toBe(4);
+    // Avant : « Enregistrer », puis « Exporter » sur la fiche, puis « SVG » parmi neuf formats (six gestes). Puis un bouton dans la
+    // barre (quatre) ; le proprietaire l'a range dans le menu Fichier (26 octobre 2026) : cinq, et l'editeur reste ouvert.
+    expect(g.total()).toBe(5);
     expect(await page.locator('.editeur-cadre').count()).toBe(1);
   });
 
@@ -93,14 +97,22 @@ describe('recuperer son dessin', () => {
     expect(await texteDe(page.locator('.resultat .fiche .aide'))).toMatch(/^3 formes/);
   });
 
-  it('ouvre « Autres formats » au clavier, parcourt les formats par Tab, et telecharge un PNG par Entree', async () => {
+  it('ouvre « Autres formats » du menu Fichier au clavier, parcourt les formats par Tab, et telecharge un PNG par Entree', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await ouvrirExemple(page);
-    await boutonTelecharger(page).focus();
+    const fichier = boutonFichier(page);
+    await fichier.focus();
+    expect(await fichier.getAttribute('aria-label')).toBe('Fichier');
+    expect(await fichier.getAttribute('aria-haspopup')).toBe('menu');
+    // Entree ouvre le menu sur son premier element ; les fleches vont jusqu'a « Télécharger le SVG ».
+    await page.keyboard.press('Enter');
+    const svg = page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true });
+    for (let i = 0; i < 4 && !(await aLeFocus(svg)); i++) await page.keyboard.press('ArrowDown');
+    expect(await aLeFocus(svg)).toBe(true);
+    // Tab, depuis un element, entre dans le contenu libre qui le suit : le titre replie « Autres formats ».
     await page.keyboard.press('Tab');
-    const chevron = page.locator('.editeur-barre .autres-formats .menu-bouton');
-    expect(await aLeFocus(chevron)).toBe(true);
-    expect(await chevron.getAttribute('aria-label')).toBe('Autres formats');
+    const repli = page.locator('.menu-panneau details.autres-formats-repli > summary');
+    expect(await aLeFocus(repli)).toBe(true);
     await page.keyboard.press('Enter');
     await page.locator('.menu-panneau .contenu-export').waitFor();
     // Tab va de format en format sans refermer le menu ; chaque bouton est decrit par son usage.
@@ -111,10 +123,10 @@ describe('recuperer son dessin', () => {
     expect(await page.locator('[id="' + (description ?? 'absent') + '"]').innerText()).toBe('une image pour un site ou un message, fond transparent');
     const f = await telecharger(page, () => page.keyboard.press('Enter'));
     expect(f.nom).toBe('exemple-1024.png');
-    // Echap referme et rend le focus au chevron ; un Tab qui sort du menu le referme aussi.
+    // Echap referme et rend le focus au bouton Fichier ; un Tab qui sort du menu le referme aussi.
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.menu-panneau').count()).toBe(0);
-    expect(await aLeFocus(chevron)).toBe(true);
+    expect(await aLeFocus(fichier)).toBe(true);
   });
 
   it('au doigt a 390 px : « Plus » met « Télécharger le SVG » en tete, « Terminer » est dans la barre d etat, la fiche telecharge', async () => {
@@ -263,15 +275,16 @@ describe('la fin du parcours Cricut', () => {
     await vignette.click();
     await page.locator('.editeur-cadre').waitFor();
     expect(await texteDe(page.locator('.editeur-titre'))).toBe('bonhomme-de-neige.svg');
-    expect((await telecharger(page, () => boutonTelecharger(page).click())).nom).toBe('bonhomme-de-neige.svg');
+    expect((await telecharger(page, async () => { await telechargerParFichier(page); })).nom).toBe('bonhomme-de-neige.svg');
     await choisirMaker(page);
-    // Le bouton de la barre suit le contexte : il exporte pour la machine (et passe par la confirmation s'il reste un point).
-    expect(await texteDe(boutonTelecharger(page))).toBe('Exporter pour Cricut');
+    // Le menu Fichier suit le contexte : l'export pour la machine suit « Télécharger le SVG » (et passe par la confirmation s'il reste un point).
+    expect(await texteDe(await elementFichier(page, 'Exporter pour Cricut'))).toBe('Exporter pour Cricut');
+    await page.keyboard.press('Escape');
     const exporter = panneau(page).locator('.export-cricut button.primaire');
     await attend(() => texteDe(exporter)).toMatch(/^Exporter (pour Cricut|quand même)/);
     const aCorriger = (await texteDe(exporter)).startsWith('Exporter quand même');
     const f = await telecharger(page, async () => {
-      await boutonTelecharger(page).click();
+      await telechargerParFichier(page, 'Exporter pour Cricut');
       if (aCorriger) await panneau(page).locator('.confirmation-export').getByRole('button', { name: 'Exporter quand même' }).click();
     });
     expect(f.nom).toBe('bonhomme-de-neige-cricut.svg');

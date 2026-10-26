@@ -363,24 +363,42 @@ export function textePressePapiers(page: Page): Promise<string | undefined> {
  */
 export async function ouvrirMenu(page: Page, nom: string) {
   // L'editeur ouvert, on ne cherche que dans l'editeur : la fiche du dessin, dessous, a aussi son menu « Autres formats ».
-  const racine = (await page.locator('.editeur-svg .editeur-cadre').count()) ? page.locator('.editeur-svg') : page;
-  // « Autres formats » est, dans la barre de l'editeur, le chevron accole a « Télécharger le SVG » (nomme par aria-label).
-  const direct = nom === 'Autres formats' && racine !== page
-    ? racine.locator('.editeur-barre .autres-formats .menu-bouton')
-    : racine.locator('.menu-bouton', { hasText: nom });
+  const editeur = (await page.locator('.editeur-svg .editeur-cadre').count()) > 0;
+  const racine = editeur ? page.locator('.editeur-svg') : page;
+  // Dans l'editeur, « Autres formats » est replie dans le menu Fichier (au bureau, un bouton a icone, nomme par aria-label) ;
+  // sur un telephone, Fichier n'est plus que des rubriques de « Plus ».
+  const cherche = editeur && nom === 'Autres formats' ? 'Fichier' : nom;
+  const direct = cherche === 'Fichier' && editeur ? boutonFichier(page) : racine.locator('.menu-bouton', { hasText: cherche });
   const bouton = (await direct.count()) ? direct : racine.locator('.editeur-barre .menu-bouton[aria-label^="Plus d’actions"]');
   await bouton.click();
-  // Sur un telephone, les autres formats sont repliees en fin de la rubrique Fichier de « Plus » : on les deplie.
-  if (nom === 'Autres formats' && !(await direct.count())) {
+  // Les autres formats sont repliees sous les elements qui recuperent le fichier : on les deplie.
+  if (editeur && nom === 'Autres formats') {
     const repli = page.locator('.menu-panneau details.autres-formats-repli');
     if (!(await repli.evaluate(d => (d as HTMLDetailsElement).open))) await repli.locator('> summary').click();
   }
   return bouton;
 }
 
-/** Le bouton « Télécharger le SVG » de la barre de l'editeur (au bureau) : le geste unique pour recuperer le dessin. */
-export function boutonTelecharger(page: Page): Locator {
-  return page.locator('.editeur-barre .recuperer-principal');
+/** Le bouton du menu Fichier de la barre de l'editeur, au bureau : une icone, nommee « Fichier » par aria-label. */
+export function boutonFichier(page: Page): Locator {
+  return page.locator('.editeur-barre .menu-fichier .menu-bouton');
+}
+
+/**
+ * Recupere le fichier comme on le fait dans l'editeur : le menu Fichier (ou « Plus » sur un telephone), puis l'element nomme,
+ * « Télécharger le SVG » par defaut (« Exporter pour Cricut » en contexte Cricut).
+ */
+export async function telechargerParFichier(page: Page, nom = 'Télécharger le SVG'): Promise<void> {
+  await (await elementFichier(page, nom)).click();
+}
+
+/** Ouvre le menu Fichier (s'il ne l'est deja) et rend l'element nomme, sans le cliquer (pour lire son texte ou son etat). */
+export async function elementFichier(page: Page, nom: string): Promise<Locator> {
+  const element = page.locator('.menu-panneau').getByRole('menuitem', { name: nom, exact: true });
+  // Le menu deja ouvert (les autres formats deplies, une option reglee) : un clic sur son bouton le refermerait.
+  if (!(await element.count())) await ouvrirMenu(page, 'Fichier');
+  await element.waitFor();
+  return element;
 }
 
 /** « Terminer » : le geste de fin de la page, qui ramene a la fiche du dessin. Attend la fiche. */

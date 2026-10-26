@@ -226,10 +226,10 @@ describe('couper ou ecrire, forme par forme', () => {
     await attend(() => page.locator('.editeur-calques .groupe-operation').count()).toBe(2);
     await ligne(page, 'f2').getByRole('button', { name: /^Écrire au stylo : Cercle 2/ }).click();
     await attend(() => lignes(page, 'ecriture')).toEqual(['f4', 'f3', 'f2']);
-    // Le SVG du document (« Autres formats » > SVG, options neutres : ce que « Terminer » rend a la page).
+    // Le SVG du document (Fichier > « Télécharger le SVG », options neutres : ce que « Terminer » rend a la page).
     const f = await telecharger(page, async () => {
-      await ouvrirMenu(page, 'Autres formats');
-      await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click();
+      await ouvrirMenu(page, 'Fichier');
+      await page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click();
     });
     const svg = f.octets.toString('utf8');
     expect(svg.match(/data-ed-operation="[a-z]+"/g)).toEqual(['data-ed-operation="ecriture"']);

@@ -124,7 +124,8 @@ describe('un accueil par public', () => {
     await essayer.click();
     await page.locator('.editeur-cadre').waitFor();
     const fin = page.locator('.editeur-barre .groupe.fin').getByRole('button', { name: 'Mettre à jour le logo', exact: true });
-    expect(await texteDe(fin)).toBe('Mettre à jour le logo');
+    // Le geste de fin n'est qu'une icone : le libelle de l'hote est son nom accessible, pas un texte visible.
+    expect(await fin.getAttribute('aria-label')).toBe('Mettre à jour le logo');
     expect(await fin.getAttribute('aria-disabled')).toBe('true');
     expect(await page.locator('.bulle-visite').count()).toBe(0);
     await page.locator('.editeur-svg-toile path[data-id="f2"]').click();

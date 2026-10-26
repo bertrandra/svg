@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, boutonTelecharger, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, elementFichier, telechargerParFichier, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
@@ -179,12 +179,18 @@ describe('le contexte Cricut', () => {
 
   it('garde le contexte dans le SVG telecharge ; en Generique, rien de plus', async () => {
     const page = await editeur(PROPRE);
-    const generique = await telecharger(page, () => boutonTelecharger(page).click());
+    const generique = await telecharger(page, () => telechargerParFichier(page));
     expect(generique.octets.toString('utf8')).not.toContain('data-ed-');
     await choisirCricut(page);
-    // En contexte Cricut, le bouton de la barre exporte pour la machine ; le SVG du dessin (avec son contexte) est sous « Autres formats ».
-    expect(await texteDe(boutonTelecharger(page))).toBe('Exporter pour Cricut');
-    const cricut = await telecharger(page, async () => { await ouvrirMenu(page, 'Autres formats'); await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click(); });
+    // En contexte Cricut, le menu Fichier ajoute l'export pour la machine apres « Télécharger le SVG », qui garde le contexte.
+    const elements = page.getByRole('menu', { name: 'Récupérer le dessin' }).getByRole('menuitem');
+    expect(await texteDe(await elementFichier(page, 'Exporter pour Cricut'))).toBe('Exporter pour Cricut');
+    const noms = await textesDe(elements);
+    expect([noms[0], noms.at(-1)]).toEqual(['Télécharger le SVG', 'Exporter pour Cricut']);
+    // Les autres formats n'ont plus de ligne « SVG » : le SVG du dessin a son element, en tete.
+    await page.locator('.menu-panneau details.autres-formats-repli > summary').click();
+    expect(await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).count()).toBe(0);
+    const cricut = await telecharger(page, () => page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click());
     const texte = cricut.octets.toString('utf8');
     // Le plan est le tapis des le choix du contexte (ADR-0039, revision du 26 octobre 2026) ; la case decochee ne s'ecrit pas.
     expect(texte).toContain(' viewBox="16.441 16.441 1152 1152" width="1152" height="1152" data-ed-contexte="cricut"');

@@ -56,14 +56,15 @@ describe('les textes de la visite', () => {
     expect(tout).not.toMatch(/\btu\b|\bton\b|\bta\b/);
   });
 
-  it('dit ou trouver « Télécharger le SVG » selon l ecran, et « Enregistrer » chez un hote', () => {
-    // Au bureau, un seul geste : le bouton de la barre (plus le menu Fichier, qui ne l'a plus).
-    expect(n(texteEtape('recuperer', BUREAU).corps)).toContain('Cliquez « Télécharger le SVG », en haut à droite.');
-    expect(n(texteEtape('recuperer', BUREAU).corps)).not.toContain('Fichier');
+  it('dit ou trouver « Télécharger le SVG » selon l ecran (le menu Fichier au bureau), et « Enregistrer » chez un hote', () => {
+    // Au bureau, le menu Fichier (une icone) le porte en tete : la bulle nomme le bouton, dit ou il est, puis l'element.
+    expect(n(texteEtape('recuperer', BUREAU).corps)).toContain('Cliquez « Fichier », l’icône de feuille en haut à droite, puis « Télécharger le SVG ».');
     expect(n(texteEtape('recuperer', TELEPHONE).corps)).toContain('« Plus »');
-    expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer' }).corps)).toContain('« Enregistrer »');
-    // Le libelle que l'hote a donne au geste de fin est celui que la visite nomme.
-    expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer', libelleFin: 'Mettre à jour le logo' }).corps)).toContain('Cliquez « Mettre à jour le logo » : votre dessin retouché revient');
+    expect(n(texteEtape('recuperer', TELEPHONE).corps)).not.toContain('Fichier');
+    expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer' }).corps)).toContain('« Enregistrer », le bouton plein en haut à droite');
+    expect(n(texteEtape('recuperer', { ...TELEPHONE, recuperation: 'enregistrer' }).corps)).toContain('le bouton plein en bas à droite');
+    // Le libelle que l'hote a donne au geste de fin est celui que la visite nomme (le bouton n'est plus qu'une icone : c'est son nom).
+    expect(n(texteEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer', libelleFin: 'Mettre à jour le logo' }).corps)).toContain('Cliquez « Mettre à jour le logo », le bouton plein en haut à droite : votre dessin retouché revient');
   });
 
   it('demande d abord une forme quand rien n est choisi a l etape de la couleur', () => {
@@ -88,9 +89,9 @@ describe('les textes de la visite', () => {
     expect(n(phraseFin(true, true))).toBe('Visite guidée terminée. Elle se rejoue depuis « Plus », rubrique Aide.');
   });
 
-  it('visent la toile, la pastille, Annuler, puis « Télécharger le SVG », Plus ou Enregistrer', () => {
+  it('visent la toile, la pastille, Annuler, puis le menu Fichier, Plus ou Enregistrer', () => {
     const cibles = (c: ContexteVisite) => ETAPES.map(e => cibleEtape(e, c));
-    expect(cibles(BUREAU)).toEqual(['.editeur-toile', '.editeur-barre .style-courant .pastille-style', '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]', '.editeur-barre .recuperer-principal', '.editeur-toile']);
+    expect(cibles(BUREAU)).toEqual(['.editeur-toile', '.editeur-barre .style-courant .pastille-style', '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]', '.editeur-barre .menu-fichier .menu-bouton', '.editeur-toile']);
     expect(cibleEtape('recuperer', TELEPHONE)).toBe('.editeur-barre .groupe.plus .menu-bouton');
     expect(cibleEtape('recuperer', { ...BUREAU, recuperation: 'enregistrer' })).toBe('.editeur-barre .groupe.fin button.primaire');
     expect(cibleEtape('recuperer', { ...TELEPHONE, recuperation: 'enregistrer' })).toBe('.editeur-etat button.primaire');

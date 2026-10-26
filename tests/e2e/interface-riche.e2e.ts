@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, encoderPng, ouvrirCode, pilote, RACINE_DEPOT, terminer, URL_PAGE, type OptionsSession } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, boutonFichier, encoderPng, ouvrirCode, pilote, RACINE_DEPOT, terminer, URL_PAGE, type OptionsSession } from './aide.js';
 import { champPolice } from './polices.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
@@ -75,7 +75,8 @@ describe('l interface riche, parcours et ecrans (paquet 2-D)', () => {
    * menu l'y pose apres le rendu, et un focus donne avant serait repris par lui (Entree partirait alors sur le premier element).
    */
   async function ouvrirMenuAuClavier(p: Page, menu: string): Promise<void> {
-    await p.locator('.editeur-svg .menu-bouton', { hasText: menu }).focus();
+    // Fichier n'est qu'une icone, nommee par aria-label ; les autres menus ont leur nom en texte.
+    await (menu === 'Fichier' ? boutonFichier(p) : p.locator('.editeur-svg .menu-bouton', { hasText: menu })).focus();
     await p.keyboard.press('Enter');
     await attend(() => p.evaluate(() => !!document.activeElement?.closest('[role="menu"]'))).toBe(true);
   }

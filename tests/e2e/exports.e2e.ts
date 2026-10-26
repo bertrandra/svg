@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { attend, boutonTelecharger, ouvrirExemple, ouvrirMenu, pilote, terminer } from './aide.js';
+import { attend, telechargerParFichier, ouvrirExemple, ouvrirMenu, pilote, terminer } from './aide.js';
 
 describe('exports', () => {
   const navigateur = pilote();
@@ -23,7 +23,7 @@ describe('exports', () => {
 
   it('telecharge le SVG propre d un geste, par « Télécharger le SVG » de la barre', async () => {
     const page = await editeur();
-    const { nom, octets } = await telecharger(page, () => boutonTelecharger(page).click());
+    const { nom, octets } = await telecharger(page, () => telechargerParFichier(page));
     expect(nom).toBe('exemple.svg');
     const svg = octets.toString('utf8');
     expect(svg).toMatch(/^<svg[\s>]/);
@@ -34,8 +34,8 @@ describe('exports', () => {
 
   it('ecrit le meme SVG deux fois de suite, a l\'octet pres', async () => {
     const page = await editeur();
-    const un = await telecharger(page, () => boutonTelecharger(page).click());
-    const deux = await telecharger(page, () => boutonTelecharger(page).click());
+    const un = await telecharger(page, () => telechargerParFichier(page));
+    const deux = await telecharger(page, () => telechargerParFichier(page));
     expect(deux.octets.equals(un.octets)).toBe(true);
   });
 

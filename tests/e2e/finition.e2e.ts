@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Locator, Page } from 'playwright';
-import { attend, attendreAnimations, NAVIGATEUR, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe } from './aide.js';
+import { attend, boutonFichier, attendreAnimations, NAVIGATEUR, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe } from './aide.js';
 
 type Schema = 'light' | 'dark';
 const SCHEMAS: readonly Schema[] = ['light', 'dark'];
@@ -103,7 +103,8 @@ async function pleins(page: Page): Promise<Array<{ texte: string; zone: string }
     const zone = b.closest('.menu-panneau') ? 'menu' : b.closest('.editeur-confirmer') ? 'confirmation' : b.closest('.editeur-barre') ? 'barre'
       : b.closest('.editeur-etat') ? 'etat' : b.closest('.editeur-calques') ? 'calques' : b.closest('.panneau-cricut') ? 'cricut'
       : b.closest('.editeur-inspecteur details.section') ? 'section:' + (b.closest('details.section')?.querySelector('summary')?.textContent ?? '') : 'autre';
-    return { texte: (b.textContent ?? '').trim(), zone };
+    // Un bouton a icone seule (le geste de fin) se nomme par son nom accessible.
+    return { texte: (b.textContent ?? '').trim() || (b.getAttribute('aria-label') ?? ''), zone };
   }), cyan);
 }
 
@@ -174,7 +175,7 @@ describe('la finition transversale', () => {
         await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
         await page.keyboard.press('Delete');
         expect((await pleins(page)).map(p => p.texte)).toEqual(['Terminer']);
-        await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+        await boutonFichier(page).click();
         await page.getByRole('menu', { name: 'Fichier' }).waitFor();
         expect(await pleins(page)).toEqual([]);
         await page.keyboard.press('Escape');
@@ -197,8 +198,8 @@ describe('la finition transversale', () => {
         await page.locator('.panneau-cricut .constat, .panneau-cricut .pret').first().waitFor();
         await attendreAnimations(page);
         expect(await pleins(page)).toEqual([{ texte: 'Exporter pour Cricut', zone: 'cricut' }]);
-        // Le menu Fichier ne porte plus l'export (il a son bouton dans la barre et dans le panneau) : un menu ouvert, rien de plein.
-        await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+        // Le menu Fichier porte aussi l'export, en element de menu, jamais plein : un menu ouvert, rien de plein.
+        await boutonFichier(page).click();
         await page.getByRole('menu', { name: 'Fichier' }).waitFor();
         expect(await pleins(page)).toEqual([]);
       });
@@ -335,7 +336,8 @@ describe('la finition transversale', () => {
     await page.getByRole('menu', { name: 'Vue' }).waitFor();
     expect(await page.locator('.menu-panneau .menu-raccourci').evaluateAll(l => l.filter(e => e.getBoundingClientRect().width > 0).length)).toBe(0);
     expect(await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).toEqual(expect.arrayContaining(['Aide', 'Édition', 'Fichier', 'Vue']));
-    expect((await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).slice(0, 4)).toEqual(['Aide', 'Édition', 'Fichier', 'Vue']);
+    // Les rubriques du menu Fichier du bureau suivent Edition, dans son ordre : Insérer, Récupérer le dessin, Fichier.
+    expect((await page.locator('.menu-panneau .menu-rubrique > .menu-titre').allTextContents()).slice(0, 6)).toEqual(['Aide', 'Édition', 'Insérer', 'Récupérer le dessin', 'Fichier', 'Vue']);
     expect((await textesDe(page.getByRole('menu', { name: 'Vue' }).getByRole('menuitem'))).slice(-2)).toEqual(['Zoomer', 'Dézoomer']);
   });
 
