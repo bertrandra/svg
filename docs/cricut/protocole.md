@@ -3,7 +3,7 @@
 Le contexte de production Cricut (ADR-0013) repose sur des valeurs et des comportements de Design Space que nous
 connaissons **de mémoire ou par la documentation**, pas par un essai. Chacune porte `aVerifier: true` et une note
 dans `src/model/contextes.ts`, et le panneau « Prêt pour Cricut » les marque « à vérifier ». Ce protocole dit
-comment les vérifier sur une vraie machine, avec treize SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
+comment les vérifier sur une vraie machine, avec quatorze SVG témoins (dans [`temoins/`](temoins/)), et où noter ce
 qu’on observe. Une fois rempli, il suffit de reporter les valeurs mesurées dans `src/model/contextes.ts`, de
 retirer `aVerifier` de celles qui sont confirmées, et d’annoncer le changement dans `CHANGELOG.md`.
 
@@ -226,6 +226,37 @@ Ce qu’on vérifie : `designSpace.operations.superposition`, `designSpace.opera
 >
 >
 
+## Témoin 10 — une feuille partielle, sans recalage automatique
+
+Fichier : `temoin-10-feuille-partielle.svg` (12 × 12 po, le tapis entier), écrit par « Exporter pour Cricut » avec la case
+**« Recalage automatique » décochée** (ADR-0039) : un carré rouge de 1 po à 8 po du bord gauche et 6 po du bord haut du tapis, un
+disque bleu de 1/2 po dont le bord gauche est à 2 po et le bord haut à 9 po. Sous les formes, **un cadre de repérage par couleur**
+(rouge, bleu), de la taille de la zone utile (11,5 × 11,5 po), un anneau fin d’environ 0,5 mm.
+
+Ce qu’on vérifie : `designSpace.position.rognage`, `designSpace.position.coin`, `designSpace.position.guide` et
+`designSpace.position.glisser` (le tableau des comportements ci-dessous), soit **la façon de couper à un endroit précis du
+tapis**, pour une feuille posée ailleurs qu’en haut à gauche.
+
+À observer :
+
+1. Importer sans redimensionner : quelle taille Design Space affiche-t-il ? 11,5 × 11,5 po (le cadre compte) ou 12 × 12 po ?
+   Importer un fichier sans cadre (le même dessin exporté avec le recalage coché) : la taille est-elle celle des deux formes
+   seules (le blanc autour est-il rogné) ?
+2. Sélectionner le cadre rouge et le carré rouge, **« Attacher »** ; même chose pour le cadre bleu et le disque. Le panneau des
+   calques montre-t-il deux ensembles attachés ?
+3. Passer chaque cadre en **« Guide »** (menu Opération) : est-ce permis sur un calque attaché ? Faut-il le faire avant
+   d’attacher ? Le cadre reste-t-il visible sur le canevas ?
+4. « Make It » : sur l’aperçu du tapis rouge, le carré est-il à 8 po du bord gauche et 6 po du bord haut (la grille de l’aperçu
+   le montre) ? Le cadre est-il absent de l’aperçu, et la machine ne le coupe-t-elle pas ? Même question pour le disque (2 po,
+   9 po) sur le tapis bleu.
+5. Sinon : faire glisser le carré sur l’aperçu du tapis jusqu’à 8 po et 6 po ; la machine coupe-t-elle à cet endroit ?
+6. Poser une chute de papier de 2 × 2 po à 7,5 po du bord gauche et 5,5 po du bord haut, lancer : le carré est-il découpé dans la
+   chute, centré ?
+
+> Résultat observé (taille à l’import ; « Attacher » et « Guide » ; place sur l’aperçu ; cadre coupé ou non ; découpe dans la chute) :
+>
+>
+
 ---
 
 ## Les valeurs à vérifier
@@ -278,3 +309,8 @@ Ils ne sont pas des nombres, mais le panneau s’appuie sur eux ; chacun est dit
 | `designSpace.operations.attacher` : « Attacher » garde le trait du stylo à sa place sur la pièce découpée | carte « Dans Design Space » | 9 | |
 | `designSpace.operations.groupes` : les groupes « a-couper » et « a-ecrire » du fichier combiné restent des groupes nommés | fichier combiné | 9 | |
 | Les attributs `data-ed-operation` d’un `<path>` (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |
+| `designSpace.position.rognage` : à l’import, Design Space rogne le SVG à ses formes (le blanc autour ne compte pas) | export sans recalage : le cadre de repérage | 10 | |
+| `designSpace.position.coin` : un ensemble attaché se pose dans le coin haut gauche de la zone de coupe, à sa place relative | export sans recalage, carte « Dans Design Space » | 10 | |
+| `designSpace.position.guide` : un cadre passé en « Guide » et attaché garde la place des formes sans être découpé | carte « Dans Design Space » | 10 | |
+| `designSpace.position.glisser` : faire glisser le dessin sur l’aperçu du tapis le fait couper à cet endroit | carte « Dans Design Space » (le repli) | 10 | |
+| Les attributs `data-ed-recalage` et `data-ed-feuille` de la racine (le SVG enregistré, pas l’export) sont ignorés sans gêne | — | aucun : l’export ne les écrit pas | |

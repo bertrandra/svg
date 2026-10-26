@@ -14,7 +14,8 @@ import { pluriel } from '../util/texte.js';
 export interface RepereDesigne { readonly axe: AxeRepere; readonly valeur: number }
 
 /** Le panneau flottant ouvert sur la toile : les reperes, ou une repetition de la selection. */
-export type PanneauOutils = 'reperes' | 'grille' | 'radiale' | 'symetrie' | null;
+/** `feuille` : dupliquer la selection sur la feuille du tapis, en contexte Cricut (ADR-0039). */
+export type PanneauOutils = 'reperes' | 'grille' | 'radiale' | 'symetrie' | 'feuille' | null;
 
 export interface EtatRegles {
   /** Les regles en haut et a gauche de la toile (un reglage de la session, cache par defaut). */

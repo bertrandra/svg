@@ -239,6 +239,34 @@ export const DESIGN_SPACE_OPERATIONS: readonly Comportement[] = [
   }
 ];
 
+/**
+ * Ce que Design Space fait de la position d'un dessin sur le tapis (ADR-0039), sur quoi repose l'export « sans recalage automatique » :
+ * un cadre de reperage de la taille de la zone utile, une couleur par couche, que l'on attache aux formes de sa couleur puis que l'on
+ * passe en « Guide ». La documentation de Cricut et les tutoriels le laissent attendre ; rien n'a ete essaye sur une machine (temoin 10).
+ */
+export const DESIGN_SPACE_POSITION: readonly Comportement[] = [
+  {
+    id: 'designSpace.position.rognage', aVerifier: true,
+    texte: 'À l’import, Design Space rogne le SVG à ses formes : le blanc autour du dessin, et donc sa place dans le plan, ne compte pas.',
+    note: 'Rapporté par des utilisateurs (forums Inkscape et Adobe) ; aucune documentation de Cricut ne le dit. C’est pourquoi l’export ajoute un cadre de repérage : le cadre a la taille de la zone utile, et le dessin garde sa place dans le cadre. Témoin 10.'
+  },
+  {
+    id: 'designSpace.position.coin', aVerifier: true,
+    texte: 'Un ensemble attaché se pose dans le coin haut gauche de la zone de coupe du tapis, à la place qu’il a sur le canevas, les uns par rapport aux autres.',
+    note: 'Le manuel de Design Space (« Attach to hold cut placement ») : « Attaching holds your cuts in the same position on the cutting mat as they appear on the design screen ». Le coin haut gauche par défaut est rapporté par des tutoriels (Underground Crafter, 2019). Témoin 10.'
+  },
+  {
+    id: 'designSpace.position.guide', aVerifier: true,
+    texte: 'Un cadre passé en « Guide » (Opération), attaché aux formes de sa couleur, garde leur place sur le tapis sans être découpé.',
+    note: 'Le blog de Cricut dit qu’un Guide « will not cut, or do any other function » une fois « Make It » choisi ; il ne dit pas si un Guide attaché compte encore dans la place de l’ensemble. Si ce n’est pas le cas, déplacer le dessin sur l’aperçu du tapis reste possible. Témoin 10.'
+  },
+  {
+    id: 'designSpace.position.glisser', aVerifier: true,
+    texte: 'Sur l’aperçu du tapis, faire glisser un dessin à un endroit le fait couper à cet endroit.',
+    note: 'L’aide de Cricut (écran « Prepare ») permet de déplacer et tourner les images sur l’aperçu du tapis ; un tutoriel dit que la position y est alors retenue. La distance aux bords que donne l’éditeur se lit sur la grille de l’aperçu. Témoin 10.'
+  }
+];
+
 export interface DescriptionContexte {
   readonly id: IdContexte;
   readonly nom: string;
@@ -258,7 +286,24 @@ export interface ChoixMachine {
   readonly materiau: string;
   readonly procede: Procede;
   readonly unite: UniteLongueur;
+  /**
+   * Faux : le recalage automatique est desactive (ADR-0039). Le plan de travail est alors le tapis, fixe ; les formes restent ou on
+   * les a posees et l'export garde leur place (une feuille partielle posee ailleurs qu'en haut a gauche). Absent : le recalage
+   * d'avant, le tapis cale sur le coin haut gauche du dessin, la ou Design Space pose les pieces. Seul `false` s'ecrit.
+   */
+  readonly recalage?: false;
+  /**
+   * La feuille posee sur le tapis (ADR-0039) : une boite en unites du plan, depuis le coin haut gauche du tapis. Absente : le tapis
+   * entier. C'est la feuille partielle de la decoupe sans recalage, et la place ou « Dupliquer sur la feuille » range les copies.
+   */
+  readonly feuille?: Feuille;
 }
+
+/** Une feuille sur le tapis : coin haut gauche (depuis celui du tapis), largeur et hauteur, en unites du plan (1/96 po). */
+export interface Feuille { readonly x: number; readonly y: number; readonly l: number; readonly h: number }
+
+/** Le plus petit cote d'une feuille, en pouces : en deca, aucune piece ne se decoupe proprement. */
+export const COTE_MIN_FEUILLE = 0.5;
 
 export type ChoixProduction = { readonly contexte: 'generique' } | ({ readonly contexte: 'cricut' } & ChoixMachine);
 

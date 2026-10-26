@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { identifiantValide } from '../../../src/engine/editionSvg.js';
 import {
-  CHOIX_CRICUT_DEFAUT, CONTEXTES, CRICUT, DESIGN_SPACE_OPERATIONS, DESIGN_SPACE_PX_NU_PAR_POUCE, FAMILLES, NOMS_PROCEDE, UNITES_PLAN_PAR_POUCE, type Valeur
+  CHOIX_CRICUT_DEFAUT, CONTEXTES, CRICUT, DESIGN_SPACE_OPERATIONS, DESIGN_SPACE_POSITION, DESIGN_SPACE_PX_NU_PAR_POUCE, FAMILLES, NOMS_PROCEDE, UNITES_PLAN_PAR_POUCE, type Valeur
 } from '../../../src/model/contextes.js';
 
 /** Toutes les valeurs d'un objet de profil, avec leur chemin (`cricut.tapis.12x12.zoneUtile.largeur`). */
@@ -100,5 +100,15 @@ describe('les profils de production', () => {
       expect(protocole, c.id).toContain('`' + c.id + '`');
     }
     expect(new Set(DESIGN_SPACE_OPERATIONS.map(c => c.id)).size).toBe(DESIGN_SPACE_OPERATIONS.length);
+  });
+
+  it('font figurer chaque comportement de Design Space sur la place du dessin (recalage, ADR-0039) dans le protocole, avec sa raison', () => {
+    const protocole = readFileSync(resolve(__dirname, '../../../docs/cricut/protocole.md'), 'utf8');
+    expect(DESIGN_SPACE_POSITION.map(c => c.id)).toEqual(['designSpace.position.rognage', 'designSpace.position.coin', 'designSpace.position.guide', 'designSpace.position.glisser']);
+    for (const c of DESIGN_SPACE_POSITION) {
+      expect(c.aVerifier, c.id).toBe(true);
+      expect(c.note.length, c.id).toBeGreaterThan(20);
+      expect(protocole, c.id).toContain('`' + c.id + '`');
+    }
   });
 });

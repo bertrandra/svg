@@ -17,6 +17,7 @@ import { ZoneToile } from './ZoneToile.js';
 import { Regles } from './Regles.js';
 import { CoucheReperes, PanneauReperes } from './Reperes.js';
 import { PanneauRepetition } from './PanneauRepetition.js';
+import { PanneauFeuille } from './PanneauFeuille.js';
 import { FormesToile } from './ToileNoeuds.js';
 import { useDepotImage } from './InsererImage.js';
 import { useVeilleFlous } from './SectionEffets.js';
@@ -76,6 +77,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
       <Regles toile={toile} />
       <PanneauReperes svgRef={svgRef} />
       <PanneauRepetition svgRef={svgRef} />
+      <PanneauFeuille svgRef={svgRef} />
       {/* Un plan vide (ADR-0019) : le premier geste, sur la toile meme. Les clics passent a travers ; l'inspecteur le dit aux lecteurs d'ecran. */}
       {dessin.formes.length || ui.outil !== 'selection' ? null : (
         mo.h.passe.length

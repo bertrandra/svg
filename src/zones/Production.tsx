@@ -4,7 +4,7 @@
 
 import { memo, useMemo } from 'react';
 import { ecrireChemin, type Forme } from '../engine/editionSvg.js';
-import { cadreTapis, etendueVisible, GRAVITES, LIBELLES_CORRECTION, texteTaille, unitesDePouces, type Constat, type Gravite } from '../engine/preparation.js';
+import { etendueVisible, feuillePartielle, feuilleSurTapis, gabaritDuTapis, GRAVITES, LIBELLES_CORRECTION, texteTaille, unitesDePouces, type Constat, type Gravite } from '../engine/preparation.js';
 import { CHOIX_GENERIQUE, CRICUT, NOMS_PROCEDE, OUTILS_A_VENIR, type ChoixProduction, type Procede, type UniteLongueur } from '../model/contextes.js';
 import { pluriel } from '../util/texte.js';
 import { choixCricut, nomTapis, phraseReste } from './actionsProduction.js';
@@ -16,6 +16,7 @@ import { ExportCricut } from './FinCricut.js';
 import { operationsPeintes } from '../export/operations.js';
 import { libelleSelecteur, phraseCouches } from './parcoursCricut.js';
 import { Repere } from './Repere.js';
+import { ReglagesTapis } from './ReglagesTapis.js';
 
 const NOMS_GRAVITE: Readonly<Record<Gravite, string>> = { bloquant: 'Bloquant', 'a-corriger': 'À corriger', conseil: 'Conseil' };
 // Le millimetre d'abord : c'est l'unite par defaut d'une interface francaise ; le pouce (celle de Design Space) reste au choix.
@@ -116,6 +117,7 @@ export function PanneauCricut({ nom }: { nom: string }) {
         <Repere id="cricut" titre="Ce panneau prépare la découpe">
           Il vérifie le dessin pour votre machine : chaque constat dit ce qui se découperait mal et propose une correction, que Ctrl+Z annule. Le tapis s’affiche sous le dessin ; la machine découpe ce qui tient dans les pointillés.
         </Repere>
+        <ReglagesTapis />
         {preparation ? (
           <dl className="resume-cricut">
             <dt>Taille finale</dt>
@@ -180,19 +182,19 @@ const cheminDeZones = (c: Constat): string => {
 };
 
 /**
- * Le gabarit du tapis sur la toile : le support, sa zone utile (pointilles) et un quadrillage au pouce, la zone utile
- * calee sur le coin haut gauche du dessin (la ou Design Space pose les pieces). Dessous les formes.
+ * Le gabarit du tapis sur la toile : le support, sa zone utile (pointilles), un quadrillage au pouce et la feuille posee dessus
+ * quand elle ne couvre pas tout le tapis. Avec le recalage automatique, la zone utile calee sur le coin haut gauche du dessin (la ou
+ * Design Space pose les pieces) ; sans (ADR-0039), le tapis fixe au coin du plan de travail. Dessous les formes.
  */
 export const GabaritTapis = memo(function GabaritTapis() {
   const { preparation } = useDessin(), { profil } = useInterface();
   if (!profil || profil.procede === 'imprimer-decouper' || !preparation) return null;
-  const z = profil.zoneUtile;
-  const etendue = etendueVisible(preparation.dessin);
-  const origine = etendue ?? { x: preparation.dessin.vb[0], y: preparation.dessin.vb[1] };
-  // Le meme cadre que celui que « Ajuster » montre (cadreTapis) : la vue cadre exactement le tapis dessine.
-  const { x: x0, y: y0, l, h } = cadreTapis(profil, origine), pouce = unitesDePouces(1);
+  // Le meme cadre que celui que « Ajuster » montre (gabaritDuTapis) : la vue cadre exactement le tapis dessine.
+  const { tapis, zone } = gabaritDuTapis(profil, preparation.dessin, etendueVisible(preparation.dessin));
+  const { x: x0, y: y0, l, h } = tapis, pouce = unitesDePouces(1);
+  const feuille = feuillePartielle(profil) ? feuilleSurTapis(profil, tapis) : null;
   return (
-    <g className="gabarit" pointerEvents="none" aria-hidden="true">
+    <g className="gabarit" pointerEvents="none" aria-hidden="true" data-recalage={profil.recalage ? undefined : 'non'}>
       <defs>
         <pattern id="gabarit-pouce" patternUnits="userSpaceOnUse" x={x0} y={y0} width={pouce} height={pouce}>
           <path className="gabarit-quadrillage" d={`M${pouce} 0L0 0L0 ${pouce}`} fill="none" />
@@ -200,7 +202,8 @@ export const GabaritTapis = memo(function GabaritTapis() {
       </defs>
       <rect className="gabarit-tapis" x={x0} y={y0} width={l} height={h} />
       <rect x={x0} y={y0} width={l} height={h} fill="url(#gabarit-pouce)" />
-      <rect className="gabarit-zone" x={origine.x} y={origine.y} width={z.l} height={z.h} />
+      <rect className="gabarit-zone" x={zone.x} y={zone.y} width={zone.l} height={zone.h} />
+      {feuille ? <rect className="gabarit-feuille" x={feuille.x} y={feuille.y} width={feuille.l} height={feuille.h} /> : null}
     </g>
   );
 });

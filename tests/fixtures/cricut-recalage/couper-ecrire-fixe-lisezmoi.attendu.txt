@@ -1,0 +1,24 @@
+Cricut — essai : couper et écrire
+
+Fichiers :
+- essai-a-couper.svg : les 2 formes à couper, fonds pleins, une couleur par tapis (2).
+- essai-a-ecrire.svg : les 1 forme à écrire au stylo, des traits sans remplissage, une couleur par stylo (1).
+- essai-cricut.svg : les deux ensemble, en deux groupes, « a-couper » puis « a-ecrire ».
+
+Tailles : les trois fichiers font 12 × 12 po (même cadre : posés au même endroit, ils se superposent).
+
+Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 9) :
+1. Importez essai-a-couper.svg, puis essai-a-ecrire.svg, sans changer leur taille.
+2. Sélectionnez les calques de essai-a-ecrire.svg et choisissez « Dessiner » (une couleur, un stylo) ; les autres restent sur « Couper ».
+3. Recalage automatique désactivé : chaque fichier porte un cadre de repérage par couleur, de la taille de la zone utile (11,5 × 11,5 po). Pour chaque couleur, sélectionnez le cadre et les formes de sa couleur, « Attachez »-les, puis passez le cadre en « Guide » : les formes se coupent à leur place sur le tapis (À VÉRIFIER, témoin 10).
+Ou importez essai-cricut.svg seul : si Design Space garde ses groupes, le groupe « a-ecrire » passe en « Dessiner » d’un coup.
+
+Ce qui n’a pas été essayé sur une machine :
+- Deux fichiers importés l’un après l’autre, au même cadre et à la même taille physique, se superposent exactement.
+- Le type de ligne « Dessiner » se règle sur les calques d’un fichier importé, et un trait sans remplissage y reste une ligne.
+- « Attacher » garde le trait du stylo à sa place sur la pièce découpée, sur le même tapis.
+- Les deux groupes du fichier combiné (« a-couper », « a-ecrire ») restent des groupes dans le panneau des calques, nommés par leur identifiant.
+- À l’import, Design Space rogne le SVG à ses formes : le blanc autour du dessin, et donc sa place dans le plan, ne compte pas.
+- Un ensemble attaché se pose dans le coin haut gauche de la zone de coupe du tapis, à la place qu’il a sur le canevas, les uns par rapport aux autres.
+- Un cadre passé en « Guide » (Opération), attaché aux formes de sa couleur, garde leur place sur le tapis sans être découpé.
+- Sur l’aperçu du tapis, faire glisser un dessin à un endroit le fait couper à cet endroit.

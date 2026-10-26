@@ -5,7 +5,7 @@
 
 export {
   resoudreProfil, normaliserChoix, marqueDeChoix, marqueDeProfil, choixDeMarque, choixDeDepart, unitesDePouces, versUnite, depuisUnite, texteMesure, texteTaille,
-  cadreTapis, unionCadres, type CadreTapis, type ProfilProduction
+  cadreTapis, cadreFixe, zoneDuCadre, gabaritDuTapis, planDuTapis, placeSurTapis, feuilleSur, texteFeuille, lireFeuille, feuilleSurTapis, interBoites, regionDeCoupe, feuillePartielle, unionCadres, type CadreTapis, type ProfilProduction
 } from './preparation/profil.js';
 export {
   constatsPreparation, constatsBloquants, resumePreparation, aUnTrait, estTransparente, GRAVITES, LIBELLES_CORRECTION, FORMES_MAX_FINESSE,
@@ -20,3 +20,7 @@ export {
   operationProposee, operationDe, operationsApplicables, partagerOperations, compterOperations, operationsMelees, poserOperation, phraseOperation,
   operationsAEcrire, sansOperation, type Operations, type ResultatOperation
 } from './preparation/operations.js';
+export {
+  placerSurFeuille, preparerPlacement, avancerPlacement, finirPlacement, posesDe, phrasePlacement, matriceQuart, PLACEMENT_MAX, ESPACEMENT_DEFAUT, MARGE_DEFAUT,
+  type OptionsPlacement, type Optimisation, type EtatPlacement, type ResultatPlacement, type Pose, type QuartDeTour
+} from './preparation/placement.js';

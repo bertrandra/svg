@@ -6,7 +6,7 @@
 
 import clipping from 'polygon-clipping';
 import {
-  echelle, fusionnerCouleursProches, inverserChemin, joindreExtremites, modifier, simplifier, sousChemins, transformer,
+  boiteAvecTrait, deplacer, echelle, fusionnerCouleursProches, inverserChemin, joindreExtremites, modifier, simplifier, sousChemins, transformer,
   type Chemin, type DessinSvg, type Forme
 } from '../editionSvg.js';
 import { aireSignee, aplatir, appliquerBooleen, cheminLisseDeRegion, regionDeChemin, regionDeForme, toleranceBooleen } from '../booleens.js';
@@ -18,7 +18,7 @@ import type { Constat, CodeCorrection } from './constats.js';
 import { etendueVisible, formesPeintes } from './mesures.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { silhouetteDe } from './silhouette.js';
-import { texteMesure, texteTaille, type ProfilProduction } from './profil.js';
+import { gabaritDuTapis, regionDeCoupe, texteMesure, texteTaille, type ProfilProduction } from './profil.js';
 import { corrigerTexte } from './stylo.js';
 import { poserOperation } from './operations.js';
 
@@ -77,6 +77,29 @@ function ajusterZone(dessin: DessinSvg, p: ProfilProduction): ResultatCorrection
   return { dessin: d, phrase: 'Dessin réduit à ' + nombreFr(Math.round(k * 1000) / 10) + ' %' + (e ? ' : ' + texteTaille(e.l, e.h, p.unite) + '.' : '.') };
 }
 
+/** Le plus petit glissement qui ramene [a, a + l] dans [z, z + zl] ; 0 s'il y est, ou s'il est plus grand qu'elle. */
+const glissement = (a: number, l: number, z: number, zl: number): number => (l > zl ? 0 : a < z ? z - a : a + l > z + zl ? z + zl - (a + l) : 0);
+
+/**
+ * Ramener sur le tapis fixe (ADR-0039) chaque forme qui sort de la zone utile : le plus petit deplacement qui l'y fait tenir, forme
+ * par forme, sans rien redimensionner. Une forme plus grande que la zone ne bouge pas (son constat propose de la reduire).
+ */
+function ramenerZone(dessin: DessinSvg, ids: readonly string[], p: ProfilProduction): ResultatCorrection {
+  const z = regionDeCoupe(p, gabaritDuTapis(p, dessin, null)), voulus = new Set(ids);
+  if (!z) return { erreur: 'La feuille sort de la zone utile du tapis : replacez-la dans le panneau.' };
+  let d = dessin, n = 0;
+  for (const f of dessin.formes) {
+    if (!voulus.has(f.id) || f.verrouille) continue;
+    const b = boiteAvecTrait(f);
+    if (!b) continue;
+    const dx = glissement(b.x, b.l, z.x, z.l), dy = glissement(b.y, b.h, z.y, z.h);
+    if (!dx && !dy) continue;
+    d = deplacer(d, [f.id], dx, dy);
+    n++;
+  }
+  return n ? { dessin: d, phrase: pluriel(n, 'forme') + ' ramenée' + (n > 1 ? 's' : '') + ' sur la feuille, dans la zone utile du tapis.' } : { erreur: RIEN };
+}
+
 function fermer(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
   let d = dessin, n = 0;
   for (const id of ids) {
@@ -119,6 +142,7 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
       return d === dessin ? { erreur: RIEN } : { dessin: d, phrase: pluriel(formes.length, 'forme') + ' rendue' + (formes.length > 1 ? 's' : '') + ' opaque' + (formes.length > 1 ? 's' : '') + '.' };
     }
     case 'ajuster-zone': return ajusterZone(dessin, p);
+    case 'ramener-zone': return ramenerZone(dessin, formes, p);
     case 'fermer': return fermer(dessin, formes);
     case 'fusionner-nuances': {
       const r = fusionnerCouleursProches(dessin, p.fusionNuances, 'remplissage');

@@ -5,7 +5,7 @@
 // Pourquoi : « Exporter pour Cricut » partait sans un mot alors qu'un constat « à corriger » disait que la lame dechirerait le
 // papier, et rien ne disait quoi faire du fichier une fois telecharge. Un maker debutant restait seul au pire moment.
 
-import { texteTaille, type Constat, type ProfilProduction } from '../engine/preparation.js';
+import { texteMesure, texteTaille, type Constat, type ProfilProduction } from '../engine/preparation.js';
 import { CRICUT, type ChoixProduction, type Procede, type UniteLongueur } from '../model/contextes.js';
 import { pluriel } from '../util/texte.js';
 
@@ -62,15 +62,32 @@ export interface EtapeDesignSpace { readonly texte: string; readonly aVerifier?:
  * imprimer puis decouper (Print Then Cut). Rien n'est promis que l'on n'ait pas vu : ce que le protocole (docs/cricut/protocole.md)
  * n'a pas confirme est marque. `taille` est celle du dessin, en unites du plan ; null pour un dessin vide (l'export le refuse).
  */
-export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { readonly l: number; readonly h: number } | null, melange = false): EtapeDesignSpace[] {
-  const dimension = taille ? texteTaille(taille.l, taille.h, p.unite) : null;
+/**
+ * Les etapes qui gardent la place du dessin sur le tapis, sans recalage automatique (ADR-0039) : attacher chaque cadre de reperage aux
+ * formes de sa couleur, le passer en « Guide », puis verifier la place sur l'apercu du tapis (ou y faire glisser le dessin). `place`
+ * est la distance du dessin aux bords gauche et haut du tapis, en unites du plan. Rien de cela n'a ete essaye (temoin 10).
+ */
+export function etapesReperage(p: ProfilProduction, place: { readonly x: number; readonly y: number } | null): EtapeDesignSpace[] {
+  const ou = place ? ' : le dessin commence à ' + texteMesure(place.x, p.unite) + ' du bord gauche et ' + texteMesure(place.y, p.unite) + ' du bord haut du tapis' : '';
+  return [
+    { texte: 'Pour chaque couleur, sélectionnez le cadre de repérage de cette couleur et les formes de la même couleur, puis « Attacher ».', aVerifier: true },
+    { texte: 'Passez chaque cadre en « Guide » (menu Opération) : il ne se découpe pas.', aVerifier: true },
+    { texte: 'Sur l’aperçu du tapis, vérifiez la place' + ou + ' ; sinon, faites-y glisser le dessin, puis posez la feuille à cet endroit.', aVerifier: true }
+  ];
+}
+
+export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { readonly l: number; readonly h: number } | null, melange = false, place: { readonly x: number; readonly y: number } | null = null): EtapeDesignSpace[] {
+  // Sans recalage automatique (ADR-0039), le fichier porte des cadres de reperage : Design Space le lit a la taille de la zone utile.
+  const fixe = !p.recalage && p.procede !== 'imprimer-decouper';
+  const dimension = fixe ? texteTaille(p.zoneUtile.l, p.zoneUtile.h, p.unite) + ', cadre compris' : taille ? texteTaille(taille.l, taille.h, p.unite) : null;
+  const reperage = fixe ? etapesReperage(p, place) : [];
   if (melange && p.procede !== 'imprimer-decouper') {
     // Couper et ecrire (ADR-0028) : deux fichiers a importer, le second passe en « Dessiner » ; rien de cela n'a ete essaye (temoin 9).
     return [
       { texte: 'Ouvrez l’archive ' + nom + '-cricut.zip : le fichier à couper, le fichier à écrire, les deux ensemble et un mode d’emploi.' },
       { texte: 'Dans Design Space, « Nouveau projet », puis « Importer » ' + nom + '-a-couper.svg, puis ' + nom + '-a-ecrire.svg, sans changer leur taille' + (dimension ? ' (' + dimension + ')' : '') + '.', aVerifier: true },
       { texte: 'Passez les calques de ' + nom + '-a-ecrire.svg en « Dessiner » (une couleur, un stylo) ; ceux de ' + nom + '-a-couper.svg restent sur « Couper ».', aVerifier: true },
-      { texte: 'Sélectionnez tout et « Attachez » : le stylo écrit à sa place sur la pièce découpée.', aVerifier: true }
+      ...(fixe ? reperage : [{ texte: 'Sélectionnez tout et « Attachez » : le stylo écrit à sa place sur la pièce découpée.', aVerifier: true } satisfies EtapeDesignSpace])
     ];
   }
   if (p.procede === 'imprimer-decouper') {
@@ -88,6 +105,7 @@ export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { re
       { texte: 'Dans Design Space, « Nouveau projet », puis « Importer ».' },
       { texte: 'Choisissez le fichier ' + nom + '-stylo.svg, importez-le, puis ajoutez-le au projet.' },
       { texte: (dimension ? 'Vérifiez sa taille : ' + dimension + '.' : 'Vérifiez sa taille.') + ' Ne la changez pas.', aVerifier: true },
+      ...reperage,
       { texte: 'Pour chaque couche, choisissez « Dessiner » et la couleur du stylo : une couleur, un stylo.', aVerifier: true },
       { texte: 'Vérifiez que les lignes restent ouvertes et sans remplissage, puis insérez le stylo quand la machine le demande.', aVerifier: true }
     ];
@@ -96,6 +114,7 @@ export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { re
     { texte: 'Dans Design Space, « Nouveau projet », puis « Importer ».' },
     { texte: 'Choisissez le fichier ' + nom + '-cricut.svg, importez-le, puis ajoutez-le au projet.' },
     { texte: (dimension ? 'Vérifiez sa taille : ' + dimension + '.' : 'Vérifiez sa taille.') + ' Ne la changez pas.', aVerifier: true },
+    ...reperage,
     { texte: 'Pour chaque couche, choisissez couper, dessiner ou rainer : le fichier ne le dit pas.' }
   ];
 }

@@ -9,6 +9,7 @@ import { marquerProduction, type Forme } from '../engine/editionSvg.js';
 import type { DessinPlat } from '../engine/aplatir.js';
 import { constatsBloquants, marqueDeProfil, partagerOperations, versUnite, type Constat, type ProfilProduction } from '../engine/preparation.js';
 import { svgExporte } from './svgs.js';
+import { avecReperage, cadresReperage, couleursDistinctes } from './reperage.js';
 
 export type ExportCricut =
   | { readonly svg: string; readonly couches: number; readonly laissees: number }
@@ -41,6 +42,9 @@ export function svgCricut(dessin: DessinPlat, p: ProfilProduction): ExportCricut
   const visibles = dessin.formes.filter(f => f.visible);
   const pleines = decoupe.formes.filter(f => f.visible && f.remplissage !== null).map(pleine);
   const couches = new Set(pleines.map(f => (f.remplissage ?? '').toLowerCase())).size;
-  const svg = svgExporte({ vb: dessin.vb, formes: pleines }, { precision: 3, taille: { largeur: versUnite(dessin.vb[2], p.unite), unite: p.unite } });
+  // Sans recalage automatique (ADR-0039), le plan est le tapis et un cadre de reperage par couleur passe sous les formes : le meme
+  // objet sinon, donc les memes octets qu'avant.
+  const pose = avecReperage({ vb: dessin.vb, formes: pleines }, p, zone => cadresReperage(zone, couleursDistinctes(pleines.map(f => f.remplissage)), { plein: true }));
+  const svg = svgExporte(pose, { precision: 3, taille: { largeur: versUnite(pose.vb[2], p.unite), unite: p.unite } });
   return { svg: marquerProduction(svg, marqueDeProfil(profil)), couches, laissees: visibles.length - pleines.length };
 }
