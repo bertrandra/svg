@@ -15,15 +15,17 @@ import { useActionsTexte } from './actionsTexte.js';
 import { Nombre } from './commun/Nombre.js';
 import { policeNouveauTexte, tailleNouveauTexte } from './saisie.js';
 import { selonSaisie } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { useTactile } from './Vue.js';
 
-const ALIGNEMENTS: ReadonlyArray<readonly [TexteVivant['alignement'], string]> = [['gauche', 'À gauche'], ['centre', 'Au centre'], ['droite', 'À droite']];
+// Les libelles se traduisent au rendu, pas au chargement du module : la langue n'est posee qu'ensuite.
+const alignements = (): ReadonlyArray<readonly [TexteVivant['alignement'], string]> => [['gauche', t('À gauche')], ['centre', t('Au centre')], ['droite', t('À droite')]];
 
 export function PanneauTexte() {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie(), { polices, erreurPolices, deposer } = usePolices(), at = useActionsTexte();
   const doigt = useTactile();
   const [erreur, poserErreur] = useState('');
-  const [texte, poserTexte] = useState('Joyeux anniversaire');
+  const [texte, poserTexte] = useState(() => t('Joyeux anniversaire'));
   const entree = useRef<HTMLInputElement>(null);
   const explorerDemande = useDemandePanneau();
   const n = sx.nouveau, police = policeNouveauTexte(n, polices), taille = tailleNouveauTexte(n, mo.dessin.vb);
@@ -45,36 +47,36 @@ export function PanneauTexte() {
 
   return (
     <fieldset className="editeur-groupe panneau-texte">
-      <legend>Texte</legend>
-      <p className="aide">{selonSaisie('Cliquez sur la toile là où écrire, puis tapez : les lettres s’y posent. Ou écrivez ici et ajoutez le texte au centre du plan.', doigt)}</p>
-      <textarea rows={2} value={texte} onChange={e => poserTexte(e.target.value)} aria-label="Texte" placeholder="Votre texte" />
+      <legend>{t('Texte')}</legend>
+      <p className="aide">{selonSaisie(t('Cliquez sur la toile là où écrire, puis tapez : les lettres s’y posent. Ou écrivez ici et ajoutez le texte au centre du plan.'), doigt)}</p>
+      <textarea rows={2} value={texte} onChange={e => poserTexte(e.target.value)} aria-label={t('Texte')} placeholder={t('Votre texte')} />
       <ChoixPolice polices={polices} valeur={police?.id ?? ''} poser={id => sx.poserNouveau({ police: id })} texte={texte} explorerDemande={explorerDemande} />
       <div className="grille-2">
-        <Nombre libelle="Taille" valeur={taille} min={0.01} poser={v => sx.poserNouveau({ taille: v })} />
-        <Nombre libelle="Espace" valeur={n.interlettrage} poser={v => sx.poserNouveau({ interlettrage: v })} />
-        <Nombre libelle="Interligne" valeur={n.interligne} min={0.1} poser={v => sx.poserNouveau({ interligne: v })} />
+        <Nombre libelle={t('Taille')} valeur={taille} min={0.01} poser={v => sx.poserNouveau({ taille: v })} />
+        <Nombre libelle={t('Espace')} valeur={n.interlettrage} poser={v => sx.poserNouveau({ interlettrage: v })} />
+        <Nombre libelle={t('Interligne')} valeur={n.interligne} min={0.1} poser={v => sx.poserNouveau({ interligne: v })} />
       </div>
-      <div className="alignement-texte" role="group" aria-label="Alignement des lignes">
-        {ALIGNEMENTS.map(([a, libelle]) => <button key={a} type="button" aria-pressed={n.alignement === a} onClick={() => sx.poserNouveau({ alignement: a })}>{libelle}</button>)}
+      <div className="alignement-texte" role="group" aria-label={t('Alignement des lignes')}>
+        {alignements().map(([a, libelle]) => <button key={a} type="button" aria-pressed={n.alignement === a} onClick={() => sx.poserNouveau({ alignement: a })}>{libelle}</button>)}
       </div>
       <ChoixTrace trace={police?.nature === 'trait' ? 'median' : n.trace} trait={police?.nature === 'trait'} poser={v => sx.poserNouveau({ trace: v })} />
       {aDesLigatures ? (
         <label className="case">
-          <input type="checkbox" checked={n.ligatures} disabled={n.interlettrage !== 0} onChange={e => sx.poserNouveau({ ligatures: e.target.checked })} /> Ligatures (fi, fl…)
-          {n.interlettrage !== 0 ? <span className="aide"> Sans effet avec un espace entre les lettres.</span> : null}
+          <input type="checkbox" checked={n.ligatures} disabled={n.interlettrage !== 0} onChange={e => sx.poserNouveau({ ligatures: e.target.checked })} /> {t('Ligatures (fi, fl…)')}
+          {n.interlettrage !== 0 ? <span className="aide"> {t('Sans effet avec un espace entre les lettres.')}</span> : null}
         </label>
       ) : null}
       <div className="boutons">
-        <button type="button" className="primaire" disabled={!police || !texte.trim()} onClick={ajouter}>Ajouter le texte</button>
-        <button type="button" className="discret" onClick={() => entree.current?.click()}>Déposer une fonte TTF/OTF…</button>
+        <button type="button" className="primaire" disabled={!police || !texte.trim()} onClick={ajouter}>{t('Ajouter le texte')}</button>
+        <button type="button" className="discret" onClick={() => entree.current?.click()}>{t('Déposer une fonte TTF/OTF…')}</button>
         <input ref={entree} type="file" accept=".ttf,.otf,font/ttf,font/otf" hidden onChange={e => { deposerFichier(e.target.files?.[0]); e.target.value = ''; }} />
       </div>
       {message ? <p className="aide" role="alert">{message}</p> : (
         <p className="aide">
           {police?.nature === 'trait'
-            ? 'Une police à trait unique se dessine en traits ouverts, sans fond : ce que suit la pointe d’un stylo.'
-            : 'Le texte prend le remplissage et le contour courants, et reste modifiable.'}
-          {ui.profil ? ' Pour la machine, vectorisez-le une fois le design fini.' : ''}
+            ? t('Une police à trait unique se dessine en traits ouverts, sans fond : ce que suit la pointe d’un stylo.')
+            : t('Le texte prend le remplissage et le contour courants, et reste modifiable.')}
+          {ui.profil ? ' ' + t('Pour la machine, vectorisez-le une fois le design fini.') : ''}
         </p>
       )}
     </fieldset>

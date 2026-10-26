@@ -9,15 +9,19 @@ import { formesParOperation, inverserSelection, memeContour, memeType, toutesCho
 import { estPlat, type Operation } from '../engine/editionSvg.js';
 import { noeudsChoisissables } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import type { ElementMenu } from './commun/Menu.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil, OutilZone } from './typesEditeur.js';
 import { niveauEdition } from './lentille.js';
 
-/** Les outils de selection, dans l'ordre du menu : leur icone, leur nom, leur raccourci. */
+/**
+ * Les outils de selection, dans l'ordre du menu : leur icone, leur nom, leur raccourci. Le nom se traduit a la lecture (un accesseur),
+ * pas au chargement du module : la langue n'est posee qu'ensuite.
+ */
 export const OUTILS_SELECTION = [
-  { outil: 'selection', icone: 'selection', libelle: 'Sélection', raccourci: 'V' },
-  { outil: 'cadre', icone: 'cadre-selection', libelle: 'Cadre de sélection', raccourci: 'B' },
-  { outil: 'lasso', icone: 'lasso', libelle: 'Lasso', raccourci: 'Q' }
+  { outil: 'selection', icone: 'selection', get libelle() { return t('Sélection'); }, raccourci: 'V' },
+  { outil: 'cadre', icone: 'cadre-selection', get libelle() { return t('Cadre de sélection'); }, raccourci: 'B' },
+  { outil: 'lasso', icone: 'lasso', get libelle() { return t('Lasso'); }, raccourci: 'Q' }
 ] as const;
 
 export type OutilSelection = typeof OUTILS_SELECTION[number]['outil'];
@@ -25,39 +29,50 @@ export type OutilSelection = typeof OUTILS_SELECTION[number]['outil'];
 export const estOutilZone = (o: Outil): o is OutilZone => o === 'cadre' || o === 'lasso';
 export const estOutilSelection = (o: Outil): o is OutilSelection => o === 'selection' || estOutilZone(o);
 
-/** Les deux regles, telles que le menu les nomme. */
-export const LIBELLES_REGLE: Readonly<Record<RegleZone, string>> = { touche: 'Les formes touchées, même en partie', dedans: 'Les formes entièrement dedans' };
+/** Les deux regles, telles que le menu les nomme (traduites a la lecture, comme OUTILS_SELECTION). */
+export const LIBELLES_REGLE: Readonly<Record<RegleZone, string>> = { get touche() { return t('Les formes touchées, même en partie'); }, get dedans() { return t('Les formes entièrement dedans'); } };
 
 /** L'effet d'un geste de zone selon ses touches : Alt retire, Maj ajoute (Alt l'emporte), sinon la selection est remplacee. */
 export const effetDe = (e: { readonly shiftKey: boolean; readonly altKey: boolean }): EffetZone => (e.altKey ? 'retirer' : e.shiftKey ? 'ajouter' : 'remplacer');
 
-const choisies = (n: number): string => (n ? pluriel(n, 'forme') + ' choisie' + (n > 1 ? 's' : '') : 'aucune forme choisie');
+const choisies = (n: number): string => (n > 1 ? t('{formes} choisies', { formes: pluriel(n, 'forme') }) : n ? t('{formes} choisie', { formes: pluriel(n, 'forme') }) : t('aucune forme choisie'));
 
 /**
  * Ce que dit le relachement d'un cadre ou d'un lasso : « 3 formes choisies. », « 2 formes ajoutées : 5 formes choisies. »,
  * « 1 forme retirée : aucune forme choisie. », ou « Aucune forme dans le cadre. ».
  */
 export function phraseZone(forme: OutilZone, effet: EffetZone, avant: readonly string[], apres: readonly string[]): string {
-  if (effet === 'remplacer') return apres.length ? choisies(apres.length).replace(/^./, c => c.toUpperCase()) + '.' : 'Aucune forme dans le ' + forme + '.';
+  if (effet === 'remplacer') return apres.length ? choisies(apres.length).replace(/^./, c => c.toUpperCase()) + '.' : forme === 'cadre' ? t('Aucune forme dans le cadre.') : t('Aucune forme dans le lasso.');
   const n = effet === 'ajouter' ? apres.length - avant.length : avant.length - apres.length;
-  const verbe = effet === 'ajouter' ? 'ajoutée' : 'retirée';
-  return (n ? pluriel(n, 'forme') + ' ' + verbe + (n > 1 ? 's' : '') : 'Aucune forme ' + verbe) + ' : ' + choisies(apres.length) + '.';
+  const formes = pluriel(n, 'forme');
+  const quoi = effet === 'ajouter'
+    ? (n > 1 ? t('{formes} ajoutées', { formes }) : n ? t('{formes} ajoutée', { formes }) : t('Aucune forme ajoutée'))
+    : (n > 1 ? t('{formes} retirées', { formes }) : n ? t('{formes} retirée', { formes }) : t('Aucune forme retirée'));
+  return t('{quoi} : {choisies}.', { quoi, choisies: choisies(apres.length) });
 }
 
 /** La barre d'etat des outils de zone : ce que fait le geste, la regle, et le clavier. */
 export function etatOutilZone(outil: OutilZone, regle: RegleZone, nTrace: number): string {
-  const prend = regle === 'touche' ? 'les formes touchées' : 'les formes entièrement dedans';
+  const prend = regle === 'touche' ? t('les formes touchées') : t('les formes entièrement dedans');
   if (outil === 'cadre') {
     return nTrace === 1
-      ? 'Premier coin posé : flèches pour l’autre coin, Entrée prend ' + prend + ', Maj et Entrée les ajoute, Échap annule.'
-      : 'Cadre : glissez, même sur une forme, pour prendre ' + prend + ' (Maj ajoute, Alt retire) ; au clavier, flèches puis Espace.';
+      ? t('Premier coin posé : flèches pour l’autre coin, Entrée prend {prend}, Maj et Entrée les ajoute, Échap annule.', { prend })
+      : t('Cadre : glissez, même sur une forme, pour prendre {prend} (Maj ajoute, Alt retire) ; au clavier, flèches puis Espace.', { prend });
   }
   return nTrace
-    ? pluriel(nTrace, 'point') + ' · Espace pose un point, Entrée ferme le lasso et prend ' + prend + ', Retour arrière retire le dernier point.'
-    : 'Lasso : entourez à main levée pour prendre ' + prend + ' (Maj ajoute, Alt retire) ; au clavier, flèches puis Espace.';
+    ? t('{points} · Espace pose un point, Entrée ferme le lasso et prend {prend}, Retour arrière retire le dernier point.', { points: pluriel(nTrace, 'point'), prend })
+    : t('Lasso : entourez à main levée pour prendre {prend} (Maj ajoute, Alt retire) ; au clavier, flèches puis Espace.', { prend });
 }
 
-const NOMS_TYPES: Readonly<Record<TypeForme, readonly [string, string]>> = { texte: ['texte', 'choisi'], trait: ['trait', 'choisi'], pleine: ['forme pleine', 'choisie'] };
+/** « 3 formes pleines choisies », « 2 traits choisis », « 1 texte choisi » : la phrase du meme type, accordee par type et par nombre. */
+function phraseType(type: TypeForme | undefined, n: number): string {
+  switch (type) {
+    case 'texte': return n > 1 ? t('{n} textes choisis.', { n }) : t('{n} texte choisi.', { n });
+    case 'trait': return n > 1 ? t('{n} traits choisis.', { n }) : t('{n} trait choisi.', { n });
+    case 'pleine': return n > 1 ? t('{n} formes pleines choisies.', { n }) : t('{n} forme pleine choisie.', { n });
+    default: return n > 1 ? t('{n} formes de même type choisies.', { n }) : t('{n} forme de même type choisie.', { n });
+  }
+}
 
 /** Choisit `ids`, rend le point actif et le dit. */
 function choisir(ac: ActionsEditeur, ids: string[], phrase: string): void {
@@ -76,28 +91,26 @@ export function commandesSelection(m: ModeleDessin, u: EtatInterface, ac: Action
     rien: () => { ac.choisir([]); ac.poserPoint(null); },
     inverser: () => {
       const n = niveau(), ids = n ? n.filter(id => !m.sel.includes(id)) : inverserSelection(m.dessin, m.sel);
-      choisir(ac, ids, ids.length ? 'Sélection inversée : ' + choisies(ids.length) + '.' : 'Sélection inversée : aucune autre forme à choisir.');
+      choisir(ac, ids, ids.length ? t('Sélection inversée : {choisies}.', { choisies: choisies(ids.length) }) : t('Sélection inversée : aucune autre forme à choisir.'));
     },
     memeContour: () => {
       if (!m.sel.length) return;
       const r = memeContour(m.dessin, m.sel);
-      if (!r.valeurs.length) { ac.dire('La sélection n’a pas de contour : pas de couleur de contour à retrouver.'); return; }
-      choisir(ac, r.ids, pluriel(r.ids.length, 'forme') + ' de même contour ' + r.valeurs.map(couleurDite).join(', ') + ' choisie' + (r.ids.length > 1 ? 's' : '') + '.');
+      if (!r.valeurs.length) { ac.dire(t('La sélection n’a pas de contour : pas de couleur de contour à retrouver.')); return; }
+      const v = { formes: pluriel(r.ids.length, 'forme'), couleurs: r.valeurs.map(couleurDite).join(', ') };
+      choisir(ac, r.ids, r.ids.length > 1 ? t('{formes} de même contour {couleurs} choisies.', v) : t('{formes} de même contour {couleurs} choisie.', v));
     },
     memeType: () => {
       if (!m.sel.length) return;
       const r = memeType(m.dessin, m.sel), seul = r.valeurs.length === 1 ? r.valeurs[0] : undefined;
-      const [nom, accord] = seul ? NOMS_TYPES[seul] : ['forme de même type', 'choisie'];
-      const n = r.ids.length, mots = nom.split(' ');
-      // « 3 formes pleines choisies », « 2 traits choisis » : chaque mot du nom s'accorde, sauf « de même type ».
-      const dit = n > 1 ? (seul ? mots.map(x => x + 's').join(' ') : 'formes de même type') : nom;
-      choisir(ac, r.ids, n + ' ' + dit + ' ' + accord + (n > 1 ? 's' : '') + '.');
+      choisir(ac, r.ids, phraseType(seul, r.ids.length));
     },
     /** En contexte Cricut qui coupe ou ecrit (ADR-0028) : tout ce que la lame coupe, ou que le stylo ecrit. */
     parOperation: (operation: Operation) => {
       if (!procede) return;
-      const ids = formesParOperation(m.dessin, procede, operation), quoi = operation === 'decoupe' ? 'à couper' : 'à écrire';
-      choisir(ac, ids, ids.length ? pluriel(ids.length, 'forme') + ' ' + quoi + ' choisie' + (ids.length > 1 ? 's' : '') + '.' : 'Aucune forme ' + quoi + '.');
+      const ids = formesParOperation(m.dessin, procede, operation), quoi = operation === 'decoupe' ? t('à couper') : t('à écrire');
+      const v = { formes: pluriel(ids.length, 'forme'), quoi };
+      choisir(ac, ids, ids.length > 1 ? t('{formes} {quoi} choisies.', v) : ids.length ? t('{formes} {quoi} choisie.', v) : t('Aucune forme {quoi}.', v));
     },
     /** Le contexte permet-il de choisir par operation ? */
     parOperationPossible: procede !== null
@@ -108,15 +121,15 @@ export function commandesSelection(m: ModeleDessin, u: EtatInterface, ac: Action
 export function elementsSelection(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur): ElementMenu[] {
   const c = commandesSelection(m, u, ac), rien = !m.sel.length, vide = !m.dessin.formes.length;
   return [
-    { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: vide, onClick: c.tout },
-    { id: 'aucun', libelle: 'Désélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: c.rien },
-    { id: 'inverser', libelle: 'Inverser la sélection', icone: 'inverser-selection', raccourci: 'I', desactive: vide, onClick: c.inverser },
-    { id: 'meme-couleur', libelle: 'Sélectionner la même couleur de fond', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
-    { id: 'meme-contour', libelle: 'Sélectionner la même couleur de contour', raccourci: 'Alt+C', desactive: rien, onClick: c.memeContour },
-    { id: 'meme-type', libelle: 'Sélectionner le même type', raccourci: 'Y', desactive: rien, onClick: c.memeType },
+    { id: 'tout', libelle: t('Tout sélectionner'), icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: vide, onClick: c.tout },
+    { id: 'aucun', libelle: t('Désélectionner'), icone: 'aucune-selection', raccourci: t('Échap'), desactive: rien, onClick: c.rien },
+    { id: 'inverser', libelle: t('Inverser la sélection'), icone: 'inverser-selection', raccourci: 'I', desactive: vide, onClick: c.inverser },
+    { id: 'meme-couleur', libelle: t('Sélectionner la même couleur de fond'), icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
+    { id: 'meme-contour', libelle: t('Sélectionner la même couleur de contour'), raccourci: 'Alt+C', desactive: rien, onClick: c.memeContour },
+    { id: 'meme-type', libelle: t('Sélectionner le même type'), raccourci: 'Y', desactive: rien, onClick: c.memeType },
     ...(c.parOperationPossible ? [
-      { id: 'tout-decoupe', libelle: 'Sélectionner tout ce qui est à couper', raccourci: 'Alt+Maj+X', desactive: vide, onClick: () => c.parOperation('decoupe') },
-      { id: 'tout-ecriture', libelle: 'Sélectionner tout ce qui est à écrire', raccourci: 'Alt+Maj+E', desactive: vide, onClick: () => c.parOperation('ecriture') }
+      { id: 'tout-decoupe', libelle: t('Sélectionner tout ce qui est à couper'), raccourci: t('Alt+Maj+X'), desactive: vide, onClick: () => c.parOperation('decoupe') },
+      { id: 'tout-ecriture', libelle: t('Sélectionner tout ce qui est à écrire'), raccourci: t('Alt+Maj+E'), desactive: vide, onClick: () => c.parOperation('ecriture') }
     ] satisfies ElementMenu[] : [])
   ];
 }

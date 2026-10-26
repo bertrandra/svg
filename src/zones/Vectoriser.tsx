@@ -16,8 +16,10 @@ import { AtelierResultat, type Essai } from './AtelierResultat.js';
 import { FournisseurSections } from './commun/Section.js';
 import { LotImages } from './LotImages.js';
 import { ChampAdresse, fichierImage, useAdresseDeVoie, type Reception } from './OuvrirAdresse.js';
+import { t } from '../util/i18n.js';
 
-const TOLERANCES: ReadonlyArray<readonly [number, string]> = [[0.04, 'Serrée : seul le fond exact'], [TOLERANCE_DEFAUT, 'Normale'], [0.16, 'Large : un fond irrégulier, une ombre']];
+// Les libelles se traduisent au rendu, pas au chargement du module : la langue n'est posee qu'ensuite.
+const tolerances = (): ReadonlyArray<readonly [number, string]> => [[0.04, t('Serrée : seul le fond exact')], [TOLERANCE_DEFAUT, t('Normale')], [0.16, t('Large : un fond irrégulier, une ombre')]];
 const ESSAIS_MAX = 8;
 /** La pause avant de rejouer : on laisse finir un geste (un curseur qu'on tire) avant de relancer le traceur. */
 const PAUSE_REJEU = 400;
@@ -52,7 +54,7 @@ function ApercuConversion() {
           <svg viewBox="0 0 64 48" focusable="false" shapeRendering="crispEdges">
             {CASES.map(c => <rect key={c.x + ',' + c.y} className={c.forme === 'disque' ? 'forme-a' : 'forme-b'} x={c.x} y={c.y} width={CASE} height={CASE} />)}
           </svg>
-          <span className="aide">Image</span>
+          <span className="aide">{t('Image')}</span>
         </div>
         <svg className="fleche" viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h15M13 6l6 6-6 6" /></svg>
         <div>
@@ -63,22 +65,22 @@ function ApercuConversion() {
           <span className="aide">SVG</span>
         </div>
       </div>
-      <figcaption className="aide">Une image en pixels devient des formes vectorielles, nettes à toute taille. Un logo ou un dessin aux couleurs franches s’y prête le mieux ; plusieurs images déposées d’un coup se convertissent en lot, avec les mêmes réglages.</figcaption>
+      <figcaption className="aide">{t('Une image en pixels devient des formes vectorielles, nettes à toute taille. Un logo ou un dessin aux couleurs franches s’y prête le mieux ; plusieurs images déposées d’un coup se convertissent en lot, avec les mêmes réglages.')}</figcaption>
     </figure>
   );
 }
 
 /** La forme du resultat : de vrais vecteurs, ou l'image gardee telle quelle dans un SVG. */
-function ChoixForme({ t, poserT }: { t: Traitement; poserT: (t: Traitement) => void }) {
-  const vecteurs = t.vecteurs;
+function ChoixForme({ tr, poserT }: { tr: Traitement; poserT: (t: Traitement) => void }) {
+  const vecteurs = tr.vecteurs;
   return (
     <fieldset className="editeur-groupe">
-      <legend>Forme</legend>
-      <div className="mini-onglets" role="group" aria-label="Forme du résultat">
-        <button type="button" aria-pressed={Boolean(vecteurs)} onClick={() => poserT({ ...t, vecteurs: vecteurs ?? TRAITEMENT_DEFAUT.vecteurs })}>Vecteurs (SVG)</button>
-        <button type="button" aria-pressed={!vecteurs} onClick={() => poserT({ ...t, vecteurs: null })}>Garder l’image telle quelle (dans un SVG)</button>
+      <legend>{t('Forme')}</legend>
+      <div className="mini-onglets" role="group" aria-label={t('Forme du résultat')}>
+        <button type="button" aria-pressed={Boolean(vecteurs)} onClick={() => poserT({ ...tr, vecteurs: vecteurs ?? TRAITEMENT_DEFAUT.vecteurs })}>{t('Vecteurs (SVG)')}</button>
+        <button type="button" aria-pressed={!vecteurs} onClick={() => poserT({ ...tr, vecteurs: null })}>{t('Garder l’image telle quelle (dans un SVG)')}</button>
       </div>
-      <p className="aide">{vecteurs ? 'Des formes vectorielles, nettes à toute taille, que l’éditeur sait reprendre. Un dessin plat s’y prête ; une photo non.' : 'L’image détourée, gardée telle quelle dans un SVG : fidèle au pixel, mais l’éditeur ne la retouche pas.'}</p>
+      <p className="aide">{vecteurs ? t('Des formes vectorielles, nettes à toute taille, que l’éditeur sait reprendre. Un dessin plat s’y prête ; une photo non.') : t('L’image détourée, gardée telle quelle dans un SVG : fidèle au pixel, mais l’éditeur ne la retouche pas.')}</p>
     </fieldset>
   );
 }
@@ -90,7 +92,7 @@ function ChoixForme({ t, poserT }: { t: Traitement; poserT: (t: Traitement) => v
  */
 export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: string, svg: string) => void; surImage?: (nom: string, fichier: File) => void; reception?: Reception }) {
   const [source, poserSource] = useState<Deposee | null>(null);
-  const [t, poserT] = useState<Traitement>(TRAITEMENT_DEFAUT);
+  const [tr, poserT] = useState<Traitement>(TRAITEMENT_DEFAUT);
   const [resultat, poserResultat] = useState<ImageConvertie | null>(null);
   const [essais, poserEssais] = useState<readonly Essai[]>([]);
   const [auto, poserAuto] = useState(true);
@@ -115,14 +117,14 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
     // ne le demande pas. Son chargement se dit avant, et ses echecs avec la marche a suivre.
     let traceur: Traceur | undefined;
     if (vtracer && !traceurCharge()) {
-      dire('Chargement du traceur…');
+      dire(t('Chargement du traceur…'));
       try { traceur = await chargerTraceur(); } catch (e) {
         if (mien === jeton.current) { poserEnCours(false); dire(e instanceof Error ? e.message : String(e)); }
         return;
       }
       if (mien !== jeton.current) return;
     }
-    dire(!traitement.vecteurs ? 'Détourage…' : vtracer ? 'Vectorisation…' : 'Tracé de la ligne médiane…');
+    dire(!traitement.vecteurs ? t('Détourage…') : vtracer ? t('Vectorisation…') : t('Tracé de la ligne médiane…'));
     await pause();
     const r = await traiterImage(image, traitement, traceur);
     if (mien !== jeton.current) return;
@@ -138,25 +140,25 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
   // Rejouer a chaque changement : sauf si le resultat montre deja ces reglages sur cette image.
   useEffect(() => {
     if (!auto || !source) return;
-    if (resultat && resultat.source === source.image && cleTraitement(resultat.traitement) === cleTraitement(t)) return;
-    const id = setTimeout(() => { void lancer(source.image, t); }, PAUSE_REJEU);
+    if (resultat && resultat.source === source.image && cleTraitement(resultat.traitement) === cleTraitement(tr)) return;
+    const id = setTimeout(() => { void lancer(source.image, tr); }, PAUSE_REJEU);
     return () => clearTimeout(id);
-  }, [auto, source, t, resultat, lancer]);
+  }, [auto, source, tr, resultat, lancer]);
 
   // L'aperçu prétraité (ce que le traceur lira) se recalcule après une courte pause, hors du chemin du traceur ;
   // le tampon pretraité est mémorisé dans io, le tracé qui suit ne le recalcule pas.
-  const clePre = JSON.stringify([t.pretraitement ?? null, t.detourer, t.tolerance, t.portee]);
+  const clePre = JSON.stringify([tr.pretraitement ?? null, tr.detourer, tr.tolerance, tr.portee]);
   useEffect(() => {
-    if (!source || !t.pretraitement) { poserApercu(null); return; }
+    if (!source || !tr.pretraitement) { poserApercu(null); return; }
     let vivant = true;
-    const id = setTimeout(() => { void pause().then(() => { if (vivant) poserApercu(apercuPretraite(source.image, t)); }); }, PAUSE_APERCU);
+    const id = setTimeout(() => { void pause().then(() => { if (vivant) poserApercu(apercuPretraite(source.image, tr)); }); }, PAUSE_APERCU);
     return () => { vivant = false; clearTimeout(id); };
   }, [source, clePre]);
 
   // Mesurer l'effet du prétraitement : le même tracé sans lui, ajouté aux essais (il ne remplace pas le résultat affiché).
   const mesurerSans = useCallback(() => {
     if (!source) return;
-    const sans = sansPretraitement(t), mien = ++jeton.current;
+    const sans = sansPretraitement(tr), mien = ++jeton.current;
     poserEnCours(true);
     void (async () => {
       await pause();
@@ -166,9 +168,9 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
       if ('erreur' in r) { dire(r.erreur); return; }
       const cle = cleTraitement(sans);
       poserEssais(es => [{ id: mien, traitement: sans, resultat: r }, ...es.filter(e => cleTraitement(e.traitement) !== cle)].slice(0, ESSAIS_MAX));
-      dire('Essai sans prétraitement ajouté : ' + resumeConversion(r) + '.');
+      dire(t('Essai sans prétraitement ajouté : {resume}.', { resume: resumeConversion(r) }));
     })();
-  }, [source, t]);
+  }, [source, tr]);
 
   const deposerUne = (f: File | undefined) => {
     if (!f) return;
@@ -180,7 +182,7 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
       poserResultat(null);
       poserEssais([]);
       poserEnCours(false);
-      dire(r.largeur + ' × ' + r.hauteur + ' px.' + (auto ? ' Vectorisation automatique dans un instant.' : ' Réglez, puis « Vectoriser ».'));
+      dire(auto ? t('{l} × {h} px. Vectorisation automatique dans un instant.', { l: r.largeur, h: r.hauteur }) : t('{l} × {h} px. Réglez, puis « Vectoriser ».', { l: r.largeur, h: r.hauteur }));
     });
   };
   // Une image : le circuit d'avant, inchangé. Plusieurs : la première s'ouvre dans l'atelier (pour régler), et
@@ -190,49 +192,49 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
     poserFichiersLot(liste.length > 1 ? liste : []);
     deposerUne(liste[0]);
   };
-  const adresse = useAdresseDeVoie(reception, t => dire(t), reception?.imageRecue, r => deposer([fichierImage(r)])); // un lien glisse demande l'image
+  const adresse = useAdresseDeVoie(reception, m => dire(m), reception?.imageRecue, r => deposer([fichierImage(r)])); // un lien glisse demande l'image
   const glisser = (e: DragEvent<HTMLElement>) => { e.preventDefault(); poserSurvol(false); if (e.dataTransfer.files.length || !adresse.lienDepose(e.dataTransfer)) deposer(e.dataTransfer.files); };
 
   return (
     <FournisseurSections>
-      <section className="vectoriser" aria-label="Convertir une image en SVG">
-        <h2 className="sr-only">Convertir une image en SVG</h2>
+      <section className="vectoriser" aria-label={t('Convertir une image en SVG')}>
+        <h2 className="sr-only">{t('Convertir une image en SVG')}</h2>
         <div className={'depot petit' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={glisser}>
           {source ? null : <ApercuConversion />}
-          {source ? <img className="miniature" src={source.original} alt={'Image déposée : ' + source.nom} /> : null}
-          <p>{source ? source.nom + ' · ' + source.image.largeur + ' × ' + source.image.hauteur + ' px' : 'Déposez un PNG, un JPG, un GIF ou un WebP, ou'}</p>
-          <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>
+          {source ? <img className="miniature" src={source.original} alt={t('Image déposée : {nom}', { nom: source.nom })} /> : null}
+          <p>{source ? t('{nom} · {l} × {h} px', { nom: source.nom, l: source.image.largeur, h: source.image.hauteur }) : t('Déposez un PNG, un JPG, un GIF ou un WebP, ou')}</p>
+          <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? t('Changer d’image…') : t('Choisir une image…')}</button>
           <input ref={entree} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden onChange={e => { deposer(e.target.files); e.target.value = ''; }} />
         </div>
-        {reception ? <ChampAdresse t={adresse.t} aide="Une image PNG, JPEG, GIF, WebP ou BMP ; un SVG ou un PDF s’ouvre dans l’éditeur." /> : null}
+        {reception ? <ChampAdresse t={adresse.t} aide={t('Une image PNG, JPEG, GIF, WebP ou BMP ; un SVG ou un PDF s’ouvre dans l’éditeur.')} /> : null}
         {source ? (
           <div className="reglages-image">
             <fieldset className="editeur-groupe">
-              <legend>Fond</legend>
-              <label className="case"><input type="checkbox" checked={t.detourer} onChange={e => poserT({ ...t, detourer: e.target.checked })} /> Détourer le fond</label>
-              {t.detourer ? (
+              <legend>{t('Fond')}</legend>
+              <label className="case"><input type="checkbox" checked={tr.detourer} onChange={e => poserT({ ...tr, detourer: e.target.checked })} /> {t('Détourer le fond')}</label>
+              {tr.detourer ? (
                 <>
-                  <label className="champ-ligne"><span>Tolérance</span>
-                    <select value={String(t.tolerance)} onChange={e => poserT({ ...t, tolerance: Number(e.target.value) })}>
-                      {TOLERANCES.map(([v, l]) => <option key={v} value={String(v)}>{l}</option>)}
+                  <label className="champ-ligne"><span>{t('Tolérance')}</span>
+                    <select value={String(tr.tolerance)} onChange={e => poserT({ ...tr, tolerance: Number(e.target.value) })}>
+                      {tolerances().map(([v, l]) => <option key={v} value={String(v)}>{l}</option>)}
                     </select>
                   </label>
-                  <label className="case" title="Rend transparente la couleur de fond partout, y compris à l’intérieur des formes : l’œil d’une lettre, un aplat de la même couleur">
-                    <input type="checkbox" checked={t.portee === 'partout'} onChange={e => poserT({ ...t, portee: e.target.checked ? 'partout' : 'bord' })} /> Sur toute l’image : transparence complète de cette couleur
+                  <label className="case" title={t('Rend transparente la couleur de fond partout, y compris à l’intérieur des formes : l’œil d’une lettre, un aplat de la même couleur')}>
+                    <input type="checkbox" checked={tr.portee === 'partout'} onChange={e => poserT({ ...tr, portee: e.target.checked ? 'partout' : 'bord' })} /> {t('Sur toute l’image : transparence complète de cette couleur')}
                   </label>
-                  <p className="aide">{t.portee === 'partout' ? 'Chaque pixel de la couleur du bord s’efface, où qu’il soit.' : 'Seuls les pixels reliés au bord s’effacent ; un blanc enfermé dans une forme reste.'}</p>
+                  <p className="aide">{tr.portee === 'partout' ? t('Chaque pixel de la couleur du bord s’efface, où qu’il soit.') : t('Seuls les pixels reliés au bord s’effacent ; un blanc enfermé dans une forme reste.')}</p>
                 </>
               ) : null}
             </fieldset>
-            <ChoixForme t={t} poserT={poserT} />
+            <ChoixForme tr={tr} poserT={poserT} />
           </div>
         ) : message ? <p className="aide" role="status">{message}</p> : null}
-        {fichiersLot.length > 1 ? <LotImages fichiers={fichiersLot} traitement={t} ouvrir={ouvrir} fermer={() => poserFichiersLot([])} /> : null}
+        {fichiersLot.length > 1 ? <LotImages fichiers={fichiersLot} traitement={tr} ouvrir={ouvrir} fermer={() => poserFichiersLot([])} /> : null}
         {source ? (
-          <AtelierResultat nom={source.nom} source={source.image} original={source.original} t={t} poserT={poserT} resultat={resultat} essais={essais}
+          <AtelierResultat nom={source.nom} source={source.image} original={source.original} t={tr} poserT={poserT} resultat={resultat} essais={essais}
             auto={auto} poserAuto={poserAuto} enCours={enCours} message={message} ouvrir={ouvrir} apercu={apercu} mesurerSans={mesurerSans}
-            rejouer={() => { void lancer(source.image, t); }}
-            reprendre={e => { poserT(e.traitement); poserResultat(e.resultat); dire('Réglages de l’essai repris.'); }} />
+            rejouer={() => { void lancer(source.image, tr); }}
+            reprendre={e => { poserT(e.traitement); poserResultat(e.resultat); dire(t('Réglages de l’essai repris.')); }} />
         ) : null}
       </section>
     </FournisseurSections>

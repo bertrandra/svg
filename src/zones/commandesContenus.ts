@@ -15,6 +15,7 @@ import { porteurDe } from './actionsContenus.js';
 import { RAISONS_CONTENUS, RAISONS_LENTILLE } from './phrasesContenus.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
 import { dessinComplet, lentilleDe, niveauEdition } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 /**
  * Les elements des decoupes et des masques au menu Edition, en modele riche seulement (vide sinon). « Modifier la découpe » et « Modifier
@@ -28,12 +29,12 @@ export function elementsContenus(m: Pick<ModeleDessin, 'dessin' | 'sel' | 'compl
   const decoupe = l ? l.genre === 'decoupe' : porteurDe(m.dessin, m.sel, contexte, 'decoupe') !== null;
   const masque = l ? l.genre === 'masque' : porteurDe(m.dessin, m.sel, contexte, 'masque') !== null;
   return [
-    { id: 'creer-decoupe', libelle: 'Créer une découpe', icone: 'decoupe', separateur: true, desactive: !deux, raison: RAISONS_CONTENUS.deux, onClick: ac.creerDecoupe },
-    { id: 'modifier-decoupe', libelle: 'Modifier la découpe', desactive: !!l || !decoupe, raison: l ? RAISONS_LENTILLE.dejaDedans : RAISONS_LENTILLE.modifierDecoupe, onClick: () => { ac.modifierContenu('decoupe'); } },
-    { id: 'liberer-decoupe', libelle: 'Libérer la découpe', desactive: !decoupe, raison: l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.decoupe, onClick: ac.libererDecoupe },
-    { id: 'creer-masque', libelle: 'Créer un masque', icone: 'masque', desactive: !deux || dansDecoupe, raison: dansDecoupe ? RAISONS_LENTILLE.decoupe : RAISONS_CONTENUS.deux, onClick: ac.creerMasque },
-    { id: 'modifier-masque', libelle: 'Modifier le masque', desactive: !!l || !masque, raison: l ? RAISONS_LENTILLE.dejaDedans : RAISONS_LENTILLE.modifierMasque, onClick: () => { ac.modifierContenu('masque'); } },
-    { id: 'inverser-masque', libelle: 'Inverser le masque', desactive: !masque, raison: l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.masque, onClick: ac.inverserMasque },
-    { id: 'liberer-masque', libelle: 'Libérer le masque', desactive: !masque, raison: l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.masque, onClick: ac.libererMasque }
+    { id: 'creer-decoupe', libelle: t('Créer une découpe'), icone: 'decoupe', separateur: true, desactive: !deux, raison: t(RAISONS_CONTENUS.deux), onClick: ac.creerDecoupe },
+    { id: 'modifier-decoupe', libelle: t('Modifier la découpe'), desactive: !!l || !decoupe, raison: t(l ? RAISONS_LENTILLE.dejaDedans : RAISONS_LENTILLE.modifierDecoupe), onClick: () => { ac.modifierContenu('decoupe'); } },
+    { id: 'liberer-decoupe', libelle: t('Libérer la découpe'), desactive: !decoupe, raison: t(l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.decoupe), onClick: ac.libererDecoupe },
+    { id: 'creer-masque', libelle: t('Créer un masque'), icone: 'masque', desactive: !deux || dansDecoupe, raison: t(dansDecoupe ? RAISONS_LENTILLE.decoupe : RAISONS_CONTENUS.deux), onClick: ac.creerMasque },
+    { id: 'modifier-masque', libelle: t('Modifier le masque'), desactive: !!l || !masque, raison: t(l ? RAISONS_LENTILLE.dejaDedans : RAISONS_LENTILLE.modifierMasque), onClick: () => { ac.modifierContenu('masque'); } },
+    { id: 'inverser-masque', libelle: t('Inverser le masque'), desactive: !masque, raison: t(l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.masque), onClick: ac.inverserMasque },
+    { id: 'liberer-masque', libelle: t('Libérer le masque'), desactive: !masque, raison: t(l ? RAISONS_LENTILLE.autreContenu : RAISONS_CONTENUS.masque), onClick: ac.libererMasque }
   ];
 }

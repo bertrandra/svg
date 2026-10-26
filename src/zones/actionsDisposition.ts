@@ -11,6 +11,7 @@ import { appliquerChangement, dispositionPour, formePorteuse, policeDe, poseApre
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { PHRASE_FORME_REFUSEE, PHRASE_LIBRE, PHRASE_TAILLE_AJUSTEE, phraseDepassement, phraseFormeVisible, phrasePose, phraseRemplir, phraseRienNeTient, remplit, type ModeDisposition } from './phrasesDisposition.js';
+import { t } from '../util/i18n.js';
 
 /** Les formes qui peuvent porter ce texte, dans l'ordre du dessin : visibles, deverrouillees, pas des textes. */
 export const candidatesPour = (d: DessinSvg, idTexte: string): Forme[] => d.formes.filter(f => f.visible && !f.verrouille && peutPorter(f, idTexte));
@@ -50,9 +51,9 @@ export function useDisposition() {
   const poser = useCallback((idTexte: string, idForme: string, mode: ModeDisposition): boolean => {
     const f = dessin.formes.find(x => x.id === idTexte), base = formePorteuse(dessin, idForme, idTexte);
     if (!f?.texte) return false;
-    if (f.verrouille) { ac.dire('Ce texte est verrouillé : déverrouillez-le pour le poser sur une forme.'); return false; }
-    if (!base) { ac.dire(PHRASE_FORME_REFUSEE); return false; }
-    if (!policeDe(f, polices)) { ac.dire(polices ? 'Police absente : choisissez-en une pour poser le texte.' : 'Les polices se chargent encore : recommencez dans un instant.'); return false; }
+    if (f.verrouille) { ac.dire(t('Ce texte est verrouillé : déverrouillez-le pour le poser sur une forme.')); return false; }
+    if (!base) { ac.dire(t(PHRASE_FORME_REFUSEE)); return false; }
+    if (!policeDe(f, polices)) { ac.dire(polices ? t('Police absente : choisissez-en une pour poser le texte.') : t('Les polices se chargent encore : recommencez dans un instant.')); return false; }
     const avant = f.texte.disposition, memeForme = avant?.forme === base.id, dispo = dispositionPour(mode, base, memeForme ? avant : undefined);
     // Passer de deforme a en lignes (ou l'inverse) dans la meme forme garde l'alignement : c'est toujours « dans la forme ».
     const bascule = memeForme && remplit(avant?.mode) && remplit(mode);
@@ -65,14 +66,14 @@ export function useDisposition() {
     if (!r) { ac.dire(phraseRienNeTient(mode, mode === 'enveloppe' && police ? poseApres(dessin, idTexte, c, police)?.refus : undefined)); return false; }
     ac.choisir([idTexte]);
     const { depasse, nonPlaces } = depassementDe(r.dessin, idTexte, r.police);
-    ac.dire((bascule && remplit(mode) ? phraseRemplir(mode) : phrasePose(mode, base, depasse, nonPlaces)) + (ajustee ? ' ' + PHRASE_TAILLE_AJUSTEE : ''));
+    ac.dire((bascule && remplit(mode) ? phraseRemplir(mode) : phrasePose(mode, base, depasse, nonPlaces)) + (ajustee ? ' ' + t(PHRASE_TAILLE_AJUSTEE) : ''));
     return true;
   }, [ac, changer, dessin, polices]);
 
   /** Le texte redevient libre, compose en ligne droite a son point d'ancrage. */
   const liberer = useCallback((idTexte: string) => {
     if (!dessin.formes.find(x => x.id === idTexte)?.texte?.disposition) return;
-    if (changer(idTexte, { disposition: null })) ac.dire(PHRASE_LIBRE);
+    if (changer(idTexte, { disposition: null })) ac.dire(t(PHRASE_LIBRE));
   }, [ac, changer, dessin]);
 
   /**
@@ -80,8 +81,8 @@ export function useDisposition() {
    * fond un geste continu (la poignee de depart) en une entree ; `taire` laisse dire l'appelant.
    */
   const regler = useCallback((idTexte: string, r: ReglageDisposition, cle?: string | null, taire = false): { dessin: DessinSvg; police: Police } | null => {
-    const t = dessin.formes.find(x => x.id === idTexte)?.texte, p = t?.disposition;
-    if (!t || !p) return null;
+    const tv = dessin.formes.find(x => x.id === idTexte)?.texte, p = tv?.disposition;
+    if (!tv || !p) return null;
     const neuve = { ...p, ...r } as DispositionTexte;
     const fait = changer(idTexte, { disposition: neuve, ...(neuve.mode === 'dans' && neuve.justifier ? { alignement: 'gauche' as const } : {}) }, cle);
     if (!fait) {
@@ -94,7 +95,7 @@ export function useDisposition() {
       const avant = depassementDe(dessin, idTexte, fait.police);
       const dit = phraseDepassement(p.mode, depasse, nonPlaces);
       if (dit && (depasse !== avant.depasse || nonPlaces !== avant.nonPlaces)) ac.dire(dit);
-      else if (!dit && (avant.depasse || avant.nonPlaces)) ac.dire(p.mode === 'sur' ? 'Tout le texte tient sur le tracé.' : 'Tout le texte tient dans la forme.');
+      else if (!dit && (avant.depasse || avant.nonPlaces)) ac.dire(p.mode === 'sur' ? t('Tout le texte tient sur le tracé.') : t('Tout le texte tient dans la forme.'));
     }
     return fait;
   }, [ac, changer, dessin, polices]);

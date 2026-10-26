@@ -9,12 +9,13 @@ import { Section } from './commun/Section.js';
 import { Nombre } from './commun/Nombre.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { Icone } from './icones.js';
+import { t } from '../util/i18n.js';
 
 /** Le nom accessible du verrou : fixe, c'est `aria-pressed` qui porte l'etat (un nom qui changerait serait lu deux fois). */
-export const NOM_VERROU_PROPORTIONS = 'Conserver les proportions';
+export const nomVerrouProportions = (): string => t('Conserver les proportions');
 
 /** L'infobulle du verrou : ce qu'il fait, et ce que Maj devient sur un coin. */
-export const AIDE_VERROU_PROPORTIONS = 'Conserver les proportions : la hauteur suit la largeur, et l’inverse, aux champs, aux coins et au clavier (Alt et flèches). Sur un coin, Maj inverse le réglage le temps du geste.';
+export const aideVerrouProportions = (): string => t('Conserver les proportions : la hauteur suit la largeur, et l’inverse, aux champs, aux coins et au clavier (Alt et flèches). Sur un coin, Maj inverse le réglage le temps du geste.');
 
 export function SectionPositionTaille({ boite }: { boite: Boite }) {
   const mo = useDessin(), ac = useActions(), { verrouProportions } = useInterface();
@@ -30,17 +31,17 @@ export function SectionPositionTaille({ boite }: { boite: Boite }) {
     ac.annoncer(phraseTaille(apres, sel));
   };
   return (
-    <Section titre="Position et taille" ouverte>
+    <Section titre={t('Position et taille')} ouverte>
       <div className="grille-2 grille-taille">
         <Nombre libelle="X" valeur={boite.x} poser={v => placer({ ...boite, x: v })} />
         <span aria-hidden="true" />
         <Nombre libelle="Y" valeur={boite.y} poser={v => placer({ ...boite, y: v })} />
-        <Nombre libelle="L" valeur={boite.l} min={0} poser={v => poserCote('l', v)} />
-        <button type="button" className="icone-bouton verrou-proportions" aria-label={NOM_VERROU_PROPORTIONS} title={AIDE_VERROU_PROPORTIONS}
+        <Nombre libelle={t('L')} valeur={boite.l} min={0} poser={v => poserCote('l', v)} />
+        <button type="button" className="icone-bouton verrou-proportions" aria-label={nomVerrouProportions()} title={aideVerrouProportions()}
           aria-pressed={verrouProportions} onClick={() => ac.poserVerrouProportions(!verrouProportions)}>
           <Icone nom={verrouProportions ? 'proportions-liees' : 'proportions-libres'} />
         </button>
-        <Nombre libelle="H" valeur={boite.h} min={0} poser={v => poserCote('h', v)} />
+        <Nombre libelle={t('H')} valeur={boite.h} min={0} poser={v => poserCote('h', v)} />
       </div>
     </Section>
   );

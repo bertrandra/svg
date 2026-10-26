@@ -13,11 +13,12 @@ import { useStockage } from './contexteStockage.js';
 import { dateCourte } from './session.js';
 import { optionsModele, refusModele } from './modele.js';
 import { dessinComplet } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 export function PanneauVersions() {
   const mo = useDessin(), ac = useActions(), { production, modele } = useInterface(), stockage = useStockage();
   const [nom, poserNom] = useState('');
-  const garder = () => { ac.garderVersion(nom.trim() || 'Version ' + (mo.versions.length + 1), svgDocument(dessinComplet(mo), production)); poserNom(''); };
+  const garder = () => { ac.garderVersion(nom.trim() || t('Version {n}', { n: mo.versions.length + 1 }), svgDocument(dessinComplet(mo), production)); poserNom(''); };
   const revenir = (svg: string, nomVersion: string) => {
     // Une version ecrite en modele riche ne se rouvre pas a plat (annexe 5 §3) : on le dit, elle reste gardee.
     const refus = refusModele(svg, modele, 'version');
@@ -26,32 +27,33 @@ export function PanneauVersions() {
     if ('erreur' in lu) { ac.dire(lu.erreur); return; }
     ac.appliquer(() => lu.dessin);
     ac.choisir([]);
-    ac.dire('Retour à « ' + nomVersion + ' » ; Ctrl+Z revient en arrière.');
+    ac.dire(t('Retour à « {nom} » ; Ctrl+Z revient en arrière.', { nom: nomVersion }));
   };
   return (
-    <Section titre="Versions nommées" note={mo.versions.length || undefined}>
+    <Section titre={t('Versions nommées')} note={mo.versions.length || undefined}>
       <div className="champ-ligne">
-        <input type="text" value={nom} placeholder="avant recoloration…" aria-label="Nom de la version" onChange={e => poserNom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') garder(); }} />
-        <button type="button" onClick={garder}>Garder</button>
+        <input type="text" value={nom} placeholder={t('avant recoloration…')} aria-label={t('Nom de la version')} onChange={e => poserNom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') garder(); }} />
+        <button type="button" onClick={garder}>{t('Garder')}</button>
       </div>
       {mo.versions.length ? (
         <ul className="versions">
           {mo.versions.map(v => (
             <li key={v.id}>
               <span className="nom-version" title={dateCourte(v.quand)}>{v.nom} <span className="aide">{dateCourte(v.quand)}</span></span>
-              <button type="button" className="discret" onClick={() => revenir(v.svg, v.nom)}>Revenir</button>
+              <button type="button" className="discret" onClick={() => revenir(v.svg, v.nom)}>{t('Revenir')}</button>
               <button type="button" className="discret" onClick={() => { void proposer(v.nom.replace(/[^\w-]+/g, '-') + '.svg', texteOctets(v.svg)).then(ac.dire); }}>SVG</button>
-              <Bouton icone="supprimer" aide={'Supprimer la version ' + v.nom} onClick={() => ac.supprimerVersion(v.id)} />
+              <Bouton icone="supprimer" aide={t('Supprimer la version {nom}', { nom: v.nom })} onClick={() => ac.supprimerVersion(v.id)} />
             </li>
           ))}
         </ul>
       ) : (
-        <EtatVide genre="premiere-fois" icone="versions" titre="Aucune version gardée.">
-          {'Une version garde le dessin tel qu’il est, pour y revenir plus tard (avant de tout recolorer, par exemple) : nommez-la, puis « Garder ». '
-            + (stockage ? 'Elle reste dans ce navigateur.' : 'Ici, elle ne dure que le temps de l’édition.')}
+        <EtatVide genre="premiere-fois" icone="versions" titre={t('Aucune version gardée.')}>
+          {stockage
+            ? t('Une version garde le dessin tel qu’il est, pour y revenir plus tard (avant de tout recolorer, par exemple) : nommez-la, puis « Garder ». Elle reste dans ce navigateur.')
+            : t('Une version garde le dessin tel qu’il est, pour y revenir plus tard (avant de tout recolorer, par exemple) : nommez-la, puis « Garder ». Ici, elle ne dure que le temps de l’édition.')}
         </EtatVide>
       )}
-      {mo.versions.length ? <button type="button" className="discret" onClick={() => { void proposer('versions.json', texteOctets(JSON.stringify(mo.versions, null, 1))).then(ac.dire); }}>Exporter les versions (JSON)</button> : null}
+      {mo.versions.length ? <button type="button" className="discret" onClick={() => { void proposer('versions.json', texteOctets(JSON.stringify(mo.versions, null, 1))).then(ac.dire); }}>{t('Exporter les versions (JSON)')}</button> : null}
     </Section>
   );
 }

@@ -5,12 +5,15 @@
 // une fois (« Effets affichés au repos »). Les mesures sont dans l'annexe 8 du plan, §0.
 
 import { aDesEffets, type DessinSvg } from '../engine/editionSvg.js';
+import { t } from '../util/i18n.js';
 
 /** Au-dela de ce nombre de feuilles et de groupes a effet, les effets ne se rendent qu'au repos (annexe 6 §6). */
 export const SEUIL_EFFETS_AU_REPOS = 20;
 
 /** La phrase dite une fois, au premier geste qui retire les effets. */
-export const PHRASE_EFFETS_AU_REPOS = 'Effets affichés au repos : au-delà de ' + SEUIL_EFFETS_AU_REPOS + ' formes ou groupes à effet, flous et ombres se masquent pendant un geste.';
+export const phraseEffetsAuRepos = (): string => t('Effets affichés au repos : au-delà de {n} formes ou groupes à effet, flous et ombres se masquent pendant un geste.', { n: SEUIL_EFFETS_AU_REPOS });
+/** La constante d'avant, pour Gestes.ts : evaluee au chargement du module, donc en francais ; la fonction suit la langue de la session. */
+export const PHRASE_EFFETS_AU_REPOS = phraseEffetsAuRepos();
 
 const memo = new WeakMap<DessinSvg, number>();
 

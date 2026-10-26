@@ -19,7 +19,7 @@ import { policesPosees } from '../io/polices.js';
 import { FenetreIncompatible } from './Incompatible.js';
 import { estModele, optionsModele } from './modele.js';
 import { avertissementLangue, preparerLangue } from '../io/langue.js';
-import { definirLangue, estLangue, type Langue } from '../util/i18n.js';
+import { definirLangue, estLangue, t, type Langue } from '../util/i18n.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
 export const RACINE_EDITEUR = '.editeur-svg';
@@ -111,36 +111,36 @@ const sansBlancs = (t: string): string => t.replace(/[\s\p{Cc}]/gu, '');
 
 /** Le premier defaut des options, dit en clair, ou null quand elles sont bonnes. L'hote n'est pas type : on verifie. */
 export function verifierOptions(options: unknown): string | null {
-  if (typeof options !== 'object' || options === null) return 'ouvrir attend un objet d’options { svg, onEnregistrer, … }.';
+  if (typeof options !== 'object' || options === null) return t('ouvrir attend un objet d’options { svg, onEnregistrer, … }.');
   const o = options as Record<string, unknown>;
-  if (typeof o.svg !== 'string' || o.svg.trim() === '') return 'L’option « svg » doit être le texte du SVG à retoucher.';
-  if (o.svg.length > LIMITES_XML.caracteres) return 'L’option « svg » dépasse ' + Math.round(LIMITES_XML.caracteres / 1048576) + ' millions de caractères : l’éditeur ne l’ouvrirait pas.';
-  if (!estFonction(o.onEnregistrer)) return 'L’option « onEnregistrer » est obligatoire : c’est une fonction qui reçoit le SVG retouché.';
-  for (const cle of ['onFermer', 'onBrouillon'] as const) if (o[cle] !== undefined && !estFonction(o[cle])) return 'L’option « ' + cle + ' » doit être une fonction.';
-  for (const cle of ['titre', 'nom', 'baseAnnexes'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'string') return 'L’option « ' + cle + ' » doit être un texte.';
-  for (const cle of ['titre', 'nom'] as const) if (typeof o[cle] === 'string' && o[cle].length > LONGUEUR_NOM_MAX) return 'L’option « ' + cle + ' » dépasse ' + LONGUEUR_NOM_MAX + ' caractères.';
-  if (typeof o.baseAnnexes === 'string' && SCHEMA_ACTIF.test(sansBlancs(o.baseAnnexes))) return 'L’option « baseAnnexes » doit être un dossier de votre site (chemin relatif ou adresse http(s)), pas une adresse « ' + o.baseAnnexes.slice(0, 20).trim() + ' ».';
-  if (o.nuancier !== undefined && !Array.isArray(o.nuancier)) return 'L’option « nuancier » doit être une liste de { nom, hex }.';
+  if (typeof o.svg !== 'string' || o.svg.trim() === '') return t('L’option « svg » doit être le texte du SVG à retoucher.');
+  if (o.svg.length > LIMITES_XML.caracteres) return t('L’option « svg » dépasse {n} millions de caractères : l’éditeur ne l’ouvrirait pas.', { n: Math.round(LIMITES_XML.caracteres / 1048576) });
+  if (!estFonction(o.onEnregistrer)) return t('L’option « onEnregistrer » est obligatoire : c’est une fonction qui reçoit le SVG retouché.');
+  for (const cle of ['onFermer', 'onBrouillon'] as const) if (o[cle] !== undefined && !estFonction(o[cle])) return t('L’option « {cle} » doit être une fonction.', { cle });
+  for (const cle of ['titre', 'nom', 'baseAnnexes'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'string') return t('L’option « {cle} » doit être un texte.', { cle });
+  for (const cle of ['titre', 'nom'] as const) if (typeof o[cle] === 'string' && o[cle].length > LONGUEUR_NOM_MAX) return t('L’option « {cle} » dépasse {n} caractères.', { cle, n: LONGUEUR_NOM_MAX });
+  if (typeof o.baseAnnexes === 'string' && SCHEMA_ACTIF.test(sansBlancs(o.baseAnnexes))) return t('L’option « baseAnnexes » doit être un dossier de votre site (chemin relatif ou adresse http(s)), pas une adresse « {adresse} ».', { adresse: o.baseAnnexes.slice(0, 20).trim() });
+  if (o.nuancier !== undefined && !Array.isArray(o.nuancier)) return t('L’option « nuancier » doit être une liste de { nom, hex }.');
   if (o.bibliotheque !== undefined && o.bibliotheque !== 'a-charger' && normaliserBibliotheque(o.bibliotheque) === null) {
-    return 'L’option « bibliotheque » doit être « a-charger » ou la bibliothèque déjà chargée (un objet avec une liste « entrees »).';
+    return t('L’option « bibliotheque » doit être « a-charger » ou la bibliothèque déjà chargée (un objet avec une liste « entrees »).');
   }
   if (o.stockage !== undefined && o.stockage !== false && o.stockage !== null && !estStockage(o.stockage)) {
-    return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
+    return t('L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.');
   }
-  for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
-  if (o.modele !== undefined && !estModele(o.modele)) return 'L’option « modele » doit être « plat » (par défaut) ou « riche ».';
-  if (o.langue !== undefined && !estLangue(o.langue)) return 'L’option « langue » doit être « fr » (par défaut) ou « en ».';
+  for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return t('L’option « {cle} » doit être vraie ou fausse.', { cle });
+  if (o.modele !== undefined && !estModele(o.modele)) return t('L’option « modele » doit être « plat » (par défaut) ou « riche ».');
+  if (o.langue !== undefined && !estLangue(o.langue)) return t('L’option « langue » doit être « fr » (par défaut) ou « en ».');
   return verifierLibelle(o.libelleEnregistrer);
 }
 
 /** Le defaut de l'option `libelleEnregistrer`, ou null : absente, ou un texte d'une ligne de 1 a 40 caracteres (blancs du bord retires). */
 export function verifierLibelle(v: unknown): string | null {
   if (v === undefined) return null;
-  if (typeof v !== 'string') return 'L’option « libelleEnregistrer » doit être un texte, par exemple « Valider ».';
-  const t = v.trim();
-  if (t === '') return 'L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».';
-  if (CONTROLE.test(t)) return 'L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.';
-  if ([...t].length > LONGUEUR_LIBELLE_MAX) return 'L’option « libelleEnregistrer » dépasse ' + LONGUEUR_LIBELLE_MAX + ' caractères : le libellé ne tiendrait plus dans le menu Fichier ni dans la confirmation.';
+  if (typeof v !== 'string') return t('L’option « libelleEnregistrer » doit être un texte, par exemple « Valider ».');
+  const texte = v.trim();
+  if (texte === '') return t('L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».');
+  if (CONTROLE.test(texte)) return t('L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.');
+  if ([...texte].length > LONGUEUR_LIBELLE_MAX) return t('L’option « libelleEnregistrer » dépasse {n} caractères : le libellé ne tiendrait plus dans le menu Fichier ni dans la confirmation.', { n: LONGUEUR_LIBELLE_MAX });
   return null;
 }
 
@@ -204,7 +204,7 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
   const ouvrir = (options: OptionsEmbarquees): PoigneeEditeur => {
     const defaut = verifierOptions(options);
     if (defaut !== null) throw new TypeError('EditeurSvg.ouvrir : ' + defaut);
-    if (ouvert) throw new Error('EditeurSvg.ouvrir : un éditeur est déjà ouvert ; fermez-le d’abord (poignée.fermer()).');
+    if (ouvert) throw new Error('EditeurSvg.ouvrir : ' + t('un éditeur est déjà ouvert ; fermez-le d’abord (poignée.fermer()).'));
     poserStyle(feuille);
     definirBaseAnnexes(options.baseAnnexes ?? '');
     const conteneur = document.createElement('div');

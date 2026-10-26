@@ -17,6 +17,7 @@ import type { ElementMenu } from './commun/Menu.js';
 import { groupesActifs } from './modele.js';
 import { phraseEntreeGroupe, phraseNiveau } from './phrasesGroupes.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 // Les groupes se commandent-ils ? (modele.ts, sans dependance : les actions du texte la lisent aussi.)
 export { groupesActifs };
@@ -46,7 +47,7 @@ export function entrerDansGroupe(m: Pick<ModeleDessin, 'dessin'>, ac: ActionsEdi
 
 /** Sortir d'un niveau (Maj+Entree, menu) ; a la racine, le dire plutot que ne rien faire en silence. */
 export function sortirDuGroupe(ac: ActionsEditeur): void {
-  if (!ac.sortirGroupe()) ac.annoncer('Vous êtes déjà à la racine du dessin.');
+  if (!ac.sortirGroupe()) ac.annoncer(t('Vous êtes déjà à la racine du dessin.'));
 }
 
 /**
@@ -87,7 +88,7 @@ export function remonterDansLentille(m: Pick<ModeleDessin, 'dessin' | 'complet'>
   ac.poserContexte(cible !== null ? { groupe: cible } : null);
   ac.choisir(quitte !== null ? [quitte] : []);
   ac.poserPoint(null);
-  ac.annoncer((l.genre === 'decoupe' ? 'Découpe reposée. ' : 'Masque reposé. ') + phraseNiveau(complet, cible));
+  ac.annoncer((l.genre === 'decoupe' ? t('Découpe reposée.') : t('Masque reposé.')) + ' ' + phraseNiveau(complet, cible));
 }
 
 /**
@@ -98,12 +99,12 @@ export function elementsGroupes(m: ModeleDessin, u: EtatInterface, ac: ActionsEd
   if (!groupesActifs(dessinComplet(m), u.modele)) return [];
   const seul = groupeSeul(m);
   return [
-    { id: 'grouper', libelle: 'Grouper', icone: 'grouper', raccourci: 'Ctrl+G', separateur: true, desactive: !m.sel.length, onClick: ac.grouper },
-    { id: 'degrouper', libelle: 'Dégrouper', icone: 'degrouper', raccourci: 'Ctrl+Maj+G', desactive: !aUnGroupe(m), onClick: ac.degrouper },
-    { id: 'entrer-groupe', libelle: 'Entrer dans le groupe', raccourci: 'Entrée', desactive: seul === null, onClick: () => { if (seul !== null) entrerDansGroupe(m, ac, seul); } },
-    { id: 'sortir-groupe', libelle: 'Sortir du groupe', raccourci: 'Maj+Entrée', desactive: !u.contexte, onClick: () => sortirDuGroupe(ac) },
+    { id: 'grouper', libelle: t('Grouper'), icone: 'grouper', raccourci: 'Ctrl+G', separateur: true, desactive: !m.sel.length, onClick: ac.grouper },
+    { id: 'degrouper', libelle: t('Dégrouper'), icone: 'degrouper', raccourci: t('Ctrl+Maj+G'), desactive: !aUnGroupe(m), onClick: ac.degrouper },
+    { id: 'entrer-groupe', libelle: t('Entrer dans le groupe'), raccourci: t('Entrée'), desactive: seul === null, onClick: () => { if (seul !== null) entrerDansGroupe(m, ac, seul); } },
+    { id: 'sortir-groupe', libelle: t('Sortir du groupe'), raccourci: t('Maj+Entrée'), desactive: !u.contexte, onClick: () => sortirDuGroupe(ac) },
     // Le motif (ADR-0012, etape 9) : la commande minimale, en riche seulement ; son interface complete (contexte « motif ») attend l'etape 8.
-    { id: 'creer-motif', libelle: 'Créer un motif depuis la sélection', separateur: true, desactive: !m.sel.length, onClick: () => creerMotifDepuisSelection(m, ac) }
+    { id: 'creer-motif', libelle: t('Créer un motif depuis la sélection'), separateur: true, desactive: !m.sel.length, onClick: () => creerMotifDepuisSelection(m, ac) }
   ];
 }
 
@@ -114,9 +115,9 @@ export function elementsGroupes(m: ModeleDessin, u: EtatInterface, ac: ActionsEd
  */
 export function creerMotifDepuisSelection(m: Pick<ModeleDessin, 'dessin' | 'sel'>, ac: ActionsEditeur): void {
   const r = creerMotif(m.dessin, m.sel);
-  if (r.id === null) { ac.dire(r.erreur ?? MSG_MOTIF.selection); return; }
+  if (r.id === null) { ac.dire(r.erreur ?? t(MSG_MOTIF.selection)); return; }
   const id = r.id;
-  ac.faire(() => r.dessin, 'Motif créé : la sélection se répète dans un rectangle, à sa place. Ctrl+Z la rend.');
+  ac.faire(() => r.dessin, t('Motif créé : la sélection se répète dans un rectangle, à sa place. Ctrl+Z la rend.'));
   ac.choisir([id]);
   ac.poserPoint(null);
 }

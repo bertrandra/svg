@@ -4,6 +4,7 @@ import type { Booleen } from '../engine/booleens.js';
 import { genreDeForme } from '../engine/description.js';
 import { FICHES_FORMES, FORMES_DE_BASE, type Forme, type Style } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import type { Outil, OutilForme, Point } from './typesEditeur.js';
 
 /** Les outils qui tracent une forme d'un glisser : les formes de base de la palette (ADR-0033). */
@@ -19,7 +20,7 @@ export const styleLigne = (s: Style): Style => ({ remplissage: null, contour: s.
 export const styleDeForme = (outil: OutilForme, s: Style): Style => (FICHES_FORMES[outil].trait ? styleLigne(s) : s);
 
 /** Le nom d'une forme de la palette avec sa majuscule, tel que le montrent la barre, la palette et le panneau. */
-export const nomOutilForme = (outil: OutilForme): string => { const n = FICHES_FORMES[outil].nom; return n.charAt(0).toUpperCase() + n.slice(1); };
+export const nomOutilForme = (outil: OutilForme): string => { const n = t(FICHES_FORMES[outil].nom); return n.charAt(0).toUpperCase() + n.slice(1); };
 
 /** Deux points voisins au millieme du plan sont le meme point : un double-clic n'en pose qu'un. */
 export const sansDoublons = (points: readonly Point[], eps: number): Point[] =>
@@ -27,26 +28,28 @@ export const sansDoublons = (points: readonly Point[], eps: number): Point[] =>
 
 /** La phrase qui dit, a l'ouverture d'un dessin, ce que la lecture n'a pas repris ; vide quand rien ne s'est perdu. */
 export const phraseIgnores = (ignores: readonly string[]): string =>
-  ignores.length ? 'Non repris à l’ouverture : ' + ignores.join(' ; ') + '. Le rendu peut différer de l’original.' : '';
+  ignores.length ? t('Non repris à l’ouverture : {liste}. Le rendu peut différer de l’original.', { liste: ignores.join(' ; ') }) : '';
 
-/** Le nom d'une operation booleenne pour la phrase d'etat ; tous feminins, d'ou « faite ». */
-const NOMS_BOOLEENS: Readonly<Record<Booleen, string>> = { union: 'Union', soustraction: 'Soustraction', intersection: 'Intersection', exclusion: 'Exclusion' };
+/** Le nom d'une operation booleenne pour la phrase d'etat ; tous feminins, d'ou « faite ». Dits a l'appel : la langue n'est posee qu'apres le chargement. */
+const NOMS_BOOLEENS: Readonly<Record<Booleen, () => string>> = { union: () => t('Union'), soustraction: () => t('Soustraction'), intersection: () => t('Intersection'), exclusion: () => t('Exclusion') };
 
 /**
  * Ce que le booleen a vraiment fait, pour la barre d'etat : le nombre de formes reunies, les points du
  * resultat, et si le contour est en courbes ou en segments droits. `courbes` se lit sur le resultat et non
  * sur le reglage : avec le reglage actif, des formes toutes droites restent droites, et la phrase le dit.
  */
-export const phraseBooleen = (op: Booleen, formes: number, points: number, courbes: boolean): string =>
-  NOMS_BOOLEENS[op] + ' faite : ' + pluriel(formes, 'forme') + ', ' + pluriel(points, 'point') + (courbes ? ' (courbes rebâties).' : ' en segments droits.');
+export function phraseBooleen(op: Booleen, formes: number, points: number, courbes: boolean): string {
+  const v = { operation: NOMS_BOOLEENS[op](), formes: pluriel(formes, 'forme'), points: pluriel(points, 'point') };
+  return courbes ? t('{operation} faite : {formes}, {points} (courbes rebâties).', v) : t('{operation} faite : {formes}, {points} en segments droits.', v);
+}
 
 /**
  * La question de la confirmation d'abandon, accordee : « la modification » au singulier (« les 1 modification » etait une faute),
  * « les 3 modifications » au-dela. Sans modification du dessin, c'est le contexte de production change qui demande confirmation.
  */
 export function phraseAbandon(n: number): string {
-  if (n <= 0) return 'Abandonner le changement de contexte non enregistré ?';
-  return n === 1 ? 'Abandonner la modification non enregistrée ?' : 'Abandonner les ' + n + ' modifications non enregistrées ?';
+  if (n <= 0) return t('Abandonner le changement de contexte non enregistré ?');
+  return n === 1 ? t('Abandonner la modification non enregistrée ?') : t('Abandonner les {n} modifications non enregistrées ?', { n });
 }
 
 // Le genre d'une forme se lit sur sa geometrie : une forme est immuable, son genre se calcule une fois (ADR-0008).
@@ -58,6 +61,6 @@ const genres = new WeakMap<Forme, string>();
  */
 export function genreAffiche(f: Forme): string {
   let g = genres.get(f);
-  if (g === undefined) { const brut = genreDeForme(f); g = brut.charAt(0).toUpperCase() + brut.slice(1); genres.set(f, g); }
+  if (g === undefined) { const brut = t(genreDeForme(f)); g = brut.charAt(0).toUpperCase() + brut.slice(1); genres.set(f, g); }
   return g;
 }
