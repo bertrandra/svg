@@ -69,6 +69,32 @@ export function reserverGroupe(table: Map<string, Groupe>, etat: EtatContenus): 
 
 // ---------------------------------------------------------------- boites (unites de boite)
 
+/** Les boites que la lecture connait d'avance pour un element, dans son repere, par analyse (une lecture). */
+const boitesConnues = new WeakMap<Analyse, Map<Noeud, Boite | null>>();
+
+/**
+ * Pose la boite d'un element dont les descendants ne disent pas ce qu'il dessine (un <text>, dont les lettres viennent d'une fonte ;
+ * un <svg> imbrique, dont le contenu vit dans son viewBox) : `boiteDescendants` la rend pour lui, dans le repere demande. null : il ne
+ * dessine rien (une boite plate). Etape 13c.
+ */
+export function poserBoiteConnue(a: Analyse, n: Noeud, b: Boite | null): void {
+  let t = boitesConnues.get(a);
+  if (!t) { t = new Map(); boitesConnues.set(a, t); }
+  t.set(n, b);
+}
+
+/** La boite qui enferme une boite transformee (ses quatre coins). */
+function boiteSousMatrice(b: Boite, m: Matrice): Boite {
+  if (m[1] === 0 && m[2] === 0 && m[0] === 1 && m[3] === 1 && m[4] === 0 && m[5] === 0) return b;
+  const xs: number[] = [], ys: number[] = [];
+  for (const [x, y] of [[b.x, b.y], [b.x + b.l, b.y], [b.x, b.y + b.h], [b.x + b.l, b.y + b.h]] as const) {
+    xs.push(m[0] * x + m[2] * y + m[4]);
+    ys.push(m[1] * x + m[3] * y + m[5]);
+  }
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  return { x: x0, y: y0, l: Math.max(...xs) - x0, h: Math.max(...ys) - y0 };
+}
+
 /**
  * La boite des descendants d'un element (un groupe), dans son repere : ce que `objectBoundingBox` mesure. Les formes, les images (par
  * leur cadre), les groupes et les clones <use> d'une forme ou d'un groupe comptent ; le texte et les symboles n'y entrent pas (une
@@ -76,6 +102,9 @@ export function reserverGroupe(table: Map<string, Groupe>, etat: EtatContenus): 
  * coute pas plus.
  */
 export function boiteDescendants(a: Analyse, n: Noeud, m: Matrice): Boite | null {
+  // Une boite connue d'avance (un texte lu en lettres, un <svg> imbrique, etape 13c) : elle seule sait ce que l'element dessine.
+  const connue = boitesConnues.get(a);
+  if (connue?.has(n)) { const b = connue.get(n); return b ? boiteSousMatrice(b, m) : null; }
   let budget = 50_000;
   const vus = new Set<Noeud>();
   const boiteDe = (e: Noeud, me: Matrice, niveau: number): Boite | null => {

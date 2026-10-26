@@ -164,11 +164,14 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
   return { contenu: lu.groupes.length ? { formes: lues, groupes: Object.fromEntries(lu.groupes) } : { formes: lues } };
 }
 
-/** Vrai si un element en cours de lecture (un <use>, un <symbol>, la racine) porte une decoupe que la lecture ne sait pas garder. */
+/**
+ * Vrai si un element en cours de lecture (un <use>, un <symbol>, la racine) porte une decoupe que la lecture ne sait pas garder. Un <svg>
+ * imbrique n'en est pas : il devient un groupe qui garde la sienne (etape 13c) ; seule la racine n'a pas de parent.
+ */
 function porteurRefuse(marche: Marche): boolean {
   const p = marche.parcours, porteurs = porteursDe(marche);
   for (const n of p.actifs) {
-    if (n.nom !== 'use' && n.nom !== 'symbol' && n.nom !== 'svg') continue;
+    if (n.nom !== 'use' && n.nom !== 'symbol' && !(n.nom === 'svg' && !p.analyse.parents.has(n))) continue;
     let r = porteurs.get(n);
     if (r === undefined) { r = valeurDecoupe(proprietesDe(p.analyse, n)) !== null; porteurs.set(n, r); }
     if (r) return true;

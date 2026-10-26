@@ -203,6 +203,11 @@ empreintes.
 
 ### Ajouté
 
+- Modèle riche (bêta) : un `<svg>` imbriqué s'ouvre en groupe, à sa place et à son échelle (viewBox, preserveAspectRatio), rogné à
+  sa fenêtre sauf `overflow` visible. Un texte lu en lettres devient un groupe « Texte « … » » qui garde sa découpe, son masque ou
+  son filtre au lieu d'être refusé. Ce que les navigateurs ne rendent pas tous pareil est dit à l'ouverture. Rien ne change en
+  modèle plat.
+
 - Dégradés dans l'éditeur (modèle riche, bêta) : le remplissage et le contour se choisissent Uni, Dégradé linéaire ou Dégradé
   radial. La liste des arrêts permet d'ajouter, retirer, régler la couleur, la position et l'opacité, et de changer l'ordre ; on
   règle aussi l'angle, le centre, le rayon et l'étalement, et on peut inverser le dégradé. Sur la toile, des poignées accessibles

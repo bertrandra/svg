@@ -173,6 +173,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Un `<svg>` imbriqué et un `<text>` lu sont des groupes en riche** (ADR-0012, étape 13c) : `edition/fonctions/imbrications.ts` lit
+  `svg` (cadre, viewBox et aspect cuits dans les feuilles par `matriceCadre`, fenêtre en découpe sauf `overflow` visible ou auto) et
+  `text` (ses lettres en groupe « Texte « … » », ses prises posées par leurs fonctionnalités, la boîte des lettres par
+  `poserBoiteConnue`) ; les écarts entre navigateurs sont dits (`MSG_IMBRICATIONS`) ; en plat, rien ne change ; un vecteur nouveau
+  entre dans `tests/fixtures/hostile/v2-imbrications-*`.
 - **Un dégradé se règle à l'inspecteur, la toile n'est qu'un raccourci** (ADR-0012, étape 4) : Uni / Linéaire / Radial seulement en
   modèle riche ou sur un dessin déjà riche ; opérations pures dans `engine/edition/degradesOperations.ts` (repli recalculé, positions
   bornées par les voisins, valeurs au millième) ; listbox des arrêts dans `zones/EditeurDegrade.tsx` ; poignées `role="slider"` dans

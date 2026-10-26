@@ -37,8 +37,8 @@ plat, écrit comme avant.
 | `<filter>` sous-ensemble | `Effets` | — | lu | 7 |
 | `<image href="data:image/…">` | feuille `image` | refusé « une image » | gardé | 12 |
 | `<image href="http…">` | — | refusé | refusé « une image qui renvoie à un fichier ou une adresse extérieurs » (le nettoyage retire déjà le `href`) | 12 |
-| `<text>`, `<tspan>` (avec nos `data-ed-*` sur un `<path>` : voir §5) | feuille `texte` | refusé « du texte » | `<path data-ed-texte>` : lu dès l'étape 10. `<text>` étranger : étape 13 | 10, 13 |
-| `<svg>` imbriqué | groupe + découpe au cadre | refusé | étape 13 (le cadre se calcule déjà : `clones.ts`, `matriceCadre`) | 13 |
+| `<text>`, `<tspan>` (avec nos `data-ed-*` sur un `<path>` : voir §5) | feuille `texte` | refusé « du texte » | `<path data-ed-texte>` : lu dès l'étape 10. `<text>` étranger : lu en lettres avec des polices (ADR-0020), en groupe de lettres en riche (13c) | 10, 13 |
+| `<svg>` imbriqué | groupe + découpe au cadre | refusé | lu en riche (13c : `fonctions/imbrications.ts`, `matriceCadre`) | 13 |
 | `<use>` | **déplié en feuilles et groupes indépendants, comme aujourd'hui** | déplié à plat | déplié, la structure de la cible (ses `<g>`) est gardée | 1 |
 | `<symbol>`, `<defs>`, `<marker>`, `<title>`, `<desc>`, `<metadata>`, `<style>` | résolus ou ignorés comme aujourd'hui | idem | idem | — |
 | `<switch>`, `<foreignObject>` | — | refusé | refusé | — |

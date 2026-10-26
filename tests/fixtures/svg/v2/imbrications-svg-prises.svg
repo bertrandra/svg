@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <clipPath id="rond">
+      <circle cx="70" cy="60" r="45"/>
+    </clipPath>
+    <filter id="flou" x="0" y="0" width="200" height="120" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+  </defs>
+  <svg x="20" y="20" width="100" height="80" clip-path="url(#rond)">
+    <rect x="-10" y="-10" width="120" height="100" fill="#1f5fb0"/>
+  </svg>
+  <svg x="130" y="20" width="50" height="50" filter="url(#flou)">
+    <circle cx="25" cy="25" r="30" fill="#c81e28"/>
+  </svg>
+</svg>

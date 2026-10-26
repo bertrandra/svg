@@ -164,3 +164,10 @@ function poserLettre(ctx: ContexteTexte, k: Caractere, g: Glyphes, r: Remplaceme
 
 /** Les phrases des remplacements faits pendant la lecture, dans l'ordre ou ils sont apparus. */
 export const phrasesRemplacements = (ctx: Pick<ContexteTexte, 'remplacements'>): string[] => [...ctx.remplacements.values()].map(x => phraseRemplacement(x.textes, x.r));
+
+/** Le nom du groupe des lettres d'un texte (ADR-0012, annexe 4 A §2) : « Texte « … » », sa premiere ligne, ecourtee. */
+export function nomGroupeTexte(texte: string): string {
+  const ligne = (texte.split('\n').find(l => l.trim() !== '') ?? '').trim();
+  const court = [...ligne].length > 40 ? [...ligne].slice(0, 39).join('').trimEnd() + '…' : ligne;
+  return 'Texte « ' + court + ' »';
+}

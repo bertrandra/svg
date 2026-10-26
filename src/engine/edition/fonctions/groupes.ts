@@ -41,7 +41,7 @@ export function nomDuGroupe(a: Readonly<Record<string, string>>): string | undef
 }
 
 /** Combien de groupes enveloppent un groupe de la table (le groupe compris) ; borne, meme sur une table abimee. */
-function profondeurDans(table: ReadonlyMap<string, Groupe>, id: string | undefined): number {
+export function profondeurDans(table: ReadonlyMap<string, Groupe>, id: string | undefined): number {
   let n = 0;
   for (let g = id === undefined ? undefined : table.get(id); g && n <= PROFONDEUR_GROUPES_MAX; g = g.parent === undefined ? undefined : table.get(g.parent)) n++;
   return n;
