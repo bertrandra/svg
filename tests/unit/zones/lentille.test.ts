@@ -44,7 +44,7 @@ function monter(initial: DessinSvg) {
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(),
     poserAnnonce: u => { annonces.push((typeof u === 'function' ? u({ texte: '', rang: 0 }) : u).texte); },
     poserVersions: vi.fn(), dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
-    poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(), poserModele: vi.fn(),
+    poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(), poserVerrouProportions: vi.fn(), poserModele: vi.fn(),
     poserContexte: u => { etat.contexte = typeof u === 'function' ? u(etat.contexte ?? null) : u; miseAJour(); },
     poserDeplies: vi.fn(), toile: { current: null }
   };

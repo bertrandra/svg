@@ -10,6 +10,7 @@ import {
   type Boite, type Commande, type CoteDegrade, type DessinSvg, type ParametresFormes, type Style
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
+import { cotesProportionnels, proportionsAuCoin, type Cotes } from '../engine/proportions.js';
 import { FORMES, styleDeForme } from './aidesEditeur.js';
 import { phraseSelection } from './annonces.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
@@ -28,7 +29,8 @@ import { RAISONS_LENTILLE } from './phrasesContenus.js';
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
   | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string; cibles?: Boite[] }
-  | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string }
+  // `verrouille` : « Conserver les proportions » etait pose a l'appui ; `ref` est alors la proportion a garder (null pour une ligne).
+  | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string; verrouille: boolean; ref: Cotes | null }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
@@ -132,7 +134,10 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (ui.outil === 'plume') { ac.poserTrace([...ui.trace, versGrille(e)]); return; }
     if (FORMES.has(ui.outil)) { const [gx, gy] = versGrille(e); geste.current = { type: 'tracer', outil: ui.outil as OutilForme, x0: gx, y0: gy, base: mo.dessin, cle: ac.nouvelleCle() }; return; }
     const coin = t.getAttribute('data-coin') as Coin | null, iAncre = t.getAttribute('data-ancre'), poignee = t.getAttribute('data-poignee');
-    if (coin && mo.boite) { geste.current = { type: 'echelle', coin, b: mo.boite, base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle() }; return; }
+    if (coin && mo.boite) {
+      geste.current = { type: 'echelle', coin, b: mo.boite, base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle(), verrouille: ui.verrouProportions, ref: ac.proportionsDe(mo.sel, mo.boite) };
+      return;
+    }
     if (mo.formeSeule && iAncre !== null) {
       ac.poserPoint(Number(iAncre));
       geste.current = { type: 'ancre', i: Number(iAncre), base: mo.dessin, id: mo.formeSeule.id, cle: ac.nouvelleCle() };
@@ -197,7 +202,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     }
     const [gx, gy] = [ui.aimant(x), ui.aimant(y)];
     if (g.type === 'degrade') { ac.appliquer(() => glisserPoignee(g, x, y, gx, gy), g.cle); return; }
-    if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, e.shiftKey, mo.dessin.vb), g.cle);
+    if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, proportionsAuCoin(g.verrouille, g.ref, g.b, e.shiftKey), mo.dessin.vb), g.cle);
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
     // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
     else if (g.type === 'poignee') ac.appliquer(() => deplacerPoigneeLiee(g.base, g.id, g.i, g.k, gx, gy, e.altKey), g.cle);
@@ -311,12 +316,11 @@ function glisserPoignee(g: Extract<Geste, { type: 'degrade' }>, x: number, y: nu
 }
 
 /** Tirer un coin : le coin oppose reste fixe ; passer de l'autre cote d'un bord retourne la selection. */
-function etirer(g: Extract<Geste, { type: 'echelle' }>, x: number, y: number, proportions: boolean, vb: DessinSvg['vb']): DessinSvg {
+function etirer(g: Extract<Geste, { type: 'echelle' }>, x: number, y: number, ref: Cotes | null, vb: DessinSvg['vb']): DessinSvg {
   const b = g.b, fixeX = g.coin.endsWith('w') ? b.x + b.l : b.x, fixeY = g.coin.startsWith('n') ? b.y + b.h : b.y;
-  let l = Math.abs(x - fixeX), h = Math.abs(y - fixeY);
-  if (proportions && b.l > 0 && b.h > 0) { const k = Math.max(l / b.l, h / b.h); l = b.l * k; h = b.h * k; }
+  const c = cotesProportionnels(Math.abs(x - fixeX), Math.abs(y - fixeY), ref);
   const min = Math.max(vb[2], vb[3]) / 1000;
-  l = Math.max(min, l); h = Math.max(min, h);
+  const l = Math.max(min, c.l), h = Math.max(min, c.h);
   let d = redimensionner(g.base, g.ids, { x: x < fixeX ? fixeX - l : fixeX, y: y < fixeY ? fixeY - h : fixeY, l, h });
   if ((x < fixeX) !== g.coin.endsWith('w')) d = retourner(d, g.ids, 'h');
   if ((y < fixeY) !== g.coin.startsWith('n')) d = retourner(d, g.ids, 'v');

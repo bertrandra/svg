@@ -282,6 +282,17 @@ empreintes.
 
 ### Ajouté
 
+- Éditeur : **« Conserver les proportions »**, un bouton bascule (une chaîne) entre les champs L et H de la section « Position et
+  taille ». Posé, la hauteur suit la largeur tapée et l'inverse (une seule entrée d'historique, la taille entière dite à voix
+  haute), glisser un coin garde les proportions et **Maj redimensionne librement** le temps du geste, Alt et flèches les gardent
+  aussi ; plusieurs formes ou un groupe gardent la proportion de leur boîte commune. La proportion gardée est celle de la boîte
+  au moment où le verrou est posé (ou où la sélection change) : une suite de frappes ou de pas ne dérive pas ; une rotation ou
+  un étirement libre la refont. Une ligne droite (un côté nul) n'a pas de proportion : le verrou ne s'y applique pas. Le
+  basculement est dit (« Proportions conservées. », « Proportions libres. »), la barre d'état et l'aide des raccourcis disent ce
+  que devient Maj. **Coupé par défaut, retenu pour la session** : couper par défaut garde au coin et à Maj le sens qu'ils ont
+  toujours eu (Maj garde les proportions), comme la plupart des éditeurs pour une forme ; une fois posé, il le reste jusqu'à la
+  fermeture de l'éditeur, quelle que soit la sélection, ce qui en fait l'usage courant demandé sans surprendre à l'ouverture.
+  Rien ne s'écrit : aucun octet ni aucune référence ne change.
 - Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »**, cochée
   par défaut (le comportement d'avant, export inchangé à l'octet), dans le panneau « Prêt pour Cricut » ; décochée, le plan de
   travail devient le tapis, fixe, les formes restent où vous les posez, et l'export garde leur place grâce à un **cadre de repérage
