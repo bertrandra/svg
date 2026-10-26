@@ -439,8 +439,19 @@ function lireProduction(v: unknown): ChoixProduction {
   return {
     contexte: 'cricut', machine: ident('machine'), tapis: ident('tapis'), materiau: ident('materiau'),
     procede: choix(o['procede'], 'le procédé', ['decoupe', 'imprimer-decouper', 'dessin-stylo'] as const),
-    unite: choix(o['unite'], 'l’unité', ['in', 'mm'] as const)
+    unite: choix(o['unite'], 'l’unité', ['in', 'mm'] as const),
+    // Le recalage desactive et la feuille sur le tapis (ADR-0039) : presents seulement hors du defaut.
+    ...(o['recalage'] === undefined ? {} : o['recalage'] === false ? { recalage: false as const } : refuser('le recalage du contexte de production est mal formé')),
+    ...(o['feuille'] === undefined ? {} : { feuille: lireFeuilleProjet(o['feuille']) })
   };
+}
+
+/** La feuille sur le tapis : quatre nombres, des cotes positifs (le profil la ramene ensuite sur son tapis). */
+function lireFeuilleProjet(v: unknown): { x: number; y: number; l: number; h: number } {
+  const f = objet(v, 'la feuille sur le tapis');
+  const n = (cle: string) => nombre(f[cle], 'la feuille sur le tapis', 0, 100_000);
+  const r = { x: n('x'), y: n('y'), l: n('l'), h: n('h') };
+  return r.l > 0 && r.h > 0 ? r : refuser('la feuille sur le tapis est vide');
 }
 
 function lireNuancier(v: unknown): readonly TeinteProjet[] {

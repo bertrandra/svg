@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ecrireDessin, marquerProduction, marquerReperes, type DessinSvg } from '../engine/editionSvg.js';
 import {
-  cadreTapis, constatsPreparation, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
+  cadreFixe, cadreTapis, constatsPreparation, feuillePartielle, gabaritDuTapis, planDuTapis, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
   resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { archiveOperations, exportParOperation, nomsOperations, operationsPeintes } from '../export/operations.js';
@@ -80,7 +80,31 @@ export function cadreDeVue(dessin: DessinSvg, production: ChoixProduction): Cadr
   // Le tapis compte pour la lame et pour le stylo (ADR-0022) ; Print Then Cut n'a pas de gabarit.
   if (!p || p.procede === 'imprimer-decouper') return null;
   const etendue = etendueVisible(dessin);
-  return unionCadres(cadreTapis(p, etendue ?? { x: dessin.vb[0], y: dessin.vb[1] }), etendue);
+  return unionCadres(gabaritDuTapis(p, dessin, etendue).tapis, etendue);
+}
+
+/** Ce que dit la feuille quand on la change : sa taille et sa place depuis le coin haut gauche du tapis. */
+export const phraseFeuille = (p: ProfilProduction): string => (feuillePartielle(p)
+  ? 'Feuille de ' + texteTaille(p.feuille.l, p.feuille.h, p.unite) + ', à ' + texteMesure(p.feuille.x, p.unite) + ' du bord gauche et ' + texteMesure(p.feuille.y, p.unite) + ' du bord haut du tapis.'
+  : 'Feuille : le tapis entier.');
+
+/** Ce que dit le recalage automatique quand on le change (ADR-0039). */
+export const phraseRecalage = (actif: boolean): string => (actif
+  ? 'Recalage automatique activé : le tapis suit le dessin, que Design Space posera dans son coin haut gauche.'
+  : 'Recalage automatique désactivé : le plan de travail est le tapis, les formes restent où vous les posez, et l’export garde leur place. Ctrl+Z rend l’ancien plan.');
+
+/**
+ * Le plan de travail que demande un nouveau choix (ADR-0039), ou null quand il ne change pas. Desactiver le recalage pose le plan sur
+ * le tapis tel que la toile le montrait (rien ne bouge a l'ecran) ; sans recalage, changer de tapis lui donne la taille du nouveau, au
+ * meme coin. Print Then Cut n'a pas de tapis a l'ecran : le plan reste.
+ */
+export function planPourChoix(dessin: DessinSvg, avant: ChoixProduction, apres: ChoixProduction): DessinSvg | null {
+  const p = resoudreProfil(apres);
+  if (!p || p.recalage || p.procede === 'imprimer-decouper') return null;
+  const avantFixe = avant.contexte === 'cricut' && avant.recalage === false;
+  const cadre = avantFixe ? cadreFixe(p, dessin.vb) : cadreTapis(p, etendueVisible(dessin) ?? { x: dessin.vb[0], y: dessin.vb[1] });
+  const d = planDuTapis(dessin, cadre);
+  return d === dessin ? null : d;
 }
 
 // L'unite choisie se retient d'une ouverture a l'autre : dans le stockage injecte s'il y en a un, sinon le temps de la page.
@@ -162,9 +186,18 @@ export function actionsProduction(lire: () => EtatDuMoment, l: Leviers, s: Sette
   const actions: ActionsProduction = {
     poserProduction: c => {
       const n = normaliserChoix(c), avant = lire().production;
+      // Le plan suit le tapis fixe (ADR-0039) : une entree d'historique, puisque le dessin change ; le choix, lui, reste hors de l'historique.
+      const plan = planPourChoix(lire().dessin, avant, n);
       s.poserProduction(n);
       s.poserSuiteCricut(null);
+      if (plan) appliquer(d => planPourChoix(d, avant, n) ?? d);
       if (n.contexte === 'cricut') retenirUnite(lire().stockage, n.unite);
+      const recalageAvant = avant.contexte === 'cricut' && avant.recalage !== false, recalageApres = n.contexte === 'cricut' && n.recalage !== false;
+      if (avant.contexte === 'cricut' && n.contexte === 'cricut' && recalageAvant !== recalageApres && avant.tapis === n.tapis && avant.procede === n.procede) { dire(phraseRecalage(recalageApres)); return; }
+      if (avant.contexte === 'cricut' && n.contexte === 'cricut' && avant.tapis === n.tapis && JSON.stringify(avant.feuille) !== JSON.stringify(n.feuille)) {
+        const p = resoudreProfil(n);
+        if (p) { dire(phraseFeuille(p)); return; }
+      }
       // Le tapis qui apparait, ou qui change, se voit en entier : la vue le cadre (apres le rendu qui le pose), le dessin dedans. La
       // phrase du contexte est dite avec ce cadrage, dans le meme rendu : un zoom au clavier qui suit (Entree dans le menu) ne la
       // remplace pas par « Zoom 53 % » dans la region vocale.

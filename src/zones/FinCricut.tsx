@@ -9,7 +9,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { etapesDesignSpace, etatExport, pointsACorriger } from './parcoursCricut.js';
 import { operationsPeintes } from '../export/operations.js';
 import type { DessinSvg } from '../engine/editionSvg.js';
-import type { ProfilProduction } from '../engine/preparation.js';
+import { cadreFixe, etendueVisible, placeSurTapis, type ProfilProduction } from '../engine/preparation.js';
 
 /** Vrai quand le dessin juge mele des formes a couper et des formes a ecrire (ADR-0028) : l'export livre alors une archive. */
 export function estMelange(dessin: DessinSvg | undefined, profil: ProfilProduction): boolean {
@@ -84,7 +84,10 @@ function Confirmation({ nom, aCorriger }: { nom: string; aCorriger: readonly Con
 function CarteDesignSpace({ nom }: { nom: string }) {
   const { preparation } = useDessin(), { profil } = useInterface(), ac = useActions(), id = useId();
   if (!profil) return null;
-  const etapes = etapesDesignSpace(profil, nom, preparation?.taille ?? null, estMelange(preparation?.dessin, profil));
+  // Sans recalage automatique (ADR-0039), la place du dessin sur le tapis : la carte la dit, pour la verifier sur l'apercu du tapis.
+  const e = !profil.recalage && preparation ? etendueVisible(preparation.dessin) : null;
+  const place = e && preparation ? placeSurTapis(e, cadreFixe(profil, preparation.dessin.vb)) : null;
+  const etapes = etapesDesignSpace(profil, nom, preparation?.taille ?? null, estMelange(preparation?.dessin, profil), place);
   return (
     <section className="carte-design-space" aria-labelledby={id}>
       <h3 id={id}>Dans Design Space</h3>

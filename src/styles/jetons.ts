@@ -59,6 +59,7 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('encre-toile', 'toile', '#15181d', '#15181d', 'L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe)'),
   jeton('apercu-coupe', 'toile', '#cc4a1a', '#cc4a1a', 'L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier'),
   jeton('apercu-stylo', 'toile', '#3d6fe0', '#3d6fe0', 'L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier'),
+  jeton('feuille-tapis', 'toile', '#9a6a00', '#9a6a00', 'La feuille posée sur le tapis d’une Cricut (ADR-0039) : son contour discret sur la toile ; lisible sur le plan blanc, sombre et en damier'),
   jeton('contour-decoupe', 'toile', '#8e5bd4', '#8e5bd4', 'Le contenu d’une découpe qu’on modifie (ADR-0012, paquet 8-D) : sa géométrie tracée en contour sur la toile, le reste estompé ; lisible sur le plan blanc, sombre et en damier'),
   jeton('contour-masque', 'toile', '#1e8f6a', '#1e8f6a', 'Le contenu d’un masque qu’on modifie (ADR-0012, paquet 8-D) : le filet qui cerne ses formes, peintes telles quelles, et les tirets de sa région ; lisible sur le plan blanc, sombre et en damier'),
   jeton('ombre-menu', 'relief', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.2)', 'L’ombre des menus déroulants'),
@@ -151,6 +152,10 @@ export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'apercu-stylo', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan blanc' },
   { texte: 'apercu-stylo', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan sombre' },
   { texte: 'apercu-stylo', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur la case grise du damier' },
+  // La feuille sur le tapis (ADR-0039) se pose sur le plan, quel que soit son fond.
+  { texte: 'feuille-tapis', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'le contour de la feuille posée sur le tapis, sur le plan blanc' },
+  { texte: 'feuille-tapis', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'le contour de la feuille posée sur le tapis, sur le plan sombre' },
+  { texte: 'feuille-tapis', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'le contour de la feuille posée sur le tapis, sur la case grise du damier' },
   // Le contenu d'une decoupe ou d'un masque qu'on modifie (paquet 8-D) se trace sur le plan, quel que soit son fond.
   { texte: 'contour-decoupe', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'le contour du contenu d’une découpe qu’on modifie, sur le plan blanc' },
   { texte: 'contour-decoupe', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'le contour du contenu d’une découpe qu’on modifie, sur le plan sombre' },

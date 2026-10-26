@@ -292,6 +292,15 @@ npm run test:php     # les tests du site PHP (tests/php/)
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
   le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques. Millimètre par défaut, pouce retenu ;
   un point « à corriger » demande une confirmation, jamais un bloquant de plus.
+- **Le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039) : `ChoixMachine.recalage?: false` (case « Recalage
+  automatique », cochée par défaut : le gabarit suit le dessin, l'export d'avant à l'octet) ; décochée, le plan devient le tapis
+  (`planPourChoix`, une entrée d'historique), le tapis se fixe au coin du plan (`cadreFixe`, `gabaritDuTapis`), `hors-tapis` dit une
+  forme hors de la feuille ; `ChoixMachine.feuille?` (depuis le coin du tapis, absente pour le tapis entier, jeton `--feuille-tapis`) ;
+  `data-ed-recalage="non"` et `data-ed-feuille` sur la racine seulement hors du défaut, dans le projet, jamais dans un export ; sans
+  recalage, l'export pose le tapis pour plan et un cadre de repérage par couleur (`export/reperage.ts`), à attacher puis passer en
+  « Guide » (`DESIGN_SPACE_POSITION`, témoin 10, `aVerifier`) ; « Dupliquer sur la feuille » est pur (`engine/preparation/placement.ts` :
+  simple par boîtes, avancée sur les contours réels qui rend le meilleur des deux), par tranches d'essais dont `io/placement.ts`
+  mesure le temps, une seule entrée d'historique.
 - **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
   pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
   se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin

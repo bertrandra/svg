@@ -129,7 +129,21 @@ const TEMOINS: ReadonlyArray<{ nom: string; fabriquer: () => string }> = [
       if ('erreur' in r || r.genre !== 'mixte') throw new Error('erreur' in r ? r.erreur : 'une seule opération');
       return fichier === 'a-couper' ? r.aCouper : fichier === 'a-ecrire' ? r.aEcrire : r.combine;
     }
-  }))
+  })),
+  // 10. Sans recalage automatique (ADR-0039) : sur un plan de 12 x 12 po (le tapis), un carre de 1 po a 8 po du bord gauche et 6 po du
+  //    bord haut, et un disque de 1/2 po a 2 po et 9 po, deux couleurs. L'export pose un cadre de reperage par couleur, de la taille de
+  //    la zone utile. Attache et passe en « Guide », le cadre fait-il couper chaque forme a sa place sur une feuille posee la ?
+  {
+    nom: 'temoin-10-feuille-partielle.svg',
+    fabriquer: () => {
+      const fixe = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: false });
+      if (!fixe) throw new Error('profil');
+      const d = lire(rect(8, 6, 1, 1, '#c81e28') + '<circle cx="' + 2.25 * P + '" cy="' + 9.25 * P + '" r="' + P / 4 + '" fill="#1f4e8c"/>', 12, 12);
+      const r = svgCricut(d, fixe);
+      if ('erreur' in r) throw new Error(r.erreur);
+      return r.svg;
+    }
+  }
 ];
 
 describe('les temoins du protocole Cricut', () => {
@@ -174,5 +188,8 @@ describe('les temoins du protocole Cricut', () => {
     expect(constats('temoin-9-couper-ecrire-a-couper.svg')).toEqual([]);
     expect(constats('temoin-9-couper-ecrire-a-ecrire.svg', STYLO)).toEqual([]);
     expect(constats('temoin-9-couper-ecrire-combine.svg')).toEqual([]);
+    // 10 : rouvert (sans la marque du recalage, qu'aucun export ne porte), seuls les cadres de reperage se disent trop fins pour la
+    // lame : ce sont des guides, qu'on ne coupe pas.
+    expect(constats('temoin-10-feuille-partielle.svg')).toEqual(['detail-fin']);
   });
 });

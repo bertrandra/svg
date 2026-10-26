@@ -11,10 +11,17 @@ export interface MarqueProduction {
   readonly materiau?: string;
   readonly procede?: string;
   readonly unite?: string;
+  /** « non » quand le recalage automatique est desactive (ADR-0039) ; absent sinon. Le document seul le porte, jamais un export. */
+  readonly recalage?: string;
+  /** La feuille sur le tapis (ADR-0039), « x-y-l-h » en centiemes d'unite du plan ; absente pour le tapis entier. */
+  readonly feuille?: string;
 }
 
-/** Les champs dans l'ordre d'ecriture : un ordre fixe, pour que la meme marque donne les memes octets. */
-export const CHAMPS_PRODUCTION = ['contexte', 'machine', 'tapis', 'materiau', 'procede', 'unite'] as const;
+/**
+ * Les champs dans l'ordre d'ecriture : un ordre fixe, pour que la meme marque donne les memes octets. `recalage` vient en dernier
+ * (ADR-0039) : absent d'une marque, il n'ecrit rien, et une marque d'avant garde ses octets.
+ */
+export const CHAMPS_PRODUCTION = ['contexte', 'machine', 'tapis', 'materiau', 'procede', 'unite', 'recalage', 'feuille'] as const;
 export const PREFIXE_PRODUCTION = 'data-ed-';
 
 /** Un identifiant de profil : des minuscules, des chiffres et des tirets, rien a echapper, rien d'executable. */
@@ -51,9 +58,9 @@ export function lireProduction(attributs: Readonly<Record<string, string>>): Mar
   };
   const contexte = lu('contexte');
   if (contexte === undefined) return null;
-  const machine = lu('machine'), tapis = lu('tapis'), materiau = lu('materiau'), procede = lu('procede'), unite = lu('unite');
+  const machine = lu('machine'), tapis = lu('tapis'), materiau = lu('materiau'), procede = lu('procede'), unite = lu('unite'), recalage = lu('recalage'), feuille = lu('feuille');
   return {
     contexte, ...(machine ? { machine } : {}), ...(tapis ? { tapis } : {}), ...(materiau ? { materiau } : {}),
-    ...(procede ? { procede } : {}), ...(unite ? { unite } : {})
+    ...(procede ? { procede } : {}), ...(unite ? { unite } : {}), ...(recalage ? { recalage } : {}), ...(feuille ? { feuille } : {})
   };
 }

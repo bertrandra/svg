@@ -282,6 +282,17 @@ empreintes.
 
 ### Ajouté
 
+- Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »**, cochée
+  par défaut (le comportement d'avant, export inchangé à l'octet), dans le panneau « Prêt pour Cricut » ; décochée, le plan de
+  travail devient le tapis, fixe, les formes restent où vous les posez, et l'export garde leur place grâce à un **cadre de repérage
+  par couleur** de la taille de la zone utile, à attacher aux formes puis à passer en « Guide » dans Design Space (à vérifier,
+  témoin 10) ; un constat dit une forme qui sort de la feuille, « Ramener dans la zone utile » la corrige. Une **feuille** se règle
+  sur le tapis (taille et place, dans l'unité retenue) et se voit sur la toile : c'est la feuille partielle de la découpe. **« Dupliquer
+  sur la feuille… »** (menu Édition, menu « Répéter » de la sélection) copie la sélection sur la feuille sans chevaucher ce qui y
+  est déjà, en quantité ou jusqu'à la remplir, avec espacement, marge et rotation d'un quart de tour ; l'optimisation **Avancée**
+  emboîte les contours réels (étoiles, lettres, cœurs) et pose toujours au moins autant que la **Simple**, par tranches qu'on peut
+  arrêter. Une seule annulation retire toutes les copies. Le document garde le recalage et la feuille (`data-ed-recalage`,
+  `data-ed-feuille`, seulement hors du défaut), jamais un export.
 - Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
   menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le
   masque se dessine tel quel, cerné. Les outils ordinaires s'y appliquent, chaque geste s'annule en une fois, et l'on sort par

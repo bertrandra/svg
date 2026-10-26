@@ -105,7 +105,10 @@ export function formeDuProjet(f: FormeProjet): Forme {
 const CONVERSION: ConversionFormes = { versProjet: formeProjet, versModele: formeDuProjet };
 
 const choixCopie = (c: ChoixProduction): ChoixProduction => (c.contexte === 'cricut'
-  ? { contexte: 'cricut', machine: c.machine, tapis: c.tapis, materiau: c.materiau, procede: c.procede, unite: c.unite }
+  ? {
+    contexte: 'cricut', machine: c.machine, tapis: c.tapis, materiau: c.materiau, procede: c.procede, unite: c.unite,
+    ...(c.recalage === false ? { recalage: false as const } : {}), ...(c.feuille ? { feuille: { x: c.feuille.x, y: c.feuille.y, l: c.feuille.l, h: c.feuille.h } } : {})
+  }
   : { contexte: 'generique' });
 
 /**

@@ -11,6 +11,7 @@ import type { UniteLongueur } from '../model/contextes.js';
 import { constatsBloquants, marqueDeProfil, partagerOperations, versUnite, type ProfilProduction } from '../engine/preparation.js';
 import { svgExporte } from './svgs.js';
 import { phraseRefus } from './cricut.js';
+import { avecReperage, cadresReperage, couleursDistinctes } from './reperage.js';
 
 export interface ExportStylo { readonly svg: string; readonly couches: number; readonly pourtours: number }
 
@@ -50,6 +51,8 @@ export function svgPourStylo(dessin: DessinPlat, p: ProfilProduction): ExportSty
   const { ecriture } = p.procede === 'imprimer-decouper' ? { ecriture: dessin } : partagerOperations(dessin, p.procede);
   const bloquants = constatsBloquants(ecriture, profil);
   if (bloquants.length) return { erreur: phraseRefus(bloquants) };
-  const r = svgStylo(ecriture, profil.unite, profil.largeurStylo);
+  // Sans recalage automatique (ADR-0039), un cadre de reperage en trait par couleur de stylo, sous les traits ; le meme dessin sinon.
+  const couleurs = couleursDistinctes(dessinSansTextes(ecriture).formes.filter(f => f.visible).map(f => f.contour ?? f.remplissage));
+  const r = svgStylo(avecReperage(ecriture, profil, zone => cadresReperage(zone, couleurs, { trait: profil.largeurStylo })), profil.unite, profil.largeurStylo);
   return { ...r, svg: marquerProduction(r.svg, marqueDeProfil(profil)) };
 }

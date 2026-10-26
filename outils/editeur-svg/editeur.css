@@ -269,6 +269,11 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .champ-ligne input[type="range"] { flex: 1; min-width: 0; }
 .champ-ligne button { padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
 .grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--esp-xs) var(--esp-m); }
+/* Un groupe de champs nomme (ADR-0039 : la feuille sur le tapis, les copies, l'optimisation) : sans cadre, sa legende comme un libelle. */
+.champ-groupe { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: var(--esp-xs); }
+.champ-groupe > legend { padding: 0; margin-bottom: var(--esp-xs); font-size: var(--texte-compact); color: var(--encre-douce); }
+.champs-feuille { display: grid; gap: var(--esp-xs); }
+.champs-feuille .champ-ligne > span:first-child { min-width: 9.5em; }
 .grille-2 .champ-ligne > span:first-child { min-width: 14px; }
 .grille-2 .champ-ligne input { width: 100%; min-width: 0; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
@@ -756,6 +761,8 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-svg-toile .gabarit-tapis { fill: var(--repli-cyan-10); } }
 .editeur-svg-toile .gabarit-quadrillage { stroke: var(--filet); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .editeur-svg-toile .gabarit-zone { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+/* La feuille posee sur le tapis (ADR-0039) : un contour discret, plein, qui ne se confond pas avec les pointilles de la zone utile. */
+.editeur-svg-toile .gabarit-feuille { fill: none; stroke: var(--feuille-tapis); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .editeur-svg-toile .forme-debordante { fill: none; stroke: var(--echec); stroke-width: 2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
 .editeur-svg-toile .zone-fine { fill: var(--alerte); fill-opacity: 0.55; stroke: var(--alerte); stroke-width: 6; stroke-opacity: 0.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 @media (pointer: coarse), (max-width: 900px) {
@@ -763,7 +770,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 }
 @media (forced-colors: active) {
   .panneau-cricut .constat, .confirmation-export, .carte-design-space { border-color: CanvasText; }
-  .editeur-svg-toile .gabarit-zone, .editeur-svg-toile .forme-debordante, .editeur-svg-toile .zone-fine { stroke: Highlight; }
+  .editeur-svg-toile .gabarit-zone, .editeur-svg-toile .gabarit-feuille, .editeur-svg-toile .forme-debordante, .editeur-svg-toile .zone-fine { stroke: Highlight; }
 }
 
 /* Couper ou ecrire (ADR-0028). Sur la toile, l'apercu de la machine : il precede les formes, qu'il rend transparentes (elles gardent

@@ -9,7 +9,7 @@ import { pluriel } from '../../util/texte.js';
 import { finesseDe, POINTS_MAX_MESURE } from './finesse.js';
 import { couchesDe, etendueVisible, formesPeintes, tientDans } from './mesures.js';
 import { silhouetteDe } from './silhouette.js';
-import { texteMesure, texteTaille, unitesDePouces, type ProfilProduction } from './profil.js';
+import { feuillePartielle, gabaritDuTapis, regionDeCoupe, texteMesure, texteTaille, unitesDePouces, type CadreTapis, type ProfilProduction } from './profil.js';
 import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { constatTraitsOuverts, constatsStylo, textesQuiSeChevauchent, traitOuvert, type ConstatTexte } from './stylo.js';
 import { partagerOperations } from './operations.js';
@@ -19,14 +19,14 @@ export const GRAVITES: readonly Gravite[] = ['bloquant', 'a-corriger', 'conseil'
 
 export type CodeConstat =
   | 'vide' | 'trait' | 'opacite' | 'piece-trop-grande' | 'ptc-trop-grand'
-  | 'depassement' | 'trace-ouvert' | 'lettres-chevauchent' | 'nuances-proches' | 'detail-fin'
+  | 'depassement' | 'hors-tapis' | 'trace-ouvert' | 'lettres-chevauchent' | 'nuances-proches' | 'detail-fin'
   | 'trop-de-noeuds' | 'trou-superpose' | 'pair-impair' | 'analyse-limitee'
   | 'decoupe-trait-ouvert' | 'stylo-plein' | 'stylo-double-trait';
 
 export type CodeCorrection =
   | 'contour-en-forme' | 'rendre-opaque' | 'ajuster-zone' | 'fermer' | 'fusionner-nuances'
   | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder'
-  | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire';
+  | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire' | 'ramener-zone';
 
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'contour-en-forme': 'Contour en forme',
@@ -42,7 +42,8 @@ export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
   'garder-contour': 'Garder le contour',
   hachurer: 'Hachurer',
   'police-trait': 'Police à trait unique',
-  ecrire: 'Écrire au stylo'
+  ecrire: 'Écrire au stylo',
+  'ramener-zone': 'Ramener dans la zone utile'
 };
 
 export interface Constat {
@@ -66,7 +67,7 @@ export interface Constat {
 /** Au-dela, les parties fines ne se mesurent que sur les premieres formes : le panneau juge en continu. */
 export const FORMES_MAX_FINESSE = 300;
 
-const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
+const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'hors-tapis', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
 const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
@@ -114,12 +115,32 @@ function constatsTaille(peintes: readonly Forme[], dessin: DessinSvg, p: ProfilP
       message: (grandes.length > 1 ? grandes.length + ' formes sont plus grandes' : 'Une forme est plus grande') + ' que la zone utile du ' + tapis.toLowerCase() + ' (' + zone + ')' + (b ? ' : ' + texteTaille(b.l, b.h, p.unite) + '.' : '.')
     }];
   }
+  // Sans recalage automatique (ADR-0039), le tapis est fixe : ce qui compte est que chaque forme tienne sur la feuille, dans la zone
+  // utile, la ou elle est posee. Une forme qui en sort ne se couperait pas a cet endroit ; l'ensemble, s'il y tient, ne deborde pas.
+  if (!p.recalage) return constatHorsTapis(peintes, regionDeCoupe(p, gabaritDuTapis(p, dessin, null)), p);
   const e = etendueVisible(dessin);
   if (!e || tientDans(e.l, e.h, z.l, z.h, false)) return [];
   const suggere = tapisSuggere(p, e.l, e.h, false);
   return [{
     code: 'depassement', gravite: 'a-corriger', formes: ids(peintes), correction: 'ajuster-zone', aVerifier: true, ...(suggere ? { tapis: suggere } : {}),
     message: 'Le dessin mesure ' + texteTaille(e.l, e.h, p.unite) + ' : il dépasse la zone utile du ' + tapis.toLowerCase() + ' (' + zone + '). Chaque pièce y tient, mais Design Space devra les répartir sur le tapis (à vérifier).'
+  }];
+}
+
+/** Le jeu laisse a l'arrondi de l'ecriture (trois decimales) : une forme ramenee au bord de la zone y reste. */
+const JEU_ZONE = 0.01;
+
+/** Vrai quand la boite tient dans la zone, la ou elle est. */
+export const dansZone = (b: { readonly x: number; readonly y: number; readonly l: number; readonly h: number }, z: CadreTapis): boolean =>
+  b.x >= z.x - JEU_ZONE && b.y >= z.y - JEU_ZONE && b.x + b.l <= z.x + z.l + JEU_ZONE && b.y + b.h <= z.y + z.h + JEU_ZONE;
+
+function constatHorsTapis(peintes: readonly Forme[], zone: CadreTapis | null, p: ProfilProduction): Constat[] {
+  const dehors = peintes.filter(f => { const b = boiteAvecTrait(f); return b !== null && (!zone || !dansZone(b, zone)); });
+  if (!dehors.length) return [];
+  const ou = feuillePartielle(p) ? 'de la feuille posée sur le ' + p.tapis.nom.toLowerCase() : 'de la zone utile du ' + p.tapis.nom.toLowerCase() + ' (les pointillés)';
+  return [{
+    code: 'hors-tapis', gravite: 'a-corriger', formes: ids(dehors), correction: zone ? 'ramener-zone' : null, aVerifier: true,
+    message: (dehors.length > 1 ? dehors.length + ' formes sortent' : 'Une forme sort') + ' ' + ou + ' : la machine ne ' + accord(dehors.length, 'la', 'les') + ' couperait pas à cet endroit. Ramenez-' + accord(dehors.length, 'la', 'les') + (feuillePartielle(p) ? ' sur la feuille.' : ' sur le tapis.')
   }];
 }
 
