@@ -1318,7 +1318,13 @@ passe à « acceptée » ; le paquet passe en **0.2.0** (aucune version n'a ét�
      lettres séparées jouées dans les deux) et le test de l'embarquement (à plat sans option, même si le stockage garde `riche`) ;
   7. **la bascule** : `MODELE_PAGE = 'riche'`, et les attentes qui suivent le défaut de la page ;
   8. les documents (README, `docs/integration.md`, `docs/navigateurs.md`, `docs/verification-manuelle.md` § 1 bis, cet ADR), le
-     CHANGELOG et la version.
+     CHANGELOG et la version ;
+  9. la fusion de la base (la cale de la rangée de la sélection, `21680a2`), puis ce qu'elle a fait tomber, à plat comme en riche : une
+     ligne des calques choisie et survolée (le pointeur ne quitte plus la ligne qu'il choisit) passait à 3,99:1 sous le cyan du survol,
+     elle garde l'encre ; le test des guides d'alignement visait sans le savoir le décalage de 33 px, son geste vise un alignement ; sous
+     Firefox, le test de la cale touche la forme au doigt, et celui de l'aimant des repères vise 2 unités (la troncature au pixel du
+     pointeur mangeait la marge) ;
+  10. un bouton de constat Cricut survolé passe au cyan du survol (4,33:1 sur un constat bloquant ; audit intermittent).
 - **Décisions** :
   - *le site PHP lit en riche*, comme la page : c'est un hôte à nous, sans projet existant à protéger ; un projet rouvert s'ouvre tel qu'il a
     été enregistré, quel que soit le réglage, et un SVG importé suit le réglage (`svg.modele`, le même stockage que la page) ;
@@ -1332,6 +1338,23 @@ passe à « acceptée » ; le paquet passe en **0.2.0** (aucune version n'a ét�
   `onboarding`), et l'embarquement (`embarquement.e2e.ts`). `prise.e2e.ts` (survol de 5 000 formes) est tombé une fois dans la suite
   entière sous charge (rendu 28,6 ms pour 16) : rejoué seul, 5,3 à 5,8 ms en riche comme à plat (deux passes chacun) ; aucun écart
   entre les modèles, le seuil est sensible à la charge du poste.
+- **Trois moteurs** (suite entière, 66 fichiers, page construite, deux fichiers en parallèle, poste partagé à 4 cœurs ; Playwright
+  1.56.1 : Chromium 141, Firefox 142, WebKit 26) :
+
+  | Moteur | Passe | Résultat | Échecs trouvés en route, et leur racine |
+  |---|---|---|---|
+  | Chromium | 1, défaut riche, tests d'avant | 60 échecs sur 1 486 joués | attendus du défaut : 42 du corpus hostile (21 fichiers × code collé et fichier déposé, `attenduRiche`), 18 tests d'interface qui supposaient la page à plat (dont deux défauts de la page : les cibles de 18,8 et 19 px) ; `prise` (survol de 5 000 formes) sous charge seulement |
+  | Chromium | 2, avant la fusion de la base | **1 491 réussis**, 4 non joués | — |
+  | Chromium | 3, après la fusion de `21680a2` | 4 échecs, puis **1 492 réussis** une fois corrigés | la cale de la rangée (aussi sur la base seule, à plat) : la ligne choisie survolée à 3,99:1 (axe, nuancier et Cricut), le test des guides qui visait le décalage de 33 px |
+  | Firefox | 1, après la fusion | 3 échecs sur 1 492 joués | test de la cale cliqué dans un contexte tactile (Firefox ne choisit pas par un clic synthétique : un toucher) ; aimant des repères visé à 5,8 px pour 6, perdu par la troncature au pixel des coordonnées du pointeur ; audit axe du contexte Cricut (voir Chromium 4) |
+  | Firefox | 2, tête finale | **1 492 réussis**, 4 non joués | — |
+  | WebKit | 1, tête finale | **1 492 réussis**, 4 non joués | — |
+  | Chromium | 4 | 1 échec sur 1 492 joués | l'audit axe du contexte Cricut, par intermittence dans deux moteurs : **défaut de la page**, un bouton de constat survolé (le pointeur reste sur le panneau après un clic) prenait le cyan d'outil sur le fond d'un constat bloquant, 4,33:1 ; il prend le cyan du survol des boutons discrets (5,46:1, paire ajoutée au registre des jetons), et un test survole chaque bouton |
+  | les trois | après ce correctif | `cricut`, `operations`, `accessibilite-axe`, `contraste-force`, `fin-parcours` : **128 réussis dans chacun** | — |
+
+  Les quatre « non joués » sont les captures de `texte-enveloppe.e2e.ts` (`it.runIf(CAPTURES)`, un outil de capture d'écran qui ne
+  tourne que demandé, d'avant cette étape) : aucun test n'est sauté, aucun délai fixe ajouté, aucune règle d'axe désactivée.
+
 - **Inkscape et resvg** : ni `inkscape`, ni `resvg`, ni `rsvg-convert` sur le poste de l'agent ; la comparaison d'un échantillon de
   références v2 (`tests/fixtures/svg/v2/*.attendu.svg` et leurs entrées, 253 fichiers en tout) au rendu de Chromium revient à un humain : ouvrir chaque référence dans
   Inkscape 1.x et la rendre par `resvg` (ou `rsvg-convert`), puis comparer à la capture de Chromium, en priorité les dégradés radiaux
@@ -1345,8 +1368,8 @@ passe à « acceptée » ; le paquet passe en **0.2.0** (aucune version n'a ét�
   - **WebKit exigé** : retirer `continue-on-error` de la CI après son premier passage vert (ADR-0016) ;
   - les amendements de `CLAUDE.md` proposés au chef de chantier (le dessin en feuilles, la bascule, le texte vivant, le réglage du
     modèle) ;
-  - les restes des étapes, inchangés : la rangée de la sélection qui décale panneaux et toile (2-D), le genre d'un remplissage à
-    motif qui montre « Uni » (9), le raster des effets dans le PDF (13a).
+  - les restes des étapes, inchangés : le genre d'un remplissage à motif qui montre « Uni » (9), le raster des effets dans le PDF (13a).
+    La rangée de la sélection qui décalait panneaux et toile (2-D) a sa cale depuis `21680a2`, fusionnée avant la passe des trois moteurs.
 
 ### Caduc
 

@@ -221,6 +221,13 @@ de Playwright 1.56.1) avant et après correction :
 | Texte d’exemple en grotesque (`finition.e2e.ts`, deux thèmes) : la chasse fixe du champ | Test : WebKit ne calcule pas le style de `::placeholder` par `getComputedStyle`, il rend celui du champ (sonde : couleur et famille du champ, pas de l’exemple) | Une sonde dit si le moteur le calcule ; sinon la couleur, la famille et l’opacité sont relues dans les feuilles (dernière règle `::placeholder` qui vise le champ) et calculées sur un élément voisin. Le contraste de 4,5:1 est ainsi mesuré pour de bon sous WebKit, il ne l’était pas |
 | La molette qui retire la ligne au focus (`couleurs-nombreuses.e2e.ts`) : 3 123 px au lieu de 3 600 | Test : passé 1 000 px, il n’attendait plus qu’un cran ait porté avant d’envoyer le suivant, et WebKit en perdait ; cran par cran, la liste va jusqu’au bout, focus retiré compris (mesuré) | Chaque cran est attendu |
 
+La bascule du modèle riche (ADR-0012, étape 14, 26 octobre 2026), en local, suite entière : Firefox 142 et WebKit 26 **entièrement
+verts** (1 492 tests passés dans chacun, les 4 non joués étant les captures demandées de `texte-enveloppe.e2e.ts`), Chromium 141 aussi,
+sauf un audit axe intermittent (un bouton de constat Cricut survolé à 4,33:1, défaut de la page, corrigé, son fichier et quatre autres
+rejoués verts dans les trois). En route, sous Firefox seul : un clic synthétique ne choisit pas une forme dans un contexte tactile (le
+test la touche), et Firefox tronque au pixel les coordonnées du pointeur (un geste peut perdre un pixel : le test de l'aimant des repères
+visait 5,8 px pour une attraction à 6). Le détail est à l'annexe 8 de l'ADR-0012, « Ce que l'étape 14 a posé ».
+
 Trouvé en levant le saut du contraste forcé, **défaut de la page sous WebKit** : un focus posé par script pendant un `keydown`
 dont le geste par défaut est empêché (`preventDefault`, pour que la flèche ne fasse pas défiler la page) n’y reçoit pas
 `:focus-visible`. Un menu ouvert à la souris puis parcouru aux flèches ne montrait donc aucun élément atteint, pas plus que

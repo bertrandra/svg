@@ -198,6 +198,12 @@ empreintes.
 - Les boutons radio Uni / Dégradé linéaire / Dégradé radial de l'inspecteur et les cases Flou et Ombre portée de la section Effets
   font 24 px de haut à la souris (18,8 et 19 px) : les tests de cibles, joués en riche, les ont trouvés.
 
+- Une ligne des calques choisie et survolée garde l'encre : le cyan du survol sur la teinte de la sélection n'y faisait que 3,99:1,
+  et, la rangée de la sélection ne décalant plus la liste, le pointeur reste sur la ligne qu'il vient de choisir.
+
+- Un bouton survolé d'un constat « Prêt pour Cricut » prend le cyan du survol des boutons discrets : sur le fond d'un constat
+  bloquant, le cyan d'outil ne faisait que 4,33:1 (l'audit axe tombait quand le pointeur restait sur le panneau).
+
 - Modèle riche : une forme dessinée, collée ou insérée dans un groupe y entre, au premier plan, au lieu de naître hors du contexte,
   estompée et imprenable ; « Vectoriser : lettres séparées » rend les lettres en un groupe « Texte « … » », choisi, et le dit.
 - Une image intégrée se dit « image PNG » (calques, sélection, Alt+clic), plus « rectangle, sans fond ».
