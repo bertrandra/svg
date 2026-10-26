@@ -8,8 +8,9 @@
 // La scene se construit juste avant la regle des groupes (qui fond la table) ; ce qu'elle porte quitte alors le dessin, sans phrase :
 // l'exporteur l'ecrit. Un dessin sans rien de natif n'a pas de scene : son export ne change pas d'un octet. Pure.
 
-import { ancetres, boiteAvecTrait, boiteChemin, seCroisent, visibleEffectif, type Boite, type Chemin, type Decoupe, type Degrade, type DessinSvg, type Forme, type Groupe, type ImageIntegree, type Masque } from '../editionSvg.js';
+import { ancetres, boiteAvecTrait, boiteChemin, seCroisent, visibleEffectif, type Boite, type Chemin, type Contenu, type Decoupe, type Degrade, type DessinSvg, type Forme, type Groupe, type ImageIntegree, type Masque, type Matrice, type Motif } from '../editionSvg.js';
 import { estDegrade } from '../edition/degrades.js';
+import { estMotif } from '../edition/fonctions/motifs.js';
 import { cheminDeRegion, cheminLisseDeRegion, toleranceBooleen } from '../booleens.js';
 import { decoupeCourbe, regionDecoupe } from './decoupes.js';
 import type { MultiPolygon } from 'polygon-clipping';
@@ -21,12 +22,22 @@ export interface PeintureScene {
   readonly domaine: readonly [number, number];
 }
 
-/** Une feuille plate (aucun champ v2), son opacite composee avec celle de ses groupes ; son degrade de fond ou de trait a part. */
+/**
+ * Un motif a paver nativement : sa tuile (x, y, l, h) dans le repere du motif, la matrice qui pose ce repere dans le plan, et le
+ * contenu de la tuile, deja une scene, dans le repere de la tuile (son origine au coin x, y).
+ */
+export interface MotifScene {
+  readonly tuile: Boite;
+  readonly matrice?: Matrice;
+  readonly contenu: Scene;
+}
+
+/** Une feuille plate (aucun champ v2), son opacite composee avec celle de ses groupes ; son degrade ou son motif de fond ou de trait a part. */
 export interface FeuilleScene {
   readonly genre: 'forme';
   readonly forme: Forme;
-  readonly fond?: PeintureScene;
-  readonly trait?: PeintureScene;
+  readonly fond?: PeintureScene | MotifScene;
+  readonly trait?: PeintureScene | MotifScene;
 }
 
 /** Une image integree, son opacite composee avec celle de ses groupes. */
@@ -63,7 +74,6 @@ export interface PorteeScene {
   readonly enfants: readonly NoeudScene[];
 }
 
-// Un motif de pavage (`/Pattern` de type 1 dans le PDF) entrera ici avec l'etape 9, comme une peinture de plus (`PeintureScene`).
 export type NoeudScene = FeuilleScene | ImageScene | PorteeScene;
 
 export interface Scene { readonly noeuds: readonly NoeudScene[] }
@@ -158,19 +168,23 @@ function boiteDes(fs: readonly Forme[]): Boite {
   return Number.isFinite(x0) ? { x: x0, y: y0, l: x1 - x0, h: y1 - y0 } : { x: 0, y: 0, l: 0, h: 0 };
 }
 
-type Natifs = { readonly degrades: boolean; readonly images: boolean; readonly decoupes: boolean; readonly masques: boolean; readonly groupes: boolean };
+type Natifs = { readonly degrades: boolean; readonly motifs: boolean; readonly images: boolean; readonly decoupes: boolean; readonly masques: boolean; readonly groupes: boolean };
+
+/** Vrai pour une peinture que l'exporteur ecrit lui-meme. */
+const peintureNative = (p: Forme['peintureRemplissage'], n: Natifs): boolean => (n.degrades && estDegrade(p)) || (n.motifs && estMotif(p));
 
 /**
  * Le dessin sans ce que l'exporteur ecrit lui-meme : ni les degrades ou les images (s'ils sont natifs), ni les decoupes ou les masques
- * des groupes, ni leur opacite quand la scene la porte (`opacites`). Un motif reste : le filet le dit.
+ * des groupes, ni leur opacite quand la scene la porte (`opacites`). Une peinture qui n'est pas native reste : sa regle, ou le filet, la dit.
  */
 function sans(d: DessinSvg, n: Natifs, opacites: boolean): DessinSvg {
   const formes = d.formes.flatMap((f): Forme[] => {
     if (n.images && f.image) return [];
-    if (!n.degrades || (!estDegrade(f.peintureRemplissage) && !estDegrade(f.peintureContour))) return [f];
+    const r = peintureNative(f.peintureRemplissage, n), c = peintureNative(f.peintureContour, n);
+    if (!r && !c) return [f];
     const x: Record<string, unknown> = { ...f };
-    if (estDegrade(f.peintureRemplissage)) delete x.peintureRemplissage;
-    if (estDegrade(f.peintureContour)) delete x.peintureContour;
+    if (r) delete x.peintureRemplissage;
+    if (c) delete x.peintureContour;
     return [x as unknown as Forme];
   });
   const table = d.groupes, sansOpacite = opacites && n.groupes;
@@ -192,10 +206,10 @@ const scenePlate = (d: DessinSvg): Scene => ({ noeuds: d.formes.filter(f => f.vi
  */
 export function sceneNative(d: DessinSvg, capacites: Capacites, sousDescente: SousDescente): SceneConstruite | null {
   const n: Natifs = {
-    degrades: capacites.degrades === 'natif', images: capacites.images === 'natif', decoupes: capacites.decoupes === 'natif', masques: capacites.masques === 'natif',
+    degrades: capacites.degrades === 'natif', motifs: capacites.motifs === 'natif', images: capacites.images === 'natif', decoupes: capacites.decoupes === 'natif', masques: capacites.masques === 'natif',
     groupes: capacites.groupes === 'natif'
   };
-  if (!n.degrades && !n.images && !n.decoupes && !n.masques && !n.groupes) return null;
+  if (!n.degrades && !n.motifs && !n.images && !n.decoupes && !n.masques && !n.groupes) return null;
   const table = d.groupes;
   const groupe = (id: string): Groupe | undefined => (table && aPropre(table, id) ? table[id] : undefined);
   const visibles = d.formes.filter(f => f.visible && visibleEffectif(d, f.id));
@@ -209,7 +223,7 @@ export function sceneNative(d: DessinSvg, capacites: Capacites, sousDescente: So
     return fs.length > 1 || (!!seule && seule.remplissage !== null && seule.contour !== null && seule.epaisseur > 0);
   };
   const enPortee = (g: Groupe | undefined): boolean => !!g && ((n.decoupes && !!g.decoupe) || (n.masques && !!g.masque) || transparence(g));
-  const utile = visibles.some(f => (n.degrades && (estDegrade(f.peintureRemplissage) || estDegrade(f.peintureContour))) || (n.images && f.image)
+  const utile = visibles.some(f => peintureNative(f.peintureRemplissage, n) || peintureNative(f.peintureContour, n) || (n.images && f.image)
     || (f.parent !== undefined && ancetres(d, f.id).some(a => enPortee(groupe(a)))));
   // Rien de natif ne se voit : pas de scene ; ce qui est natif mais cache part sans phrase (le filet le dirait perdu), l'opacite des
   // groupes reste a la regle des groupes (le PDF d'avant).
@@ -228,12 +242,18 @@ export function sceneNative(d: DessinSvg, capacites: Capacites, sousDescente: So
     return { degrade: sans as Degrade, domaine: [0, 1] };
   };
 
-  const masque = (m: Masque): MasqueScene => {
-    const c = m.contenu;
-    const sous = sousDescente({ vb: d.vb, formes: c.formes, ...(c.groupes ? { groupes: c.groupes } : {}) });
+  /** Le contenu d'une definition (masque, tuile) descendu a son tour : sa scene, ce qu'il approche dit avec le reste. */
+  const sousScene = (c: Contenu, vb: DessinSvg['vb']): Scene => {
+    const sous = sousDescente({ vb, formes: c.formes, ...(c.groupes ? { groupes: c.groupes } : {}) });
     for (const p of sous.pertes) dire(p, sous.perdus.includes(p));
-    return { type: m.type, region: m.region, contenu: sous.scene ?? scenePlate(sous.dessin) };
+    return sous.scene ?? scenePlate(sous.dessin);
   };
+
+  const motif = (m: Motif): MotifScene => ({ tuile: { x: m.x, y: m.y, l: m.l, h: m.h }, ...(m.matrice ? { matrice: m.matrice } : {}), contenu: sousScene(m.contenu, [0, 0, m.l, m.h]) });
+  const cote = (p: Forme['peintureRemplissage'], f: Forme): PeintureScene | MotifScene | undefined =>
+    n.degrades && estDegrade(p) ? peinture(p, f) : n.motifs && estMotif(p) ? motif(p) : undefined;
+
+  const masque = (m: Masque): MasqueScene => ({ type: m.type, region: m.region, contenu: sousScene(m.contenu, d.vb) });
 
   const portee = (g: Groupe): PorteeScene & { enfants: NoeudScene[] } => {
     let decoupe: DecoupeScene | undefined;
@@ -270,8 +290,8 @@ export function sceneNative(d: DessinSvg, capacites: Capacites, sousDescente: So
     if (f.image) { if (n.images) cible.push({ genre: 'image', source: f.image, opacite }); continue; }
     const { parent: _p, peintureRemplissage, peintureContour, effets: _e, image: _i, ...plate } = f;
     void _p; void _e; void _i;
-    const fond = n.degrades && estDegrade(peintureRemplissage) && f.remplissage !== null ? peinture(peintureRemplissage, f) : undefined;
-    const trait = n.degrades && estDegrade(peintureContour) && f.contour !== null && f.epaisseur > 0 ? peinture(peintureContour, f) : undefined;
+    const fond = f.remplissage !== null ? cote(peintureRemplissage, f) : undefined;
+    const trait = f.contour !== null && f.epaisseur > 0 ? cote(peintureContour, f) : undefined;
     cible.push({ genre: 'forme', forme: opacite !== f.opacite ? { ...plate, opacite } : plate, ...(fond ? { fond } : {}), ...(trait ? { trait } : {}) });
   }
 

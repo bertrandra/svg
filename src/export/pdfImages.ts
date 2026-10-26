@@ -44,12 +44,14 @@ export const MSG_IMAGES_PDF = {
   cmjn: 'les images (gardées en RVB : ce format ne convertit pas leurs pixels en CMJN)'
 } as const;
 
-/** Les images d'une scene, contenus de masques compris, chacune une fois (par ses donnees). */
+/** Les images d'une scene, contenus de masques et tuiles de motifs compris, chacune une fois (par ses donnees). */
 function imagesDe(scene: Scene): ImageIntegree[] {
   const vues = new Map<string, ImageIntegree>();
-  const visiter = (n: NoeudScene) => {
+  const visiter = (n: NoeudScene): void => {
     if (n.genre === 'image') { if (!vues.has(n.source.donnees)) vues.set(n.source.donnees, n.source); return; }
-    if (n.genre === 'portee') { n.enfants.forEach(visiter); n.masque?.contenu.noeuds.forEach(visiter); }
+    if (n.genre === 'portee') { n.enfants.forEach(visiter); n.masque?.contenu.noeuds.forEach(visiter); return; }
+    // La tuile d'un motif est une scene a son tour.
+    for (const p of [n.fond, n.trait]) if (p && 'tuile' in p) p.contenu.noeuds.forEach(visiter);
   };
   scene.noeuds.forEach(visiter);
   return [...vues.values()];

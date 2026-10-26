@@ -17,7 +17,7 @@ import { effets } from './descente/effets.js';
 import { descenteGroupes } from './descente/groupes.js';
 import { sceneNative, type Scene } from './descente/scene.js';
 
-export type { Scene, NoeudScene, FeuilleScene, ImageScene, PorteeScene, PeintureScene, DecoupeScene, MasqueScene } from './descente/scene.js';
+export type { Scene, NoeudScene, FeuilleScene, ImageScene, PorteeScene, PeintureScene, MotifScene, DecoupeScene, MasqueScene } from './descente/scene.js';
 
 /** Ce qu'un exporteur fait d'une fonction du modele : il la sait, il l'approche, il la rend en image, ou il la refuse. */
 export type Niveau = 'natif' | 'approche' | 'raster' | 'refus';

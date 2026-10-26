@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { estPlat, lireDessin, type DessinSvg, type Forme, type Groupe } from '../../../src/engine/editionSvg.js';
-import { aplatirPour, CAPACITES_PLAT, phrasePertes, type NoeudScene, type PorteeScene } from '../../../src/engine/aplatir.js';
+import { aplatirPour, CAPACITES_PLAT, phrasePertes, type MotifScene, type NoeudScene, type PeintureScene, type PorteeScene } from '../../../src/engine/aplatir.js';
 import { domaineDegrade, MSG_SCENE, PERIODES_MAX } from '../../../src/engine/descente/scene.js';
 import { CAPACITES_EPS, CAPACITES_PDF } from '../../../src/export/capacites.js';
 
@@ -21,6 +21,7 @@ const f = (id: string, champs: Partial<Forme> = {}): Forme => ({
   remplissage: '#ff0000', contour: null, epaisseur: 0, opacite: 1, regle: 'nonzero', visible: true, verrouille: false, ...champs
 });
 const g = (id: string, champs: Partial<Groupe> = {}): Groupe => ({ id, visible: true, verrouille: false, ...champs });
+const degrade = (p: PeintureScene | MotifScene | undefined): PeintureScene | undefined => (p && 'degrade' in p ? p : undefined);
 const portees = (n: readonly NoeudScene[]): PorteeScene[] => n.flatMap(x => (x.genre === 'portee' ? [x, ...portees(x.enfants)] : []));
 
 describe('la scene native', () => {
@@ -45,8 +46,8 @@ describe('la scene native', () => {
     const [n] = r.scene?.noeuds ?? [];
     expect(n?.genre).toBe('forme');
     if (n?.genre !== 'forme') return;
-    expect(n.fond?.domaine).toEqual([0, 1]);
-    expect(n.trait?.degrade.genre).toBe('lineaire');
+    expect(degrade(n.fond)?.domaine).toEqual([0, 1]);
+    expect(degrade(n.trait)?.degrade.genre).toBe('lineaire');
     expect(Object.keys(n.forme)).not.toContain('peintureRemplissage');
     expect(n.forme.remplissage).toBe(r.dessin.formes[0]?.remplissage);
   });
@@ -67,7 +68,7 @@ describe('la scene native', () => {
     const r = aplatirPour(d, CAPACITES_PDF);
     expect(r.pertes).toEqual([MSG_SCENE.periodes]);
     const [n] = r.scene?.noeuds ?? [];
-    expect(n?.genre === 'forme' && n.fond?.degrade.etalement).toBeUndefined();
+    expect(n?.genre === 'forme' && degrade(n.fond)?.degrade.etalement).toBeUndefined();
   });
 
   it('enferme les feuilles d un groupe decoupe dans une portee, au chemin exact ; deux formes qui se recouvrent sont recalculees et dites', () => {
@@ -112,20 +113,22 @@ describe('la scene native', () => {
     expect(pdf.dessin.formes.map(x => x.opacite)).toEqual([1, 1]);
   });
 
-  it('laisse les images, sauf masquees ; un motif reste approche par le filet', () => {
+  it('laisse les images, sauf masquees ; pave un motif, sa tuile descendue en scene dans son repere', () => {
     const d = riche(readFileSync(resolve(__dirname, '../../fixtures/pdf-natif/images-perdues.svg'), 'utf8'));
     const r = aplatirPour(d, CAPACITES_PDF);
     expect(r.scene?.noeuds.filter(n => n.genre === 'image')).toHaveLength(2);
     const cache = { ...d, formes: d.formes.map(x => (x.image ? { ...x, visible: false } : x)) };
     expect(aplatirPour(cache, CAPACITES_PDF).scene).toBeUndefined();
-    const motif: DessinSvg = {
-      vb: [0, 0, 10, 10],
-      formes: [f('f1', { peintureRemplissage: { genre: 'motif', x: 0, y: 0, l: 2, h: 2, contenu: { formes: [] } } }), f('f2', { parent: 'g1' }), f('f3', { parent: 'g1' })],
-      groupes: { g1: g('g1', { opacite: 0.5 }) }
-    };
+    const motif = riche(SVG('<pattern id="p" patternUnits="userSpaceOnUse" x="5" y="5" width="10" height="10"><linearGradient id="a"><stop offset="0" stop-color="#f00"/><stop offset="1" stop-color="#00f"/></linearGradient><rect width="5" height="5" fill="url(#a)"/></pattern><rect width="100" height="50" fill="url(#p)"/>'));
     const m = aplatirPour(motif, CAPACITES_PDF);
     expect(estPlat(m.dessin)).toBe(true);
-    expect(m.pertes).toEqual(['les dégradés et les motifs (remplacés par une couleur unie)']);
-    expect(m.scene?.noeuds[0]).toEqual({ genre: 'forme', forme: f('f1') });
+    expect(m.pertes).toEqual([]);
+    const [n] = m.scene?.noeuds ?? [];
+    const p = n?.genre === 'forme' ? n.fond : undefined;
+    expect(p && 'tuile' in p ? p.tuile : null).toEqual({ x: 5, y: 5, l: 10, h: 10 });
+    // La tuile est une scene : son degrade y est natif.
+    expect(p && 'tuile' in p && p.contenu.noeuds.some(x => x.genre === 'forme' && x.fond !== undefined)).toBe(true);
+    // Ailleurs, le motif est approche par sa couleur moyenne, et dit.
+    expect(aplatirPour(motif, CAPACITES_EPS).pertes).toEqual(['les motifs (remplacés par leur couleur moyenne)']);
   });
 });

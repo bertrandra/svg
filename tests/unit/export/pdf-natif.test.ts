@@ -97,7 +97,7 @@ const VARIANTES: readonly { readonly nom: string; readonly fixture: string; read
 
 describe('le PDF natif d un dessin riche', () => {
   it('a ses fixtures', () => {
-    expect(FIXTURES).toEqual(['decoupes', 'degrades', 'images', 'images-perdues', 'masques', 'mixte']);
+    expect(FIXTURES).toEqual(['decoupes', 'degrades', 'images', 'images-perdues', 'masques', 'mixte', 'motifs']);
   });
 
   for (const v of VARIANTES) {
@@ -137,6 +137,11 @@ describe('le PDF natif d un dessin riche', () => {
     expect([...msq.o.values()].filter(x => /\/Group << \/S \/Transparency \/CS \/DeviceGray >>/.test(x.dict))).toHaveLength(2);
     // Le contenu d'un masque de luminance s'ecrit en gris : sa luminance.
     expect([...msq.o.values()].some(x => /\/CS \/DeviceGray/.test(x.dict) && / g\n/.test(decode(x).toString('latin1')))).toBe(true);
+    const mot = contenu('motifs');
+    expect(mot.page).toMatch(/\/Pattern cs \/P\d+ scn\n/);
+    expect(mot.page).toMatch(/\/Pattern CS \/P\d+ SCN\n/);
+    const pavages = [...mot.o.values()].filter(x => /\/PatternType 1 \/PaintType 1 \/TilingType 1/.test(x.dict));
+    expect(pavages.map(x => /\/XStep ([\d.]+) \/YStep ([\d.]+)/.exec(x.dict)?.slice(1).join(' ')).sort()).toEqual(['16 16', '20 20', '25 25', '30 30', '6 6', '6 6', '7.5 15'].sort());
     const mix = contenu('mixte');
     expect(mix.ressources).toMatch(/<< \/ca 0\.85 \/CA 0\.85 >>/);
     const img = contenu('images');
@@ -227,5 +232,6 @@ const POINTS: Readonly<Record<string, readonly (readonly [number, number, readon
   decoupes: [[50, 20, [224, 184, 74]], [50, 80, [255, 255, 255]], [12, 50, [255, 255, 255]], [150, 20, [42, 138, 90]], [150, 50, [255, 255, 255]], [115, 50, [42, 138, 90]], [205, 45, [208, 80, 16]], [232, 70, [208, 80, 16]], [185, 85, [255, 255, 255]], [40, 50, [163, 112, 135]]],
   masques: [[15, 60, [203, 42, 52]], [105, 60, [252, 244, 245]], [60, 60, [144, 168, 198]], [140, 60, [148, 196, 172]]],
   images: [[191, 13, [20, 140, 60]], [150, 85, [53, 62, 173]], [210, 80, [232, 232, 232]], [260, 80, [192, 32, 96]], [40, 150, [118, 56, 113]], [120, 140, [162, 146, 181]], [255, 140, [32, 64, 208]], [280, 175, [33, 176, 32]]],
+  motifs: [[15, 15, [200, 30, 40]], [25, 25, [31, 78, 140]], [15, 25, [255, 255, 255]], [195, 40, [255, 248, 224]], [40, 130, [72, 71, 192]], [36, 90, [55, 96, 192]], [100, 95, [244, 240, 232]], [195, 117, [99, 99, 99]], [180, 105, [255, 255, 255]]],
   mixte: [[100, 30, [243, 235, 206]], [40, 70, [101, 131, 184]], [100, 80, [133, 135, 162]], [100, 120, [36, 110, 81]], [60, 40, [203, 207, 208]]]
 };

@@ -7,17 +7,19 @@
 //    (`/SMask` d'un `ExtGState`, `/S /Luminosity` ou `/Alpha`) dont le groupe est le contenu du masque, ecrit en gris de luminance ;
 //    la region du masque est la boite des deux groupes ;
 //  - un groupe translucide dont les feuilles se recouvrent : un groupe de transparence peint a son opacite ;
-//  - une image : son XObject (`pdfImages.ts`), pose par `cm` sur son cadre (`pdfPlacement.ts`), rognee a son cadre en `slice`.
+//  - une image : son XObject (`pdfImages.ts`), pose par `cm` sur son cadre (`pdfPlacement.ts`), rognee a son cadre en `slice` ;
+//  - un motif : un motif de pavage colore (`/PatternType 1`, `/PaintType 1`, `/TilingType 1`), sa tuile ecrite comme une scene dans
+//    son propre repere (`/BBox`, `/XStep`, `/YStep`), pose par sa matrice rapportee a l'espace du motif, comme un trait en degrade.
 // Les objets suivent ceux de la page (`pdfRessources.ts`). Pur et deterministe.
 
 import { boiteChemin, type Chemin, type DessinSvg, type Forme } from '../engine/editionSvg.js';
-import type { FeuilleScene, ImageScene, NoeudScene, PeintureScene, PorteeScene, Scene } from '../engine/aplatir.js';
+import type { FeuilleScene, ImageScene, MotifScene, NoeudScene, PeintureScene, PorteeScene, Scene } from '../engine/aplatir.js';
 import type { MiseEnPage } from './pdfPage.js';
-import { fluxOctets } from './pdfObjets.js';
+import { fluxOctets, fluxTexte } from './pdfObjets.js';
 import { arretUnique, opaciteConstante, shading } from './pdfDegrades.js';
 import type { ImagesPdf } from './pdfImages.js';
 import { placementImage } from './pdfPlacement.js';
-import { RessourcesPdf } from './pdfRessources.js';
+import { RessourcesPdf, tableau4 } from './pdfRessources.js';
 import type { ObjetPdf } from './pdfObjets.js';
 import { cleEtat, contenuForme, couleurMode, nb, nbk, opacitesPdf, operateurs, operateursTrait, traite, valeursEtat, type ModeCouleur } from './pdfTrace.js';
 
@@ -50,13 +52,16 @@ function peinture(p: PeintureScene | undefined) {
   return { u, degrade: p && !u ? p : null, alpha: u ? (u.opacite ?? 1) : constante ?? 1, masque: !!p && !u && constante === null };
 }
 
-/** L'ecrivain d'une scene : ses ressources, et le plan retourne du PDF. */
-class EcrivainScene {
-  readonly r = new RessourcesPdf();
-  private readonly F: Mat;
-  private readonly imagesEcrites = new Map<string, string>();
+const estMotif = (p: PeintureScene | MotifScene | undefined): p is MotifScene => p !== undefined && 'tuile' in p;
 
-  constructor(private readonly vb: DessinSvg['vb'], private readonly images: ImagesPdf | undefined) {
+/**
+ * L'ecrivain d'une scene : ses ressources (partagees avec les tuiles des motifs, qui s'ecrivent dans leur propre repere), et le plan
+ * retourne du PDF.
+ */
+class EcrivainScene {
+  private readonly F: Mat;
+
+  constructor(readonly r: RessourcesPdf, private readonly vb: DessinSvg['vb'], private readonly images: ImagesPdf | undefined, private readonly imagesEcrites = new Map<string, string>()) {
     const [vx, vy, , vh] = vb;
     this.F = [1, 0, 0, -1, -vx, vh + vy];
   }
@@ -78,7 +83,22 @@ class EcrivainScene {
     return this.r.etat('<< /SMask << /Type /Mask /S /Luminosity /G ' + g + ' 0 R >> >>');
   }
 
-  private remplir(f: Forme, p: PeintureScene | undefined, op: number, flux: Flux): string {
+  /**
+   * Le nom du motif de pavage d'une peinture. Son espace : (px, py) de la tuile, l'axe vertical retourne, devient (x + px, y + h - py)
+   * dans le repere du motif, que sa matrice pose dans le plan, puis le plan retourne du PDF, puis l'espace du flux qui le peint.
+   */
+  private pavage(p: MotifScene, flux: Flux): string {
+    const { x, y, l, h } = p.tuile;
+    const tuile = new EcrivainScene(this.r, [0, 0, l, h], this.images, this.imagesEcrites);
+    const contenu = tuile.noeuds(p.contenu.noeuds, { mode: flux.mode, base: IDENTITE });
+    const m = composer(composer(composer([1, 0, 0, -1, x, y + h], p.matrice ?? IDENTITE), this.F), flux.base);
+    const dict = '/Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox ' + tableau4([0, 0, l, h]) + ' /XStep ' + nbk(l, 4) + ' /YStep ' + nbk(h, 4)
+      + ' /Resources 6 0 R /Matrix [' + matrice(m) + ']';
+    return this.r.motif(this.r.unique('pavage ' + dict + '\n' + contenu, () => fluxTexte(dict, contenu)) + ' 0 R');
+  }
+
+  private remplir(f: Forme, p: PeintureScene | MotifScene | undefined, op: number, flux: Flux): string {
+    if (estMotif(p)) return this.paver(f, p, op, flux, false);
     const x = peinture(p), a = nb(op * x.alpha), regle = f.regle === 'evenodd' ? '*' : '', l = ['q'];
     if (a !== '1') l.push('/' + this.r.etat('<< /ca ' + a + ' >>') + ' gs');
     if (!x.degrade) l.push(couleurMode(x.u?.couleur ?? f.remplissage ?? '#000000', false, flux.mode), operateurs(f.d, this.vb), 'f' + regle);
@@ -90,7 +110,18 @@ class EcrivainScene {
     return l.join('\n');
   }
 
-  private tracer(f: Forme, p: PeintureScene | undefined, op: number, flux: Flux): string {
+  /** Une forme remplie ou contournee de son motif de pavage. */
+  private paver(f: Forme, p: MotifScene, op: number, flux: Flux, trait: boolean): string {
+    const a = nb(op), l = ['q'];
+    if (a !== '1') l.push('/' + this.r.etat('<< /' + (trait ? 'CA' : 'ca') + ' ' + a + ' >>') + ' gs');
+    l.push('/Pattern ' + (trait ? 'CS' : 'cs') + ' /' + this.pavage(p, flux) + (trait ? ' SCN' : ' scn'));
+    if (trait) l.push(nb(f.epaisseur) + ' w', ...operateursTrait(f));
+    l.push(operateurs(f.d, this.vb), trait ? 'S' : 'f' + (f.regle === 'evenodd' ? '*' : ''), 'Q');
+    return l.join('\n');
+  }
+
+  private tracer(f: Forme, p: PeintureScene | MotifScene | undefined, op: number, flux: Flux): string {
+    if (estMotif(p)) return this.paver(f, p, op, flux, true);
     const x = peinture(p), a = nb(op * x.alpha), l = ['q'];
     if (a !== '1') l.push('/' + this.r.etat('<< /CA ' + a + ' >>') + ' gs');
     if (x.masque && x.degrade) l.push('/' + this.masqueAlpha(x.degrade, this.boite(f.d, (f.epaisseur * Math.max(1, f.limiteMitre ?? 4)) / 2 + 1)) + ' gs');
@@ -158,7 +189,7 @@ class EcrivainScene {
 
 /** La scene en contenu de page, ressources et objets. `mise` donne la matrice de la page, a laquelle un motif se rapporte. */
 export function ecrireScene(scene: Scene, vb: DessinSvg['vb'], cmjn: boolean, mise: MiseEnPage | null, images?: ImagesPdf): SceneEcrite {
-  const e = new EcrivainScene(vb, images);
+  const e = new EcrivainScene(new RessourcesPdf(), vb, images);
   // La matrice de la page telle que `fluxMisEnPage` l'ecrit : l'espace d'un motif peint par la page.
   const echelle = mise ? Number(mise.echelle.toFixed(6)) : 1;
   const base: Mat = mise ? [echelle, 0, 0, echelle, Number(nb(mise.dx)), Number(nb(mise.dy))] : IDENTITE;

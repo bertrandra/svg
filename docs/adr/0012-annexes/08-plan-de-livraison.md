@@ -24,7 +24,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
 | 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
-| 8, 13a, 13b, 13d, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 13a PDF natif | **fait** le 26 octobre 2026, sauf le raster des effets (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13a a posé ») |
+| 8, 13b, 13d, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -819,6 +820,64 @@ avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'on
   masques (`fonctions/masques.ts`) compte deux fois les places vides d'un contenu imbriqué et s'arrête alors en silence sous la borne
   (corrigé ici pour les motifs seulement : à reprendre pour les masques).
 
+### Ce que l'étape 13a a posé (26 octobre 2026)
+
+- **Capacités** : `CAPACITES_PDF` (`export/capacites.ts`) déclare `natif` les dégradés, les motifs, les découpes, les masques, les
+  images et les groupes ; `effets` reste `approche` (abandonnés et dits), `texte` `natif` comme partout.
+- **La scène native** (`engine/descente/scene.ts`, exportée par `aplatir.ts`) : juste avant la règle des groupes, `aplatirPour` remet à
+  l'exporteur, en plus du `DessinPlat`, ce qu'il écrit lui-même : des feuilles plates (aucun champ v2) avec leur dégradé
+  (`PeintureScene`, domaine du paramètre calculé sur la boîte peinte : `[0, 1]` étalé, des périodes entières pour `repeat`/`reflect`,
+  au plus `PERIODES_MAX` = 256, au-delà prolongé et dit) ou leur motif (`MotifScene` : tuile, matrice, contenu en scène dans le repère
+  de la tuile) à part, des images posées, et des **portées** pour un groupe découpé (chemin exact pour une forme, ou des formes de même
+  règle qui ne se touchent pas ; sinon l'union des booléens, dite si elle rebâtit des courbes), masqué (contenu en scène, région) ou
+  translucide quand ses feuilles se recouvrent (plus d'une feuille, ou une feuille à fond et trait : `opacite` et `boite`). Ce que la
+  scène porte quitte le dessin plat sans phrase ; ce qui est natif mais caché part sans phrase, même sans scène (sinon le filet le
+  disait perdu) ; l'opacité des groupes n'est retirée que s'il y a une scène. Les contenus de masques et les tuiles descendent par
+  `aplatirPour` (récursion passée en paramètre : pas de cycle d'import). Un dessin plat, ou riche sans rien de natif visible, n'a pas
+  de scène : le PDF d'avant, octet pour octet (vérifié : les six empreintes de `pdf-options.test.ts` sans régénérer ; tout SVG v1 lu en
+  riche sans scène donne le même PDF que la descente d'avant).
+- **« Approché » et « perdu »** : `RegleDescente.descendre` peut rendre `perdus` (la part de ses phrases qui ne s'exporte pas) ;
+  `Descente.perdus` ; images, effets, masques et le filet (effets, images) s'y rangent ; `phrasePertes(pertes, perdus)` dit
+  « Approché par ce format : … . Perdu dans ce format : … . » (sans `perdus`, la phrase d'avant). `actionsExport`, `actionsProduction`
+  et « Télécharger le SVG à plat » passent `perdus`.
+- **L'écriture** (`export/`, chaque fichier pur, sans dépendance) : `pdf.ts` (l'entrée, `ecrirePdf(dessin, options, natif?)` ; sans
+  scène, les octets d'avant), `pdfTrace.ts` (les opérateurs sortis de `pdf.ts` tels quels, plus le gris de luminance), `pdfObjets.ts`
+  (l'assemblage, flux binaires compris), `pdfRessources.ts` (objet 6 partagé, objets 7 et suivants, noms stables dédoublonnés),
+  `pdfNatif.ts` (la scène), `pdfDegrades.ts` (shading axial/radial, fonctions de type 2 cousues en type 3, marche nette sur un arrêt
+  double, `Extend`, périodes renversées pour le reflet, fonction de base rangée à part et citée par période), `pdfPlacement.ts`
+  (`preserveAspectRatio`, orientation EXIF — Chromium l'applique à une `<image>` SVG, mesuré), `pdfImages.ts`, `deflate.ts` (zlib à
+  codes fixes, déterministe ; blocs stockés s'il ne gagne rien). Dégradé de fond : chemin de découpe puis `sh` ; de trait : motif de
+  shading (`/PatternType 2`) ; opacités d'arrêts constantes dans l'état graphique, variables en masque doux de luminance (shading gris
+  dans un groupe `/CS /DeviceGray`). Motif : `/PatternType 1 /PaintType 1 /TilingType 1`, `/BBox [0 0 l h]`, `/XStep`, `/YStep`, sa tuile
+  écrite comme une scène dans son repère (axe vertical retourné), `/Matrix` rapportée à l'espace du flux qui le peint (la page et sa mise
+  en page, ou l'identité dans un groupe ou une tuile). Découpe : `W n`/`W* n` dans un `q … Q` (le trait est rogné exactement). Masque :
+  le contenu masqué en groupe de transparence, peint sous `/SMask << /S /Luminosity|/Alpha /G … >>`, le contenu du masque en gris de
+  luminance (coefficients de `luminanceToAlpha` sur le sRVB : exact, dégradés compris). Groupe translucide : groupe de transparence à
+  `/ca /CA`. Image : JPEG en `/DCTDecode` tel quel (gris, RVB, CMJN avec `/Decode` inversé sous le marqueur Adobe ; arithmétique,
+  sans perte ou douze bits : perdu, dit), PNG sans alpha en `/FlateDecode` et `/Predictor 15` tel quel (gris, RVB, palette en
+  `/Indexed`), PNG à alpha, à couleur clé, à alphas de palette, entrelacé ou de seize bits décodé (`engine/images/png.ts`, défiltrage et
+  Adam7 en pur ; la décompression vient de `io`), GIF décodé (`engine/images/gif.ts`, LZW borné, première image, animation dite) ;
+  couleur et alpha recompressés (`deflate.ts`), alpha en `/SMask`, couleur des pixels transparents prise à leurs voisins (un lecteur qui
+  lisse ne fait plus déborder la couleur cachée) ; WebP perdu, dit ; en CMJN, les images restent en RVB, dit.
+- **`io/exportPdf.ts`** (`pdfDuDessin`) : descente, décompression des PNG par `decompresserZlib` (DecompressionStream, asynchrone ;
+  injectable), images préparées, fichier écrit ; `exporterPdf` (zones) l'appelle et dit la phrase. Mesuré : le PDF téléchargé dans
+  Chromium est, à l'octet, celui de l'écriture pure hors du navigateur (`tests/e2e/pdf-natif.e2e.ts`).
+- **Tests** : `tests/unit/export/pdf-natif.test.ts` (sept SVG d'entrée dans `tests/fixtures/pdf-natif/`, neuf références PDF dont une
+  A4 CMJN à fond perdu et une A4, refaites par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/export/pdf-natif.test.ts` et relues ;
+  un lecteur indépendant : table des décalages, `/Length`, références, ressources citées, `q`/`Q` équilibrés ; la forme de chaque
+  écriture ; le rendu par `pdftoppm` quand Poppler est là, des points comparés à la couleur que Chromium donne au SVG écrit ; chaque
+  fixture v2 et du corpus écrite et lue par Poppler sans un mot d'erreur), `descente-scene.test.ts`, `images/png|gif|jpeg.test.ts`,
+  `deflate.test.ts`, `io/exportPdf.test.ts`, l'e2e `pdf-natif`. Les tests de descente qui attendaient du PDF l'approche d'aujourd'hui
+  la vérifient sur un autre exporteur et vérifient la scène du PDF.
+- **Vérifié à l'œil** (Chromium sur le SVG écrit par l'éditeur, Poppler `pdftoppm` sur le PDF, à 216 ppp, côte à côte) : dégradés,
+  découpes, masques, motifs, groupe translucide et images se superposent ; écarts mesurés : l'échantillonnage (Poppler au coin du pixel,
+  Chromium au centre), le lissage d'une petite image agrandie (Poppler décale ses échantillons d'un demi-pixel ; sans `/Interpolate`,
+  chaque pixel tombe exactement), la conversion CMJN d'un JPEG CMJN (propre à chaque lecteur), les joints de tuile d'un motif.
+- **Reste** : le **raster des effets** (le PDF n'a pas de résolution d'export : `OptionsExport.dpi` est celle du PNG ; il faudrait une
+  résolution de PDF dans les options et un rastériseur dans `io`, au prix d'octets propres au navigateur, comme JPEG et WebP) ; le WebP
+  (décodeur pur déraisonnable ; le canevas du navigateur rendrait des pixels prémultipliés et gérés en couleur) ; la vignette PHP ; le
+  CMJN des images ; `/Interpolate true` est un choix (le plus proche du navigateur, sauf chez Poppler, qui lisse décalé).
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -1072,7 +1131,8 @@ ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *R
 ### Étape 13 — Exports natifs et idiomes d'éditeurs · taille G, quatre lots indépendants
 
 - **13a PDF natif** : `shading` axial/radial, découpe `W n`, masque doux, motif de pavage, image XObject,
-  raster des effets ; avec l'agent des exports (même fichier `export/pdf.ts`) · après 3, 5, 6, 12.
+  raster des effets ; avec l'agent des exports (même fichier `export/pdf.ts`) · après 3, 5, 6, 12 · **fait le 26 octobre 2026, sauf le
+  raster des effets** (§0, « Ce que l'étape 13a a posé »).
 - **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7.
 - **13c `<svg>` imbriqué**, et en mode riche un `<text>` lu en **groupe** de lettres · après 1 · **fait pour le moteur le 26 octobre 2026** (§0). *Révision : le `<text>` étranger
   se lit déjà en lettres, polices remplacées et dites (ADR-0020, `io/texteSvg.ts`) ; la liste `aComposer` est caduque.*
