@@ -172,6 +172,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .editeur-calques li { display: flex; align-items: center; gap: var(--esp-2xs); border-radius: var(--rayon-pastille); content-visibility: auto; contain-intrinsic-size: auto 26px; }
 .editeur-calques li.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-calques li.choisi { background: var(--repli-cyan-18); } }
+/* Survolee, une ligne choisie garde l'encre : le cyan du survol des boutons sur la teinte de la selection tombe a 4:1. La rangee de la
+   selection ne decalant plus la liste, le pointeur reste sur la ligne qu'il vient de choisir. */
+.editeur-calques li.choisi .calque-nom:hover:not(:disabled) { color: var(--encre); }
 .editeur-calques .calque-nom { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--esp-s); background: transparent; color: var(--encre); border: 0; padding: var(--esp-2xs) var(--esp-xs); font-weight: 400; font-size: var(--texte-petit); text-align: left; }
 /* Le nom d'une forme est son genre (« Cercle », « Polygone à 7 sommets ») : il se tronque plutot que de pousser les bascules ; son
    numero suit, a l'encre douce et en chiffres tabulaires, pour distinguer deux rectangles. */
