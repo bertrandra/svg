@@ -107,7 +107,7 @@ export function EcranReglages({ serveur, moi, retour }: Proprietes) {
       </header>
       {message ? <Message ton={message.ton}>{message.texte}</Message> : null}
       {r === null ? <p className="aide" role="status">{t('Chargement des réglages…')}</p> : (
-        <form className="carte-site formulaire-site" aria-labelledby={idTitre} onSubmit={e => { void enregistrer(e); }}>
+        <form className="carte-site formulaire-site" aria-labelledby={idTitre} noValidate onSubmit={e => { void enregistrer(e); }}>
           <h2 id={idTitre}>{t('Site')}</h2>
           <Champ libelle={t('Nom du site')} valeur={r.site.nom} poser={v => poserReglages({ ...r, site: { ...r.site, nom: v } })} maxLength={NOM_MAX} erreur={erreurs.nom} />
           <ChoixLangue legende={t('Langue par défaut (pages avant connexion, visiteurs sans préférence)')} valeur={r.site.langue} poser={l => poserReglages({ ...r, site: { ...r.site, langue: l } })} />

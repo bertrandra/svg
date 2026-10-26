@@ -60,7 +60,7 @@ function ConfirmationLigne({ action, c, agir, fermer }: { action: ActionCompte; 
     if (!ok) fermer();
   };
   return (
-    <form className="compte-confirmer" role="group" aria-label={t('{action} « {nom} »', { action: LIBELLES_ACTIONS[action].replace('…', ''), nom: c.nom })} onSubmit={e => { void envoyer(e); }}
+    <form className="compte-confirmer" role="group" aria-label={t('{action} « {nom} »', { action: LIBELLES_ACTIONS[action].replace('…', ''), nom: c.nom })} noValidate onSubmit={e => { void envoyer(e); }}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(); } }}>
       <p>{texteConfirmation(action)}</p>
       {action === 'refuser' ? <Champ libelle={t('Raison (facultative, une ligne)')} valeur={valeur} poser={poserValeur} maxLength={200} reference={champ} /> : null}
@@ -132,7 +132,7 @@ function FormulaireCreation({ agir, fermer }: { agir: (corps: Record<string, unk
     if (ok) fermer();
   };
   return (
-    <form className="carte-site formulaire-site creation-compte" aria-labelledby={idTitre} onSubmit={e => { void envoyer(e); }}
+    <form className="carte-site formulaire-site creation-compte" aria-labelledby={idTitre} noValidate onSubmit={e => { void envoyer(e); }}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); fermer(); } }}>
       <h2 id={idTitre}>{t('Créer un compte')}</h2>
       <p className="aide">{t('Pour une personne qui ne peut pas s’inscrire elle-même (sans mail qui parte, par exemple) : le compte est actif tout de suite, sans confirmation ni approbation. Transmettez-lui le mot de passe provisoire ; elle le changera dans son profil.')}</p>

@@ -129,8 +129,10 @@ describe('les comptes du site (ADR-0041)', () => {
     format: 'editeur-svg/config', version: 1,
     site: { nom: 'Mon site', langue: 'en', adresse: 'https://exemple.org/svg/' }, inscriptions: { ouvertes: false },
     courrier: { expediteur: 'no-reply@exemple.org', nom: 'Mon site', mode: 'smtp', smtp: { hote: 'smtp.exemple.org', port: 465, securite: 'ssl', utilisateur: 'anne' } },
-    sessions: { inactivite: 3600 }, smtpMotDePassePose: true
+    sessions: { inactivite: 3600 }
   };
+  /** Ce que `r=reglages` rend (ADR-0041 §7) : les reglages sous `reglages`, le mot de passe SMTP jamais, sa presence a cote. */
+  const REPONSE_REGLAGES = { reglages: CONFIG, smtpMotDePassePose: true, fichier: true, problemes: [] };
   const entetes = (a: Appel | undefined) => a?.init.headers as Record<string, string>;
 
   it('lit la personne connectee, le site et les demandes en attente ; refuse une reponse mal formee', async () => {
@@ -195,25 +197,27 @@ describe('les comptes du site (ADR-0041)', () => {
     expect(muet.ok ? '' : muet.message).toMatch(/votre propre compte/);
   });
 
-  it('lit les reglages champ par champ, chacun a son defaut, et ne renvoie le mot de passe SMTP que tape', async () => {
-    const { serveur, appels } = faux(a => (a.init.method === 'POST' ? json(200, { ok: true }) : json(200, CONFIG)));
+  it('lit les reglages sous `reglages`, champ par champ, chacun a son defaut, et ne renvoie le mot de passe SMTP que tape', async () => {
+    const { serveur, appels } = faux(a => (a.init.method === 'POST' ? json(200, { ok: true }) : json(200, REPONSE_REGLAGES)));
     const lu = await serveur.reglages();
     const attendu: Reglages = { site: { ...CONFIG.site, langue: 'en' }, inscriptions: CONFIG.inscriptions, courrier: { ...CONFIG.courrier, mode: 'smtp', smtp: { ...CONFIG.courrier.smtp, securite: 'ssl' } }, sessions: CONFIG.sessions, smtpMotDePassePose: true };
     expect(lu).toEqual({ ok: true, valeur: attendu });
+    // Les reglages a plat, sans l'enveloppe `reglages` : ce n'est pas la reponse du serveur.
+    expect(await faux(() => json(200, CONFIG)).serveur.reglages()).toMatchObject({ ok: false, code: 'serveur' });
     expect(lireReglages({ site: { nom: 'X', langue: 'xx' }, courrier: { mode: 'pigeon', smtp: { port: 70000 } } })).toEqual({
       ...REGLAGES_PAR_DEFAUT, site: { ...REGLAGES_PAR_DEFAUT.site, nom: 'X' }
     });
     expect(lireReglages([])).toBeNull();
     const sans = await serveur.poserReglages(attendu, '');
     expect(sans).toEqual({ ok: true, valeur: attendu });
-    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ site: CONFIG.site, inscriptions: CONFIG.inscriptions, courrier: CONFIG.courrier, sessions: CONFIG.sessions });
+    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ reglages: { site: CONFIG.site, inscriptions: CONFIG.inscriptions, courrier: CONFIG.courrier, sessions: CONFIG.sessions } });
     const avec = await serveur.poserReglages({ ...attendu, smtpMotDePassePose: false }, 'secret');
     expect(avec).toEqual({ ok: true, valeur: attendu });
-    expect(JSON.parse(String(appels[2]?.init.body)).courrier.smtp).toEqual({ ...CONFIG.courrier.smtp, motDePasse: 'secret' });
+    expect(JSON.parse(String(appels[2]?.init.body)).reglages.courrier.smtp).toEqual({ ...CONFIG.courrier.smtp, motDePasse: 'secret' });
     expect(entetes(appels[2])['X-CSRF']).toBe('jeton');
-    // Un serveur qui rend la configuration relue : on la croit, elle.
-    const relu = await faux(() => json(200, { ...CONFIG, site: { ...CONFIG.site, nom: 'Relu' } })).serveur.poserReglages(attendu, '');
-    expect(relu.ok ? relu.valeur.site.nom : '').toBe('Relu');
+    // Un serveur qui rend la configuration relue : on la croit, elle, et la presence du mot de passe avec.
+    const relu = await faux(() => json(200, { ...REPONSE_REGLAGES, reglages: { ...CONFIG, site: { ...CONFIG.site, nom: 'Relu' } }, smtpMotDePassePose: false })).serveur.poserReglages(attendu, '');
+    expect(relu.ok ? [relu.valeur.site.nom, relu.valeur.smtpMotDePassePose] : []).toEqual(['Relu', false]);
   });
 
   it('envoie un mail d essai, avec ou sans destinataire, et dit l echec du courrier', async () => {

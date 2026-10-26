@@ -45,7 +45,7 @@ function FormulaireIdentite({ compte, serveur, changer }: Pick<Proprietes, 'comp
     poserRetour({ texte: t('Profil enregistré.'), ton: 'info' });
   };
   return (
-    <form className="formulaire-site" aria-labelledby={idTitre} onSubmit={e => { void envoyer(e); }}>
+    <form className="formulaire-site" aria-labelledby={idTitre} noValidate onSubmit={e => { void envoyer(e); }}>
       <h3 id={idTitre}>{t('Identité')}</h3>
       <Champ libelle={t('Nom')} valeur={nom} poser={poserNom} maxLength={NOM_MAX} autoComplete="name" erreur={erreurs.nom} reference={champ} />
       <p className="champ-site"><span className="aide">{t('Adresse : {email}. Elle ne se change pas ici : demandez-le à un administrateur.', { email: compte.email })}</span></p>
@@ -82,7 +82,7 @@ function FormulaireMotDePasse({ serveur }: Pick<Proprietes, 'serveur'>) {
     poserRetour({ texte: t('Mot de passe changé. Vos autres sessions sont fermées.'), ton: 'info' });
   };
   return (
-    <form className="formulaire-site" aria-labelledby={idTitre} onSubmit={e => { void envoyer(e); }}>
+    <form className="formulaire-site" aria-labelledby={idTitre} noValidate onSubmit={e => { void envoyer(e); }}>
       <h3 id={idTitre}>{t('Mot de passe')}</h3>
       <Champ libelle={t('Mot de passe actuel')} type="password" valeur={ancien} poser={poserAncien} autoComplete="current-password" erreur={erreurs.ancien} />
       <Champ libelle={t('Nouveau mot de passe')} type="password" valeur={nouveau} poser={poserNouveau} autoComplete="new-password" erreur={erreurs.nouveau} aide={t('Dix caractères au moins.')} />

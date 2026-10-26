@@ -49,7 +49,8 @@
    par la regle des .icone-bouton) ; la pastille des demandes en attente se pose sur son coin. */
 .menu-profil { display: inline-flex; align-items: center; }
 .menu-profil-bouton .menu-bouton { border-radius: 50%; border-color: var(--filet-fort); background: var(--table); font-weight: 600; font-size: var(--texte-compact); letter-spacing: 0.02em; position: relative; overflow: visible; }
-.menu-profil-bouton .menu-bouton:hover:not(:disabled), .menu-profil-bouton .menu-bouton[aria-expanded="true"] { border-color: var(--cyan); color: var(--cyan); }
+/* Survole ou ouvert : le cyan sur le fond de la page (la teinte a 14 % des boutons d'icone ouverts passerait le texte sous 4,5:1). */
+.menu-profil-bouton .menu-bouton:hover:not(:disabled), .menu-profil-bouton .menu-bouton[aria-expanded="true"] { border-color: var(--cyan); color: var(--cyan); background: var(--table); }
 .profil-initiales { display: inline-grid; place-items: center; }
 .profil-pastille { position: absolute; top: calc(-1 * var(--esp-xs)); right: calc(-1 * var(--esp-xs)); min-width: var(--esp-xl); height: var(--esp-xl); padding: 0 var(--esp-xs); border-radius: var(--rayon-menu); background: var(--cyan); color: var(--sur-cyan); font-size: var(--texte-petit); font-weight: 600; line-height: var(--esp-xl); text-align: center; }
 /* L'en-tete du menu : le nom et l'adresse, du texte qu'on lit, sous un filet. */
