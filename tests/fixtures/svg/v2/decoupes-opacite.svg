@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <clipPath id="ovale"><ellipse cx="100" cy="60" rx="80" ry="40"/></clipPath>
+  </defs>
+  <g opacity="0.6" data-name="Ciel rogné" clip-path="url(#ovale)">
+    <rect x="0" y="0" width="200" height="60" fill="#1f5fb0"/>
+    <rect x="0" y="60" width="200" height="60" fill="#1f5f3f"/>
+  </g>
+</svg>

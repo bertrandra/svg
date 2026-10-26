@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <clipPath id="etoile">
+      <path d="M50 10L61 40L92 40L67 58L76 88L50 70L24 88L33 58L8 40L39 40Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#etoile)"><rect x="0" y="0" width="100" height="50" fill="#c81e28"/></g>
+  <g clip-path="url(#etoile)"><rect x="0" y="50" width="100" height="50" fill="#1f5fb0"/></g>
+  <g clip-path="url(#etoile)" transform="translate(100 20)"><rect x="0" y="0" width="100" height="100" fill="#1f5f3f"/></g>
+</svg>

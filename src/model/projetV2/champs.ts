@@ -8,6 +8,7 @@
 
 import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
 import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
+import { lireDecoupeProjet, type DecoupeProjet } from './decoupe.js';
 
 /** Ce que la validation du projet prete a un lecteur de champ : ses gardes, qui refusent en nommant (jamais une exception visible). */
 export interface OutilsProjet {
@@ -18,6 +19,8 @@ export interface OutilsProjet {
   tableau(v: unknown, quoi: string, max: number): readonly unknown[];
   objet(v: unknown, quoi: string): Record<string, unknown>;
   choix<T extends string>(v: unknown, quoi: string, permis: readonly T[]): T;
+  /** Un trace de projet bien forme (« M10 20L30 40Z », bornes du projet), ou le refus nomme (etape 5 : les feuilles d'une decoupe). */
+  chemin(v: unknown, quoi: string): string;
   /** La forme d'un identifiant de forme ou de groupe. */
   readonly identifiant: RegExp;
 }
@@ -75,8 +78,11 @@ export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly 
   return lus as ChampsFormeV2;
 }
 
-/** Les champs v2 d'un groupe de projet au-dela de sa base (decoupe, masque, effets : une ligne par etape) ; aucun a l'etape 1. */
-export type ChampsGroupeV2 = Record<never, never>;
+/** Les champs v2 d'un groupe de projet au-dela de sa base (decoupe, masque, effets : une ligne par etape). */
+export interface ChampsGroupeV2 {
+  /** Etape 5 : la decoupe du groupe (decoupe.ts). */
+  readonly decoupe?: DecoupeProjet;
+}
 
 /** Une ligne d'un champ de groupe : sa cle et son lecteur. */
 export interface ChampGroupeV2 {
@@ -84,5 +90,8 @@ export interface ChampGroupeV2 {
   readonly lire: (v: unknown, o: OutilsProjet) => unknown;
 }
 
-/** Les champs v2 d'un groupe, dans l'ordre ou ils se lisent et s'ecrivent (apres la base du groupe) ; vide a l'etape 1. */
-export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [];
+/** Les champs v2 d'un groupe, dans l'ordre ou ils se lisent et s'ecrivent (apres la base du groupe). Une ligne par etape. */
+export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [
+  // Etape 5 : la decoupe, de la geometrie seule.
+  { cle: 'decoupe', lire: (v, o) => lireDecoupeProjet(v, o) }
+];

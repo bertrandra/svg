@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ecrireDessin, lireDessin, transformer, rotation, type Degrade, type DessinSvg, type Forme } from '../../../src/engine/editionSvg.js';
+import { creerDecoupe, dupliquer, ecrireDessin, lireDessin, transformer, rotation, type Degrade, type DessinSvg, type Forme, type Groupe } from '../../../src/engine/editionSvg.js';
 import { etatDuProjet, formeDuProjet, formeProjet, projetDe, texteDuProjet, type EtatProjet } from '../../../src/engine/projet.js';
 import { FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, lireProjet } from '../../../src/model/projet.js';
 import { ARRETS_PROJET_MAX } from '../../../src/model/projetV2/peinture.js';
@@ -24,6 +24,12 @@ const CHAMPS_FORME: Readonly<Record<keyof Forme, Portage>> = {
 };
 
 const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', reperes: 'porte', groupes: 'porte' };
+
+/** Les champs d'un groupe (etape 1 : sa base ; puis une ligne de CHAMPS_GROUPE_V2 par etape). */
+const CHAMPS_GROUPE: Readonly<Record<keyof Groupe, Portage>> = {
+  id: 'porte', parent: 'porte', nom: 'porte', visible: 'porte', verrouille: 'porte', opacite: 'porte', origine: 'porte',
+  decoupe: 'porte', masque: 'etape 6', effets: 'etape 7'
+};
 
 const lire = (nom: string, modele: 'plat' | 'riche' = 'plat'): DessinSvg => {
   const r = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg', nom), 'utf8'), { modele });
@@ -72,6 +78,8 @@ describe('le projet porte tout le modele', () => {
   it('les champs du modele v2 attendent l etape qui les livre', () => {
     const attendus = Object.entries({ ...CHAMPS_FORME, ...CHAMPS_DESSIN }).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
     expect(attendus).toEqual(['effets : etape 7']);
+    const duGroupe = Object.entries(CHAMPS_GROUPE).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
+    expect(duGroupe).toEqual(['masque : etape 6', 'effets : etape 7']);
   });
 
   it('un dessin plat garde son nuancier et ses reperes, au format 1', () => {
@@ -202,5 +210,63 @@ describe('les groupes dans le projet (etape 1)', () => {
     expect(etatDuProjet(lu.projet)).toEqual({ erreur: 'Ce projet porte des groupes mal formés.' });
     const orpheline = { ...projet, dessin: { ...projet.dessin, formes: [{ ...(premiere as object), parent: 'g99' }, ...autres] } };
     expect(erreur(orpheline)).toMatch(/dans un groupe absent/);
+  });
+});
+
+describe('les decoupes dans le projet (etape 5)', () => {
+  const plein = (): DessinSvg => {
+    const d = lire('v2/decoupes-imbriquees.svg', 'riche');
+    const g = Object.values(d.groupes ?? {}).find(x => x.decoupe);
+    if (!g?.decoupe) throw new Error('aucune decoupe');
+    return d;
+  };
+
+  it('chaque champ d un groupe dit porte fait l aller-retour exact (la decoupe comprise, de la geometrie seule)', () => {
+    const portes = Object.entries(CHAMPS_GROUPE).filter(([, p]) => p === 'porte').map(([k]) => k).sort();
+    const d = plein();
+    const avecDecoupe = Object.values(d.groupes ?? {}).find(x => x.decoupe);
+    // Un parent neuf, qui n'enveloppe que ce groupe : l'arbre reste bien forme.
+    const g: Groupe = { ...(avecDecoupe as Groupe), parent: 'g99', nom: 'Fenêtre', visible: false, verrouille: true, opacite: 0.4, origine: ['game-icons:a'] };
+    expect(Object.keys(g).sort()).toEqual(portes);
+    const x: DessinSvg = { ...d, groupes: { ...d.groupes, [g.id]: g, g99: { id: 'g99', visible: true, verrouille: false } } };
+    expect(allerRetour(etat(x)).rouvert.dessin.groupes?.[g.id]).toEqual(g);
+  });
+
+  it('un dessin a decoupes s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+    const noms = ['decoupes-groupe', 'decoupes-feuille', 'decoupes-boite', 'decoupes-use', 'decoupes-regles', 'decoupes-imbriquees', 'decoupes-ignorees', 'decoupes-opacite'];
+    for (const nom of noms) {
+      const d = lire('v2/' + nom + '.svg', 'riche');
+      const tous = d.formes.map(f => f.id);
+      for (const x of [d, transformer(d, tous, rotation(17, 40, 30)), dupliquer(d, Object.keys(d.groupes ?? {}), 5, 5).dessin]) {
+        const { texte, rouvert } = allerRetour(etat(x));
+        expect(JSON.parse(texte).version, nom).toBe(VERSION_PROJET);
+        expect(rouvert.dessin, nom).toEqual(x);
+        expect(texteDuProjet(projetDe(rouvert)), nom).toBe(texte);
+        expect(ecrireDessin(rouvert.dessin, 3), nom).toBe(ecrireDessin(x, 3));
+      }
+    }
+    const plat = lire('chemins.svg');
+    const cree = creerDecoupe(plat, plat.formes.map(f => f.id).slice(0, 3));
+    expect(allerRetour(etat(cree.dessin)).rouvert.dessin).toEqual(cree.dessin);
+  });
+
+  it('refuse en le nommant une decoupe mal formee, et des identifiants repris dans une decoupe a l ouverture', () => {
+    const d = plein();
+    const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { dessin: { groupes: Record<string, Record<string, unknown>> } };
+    const cle = Object.keys(base.dessin.groupes).find(k => base.dessin.groupes[k]?.['decoupe'] !== undefined) ?? '';
+    const dec = base.dessin.groupes[cle]?.['decoupe'] as { formes: Array<Record<string, unknown>> };
+    const avec = (decoupe: unknown) => ({ ...base, dessin: { ...base.dessin, groupes: { ...base.dessin.groupes, [cle]: { ...base.dessin.groupes[cle], decoupe } } } });
+    const ouvrir = (x: unknown): string => { const r = lireProjet(x); if ('erreur' in r) return r.erreur; const e = etatDuProjet(r.projet); return 'erreur' in e ? e.erreur : ''; };
+    expect(ouvrir(avec(dec))).toBe('');
+    expect(ouvrir(avec({ ...dec, formes: [{ ...dec.formes[0], d: 'M0 0 A1 1 0 0 0 5 5' }] }))).toMatch(/tracé d’une forme de découpe est mal formé/);
+    expect(ouvrir(avec({ ...dec, formes: [{ ...dec.formes[0], parent: 'g99' }] }))).toMatch(/dans un groupe absent/);
+    expect(ouvrir(avec({ ...dec, formes: [{ ...dec.formes[0], regle: 'autre' }] }))).toMatch(/règle d’une forme de découpe/);
+    const { parent: _p, ...sansParent } = dec.formes[0] ?? {};
+    void _p;
+    // L'identifiant d'une forme du dessin, repris dans une decoupe : I1, verifie a l'ouverture.
+    expect(ouvrir(avec({ formes: [{ ...sansParent, id: d.formes[0]?.id }] }))).toBe('Ce projet porte des groupes mal formés.');
+    // Au format 1, la table des groupes, et la decoupe avec elle, est ignoree.
+    const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
+    expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.groupes).toBeUndefined();
   });
 });

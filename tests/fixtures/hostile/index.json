@@ -1172,6 +1172,60 @@
       "famille": "v2-groupes",
       "vecteur": "Marqueur data-ed-modele d'une version plus recente : refuse dans les deux modes, jamais lu au mieux",
       "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-cycle-soi.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Un <clipPath> decoupe par lui-meme : refuse en mode riche, « un cycle de découpes »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-cycle-croise.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Deux decoupes qui s'emploient l'une l'autre (un enfant de a decoupe par b, b decoupe par a) : refuse, « un cycle de découpes »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-use-vers-soi.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Un <use> dans un <clipPath> qui renvoie au <clipPath> : ignore et dit en mode riche, comme un navigateur (un clone n'y vise qu'une forme)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-bombe-imbrication.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Douze decoupes emboitees (chacune decoupee par la suivante) : refuse au-dela de PROFONDEUR_DEFS_MAX (8), sans rien construire de plus",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-bombe-references.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Une decoupe de 50 formes citee par 500 groupes (25 000 formes de definitions) : refuse au-dela de NOEUDS_DEFS_MAX, la lecture termine vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-renvoi-externe.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupes qui renvoient a un fichier ou a une adresse exterieurs : refusees en mode riche ; le nettoyage les neutralise (none), le dessin s'ouvre sans elles",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-decoupes-forme-css.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupe par forme CSS (circle()) : refusee en le nommant, « une découpe par forme CSS », dans les deux modes (en plat, « un masque ou une découpe »)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-porteur-use.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupe posee sur un clone <use> : refusee en le nommant en mode riche (on ne saurait pas la garder), comme en mode plat",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-transformation-illisible.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Transformation illisible sur un <clipPath> (un schema javascript: dans rotate()) : refusee, « une découpe dont la transformation est illisible »",
+      "attendu": "refus"
     }
   ]
 }

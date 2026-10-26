@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <style>
+    .rogne { clip-path: url(#cadre); }
+  </style>
+  <defs>
+    <clipPath id="cadre"><rect x="20" y="20" width="160" height="80"/></clipPath>
+    <clipPath id="coin"><path d="M0 0L100 0L0 100Z"/></clipPath>
+  </defs>
+  <g class="rogne"><circle cx="100" cy="60" r="55" fill="#c81e28"/></g>
+  <rect x="0" y="0" width="80" height="80" fill="#1f5fb0" style="clip-path: url('#coin')"/>
+</svg>

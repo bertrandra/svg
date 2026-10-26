@@ -89,6 +89,13 @@ compris) et 64 millions de pixels lus dans l’en-tête (`edition/dimensionsImag
 jamais le décodeur du navigateur. L’écriture ne pose que `xlink:href="data:image/(png|jpeg|gif|webp);base64,…"`, de sa forme
 exacte (extension « étape 12 : images » de la spécification de l’écriture). Corpus : `tests/fixtures/hostile/v2-images-*`.
 
+En mode `riche` toujours (ADR-0012, étape 5), un `clip-path` vers un `<clipPath>` du même document se lit en géométrie seule : rien
+n’est jamais suivi hors du document (un renvoi extérieur est refusé en le nommant, le nettoyage le neutralise en `none`), une forme CSS
+(`circle()`…) est refusée, un cycle de découpes l’est aussi (la pile des `<clipPath>` en cours), l’imbrication est bornée à 8 niveaux
+et toutes les découpes lues à 20 000 formes et groupes, ce qui arrête une bombe de références (une découpe lourde citée mille fois)
+avant qu’elle ne coûte. L’écriture ne pose que `<clipPath id="ed-c-…">` dans `<defs>`, des `<path>` et `clip-path="url(#ed-c-…)"`, de
+leur forme exacte (extension « étape 5 : decoupes »). Corpus : `tests/fixtures/hostile/v2-decoupes-*`.
+
 ### `lirePdf` : un PDF se lit, rien ne s’y exécute (ADR-0020)
 
 Le PDF est lu par un analyseur linéaire écrit à la main sur ses octets (`engine/pdf/lexique.ts`) : objets, table des objets
