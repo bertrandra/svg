@@ -122,8 +122,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   et listbox ARIA, posée par un portail à la racine de l'éditeur), le calcul pur dans `zones/lignesPolices.ts` ; une police est
   locale si elle est livrée, déposée, lue ou gardée en cache (seules les clés se lisent) ; la marque est une icône et des mots,
   jamais la seule couleur ; seul le choix télécharge ; les tests passent par `tests/e2e/polices.ts`.
-- **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/` (`public/` racine web, `data/` à côté,
-  `DATA_DIR` dans `config.local.php`) ; un seul mot de passe en empreinte dans `data/pwd` ; `src/site/` monte l'éditeur, qui ne
+- **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/public/`, un seul dossier à envoyer par FTP, sans
+  réglage (`data/` dedans, tenu par son `.htaccess` réécrit s'il manque et vérifié par HTTP ; `DATA_DIR` vaut `public/data`, sinon
+  `../data`, `config.local.php` le fixe ; `inc/serveur-local.php` imite les `.htaccess` sous `php -S`) ; un seul mot de passe en
+  empreinte dans `data/pwd`, choisi dans la page tant qu'il n'existe pas (CSRF, revu sous verrou), ou déposé en clair dans
+  `data/password` (converti puis supprimé, il remplace l'ancien), ou par `php inc/mot-de-passe.php` ; le changer ferme les sessions ; `src/site/` monte l'éditeur, qui ne
   connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet (`model/projet.ts`,
   `engine/projet.ts`) garde tout le modèle à pleine précision en un seul format (`VERSION_PROJET = 1`, migrations vides, toute autre version
   refusée en la nommant), se valide sans lever et réécrit le même SVG à l'octet ;

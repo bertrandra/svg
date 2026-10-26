@@ -56,6 +56,11 @@ empreintes.
 
 ### Modifié
 
+- Site PHP : un seul dossier à envoyer par FTP (ADR-0030, révision) : `dist/php/public/` contient tout, `data/` compris, sans
+  réglage. Le mot de passe se choisit dans la page à la première visite, ou se dépose dans `data/password` (converti en empreinte
+  puis supprimé, il remplace l'ancien). Le changer ferme les sessions ouvertes. L'outil en ligne de commande devient
+  `inc/mot-de-passe.php`.
+
 - La rangée de la sélection garde sa place sans sélection (une bande vide) : la première sélection ne pousse plus les panneaux et
   la toile vers le bas, et un double-clic ne tombe plus à côté de sa cible.
 
