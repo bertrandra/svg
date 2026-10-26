@@ -148,6 +148,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `data-ed-reperes` sur la racine par `svgDocument` seulement s'il y en a, se garde dans le projet, jamais dans un export ; règles,
   visibilité et verrou sont de la session ; grille, radiale et symétrie sont pures (`engine/edition/repetition.ts`) ; la largeur
   variable est une conversion (`engine/contour/largeur.ts`), pas un style.
+- **Les groupes sont des feuilles à `parent` et une table** (ADR-0012, étape 1) : `Forme.parent` nomme le groupe, `Dessin.groupes`
+  porte nom, visibilité, verrou et opacité, sans matrice vivante (la transformation est cuite dans les feuilles) ; l'arbre se vérifie (`verifierDessin`) et `normaliser` le garde contigu ; les groupes
+  descendent en dernier dans `REGLES_DESCENTE` (opacité multipliée) ; au format 1 du projet, un champ de
+  groupe est ignoré comme tout champ v2.
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente

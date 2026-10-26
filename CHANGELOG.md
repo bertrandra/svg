@@ -201,6 +201,11 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 1 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les `<g>` restent des groupes
+  (nom, opacité ; la transformation est cuite dans les formes) et se réécrivent à l'identique ; quatre opérations pures (grouper, dégrouper, déplacer dans un
+  groupe, renommer). Une image ou un dégradé sous un groupe transformé suivent le groupe ; les exports à plat multiplient l'opacité du groupe. Le projet du site garde la table des groupes au format 2 ; au format 1, un
+  champ de groupe est ignoré comme tout champ v2.
+
 - Modèle v2, étape 3 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les dégradés linéaires et radiaux
   sont lus (unités de boîte, pourcentages, transformation, chaîne `href`, 64 arrêts au plus), réécrits sous un identifiant
   d'empreinte, une seule définition par dégradé, et suivent leur forme. Les exports qui ne savent pas peindre un dégradé (PDF, SVG
