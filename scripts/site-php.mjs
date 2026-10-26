@@ -36,7 +36,7 @@ const SOURCES = depuisRacine('outils/site-php');
 const DONNEES = join(SORTIE, 'public/data');
 
 /** Les annexes de donnees de dist/, sorties en JSON pour le serveur : le texte du script, sans `window.X=` ni le `;` final. */
-const ANNEXES_JSON = ['bibliotheque', 'bibliotheque-mdi', 'bibliotheque-ph', 'bibliotheque-tabler', 'bibliotheque-healthicons', 'bibliotheque-lucide', 'polices-catalogue', 'polices-apercus'];
+const ANNEXES_JSON = ['bibliotheque', 'bibliotheque-mdi', 'bibliotheque-ph', 'bibliotheque-tabler', 'bibliotheque-healthicons', 'bibliotheque-lucide', 'polices-catalogue', 'polices-apercus', 'langue-en'];
 
 const ecrire = (chemin, texte) => { mkdirSync(join(chemin, '..'), { recursive: true }); writeFileSync(chemin, texte); return texte.length; };
 

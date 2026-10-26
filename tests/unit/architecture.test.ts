@@ -12,7 +12,8 @@ const src = resolve(__dirname, '../../src');
  * peut importer que d'un niveau inferieur ou egal au sien. Les couches reservees sont classees avant
  * d'exister : un dossier qui apparait a deja sa place.
  *
- * - **0** `util` (pur) et `shell` (DOM sans domaine) : des primitives.
+ * - **0** `util` (pur) et `shell` (DOM sans domaine) : des primitives. `i18n` : les dictionnaires de l'interface (ADR-0042), du JSON
+ *   que personne n'importe (l'annexe langue-<l>.js les livre) ; range ici pour que le dossier ait une place.
  * - **1** `geometry` : des mathematiques, rien d'autre.
  * - **2** `model` : ce qu'est un document. `plateforme` : ce qu'une plateforme promet.
  * - **3** `engine` : ce qu'on calcule a partir du dessin. `styles` : la palette de l'interface.
@@ -22,7 +23,7 @@ const src = resolve(__dirname, '../../src');
  *   la page autonome, avec un magasin de projets par le serveur.
  */
 const NIVEAU: Record<string, number> = {
-  util: 0, shell: 0,
+  util: 0, shell: 0, i18n: 0,
   geometry: 1,
   model: 2, plateforme: 2,
   engine: 3, styles: 3,
