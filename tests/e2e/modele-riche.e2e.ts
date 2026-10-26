@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Page } from 'playwright';
+import type { Download, Page } from 'playwright';
 import { attend, attendreAnimations, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, terminer, URL_PAGE } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
@@ -22,8 +22,8 @@ describe('le modele riche sur la toile', () => {
   const navigateur = pilote();
 
   /** Une page dont le stockage porte deja le reglage voulu (pose seulement s'il manque, pour qu'un choix fait dans le test survive). */
-  async function page(modele: 'plat' | 'riche' | null): Promise<Page> {
-    const s = await navigateur.ouvrir({ naviguer: false });
+  async function page(modele: 'plat' | 'riche' | null, options: { schema?: 'light' | 'dark'; tactile?: boolean } = {}): Promise<Page> {
+    const s = await navigateur.ouvrir({ naviguer: false, ...options });
     if (modele) await s.contexte.addInitScript(m => { try { if (localStorage.getItem('svg.modele') === null) localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); } catch { /* sans stockage */ } }, modele);
     await s.page.goto(URL_PAGE);
     return s.page;
@@ -96,10 +96,16 @@ describe('le modele riche sur la toile', () => {
     await attend(() => annonce(p)).toMatch(/Dans le groupe « Nuage », 2 éléments\.|Forme 1/);
     expect(await auditAxe(p)).toEqual([]);
 
-    // La forme seule, hors du groupe, ne se prend plus.
+    // Un clic sur la forme seule, hors du groupe, en fait sortir (paquet 2-C) : elle seule est choisie, plus rien n'est estompe ;
+    // un double-clic y fait rentrer.
     const dehors = await versEcran(p, 80, 210);
     await p.mouse.click(dehors.x, dehors.y);
-    await attend(() => traces(p)).toBe(0);
+    await attend(() => p.locator('.editeur-svg-toile .hors-contexte').count()).toBe(0);
+    await attend(() => traces(p)).toBe(1);
+    await attend(() => annonce(p)).toMatch(/^Retour à la racine\. Forme 3 sélectionnée : /);
+    await p.mouse.dblclick(centre.x, centre.y);
+    await attend(() => p.locator('.editeur-svg-toile .hors-contexte').count()).toBe(1);
+    await attend(() => traces(p)).toBe(1);
 
     // Un enfant se deplace seul : sa voisine du groupe ne bouge pas.
     const avant1 = await chemin(p, 'f1'), avant2 = await chemin(p, 'f2');
@@ -145,5 +151,120 @@ describe('le modele riche sur la toile', () => {
     await p.locator('.editeur-cadre').waitFor();
     await attend(() => p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
     expect(await p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'riche' }));
+  });
+
+  /** Trois formes a plat : en riche, elles se groupent au clavier. */
+  const TROIS = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">'
+    + '<rect x="40" y="40" width="80" height="60" fill="#c81e28"/><rect x="160" y="40" width="80" height="60" fill="#1f4e8c"/>'
+    + '<rect x="40" y="180" width="80" height="60" fill="#e0b84a"/></svg>';
+
+  /** Choisit les deux premieres formes au clavier, sur la toile, et les groupe : le groupe est choisi. */
+  async function grouperAuClavier(p: Page): Promise<void> {
+    await p.locator('.editeur-svg-toile').focus();
+    await p.keyboard.press('PageDown');
+    await attend(() => annonce(p)).toMatch(/^Forme 1 sélectionnée : /);
+    await p.keyboard.press('Shift+PageDown');
+    await attend(() => annonce(p)).toBe('Forme 2 ajoutée : 2 formes sélectionnées.');
+    await p.keyboard.press('Control+g');
+    await attend(() => annonce(p)).toBe('Groupe créé : 2 formes.');
+  }
+
+  it('au clavier seul : grouper, entrer, parcourir, remonter par le fil d Ariane, sortir, degrouper, et le SVG a plat sans <g>', async () => {
+    const p = await page('riche');
+    await ouvrir(p, TROIS);
+    await grouperAuClavier(p);
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
+    await attend(() => traces(p)).toBe(2);
+
+    // Entree y entre : le premier enfant est choisi, la meme phrase le dit ; le fil d'Ariane apparait.
+    await p.keyboard.press('Enter');
+    await attend(() => annonce(p)).toMatch(/^Dans le groupe 1, 2 éléments\. Forme 1 sélectionnée : /);
+    const fil = p.getByRole('navigation', { name: 'Contexte d’édition' });
+    await attend(() => fil.textContent()).toBe('Racine›Groupe 1');
+    expect(await fil.locator('[aria-current="location"]').textContent()).toBe('Groupe 1');
+    await attend(() => p.locator('.editeur-svg-toile .hors-contexte').count()).toBe(1);
+
+    // Tab et Maj+Tab passent d'un enfant a l'autre ; Ctrl+A ne prend que les deux enfants (la troisieme forme est hors du groupe).
+    await p.keyboard.press('Tab');
+    await attend(() => annonce(p)).toMatch(/^Forme 2 sélectionnée : /);
+    await p.keyboard.press('Shift+Tab');
+    await attend(() => annonce(p)).toMatch(/^Forme 1 sélectionnée : /);
+    await p.keyboard.press('Control+a');
+    await attend(() => annonce(p)).toBe('2 formes sélectionnées.');
+    expect(await auditAxe(p)).toEqual([]);
+
+    // Maj+Entree sort : le groupe est choisi, le fil s'en va.
+    await p.keyboard.press('Shift+Enter');
+    await attend(() => annonce(p)).toBe('Retour à la racine.');
+    await attend(() => fil.count()).toBe(0);
+    await attend(() => traces(p)).toBe(2);
+
+    // Le fil d'Ariane au clavier : « Racine » ramene a la racine, le focus revient a la toile.
+    await p.keyboard.press('Enter');
+    await attend(() => fil.count()).toBe(1);
+    await fil.getByRole('button', { name: 'Racine' }).focus();
+    await p.keyboard.press('Enter');
+    await attend(() => annonce(p)).toBe('Retour à la racine.');
+    await attend(() => p.evaluate(() => document.activeElement?.classList.contains('editeur-svg-toile') ?? false)).toBe(true);
+    expect(await fil.count()).toBe(0);
+
+    // Ctrl+Maj+G degroupe, Ctrl+G regroupe.
+    await p.keyboard.press('Control+Shift+G');
+    await attend(() => annonce(p)).toBe('Groupe défait : 2 formes.');
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
+    await p.keyboard.press('Control+g');
+    await attend(() => annonce(p)).toBe('Groupe créé : 2 formes.');
+
+    // « Télécharger le SVG à plat » (menu Fichier) : un fichier sans groupe ni marqueur du modele ; rien n'est enregistre.
+    await ouvrirMenu(p, 'Fichier');
+    const [t]: [Download, void] = await Promise.all([p.waitForEvent('download'), p.getByRole('menuitem', { name: 'Télécharger le SVG à plat' }).click()]);
+    expect(t.suggestedFilename()).toMatch(/-a-plat\.svg$/);
+    const svg = readFileSync(await t.path(), 'utf8');
+    expect(svg).not.toContain('<g');
+    expect(svg).not.toContain('data-ed-modele');
+    expect(svg.match(/<path /g)).toHaveLength(3);
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
+  });
+
+  for (const [nom, options] of [['en sombre', { schema: 'dark' }], ['au doigt', { tactile: true }]] as const) {
+    it('axe dans un groupe et apres en etre sorti, ' + nom, async () => {
+      const p = await page('riche', options);
+      await ouvrir(p, TROIS);
+      await grouperAuClavier(p);
+      expect(await auditAxe(p)).toEqual([]);
+      await p.keyboard.press('Enter');
+      await attend(() => p.getByRole('navigation', { name: 'Contexte d’édition' }).count()).toBe(1);
+      expect(await auditAxe(p)).toEqual([]);
+      await p.keyboard.press('Shift+Enter');
+      await attend(() => annonce(p)).toBe('Retour à la racine.');
+      expect(await auditAxe(p)).toEqual([]);
+    });
+  }
+
+  it('a plat, aucune commande de groupe : Ctrl+G combine, le menu n a ni Grouper ni le SVG a plat', async () => {
+    const p = await page('plat');
+    await ouvrir(p, TROIS);
+    await p.locator('.editeur-svg-toile').focus();
+    await p.keyboard.press('PageDown');
+    await p.keyboard.press('Shift+PageDown');
+    await attend(() => annonce(p)).toBe('Forme 2 ajoutée : 2 formes sélectionnées.');
+    await p.keyboard.press('Control+g');
+    await attend(() => annonce(p)).toMatch(/^2 formes combinées en une\./);
+    await ouvrirMenu(p, 'Édition');
+    expect(await p.getByRole('menuitem', { name: /^Grouper/ }).count()).toBe(0);
+    expect(await p.getByRole('menuitem', { name: /^Combiner en un tracé composé/ }).textContent()).toContain('Ctrl+G');
+    await p.keyboard.press('Escape');
+    await ouvrirMenu(p, 'Fichier');
+    expect(await p.getByRole('menuitem', { name: /SVG à plat/ }).count()).toBe(0);
+  });
+
+  it('refuse le mode points sur une image au double-clic, et le dit', async () => {
+    const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC';
+    const p = await page('riche');
+    await ouvrir(p, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><image x="40" y="40" width="120" height="90" href="data:image/png;base64,' + PNG + '"/></svg>');
+    const c = await versEcran(p, 100, 85);
+    await p.mouse.dblclick(c.x, c.y);
+    await attend(() => annonce(p)).toMatch(/^Les points d’une image ne se modifient pas/);
+    expect(await p.locator('.editeur-svg-toile [data-ancre]').count()).toBe(0);
   });
 });

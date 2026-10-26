@@ -382,6 +382,14 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .reprise { background: var(--repli-cyan-8-panneau); } }
 .reprise p { margin: 0; }
 .editeur-etat .tiroirs { display: none; gap: var(--esp-2xs); }
+/* Le fil d'Ariane du contexte d'edition (ADR-0012, annexe 6 §2) : des boutons qui se lisent comme des liens, le niveau du moment a
+   l'encre ; le chevron qui les separe est decoratif (aria-hidden). Au survol, un soulignement plutot que le voile cyan des boutons
+   discrets, sous lequel le cyan d'encre perd son contraste. */
+.fil-ariane ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2xs); margin: 0; padding: 0; list-style: none; }
+.fil-ariane li { display: inline-flex; align-items: center; gap: var(--esp-2xs); white-space: nowrap; }
+.fil-ariane button.discret { min-height: 24px; padding: 0 var(--esp-2xs); font-size: var(--texte-petit); }
+.fil-ariane button.discret:hover:not(:disabled) { background: transparent; text-decoration: underline; text-underline-offset: 0.2em; }
+.fil-ariane [aria-current] { color: var(--encre); font-weight: 600; padding: 0 var(--esp-2xs); }
 .editeur-etat .message-etat { min-width: 0; }
 .editeur-inspecteur textarea { font: inherit; font-size: var(--texte-compact); }
 @media (max-width: 900px) {
@@ -422,7 +430,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-etat .espace { order: 2; }
   .editeur-etat .compte-modifications, .editeur-etat .etat-enregistrement { order: 3; }
   .editeur-etat button.texte { order: 4; }
-  .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
+  .editeur-etat .fil-ariane, .editeur-etat .message-etat { order: 5; flex: 1 0 100%; }
   /* Un tiroir ouvert couvre presque toute la toile d'un telephone, sous un voile qui recoit les touchers : le dessin y est
      masque (la toile reste focalisable). Le tiroir ne se lit plus par-dessus des formes qu'on ne voit ni ne touche : un audit
      (axe) jugeait le contraste d'un texte du tiroir d'apres les formes dessinees dessous, selon ou tombait chaque ligne. */
@@ -587,7 +595,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .vectoriser-texte .case, .section-corps > .case { min-height: 40px; }
   .alignement-texte button, .choix-police .apercu-bascule, .apercu-police .apercu-fermer { min-height: 40px; }
   .barre-texte select, .barre-texte .champ-ligne input[type="text"], .barre-texte > .groupe > button:not(.icone-bouton) { height: 40px; }
-  .police-ligne, .polices-courtes button.discret { min-height: 40px; }
+  .police-ligne, .polices-courtes button.discret, .fil-ariane button.discret { min-height: 40px; }
   .liste-polices .police-favori { width: 40px; height: 40px; }
   .police-option { height: 40px; }
   .barre-texte .liste-polices-champ input[type="text"], .liste-polices-pied button.discret { min-height: 40px; height: 40px; }

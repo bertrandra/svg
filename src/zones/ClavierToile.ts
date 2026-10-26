@@ -11,6 +11,9 @@
 //
 // Les outils Cadre et Lasso (ADR-0035) : le reticule pose les coins du cadre ou les points du lasso (ClavierZone.ts).
 //
+// En modele riche (ADR-0012, annexe 6 §2), Tab et Page suivante ne voient que les noeuds du niveau du contexte d'edition ; Entree
+// sur un groupe choisi y entre, Maj+Entree en sort (commandesGroupes.ts).
+//
 // Regle de sortie (WCAG 2.1.2) : Tab ne tourne jamais dans la toile. Il parcourt les formes tant qu'une
 // est choisie, et au-dela de la derniere (ou avant la premiere) il laisse le navigateur faire : le
 // focus quitte la toile. Sans forme choisie, Tab quitte la toile tout de suite. Echap desselectionne.
@@ -26,6 +29,7 @@ import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, P
 import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { ajouterTracee, formeTracee } from './Gestes.js';
 import { toucheZone } from './ClavierZone.js';
+import { toucheGroupes } from './commandesGroupes.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 import type { EtatSaisie } from './contexteSaisie.js';
 
@@ -40,7 +44,7 @@ function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
     return true;
   }
   if (!m.sel.length) return false;
-  const id = formeVoisine(m.dessin, m.sel, sens, false);
+  const id = formeVoisine(m.dessin, m.sel, sens, false, u.contexte?.groupe ?? null);
   if (id === null) return false;
   ac.choisir([id]);
   ac.poserPoint(null);
@@ -48,8 +52,8 @@ function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
 }
 
 /** PageSuiv et PageReg : la forme suivante ou precedente, en boucle, meme sans rien de choisi. */
-function changerForme({ m, ac }: ContexteToile, sens: Sens): boolean {
-  const id = formeVoisine(m.dessin, m.sel, sens, true);
+function changerForme({ m, u, ac }: ContexteToile, sens: Sens): boolean {
+  const id = formeVoisine(m.dessin, m.sel, sens, true, u.contexte?.groupe ?? null);
   if (id === null) { ac.annoncer('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.'); return true; }
   ac.choisir([id]);
   ac.poserPoint(null);
@@ -163,6 +167,8 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (outil === 'texte') return texte(c, e);
   if (outil === 'cadre' || outil === 'lasso') return toucheZone(c, e, () => departReticule(c));
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
+  // Modele riche (ADR-0012, annexe 6 §2) : Entree sur un groupe choisi y entre, Maj+Entree sort d'un niveau.
+  if (toucheGroupes(e, c.m, c.u, c.ac)) return true;
   // Entree sur un texte vivant le rouvre sur la toile (ADR-0027) ; sur une autre forme, le mode points.
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && !c.m.formeSeule.verrouille && c.sx) { c.sx.ouvrir(c.m.formeSeule.id); return true; }
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule) { c.ac.poserOutil('points'); return true; }

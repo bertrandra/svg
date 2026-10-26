@@ -284,6 +284,10 @@ export interface ActionsEditeur {
   sortirGroupe: () => boolean;
   /** Deplie (vrai) ou replie (faux) ces groupes dans la liste des calques. */
   deplier: (ids: readonly string[], deplie: boolean) => void;
+  /** Groupe les noeuds choisis sous un groupe nouveau, qui devient la selection, et le dit (modele riche, Ctrl+G). */
+  grouper: () => void;
+  /** Defait les groupes choisis : leurs enfants remontent et deviennent la selection, et c'est dit (modele riche, Ctrl+Maj+G). */
+  degrouper: () => void;
 }
 
 export interface Vues {

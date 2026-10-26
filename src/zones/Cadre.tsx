@@ -4,6 +4,7 @@
 
 import { memo, useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { RegionVocale } from './RegionVocale.js';
+import { FilAriane } from './FilAriane.js';
 import { Barre, BoutonEnregistrer } from './BarreOutils.js';
 import { useTactile, useTelephone } from './Vue.js';
 import { BarreSelection } from './BarreSelection.js';
@@ -125,6 +126,8 @@ function BarreEtat() {
         <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
         <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
       </span>
+      {/* Le fil d'Ariane, seulement dans un groupe (ADR-0012, annexe 6 §2) : il vient avant le message, qui peut passer a la ligne. */}
+      <FilAriane />
       <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length, regleZone), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>

@@ -3,12 +3,13 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, contexteValide, garderTextes, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, contexteValide, dessinableEnPoints, garderTextes, MSG_POINTS_IMAGE, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
 import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
+import { actionsGroupes } from './actionsGroupes.js';
 import { actionsProduction, cadreDeVue, svgDocument } from './actionsProduction.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
@@ -73,6 +74,8 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const poserOutil = (o: Outil) => {
     // Modifier les points d'un texte vivant, c'est le vectoriser d'abord (ADR-0022) : on le fait, une entree d'historique, et on le dit.
     const seule = o === 'points' ? lire().formeSeule : null;
+    // Les points d'une image ne se modifient pas (ADR-0012, etape 12) : l'outil reste ce qu'il etait, et on dit quoi faire.
+    if (seule && !dessinableEnPoints(seule)) { dire(MSG_POINTS_IMAGE); return; }
     if (seule?.texte && !seule.verrouille) {
       appliquer(d => ({ ...d, formes: d.formes.map(f => (f.id === seule.id ? sansTexte(f) : f)) }));
       dire('Texte vectorisé pour modifier ses points : il n’est plus modifiable comme texte. Ctrl+Z le rend.');
@@ -88,6 +91,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const leviers = { appliquer, choisir: s.choisir, poserPoint: s.poserPoint, poserOutil, poserOutilBrut, poserTrace: s.poserTrace, poserPresse: s.poserPresse, dire, annoncer, toile: s.toile };
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
+  const groupes = actionsGroupes(lire, leviers);
   const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
   return {
     appliquer, finir, poserOutil,
@@ -183,6 +187,6 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       s.poserRegleZone(r);
       dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
     },
-    ...metier, ...trace, ...production
+    ...metier, ...trace, ...production, ...groupes
   };
 }

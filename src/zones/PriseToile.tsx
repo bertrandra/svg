@@ -4,10 +4,11 @@
 // les formes, lu par editeur.css) et le lisere de la forme qu'un clic prendrait, ou de celle que le doigt touche.
 
 import { memo, useEffect, useRef, useState, type RefObject } from 'react';
-import { boiteDe, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { boiteDe, cheminDuContexte, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { genreDeForme, numeroDeForme } from '../engine/description.js';
 import { candidatesDans, formeDessous, optionsPrise, zoneDePrise, type OptionsPrise } from '../engine/prise.js';
-import { groupeDit } from './phrasesGroupes.js';
+import { groupeDit, phraseNiveau } from './phrasesGroupes.js';
+import { phraseSelection } from './annonces.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import type { Vue } from './typesEditeur.js';
@@ -62,6 +63,22 @@ export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
     viserDans: (e: Pointage, contexte: string | null): string | null => sous(e, contexte)[0] ?? null,
     /** Toutes les formes que le pointeur peut prendre, la meilleure d'abord (le choix de la forme d'un texte pose, ADR-0031). */
     toutes: (e: Pointage): string[] => sous(e),
+    /**
+     * Un appui qui ne prend rien dans le contexte d'edition, mais touche une forme hors de lui, en sort (ADR-0012, annexe 6 §2) : au
+     * niveau le plus proche ou cette forme se prend, qui devient le contexte ; rend le noeud pris (a choisir), ou null (le vide).
+     */
+    sortir(e: Pointage): string | null {
+      const actuel = ui.contexte?.groupe ?? null;
+      if (actuel === null) return null;
+      for (const niveau of [...cheminDuContexte(mo.dessin, actuel).slice(1), null]) {
+        const id = sous(e, niveau)[0];
+        if (id === undefined) continue;
+        ac.poserContexte(niveau !== null ? { groupe: niveau } : null);
+        ac.annoncer(phraseNiveau(mo.dessin, niveau) + ' ' + phraseSelection(mo.dessin, [id]));
+        return id;
+      }
+      return null;
+    },
     /** La forme qu'un appui prend ; Alt passe a celle du dessous, en boucle. */
     prendre(e: Pointage): string | null {
       const svg = svgRef.current, ids = sous(e);

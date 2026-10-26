@@ -5,7 +5,8 @@
 import { memo } from 'react';
 import { aligner, retourner, sousChemins, tourner, type Alignement, type Ordre } from '../engine/editionSvg.js';
 import type { Booleen } from '../engine/booleens.js';
-import { useActions, useDessin } from './contexteEditeur.js';
+import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { aUnGroupe, groupesActifs } from './commandesGroupes.js';
 import { useReperes } from './contexteGuide.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
@@ -35,8 +36,10 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 
 /** Les gestes de la rangee, une fois pour ses deux mises en page : chacun a son nom, son icone et ce qu'il fait. */
 function useGestes() {
-  const { sel, formeSeule, dessin } = useDessin(), ac = useActions(), { rencontrer } = useReperes();
+  const { sel, formeSeule, dessin } = useDessin(), ac = useActions(), { rencontrer } = useReperes(), { modele } = useInterface();
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
+  // Le modele riche (ADR-0012, etape 2) : Grouper et Degrouper rejoignent les formes, et prennent Ctrl+G a Combiner et Separer.
+  const riche = groupesActifs(dessin, modele), degroupable = riche && aUnGroupe({ dessin, sel });
   const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
   return {
     sel, ac, surPlan,
@@ -46,7 +49,7 @@ function useGestes() {
     empiler: (o: Ordre) => empiler(ac, dessin, sel, o),
     // Le repere du premier booleen ne se montre que si l'operation a reussi (ADR-0019).
     booleen: (op: Booleen) => { if (ac.booleen(op)) rencontrer('booleen'); },
-    separable
+    separable, riche, degroupable
   };
 }
 
@@ -85,8 +88,12 @@ function RangeeEntiere() {
         {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => g.booleen(op)} />)}
       </div>
       <div className="groupe" role="group" aria-label="Formes">
-        <Bouton icone="combiner" aide="Combiner en une forme (Ctrl+G)" disabled={sel.length < 2} onClick={ac.combinerSelection} />
-        <Bouton icone="separer" aide="Séparer les tracés (Ctrl+Maj+G)" disabled={!g.separable} onClick={ac.separerSelection} />
+        {g.riche ? <>
+          <Bouton icone="grouper" aide="Grouper (Ctrl+G)" onClick={ac.grouper} />
+          <Bouton icone="degrouper" aide="Dégrouper (Ctrl+Maj+G)" disabled={!g.degroupable} onClick={ac.degrouper} />
+        </> : null}
+        <Bouton icone="combiner" aide={g.riche ? 'Combiner en une forme' : 'Combiner en une forme (Ctrl+G)'} disabled={sel.length < 2} onClick={ac.combinerSelection} />
+        <Bouton icone="separer" aide={g.riche ? 'Séparer les tracés' : 'Séparer les tracés (Ctrl+Maj+G)'} disabled={!g.separable} onClick={ac.separerSelection} />
         <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ac.dupliquerSelection} />
         <Bouton icone="masquer" aide="Masquer" onClick={ac.masquerSelection} />
         <Bouton icone="verrouiller" aide="Verrouiller" onClick={ac.verrouillerSelection} />
@@ -121,8 +128,12 @@ export function useSectionsSelection(complet: boolean): SectionMenu[] {
     { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
     { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },
     { id: 'formes', titre: 'Formes', elements: [
-      { id: 'combiner', libelle: 'Combiner en une forme', icone: 'combiner', raccourci: 'Ctrl+G', desactive: sel.length < 2, onClick: ac.combinerSelection },
-      { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !g.separable, onClick: ac.separerSelection },
+      ...(g.riche ? [
+        { id: 'grouper', libelle: 'Grouper', icone: 'grouper', raccourci: 'Ctrl+G', onClick: ac.grouper },
+        { id: 'degrouper', libelle: 'Dégrouper', icone: 'degrouper', raccourci: 'Ctrl+Maj+G', desactive: !g.degroupable, onClick: ac.degrouper }
+      ] satisfies ElementMenu[] : []),
+      { id: 'combiner', libelle: 'Combiner en une forme', icone: 'combiner', ...(g.riche ? {} : { raccourci: 'Ctrl+G' }), desactive: sel.length < 2, onClick: ac.combinerSelection },
+      { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', ...(g.riche ? {} : { raccourci: 'Ctrl+Maj+G' }), desactive: !g.separable, onClick: ac.separerSelection },
       { id: 'masquer', libelle: 'Masquer', icone: 'masquer', onClick: ac.masquerSelection },
       { id: 'verrouiller', libelle: 'Verrouiller', icone: 'verrouiller', onClick: ac.verrouillerSelection }
     ] },

@@ -26,7 +26,9 @@ export type NomIcone =
   // La marque d'une police a telecharger (ADR-0034).
   | 'nuage-telecharger'
   // Les regles, les reperes et les repetitions (ADR-0038).
-  | 'regle' | 'repeter' | 'radiale' | 'symetrie';
+  | 'regle' | 'repeter' | 'radiale' | 'symetrie'
+  // Les groupes du modele riche (ADR-0012, etape 2).
+  | 'grouper' | 'degrouper';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -161,7 +163,10 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Des copies en couronne autour d'un centre.
   radiale: [t('M10 2.5h4v4h-4z', true), t('M17.5 10h4v4h-4z'), t('M10 17.5h4v4h-4z'), t('M2.5 10h4v4h-4z'), t('M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0', true)],
   // Une forme et son reflet de part et d'autre d'un axe en pointilles.
-  symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')]
+  symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')],
+  // Deux formes dans le cadre en pointilles d'un groupe ; degrouper ne garde que les coins du cadre, ouverts.
+  grouper: [{ d: 'M3 3h18v18H3z', pointille: true }, t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)],
+  degrouper: [t('M3 8V3h5'), t('M16 3h5v5'), t('M21 16v5h-5'), t('M8 21H3v-5'), t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

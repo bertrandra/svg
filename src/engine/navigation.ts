@@ -2,7 +2,7 @@
 // ou se pose le reticule d'un outil de trace. Aucun evenement ici (voir zones/Clavier.ts), seulement
 // des choix et des nombres, pour qu'ils se testent sans navigateur.
 
-import { ancre, type Boite, type Chemin, type DessinSvg, type Forme } from './editionSvg.js';
+import { ancre, estPlat, noeudsDuNiveau, verrouilleEffectif, visibleEffectif, type Boite, type Chemin, type DessinSvg, type Forme, type NoeudArbre } from './editionSvg.js';
 
 export type Sens = 1 | -1;
 export type Direction = 'gauche' | 'droite' | 'haut' | 'bas';
@@ -11,13 +11,26 @@ export type PointPlan = readonly [number, number];
 /** Les formes qu'on peut choisir : visibles et deverrouillees, du fond au premier plan (l'ordre du dessin). */
 export const choisissables = (d: DessinSvg): Forme[] => d.formes.filter(f => f.visible && !f.verrouille);
 
+const idDuNoeud = (n: NoeudArbre): string => (n.genre === 'feuille' ? n.forme.id : n.groupe.id);
+
 /**
- * La forme qui suit (`sens` 1, vers le premier plan) ou precede (`sens` -1) la selection. Sans selection,
+ * Les noeuds qu'on peut choisir au niveau du contexte d'edition (ADR-0012, annexe 6 §2), du fond au premier plan : sur un dessin
+ * plat, les formes choisissables d'avant (la meme liste) ; sur un dessin riche, les freres du contexte (feuilles et groupes), visibles
+ * et deverrouilles eux et leurs ancetres. Tab, Page suivante, Ctrl+A et « Inverser » ne voient que ceux-la.
+ */
+export function noeudsChoisissables(d: DessinSvg, contexte: string | null = null): string[] {
+  if (estPlat(d)) return choisissables(d).map(f => f.id);
+  return noeudsDuNiveau(d, contexte).map(idDuNoeud).filter(id => visibleEffectif(d, id) && !verrouilleEffectif(d, id));
+}
+
+/**
+ * La forme (le noeud du niveau du contexte, sur un dessin riche) qui suit (`sens` 1, vers le premier plan) ou precede (`sens` -1)
+ * la selection. Sans selection,
  * la premiere (ou la derniere). Au bout de la liste : la premiere si `boucler`, sinon null, pour que
  * Tab puisse sortir de la toile au lieu d'y tourner pour toujours.
  */
-export function formeVoisine(d: DessinSvg, sel: readonly string[], sens: Sens, boucler: boolean): string | null {
-  const ids = choisissables(d).map(f => f.id), n = ids.length;
+export function formeVoisine(d: DessinSvg, sel: readonly string[], sens: Sens, boucler: boolean, contexte: string | null = null): string | null {
+  const ids = noeudsChoisissables(d, contexte), n = ids.length;
   if (!n) return null;
   const choisis = new Set(sel);
   let premier = -1, dernier = -1;
@@ -119,8 +132,8 @@ export function boiteDeDeuxCoins(a: PointPlan, b: PointPlan): Boite {
  */
 export interface Focale { id: string; sel: readonly string[] }
 
-export function formeAuCurseur(d: DessinSvg, sel: readonly string[], focale: Focale | null): string | null {
-  if (focale && focale.sel === sel && choisissables(d).some(f => f.id === focale.id)) return focale.id;
+export function formeAuCurseur(d: DessinSvg, sel: readonly string[], focale: Focale | null, contexte: string | null = null): string | null {
+  if (focale && focale.sel === sel && noeudsChoisissables(d, contexte).includes(focale.id)) return focale.id;
   return sel[sel.length - 1] ?? null;
 }
 

@@ -6,7 +6,8 @@
 import { couleurDite } from '../engine/description.js';
 import { operationsApplicables } from '../engine/preparation.js';
 import { formesParOperation, inverserSelection, memeContour, memeType, toutesChoisissables, type EffetZone, type RegleZone, type TypeForme } from '../engine/selection.js';
-import type { Operation } from '../engine/editionSvg.js';
+import { estPlat, type Operation } from '../engine/editionSvg.js';
+import { noeudsChoisissables } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
 import type { ElementMenu } from './commun/Menu.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil, OutilZone } from './typesEditeur.js';
@@ -67,11 +68,13 @@ function choisir(ac: ActionsEditeur, ids: string[], phrase: string): void {
 /** Les commandes de selection, sur l'etat qu'on leur donne (celui du rendu, ou celui du moment pour le clavier). */
 export function commandesSelection(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur) {
   const procede = u.profil && operationsApplicables(u.profil.procede) ? u.profil.procede : null;
+  // Un dessin riche (ADR-0012, annexe 6 §2) : tout choisir et inverser ne voient que les noeuds du niveau du contexte d'edition.
+  const niveau = (): string[] | null => (estPlat(m.dessin) ? null : noeudsChoisissables(m.dessin, u.contexte?.groupe ?? null));
   return {
-    tout: () => { const ids = toutesChoisissables(m.dessin); ac.choisir(ids); ac.poserPoint(null); },
+    tout: () => { const ids = niveau() ?? toutesChoisissables(m.dessin); ac.choisir(ids); ac.poserPoint(null); },
     rien: () => { ac.choisir([]); ac.poserPoint(null); },
     inverser: () => {
-      const ids = inverserSelection(m.dessin, m.sel);
+      const n = niveau(), ids = n ? n.filter(id => !m.sel.includes(id)) : inverserSelection(m.dessin, m.sel);
       choisir(ac, ids, ids.length ? 'Sélection inversée : ' + choisies(ids.length) + '.' : 'Sélection inversée : aucune autre forme à choisir.');
     },
     memeContour: () => {

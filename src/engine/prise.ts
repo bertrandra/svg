@@ -188,7 +188,8 @@ function essayer(f: Forme, rang: number, px: number, py: number, o: OptionsPrise
   const tol = o.tolerance / o.zoom, cible = o.cible / o.zoom;
   const e = etendue(f);
   if (!e) return null;
-  const surface = !!o.contours || f.remplissage !== null;
+  // Une image integree (ADR-0012, etape 12) peint tout son cadre, sans remplissage ni trait : elle se prend sur sa surface.
+  const surface = !!o.contours || f.remplissage !== null || f.image !== undefined;
   // Un texte pose sur ou dans une forme (ADR-0031) se prend par ses lettres : sa boite couvrirait la forme qui le porte.
   const boiteTexte = !!f.texte && !f.texte.disposition;
   const base = { id: f.id, rang, filet: !surface && !boiteTexte };
