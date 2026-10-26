@@ -6,6 +6,7 @@
 // (choisir une forme, changer sa couleur, recuperer le fichier). La visite ne montre que ce chemin, sur le vrai editeur.
 
 import type { DessinSvg } from '../engine/editionSvg.js';
+import { t } from '../util/i18n.js';
 import { insecables } from '../util/texte.js';
 
 export type EtapeVisite = 'choisir' | 'couleur' | 'annuler' | 'recuperer' | 'fin';
@@ -43,7 +44,7 @@ export function apresSignal(e: EtapeVisite, s: SignalVisite): EtapeVisite {
 }
 
 /** « Étape 2 sur 5 » : ce que la bulle affiche au-dessus de son titre. */
-export const progression = (e: EtapeVisite): string => 'Étape ' + rang(e) + ' sur ' + ETAPES.length;
+export const progression = (e: EtapeVisite): string => t('Étape {rang} sur {total}', { rang: rang(e), total: ETAPES.length });
 
 /**
  * Quand la visite s'ouvre d'elle-meme : `toujours` (la page, quand on a demande « Essayer avec la visite guidée »), `si-nouveau`
@@ -68,48 +69,64 @@ export interface TexteEtape { readonly titre: string; readonly corps: string }
 
 /** Le titre et le corps d'une etape : des phrases courtes, sans mot de metier qui ne soit dit autrement, en typographie francaise. */
 export function texteEtape(e: EtapeVisite, c: ContexteVisite): TexteEtape {
-  const t = texteBrut(e, c), verbe = c.doigt ? 'Touchez' : 'Cliquez';
-  return { titre: insecables(t.titre), corps: insecables(t.corps.replace(/\bCliquez\b/g, verbe)) };
+  const brut = texteBrut(e, c);
+  return { titre: insecables(brut.titre), corps: insecables(brut.corps) };
 }
 
+/**
+ * Les textes, le verbe de la souris remplace par celui du doigt quand on touche l'ecran (« Cliquez » / « Touchez ») : le verbe est
+ * une valeur de la phrase, pour qu'il se traduise avec elle (ADR-0042).
+ */
 function texteBrut(e: EtapeVisite, c: ContexteVisite): TexteEtape {
+  const verbe = c.doigt ? t('Touchez') : t('Cliquez');
   switch (e) {
     case 'choisir':
-      return { titre: 'Choisissez une forme', corps: 'Cliquez une des formes du dessin : un cadre l’entoure, elle est choisie. Au clavier, Page suivante en choisit une.' };
+      return { titre: t('Choisissez une forme'), corps: t('{verbe} une des formes du dessin : un cadre l’entoure, elle est choisie. Au clavier, Page suivante en choisit une.', { verbe }) };
     case 'couleur':
       return {
-        titre: 'Changez sa couleur',
+        titre: t('Changez sa couleur'),
         corps: c.selection
-          ? 'Cliquez la pastille « Remplissage », en haut, puis choisissez une couleur. La forme change aussitôt.'
-          : 'Choisissez d’abord une forme sur la toile, puis cliquez la pastille « Remplissage », en haut.'
+          ? t('{verbe} la pastille « Remplissage », en haut, puis choisissez une couleur. La forme change aussitôt.', { verbe })
+          : t('Choisissez d’abord une forme sur la toile, puis cliquez la pastille « Remplissage », en haut.')
       };
     case 'annuler':
-      return { titre: 'Vous pouvez toujours revenir en arrière', corps: 'Cette flèche annule le dernier changement (Ctrl+Z) ; sa voisine le refait. Essayez si vous voulez, ou passez à la suite.' };
+      return { titre: t('Vous pouvez toujours revenir en arrière'), corps: t('Cette flèche annule le dernier changement (Ctrl+Z) ; sa voisine le refait. Essayez si vous voulez, ou passez à la suite.') };
     case 'recuperer':
       // Le geste de fin n'est plus qu'une icone : la bulle dit son nom et ou le trouver (le bouton plein, en haut, ou en bas au telephone).
-      if (c.recuperation === 'enregistrer') return { titre: 'Récupérez votre dessin', corps: 'Cliquez « ' + (c.libelleFin ?? 'Enregistrer') + ' », le bouton plein ' + (c.telephone ? 'en bas' : 'en haut') + ' à droite : votre dessin retouché revient dans la page qui a ouvert l’éditeur.' };
+      if (c.recuperation === 'enregistrer') {
+        const v = { verbe, libelle: c.libelleFin ?? t('Enregistrer') };
+        return {
+          titre: t('Récupérez votre dessin'),
+          corps: c.telephone
+            ? t('{verbe} « {libelle} », le bouton plein en bas à droite : votre dessin retouché revient dans la page qui a ouvert l’éditeur.', v)
+            : t('{verbe} « {libelle} », le bouton plein en haut à droite : votre dessin retouché revient dans la page qui a ouvert l’éditeur.', v)
+        };
+      }
       // Au bureau, le menu Fichier (une icone de feuille) le porte en tete ; le telephone le range dans « Plus », rubrique Récupérer le dessin.
       return {
-        titre: 'Récupérez votre dessin',
-        corps: (c.telephone ? 'Touchez « Plus » (les trois points), puis « Télécharger le SVG ».' : 'Cliquez « Fichier », l’icône de feuille en haut à droite, puis « Télécharger le SVG ».') + ' Le fichier arrive dans vos téléchargements.'
+        titre: t('Récupérez votre dessin'),
+        corps: c.telephone
+          ? t('Touchez « Plus » (les trois points), puis « Télécharger le SVG ». Le fichier arrive dans vos téléchargements.')
+          : t('{verbe} « Fichier », l’icône de feuille en haut à droite, puis « Télécharger le SVG ». Le fichier arrive dans vos téléchargements.', { verbe })
       };
     case 'fin':
-      return { titre: 'Votre première retouche est faite', corps: 'Choisir une forme, changer sa couleur, récupérer le fichier : vous connaissez le chemin. Pour la suite :' };
+      return { titre: t('Votre première retouche est faite'), corps: t('Choisir une forme, changer sa couleur, récupérer le fichier : vous connaissez le chemin. Pour la suite :') };
   }
 }
 
 /** Ou retrouver la visite : le menu Aide, range dans « Plus » sur un telephone. */
-export const ouRejouer = (telephone: boolean): string => (telephone ? 'Elle se rejoue depuis « Plus », rubrique Aide.' : 'Elle se rejoue depuis le menu Aide.');
+export const ouRejouer = (telephone: boolean): string => (telephone ? t('Elle se rejoue depuis « Plus », rubrique Aide.') : t('Elle se rejoue depuis le menu Aide.'));
 
 /** La phrase dite dans la region vocale a chaque etape ; la premiere dit aussi comment atteindre la bulle au clavier. */
 export function phraseEtape(e: EtapeVisite, c: ContexteVisite): string {
-  const t = texteEtape(e, c);
-  const debut = 'Visite guidée, ' + progression(e).toLowerCase() + ' : ' + t.titre + '. ' + t.corps;
-  return insecables(e === 'choisir' ? debut + ' F6 mène à la bulle de la visite et revient à la toile ; dans la bulle, Échap quitte la visite.' : debut);
+  const texte = texteEtape(e, c);
+  const debut = t('Visite guidée, {etape} : {titre}. {corps}', { etape: progression(e).toLowerCase(), titre: texte.titre, corps: texte.corps });
+  return insecables(e === 'choisir' ? debut + ' ' + t('F6 mène à la bulle de la visite et revient à la toile ; dans la bulle, Échap quitte la visite.') : debut);
 }
 
 /** La phrase dite quand la visite se ferme, terminee ou passee. */
-export const phraseFin = (terminee: boolean, telephone: boolean): string => insecables('Visite guidée ' + (terminee ? 'terminée' : 'quittée') + '. ' + ouRejouer(telephone));
+export const phraseFin = (terminee: boolean, telephone: boolean): string =>
+  insecables((terminee ? t('Visite guidée terminée.') : t('Visite guidée quittée.')) + ' ' + ouRejouer(telephone));
 
 /** L'element vise par une etape, en selecteur sous `.editeur-cadre` : la toile, une pastille, un bouton de la barre. */
 export function cibleEtape(e: EtapeVisite, c: Pick<ContexteVisite, 'telephone' | 'recuperation'>): string {
@@ -120,7 +137,8 @@ export function cibleEtape(e: EtapeVisite, c: Pick<ContexteVisite, 'telephone' |
     case 'couleur':
       return '.editeur-barre .style-courant .pastille-style';
     case 'annuler':
-      return '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]';
+      // Le nom accessible du bouton est traduit : le selecteur le prend dans la langue de l'interface.
+      return '.editeur-barre button[aria-label="' + t('Annuler (Ctrl+Z)') + '"]';
     case 'recuperer':
       if (c.recuperation === 'enregistrer') return c.telephone ? '.editeur-etat button.primaire' : '.editeur-barre .groupe.fin button.primaire';
       return c.telephone ? '.editeur-barre .groupe.plus .menu-bouton' : '.editeur-barre .menu-fichier .menu-bouton';

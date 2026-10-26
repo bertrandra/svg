@@ -11,6 +11,7 @@ import { destinations, enfantsDe, etendue, groupeCommun, idNoeud, parentDe, type
 import { PHRASE_FEUILLE_SANS_NOM, PHRASE_VERROUILLE, phraseDeplie, phraseFreresDeplies, phraseReplie } from './phrasesCalques.js';
 import type { ActionsEditeur, ContexteEdition } from './typesEditeur.js';
 import { niveauEdition } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 /** Le type des donnees glissees d'une ligne : les identifiants des noeuds, separes par des espaces. */
 export const TYPE_GLISSE = 'application/x-svg-noeuds';
@@ -149,7 +150,7 @@ export function verbesArbre(e: EtatArbre) {
       id: dst.id ?? 'racine', libelle: dst.libelle, desactive: dst.refusee,
       onClick: () => appliquerDeplacement(deplacerVers(dessin, sel, dst.id), unites(dessin, sel)[0] ?? null)
     }))
-    : [{ id: 'rien', libelle: 'Choisissez d’abord un calque à déplacer', desactive: true }]);
+    : [{ id: 'rien', libelle: t('Choisissez d’abord un calque à déplacer'), desactive: true }]);
 
   return { aller, choisirLigne, basculer, entrer, appliquerDeplacement, deplacerAuClavier, commencerRenommage, finirRenommage, deplierFreres, ouvrirMenu, elementsMenu };
 }

@@ -10,6 +10,7 @@
 import type { DessinSvg, OptionsLecture } from '../engine/editionSvg.js';
 import { ATTRIBUT_MODELE, estPlat, lireDessin } from '../engine/editionSvg.js';
 import type { Stockage } from '../io/stockage.js';
+import { t } from '../util/i18n.js';
 import type { Modele } from './typesEditeur.js';
 
 export const CLE_MODELE = 'svg.modele';
@@ -57,8 +58,8 @@ export type Garde = 'version' | 'brouillon';
 export function refusModele(svg: string, m: Modele, garde: Garde): string | null {
   if (m === 'riche' || !porteModeleRiche(svg)) return null;
   return garde === 'version'
-    ? 'Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets », menu Édition) pour l’ouvrir.'
-    : 'Ce brouillon emploie des groupes, des dégradés ou des effets ; activez le modèle riche pour le reprendre.';
+    ? t('Cette version emploie des groupes, des dégradés ou des effets ; activez le modèle riche (« Groupes, dégradés, effets », menu Édition) pour l’ouvrir.')
+    : t('Ce brouillon emploie des groupes, des dégradés ou des effets ; activez le modèle riche pour le reprendre.');
 }
 
 /**
@@ -68,15 +69,15 @@ export function refusModele(svg: string, m: Modele, garde: Garde): string | null
  */
 export function refusAvecRepli(svg: string, erreur: string, m: Modele): string {
   if (m !== 'riche' || 'erreur' in lireDessin(svg)) return erreur;
-  return erreur + ' Lu à plat, ses groupes fondus, il s’ouvrirait : décochez « Groupes, dégradés, effets » au menu Édition de l’éditeur, puis rouvrez-le.';
+  return erreur + ' ' + t('Lu à plat, ses groupes fondus, il s’ouvrirait : décochez « Groupes, dégradés, effets » au menu Édition de l’éditeur, puis rouvrez-le.');
 }
 
 /** Ce que dit le reglage quand il change : il vaut pour les fichiers ouverts ensuite, le dessin ouvert reste tel qu'il a ete lu. */
 export function phraseModele(m: Modele, garde: boolean): string {
   const quoi = m === 'riche'
-    ? 'Groupes, dégradés et effets activés : les prochains fichiers ouverts gardent leurs groupes.'
-    : 'Groupes, dégradés et effets désactivés : les prochains fichiers s’ouvrent à plat.';
-  return garde ? quoi : quoi + ' Ce navigateur ne garde pas ce réglage : il ne vaut que pour cette édition.';
+    ? t('Groupes, dégradés et effets activés : les prochains fichiers ouverts gardent leurs groupes.')
+    : t('Groupes, dégradés et effets désactivés : les prochains fichiers s’ouvrent à plat.');
+  return garde ? quoi : quoi + ' ' + t('Ce navigateur ne garde pas ce réglage : il ne vaut que pour cette édition.');
 }
 
 /**
