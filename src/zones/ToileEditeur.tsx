@@ -30,7 +30,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
   return (
     <div className={'editeur-toile fond-' + fond} ref={toile}>
       {/* Ce que la toile dit en prenant le focus, dont la sortie (WCAG 2.1.2) : Tab quitte la toile apres la derniere forme, ou Echap puis Tab. */}
-      <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Entrée : modifier le texte choisi, ou les points d’une forme. Échap puis Tab : quitter la toile.</span>
+      <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Entrée : modifier le texte choisi, ou les points d’une forme. Sur une forme à dégradé, Tab atteint ses poignées. Échap puis Tab : quitter la toile.</span>
       <svg ref={svgRef} id={idToile} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={'Plan de travail de ' + titre + ' : ' + dessin.formes.length + ' forme' + (dessin.formes.length > 1 ? 's' : '')} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic} onMouseDown={gestes.sourisBas}>
         <FondPrise />
         <g transform={`translate(${vues.vue.x} ${vues.vue.y}) scale(${z})`}>
@@ -46,7 +46,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
           {/* L'apercu de la machine (ADR-0028) : avant les formes, qu'il rend transparentes (editeur.css) ; elles gardent les clics. */}
           <ApercuMachine />
-          <FormesToile dessin={dessin} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} contexte={ui.contexte?.groupe ?? null} />
+          <FormesToile dessin={dessin} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} contexte={ui.contexte?.groupe ?? null} brouillon={gestes.brouillon} />
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, tactile, !!sx.saisie)}</g>

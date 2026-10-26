@@ -1,11 +1,13 @@
 // Les gestes a la souris, au stylet ou au doigt sur la toile : deplacer, redimensionner, tourner,
 // tracer, pincer, et poser ou deplacer le curseur d'un texte en saisie (ADR-0027). Le calcul est dans le
-// coeur pur ; ici, le fil des evenements de pointeur.
+// coeur pur ; ici, le fil des evenements de pointeur. Une poignee de degrade (ADR-0012, etape 4) se prend
+// comme un coin : un arret glisse le long de l'axe, une extremite suit le pointeur (PoigneesDegrade.tsx).
 
-import { useEffect, useRef, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
   ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, formeDeBase, PARAMETRES_FORMES_DEFAUT, polygone, redimensionner, regleDeForme, retourner, 
-  type Boite, type Commande, type DessinSvg, type ParametresFormes, type Style
+  degradeDe, deplacerExtremite, modifierArret, positionSurAxe,
+  type Boite, type Commande, type CoteDegrade, type DessinSvg, type ParametresFormes, type Style
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
 import { FORMES, styleDeForme } from './aidesEditeur.js';
@@ -17,6 +19,8 @@ import { useReperesActifs } from './contexteRegles.js';
 import { effacerReperes as sansReperes } from '../engine/editionSvg.js';
 import { useGesteZone } from './GesteZone.js';
 import { estOutilZone } from './commandesSelection.js';
+import { poigneeDe, poigneesActives, type CiblePoignee } from './PoigneesDegrade.js';
+import { effetsAuRepos, PHRASE_EFFETS_AU_REPOS } from './brouillon.js';
 import type { ActionsEditeur, Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
@@ -28,6 +32,7 @@ type Geste =
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
   | { type: 'rotation'; centre: readonly [number, number]; angle0: number; base: DessinSvg; ids: string[]; cle: string }
   | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue }
+  | { type: 'degrade'; cote: CoteDegrade; cible: CiblePoignee; base: DessinSvg; id: string; cle: string }
   | { type: 'saisie' };
 
 /**
@@ -64,14 +69,9 @@ function poserFormeTracee(ac: ActionsEditeur, dessin: DessinSvg, id: string, cle
 }
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
-export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui, prise = usePrise(svgRef), reperesActifs = useReperesActifs();
-  const geste = useRef<Geste | null>(null), espace = useRef(false);
-  const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
-  // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
-  const pointeurs = useRef(new Map<number, { x: number; y: number }>());
-  // Le cadre et le lasso (ADR-0035) : leur geste vit a part, ici il n'est qu'appele.
-  const zone = useGesteZone();
+/** Espace tenue hors d'un champ : la toile se deplace a la main le temps de l'appui, quel que soit l'outil. */
+function useEspace() {
+  const espace = useRef(false);
   useEffect(() => {
     const bas = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -82,6 +82,18 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     window.addEventListener('keyup', haut);
     return () => { window.removeEventListener('keydown', bas); window.removeEventListener('keyup', haut); };
   }, []);
+  return espace;
+}
+
+export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), { vues } = ui, prise = usePrise(svgRef), reperesActifs = useReperesActifs();
+  const geste = useRef<Geste | null>(null), espace = useEspace();
+  const { brouillon, commencer: commencerBrouillon, finir: finirBrouillon } = useBrouillon(ac);
+  const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
+  // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
+  const pointeurs = useRef(new Map<number, { x: number; y: number }>());
+  // Le cadre et le lasso (ADR-0035) : leur geste vit a part, ici il n'est qu'appele.
+  const zone = useGesteZone();
   const { vue } = vues;
   const versDoc = (e: { clientX: number; clientY: number }): [number, number] => {
     const r = svgRef.current?.getBoundingClientRect();
@@ -101,6 +113,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       if (a && b) {
         if (geste.current && geste.current.type !== 'pan' && 'cle' in geste.current) ac.annulerGeste(geste.current.cle);
         zone.annuler();
+        finirBrouillon();
         geste.current = { type: 'pincer', d0: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vue };
       }
       return;
@@ -110,6 +123,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (sx.choixForme) { sx.viserForme.current?.(prise.toutes(e)); return; } // le choix de la forme d'un texte pose (ADR-0031) : le clic la donne
     if (sx.saisie || ui.outil === 'texte') { geste.current = gt.appuyer(x, y, t, e.shiftKey); return; }
     if (estOutilZone(ui.outil)) { zone.commencer(ui.outil, [x, y], e); return; }
+    const pd = poigneeDe(t), pa = poigneesActives(mo, ui); // une poignee de degrade (etape 4) : glisserPoignee
+    if (pd && pa) { geste.current = { type: 'degrade', cote: pd.cote, cible: pd.cible, base: mo.dessin, id: pa.forme.id, cle: ac.nouvelleCle() }; return; }
     const rot = t.getAttribute('data-rotation');
     if (rot !== null && mo.boite) { geste.current = { type: 'rotation', centre: centre(mo.boite), angle0: angleVers(centre(mo.boite), [x, y]), base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle() }; return; }
     if (ui.outil === 'plume') { ac.poserTrace([...ui.trace, versGrille(e)]); return; }
@@ -156,6 +171,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     }
     if (g.type === 'pan') { vues.poserVue({ ...g.vue, x: g.vue.x + e.clientX - g.x0, y: g.vue.y + e.clientY - g.y0 }); return; }
     const [x, y] = versDoc(e);
+    if (g.type === 'rotation' || g.type === 'deplacer' || g.type === 'echelle') commencerBrouillon(g.base);
     if (g.type === 'rotation') {
       let a = angleVers(g.centre, [x, y]) - g.angle0;
       if (e.shiftKey) a = Math.round(a / 15) * 15;
@@ -178,6 +194,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       return;
     }
     const [gx, gy] = [ui.aimant(x), ui.aimant(y)];
+    if (g.type === 'degrade') { ac.appliquer(() => glisserPoignee(g, x, y, gx, gy), g.cle); return; }
     if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, e.shiftKey, mo.dessin.vb), g.cle);
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
     // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
@@ -190,6 +207,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     pointeurs.current.delete(e.pointerId);
     if (g?.type === 'pincer') { if (pointeurs.current.size === 0) geste.current = null; return; }
     geste.current = null;
+    finirBrouillon();
     if (ui.guides.length) ac.poserGuides([]);
     if (!g) { zone.lacher(versDoc(e)); return; }
     if (g.type === 'saisie') { sx.poignee.current?.lacher(); return; }
@@ -206,7 +224,24 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
   };
 
   const doubleClic = (e: ME<SVGSVGElement>) => { if (ui.outil === 'plume') ac.finirTrace(true); else gt.doubleClic(e, versDoc(e)); };
-  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, zone: zone.zone };
+  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, zone: zone.zone, brouillon };
+}
+
+/**
+ * Le brouillon des effets (ADR-0012, etape 7-B, brouillon.ts) : pose au premier mouvement d'un glisser, d'un redimensionnement ou
+ * d'une rotation sur un dessin a plus de vingt noeuds a effet, retire au relacher ; dit une fois par editeur.
+ */
+function useBrouillon(ac: ActionsEditeur) {
+  const [brouillon, poserBrouillon] = useState(false);
+  const enCours = useRef(false), dit = useRef(false);
+  const finir = () => { if (enCours.current) { enCours.current = false; poserBrouillon(false); } };
+  const commencer = (base: DessinSvg) => {
+    if (enCours.current || !effetsAuRepos(base)) return;
+    enCours.current = true;
+    poserBrouillon(true);
+    if (!dit.current) { dit.current = true; ac.dire(PHRASE_EFFETS_AU_REPOS); }
+  };
+  return { brouillon, commencer, finir };
 }
 
 /**
@@ -261,6 +296,14 @@ function useGestesTexte(prise: ReturnType<typeof usePrise>) {
   /** La souris enfoncee donnerait le focus a la toile : pendant la saisie, il reste dans son champ. */
   const sourisBas = (e: ME<SVGSVGElement>) => { if (garderFocus.current) { e.preventDefault(); garderFocus.current = false; } };
   return { sx, garderFocus, appuyer, doubleClic, sourisBas };
+}
+
+/** Glisser une poignee de degrade : un arret prend la position de la projection du pointeur, une extremite le point aimante. */
+function glisserPoignee(g: Extract<Geste, { type: 'degrade' }>, x: number, y: number, gx: number, gy: number): DessinSvg {
+  const f = g.base.formes.find(v => v.id === g.id), d = f ? degradeDe(f, g.cote) : null;
+  if (!d) return g.base;
+  if (typeof g.cible === 'number') return modifierArret(g.base, [g.id], g.cote, g.cible, { position: positionSurAxe(d, x, y) });
+  return deplacerExtremite(g.base, [g.id], g.cote, g.cible, gx, gy);
 }
 
 /** Tirer un coin : le coin oppose reste fixe ; passer de l'autre cote d'un bord retourne la selection. */

@@ -90,7 +90,7 @@ const similitude = (m: Matrice): boolean => (m[0] === m[3] && m[1] === -m[2]) ||
  * plan expriment exactement (l'etalement agit sur t : il est garde). P1 est l'image de la premiere extremite ; P2 = P1 + g/|g|².
  * Sans matrice, ou sous une similitude, les extremites sont simplement transportees (aucun calcul de plus, aucun bruit d'arrondi).
  */
-function lineaireDansLePlan(d: DegradeLineaire): readonly [number, number, number, number] {
+export function lineaireDansLePlan(d: DegradeLineaire): readonly [number, number, number, number] {
   const m = d.matrice;
   if (!m) return [d.x1, d.y1, d.x2, d.y2];
   const [x1, y1] = appliquer(m, d.x1, d.y1);

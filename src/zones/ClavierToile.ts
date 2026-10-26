@@ -30,6 +30,7 @@ import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { ajouterTracee, formeTracee } from './Gestes.js';
 import { toucheZone } from './ClavierZone.js';
 import { toucheGroupes } from './commandesGroupes.js';
+import { entrerDansPoignees, poigneeDe, touchePoignee } from './PoigneesDegrade.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 import type { EtatSaisie } from './contexteSaisie.js';
 
@@ -157,8 +158,13 @@ function reticule(c: ContexteToile, e: KeyboardEvent): boolean {
  * Les combinaisons avec Ctrl, Alt ou Meta ne sont pas d'ici : elles ont leurs raccourcis.
  */
 export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
+  // Une poignee de degrade a le focus (ADR-0012, etape 4) : ses touches d'abord (fleches, Suppr, Tab, Echap ; PoigneesDegrade.tsx).
+  const poignee = poigneeDe(e.target);
+  if (poignee) return touchePoignee(e, c, poignee);
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const { outil } = c.u, parcourt = outil === 'selection' || outil === 'points';
+  // Tab sur une forme a degrade entre dans ses poignees avant de passer a la forme suivante.
+  if (parcourt && e.key === 'Tab' && !e.shiftKey && entrerDansPoignees(c)) return true;
   if (parcourt && e.key === 'Tab') return tabuler(c, e.shiftKey ? -1 : 1);
   const page = e.key === 'PageDown' ? 1 : e.key === 'PageUp' ? -1 : null;
   if (outil === 'selection' && e.shiftKey && page) return etendreSelection(c, page);

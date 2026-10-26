@@ -43,6 +43,8 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('encre-douce', 'texte', '#555c66', '#9aa3ad', 'Le texte secondaire : aides, légendes, libellés de champ'),
   jeton('filet', 'trait', '#cfd4da', '#2f353c', 'Les bordures et séparations ; décoratif, il ne porte jamais seul une information'),
   jeton('filet-fort', 'trait', '#7d848d', '#69717b', 'Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement'),
+  jeton('poignee-degrade', 'trait', '#9c2a7a', '#e07ac0', 'Les poignées de dégradé sur la toile (ADR-0012, étape 4) : l’axe, le rail et le cerne des arrêts, posés sur leur halo de panneau ; une teinte à part du cyan de la sélection'),
+  jeton('arret-selectionne', 'trait', '#15181d', '#e6e9ec', 'L’arrêt de dégradé choisi : le bord de son option dans la liste des arrêts, l’anneau de la poignée qui a le focus (sur son halo de panneau)'),
   jeton('cyan', 'action', '#00719c', '#4fb3dc', 'La couleur d’outil : action primaire, état actif, focus, liens'),
   jeton('cyan-survol', 'action', '#006186', '#4fb3dc', 'Le texte d’un bouton discret survolé : le cyan s’assombrit en clair, où le voile du survol le ferait passer sous 4,5:1'),
   jeton('sur-cyan', 'action', '#ffffff', '#08202b', 'Le texte posé sur la couleur d’outil'),
@@ -136,6 +138,8 @@ export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
   { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' },
   { texte: 'cyan', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029)' },
+  { texte: 'poignee-degrade', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'l’axe et les poignées d’un dégradé sur la toile, filet sur son halo de panneau (ADR-0012, étape 4)' },
+  { texte: 'arret-selectionne', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'le bord de l’arrêt choisi dans la liste, l’anneau de la poignée focalisée sur son halo de panneau' },
   // L'apercu de la machine (ADR-0028) se pose sur le plan, quel que soit son fond : blanc, sombre, ou les deux cases du damier.
   { texte: 'apercu-coupe', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan blanc' },
   { texte: 'apercu-coupe', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan sombre' },

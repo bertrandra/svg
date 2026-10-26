@@ -53,7 +53,10 @@ describe('un dessin riche se rend par noeud, par les crochets de l ecriture', ()
 
   it('pose les definitions ecrites, les peintures, les groupes et l image', () => {
     const defs = /<defs>(.*?)<\/defs>/.exec(ecrireDessin(d, 3))?.[1] ?? '';
-    expect(html).toContain('<defs>' + defs + '</defs>');
+    // Une definition par <g> de <defs> (etape 7-B : seule celle qui change se reecrit) ; ensemble, le texte ecrit, dans son ordre.
+    const rendues = /<defs>(.*?)<\/defs>/.exec(html)?.[1] ?? '';
+    expect(rendues.replace(/<\/?g>/g, '')).toBe(defs);
+    expect(rendues.match(/<g>/g)?.length).toBe(defs.match(/ id="ed-/g)?.length);
     expect(html).toMatch(/<g data-groupe="g\d+" opacity="0.8" data-ed-nom="Ciel">/);
     expect(html).toMatch(/fill="url\(#ed-d-[0-9a-f]{14}\)"/);
     expect(html).toMatch(/stroke="url\(#ed-d-[0-9a-f]{14}\)"/);
