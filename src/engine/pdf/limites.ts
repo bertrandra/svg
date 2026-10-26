@@ -2,6 +2,8 @@
 // nomme, et la demande d'un flux a decompresser. Chaque borne est haute : aucun PDF de dessin reel ne la touche ; basse
 // assez pour qu'un fichier hostile ne coute que quelques secondes et quelques centaines de Mo au plus.
 
+import { nombre } from '../../util/i18n.js';
+
 /** Les bornes de la lecture. Un depassement est un refus nomme, jamais un travail sans fin. */
 export const LIMITES_PDF = {
   /** Taille du fichier. Un PDF de dessin pese rarement plus de 20 Mo ; un export d'Illustrator avec ses donnees privees, 60. */
@@ -65,4 +67,4 @@ export class FluxEnAttente extends Error {
 }
 
 /** Un nombre en francais, pour les phrases de refus. */
-export const enFrancais = (n: number): string => n.toLocaleString('fr-FR');
+export const enFrancais = (n: number): string => nombre(n);

@@ -12,8 +12,8 @@ import { sansPretraitement, type Traitement } from '../engine/vectorisation.js';
 import type { ApercuPretraite, ImageConvertie } from '../io/image.js';
 import { Section } from './commun/Section.js';
 import { Icone } from './icones.js';
+import { nombre } from '../util/i18n.js';
 
-const nombre = (n: number): string => n.toLocaleString('fr-FR');
 const ko = (svg: string): string => Math.max(1, Math.round(svg.length / 1024)) + ' Ko';
 const arrondi = (v: number): number => Math.round(v * 100) / 100;
 

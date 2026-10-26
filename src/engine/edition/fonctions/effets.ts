@@ -43,10 +43,11 @@ import {
   ALPHA, SOURCE, REFUS_IDIOMES, aplat, appliquerMatrice, arithmetique, avecIdiome, dans, decalage, flou, fusion, hors, matriceCouleurs, matriceDeTeinte, pile,
   reconnaitre, type EffetsBruts, type Idiome, type Image
 } from '../filtres.js';
+import { nombre as nombreDeLaLangue } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
-const nombreDit = (v: number): string => v.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+const nombreDit = (v: number): string => nombreDeLaLangue(v, 3);
 
 /** Ce que la lecture riche dit perdre (`ignores`, annexe 5 §1). */
 export const MSG_EFFETS = {
@@ -55,7 +56,7 @@ export const MSG_EFFETS = {
   regionNeutre: 'la région d’un filtre sans effet plus étroite que la forme : la forme s’écrit entière',
   anisotrope: 'un flou anisotrope sous une rotation ou un cisaillement : écart moyen',
   ombreAnisotrope: 'une ombre au flou anisotrope ou déformé : écart moyen',
-  nombreux: 'les effets de plus de ' + NOEUDS_A_EFFET_MAX.toLocaleString('fr-FR') + ' formes ou groupes (les suivants sont ignorés)',
+  nombreux: 'les effets de plus de ' + nombreDeLaLangue(NOEUDS_A_EFFET_MAX) + ' formes ou groupes (les suivants sont ignorés)',
   reference: 'les filtres url(#…) qui ne renvoient à aucun filtre (la forme est dessinée sans, comme le prévoit la spécification)',
   illisible: 'un nombre illisible dans un filtre (sa valeur par défaut est prise, comme dans un navigateur)'
 } as const;

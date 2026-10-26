@@ -9,6 +9,8 @@
 // reference inconnue reste telle quelle, ce qui rend inertes les bombes d'entites et les entites externes.
 // Les limites ci-dessous bornent le temps et la memoire, avec un refus nomme au-dela.
 
+import { nombre } from './i18n.js';
+
 export interface Noeud {
   nom: string;
   attributs: Record<string, string>;
@@ -183,7 +185,7 @@ export function parcourirXml(texte: string, rappel: (j: Jeton) => void, lim: Lim
       i = f + 1;
     } else {
       if (!(c >= 0) || estBlanc(c) || c === 62 || c === 60 || c === 61) throw new ErreurXml('un « < » isolé');
-      if (++noeuds > lim.noeuds) throw new ErreurXml('il a plus de ' + lim.noeuds.toLocaleString('fr-FR') + ' éléments');
+      if (++noeuds > lim.noeuds) throw new ErreurXml('il a plus de ' + nombre(lim.noeuds) + ' éléments');
       const b = lireBalise(texte, lt, lim);
       if (!b.autoFermant && pile.length >= lim.profondeur) throw new ErreurXml('il est trop profond (plus de ' + lim.profondeur + ' niveaux d’éléments imbriqués)');
       rappel({ t: 'debut', nom: b.nom, attributs: b.attributs, queue: b.queue, autoFermant: b.autoFermant, profondeur: pile.length });

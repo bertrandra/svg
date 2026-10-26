@@ -33,6 +33,7 @@ import { lireReference, NOEUDS_DEFS_MAX } from '../resolution.js';
 import { boiteDescendants, etatContenus, placeVide, poserBoiteConnue, reserverGroupe } from '../contenus.js';
 import { GROUPES_MAX, MSG_GROUPES_NOMBREUX, MSG_GROUPES_PROFONDS, nomDuGroupe, profondeurDans } from './groupes.js';
 import { feuilleDeDecoupe, REFUS_DECOUPES } from './decoupes.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -43,7 +44,7 @@ export const REFUS_IMBRICATIONS = {
   /** Sans table des groupes (une liste de fonctionnalites donnee par un test), un <svg> imbrique reste refuse comme en mode plat. */
   svg: 'un SVG imbriqué',
   longueur: 'un SVG imbriqué dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage',
-  demesure: 'des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')'
+  demesure: 'des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')'
 } as const;
 
 /** Ce que la lecture riche dit (`ignores`) : ce que les navigateurs ne rendent pas tous pareil. */

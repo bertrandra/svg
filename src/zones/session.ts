@@ -3,6 +3,7 @@
 // (null), rien ne se garde et rien ne se lit, et la page marche quand meme.
 
 import type { Stockage } from '../io/stockage.js';
+import { locale } from '../util/i18n.js';
 
 export interface Brouillon { nom: string; svg: string; quand: number }
 export interface Version { id: string; nom: string; svg: string; quand: number }
@@ -43,8 +44,8 @@ export const garderVersions = (s: Stockage | null, versions: readonly Version[])
 /** Un identifiant stable pour une version : son instant et un compteur, jamais un tirage. */
 export const idVersion = (quand: number, rang: number): string => 'v' + quand.toString(36) + '-' + rang;
 
-/** La date d'une version, en francais court. */
+/** La date d'une version, courte, dans la langue de l'interface (ADR-0042 : la locale de la langue). */
 export function dateCourte(quand: number): string {
   const d = new Date(quand);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }

@@ -15,6 +15,7 @@ import { lireTrait } from './trait.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import type { Proprietes } from './ignores.js';
 import { coordonneeSaine } from './limites.js';
+import { nombre } from '../../util/i18n.js';
 
 /** Les fontes que la lecture peut employer pour le texte, par identifiant (dist/polices.js) ; null pour une fonte non chargee. */
 export interface PolicesTexte { glyphes(id: IdPolice): Glyphes | null }
@@ -105,7 +106,7 @@ export function lireTexte(ctx: ContexteTexte, n: Noeud, h: Proprietes, m: Matric
   if (/^(tb|tb-rl|vertical-rl|vertical-lr|sideways)/i.test((h['writing-mode'] ?? '').trim())) { ctx.analyse.ignores.add(MSG_VERTICAL); return; }
   const cs: Caractere[] = [];
   caracteres(ctx, n, h, [], cs);
-  if (ctx.caracteres > CARACTERES_MAX) { ctx.refus.add('trop de texte (plus de ' + CARACTERES_MAX.toLocaleString('fr-FR') + ' caractères)'); return; }
+  if (ctx.caracteres > CARACTERES_MAX) { ctx.refus.add('trop de texte (plus de ' + nombre(CARACTERES_MAX) + ' caractères)'); return; }
   const lettres = sansBlancFinal(cs);
   // Les morceaux : un caractere a x ou y absolu en commence un nouveau ; text-anchor deplace chaque morceau entier.
   let cx = 0, cy = 0, precedent: { c: string; g: Glyphes } | null = null;

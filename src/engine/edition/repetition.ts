@@ -11,6 +11,7 @@ import type { DessinSvg, Forme, Matrice } from './types.js';
 import { boiteDe, echelle, rotation, translation } from './geometrie.js';
 import { prochainId, transformer } from './operations.js';
 import { relierCopie } from './texteVivant.js';
+import { nombre } from '../../util/i18n.js';
 
 /** Ce qu'une repetition rend : le dessin, les formes a choisir ensuite (la selection et ses copies), le nombre de copies. */
 export interface ResultatRepetition {
@@ -50,7 +51,7 @@ export function copierPar(dessin: DessinSvg, ids: readonly string[], matrices: r
   if (!choisies.length) return refus(dessin, ids, 'Choisissez d’abord une forme visible et déverrouillée à répéter.');
   if (!matrices.length) return { dessin, ids: choisies.map(f => f.id), copies: 0 };
   if (choisies.length * matrices.length > REPETITION_MAX.formes) {
-    return refus(dessin, ids, 'Trop de copies : ' + (choisies.length * matrices.length).toLocaleString('fr-FR') + ' formes, au-delà des ' + REPETITION_MAX.formes.toLocaleString('fr-FR') + ' qu’un geste peut créer.');
+    return refus(dessin, ids, 'Trop de copies : ' + nombre(choisies.length * matrices.length) + ' formes, au-delà des ' + nombre(REPETITION_MAX.formes) + ' qu’un geste peut créer.');
   }
   let n = prochainId(dessin);
   const poses: Forme[] = [], nouveaux: string[] = [];

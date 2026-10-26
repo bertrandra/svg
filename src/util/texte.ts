@@ -1,15 +1,29 @@
 // Les petites aides de texte que plusieurs couches partagent.
 
+import { langue, t, traduction } from './i18n.js';
+
 /**
  * Un mot au pluriel : un « s » de plus, sauf aux mots deja termines par s, x ou z, qui ne changent pas (« tapis »,
  * « prix », « nez »). Une expression de plusieurs mots s'accorde mot a mot (« petite forme », « petites formes ») :
  * c'est le cas de nos libelles, un nom et son adjectif. Les pluriels irreguliers (-al, -eau) n'y sont pas : aucun
- * libelle de l'interface n'en emploie, et une regle de plus serait une regle a tenir.
+ * libelle de l'interface n'en emploie, et une regle de plus serait une regle a tenir ; `pluriel` les recoit entiers.
+ * La regle vaut aussi pour l'anglais courant (ADR-0042) ; une exception (« copy », « copies ») se donne au dictionnaire.
  */
 export const auPluriel = (mot: string): string => mot.split(' ').map(m => (m === '' || /[sxz]$/i.test(m) ? m : m + 's')).join(' ');
 
-/** « 1 forme », « 3 formes », « 2 tapis » : le nombre, un blanc, le mot, accorde en nombre au-dela de un. */
-export const pluriel = (n: number, mot: string): string => n + ' ' + (n > 1 ? auPluriel(mot) : mot);
+/**
+ * « 1 forme », « 3 formes », « 2 tapis » : le nombre, un blanc, le mot, accorde en nombre au-dela de un. Un pluriel irregulier se
+ * donne entier : `pluriel(n, 'cheval', 'chevaux')`. Le mot passe par `t` (ADR-0042) : dans une autre langue, le singulier est
+ * son entree du dictionnaire, et le pluriel l'entree de la forme plurielle francaise (« copies » : « copies ») quand le
+ * dictionnaire la donne, sinon la regle d'`auPluriel` sur le singulier traduit (« shape », « shapes »).
+ */
+export function pluriel(n: number, mot: string, plurielIrregulier?: string): string {
+  if (n <= 1) return n + ' ' + t(mot);
+  const forme = plurielIrregulier ?? auPluriel(mot);
+  // Un mot invariable en francais (« tapis ») ne l'est pas forcement ailleurs : son entree est celle du singulier, pas d'un pluriel.
+  const traduite = forme === mot ? undefined : traduction(forme);
+  return n + ' ' + (traduite ?? (langue() === 'fr' ? forme : auPluriel(t(mot))));
+}
 
 /**
  * Les verbes de la souris, dits au doigt : une aide qui dit « Cliquez » a quelqu'un qui touche l'ecran le fait chercher

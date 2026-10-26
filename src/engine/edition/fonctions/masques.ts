@@ -38,6 +38,7 @@ import type { Definition } from '../definitions.js';
 import {
   ancetresDe, boiteDescendants, boiteFeuille, etatContenus, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -47,7 +48,7 @@ export const REFUS_MASQUES = {
   externe: 'une découpe ou un masque qui renvoie à un fichier extérieur',
   cycle: 'un cycle de masques',
   profondeur: 'des masques emboîtés sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux',
-  trop: 'des masques trop lourds (plus de ' + NOEUDS_DEFS_MAX.toLocaleString('fr-FR') + ' formes dans leurs définitions)'
+  trop: 'des masques trop lourds (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)'
 } as const;
 
 /** Ce que la lecture riche dit perdre (`ignores`). */
@@ -196,7 +197,7 @@ function lireMasque(valeur: string, base: Matrice, boite: () => Boite | null, pr
   const region = boiteSous(local, base);
   // Une region demesuree (1e309, ou une boite immense) ne s'ecrirait pas : refusee comme toute coordonnee hors bornes.
   if (![region.x, region.y, region.x + region.l, region.y + region.h].every(coordonneeSaine)) {
-    marche.refuser('des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')');
+    marche.refuser('des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')');
     return null;
   }
   const m = contenuEnBoite && b ? multiplier(base, [b.l, 0, 0, b.h, b.x, b.y]) : base;

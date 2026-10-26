@@ -16,6 +16,7 @@ import { PROFONDEUR_GROUPES_MAX } from '../arbre.js';
 import { arrondirOpacite, lireOpacite } from '../opacites.js';
 import { decoderTexte, encoderTexte } from '../texteVivant.js';
 import { nb } from '../chemins.js';
+import { nombre } from '../../../util/i18n.js';
 
 /** Le nombre de groupes qu'un dessin lu peut porter (annexe 5 §2) : au-dela, la lecture refuse en le nommant. */
 export const GROUPES_MAX = 20_000;
@@ -25,7 +26,7 @@ export const NOM_GROUPE_MAX = 200;
 export const ATTRIBUT_NOM = 'data-ed-nom';
 
 export const MSG_GROUPES_PROFONDS = 'des groupes emboîtés sur plus de ' + PROFONDEUR_GROUPES_MAX + ' niveaux';
-export const MSG_GROUPES_NOMBREUX = 'des groupes trop nombreux (plus de ' + GROUPES_MAX.toLocaleString('fr-FR') + ')';
+export const MSG_GROUPES_NOMBREUX = 'des groupes trop nombreux (plus de ' + nombre(GROUPES_MAX) + ')';
 
 /**
  * Le nom d'un groupe lu : celui que l'editeur a ecrit (`data-ed-nom`, decode), le calque d'Inkscape (`inkscape:label`), le nom de

@@ -28,6 +28,7 @@ import {
   badgeSource, cleFamille, estChoisie, etatLigne, groupesListe, idDeLigne, nomAccessibleLigne, nombrePolices, pasDePage, placerListe, varianteDeLigne,
   type Disponibilite, type EtatLigne, type GroupePolices, type IdGroupe, type LignePolice, type Placement, type PoliceDuDocument
 } from './lignesPolices.js';
+import { nombre as formaterNombre } from '../util/i18n.js';
 
 export interface ProprietesChoixPoliceListe {
   readonly polices: readonly Police[];
@@ -57,7 +58,7 @@ function nomDansLeChamp(polices: readonly Police[], valeur: string, absente: str
   return p ? p.nom : absente ?? 'Police absente';
 }
 
-const formatNombre = (n: number): string => n.toLocaleString('fr-FR') + ' ' + (n > 1 ? 'polices' : 'police');
+const formatNombre = (n: number): string => formaterNombre(n) + ' ' + (n > 1 ? 'polices' : 'police');
 
 export function ChoixPoliceListe({ polices, valeur, poser, absente, desactive = false, compacte = false, explorer }: ProprietesChoixPoliceListe) {
   const tx = useTexte();

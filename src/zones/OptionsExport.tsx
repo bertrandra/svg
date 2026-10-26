@@ -7,6 +7,7 @@ import type { DessinSvg } from '../engine/editionSvg.js';
 import { hauteurPour, UNITES, type Unite } from '../export/dimensions.js';
 import { DPI_CHOIX, PAGES_EXPORT, PRECISIONS, lireNombre, tailleDe, type OptionsExport, type PageExport } from '../export/options.js';
 import { Section } from './commun/Section.js';
+import { nombre } from '../util/i18n.js';
 
 const NOMS_UNITE: Readonly<Record<Unite, string>> = { mm: 'mm', in: 'pouce', px: 'px' };
 const NOMS_PAGE: Readonly<Record<PageExport, string>> = { dessin: 'Taille du dessin', A4: 'A4', A3: 'A3', Letter: 'Letter', perso: 'Personnalisée' };
@@ -32,7 +33,7 @@ function ChampMesure({ libelle, aria, valeur, vide, min, max, poser, indice }: {
   );
 }
 
-const formater = (v: number) => v.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+const formater = (v: number) => nombre(v, 2);
 
 export function OptionsExportPanneau({ o, poser, dessin }: Proprietes) {
   const taille = tailleDe(o);

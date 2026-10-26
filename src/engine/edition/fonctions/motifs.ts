@@ -40,6 +40,7 @@ import { ancetresDe, etatContenus, lireContenu, visiterSousBudget } from '../con
 import { lireCode, versOklab, depuisOklch, versHex } from '../../../util/couleur.js';
 import { aireDeChemin, longueurDeChemin } from '../../nuancier/surfaces.js';
 import type { Recueil } from '../definitions.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -52,12 +53,12 @@ export const REFUS_MOTIFS = {
   cycle: 'un cycle de motifs',
   chaine: 'des motifs qui héritent l’un de l’autre sur plus de 16 niveaux',
   profondeur: 'des définitions emboîtées sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux (motifs, masques, découpes)',
-  trop: 'des motifs trop lourds (plus de ' + NOEUDS_DEFS_MAX.toLocaleString('fr-FR') + ' formes dans leurs définitions)',
-  nombreux: 'trop de motifs distincts (plus de ' + NOEUDS_DEFS_MAX.toLocaleString('fr-FR') + ')',
+  trop: 'des motifs trop lourds (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)',
+  nombreux: 'trop de motifs distincts (plus de ' + nombre(NOEUDS_DEFS_MAX) + ')',
   vide: 'un motif dont la tuile est vide, nulle ou plus petite qu’un centième (rien ne s’y répète)',
   unite: 'un motif dont une longueur n’est ni un nombre, ni des pixels, ni un pourcentage',
   transformation: 'un motif dont la transformation est illisible ou dégénérée',
-  demesure: 'un motif aux coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')',
+  demesure: 'un motif aux coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')',
   image: 'une image dans la tuile d’un motif'
 } as const;
 

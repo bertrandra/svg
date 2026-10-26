@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fichierPdf, ouvrirPdf } from '../io/pdf.js';
+import { nombre } from '../util/i18n.js';
 
 /** Ouvrir un SVG dans l'editeur, avec ce que la lecture du document d'origine n'a pas repris. */
 export type OuvrirDessin = (nom: string, svg: string, ignores?: readonly string[]) => void;
@@ -36,7 +37,7 @@ export function usePdf(ouvrir: OuvrirDessin, dire: (message: string) => void) {
     // Plusieurs pages a la premiere lecture : on propose de choisir, sans rien ouvrir (la premiere est choisie d'avance).
     if (premiere && pages > 1) {
       poserChoix({ ...pdf, pages, page: 1 });
-      dire('« ' + pdf.nom + ' » compte ' + pages.toLocaleString('fr-FR') + ' pages : choisissez celle à ouvrir.');
+      dire('« ' + pdf.nom + ' » compte ' + nombre(pages) + ' pages : choisissez celle à ouvrir.');
       return;
     }
     if (pages <= 1) poserChoix(null);
@@ -74,7 +75,7 @@ export function ChoixPagePdf({ pdf }: { pdf: ReturnType<typeof usePdf> }) {
   const { pages, page, nom } = choix;
   return (
     <section className="reprise choix-page" aria-label="Page du PDF à ouvrir" aria-busy={pdf.lecture}>
-      <p><strong className="nom-fichier">{nom}</strong> compte {pages.toLocaleString('fr-FR')} pages.</p>
+      <p><strong className="nom-fichier">{nom}</strong> compte {nombre(pages)} pages.</p>
       <label className="champ-ligne">
         <span>Page</span>
         {pages <= PAGES_EN_LISTE ? (
@@ -85,7 +86,7 @@ export function ChoixPagePdf({ pdf }: { pdf: ReturnType<typeof usePdf> }) {
           <input ref={champ} type="number" min={1} max={pages} step={1} value={page} aria-describedby="choix-page-total"
             onChange={e => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= pages) pdf.choisir(v); }} />
         )}
-        {pages > PAGES_EN_LISTE ? <span id="choix-page-total">sur {pages.toLocaleString('fr-FR')}</span> : null}
+        {pages > PAGES_EN_LISTE ? <span id="choix-page-total">sur {nombre(pages)}</span> : null}
       </label>
       <div className="actions">
         <button type="button" className="primaire" disabled={pdf.lecture} onClick={pdf.ouvrirChoix}>Ouvrir la page</button>

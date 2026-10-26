@@ -21,6 +21,7 @@ import { ATTRIBUT_MODELE, VERSION_MODELE } from './ecritureRiche.js';
 import { ignoresDeFusion } from './fusion.js';
 import { normaliser } from './arbre.js';
 import { ATTRIBUT_REPERES, lireReperes } from './reperes.js';
+import { nombre } from '../../util/i18n.js';
 
 /** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038). */
 export const MSG_REPERES_ILLISIBLES = 'les repères du document (illisibles)';
@@ -93,7 +94,7 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const marqueur = refusDuMarqueur(racine.attributs);
   if (marqueur) return { erreur: marqueur };
   if (!plan) return { erreur: 'Ce SVG n’a ni viewBox ni dimensions.' };
-  if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ') : corrigez son viewBox.' };
+  if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + nombre(COORDONNEE_MAX) + ') : corrigez son viewBox.' };
   // L'ecriture garde le millieme : un plan plus petit s'ecrirait « width="0" », que plus rien ne relit.
   if (plan[2] < 0.001 || plan[3] < 0.001) return { erreur: 'Ce SVG a un plan de travail trop petit (moins de 0,001 unité) : corrigez son viewBox.' };
   const analyse = analyser(racine);
@@ -113,7 +114,7 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };
   racine.enfants.forEach(e => visiter(p, e, ctx));
   if (analyse.effort.depasse) {
-    return { erreur: 'Ce SVG a trop de règles de style (' + analyse.regles.length.toLocaleString('fr-FR') + ') pour ses éléments (plus de ' + (CONFRONTATIONS_MAX / 1e6).toLocaleString('fr-FR') + ' millions de confrontations) : simplifiez-le dans votre logiciel.' };
+    return { erreur: 'Ce SVG a trop de règles de style (' + nombre(analyse.regles.length) + ') pour ses éléments (plus de ' + nombre(CONFRONTATIONS_MAX / 1e6) + ' millions de confrontations) : simplifiez-le dans votre logiciel.' };
   }
   if (p.refus.size) return { erreur: 'Ce SVG contient ' + [...p.refus].join(', ') + ' : il ne s’édite pas ici. Vectorisez l’image, ou simplifiez-le dans votre logiciel.' };
   // Une forme sans aucune commande (chemin vide, nombre illisible) ne se dessine pas : un SVG qui n'en a que de telles formes est vide.

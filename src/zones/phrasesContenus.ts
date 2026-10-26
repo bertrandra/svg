@@ -5,6 +5,7 @@
 import { pluriel } from '../util/texte.js';
 import { elementsDits, groupeDit, phraseEntreeGroupe } from './phrasesGroupes.js';
 import { arbreDe, groupeDe, type DessinSvg } from '../engine/editionSvg.js';
+import { nombre } from '../util/i18n.js';
 
 /** « Découpe créée : la forme du dessus découpe 2 éléments. » ; `autres` sont les noeuds decoupes, lus dans le dessin d'avant. */
 export const phraseDecoupeCreee = (avant: DessinSvg, autres: readonly string[]): string =>
@@ -86,13 +87,13 @@ export const phraseFlou = (ecart: number | null): string => (ecart === null ? 'F
 export const phraseOmbre = (posee: boolean): string => (posee ? 'Ombre portée posée : elle ne tourne pas avec la forme.' : 'Ombre portée retirée.');
 
 /** Un nombre tel qu'on le dit : au millieme, a la francaise. */
-export const nombreDit = (v: number): string => (Math.round(v * 1000) / 1000).toLocaleString('fr-FR');
+export const nombreDit = (v: number): string => nombre(Math.round(v * 1000) / 1000);
 
 // ---------------------------------------------------------------- images
 
 /** « Image insérée : 640 × 480 pixels, au centre de la vue. » ; `reduite` : elle a ete ramenee a la taille du plan. */
 export const phraseImageInseree = (l: number, h: number, reduite: boolean): string =>
-  'Image insérée : ' + l.toLocaleString('fr-FR') + ' × ' + h.toLocaleString('fr-FR') + ' pixels, au centre de la vue'
+  'Image insérée : ' + nombre(l) + ' × ' + nombre(h) + ' pixels, au centre de la vue'
   + (reduite ? ', réduite pour tenir dans le plan' : '') + '. Déplacez-la, tournez-la ou redimensionnez-la.';
 
 /** Le refus d'une image (une phrase de la lecture : « une image trop grande (plus de 4 Mo) ») devient une phrase entiere. */

@@ -22,6 +22,7 @@ import { COORDONNEE_MAX } from '../limites.js';
 import { attributHerite, chaineHref, lireFraction, lireLongueur, lireReference, NOEUDS_DEFS_MAX, type Longueur } from '../resolution.js';
 import { ARRETS_MAX, couleurDeRepli, definitionDegrade, estDegrade, transformerDegrade } from '../degrades.js';
 import type { Definition, Recueil } from '../definitions.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -42,8 +43,8 @@ export const REFUS_DEGRADES = {
   chaine: 'des dégradés qui héritent l’un de l’autre sur plus de 16 niveaux',
   unite: 'un dégradé dont une coordonnée n’est ni un nombre, ni des pixels, ni un pourcentage',
   transformation: 'un dégradé dont la transformation est illisible',
-  demesure: 'un dégradé aux coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')',
-  trop: 'trop de dégradés distincts (plus de ' + NOEUDS_DEFS_MAX.toLocaleString('fr-FR') + ')'
+  demesure: 'un dégradé aux coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')',
+  trop: 'trop de dégradés distincts (plus de ' + nombre(NOEUDS_DEFS_MAX) + ')'
 } as const;
 
 // ---------------------------------------------------------------- lecture d'une definition (sans la forme qui l'emploie)

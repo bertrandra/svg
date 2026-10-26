@@ -30,6 +30,7 @@ import {
 } from './clones.js';
 import { completerFeuille, lecteurDe, prisesDe, resoudrePeinture, type Fonctionnalite, type Marche, type PeintureResolue } from './fonctionnalites.js';
 import { ignoresDeFusion } from './fusion.js';
+import { nombre } from '../../util/i18n.js';
 
 const IGNORES = new Set(['defs', 'title', 'desc', 'metadata', 'style', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'pattern', 'symbol', 'marker', 'filter']);
 const NON_PRIS: ReadonlyMap<string, string> = new Map([
@@ -127,7 +128,7 @@ function depasseBorne(p: Parcours): boolean {
 function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   p.donnees += (n.attributs.d?.length ?? 0) + (n.attributs.points?.length ?? 0);
   if (p.donnees > DONNEES_TRACE_MAX) {
-    p.refus.add('trop de données de tracé (plus de ' + (DONNEES_TRACE_MAX / 1e6).toLocaleString('fr-FR') + ' millions de caractères de chemins, clones <use> compris)');
+    p.refus.add('trop de données de tracé (plus de ' + nombre(DONNEES_TRACE_MAX / 1e6) + ' millions de caractères de chemins, clones <use> compris)');
     p.trop = true;
     return;
   }
@@ -156,7 +157,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   const chemin = transformerChemin(d, m);
   // NaN n'est pas dans l'intervalle : un exposant demesure (1e308) qui deborde est refuse comme une coordonnee hors bornes.
   if (!chemin.every(c => c.p.every(coordonneeSaine)) || !Number.isFinite(facteur(m))) {
-    p.refus.add('des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')');
+    p.refus.add('des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')');
     return;
   }
   const epaisseur = contour ? lireEpaisseur(heritees['stroke-width']) * facteur(m) : 0;

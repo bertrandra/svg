@@ -32,6 +32,7 @@ import type { Definition, Recueil } from '../definitions.js';
 import {
   ancetresDe, boiteDescendants, boiteFeuille, etatContenus, FORMES, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -41,7 +42,7 @@ export const REFUS_DECOUPES = {
   externe: 'une découpe ou un masque qui renvoie à un fichier extérieur',
   cycle: 'un cycle de découpes',
   profondeur: 'des découpes emboîtées sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux',
-  trop: 'des découpes trop lourdes (plus de ' + NOEUDS_DEFS_MAX.toLocaleString('fr-FR') + ' formes dans leurs définitions)',
+  trop: 'des découpes trop lourdes (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)',
   transformation: 'une découpe dont la transformation est illisible',
   porteur: 'une découpe posée sur un clone <use>, un symbole ou le SVG entier'
 } as const;

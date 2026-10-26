@@ -22,6 +22,7 @@ import { completerFeuille, type Fonctionnalite, type LecteurElement } from '../f
 import type { Parcours } from '../parcours.js';
 import { natureDesOctets } from '../../natureOctets.js';
 import { decoderBase64, dimensionsImage, octetsBase64, type NatureImageIntegree } from '../dimensionsImage.js';
+import { nombre } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- bornes (annexe 5 §2, question 7 de l'annexe 9)
 
@@ -43,7 +44,7 @@ export const MSG_IMAGE_ENTETE = 'une image dont l’en-tête ne donne pas les di
 export const MSG_IMAGE_LOURDE = 'une image trop grande (plus de 4 Mo)';
 export const MSG_IMAGES_LOURDES = 'des images trop lourdes (plus de 16 Mo en tout, clones compris)';
 export const MSG_IMAGE_UNITE = 'une image dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage';
-export const MSG_IMAGE_COORDONNEES = 'des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')';
+export const MSG_IMAGE_COORDONNEES = 'des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')';
 export const MSG_IMAGE_PETITE = 'une image trop petite pour s’écrire (moins d’un millième d’unité de côté)';
 export const MSG_POINTS_IMAGE = 'Les points d’une image ne se modifient pas : déplacez-la, tournez-la ou redimensionnez-la, ou vectorisez-la pour obtenir des formes.';
 
@@ -54,7 +55,7 @@ export const msgImageType = (mime: string): string =>
   'une image d’un type que l’éditeur ne garde pas' + (/^[a-z0-9.+-]{1,40}\/[a-z0-9.+-]{1,40}$/.test(mime) ? ' (« ' + mime + ' »' : ' (') + ' ; PNG, JPEG, GIF ou WebP seulement)';
 
 export const msgImagePixels = (l: number, h: number): string =>
-  'une image trop grande (' + l.toLocaleString('fr-FR') + ' × ' + h.toLocaleString('fr-FR') + ' pixels, plus de 64 millions)';
+  'une image trop grande (' + nombre(l) + ' × ' + nombre(h) + ' pixels, plus de 64 millions)';
 
 export const msgTypeCorrige = (annonce: NatureImageIntegree, lu: NatureImageIntegree): string =>
   'le type annoncé d’une image (' + NOMS[annonce] + ') ne correspondait pas à son contenu (' + NOMS[lu] + ') : il est corrigé';
