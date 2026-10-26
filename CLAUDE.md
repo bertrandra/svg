@@ -143,6 +143,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `catalogue.ts`, sa descente `engine/descente/<nom>.ts` ; la lecture `plat` (défaut) ne consulte aucune fonctionnalité ; un
   exporteur reçoit un `DessinPlat` par `aplatirPour` ; les références v1 sont gelées par `references-v1.sha256` ; le plan et les
   consignes des vagues sont dans `docs/adr/0012-annexes/08-plan-de-livraison.md`.
+- **Les repères sont un réglage du document, les répétitions des formes ordinaires** (ADR-0038) : `DessinSvg.reperes` (au millième,
+  triés, absent sans repère ; comme le nuancier, il ne rend pas le dessin non plat) passe par l'historique, s'écrit en
+  `data-ed-reperes` sur la racine par `svgDocument` seulement s'il y en a, se garde dans le projet, jamais dans un export ; règles,
+  visibilité et verrou sont de la session ; grille, radiale et symétrie sont pures (`engine/edition/repetition.ts`) ; la largeur
+  variable est une conversion (`engine/contour/largeur.ts`), pas un style.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
