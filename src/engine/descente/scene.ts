@@ -15,6 +15,7 @@ import { cheminDeRegion, cheminLisseDeRegion, toleranceBooleen } from '../boolee
 import { decoupeCourbe, regionDecoupe } from './decoupes.js';
 import type { MultiPolygon } from 'polygon-clipping';
 import type { Capacites } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
 /** Un degrade a peindre nativement, et le domaine de son parametre a couvrir : [0, 1] etale aux bords, [k0, k1] entiers s'il se repete. */
 export interface PeintureScene {
@@ -80,9 +81,9 @@ export interface Scene { readonly noeuds: readonly NoeudScene[] }
 
 /** Ce que la scene approche encore, a dire a l'export. */
 export const MSG_SCENE = {
-  decoupe: 'une découpe faite de formes qui se recouvrent (son bord est recalculé, les courbes rebâties)',
-  periodes: 'un dégradé répété trop de fois pour ce format (prolongé par ses couleurs de bord)'
-} as const;
+  get decoupe(): string { return t('une découpe faite de formes qui se recouvrent (son bord est recalculé, les courbes rebâties)'); },
+  get periodes(): string { return t('un dégradé répété trop de fois pour ce format (prolongé par ses couleurs de bord)'); }
+};
 
 /** Au-dela, un degrade repete ou reflechi est prolonge par ses bords (une fonction de plus par periode). */
 export const PERIODES_MAX = 256;

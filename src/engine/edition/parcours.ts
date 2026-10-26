@@ -30,12 +30,13 @@ import {
 } from './clones.js';
 import { completerFeuille, lecteurDe, prisesDe, resoudrePeinture, type Fonctionnalite, type Marche, type PeintureResolue } from './fonctionnalites.js';
 import { ignoresDeFusion } from './fusion.js';
-import { nombre } from '../../util/i18n.js';
+import { nombre, t } from '../../util/i18n.js';
 
 const IGNORES = new Set(['defs', 'title', 'desc', 'metadata', 'style', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'pattern', 'symbol', 'marker', 'filter']);
-const NON_PRIS: ReadonlyMap<string, string> = new Map([
-  ['text', 'du texte (vectorisez-le dans votre logiciel)'], ['image', 'une image'], ['foreignObject', 'un objet étranger'],
-  ['svg', 'un SVG imbriqué'], ['switch', 'un aiguillage <switch>']
+/** Les balises que la lecture plate refuse en les nommant ; la phrase se fait au moment du refus, dans la langue de l'interface. */
+const NON_PRIS: ReadonlyMap<string, () => string> = new Map([
+  ['text', () => t('du texte (vectorisez-le dans votre logiciel)')], ['image', () => t('une image')], ['foreignObject', () => t('un objet étranger')],
+  ['svg', () => t('un SVG imbriqué')], ['switch', () => t('un aiguillage <switch>')]
 ]);
 
 /** Ce que la marche partage : le document analyse, le plan, et ce qu'elle ramasse (formes, refus ; les pertes sont celles de l'analyse). */
@@ -92,11 +93,11 @@ function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   if ((pr.display ?? '').trim() === 'none') return null;
   // Une balise qu'une fonctionnalite sait lire (mode riche) n'est plus refusee ici : son lecteur en decide.
   const nonPris = NON_PRIS.get(n.nom);
-  if (nonPris && !(n.nom === 'text' && p.texte) && !lecteurDe(fonctionsDe(p), n.nom)) { p.refus.add(nonPris); return null; }
+  if (nonPris && !(n.nom === 'text' && p.texte) && !lecteurDe(fonctionsDe(p), n.nom)) { p.refus.add(nonPris()); return null; }
   const refusNoeud = refusDe(pr, prisesDe(fonctionsDe(p)));
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
-  const t = n.attributs.transform ? lireTransformation(n.attributs.transform) : IDENTITE;
-  if (!t) { p.refus.add('une transformation illisible'); return null; }
+  const m = n.attributs.transform ? lireTransformation(n.attributs.transform) : IDENTITE;
+  if (!m) { p.refus.add(t('une transformation illisible')); return null; }
   // Ce qui se perdait sans etre dit (fusion, ordre de peinture, vector-effect) : dit, dans les deux modes (fusion.ts).
   for (const msg of ignoresDeFusion(pr, n)) p.analyse.ignores.add(msg);
   return {
@@ -104,7 +105,7 @@ function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
     heritees: heriter(ctx.heritees, pr),
     opacite: ctx.opacite * (pr.opacity !== undefined ? lireOpacite(pr.opacity) : 1),
     opaciteDuParent: ctx.opacite,
-    m: multiplier(ctx.m, t),
+    m: multiplier(ctx.m, m),
     profondeur: ctx.profondeur,
     ...parentDe(ctx)
   };
@@ -119,7 +120,7 @@ function parcourirEnfants(p: Parcours, n: Noeud, ctx: Contexte): void {
 /** Compte un clone (un <use> deplie, ou une forme qu'il produit) ; au-dela de la borne, arrete la marche et refuse le SVG. */
 function depasseBorne(p: Parcours): boolean {
   if (++p.clones <= CLONES_MAX) return false;
-  p.refus.add('des clones <use> trop nombreux (plus de ' + CLONES_MAX + ' clones et formes de clones)');
+  p.refus.add(t('des clones <use> trop nombreux (plus de {n} clones et formes de clones)', { n: CLONES_MAX }));
   p.trop = true;
   return true;
 }
@@ -128,7 +129,7 @@ function depasseBorne(p: Parcours): boolean {
 function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   p.donnees += (n.attributs.d?.length ?? 0) + (n.attributs.points?.length ?? 0);
   if (p.donnees > DONNEES_TRACE_MAX) {
-    p.refus.add('trop de données de tracé (plus de ' + nombre(DONNEES_TRACE_MAX / 1e6) + ' millions de caractères de chemins, clones <use> compris)');
+    p.refus.add(t('trop de données de tracé (plus de {n} millions de caractères de chemins, clones <use> compris)', { n: nombre(DONNEES_TRACE_MAX / 1e6) }));
     p.trop = true;
     return;
   }
@@ -148,28 +149,29 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     const fonctions = fonctionsDe(p);
     if (remplissage && remplissage.startsWith('url(')) peintureR = fonctions.length ? resoudrePeinture(fonctions, remplissage, 'remplissage', n, b, marche(p)) : null;
     if (contour && contour.startsWith('url(')) peintureC = fonctions.length ? resoudrePeinture(fonctions, contour, 'contour', n, b, marche(p)) : null;
-    if ((remplissage && remplissage.startsWith('url(') && !peintureR) || (contour && contour.startsWith('url(') && !peintureC)) { p.refus.add('un dégradé ou un motif'); return; }
+    if ((remplissage && remplissage.startsWith('url(') && !peintureR) || (contour && contour.startsWith('url(') && !peintureC)) { p.refus.add(t('un dégradé ou un motif')); return; }
     if (peintureR) remplissage = peintureR.repli;
     if (peintureC) contour = peintureC.repli;
   }
-  if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { p.refus.add('une peinture qui n’est pas une couleur lisible'); return; }
+  if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { p.refus.add(t('une peinture qui n’est pas une couleur lisible')); return; }
   if (b.profondeur > 0 && depasseBorne(p)) return;
   const chemin = transformerChemin(d, m);
   // NaN n'est pas dans l'intervalle : un exposant demesure (1e308) qui deborde est refuse comme une coordonnee hors bornes.
   if (!chemin.every(c => c.p.every(coordonneeSaine)) || !Number.isFinite(facteur(m))) {
-    p.refus.add('des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')');
+    p.refus.add(t('des coordonnées démesurées (au-delà de ± {max})', { max: nombre(COORDONNEE_MAX) }));
     return;
   }
   const epaisseur = contour ? lireEpaisseur(heritees['stroke-width']) * facteur(m) : 0;
   const { champs: styleTrait, ignores: pertesTrait } = contour ? lireTrait(heritees, facteur(m)) : { champs: {}, ignores: [] };
   // Un trait invisible (epaisseur nulle) ne perd rien de ce qu'on ne porte pas.
-  for (const msg of [...(epaisseur > 0 ? pertesTrait : []), ...ignoresDeMarqueurs(heritees)]) p.analyse.ignores.add(msg);
-  if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
+  // Les pertes du trait sont des cles d'ignores.ts (trait.ts les rend telles quelles) : traduites ici, quand on les dit.
+  for (const msg of [...(epaisseur > 0 ? pertesTrait : []), ...ignoresDeMarqueurs(heritees)]) p.analyse.ignores.add(t(msg));
+  if (n.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(t(MSG_ANIMATIONS));
   // La provenance qu'un SVG ecrit ici porte sur son <path> : on la reprend (rien si absente ou inconnue).
   const origine = lireOrigines(n.attributs[ATTRIBUT_ORIGINE]);
   // Le texte vivant qu'un SVG ecrit ici porte sur son <path> (ADR-0022) : on le reprend, compose avec les groupes autour.
   const lu = n.nom === 'path' ? lireTexteVivant(n.attributs, m) : null;
-  if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
+  if (lu && 'illisible' in lu) p.analyse.ignores.add(t(MSG_TEXTE_ILLISIBLE));
   else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);
   const texte = lu && 'texte' in lu ? lu.texte : undefined;
   if (lu && 'texte' in lu && lu.lien) p.liens?.push({ id: 'f' + (p.formes.length + 1), lien: lu.lien });
@@ -200,7 +202,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
 /** Le <symbol> d'un <use> : un cadre (x, y, largeur, hauteur) dans lequel son viewBox se place, puis ses enfants comme ceux d'un groupe. */
 function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
   const pr = proprietesDe(p.analyse, s);
-  const refusS = refusDe(pr, prisesDe(fonctionsDe(p))) ?? refusHorsFeuille(pr, 'posé sur un symbole');
+  const refusS = refusDe(pr, prisesDe(fonctionsDe(p))) ?? refusHorsFeuille(pr, t('posé sur un symbole'));
   if (refusS) { p.refus.add(refusS); return; }
   // Un cadre nul ou un viewBox vide desactive le rendu, comme dans un navigateur.
   const vue = lireVue(s.attributs.viewBox);
@@ -218,7 +220,7 @@ function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
   const debord = (pr.overflow ?? '').trim().toLowerCase();
   const versCadre = inverse(b.m);
   const visibles = p.formes.slice(avant).filter(f => f.remplissage !== null || f.contour !== null);
-  if (debord !== 'visible' && debord !== 'auto' && versCadre && depasseDuCadre(visibles, versCadre, cadre)) p.analyse.ignores.add(MSG_SYMBOLE_ROGNE);
+  if (debord !== 'visible' && debord !== 'auto' && versCadre && depasseDuCadre(visibles, versCadre, cadre)) p.analyse.ignores.add(t(MSG_SYMBOLE_ROGNE));
 }
 
 /** Les quatre longueurs d'un <use> (x, y, largeur, hauteur) ; null si l'une est dans une unite qu'on ne calcule pas. */
@@ -231,15 +233,15 @@ function cadreDeUse(u: Noeud, plan: readonly [number, number, number, number]): 
 
 /** Deplie un <use> : la cible, vue comme un groupe translate de (x, y) puis transforme par le <use>, avec l'heritage du <use>. */
 function visiterUse(p: Parcours, u: Noeud, b: Pret): void {
-  if (u.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(MSG_ANIMATIONS);
+  if (u.enfants.some(e => ANIMATIONS.has(e.nom))) p.analyse.ignores.add(t(MSG_ANIMATIONS));
   const cible = cibleDe(u, p.analyse.ids);
-  if ('externe' in cible) { p.refus.add('un clone <use> vers un fichier ou une adresse extérieurs (« ' + cible.externe + ' »)'); return; }
-  if ('absente' in cible) { p.analyse.ignores.add(MSG_USE_ABSENT); return; }
+  if ('externe' in cible) { p.refus.add(t('un clone <use> vers un fichier ou une adresse extérieurs (« {adresse} »)', { adresse: cible.externe })); return; }
+  if ('absente' in cible) { p.analyse.ignores.add(t(MSG_USE_ABSENT)); return; }
   const c = cible.noeud;
-  if (c === u || p.actifs.has(c)) { p.refus.add('un cycle de clones <use> (« #' + (c.attributs.id ?? '') + ' » se contient lui-même)'); return; }
-  if (b.profondeur >= PROFONDEUR_USE_MAX) { p.refus.add('des clones <use> emboîtés sur plus de ' + PROFONDEUR_USE_MAX + ' niveaux'); return; }
+  if (c === u || p.actifs.has(c)) { p.refus.add(t('un cycle de clones <use> (« #{id} » se contient lui-même)', { id: c.attributs.id ?? '' })); return; }
+  if (b.profondeur >= PROFONDEUR_USE_MAX) { p.refus.add(t('des clones <use> emboîtés sur plus de {n} niveaux', { n: PROFONDEUR_USE_MAX })); return; }
   const cadre = cadreDeUse(u, p.plan);
-  if (!cadre) { p.refus.add('un clone <use> dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage'); return; }
+  if (!cadre) { p.refus.add(t('un clone <use> dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage')); return; }
   if (depasseBorne(p)) return;
   p.actifs.add(u);
   const interne: Pret = { ...b, profondeur: b.profondeur + 1 };
@@ -252,11 +254,11 @@ function visiterUse(p: Parcours, u: Noeud, b: Pret): void {
 export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (p.trop || IGNORES.has(n.nom)) return;
   if (p.actifs.size > PROFONDEUR_MARCHE_MAX) {
-    p.refus.add('des éléments imbriqués sur plus de ' + PROFONDEUR_MARCHE_MAX + ' niveaux (clones <use> compris)');
+    p.refus.add(t('des éléments imbriqués sur plus de {n} niveaux (clones <use> compris)', { n: PROFONDEUR_MARCHE_MAX }));
     p.trop = true;
     return;
   }
-  if (ANIMATIONS.has(n.nom)) { p.analyse.ignores.add(MSG_ANIMATIONS); return; }
+  if (ANIMATIONS.has(n.nom)) { p.analyse.ignores.add(t(MSG_ANIMATIONS)); return; }
   const b = preparer(p, n, ctx);
   if (!b) return;
   // Le mode riche : une fonctionnalite qui sait lire cette balise la lit (fonctionnalites.ts) ; en mode plat, aucune.
@@ -264,7 +266,7 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (lecteur) { lecteur(n, b, marche(p)); return; }
   // Une prise du mode riche (un filtre) n'est lue que sur une feuille ou un groupe : ailleurs, aucune fonctionnalite ne la porterait,
   // elle reste refusee (en mode plat, `preparer` l'a deja refusee).
-  const ou = n.nom === 'use' ? 'posé sur un clone <use>' : n.nom === 'text' && p.texte ? 'posé sur un texte' : n.nom === 'g' || n.nom === 'a' ? 'posé sur un groupe' : null;
+  const ou = n.nom === 'use' ? t('posé sur un clone <use>') : n.nom === 'text' && p.texte ? t('posé sur un texte') : n.nom === 'g' || n.nom === 'a' ? t('posé sur un groupe') : null;
   const refusPrise = ou ? refusHorsFeuille(b.pr, ou) : null;
   if (refusPrise) { p.refus.add(refusPrise); return; }
   if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);

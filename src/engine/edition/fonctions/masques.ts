@@ -38,29 +38,31 @@ import type { Definition } from '../definitions.js';
 import {
   ancetresDe, boiteDescendants, boiteFeuille, etatContenus, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
-import { nombre } from '../../../util/i18n.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
+
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … », annexe 5 §1). */
 export const REFUS_MASQUES = {
-  css: 'un masque CSS (mask-image…)',
-  externe: 'une découpe ou un masque qui renvoie à un fichier extérieur',
-  cycle: 'un cycle de masques',
-  profondeur: 'des masques emboîtés sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux',
-  trop: 'des masques trop lourds (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)'
-} as const;
+  get css(): string { return t('un masque CSS (mask-image…)'); },
+  get externe(): string { return t('une découpe ou un masque qui renvoie à un fichier extérieur'); },
+  get cycle(): string { return t('un cycle de masques'); },
+  get profondeur(): string { return t('des masques emboîtés sur plus de {n} niveaux', { n: PROFONDEUR_DEFS_MAX }); },
+  get trop(): string { return t('des masques trop lourds (plus de {n} formes dans leurs définitions)', { n: nombre(NOEUDS_DEFS_MAX) }); }
+};
 
 /** Ce que la lecture riche dit perdre (`ignores`). */
 export const MSG_MASQUES = {
-  absente: 'les masques url(#…) qui ne renvoient à aucun <mask> (ignorés : la forme est dessinée sans)',
-  boitePlate: 'les masques en unités de boîte sur un objet sans largeur ou sans hauteur (rien n’est dessiné, comme dans un navigateur)',
-  transformation: 'une transformation posée sur un <mask> (ignorée, comme dans un navigateur)',
-  surMasque: 'une découpe, un masque, un filtre ou une opacité posés sur un <mask> lui-même (ignorés)',
-  dansDecoupe: 'des masques posés dans une découpe (ignorés, comme dans un navigateur : une découpe ne garde que la géométrie)',
-  unite: 'une longueur de masque dans une unité qui ne se calcule pas ici (sa valeur par défaut est prise)',
-  regionTournee: 'la région d’un masque tourné ou incliné, que son contenu dépasse (élargie au rectangle qui l’enferme)'
-} as const;
+  get absente(): string { return t('les masques url(#…) qui ne renvoient à aucun <mask> (ignorés : la forme est dessinée sans)'); },
+  get boitePlate(): string { return t('les masques en unités de boîte sur un objet sans largeur ou sans hauteur (rien n’est dessiné, comme dans un navigateur)'); },
+  get transformation(): string { return t('une transformation posée sur un <mask> (ignorée, comme dans un navigateur)'); },
+  get surMasque(): string { return t('une découpe, un masque, un filtre ou une opacité posés sur un <mask> lui-même (ignorés)'); },
+  get dansDecoupe(): string { return t('des masques posés dans une découpe (ignorés, comme dans un navigateur : une découpe ne garde que la géométrie)'); },
+  get unite(): string { return t('une longueur de masque dans une unité qui ne se calcule pas ici (sa valeur par défaut est prise)'); },
+  get regionTournee(): string { return t('la région d’un masque tourné ou incliné, que son contenu dépasse (élargie au rectangle qui l’enferme)'); }
+};
 
 // ---------------------------------------------------------------- ce que porte un element
 
@@ -174,7 +176,7 @@ function lireMasque(valeur: string, base: Matrice, boite: () => Boite | null, pr
   if (ref.genre === 'externe') { marche.refuser(REFUS_MASQUES.externe); return null; }
   const cible = a.ids.get(ref.id);
   if (!cible || cible.nom !== 'mask') { marche.ignorer(MSG_MASQUES.absente); return null; }
-  if (etat.actives.includes(cible)) { marche.refuser(REFUS_MASQUES.cycle + ' (« #' + ref.id.slice(0, 40) + ' »)'); return null; }
+  if (etat.actives.includes(cible)) { marche.refuser(t('{refus} (« #{id} »)', { refus: REFUS_MASQUES.cycle, id: ref.id.slice(0, 40) })); return null; }
   if (etat.actives.length >= PROFONDEUR_DEFS_MAX) { marche.refuser(REFUS_MASQUES.profondeur); return null; }
   const pr = proprietesDe(a, cible);
   if (cible.attributs.transform !== undefined) marche.ignorer(MSG_MASQUES.transformation);
@@ -197,12 +199,12 @@ function lireMasque(valeur: string, base: Matrice, boite: () => Boite | null, pr
   const region = boiteSous(local, base);
   // Une region demesuree (1e309, ou une boite immense) ne s'ecrirait pas : refusee comme toute coordonnee hors bornes.
   if (![region.x, region.y, region.x + region.l, region.y + region.h].every(coordonneeSaine)) {
-    marche.refuser('des coordonnées démesurées (au-delà de ± ' + nombre(COORDONNEE_MAX) + ')');
+    marche.refuser(t('des coordonnées démesurées (au-delà de ± {max})', { max: nombre(COORDONNEE_MAX) }));
     return null;
   }
   const m = contenuEnBoite && b ? multiplier(base, [b.l, 0, 0, b.h, b.x, b.y]) : base;
   const table = p.groupes;
-  if (!table) { marche.refuser('un masque ou une découpe'); return null; }
+  if (!table) { marche.refuser(t('un masque ou une découpe')); return null; }
   // Les enfants heritent de l'endroit ou le <mask> est ecrit (le `fill="white"` de Figma et de Sketch), pas de l'element qu'il masque.
   const chaine = ancetresDe(a, cible);
   const heritees = chaine.slice().reverse().reduce<Proprietes>((h, x) => heriter(h, proprietesDe(a, x)), {});
@@ -222,7 +224,7 @@ function completerFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme
   const etat = etatContenus(marche);
   if (dansDecoupe(etat)) { marche.ignorer(MSG_MASQUES.dansDecoupe); return f; }
   const table = marche.parcours.groupes;
-  if (!table) { marche.refuser('un masque ou une découpe'); return f; }
+  if (!table) { marche.refuser(t('un masque ou une découpe')); return f; }
   const id = reserverGroupe(table, etat);
   // La feuille a deja son numero mais n'est pas encore rangee : une place le lui garde le temps de lire son masque, dont les feuilles
   // et les groupes prennent les numeros suivants ; la place part ensuite, la feuille sera rangee par la marche.
@@ -243,7 +245,7 @@ function completerGroupe(g: Groupe, n: Noeud, pret: Pret, marche: Marche): Group
   const v = valeurMasque(pret.pr);
   if (!v) return g;
   const table = marche.parcours.groupes;
-  if (!table) { marche.refuser('un masque ou une découpe'); return g; }
+  if (!table) { marche.refuser(t('un masque ou une découpe')); return g; }
   // Le groupe prend sa place dans la table avant que le contenu du masque soit lu : les <g> du masque prennent les numeros suivants
   // (le lecteur des groupes l'y range ensuite a la meme place).
   if (!table.has(g.id)) table.set(g.id, g);

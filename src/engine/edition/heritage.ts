@@ -3,6 +3,7 @@
 
 import type { Forme } from './types.js';
 import { lirePeintureAlpha, type PeintureLue } from './peinture.js';
+import { t } from '../../util/i18n.js';
 import { arrondirOpacite, lireOpacite } from './opacites.js';
 import type { Proprietes } from './ignores.js';
 import type { PriseEnCharge } from './fonctionnalites.js';
@@ -72,8 +73,8 @@ const AUCUNE_PRISE: ReadonlySet<PriseEnCharge> = new Set();
  * fonctionnalite du mode riche sait lire (fonctionnalites.ts) ; vide en mode plat, qui refuse donc exactement comme avant.
  */
 export function refusDe(pr: Proprietes, prises: ReadonlySet<PriseEnCharge> = AUCUNE_PRISE): string | null {
-  if ((pr['clip-path'] && pr['clip-path'] !== 'none' && !prises.has('decoupe')) || (pr.mask && pr.mask !== 'none' && !prises.has('masque'))) return 'un masque ou une découpe';
-  if (pr.filter && pr.filter !== 'none' && !prises.has('filtre')) return 'un filtre';
+  if ((pr['clip-path'] && pr['clip-path'] !== 'none' && !prises.has('decoupe')) || (pr.mask && pr.mask !== 'none' && !prises.has('masque'))) return t('un masque ou une découpe');
+  if (pr.filter && pr.filter !== 'none' && !prises.has('filtre')) return t('un filtre');
   return null;
 }
 

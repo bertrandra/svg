@@ -10,12 +10,13 @@ import clipping, { type MultiPolygon, type Pair } from 'polygon-clipping';
 import { ancetres, boiteAvecTrait, prochainNumero, visibleEffectif, type Decoupe, type DessinSvg, type Forme, type Groupe } from '../editionSvg.js';
 import { aireSignee, cheminDeRegion, cheminLisseDeRegion, regionDeChemin, toleranceBooleen } from '../booleens.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce qui se dit a l'export (« Approché par ce format : … »). */
+/** Ce qui se dit a l'export (« Approché par ce format : … ») ; des accesseurs, pour que la phrase soit celle de la langue au moment ou on la lit. */
 export const MSG_DESCENTE_DECOUPES = {
-  rognees: 'les découpes (les formes pleines sont rognées à leur bord, les courbes rebâties)',
-  traits: 'des traits sous une découpe (gardés entiers : ce format ne les rogne pas)'
-} as const;
+  get rognees(): string { return t('les découpes (les formes pleines sont rognées à leur bord, les courbes rebâties)'); },
+  get traits(): string { return t('des traits sous une découpe (gardés entiers : ce format ne les rogne pas)'); }
+};
 
 const aPropre = (o: object, cle: string): boolean => Object.prototype.hasOwnProperty.call(o, cle);
 const VIDE: MultiPolygon = [];

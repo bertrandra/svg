@@ -7,13 +7,14 @@ import type { DessinSvg, Forme, Groupe } from './types.js';
 import { arbreDe, normaliser, unites, verrouilleEffectif, visibleEffectif, type NoeudArbre } from './arbre.js';
 import { avecGroupes, groupeDe, grouper } from './groupes.js';
 import { feuilleDeDecoupe } from './fonctions/decoupes.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que disent les operations quand elles ne s'appliquent pas (phrases de l'interface, au vouvoiement). */
+/** Ce que disent les operations quand elles ne s'appliquent pas (phrases de l'interface, au vouvoiement) ; des accesseurs, traduits a la lecture. */
 export const MSG_DECOUPE = {
-  selection: 'Choisissez au moins deux éléments visibles et déverrouillés : la forme du dessus découpe les autres.',
-  dessus: 'La forme du dessus doit être une seule forme (ni un groupe, ni une image) : c’est elle qui découpe les autres.',
-  aucune: 'Ce groupe ne porte pas de découpe.'
-} as const;
+  get selection(): string { return t('Choisissez au moins deux éléments visibles et déverrouillés : la forme du dessus découpe les autres.'); },
+  get dessus(): string { return t('La forme du dessus doit être une seule forme (ni un groupe, ni une image) : c’est elle qui découpe les autres.'); },
+  get aucune(): string { return t('Ce groupe ne porte pas de découpe.'); }
+};
 
 /** Le premier et le dernier index de `formes` couverts par un noeud. */
 const debut = (n: NoeudArbre): number => (n.genre === 'feuille' ? n.index : n.debut);

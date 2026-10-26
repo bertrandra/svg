@@ -5,10 +5,11 @@
 
 import type { DessinSvg } from '../editionSvg.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
 /** La phrase d'une perte, au singulier ou au pluriel : elle s'ajoute au message de l'export. */
 export const perteImages = (n: number): string =>
-  n === 1 ? 'une image (ce format ne porte que des tracés : elle n’est pas exportée)' : n + ' images (ce format ne porte que des tracés : elles ne sont pas exportées)';
+  n === 1 ? t('une image (ce format ne porte que des tracés : elle n’est pas exportée)') : t('{n} images (ce format ne porte que des tracés : elles ne sont pas exportées)', { n });
 
 export const images: RegleDescente = {
   fonction: 'images',

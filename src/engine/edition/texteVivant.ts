@@ -10,6 +10,7 @@
 // ASCII en clair ; tout encoder rend l'attribut verifiable par une seule expression, au prix de quelques octets.
 
 import { estPoliceLivree, phraseRemplacement, remplacerPolice } from '../../model/polices.js';
+import { t } from '../../util/i18n.js';
 import { estIdCatalogue } from '../../model/cataloguePolices.js';
 import type { AlignementTexte, Chemin, Commande, DessinSvg, DispositionTexte, Forme, Matrice, PoliceTexte, TexteVivant } from './types.js';
 import { IDENTITE } from './types.js';
@@ -22,8 +23,8 @@ export const TEXTE_MAX = 10_000;
 const TAILLE_MAX = 1e6, COEFFICIENT_MAX = 100;
 export const INTERLIGNE_DEFAUT = 1.2;
 
-/** Le message dit a l'ouverture quand les donnees d'un texte ne se lisent pas. */
-export const MSG_TEXTE_ILLISIBLE = 'les données d’édition d’un texte sont illisibles : il reste en contours';
+/** Le message dit a l'ouverture quand les donnees d'un texte ne se lisent pas : une cle (le francais au chargement), traduite par `t` quand on la dit. */
+export const MSG_TEXTE_ILLISIBLE = t('les données d’édition d’un texte sont illisibles : il reste en contours');
 
 const ENCODE = /^(?:[A-Za-z0-9]|%[0-9A-F]{2})*$/;
 const ID_POLICE = /^(?:[a-z0-9][a-z0-9-]{0,31}|u-[0-9a-f]{14})$/;

@@ -3,6 +3,7 @@
 
 import type { Chemin, Commande, DessinSvg } from './types.js';
 import { ancre, depart } from './chemins.js';
+import { t } from '../../util/i18n.js';
 import { surFormes } from './operations.js';
 
 const memePoint = (a: readonly number[] | null, b: readonly number[] | null) => !!a && !!b && Math.abs((a[0] ?? 0) - (b[0] ?? 0)) < 1e-6 && Math.abs((a[1] ?? 0) - (b[1] ?? 0)) < 1e-6;
@@ -77,10 +78,10 @@ export function deplacerPoignee(dessin: DessinSvg, id: string, i: number, k: 0 |
 export function supprimerAncre(dessin: DessinSvg, id: string, i: number): DessinSvg | { erreur: string } {
   const forme = dessin.formes.find(f => f.id === id), c = forme?.d[i];
   if (!forme || !c) return dessin;
-  if (c.c === 'M' || c.c === 'Z') return { erreur: 'Le point de départ ne se retire pas : retirez son voisin.' };
+  if (c.c === 'M' || c.c === 'Z') return { erreur: t('Le point de départ ne se retire pas : retirez son voisin.') };
   const [a, b] = sousChemin(forme.d, i);
   const segments = forme.d.slice(a + 1, b).filter(x => x.c !== 'Z').length;
-  if (segments <= 2) return { erreur: 'Un tracé garde au moins trois points : supprimez plutôt la forme.' };
+  if (segments <= 2) return { erreur: t('Un tracé garde au moins trois points : supprimez plutôt la forme.') };
   const d = forme.d.filter((_, k) => k !== i);
   const suivante = forme.d[i + 1];
   // La courbe suivante partait de l'ancre retiree : sa premiere poignee reprend celle de la courbe retiree.

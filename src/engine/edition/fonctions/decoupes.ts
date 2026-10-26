@@ -32,27 +32,29 @@ import type { Definition, Recueil } from '../definitions.js';
 import {
   ancetresDe, boiteDescendants, boiteFeuille, etatContenus, FORMES, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
-import { nombre } from '../../../util/i18n.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
+
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … », annexe 5 §1). */
 export const REFUS_DECOUPES = {
-  formeCss: 'une découpe par forme CSS',
-  externe: 'une découpe ou un masque qui renvoie à un fichier extérieur',
-  cycle: 'un cycle de découpes',
-  profondeur: 'des découpes emboîtées sur plus de ' + PROFONDEUR_DEFS_MAX + ' niveaux',
-  trop: 'des découpes trop lourdes (plus de ' + nombre(NOEUDS_DEFS_MAX) + ' formes dans leurs définitions)',
-  transformation: 'une découpe dont la transformation est illisible',
-  porteur: 'une découpe posée sur un clone <use>, un symbole ou le SVG entier'
-} as const;
+  get formeCss(): string { return t('une découpe par forme CSS'); },
+  get externe(): string { return t('une découpe ou un masque qui renvoie à un fichier extérieur'); },
+  get cycle(): string { return t('un cycle de découpes'); },
+  get profondeur(): string { return t('des découpes emboîtées sur plus de {n} niveaux', { n: PROFONDEUR_DEFS_MAX }); },
+  get trop(): string { return t('des découpes trop lourdes (plus de {n} formes dans leurs définitions)', { n: nombre(NOEUDS_DEFS_MAX) }); },
+  get transformation(): string { return t('une découpe dont la transformation est illisible'); },
+  get porteur(): string { return t('une découpe posée sur un clone <use>, un symbole ou le SVG entier'); }
+};
 
 /** Ce que la lecture riche dit perdre (`ignores`) : ce qu'un navigateur ignore aussi. */
 export const MSG_DECOUPES = {
-  absente: 'les découpes url(#…) qui ne renvoient à aucun <clipPath> (ignorées, comme dans un navigateur)',
-  elements: 'des éléments de découpe qu’un navigateur ne lit pas (groupes, images, clones d’autre chose qu’une forme : ignorés)',
-  boitePlate: 'les découpes en unités de boîte sur un objet sans largeur ou sans hauteur (rien n’est dessiné, comme dans un navigateur)'
-} as const;
+  get absente(): string { return t('les découpes url(#…) qui ne renvoient à aucun <clipPath> (ignorées, comme dans un navigateur)'); },
+  get elements(): string { return t('des éléments de découpe qu’un navigateur ne lit pas (groupes, images, clones d’autre chose qu’une forme : ignorés)'); },
+  get boitePlate(): string { return t('les découpes en unités de boîte sur un objet sans largeur ou sans hauteur (rien n’est dessiné, comme dans un navigateur)'); }
+};
 
 // ---------------------------------------------------------------- les feuilles d'une decoupe
 
@@ -119,11 +121,11 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
   if (ref.genre === 'externe') { marche.refuser(REFUS_DECOUPES.externe); return null; }
   const cible = a.ids.get(ref.id);
   if (!cible || cible.nom !== 'clipPath') { marche.ignorer(MSG_DECOUPES.absente); return null; }
-  if (etat.actives.includes(cible)) { marche.refuser(REFUS_DECOUPES.cycle + ' (« #' + ref.id.slice(0, 40) + ' »)'); return null; }
+  if (etat.actives.includes(cible)) { marche.refuser(t('{refus} (« #{id} »)', { refus: REFUS_DECOUPES.cycle, id: ref.id.slice(0, 40) })); return null; }
   if (etat.actives.length >= PROFONDEUR_DEFS_MAX) { marche.refuser(REFUS_DECOUPES.profondeur); return null; }
-  const t = cible.attributs.transform ? lireTransformation(cible.attributs.transform) : IDENTITE;
-  if (!t) { marche.refuser(REFUS_DECOUPES.transformation); return null; }
-  const repere = multiplier(base, t);
+  const transformation = cible.attributs.transform ? lireTransformation(cible.attributs.transform) : IDENTITE;
+  if (!transformation) { marche.refuser(REFUS_DECOUPES.transformation); return null; }
+  const repere = multiplier(base, transformation);
   let m = repere;
   if ((cible.attributs.clipPathUnits ?? '').trim() === 'objectBoundingBox') {
     const b = boite();
@@ -132,7 +134,7 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
     m = multiplier(repere, [b.l, 0, 0, b.h, b.x, b.y]);
   }
   const table = p.groupes;
-  if (!table) { marche.refuser('un masque ou une découpe'); return null; }
+  if (!table) { marche.refuser(t('un masque ou une découpe')); return null; }
   const regles = new Map<string, Forme['regle']>();
   const lu = lireContenu(marche, etat, table, cible, locale => {
     // Une decoupe du <clipPath> lui-meme : le contenu entier est rogne par elle, donc range dans un groupe qui la porte.
@@ -186,7 +188,7 @@ function completerFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme
   const v = valeurDecoupe(pret.pr);
   if (!v) return f;
   const table = marche.parcours.groupes;
-  if (!table) { marche.refuser('un masque ou une découpe'); return f; }
+  if (!table) { marche.refuser(t('un masque ou une découpe')); return f; }
   const etat = etatContenus(marche);
   const id = reserverGroupe(table, etat);
   // La feuille a deja son numero (« taille + 1 ») mais n'est pas encore rangee : une place le lui garde le temps de lire sa decoupe,

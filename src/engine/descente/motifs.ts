@@ -8,9 +8,10 @@
 import { visibleEffectif, type DessinSvg, type Forme } from '../editionSvg.js';
 import { estMotif } from '../edition/fonctions/motifs.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que l'export dit avoir approche. */
-export const PERTE_MOTIFS = 'les motifs (remplacés par leur couleur moyenne)';
+/** Ce que l'export dit avoir approche : la cle (evaluee au chargement, avant la langue : le francais) ; `t(PERTE_MOTIFS)` la traduit quand on la dit. */
+export const PERTE_MOTIFS = t('les motifs (remplacés par leur couleur moyenne)');
 
 /** La forme sans ses motifs : la couleur de repli prend leur place, telle quelle. La meme forme si elle n'en porte pas. */
 function sansMotifs(f: Forme): Forme {
@@ -32,6 +33,6 @@ export const motifs: RegleDescente = {
       if (x !== f) { change = true; if (visibleEffectif(d, f.id)) vu = true; }
       return x;
     });
-    return change ? { dessin: { ...d, formes }, pertes: vu ? [PERTE_MOTIFS] : [] } : { dessin: d, pertes: [] };
+    return change ? { dessin: { ...d, formes }, pertes: vu ? [t(PERTE_MOTIFS)] : [] } : { dessin: d, pertes: [] };
   }
 };

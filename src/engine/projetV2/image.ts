@@ -6,6 +6,7 @@
 
 import type { ImageIntegreeProjet } from '../../model/projetV2/image.js';
 import { IMAGES_OCTETS_MAX, rectangleImage, verifierDonneesImage, type Chemin, type ImageIntegree } from '../editionSvg.js';
+import { t } from '../../util/i18n.js';
 
 /** L'image telle que le projet la garde, dans l'ordre de ses champs. */
 export function imageProjet(img: ImageIntegree): ImageIntegreeProjet {
@@ -20,9 +21,9 @@ export function imageProjet(img: ImageIntegree): ImageIntegreeProjet {
 /** L'image d'un projet deja valide dans sa forme (model/projetV2/image.ts), ses octets verifies, et le `d` de sa feuille. */
 export function imageDuProjet(p: ImageIntegreeProjet): { readonly image: ImageIntegree; readonly d: Chemin; readonly octets: number } | { readonly erreur: string } {
   const v = verifierDonneesImage(p.donnees);
-  if ('refus' in v) return { erreur: 'Ce projet contient ' + v.refus + '.' };
+  if ('refus' in v) return { erreur: t('Ce projet contient {refus}.', { refus: v.refus }) };
   // Les donnees d'un projet sont celles que l'editeur a ecrites : le type d'apres les octets, sans blanc. Autre chose n'en vient pas.
-  if (v.donnees !== p.donnees) return { erreur: 'Ce projet contient une image dont le type annoncé ne correspond pas à son contenu.' };
+  if (v.donnees !== p.donnees) return { erreur: t('Ce projet contient une image dont le type annoncé ne correspond pas à son contenu.') };
   const image: ImageIntegree = {
     donnees: p.donnees, x: p.x, y: p.y, l: p.l, h: p.h,
     ...(p.matrice ? { matrice: [p.matrice[0], p.matrice[1], p.matrice[2], p.matrice[3], p.matrice[4], p.matrice[5]] as const } : {}),
@@ -33,5 +34,5 @@ export function imageDuProjet(p: ImageIntegreeProjet): { readonly image: ImageIn
 
 /** La borne de toutes les images d'un dessin de projet, comme a la lecture d'un SVG ; null quand elle tient. */
 export function refusImagesProjet(images: readonly { readonly octets: number }[]): string | null {
-  return images.reduce((s, i) => s + i.octets, 0) > IMAGES_OCTETS_MAX ? 'Ce projet contient des images trop lourdes (plus de 16 Mo en tout).' : null;
+  return images.reduce((s, i) => s + i.octets, 0) > IMAGES_OCTETS_MAX ? t('Ce projet contient des images trop lourdes (plus de 16 Mo en tout).') : null;
 }

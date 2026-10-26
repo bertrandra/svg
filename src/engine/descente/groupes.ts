@@ -8,8 +8,10 @@
 
 import { ancetres, boiteAvecTrait, seCroisent, type Boite, type DessinSvg, type Forme, type Groupe } from '../editionSvg.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
-export const MSG_OPACITE_COMPOSEE = 'une opacité de groupe composée sur ses formes (là où elles se recouvrent, le rendu s’éclaircit)';
+/** La cle de la phrase (evaluee au chargement, avant la langue : le francais) ; `t(MSG_OPACITE_COMPOSEE)` la traduit quand on la dit. */
+export const MSG_OPACITE_COMPOSEE = t('une opacité de groupe composée sur ses formes (là où elles se recouvrent, le rendu s’éclaircit)');
 
 const aPropre = (o: object, cle: string): boolean => Object.prototype.hasOwnProperty.call(o, cle);
 
@@ -51,7 +53,7 @@ export function descendreGroupes(d: DessinSvg): { readonly dessin: DessinSvg; re
   const approche = [...sousOpacite.values()].some(seRecouvrent);
   const { groupes: _g, ...plan } = d;
   void _g;
-  return { dessin: { ...plan, formes }, pertes: approche ? [MSG_OPACITE_COMPOSEE] : [] };
+  return { dessin: { ...plan, formes }, pertes: approche ? [t(MSG_OPACITE_COMPOSEE)] : [] };
 }
 
 /** La regle des groupes, inscrite en dernier dans `REGLES_DESCENTE` : quel que soit le niveau, le plan est plat. */
