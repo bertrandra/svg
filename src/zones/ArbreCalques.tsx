@@ -61,7 +61,7 @@ export const ArbreCalques = memo(function ArbreCalques({ panneau }: { panneau: R
   // La ligne sous la souris (survolFin seulement) : la seule, avec l'active, a dessiner ses boutons sans etat a montrer.
   const [survol, poserSurvol] = useState<string | null>(null);
   const survolFin = useSurvolFin();
-  const memoire = useRef<MemoireArbre>({ ancre: null, focusVoulu: false, dernierFocus: null, renommeEnCours: null }).current;
+  const memoire = useRef<MemoireArbre>({ ancre: null, focusVoulu: false, dernierFocus: null, renommeEnCours: null, premierClic: null }).current;
 
   // La ligne active : celle du focus si elle est visible, sinon son plus proche ancetre visible, la premiere choisie, la premiere.
   let actif: string | null = null;
