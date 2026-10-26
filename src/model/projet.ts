@@ -440,8 +440,9 @@ function lireProduction(v: unknown): ChoixProduction {
     contexte: 'cricut', machine: ident('machine'), tapis: ident('tapis'), materiau: ident('materiau'),
     procede: choix(o['procede'], 'le procédé', ['decoupe', 'imprimer-decouper', 'dessin-stylo'] as const),
     unite: choix(o['unite'], 'l’unité', ['in', 'mm'] as const),
-    // Le recalage desactive et la feuille sur le tapis (ADR-0039) : presents seulement hors du defaut.
-    ...(o['recalage'] === undefined ? {} : o['recalage'] === false ? { recalage: false as const } : refuser('le recalage du contexte de production est mal formé')),
+    // Le recalage actif et la feuille sur le tapis (ADR-0039) : presents seulement hors du defaut. L'ancienne valeur `false` (le tapis
+    // fixe, avant qu'il soit le defaut, revision du 26 octobre 2026) se lit comme le defaut, sans refus.
+    ...(o['recalage'] === undefined || o['recalage'] === false ? {} : o['recalage'] === true ? { recalage: true as const } : refuser('le recalage du contexte de production est mal formé')),
     ...(o['feuille'] === undefined ? {} : { feuille: lireFeuilleProjet(o['feuille']) })
   };
 }

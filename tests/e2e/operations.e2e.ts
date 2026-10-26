@@ -188,6 +188,19 @@ describe('couper ou ecrire, forme par forme', () => {
     const exporter = panneau(page).getByRole('button', { name: 'Exporter pour Cricut' });
     // L'anneau en pair-impair est un conseil : il ne demande rien.
     await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
+    // Par defaut, le tapis est fixe (ADR-0039, revision du 26 octobre 2026) : trois fichiers a la taille du tapis, un cadre de reperage
+    // par couleur sous les formes de la lame et sous les traits du stylo, et le mode d'emploi le dit.
+    const fixe = entreesZip((await telecharger(page, () => exporter.click())).octets);
+    expect(fixe.get('dessin-a-couper.svg')?.match(/<path /g)).toHaveLength(4);
+    expect([...(fixe.get('dessin-a-ecrire.svg') ?? '').matchAll(/ fill="([^"]*)"/g)].map(m => m[1])).toEqual(['none', 'none', 'none', 'none']);
+    for (const s of ['dessin-a-couper.svg', 'dessin-a-ecrire.svg', 'dessin-cricut.svg']) expect(fixe.get(s)).toMatch(/ width="304.8mm" height="304.8mm"/);
+    expect(fixe.get('LISEZMOI.txt')).toContain('3. Tapis fixe (« Recalage automatique » décoché, le réglage par défaut)');
+    // La case cochee, puis Ctrl+Z qui rend l'ancien plan (cocher ne touche pas au dessin) : l'archive d'avant la revision, a la taille
+    // du dessin, sans cadre.
+    await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).check();
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await attend(() => exporter.getAttribute('aria-disabled')).toBeNull();
     const f = await telecharger(page, () => exporter.click());
     expect(f.nom).toBe('dessin-cricut.zip');
     const zip = entreesZip(f.octets);

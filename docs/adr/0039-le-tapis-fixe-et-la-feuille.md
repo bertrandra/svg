@@ -1,8 +1,11 @@
 # ADR-0039 — Le tapis fixe, la feuille et « Dupliquer sur la feuille »
 
 **Date :** 26 octobre 2026
-**Statut :** acceptée (prolonge les ADR-0013 et 0028, s’appuie sur les ADR-0004, 0005, 0006, 0008, 0011 et 0038) ; **aucune référence
-d’écriture existante ne change** : un dessin où personne n’a rien réglé garde ses octets, en Générique comme en Cricut
+**Statut :** acceptée (prolonge les ADR-0013 et 0028, s’appuie sur les ADR-0004, 0005, 0006, 0008, 0011 et 0038) ; à l’origine, **aucune référence
+d’écriture existante ne change** : un dessin où personne n’a rien réglé garde ses octets, en Générique comme en Cricut ; **révisée le
+26 octobre 2026** : la case « Recalage automatique » est **décochée par défaut**, le tapis est fixe dès le départ (voir « Révision du
+26 octobre 2026 — le tapis fixe par défaut ») ; **l’export Cricut par défaut change : version majeure**. Les §1 et §3 ci-dessous
+décrivent la décision d’origine ; là où ils disent « cochée par défaut », « décochée » et `recalage: false`, la révision l’emporte
 
 ## Contexte
 
@@ -178,6 +181,75 @@ S’y ajoutent les valeurs déjà `aVerifier` des zones utiles (le cadre en a la
   - l’imbrication avancée ne mêle pas les orientations au-delà du quart de tour, ni ne tente de décaler une rangée : c’est un
     glouton, pas un optimum ; un gain simple et sûr serait d’essayer aussi la grille décalée d’un demi-pas (non fait).
 
+## Révision du 26 octobre 2026 — le tapis fixe par défaut
+
+**Contexte.** Décision du propriétaire, du 26 octobre 2026 : « En contexte Cricut, la case “Recalage automatique” doit être décochée
+par défaut : le tapis est fixe dès le départ, les objets restent là où on les pose (feuille partielle comprise), et l’on coche la case
+pour revenir au recalage sur le coin haut gauche. » La décision d’origine gardait l’ancien comportement par défaut pour ne déplacer
+aucun octet ; le propriétaire préfère que le comportement attendu en Cricut soit celui qu’on obtient sans rien régler, et accepte
+que l’export change.
+
+**Décision.**
+
+1. **Le défaut s’inverse.** `ChoixMachine.recalage?: true` (`model/contextes.ts`) : **absent, le tapis fixe** ; seul `true` (la case
+   cochée) se garde. `normaliserChoix` ne garde que `true` ; `resoudreProfil` rend `recalage: choix.recalage === true`. Le document
+   écrit **`data-ed-recalage="oui"`**, en dernier sur la racine avant la feuille, **seulement quand la case est cochée** ; la relecture
+   n’accepte que la valeur exacte « oui ». **Un fichier d’avant la révision qui porte `data-ed-recalage="non"` se lit décoché** (le
+   nouveau défaut) et **ne réécrit plus l’attribut** : réécrit, il perd ces 23 octets, rien d’autre (son plan était déjà le tapis).
+   Le projet JSON suit la même règle : `recalage: true` se garde, **l’ancienne valeur `false` se lit comme le défaut, sans refus**
+   (aucun projet réel n’existe à préserver, mais la lecture ne refuse pas), toute autre valeur est refusée en la nommant.
+2. **Le tapis dès le départ.** Le calcul du plan vit désormais dans le moteur (`engine/preparation/tapis.ts`, pur : `planPourChoix`,
+   `planDOuverture`), pour que la page, le site et les tests partagent la même règle :
+   - **choisir le contexte Cricut** (un geste, depuis Générique ou depuis Print Then Cut) pose le plan du tapis **dans une seule entrée
+     d’historique** (le choix restant hors de l’historique, ADR-0013 §5) ; Ctrl+Z rend l’ancien plan ;
+   - **un fichier ouvert directement en Cricut** (sa marque, le public « machine » de l’accueil, ADR-0024, ou un projet du site)
+     reçoit le plan du tapis **dans son état initial**, comme le nuancier de l’ADR-0037 : ce n’est pas une modification, Ctrl+Z n’y
+     touche pas, rien ne se réécrit sans geste (`zones/etatEditeur.ts`, `site/Site.tsx`, qui pose la même chose sur son état de
+     référence pour ne pas se croire modifié) ;
+   - **où se pose le tapis** : un plan qui a déjà la taille du tapis (un document enregistré sans recalage, un plan posé avant de
+     cocher la case) est gardé tel quel, son coin compris ; sinon, depuis un tapis qui suivait le dessin (la case cochée), le tapis
+     tel que la toile le montrait (rien ne bouge à l’écran, la règle d’origine) ; sinon, le coin haut gauche de la zone utile, là où
+     Design Space aurait posé les pièces, **à 2 mm du dessin visible** (la marge par défaut de « Dupliquer sur la feuille » ; moins,
+     jusqu’à rien, quand le dessin ne tient dans la zone qu’ainsi) : sans elle, le pourtour d’une forme que « Hachurer » ou « Garder
+     le contour » pose au stylo, un trait qui s’épaissit ou une forme poussée d’un cheveu sortaient aussitôt de la zone (« hors du
+     tapis » pour 0,2 mm) ; un dessin vide prend le tapis au coin du plan ; un changement de tapis garde le coin ; Print Then Cut et
+     la case cochée ne touchent jamais au plan ;
+   - **Générique et un dessin hors Cricut ne changent d’aucun octet** : `planDOuverture` rend le même objet.
+3. **Un dessin plus grand que le tapis** n’est **jamais déplacé en silence** : le plan se pose au coin du dessin (sans marge du côté
+   où il ne tient pas), les formes gardent leurs coordonnées, et le constat « à corriger » `hors-tapis` dit celles qui sortent de la
+   zone utile, avec sa correction « Ramener dans la zone utile » (le plus petit déplacement par forme, annulable). Une pièce plus
+   grande que la zone utile reste ce qu’elle était : `piece-trop-grande`, bloquante, avec « Ajuster à la zone utile ». « Dépassement »
+   ne se pose qu’avec la case cochée.
+4. **« Ajuster au dessin » (D)** cadre, sur le tapis fixe, l’étendue des formes visibles (le plan étant le tapis, cadrer le plan ne
+   montrait plus « le dessin seul ») ; ailleurs, le plan comme avant (`cadreDuDessin`).
+5. **Les textes suivent.** L’aide de la case dit les deux comportements, quel que soit l’état (« Décochée (par défaut)… Cochée… ») ;
+   cocher la case dit que le plan reste le tapis et que « Ajuster le plan de travail » le ramène au dessin ; la carte « Dans Design
+   Space » ajoute, sur le tapis fixe, comment revenir au recalage ; le mode d’emploi de l’archive dit « Tapis fixe (« Recalage
+   automatique » décoché, le réglage par défaut) » et comment cocher la case. Le témoin 10 du protocole devient le cas par défaut ;
+   les témoins 1 à 9, qui jugent autre chose que la place, restent écrits la case cochée et gardent leurs octets.
+
+**Conséquences.**
+
+- **Octets (version majeure)** : l’export Cricut **par défaut** (la lame, le stylo, l’archive d’un dessin mêlé) a désormais la taille
+  du tapis et porte les cadres de repérage, comme le décrivait le §3 pour la case décochée ; le document d’un dessin choisi ou ouvert
+  en Cricut a pour plan le tapis. **Avec la case cochée, l’export est celui d’avant, à l’octet**, pour un même plan :
+  `cricut-export`, `cricut-export-mm`, `couper-ecrire-*` et les témoins 1 à 9 se fabriquent avec `recalage: true` et ne bougent pas ;
+  `ecriture-stable` et `ecriture-stable-v2` passent sans `ACTUALISER_REFERENCES` ; les références v1 ne bougent pas. Les trois SVG de
+  `tests/fixtures/cricut-recalage/` (désormais l’export par défaut) gardent leurs octets ; seul `couper-ecrire-fixe-lisezmoi.attendu.txt`
+  change (le texte du point 3), refait par `ACTUALISER_REFERENCES=1 npx vitest run tests/unit/export/recalage.test.ts` et relu.
+- **Cocher la case ne rend pas l’ancien plan** : le plan reste le tapis (cocher ne modifie pas le dessin), l’export a alors la taille
+  du tapis, sans cadre ; Ctrl+Z juste après le choix du contexte, ou « Ajuster le plan de travail » (permis avec la case cochée), le
+  ramène au dessin. Design Space rognant un SVG importé à ses formes (à vérifier, `designSpace.position.rognage`), la place des pièces
+  sur le tapis est la même.
+- **Choisir Cricut est une modification** (le plan change) : fermer l’éditeur ensuite demande s’il faut l’abandonner, et « Terminer »
+  rend le dessin, comme après tout geste.
+- **Tests** : `tests/unit/engine/recalage.test.ts` (défaut inversé, ancienne marque « non », projet, plan d’ouverture, dessin plus grand
+  que le tapis), `tests/unit/zones/recalage.test.ts`, `tests/unit/export/recalage.test.ts` (la case cochée redonne `cricut-export` et
+  `cricut-export-mm` à l’octet), `tests/unit/zones/creerActions.test.ts` (« Ajuster au dessin »), `tests/e2e/cricut-feuille.e2e.ts`
+  (ouvert en Cricut : case décochée, plan = tapis, forme au milieu
+  gardée à l’export avec son cadre ; cochée : l’export d’avant ; fichier marqué ouvert avec son plan dans l’état initial ; choix du
+  contexte en une entrée d’historique), et la mise à jour de `cricut`, `operations` et `fin-parcours`.
+
 ## Alternatives écartées
 
 - **Recaler les coordonnées des formes à l’export** (tout ramener au coin) : c’est précisément ce que le propriétaire ne veut pas.
@@ -189,6 +261,20 @@ S’y ajoutent les valeurs déjà `aVerifier` des zones utiles (le cadre en a la
 - **Écrire le recalage ou la feuille dans l’export** : Design Space ne les lit pas ; le cadre dit tout ce qu’il faut.
 - **Un réglage de session seulement** : un dessin préparé pour une feuille partielle doit la retrouver à sa réouverture ; le
   document la garde, hors du défaut, comme le reste du contexte.
+- **(Révision) Garder `recalage: false` et écrire `data-ed-recalage="non"` par défaut** : chaque document Cricut porterait un
+  attribut de plus pour dire le cas ordinaire ; seul l’écart au défaut s’écrit, comme pour la feuille.
+- **(Révision) Refuser un fichier ou un projet qui porte l’ancienne valeur** : il n’en existe presque pas, mais un fichier d’inconnu
+  se lit sans refus quand le sens est clair (ADR-0014) ; « non » dit justement le nouveau défaut.
+- **(Révision) Recaler le plan au coin du plan d’origine à l’ouverture** (le tapis au coin (0, 0) du viewBox) : un dessin posé près du
+  bord tomberait dans la marge du tapis et se dirait « hors du tapis » sans que personne n’ait rien fait ; le tapis se pose là où
+  Design Space aurait posé les pièces, et rien ne bouge à l’écran.
+- **(Révision) Poser le dessin exactement au coin de la zone utile**, comme le gabarit le montrait avec le recalage : mesuré sur le
+  parcours du stylo, la correction « Hachurer » faisait aussitôt naître un « hors du tapis » de 0,2 mm (le pourtour déborde d’un
+  demi-trait de stylo) ; la marge de 2 mm ne change rien à ce que la machine coupe, le cadre de repérage tenant la place.
+- **(Révision) Déplacer les formes d’un dessin plus grand que le tapis pour qu’elles y tiennent** : c’est le recalage en silence que
+  le propriétaire ne veut pas ; le constat le dit et sa correction est un geste annulable.
+- **(Révision) Rendre l’ancien plan quand on coche la case** : le plan d’avant le choix n’est plus connu hors de l’historique, et le
+  deviner (l’étendue du dessin) changerait le document sans geste ; Ctrl+Z et « Ajuster le plan de travail » le font sur demande.
 - **L’élargissement par le décalage de l’ADR-0015** pour l’espacement de l’imbrication : juste, mais un décalage à angles ronds
   multiplie les côtés et le test d’intersection par `polygon-clipping` coûte cher à chaque position ; le test de distance donne
   exactement la même réponse que l’intersection des contours élargis, sans les calculer.

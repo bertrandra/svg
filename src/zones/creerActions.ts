@@ -11,7 +11,7 @@ import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
 import { actionsGroupes } from './actionsGroupes.js';
 import { actionsContenus } from './actionsContenus.js';
-import { actionsProduction, cadreDeVue, svgDocument } from './actionsProduction.js';
+import { actionsProduction, cadreDeVue, cadreDuDessin, svgDocument } from './actionsProduction.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Annonce } from './annonces.js';
@@ -165,7 +165,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire(e.brouillon(svgDocument(e.complet ?? e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
     },
     ajuster: () => { const e = lire(), cadre = cadreDeVue(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
-    ajusterAuDessin: () => lire().vues.ajuster(),
+    ajusterAuDessin: () => { const e = lire(), cadre = cadreDuDessin(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
     continuerEdition: () => s.poserQuitter(false),
     garderVersion: (nom, svg) => {
       const quand = Date.now(), { versions } = lire();

@@ -12,6 +12,7 @@ export {
   type Constat, type CodeConstat, type CodeCorrection, type Gravite
 } from './preparation/constats.js';
 export { corrigerPreparation, type ResultatCorrection } from './preparation/corrections.js';
+export { planPourChoix, planDOuverture } from './preparation/tapis.js';
 export { couchesDe, etendueVisible, formesPeintes, tientDans, type Couche } from './preparation/mesures.js';
 export { finesseDe, AIRE_MIN, POINTS_MAX_MESURE, type Finesse } from './preparation/finesse.js';
 export { silhouetteDe, regionPeinte, unirRegions } from './preparation/silhouette.js';

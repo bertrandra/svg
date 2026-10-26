@@ -6,7 +6,7 @@ import { useEffect, useId, useRef } from 'react';
 import type { Constat } from '../engine/preparation.js';
 import { BoutonRaison } from './commun/BoutonRaison.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
-import { etapesDesignSpace, etatExport, pointsACorriger } from './parcoursCricut.js';
+import { NOTE_TAPIS_FIXE, etapesDesignSpace, etatExport, pointsACorriger } from './parcoursCricut.js';
 import { operationsPeintes } from '../export/operations.js';
 import type { DessinSvg } from '../engine/editionSvg.js';
 import { cadreFixe, etendueVisible, placeSurTapis, type ProfilProduction } from '../engine/preparation.js';
@@ -92,6 +92,7 @@ function CarteDesignSpace({ nom }: { nom: string }) {
     <section className="carte-design-space" aria-labelledby={id}>
       <h3 id={id}>Dans Design Space</h3>
       <ol>{etapes.map(e => <li key={e.texte}>{e.texte}{e.aVerifier ? <span className="a-verifier"> (à vérifier)</span> : null}</li>)}</ol>
+      {!profil.recalage && profil.procede !== 'imprimer-decouper' ? <p className="aide">{NOTE_TAPIS_FIXE}</p> : null}
       <button type="button" className="discret" onClick={ac.fermerSuiteCricut}>Fermer ces étapes</button>
     </section>
   );

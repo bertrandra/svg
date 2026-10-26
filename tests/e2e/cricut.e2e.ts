@@ -142,6 +142,21 @@ describe('le contexte Cricut', () => {
     const page = await editeur(PROPRE);
     await choisirCricut(page);
     await panneau(page).locator('.pret').waitFor();
+    // Par defaut, le tapis est fixe (ADR-0039, revision du 26 octobre 2026) : le fichier a la taille du tapis, un cadre de reperage par
+    // couleur sous les formes, qui gardent leur place.
+    const fixe = (await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click())).octets.toString('utf8');
+    expect(/^<svg[^>]*>/.exec(fixe)?.[0]).toContain('viewBox="16.441 16.441 1152 1152" width="304.8mm" height="304.8mm"');
+    expect([...fixe.matchAll(/<path d="([^"]*)"/g)].map(m => m[1])).toEqual(['M40.441 40.441L1144.441 40.441L1144.441 1144.441L40.441 1144.441ZM42.441 42.441L42.441 1142.441L1142.441 1142.441L1142.441 42.441Z', 'M40.441 40.441L1144.441 40.441L1144.441 1144.441L40.441 1144.441ZM42.441 42.441L42.441 1142.441L1142.441 1142.441L1142.441 42.441Z', 'M48 48L240 48L240 240L48 240Z', 'M288 48L432 48L432 240L288 240Z']);
+    // La case cochee : plus de cadre ; le plan reste le tapis (cocher ne touche pas au dessin), et Ctrl+Z rend l'ancien plan : le
+    // fichier a alors la taille du dessin, l'export d'avant la revision.
+    await panneau(page).getByRole('checkbox', { name: 'Recalage automatique' }).check();
+    await panneau(page).locator('.pret').waitFor();
+    const coche = (await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click())).octets.toString('utf8');
+    expect(/^<svg[^>]*>/.exec(coche)?.[0]).toContain('viewBox="16.441 16.441 1152 1152" width="304.8mm" height="304.8mm"');
+    expect(coche.match(/<path /g)).toHaveLength(2);
+    await page.locator('.editeur-svg-toile').focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await panneau(page).locator('.pret').waitFor();
     const f = await telecharger(page, () => panneau(page).getByRole('button', { name: 'Exporter pour Cricut' }).click());
     expect(f.nom).toBe('dessin-cricut.svg');
     const svg = f.octets.toString('utf8');
@@ -171,7 +186,9 @@ describe('le contexte Cricut', () => {
     expect(await texteDe(boutonTelecharger(page))).toBe('Exporter pour Cricut');
     const cricut = await telecharger(page, async () => { await ouvrirMenu(page, 'Autres formats'); await page.locator('.menu-panneau .contenu-export button', { hasText: /^SVG$/ }).click(); });
     const texte = cricut.octets.toString('utf8');
-    expect(texte).toContain(' width="480" height="288" data-ed-contexte="cricut"');
+    // Le plan est le tapis des le choix du contexte (ADR-0039, revision du 26 octobre 2026) ; la case decochee ne s'ecrit pas.
+    expect(texte).toContain(' viewBox="16.441 16.441 1152 1152" width="1152" height="1152" data-ed-contexte="cricut"');
+    expect(texte).not.toContain('data-ed-recalage');
     // Changer de contexte suffit a rendre le dessin : « Terminer » le rend (la fiche dit qu'il est pret) au lieu de fermer sans rien.
     await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await attend(() => page.locator('.accueil .message.neutre').count()).toBe(1);

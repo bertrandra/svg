@@ -214,11 +214,14 @@ const palette = (id: string) => au(PALETTES.filter(p => p.id === id), 0).couleur
 /**
  * Le profil Cricut par defaut (Maker, tapis 12 x 12, papier cartonne), en pouces, avec des choix en plus. Les references ont ete
  * ecrites en pouces avant que le millimetre devienne l'unite par defaut de l'interface : elles le restent (cricut-export-mm couvre
- * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference.
+ * le millimetre), pour qu'un defaut d'interface ne reecrive aucune reference. De meme, les exports se font avec le recalage
+ * automatique coche (ADR-0039) : c'etait le defaut quand ils ont ete ecrits, et la case cochee redonne l'export d'avant a l'octet ;
+ * le tapis fixe, defaut depuis la revision du 26 octobre 2026, a ses references dans tests/fixtures/cricut-recalage/. Le document
+ * (cricut-marque, cricut-operations) garde le choix par defaut : il n'ecrit pas le recalage.
  */
 const CRICUT_POUCES: ChoixMachine = { ...CHOIX_CRICUT_DEFAUT, unite: 'in' };
 const profilCricut = (choix: Partial<ChoixMachine> = {}): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, ...choix });
+  const p = resoudreProfil({ contexte: 'cricut', ...CRICUT_POUCES, recalage: true, ...choix });
   if (!p) throw new Error('profil Cricut introuvable');
   return p;
 };

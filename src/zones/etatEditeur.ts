@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { aimanter, boiteDe, contenuEnDessin, pasGrille, renommagesDe, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
 import { arrondi } from './aidesEditeur.js';
-import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
+import { choixDeDepart, choixDeMarque, depuisUnite, planDOuverture, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { phraseProduction, svgDocument, usePreparation } from './actionsProduction.js';
 import type { Focale } from '../engine/navigation.js';
@@ -50,8 +50,12 @@ export interface EtatEditeur {
 
 export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const stockage = useStockage();
-  // Le nuancier du dessin (ADR-0037) se tire de ses couleurs a l'ouverture, dans l'etat initial : ce n'est pas une modification.
-  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(avecNuancier(p.initial)));
+  // Le contexte de production : un etat d'interface (il n'entre pas dans l'historique), relu de la marque du SVG ouvert, ou le depart
+  // que la page propose quand le SVG n'en porte pas. Un depart est le contexte initial, pas une modification : rien ne se reecrit sans geste.
+  const [productionInitiale] = useState<ChoixProduction>(() => choixDeDepart(p.production, p.depart));
+  // Le nuancier du dessin (ADR-0037) se tire de ses couleurs a l'ouverture, dans l'etat initial : ce n'est pas une modification. Le plan
+  // du tapis fixe aussi (ADR-0039, revision du 26 octobre 2026), pour un dessin ouvert en Cricut ; rien en Generique.
+  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(planDOuverture(avecNuancier(p.initial), productionInitiale)));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
   const [point, poserPoint] = useState<number | null>(null);
@@ -75,9 +79,6 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [curseur, poserCurseur] = useState<Point | null>(null);
   const [focale, poserFocale] = useState<Focale | null>(null);
   const [annonce, poserAnnonce] = useState<Annonce>({ texte: '', rang: 0 });
-  // Le contexte de production : un etat d'interface (il n'entre pas dans l'historique), relu de la marque du SVG ouvert, ou le depart
-  // que la page propose quand le SVG n'en porte pas. Un depart est le contexte initial, pas une modification : rien ne se reecrit sans geste.
-  const [productionInitiale] = useState<ChoixProduction>(() => choixDeDepart(p.production, p.depart));
   const [production, poserProduction] = useState<ChoixProduction>(productionInitiale);
   const [suiteCricut, poserSuiteCricut] = useState<SuiteCricut>(null);
   // L'apercu de la machine (ADR-0028) : un reglage de vue de la session, actif par defaut ; il n'agit qu'en contexte Cricut.
