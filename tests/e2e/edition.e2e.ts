@@ -34,6 +34,22 @@ describe('edition', () => {
     expect(await page.locator('.editeur-inspecteur').getByRole('button', { name: /Aligner|Miroir|Union/ }).count()).toBe(0);
   });
 
+  it('garde la place de la rangee sans selection : la premiere selection ne deplace ni la toile ni les panneaux, a la souris comme au doigt', async () => {
+    for (const tactile of [false, true]) {
+      const session = await navigateur.ouvrir({ tactile });
+      await ouvrirExemple(session.page);
+      const page = session.page;
+      const haut = (sel: string) => page.locator(sel).evaluate(e => e.getBoundingClientRect().top);
+      const toile = await haut('.editeur-svg-toile'), cale = page.locator('.editeur-cale-selection');
+      expect(await cale.count()).toBe(1);
+      expect(await cale.getAttribute('aria-hidden')).toBe('true');
+      await forme(page, 'f2').click();
+      await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
+      expect(await cale.count()).toBe(0);
+      expect(await haut('.editeur-svg-toile')).toBe(toile);
+    }
+  });
+
   it('range l\'inspecteur en sections sans cadre, trois ouvertes (le nuancier, ADR-0037) et le chiffre ferme', async () => {
     const page = await editeur();
     await forme(page, 'f2').click();

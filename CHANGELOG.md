@@ -56,6 +56,9 @@ empreintes.
 
 ### Modifié
 
+- La rangée de la sélection garde sa place sans sélection (une bande vide) : la première sélection ne pousse plus les panneaux et
+  la toile vers le bas, et un double-clic ne tombe plus à côté de sa cible.
+
 - Arbre des calques, à la souris : les boutons de visibilité et de verrou n'apparaissent que sur la ligne active, survolée, masquée
   ou verrouillée ; le clavier les atteint toujours, au doigt toutes les lignes les gardent. La grille de 200 groupes passe de 801 à
   339 éléments.
