@@ -7,6 +7,19 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Ajouté
 
+- **L’éditeur entier en anglais** (ADR-0042, après le socle ci-dessous). Chaque texte d’interface de `src/` passe par `t()` : menus,
+  barres, panneaux, boîtes, annonces de la région vocale, raccourcis dits en toutes lettres (`Maj` → `Shift`, `Échap` → `Esc`),
+  messages du moteur (refus de lecture, constats de préparation, pertes à l’export, lecture PDF), textes du site (projets, profil,
+  comptes, réglages) et mode d’emploi de l’archive Cricut (`LISEZMOI.txt`, identique à l’octet en français). Les données s’affichent
+  traduites sans changer dans les fichiers : événements et catégories de la bibliothèque, machines, tapis, matières, procédés, unités,
+  formes de base, noms de couleurs, publics de l’accueil ; une forme de la bibliothèque prend en anglais les mots de son identifiant
+  d’origine (`nomAffiche`). Les tables de libellés évaluées au chargement sont devenues des fonctions ou des accesseurs, pour lire la
+  langue au moment de l’affichage. Dictionnaires par lot dans `src/i18n/en/` (3 285 clés, une seule traduction par clé, un glossaire
+  commun : shape, path, layer, canvas, artboard, swatches, fill, stroke, mat, sheet, blade, pen, bridge, island…), fusionnés en
+  l’annexe `langue-en.js` (276 Ko, chargée seulement en anglais). Le français rendu est identique au caractère près : les tests
+  d’avant ne changent pas ; le cliquet des textes français hors `t()` tombe à zéro, hors fichiers de données et d’octets écrits
+  (`tests/fixtures/i18n/exclus.json`).
+
 - **Le socle de l'interface en français et en anglais** (ADR-0042). `src/util/i18n.ts` : `t('phrase française', { valeurs })`, la
   phrase française pour clé, l'entrée du dictionnaire anglais en anglais, la clé sinon ; `pluriel(n, mot, plurielIrrégulier ?)`
   passe le mot par `t` ; `nombre`, `locale` et `dateCourte` suivent la langue (les `toLocaleString('fr-FR')` épars y passent).
