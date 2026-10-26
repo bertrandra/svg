@@ -23,6 +23,7 @@ import {
 } from './phrasesDegrades.js';
 import type { ContexteToile } from './ClavierToile.js';
 import type { ModeleDessin, EtatInterface } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 /** Le cote dont la forme montre les poignees : le remplissage s'il est en degrade, sinon le contour, sinon aucun. */
 export function coteAPoignees(f: Forme | null): CoteDegrade | null {
@@ -158,7 +159,8 @@ export function touchePoignee(e: KeyboardEvent, c: ContexteToile, p: NonNullable
     if (position === null) return false;
     const voulue = Math.min(apres, Math.max(avant, Math.round(position * 1000) / 1000));
     ac.appliquer(d => modifierArret(d, [id], p.cote, i, { position: voulue }), 'poignee-degrade:' + p.cote + ':' + i + ':' + id);
-    ac.annoncer(phrasePositionArret(i, voulue) + (voulue === arret.position ? ' Butée : l’arrêt ne dépasse pas ses voisins.' : ''));
+    ac.annoncer(phrasePositionArret(i, voulue) + (voulue === arret.position ? t(' Butée : l’arrêt ne dépasse pas ses voisins.') : ''));
+
     return true;
   }
   if (!direction) return false;

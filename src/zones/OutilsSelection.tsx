@@ -12,33 +12,35 @@ import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { estOutilSelection, LIBELLES_REGLE, OUTILS_SELECTION, type OutilSelection } from './commandesSelection.js';
 import type { NomIcone } from './icones.js';
 import type { Outil } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 interface OutilDuMenu { readonly outil: Outil; readonly icone: NomIcone; readonly libelle: string; readonly raccourci: string }
 
-/** « Points et poignees », que le menu ne porte que sur un telephone. */
-const POINTS: OutilDuMenu = { outil: 'points', icone: 'points', libelle: 'Points et poignées', raccourci: 'A' };
+/** « Points et poignees », que le menu ne porte que sur un telephone. Une fonction : le libelle se traduit au rendu (ADR-0042). */
+const points = (): OutilDuMenu => ({ outil: 'points', icone: 'points', libelle: t('Points et poignées'), raccourci: 'A' });
 
 /**
  * Ce que dit l'infobulle d'un outil, qui est aussi son nom : son nom, son raccourci, ses touches. La regle n'y est pas : un nom qui
  * changerait avec elle serait relu ; le menu la coche et la barre d'etat la dit.
  */
 function aideOutil(o: OutilDuMenu): string {
-  return o.libelle + ' (' + o.raccourci + ')' + (o.outil === 'cadre' ? ' : glissez, même sur une forme · Maj ajoute, Alt retire' : o.outil === 'lasso' ? ' : entourez à main levée · Maj ajoute, Alt retire' : '');
+  return t('{libelle} ({raccourci})', { libelle: t(o.libelle), raccourci: o.raccourci }) + (o.outil === 'cadre' ? t(' : glissez, même sur une forme · Maj ajoute, Alt retire') : o.outil === 'lasso' ? t(' : entourez à main levée · Maj ajoute, Alt retire') : '');
 }
 
 export function OutilSelectionBarre({ avecPoints = false }: { avecPoints?: boolean }) {
   const { outil, regleZone } = useInterface(), ac = useActions();
-  const famille: readonly OutilDuMenu[] = avecPoints ? [OUTILS_SELECTION[0], POINTS, OUTILS_SELECTION[1], OUTILS_SELECTION[2]] : OUTILS_SELECTION;
+  const famille: readonly OutilDuMenu[] = avecPoints ? [OUTILS_SELECTION[0], points(), OUTILS_SELECTION[1], OUTILS_SELECTION[2]] : OUTILS_SELECTION;
   const [dernier, poserDernier] = useState<OutilSelection | 'points'>('selection');
   useEffect(() => { if (estOutilSelection(outil) || (avecPoints && outil === 'points')) poserDernier(outil); }, [outil, avecPoints]);
   const courant = famille.find(o => o.outil === dernier) ?? OUTILS_SELECTION[0];
-  const outils: ElementMenu[] = famille.map(o => ({ id: o.outil, libelle: o.libelle, icone: o.icone, raccourci: o.raccourci, radio: true, coche: outil === o.outil, onClick: () => ac.poserOutil(o.outil) }));
-  const regles: ElementMenu[] = (['touche', 'dedans'] as const).map(r => ({ id: 'regle-' + r, libelle: LIBELLES_REGLE[r], radio: true, coche: regleZone === r, onClick: () => ac.poserRegleZone(r) }));
+  const outils: ElementMenu[] = famille.map(o => ({ id: o.outil, libelle: t(o.libelle), icone: o.icone, raccourci: o.raccourci, radio: true, coche: outil === o.outil, onClick: () => ac.poserOutil(o.outil) }));
+  const regles: ElementMenu[] = (['touche', 'dedans'] as const).map(r => ({ id: 'regle-' + r, libelle: t(LIBELLES_REGLE[r]), radio: true, coche: regleZone === r, onClick: () => ac.poserRegleZone(r) }));
   return (
     <span className="outil-selection-groupe">
       <Bouton icone={courant.icone} aide={aideOutil(courant)} pressed={outil === courant.outil} onClick={() => ac.poserOutil(courant.outil)} />
-      <MenuDeroulant etiquette="Choisir un outil de sélection" className="chevron-seul"
-        sections={[{ id: 'outils', titre: 'Outil de sélection', elements: outils }, { id: 'regle', titre: 'Le cadre et le lasso prennent', elements: regles }]} />
+      <MenuDeroulant etiquette={t('Choisir un outil de sélection')} className="chevron-seul"
+        sections={[{ id: 'outils', titre: t('Outil de sélection'), elements: outils }, { id: 'regle', titre: t('Le cadre et le lasso prennent'), elements: regles }]} />
+
     </span>
   );
 }

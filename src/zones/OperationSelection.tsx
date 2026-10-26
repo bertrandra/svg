@@ -9,6 +9,7 @@ import type { Operation } from '../engine/editionSvg.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant } from './commun/Menu.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import { t } from '../util/i18n.js';
 
 /** L'operation des formes choisies : l'une ou l'autre, « melee », ou null hors d'un contexte qui coupe ou ecrit. */
 function useOperationSelection(): Operation | 'melee' | null {
@@ -24,26 +25,28 @@ function useOperationSelection(): Operation | 'melee' | null {
   return r;
 }
 
-const NOMS: Readonly<Record<Operation, string>> = { decoupe: 'À couper (Maj+X)', ecriture: 'À écrire au stylo (Maj+E)' };
+// Une fonction, pas une constante : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const noms = (): Readonly<Record<Operation, string>> => ({ decoupe: t('À couper (Maj+X)'), ecriture: t('À écrire au stylo (Maj+E)') });
 
 export const OperationSelection = memo(function OperationSelection({ compacte = false }: { compacte?: boolean }) {
   const op = useOperationSelection(), ac = useActions();
   if (!op) return null;
   if (compacte) {
-    const etat = op === 'melee' ? 'à couper et à écrire' : op === 'decoupe' ? 'à couper' : 'à écrire';
+    const etat = op === 'melee' ? t('à couper et à écrire') : op === 'decoupe' ? t('à couper') : t('à écrire');
     return (
-      <div className="groupe operation-selection" role="group" aria-label="Opération">
-        <MenuDeroulant etiquette={'Opération de la sélection : ' + etat} icone={op === 'ecriture' ? 'stylo' : 'couper'} chevron={false} alignement="gauche" elements={[
-          { id: 'operation-decoupe', libelle: 'À couper', raccourci: 'Maj+X', icone: 'couper', radio: true, coche: op === 'decoupe', onClick: () => ac.poserOperation('decoupe') },
-          { id: 'operation-ecriture', libelle: 'À écrire au stylo', raccourci: 'Maj+E', icone: 'stylo', radio: true, coche: op === 'ecriture', onClick: () => ac.poserOperation('ecriture') }
+      <div className="groupe operation-selection" role="group" aria-label={t('Opération')}>
+        <MenuDeroulant etiquette={t('Opération de la sélection : {etat}', { etat })} icone={op === 'ecriture' ? 'stylo' : 'couper'} chevron={false} alignement="gauche" elements={[
+          { id: 'operation-decoupe', libelle: t('À couper'), raccourci: t('Maj+X'), icone: 'couper', radio: true, coche: op === 'decoupe', onClick: () => ac.poserOperation('decoupe') },
+          { id: 'operation-ecriture', libelle: t('À écrire au stylo'), raccourci: t('Maj+E'), icone: 'stylo', radio: true, coche: op === 'ecriture', onClick: () => ac.poserOperation('ecriture') }
         ]} />
       </div>
     );
   }
   return (
-    <div className="groupe operation-selection" role="group" aria-label="Opération">
-      <Bouton icone="couper" aide={NOMS.decoupe} pressed={op === 'decoupe'} onClick={() => ac.poserOperation('decoupe')} />
-      <Bouton icone="stylo" aide={NOMS.ecriture} pressed={op === 'ecriture'} onClick={() => ac.poserOperation('ecriture')} />
+    <div className="groupe operation-selection" role="group" aria-label={t('Opération')}>
+      <Bouton icone="couper" aide={noms().decoupe} pressed={op === 'decoupe'} onClick={() => ac.poserOperation('decoupe')} />
+      <Bouton icone="stylo" aide={noms().ecriture} pressed={op === 'ecriture'} onClick={() => ac.poserOperation('ecriture')} />
+
     </div>
   );
 });

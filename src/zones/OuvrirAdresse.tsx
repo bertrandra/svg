@@ -13,6 +13,8 @@ import { estImage, natureDesOctets, TYPES_IMAGE, type NatureImage, type NatureOc
 import { ouvertureAdresse, telechargerAdresse } from '../io/adresse.js';
 import type { TonMessage } from './commun/Message.js';
 import type { Voie } from './publics.js';
+// Sous un autre nom : `t` est ici le telechargement (`ChampAdresse({ t })`, une propriete que d'autres fichiers passent).
+import { t as traduire } from '../util/i18n.js';
 
 /** Vrai quand l'hote a pose une ouverture par adresse (la page autonome, le site) : sans elle, ni champ, ni collage, ni lien depose. */
 export const adressesPermises = (): boolean => ouvertureAdresse() !== null;
@@ -22,15 +24,18 @@ export interface Recu { readonly nom: string; readonly nature: NatureOctets; rea
 
 export type Dire = (texte: string, ton?: TonMessage) => void;
 
-export const PHRASE_HTML = 'Cette adresse renvoie une page web, pas un fichier : ouvrez-la dans un onglet pour trouver le lien du fichier lui-même (ou la page d’erreur qu’elle affiche).';
-export const PHRASE_INCONNUE = 'Ce fichier n’est ni un SVG, ni un PDF, ni une image PNG, JPEG, GIF, WebP ou BMP : il ne s’ouvre pas ici.';
+// Les phrases des refus se traduisent au moment du refus ; les constantes, evaluees au chargement, sont leurs cles en francais.
+const phraseHtml = (): string => traduire('Cette adresse renvoie une page web, pas un fichier : ouvrez-la dans un onglet pour trouver le lien du fichier lui-même (ou la page d’erreur qu’elle affiche).');
+const phraseInconnue = (): string => traduire('Ce fichier n’est ni un SVG, ni un PDF, ni une image PNG, JPEG, GIF, WebP ou BMP : il ne s’ouvre pas ici.');
+export const PHRASE_HTML = phraseHtml();
+export const PHRASE_INCONNUE = phraseInconnue();
 
 /** Reconnait des octets recus ; rend le fichier a ouvrir, ou la phrase du refus. */
 export function reconnaitre(nom: string, octets: Uint8Array): Recu | { readonly erreur: string } {
   const n = natureDesOctets(octets);
-  if (n === 'html') return { erreur: PHRASE_HTML };
-  if (n === 'vide') return { erreur: 'Le serveur a renvoyé un fichier vide.' };
-  if (n === 'inconnue') return { erreur: PHRASE_INCONNUE };
+  if (n === 'html') return { erreur: phraseHtml() };
+  if (n === 'vide') return { erreur: traduire('Le serveur a renvoyé un fichier vide.') };
+  if (n === 'inconnue') return { erreur: phraseInconnue() };
   return { nom, nature: n, octets };
 }
 
@@ -118,16 +123,17 @@ export function ChampAdresse({ t, aide, champ: champDonne }: { t: Telecharger; a
   const envoyer = (e: FormEvent) => { e.preventDefault(); if (!occupe) t.lancer(); };
   return (
     <form className="adresse" noValidate onSubmit={envoyer} aria-busy={occupe}>
-      <label htmlFor={id + '-champ'}>Ouvrir depuis une adresse</label>
+      <label htmlFor={id + '-champ'}>{traduire('Ouvrir depuis une adresse')}</label>
       <div className="adresse-ligne">
         <input id={id + '-champ'} ref={champ} type="url" inputMode="url" autoComplete="url" spellCheck={false} placeholder="https://…"
           value={t.valeur} readOnly={occupe} aria-describedby={id + '-aide'} onChange={e => t.poserValeur(e.target.value)} />
         {occupe
-          ? <button key="annuler" type="button" onFocus={() => { avaitFocus.current = true; }} onBlur={e => { if (e.relatedTarget) avaitFocus.current = false; }} onClick={t.annuler}>Annuler</button>
-          : <button key="ouvrir" type="submit">Ouvrir</button>}
+          ? <button key="annuler" type="button" onFocus={() => { avaitFocus.current = true; }} onBlur={e => { if (e.relatedTarget) avaitFocus.current = false; }} onClick={t.annuler}>{traduire('Annuler')}</button>
+          : <button key="ouvrir" type="submit">{traduire('Ouvrir')}</button>}
       </div>
       <p id={id + '-aide'} className="aide">{aide} {o.qui}</p>
-      <p className="aide adresse-etat" role="status">{occupe ? 'Téléchargement depuis ' + t.enCours + '…' : ''}</p>
+      <p className="aide adresse-etat" role="status">{occupe ? traduire('Téléchargement depuis {hote}…', { hote: t.enCours ?? '' }) : ''}</p>
+
     </form>
   );
 }
