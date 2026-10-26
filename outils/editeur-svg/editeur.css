@@ -180,8 +180,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* L'arbre des calques d'un dessin riche (ADR-0012, annexe 6 §1) : les lignes de la liste, un retrait par niveau (sur la ligne, en
    variable d'espacement), un chevron par groupe, tourne quand le groupe est replie ; aucun mouvement. La ligne porte le focus. */
 .editeur-calques .arbre-entete { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-s); margin: var(--esp-m) 0 var(--esp-xs); }
-.editeur-calques .arbre-entete h4 { margin: 0; }
-.arbre-entete .menu-bouton.texte { min-height: 28px; padding: var(--esp-2xs) var(--esp-s); font-size: var(--texte-petit); }
+/* Le bouton « Déplacer vers… » tient sur une ligne : replie sur deux dans un panneau etroit, son texte debordait de sa hauteur fixe
+   (axe le voyait recouvert, menu ouvert) ; c'est le titre qui passe a la ligne. */
+.editeur-calques .arbre-entete h4 { margin: 0; min-width: 0; }
+.arbre-entete .menu-bouton.texte { flex: none; white-space: nowrap; min-height: 28px; padding: var(--esp-2xs) var(--esp-s); font-size: var(--texte-petit); }
 .arbre-calques { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
 .calque-ligne { display: flex; align-items: center; gap: var(--esp-2xs); border-radius: var(--rayon-pastille); }
 .calque-ligne.choisi { background: color-mix(in srgb, var(--cyan) 18%, transparent); }
@@ -194,7 +196,12 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .calque-ligne.estompee > .calque-arbre-nom { color: var(--encre-douce); }
 .calque-ligne.contexte .calque-genre { font-weight: 600; }
 .calque-chevron { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: var(--encre-douce); }
-.calque-ligne[aria-expanded="false"] .calque-chevron .icone { transform: rotate(-90deg); }
+/* Le chevron d'un groupe se dessine par deux bords (un element de moins par ligne : budget du DOM de l'arbre, annexe 7 §4) ; ses bords
+   prennent la couleur du texte, et celle du systeme en contraste force. */
+button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-1px) rotate(45deg); }
+.calque-ligne[aria-expanded="false"] button.calque-chevron::before { transform: translateX(-1px) rotate(-45deg); }
+/* Les cellules des boutons gardent leur largeur quand la ligne ne les dessine pas (a la souris, hors de la ligne active ou survolee). */
+.calque-ligne > .calque-cellule-bascule { min-width: 26px; }
 .calque-renommer { flex: 1; min-width: 0; padding: 0 var(--esp-xs); font-size: var(--texte-petit); }
 .editeur-toile { grid-area: toile; position: relative; overflow: hidden; background: var(--table); }
 .editeur-svg-toile { display: block; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
@@ -591,6 +598,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
   .calque-ligne > .calque-arbre-nom { min-height: 40px; }
   .calque-chevron { width: 40px; height: 40px; }
+  .calque-ligne > .calque-cellule-bascule { min-width: 40px; }
   .arbre-entete .menu-bouton.texte { min-height: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
   .par-couleur .couleur-choix { min-height: 40px; }
@@ -643,6 +651,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile:focus-visible { outline: 3px solid Highlight; outline-offset: -3px; }
   button:disabled, button[aria-disabled="true"] { color: GrayText; border-color: GrayText; opacity: 1; }
   .icone-bouton[aria-pressed="true"], button.primaire, .pastille-style button.aucun.actif { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: HighlightText; }
+  /* Un mini-onglet enfonce (« Les deux », « Fond », « Contour ») : sans fond ni bord, rien ne le distinguait des autres (paquet 2-D). */
+  .mini-onglets button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .icone-bouton[aria-pressed="true"] .icone, button.primaire .icone { color: HighlightText; }
   .pastille-style button.aucun { border: 1px solid ButtonText; background-clip: border-box; box-shadow: none; }
   .editeur-cadre.menu-ouvert button.primaire:not(.menu-panneau button),
@@ -662,6 +672,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-calques li.choisi button:focus-visible, .par-couleur li.choisi button:focus-visible { outline-color: HighlightText; }
   .calque-ligne.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .calque-ligne.choisi > .calque-arbre-nom, .calque-ligne.choisi button { color: HighlightText; }
+  /* Le numero, les pastilles d'une ligne choisie : ils ont leur encre douce, que le fond Highlight (non force) rendait illisible. */
+  .calque-ligne.choisi .calque-numero, .calque-ligne.choisi .calque-pastilles, .editeur-calques li.choisi .calque-numero { color: HighlightText; }
   .calque-ligne:focus-visible { outline: 2px solid Highlight; outline-offset: -2px; }
   .calque-ligne.choisi:focus-visible, .calque-ligne.choisi button:focus-visible { outline-color: HighlightText; }
   .calque-ligne.depot-dans, .calque-ligne.depot-sous { outline: 2px dashed Highlight; outline-offset: -2px; box-shadow: none; }
