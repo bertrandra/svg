@@ -11,6 +11,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { PHRASE_DEPOT_PAS_IMAGE, phraseImageRefusee } from './phrasesContenus.js';
 import type { ActionsEditeur } from './typesEditeur.js';
+import { dessinComplet } from './lentille.js';
 
 /** Les types que le choix de fichier propose (la verification decide sur les octets, pas sur le nom). */
 export const TYPES_IMAGES = 'image/png,image/jpeg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp';
@@ -30,7 +31,7 @@ export async function insererFichierImage(f: Blob, ac: Pick<ActionsEditeur, 'ins
 export function useInsertionImage(): { element: ElementMenu | null; entree: ReactNode } {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
   const entree = useRef<HTMLInputElement>(null);
-  if (!groupesActifs(mo.dessin, ui.modele)) return { element: null, entree: null };
+  if (!groupesActifs(dessinComplet(mo), ui.modele)) return { element: null, entree: null };
   return {
     element: { id: 'inserer-image', libelle: 'Insérer une image…', icone: 'image', separateur: true, onClick: () => entree.current?.click() },
     entree: (
@@ -46,7 +47,7 @@ export function useInsertionImage(): { element: ElementMenu | null; entree: Reac
  */
 export function useDepotImage(): { onDragOver?: (e: DragEvent<HTMLElement>) => void; onDrop?: (e: DragEvent<HTMLElement>) => void } {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
-  if (!groupesActifs(mo.dessin, ui.modele)) return {};
+  if (!groupesActifs(dessinComplet(mo), ui.modele)) return {};
   const fichiers = (e: DragEvent<HTMLElement>) => Array.from(e.dataTransfer.types).includes('Files');
   return {
     onDragOver: e => { if (fichiers(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } },

@@ -837,6 +837,18 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .contour-groupe { stroke: Highlight; }
 }
 
+/* Le contenu d'une decoupe ou d'un masque qu'on modifie (ADR-0012, paquet 8-D) : le reste du dessin s'estompe (la meme opacite que
+   hors d'un groupe) ; une decoupe se trace en contour de son jeton, plus epais que la vue « contours » pour se distinguer de la
+   selection ; un masque garde sa peinture, cerne d'un filet de son jeton, sa region en tirets. Rien ne bouge. En contraste force, la
+   geometrie se redit en CanvasText (la selection garde Highlight). */
+.editeur-svg-toile .lentille-decoupe .trace-contour { stroke: var(--contour-decoupe); stroke-width: 1.5; }
+.editeur-svg-toile .contour-masque { fill: none; stroke: var(--contour-masque); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.editeur-svg-toile .region-masque { fill: none; stroke: var(--contour-masque); stroke-width: 1; stroke-dasharray: 6 3; vector-effect: non-scaling-stroke; }
+.outil-selection .editeur-svg-toile .lentille-fond [data-id] { cursor: auto; }
+@media (forced-colors: active) {
+  .editeur-svg-toile .lentille-decoupe .trace-contour, .editeur-svg-toile .contour-masque, .editeur-svg-toile .region-masque { stroke: CanvasText; }
+}
+
 /* Le texte pose sur ou dans une forme (ADR-0031). Le guide de la forme d'un texte pose choisi : son trace en tirets d'outil, meme
    masquee (on voit ce qui porte le texte), sans pointeur. La poignee du depart : un rond plein a la couleur d'outil sur un halo de
    panneau, une cible invisible de 24 px (40 au doigt) ; elle se deplace, son curseur est « deplacer » ; son focus, un anneau d'outil.
@@ -996,7 +1008,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
    opacite), a l'encre douce comme le nombre d'elements, sur une bande d'une ligne ; un mot qui ne tient pas passe a la ligne suivante,
    cachee : jamais rogne sous une bascule, jamais une deuxieme hauteur de ligne (fenetrage). */
 .calque-pastilles { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: center; align-content: flex-start; column-gap: var(--esp-xs); min-width: 0; max-width: max-content; height: 16px; overflow: hidden; line-height: 16px; color: var(--encre-douce); }
-.calque-pastilles > .icone { flex: none; height: 16px; }
+.calque-pastilles > .pastille-icone { display: inline-flex; flex: none; align-items: center; height: 16px; }
 .pastille-mot { flex: none; white-space: nowrap; }
 /* La section Effets de l'inspecteur (ADR-0012, etape 8) : une case par effet, ses reglages dessous. */
 .case-effet { gap: var(--esp-s); }

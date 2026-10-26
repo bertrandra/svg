@@ -22,7 +22,7 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; **7-B (toile, brouillon, mesures) fait** le 26 octobre 2026 (ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») ; l'interface des effets est à l'étape 8 |
 | 4 Dégradés, interface | **faite** le 26 octobre 2026 (paquets 4-A et 4-B en un seul arbre ; ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 8 Découpes, masques, effets : l'interface | **faite** le 26 octobre 2026 (paquets A, B et C en un seul arbre ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 8 a posé ») ; les contextes d'édition `decoupe`/`masque` restent à faire (paquet 8-D proposé) |
+| 8 Découpes, masques, effets : l'interface | **faite** le 26 octobre 2026 (paquets A, B et C en un seul arbre ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 8 a posé ») ; les contextes d'édition `decoupe`/`masque` **faits** par le paquet 8-D le 26 octobre 2026 (ci-dessous, « Ce que le paquet 8-D a posé ») |
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
 | 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
 | 13d Couleurs | **faite** le 26 octobre 2026 (moteur et listes ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 13d a posé ») |
@@ -1025,6 +1025,96 @@ lecture `plat` est inchangée, et **en modèle plat rien n'apparaît** : ni él�
   rangera au menu Édition à côté des découpes et masques (une ligne de `elementsContenus` ou de `useElementsEdition`) ; contraste forcé
   et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
 
+### Ce que le paquet 8-D a posé (26 octobre 2026)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes : 5 références nouvelles, relues), la
+lecture `plat` est inchangée, et **en modèle plat rien n'apparaît** (`elementsContenus` rend toujours `[]` : le test « à plat » de
+l'étape 8 tient). On modifie maintenant le contenu d'une découpe ou d'un masque **sur place**, avec les outils ordinaires.
+
+- **La lentille, pure** (`engine/edition/lentilles.ts`, bloc « paquet 8-D » de la façade) : `contenuEnDessin(d, groupe, genre)` présente
+  le contenu comme un dessin de travail (le plan, le nuancier et les repères du dessin, les feuilles et les groupes du contenu, déjà
+  dans le repère du plan ; mémorisé par contenu : deux appels rendent le même objet) ; `reposerContenu(d, groupe, genre, travail)` le
+  remet à sa place et rend `{ dessin, renommes }` — **le même dessin quand rien n'a changé** (entrer puis sortir rend le même objet),
+  le contenu ramené à ses invariants (`normaliser`), puis : (I1) chaque identifiant **neuf** du contenu qui reprendrait celui d'un nœud
+  du reste du dessin prend un numéro au-delà de tous (`renommagesDe(dessin)` garde la table, pour que la sélection suive) ; (découpe)
+  les feuilles refixées par `feuilleDeDecoupe` (fond, trait, opacité, texte, effets posés dans la lentille n'y entrent pas ; la règle des
+  trous reste, c'est le `clip-rule`), les groupes réduits à nom, visibilité, verrou et découpe ; (masque) **la région suit le contenu
+  quand elle le suivait** — elle valait la boîte visuelle du contenu et des enfants du groupe, comme `creerMasque` la pose —, sinon
+  (région lue d'un fichier, masque inversé dont le fond blanc la couvre, `estFond` exporté de `edition/masques.ts`) elle ne bouge pas.
+  Le plan (`vb`) ne change jamais par la lentille ; le nuancier et les repères, réglages du document, y passent dans les deux sens.
+  `contenuVide(c)` : aucune feuille visible qui ait un tracé. `types.ts` et `fonctionnalites.ts` n'ont pas bougé.
+- **Le contexte** (`ContexteEdition` dans `typesEditeur.ts`) : `{ groupe, dans?: 'decoupe' | 'masque' | 'motif', sous? }` — `sous` est le
+  groupe **du contenu** où l'on est entré (absent : la racine du contenu) ; `motif` reste sans lentille (la tuile d'un motif, plus tard).
+  `zones/lentille.ts` : `lentilleDe(c)`, `niveauEdition(c)` (le niveau dans le dessin qu'on voit : le groupe du contexte, ou dans une
+  lentille `sous ?? null`), `avecNiveau(c, g)`, `contexteDuDessin(d, c)` (un groupe disparu ramène à la racine, un contenu disparu —
+  libéré, annulé — laisse dans le groupe, un `sous` disparu ramène à la racine du contenu ; le même objet quand il reste valable),
+  `dessinComplet(m)`. **Tous les consommateurs de `contexte?.groupe ?? null` passent par `niveauEdition`** (prise, survol, sortie par
+  un clic, cadre, lasso, aimants, Tab, Page suivante, Ctrl+A, Espace, commandes de sélection, toile, calques).
+- **L'état** (`etatEditeur.ts`) : `complet = h.present` ; dans une lentille, `dessin` (de `ModeleDessin` et de `lire()`) est le dessin de
+  travail, `ModeleDessin.complet` et `EtatLu.complet` le dessin de l'historique (absents hors d'une lentille : `dessinComplet`). La
+  sélection est faite d'identifiants du contenu ; un renommage I1 la suit (`renommagesDe`, puis la sélection gardée le prend). Ce qui
+  vise **le dessin entier** lit `complet` : enregistrer, brouillon, `changement` de l'hôte, gestes de l'hôte, versions, téléchargements
+  (SVG, à plat, autres formats), polices des crédits, « Ajuster », la préparation et les actions de production (jugées et corrigées
+  sur le dessin entier, par `appliquerComplet`), `groupesActifs` (un contenu plat ne fait pas disparaître les commandes riches).
+- **Les verbes** (`creerActions.ts`) : `appliquer(f, cle)` lit la lentille au moment de l'appel et, s'il y en a une, applique `f` au
+  dessin de travail (avec la garde du texte et le suivi des textes posés, au niveau du contenu) puis `reposerContenu` : **un geste
+  reste une entrée d'historique du dessin complet**, et Ctrl+Z revient à l'état d'avant en une fois (la lentille reste si le contenu
+  existe encore). `appliquerComplet` pour ce qui vise le dessin entier. Les verbes du contexte vivent dans `zones/actionsContexte.ts`
+  (nouveau ; `creerActions` dépassait la longueur permise) : `poserContexte` (validé sur le dessin complet), **`poserNiveau(g)`** (le
+  niveau dans le dessin qu'on voit ; le choix d'une ligne des calques et la sortie par un clic l'emploient), `entrerGroupe` (dans une
+  lentille, un groupe du contenu), `sortirGroupe` (dans une lentille : d'un groupe du contenu vers son parent, puis de la racine du
+  contenu hors de la lentille), `deplier`. **`ac.modifierContenu(genre, groupe?)`** (`actionsContenus.ts`) : le groupe visé, ou le
+  porteur de la sélection (`porteurDe`), devient `{ groupe, dans }`, le premier élément du contenu est choisi (les flèches le déplacent
+  aussitôt, Tab parcourt les autres), l'outil sélection revient, et c'est dit. Libérer et inverser depuis la lentille visent son groupe
+  dans le dessin complet ; libérer fait revenir dans le groupe (la lentille tombe d'elle-même, son contenu n'existe plus).
+- **Entrer, sortir** : « Modifier la découpe » et « Modifier le masque » au menu Édition (après « Créer une découpe », « Créer un
+  masque » ; grisés avec leur raison), et le **double-clic sur la pastille** « découpe » ou « masque » d'une ligne de groupe des calques
+  (`data-pastille`, les icônes enveloppées dans `.pastille-icone`) ; ailleurs sur la ligne, le double-clic entre dans le groupe comme
+  avant. Sortir : Échap (après le point et la sélection), Maj+Entrée, le fil d'Ariane (`Racine › Cartes › Découpe`, puis les groupes du
+  contenu ; les niveaux du dessin sortent de la lentille, ceux du contenu y laissent : `remonterDansLentille` dans
+  `commandesGroupes.ts`). **Décision : un contenu vide refuse la sortie** (il cacherait tout le groupe) et dit les trois issues —
+  dessiner, annuler, « Libérer la découpe » (qui marche depuis la lentille) ; on reste dedans, Tab sort toujours de la toile (rien ne
+  piège le focus) ; « Terminer » enregistre quand même (un `<clipPath>` vide se relit en point fixe). Un appui sur le vide dans la
+  lentille garde la lentille (le cadre y commence) : on n'en sort pas par un clic dehors, parce que tout ce qui est dehors est inerte.
+- **La toile** (`zones/ToileLentille.tsx`, nouveau) : le dessin complet, estompé (`hors-contexte`, l'opacité de 2-A) et inerte, tel qu'il
+  s'écrit — le groupe découpé ou masqué par son contenu **du moment**, à chaque geste — ; par-dessus, le contenu, seul à prendre le
+  pointeur : une découpe **toujours en contour** au jeton `contour-decoupe` (1,5 px, plus épais que la vue « contours ») ; un masque
+  **tel quel**, cerné d'un filet `contour-masque` (on le voit même blanc sur le plan blanc) et sa région en tirets du même jeton.
+  L'aperçu de la machine se retire dans une lentille. Contraste forcé : `CanvasText` (la sélection garde `Highlight`).
+- **Jetons** : `contour-decoupe` `#8e5bd4` et `contour-masque` `#1e8f6a` (rôle `toile`, même valeur dans les deux thèmes, comme
+  l'aperçu de la machine : le plan est blanc, sombre ou en damier quel que soit le thème) ; confrontés à 3:1 sur `toile-blanc`
+  (4,57 et 4,04), `toile-sombre` (3,70 et 4,18) et `damier-b` (3,66 et 3,24) ; `docs/jetons.md` régénéré. `pastille-groupe` n'a
+  toujours pas d'usage (les pastilles reprennent l'encre douce, étape 8).
+- **Ce qui ne passe pas par la lentille, grisé avec sa raison** (`RAISONS_LENTILLE`, `phrasesContenus.ts`) : l'outil Texte (bouton
+  grisé, touche T et Entrée ou double-clic sur un texte refusés et dits : une découpe n'en garderait que les contours, un masque
+  l'écrit en contours) ; dans une découpe, l'apparence (l'inspecteur ne montre que les trous et une phrase), la section Effets,
+  « Créer un masque », « Insérer une image… » et le dépôt d'une image ; une seconde lentille (« Modifier… » grisés dedans) ; les
+  commandes qui visent l'autre contenu du groupe ; « Ajuster le plan de travail ». **Les booléens passent** (de la géométrie pure,
+  refixée dans une découpe ; test). Une forme insérée de la bibliothèque, collée ou dupliquée entre dans le contenu.
+- **Phrases** : « Dans la découpe du groupe « Cartes », 1 forme, tracée en contour : seule la forme compte ; le reste est estompé.
+  Échap ou Maj+Entrée en sort. » (suivie de la sélection), « Dans le masque du groupe « Ciel », 1 forme : le clair laisse voir, le
+  sombre cache ; … », « Découpe reposée. Dans le groupe « Cartes », 2 éléments. », « Masque reposé. … », « De retour dans la découpe
+  du groupe « Cartes ». », la phrase du contenu vide, et les raisons ci-dessus.
+- **Tests** : `tests/unit/engine/lentilles.test.ts` (aller-retour au même objet, déplacement valide et le reste au même objet,
+  peinture refixée et groupes réduits, renumérotation I1 et `renommagesDe`, région qui suit, région lue et masque inversé qui ne
+  bougent pas, plan inchangé, contenu vide) ; `tests/unit/zones/lentille.test.ts` (contexte ramené au dessin, entrer au menu, une
+  entrée d'historique, annuler en une fois, sortir et sa phrase, copie renumérotée, booléen, contenu vide refusé puis libéré, refus
+  du texte, des effets et d'une seconde lentille, masque par la pastille et sa région) ; `v2/cas-lentilles.ts` (5 références
+  `lentilles-op-*` : déplacer, peindre — seul `clip-rule` reste —, dupliquer une découpe, repeindre un masque lu — sa région reste —,
+  déplacer un masque créé — sa région suit ; relues, point fixe) ; e2e `tests/e2e/lentilles.e2e.ts` (au clavier : entrer dans une
+  découpe, la déplacer, Ctrl+Z en une fois, Échap, « Terminer » et le `<clipPath>` déplacé ; de même pour un masque par Maj+Entrée ;
+  contenu vide refusé, fil d'Ariane qui rend le focus à la toile, double-clic sur la pastille ; axe dans une découpe — menu ouvert —
+  et dans un masque, en clair, sombre et au doigt).
+- **Reste** : la tuile d'un motif (`dans: 'motif'`) par la même lentille (le contenu d'une tuile est dans son propre repère : il faudra
+  une matrice à l'aller et au retour) ; la phrase d'une sélection dans une découpe nomme encore la peinture refixée (« fond noir ») ;
+  les aimants et le cadre ne voient que le contenu (pas le reste du dessin, inerte) ; le premier clic sur une ligne de groupe des
+  calques décale la liste d'une ligne (observé en e2e : un double-clic sur une ligne non choisie tombe sur la voisine ; hors de ce
+  paquet, à regarder par 2-D) ; contraste forcé et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
+  `tests/e2e/modele-riche.e2e.ts` « un brouillon écrit en riche… » a échoué trois fois (juste après une construction de la page, dont
+  une fois dans la série complète), puis passé cinq fois de suite, sur la même construction : le brouillon écrit, présent avant le
+  rechargement, n'y était plus après (un rechargement qui suit de près l'écriture) ; instrumenté, il a passé : cause non trouvée, à
+  surveiller par 2-D.
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -1247,7 +1337,7 @@ région partagent son infrastructure).
 (abandonnés, dits ; PDF raster à l'étape 13 si l'agent des exports a livré le DPI), mesures et budgets,
 corpus `inkscape-flou`. Paquets : **A** moteur (G) ; **B** toile + brouillon + mesures (M).
 
-### Étape 8 — Découpes, masques, effets : l'interface · taille G · **faite le 26 octobre 2026**, sauf les contextes `decoupe`/`masque` (§0, « Ce que l'étape 8 a posé »)
+### Étape 8 — Découpes, masques, effets : l'interface · taille G · **faite le 26 octobre 2026**, contextes `decoupe`/`masque` compris (paquet 8-D ; §0, « Ce que l'étape 8 a posé » et « Ce que le paquet 8-D a posé »)
 
 Menu Objet, contextes `decoupe`/`masque`, section Effets, phrases, jetons, axe, e2e. Après 5, 6, 7 et 2.
 Paquets : **A** menus + contextes (M) ; **B** section Effets (M) ; **C** e2e/axe (M).

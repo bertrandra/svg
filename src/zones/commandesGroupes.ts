@@ -5,7 +5,9 @@
 // d'Ariane (FilAriane.tsx) appellent les memes fonctions, sur l'etat qu'on leur donne : rien n'est capture.
 
 import { aplatirPour, CAPACITES_PLAT, phrasePertes } from '../engine/aplatir.js';
-import { creerMotif, estPlat, groupeDe, uniteDans, MSG_MOTIF, type DessinSvg } from '../engine/editionSvg.js';
+import { contenuDuGroupe, contenuVide, creerMotif, estPlat, groupeDe, uniteDans, MSG_MOTIF, type DessinSvg } from '../engine/editionSvg.js';
+import { phraseContenuVide, phraseRacineContenu } from './phrasesContenus.js';
+import { dessinComplet, lentilleDe, niveauEdition } from './lentille.js';
 import { formeVoisine } from '../engine/navigation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
@@ -64,11 +66,38 @@ export function remonterVers(m: Pick<ModeleDessin, 'dessin'>, u: Pick<EtatInterf
 }
 
 /**
+ * Le fil d'Ariane dans une decoupe ou un masque (paquet 8-D). `cible` est un niveau du dessin complet (un groupe, ou la racine) : on sort
+ * alors de la lentille, sauf si le contenu est vide (il cacherait tout le groupe ; on reste, et on dit quoi faire). `dansContenu` : la
+ * cible est un niveau du contenu (un de ses groupes, ou sa racine), et l'on reste dans la lentille. Le noeud quitte reste choisi.
+ */
+export function remonterDansLentille(m: Pick<ModeleDessin, 'dessin' | 'complet'>, u: Pick<EtatInterface, 'contexte'>, ac: ActionsEditeur, cible: string | null, dansContenu: boolean): void {
+  const l = lentilleDe(u.contexte);
+  if (!l) return;
+  if (dansContenu) {
+    const actuel = niveauEdition(u.contexte);
+    if (actuel === null || cible === actuel) return;
+    const quitte = uniteDans(m.dessin, actuel, cible);
+    ac.poserNiveau(cible);
+    ac.choisir(quitte !== null ? [quitte] : []);
+    ac.poserPoint(null);
+    ac.annoncer(cible !== null ? phraseNiveau(m.dessin, cible) : phraseRacineContenu(dessinComplet(m), l.groupe, l.genre));
+    return;
+  }
+  const complet = dessinComplet(m), c = contenuDuGroupe(complet, l.groupe, l.genre);
+  if (c && contenuVide(c)) { ac.dire(phraseContenuVide(l.genre)); return; }
+  const quitte = cible === l.groupe ? null : uniteDans(complet, l.groupe, cible);
+  ac.poserContexte(cible !== null ? { groupe: cible } : null);
+  ac.choisir(quitte !== null ? [quitte] : []);
+  ac.poserPoint(null);
+  ac.annoncer((l.genre === 'decoupe' ? 'Découpe reposée. ' : 'Masque reposé. ') + phraseNiveau(complet, cible));
+}
+
+/**
  * Les elements des groupes au menu Edition, en modele riche seulement (vide sinon) : chacun avec son raccourci, grise quand la
  * selection ne s'y prete pas.
  */
 export function elementsGroupes(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur): ElementMenu[] {
-  if (!groupesActifs(m.dessin, u.modele)) return [];
+  if (!groupesActifs(dessinComplet(m), u.modele)) return [];
   const seul = groupeSeul(m);
   return [
     { id: 'grouper', libelle: 'Grouper', icone: 'grouper', raccourci: 'Ctrl+G', separateur: true, desactive: !m.sel.length, onClick: ac.grouper },
@@ -99,8 +128,8 @@ export function creerMotifDepuisSelection(m: Pick<ModeleDessin, 'dessin' | 'sel'
  * avant. Combiner et Separer restent au menu Edition et dans la rangee, sans raccourci en riche : aucune touche libre ne vaut sur
  * tous les claviers (AltGr est Ctrl+Alt, l'AZERTY prend les chiffres sans Maj).
  */
-export function ctrlG(m: Pick<ModeleDessin, 'dessin'>, u: Pick<EtatInterface, 'modele'>, ac: ActionsEditeur, maj: boolean): void {
-  if (groupesActifs(m.dessin, u.modele)) { if (maj) ac.degrouper(); else ac.grouper(); } else if (maj) ac.separerSelection(); else ac.combinerSelection();
+export function ctrlG(m: Pick<ModeleDessin, 'dessin' | 'complet'>, u: Pick<EtatInterface, 'modele'>, ac: ActionsEditeur, maj: boolean): void {
+  if (groupesActifs(dessinComplet(m), u.modele)) { if (maj) ac.degrouper(); else ac.grouper(); } else if (maj) ac.separerSelection(); else ac.combinerSelection();
 }
 
 /**
@@ -108,7 +137,7 @@ export function ctrlG(m: Pick<ModeleDessin, 'dessin'>, u: Pick<EtatInterface, 'm
  * d'un niveau. Vrai quand la touche est prise ; Entree sur une feuille garde son sens d'avant (ses points, ou la saisie d'un texte).
  */
 export function toucheGroupes(e: KeyboardEvent, m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur): boolean {
-  if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.altKey || u.outil !== 'selection' || !groupesActifs(m.dessin, u.modele)) return false;
+  if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.altKey || u.outil !== 'selection' || !groupesActifs(dessinComplet(m), u.modele)) return false;
   if (e.shiftKey) { sortirDuGroupe(ac); return true; }
   const seul = groupeSeul(m);
   return seul !== null && entrerDansGroupe(m, ac, seul);

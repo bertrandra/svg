@@ -30,6 +30,7 @@ import { elementsGroupes, groupesActifs, telechargerAPlat } from './commandesGro
 import { elementsContenus } from './commandesContenus.js';
 import { useInsertionImage } from './InsererImage.js';
 import { useStockage } from './contexteStockage.js';
+import { dessinComplet } from './lentille.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -130,7 +131,7 @@ function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
-  const hote: ElementMenu[] = (ui.fin.actionsHote ?? []).map(a => ({ id: 'hote-' + a.id, libelle: a.libelle, onClick: () => a.faire({ dessin: mo.dessin, production: ui.production }) }));
+  const hote: ElementMenu[] = (ui.fin.actionsHote ?? []).map(a => ({ id: 'hote-' + a.id, libelle: a.libelle, onClick: () => a.faire({ dessin: dessinComplet(mo), production: ui.production }) }));
   return [
     ...(recuperer ? [recuperer] : []),
     // Le geste de fin acheve l'etape « Récupérez votre dessin » chez un hote, ou le dessin se recupere par lui (sans visite, rien).
@@ -140,7 +141,7 @@ function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void
     ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
     // Le SVG a plat (ADR-0012 §6), en modele riche : les octets d'avant le modele v2, sans groupe ni definition ; un telechargement,
     // pas un enregistrement.
-    ...(groupesActifs(mo.dessin, ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', separateur: true, onClick: () => telechargerAPlat(mo.dessin, ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
+    ...(groupesActifs(dessinComplet(mo), ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', separateur: true, onClick: () => telechargerAPlat(dessinComplet(mo), ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
     // Inserer une image (ADR-0012, etape 8), en modele riche : un PNG, JPEG, GIF ou WebP au centre de la vue.
     ...(image ? [image] : []),
     // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
@@ -162,7 +163,7 @@ function BoiteCredits({ fermer }: { fermer: () => void }) {
  */
 function usePolicesDuDessin(): PoliceCreditee[] {
   const mo = useDessin(), tx = useTexte();
-  const textes = mo.dessin.formes.flatMap(f => (f.texte && estIdCatalogue(f.texte.police.id) ? [f.texte.police] : []));
+  const textes = dessinComplet(mo).formes.flatMap(f => (f.texte && estIdCatalogue(f.texte.police.id) ? [f.texte.police] : []));
   const avecCatalogue = textes.length > 0 && tx.enLigne;
   useEffect(() => { if (avecCatalogue) tx.chargerCatalogue(); }, [avecCatalogue, tx]);
   const lues = variantesEmployees(tx.catalogue, textes);

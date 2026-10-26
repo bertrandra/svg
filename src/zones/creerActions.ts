@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, contexteValide, dessinableEnPoints, garderTextes, MSG_POINTS_IMAGE, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, contenuEnDessin, dessinableEnPoints, reposerContenu, garderTextes, MSG_POINTS_IMAGE, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -18,8 +18,10 @@ import type { Annonce } from './annonces.js';
 import { garderVersions, idVersion, type Version } from './session.js';
 import type { ActionsEditeur, ContexteEdition, EtatEnregistrement, Fond, Modele, OptionsFin, Outil, Point, SuiteCricut, Tiroir } from './typesEditeur.js';
 import { garderModele, phraseModele } from './modele.js';
-import { PHRASE_RACINE, phraseEntreeGroupe } from './phrasesGroupes.js';
 import { aEnregistrer, perdrait } from './enregistrement.js';
+import { lentilleDe, type Lentille } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
+import { actionsContexte } from './actionsContexte.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { RegleZone } from '../engine/selection.js';
@@ -62,13 +64,20 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   // La garde du texte vivant (ADR-0022) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
   // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts). Puis le lien des textes poses (ADR-0031) :
   // un texte dont la forme a change se recompose sur elle, dans la meme entree d'historique ; sans forme, il redevient libre.
-  const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => {
-    s.poserH(x => {
-      const g = garderTextes(x.present, f(x.present)).dessin;
-      const d = suivreDispositions(x.present, g, p => glyphesDe?.(p) ?? null).dessin;
-      return avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
-    });
+  const suivre = (avant: DessinSvg, apres: DessinSvg): DessinSvg => suivreDispositions(avant, garderTextes(avant, apres).dessin, p => glyphesDe?.(p) ?? null).dessin;
+  // Dans une decoupe ou un masque (paquet 8-D), l'operation recoit le dessin de travail de la lentille, et ce qu'elle rend reprend sa
+  // place dans le groupe : un geste reste UNE entree d'historique du dessin complet. La lentille est celle du moment de l'appel.
+  const parLentille = (complet: DessinSvg, l: Lentille, f: (d: DessinSvg) => DessinSvg): DessinSvg => {
+    const vue = contenuEnDessin(complet, l.groupe, l.genre);
+    return vue ? reposerContenu(complet, l.groupe, l.genre, suivre(vue, f(vue))).dessin : complet;
   };
+  const avancerAvec = (x: Historique<DessinSvg>, d: DessinSvg, cle: string | null) => avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
+  const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => {
+    const l = lentilleDe(lire().contexte);
+    s.poserH(x => avancerAvec(x, l ? parLentille(x.present, l, f) : suivre(x.present, f(x.present)), cle));
+  };
+  // Ce qui vise le dessin entier meme dans une lentille : liberer ou inverser son contenu, corriger un constat de la machine.
+  const appliquerComplet = (f: (d: DessinSvg) => DessinSvg, cle: string | null = null) => s.poserH(x => avancerAvec(x, suivre(x.present, f(x.present)), cle));
   const finir = () => s.poserH(x => clore(x));
   // Changer d'outil, de quelque facon que ce soit, rend aussi le reticule du clavier : il n'a de sens que pour l'outil qui l'a pose.
   const poserOutilBrut = (o: Outil) => { s.poserOutilBrut(o); s.poserCurseur(null); };
@@ -77,6 +86,8 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     const seule = o === 'points' ? lire().formeSeule : null;
     // Les points d'une image ne se modifient pas (ADR-0012, etape 12) : l'outil reste ce qu'il etait, et on dit quoi faire.
     if (seule && !dessinableEnPoints(seule)) { dire(MSG_POINTS_IMAGE); return; }
+    // Le texte ne passe pas par la lentille (paquet 8-D) : une decoupe n'en garderait que les contours, un masque l'ecrit en contours.
+    if (o === 'texte' && lentilleDe(lire().contexte)) { dire(RAISONS_LENTILLE.texte); return; }
     if (seule?.texte && !seule.verrouille) {
       appliquer(d => ({ ...d, formes: d.formes.map(f => (f.id === seule.id ? sansTexte(f) : f)) }));
       dire('Texte vectorisé pour modifier ses points : il n’est plus modifiable comme texte. Ctrl+Z le rend.');
@@ -93,8 +104,10 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
   const groupes = actionsGroupes(lire, leviers);
-  const poserContexte: ActionsEditeur['poserContexte'] = c => { const { dessin } = lire(); s.poserContexte(c && contexteValide(dessin, c.groupe) ? c : null); };
-  const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
+  const contexte = actionsContexte(lire, s, dire, annoncer);
+  // Le contexte de production juge et corrige le dessin entier, meme depuis une decoupe ou un masque.
+  const lireComplet = () => { const e = lire(); return e.complet ? { ...e, dessin: e.complet } : e; };
+  const production = actionsProduction(lireComplet, { ...leviers, appliquer: appliquerComplet }, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
   return {
     appliquer, finir, poserOutil,
     poserGlyphes: g => { glyphesDe = g; },
@@ -140,9 +153,9 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       if (!e.brouillon) { dire('Ctrl+S ne garde rien ici : « ' + e.fin.libelle + ' » rend votre dessin.'); return; }
       if (!e.modifie && !e.productionModifiee) { dire('Aucune modification : rien à garder.'); return; }
       // Un brouillon qui rend faux n'a pas ete garde (stockage refuse ou plein) : on ne pretend pas le contraire.
-      dire(e.brouillon(svgDocument(e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
+      dire(e.brouillon(svgDocument(e.complet ?? e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
     },
-    ajuster: () => { const e = lire(), cadre = cadreDeVue(e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
+    ajuster: () => { const e = lire(), cadre = cadreDeVue(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
     ajusterAuDessin: () => lire().vues.ajuster(),
     continuerEdition: () => s.poserQuitter(false),
     garderVersion: (nom, svg) => {
@@ -157,40 +170,12 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       s.poserModele(m);
       dire(phraseModele(m, garderModele(e.stockage, m)));
     },
-    poserContexte,
-    entrerGroupe: id => {
-      const { dessin } = lire(), phrase = contexteValide(dessin, id) ? phraseEntreeGroupe(dessin, id) : null;
-      if (!phrase) return false;
-      s.poserContexte({ groupe: id });
-      s.choisir([]);
-      s.poserPoint(null);
-      annoncer(phrase);
-      return true;
-    },
-    sortirGroupe: () => {
-      const { dessin, contexte } = lire(), actuel = contexteValide(dessin, contexte?.groupe);
-      if (!actuel) return false;
-      const parent = contexteValide(dessin, dessin.groupes?.[actuel]?.parent);
-      s.poserContexte(parent ? { groupe: parent } : null);
-      // Le groupe quitte reste choisi : on voit d'ou l'on sort, et Echap suivant vide la selection, comme partout.
-      s.choisir([actuel]);
-      s.poserPoint(null);
-      annoncer((parent ? phraseEntreeGroupe(dessin, parent) : null) ?? PHRASE_RACINE);
-      return true;
-    },
-    deplier: (ids, deplie) => s.poserDeplies(avant => {
-      const change = ids.filter(id => avant.has(id) !== deplie);
-      if (!change.length) return avant;
-      const apres = new Set(avant);
-      for (const id of change) { if (deplie) apres.add(id); else apres.delete(id); }
-      return apres;
-    }),
     poserRegleZone: r => {
       s.poserRegleZone(r);
       dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
     },
-    ...metier, ...trace, ...production, ...groupes,
-    // Les contenus (ADR-0012, etape 8) : decoupes, masques, effets, images inserees.
-    ...actionsContenus(lire, leviers, poserContexte)
+    ...metier, ...trace, ...production, ...groupes, ...contexte,
+    // Les contenus (ADR-0012, etape 8) : decoupes, masques, effets, images inserees ; modifier une decoupe ou un masque (paquet 8-D).
+    ...actionsContenus(lire, { ...leviers, appliquerComplet, annoncer }, contexte.poserContexte, s.poserContexte)
   };
 }

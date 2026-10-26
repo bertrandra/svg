@@ -22,6 +22,8 @@ import { estOutilZone } from './commandesSelection.js';
 import { poigneeDe, poigneesActives, type CiblePoignee } from './PoigneesDegrade.js';
 import { effetsAuRepos, PHRASE_EFFETS_AU_REPOS } from './brouillon.js';
 import type { ActionsEditeur, Coin, OutilForme, Vue } from './typesEditeur.js';
+import { lentilleDe, niveauEdition } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
@@ -185,7 +187,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       if (g.b && ui.aimants && !ui.grille) {
         // Le dessin de depart et la selection ne changent pas pendant le geste : les cibles se calculent une fois.
         // Des reperes masques n'attirent pas (ADR-0038) ; dans un groupe, seuls ses freres attirent (ADR-0012, annexe 6 §2).
-        g.cibles ??= ciblesAimants(reperesActifs ? g.base : sansReperes(g.base), g.ids, ui.contexte?.groupe ?? null);
+        g.cibles ??= ciblesAimants(reperesActifs ? g.base : sansReperes(g.base), g.ids, niveauEdition(ui.contexte));
         const a = aimanterBoite({ ...g.b, x: g.b.x + dx, y: g.b.y + dy }, g.cibles, 6 / vue.zoom);
         dx += a.dx; dy += a.dy;
         ac.poserGuides(a.lignes);
@@ -291,6 +293,8 @@ function useGestesTexte(prise: ReturnType<typeof usePrise>) {
     }
     ac.choisir([id]);
     const f = mo.dessin.formes.find(x => x.id === id);
+    // Dans une decoupe ou un masque (paquet 8-D), un texte ne se retape pas, et ses points le vectoriseraient : on dit pourquoi.
+    if (f?.texte && lentilleDe(ui.contexte)) { ac.dire(RAISONS_LENTILLE.texte); return; }
     if (f?.texte && !f.verrouille) sx.ouvrir(id, p); else ac.poserOutil('points');
   };
   /** La souris enfoncee donnerait le focus a la toile : pendant la saisie, il reste dans son champ. */

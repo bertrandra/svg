@@ -8,11 +8,12 @@ import { useFocusDialogue } from './focusEditeur.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
+import { dessinComplet } from './lentille.js';
 
 /** Les raccourcis de l'editeur, tels qu'on les dit : la meme liste dans le panneau du dessin et dans la boite de l'aide. */
 export function ListeRaccourcis() {
   // Le modele riche (ADR-0012, etape 2) donne Ctrl+G aux groupes : la liste dit les raccourcis du dessin ouvert.
-  const riche = groupesActifs(useDessin().dessin, useInterface().modele);
+  const riche = groupesActifs(dessinComplet(useDessin()), useInterface().modele);
   return (
     <ul className="raccourcis">
       <li>V sélection · B cadre de sélection · Q lasso · A points · H, ou espace maintenu en glissant : main · O contours</li>

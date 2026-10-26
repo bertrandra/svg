@@ -30,7 +30,8 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       vues.poserVue({ zoom, x: (el.clientWidth - bo.l * zoom) / 2 - bo.x * zoom, y: (el.clientHeight - bo.h * zoom) / 2 - bo.y * zoom });
     },
     enregistrerTout: () => {
-      const { dessin, enregistrer, production } = lire();
+      // Le dessin complet, meme dans une decoupe ou un masque (paquet 8-D) : c'est lui qu'on rend.
+      const e = lire(), dessin = e.complet ?? e.dessin, { enregistrer, production } = e;
       // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
       // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
       const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;

@@ -10,6 +10,7 @@ import { changerDeRang, ciblesDe, deplacerVers, entrerAuDessus, renommerGroupe, 
 import { destinations, enfantsDe, etendue, groupeCommun, idNoeud, parentDe, type LigneArbre } from './lignesCalques.js';
 import { PHRASE_FEUILLE_SANS_NOM, PHRASE_VERROUILLE, phraseDeplie, phraseFreresDeplies, phraseReplie } from './phrasesCalques.js';
 import type { ActionsEditeur, ContexteEdition } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 /** Le type des donnees glissees d'une ligne : les identifiants des noeuds, separes par des espaces. */
 export const TYPE_GLISSE = 'application/x-svg-noeuds';
@@ -63,7 +64,7 @@ export function verbesArbre(e: EtatArbre) {
     ac.poserPoint(null);
     if (!ids.length) return;
     const g = groupeCommun(dessin, ids);
-    if (g !== (e.contexte?.groupe ?? null)) ac.poserContexte(g === null ? null : { groupe: g });
+    if (g !== niveauEdition(e.contexte)) ac.poserNiveau(g);
   };
 
   const choisirLigne = (id: string, mode: 'seul' | 'basculer' | 'etendre') => {
@@ -178,7 +179,11 @@ export function gestesSouris(e: EtatArbre, v: VerbesArbre) {
   };
   const doubleClic = (ev: MouseEvent<HTMLDivElement>) => {
     const t = ev.target as HTMLElement, l = ligneDe(t);
-    if (l && !t.closest('[data-action], input') && groupeDe(dessin, l.id)) v.entrer(l.id);
+    if (!l || t.closest('[data-action], input') || !groupeDe(dessin, l.id)) return;
+    // La pastille d'une decoupe ou d'un masque : on en modifie le contenu (paquet 8-D) ; ailleurs sur la ligne, on entre dans le groupe.
+    const pastille = t.closest<HTMLElement>('[data-pastille]')?.dataset.pastille;
+    if (pastille === 'decoupe' || pastille === 'masque') { ac.modifierContenu(pastille, l.id); return; }
+    v.entrer(l.id);
   };
   const prendFocus = (ev: FocusEvent<HTMLDivElement>) => {
     const t = ev.target as HTMLElement;

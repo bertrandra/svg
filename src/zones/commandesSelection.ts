@@ -11,6 +11,7 @@ import { noeudsChoisissables } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
 import type { ElementMenu } from './commun/Menu.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil, OutilZone } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 /** Les outils de selection, dans l'ordre du menu : leur icone, leur nom, leur raccourci. */
 export const OUTILS_SELECTION = [
@@ -69,7 +70,7 @@ function choisir(ac: ActionsEditeur, ids: string[], phrase: string): void {
 export function commandesSelection(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur) {
   const procede = u.profil && operationsApplicables(u.profil.procede) ? u.profil.procede : null;
   // Un dessin riche (ADR-0012, annexe 6 §2) : tout choisir et inverser ne voient que les noeuds du niveau du contexte d'edition.
-  const niveau = (): string[] | null => (estPlat(m.dessin) ? null : noeudsChoisissables(m.dessin, u.contexte?.groupe ?? null));
+  const niveau = (): string[] | null => (estPlat(m.dessin) ? null : noeudsChoisissables(m.dessin, niveauEdition(u.contexte)));
   return {
     tout: () => { const ids = niveau() ?? toutesChoisissables(m.dessin); ac.choisir(ids); ac.poserPoint(null); },
     rien: () => { ac.choisir([]); ac.poserPoint(null); },

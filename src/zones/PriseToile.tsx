@@ -12,6 +12,8 @@ import { phraseSelection } from './annonces.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import type { Vue } from './typesEditeur.js';
+import { dessinComplet, lentilleDe, niveauEdition } from './lentille.js';
+import { phraseRacineContenu } from './phrasesContenus.js';
 
 /** Ce qu'il faut d'un evenement de pointeur (ou de souris, pour le double-clic : pas de `pointerType`, c'est une souris). */
 interface Pointage { clientX: number; clientY: number; pointerType?: string; altKey?: boolean }
@@ -55,7 +57,7 @@ function priseSansAlt(svg: SVGSVGElement | null, ids: readonly string[], sel: re
 /** La prise des gestes : la forme sous le pointeur, ou, avec Alt, celle du dessous de la selection (dite a voix haute). */
 export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
-  const sous = (e: Pointage, contexte = ui.contexte?.groupe ?? null): string[] => idsSous(svgRef.current, mo.dessin, contexte, ui.vues.vue, ui.contours, e);
+  const sous = (e: Pointage, contexte = niveauEdition(ui.contexte)): string[] => idsSous(svgRef.current, mo.dessin, contexte, ui.vues.vue, ui.contours, e);
   return {
     /** La forme qu'un double-clic vise : la meilleure, sans cycle. */
     viser: (e: Pointage): string | null => sous(e)[0] ?? null,
@@ -68,13 +70,15 @@ export function usePrise(svgRef: RefObject<SVGSVGElement | null>) {
      * niveau le plus proche ou cette forme se prend, qui devient le contexte ; rend le noeud pris (a choisir), ou null (le vide).
      */
     sortir(e: Pointage): string | null {
-      const actuel = ui.contexte?.groupe ?? null;
+      const actuel = niveauEdition(ui.contexte);
       if (actuel === null) return null;
       for (const niveau of [...cheminDuContexte(mo.dessin, actuel).slice(1), null]) {
         const id = sous(e, niveau)[0];
         if (id === undefined) continue;
-        ac.poserContexte(niveau !== null ? { groupe: niveau } : null);
-        ac.annoncer(phraseNiveau(mo.dessin, niveau) + ' ' + phraseSelection(mo.dessin, [id]));
+        // Dans une decoupe ou un masque (paquet 8-D), on remonte dans le contenu seulement : la lentille reste.
+        ac.poserNiveau(niveau);
+        const l = lentilleDe(ui.contexte), arrivee = l && niveau === null ? phraseRacineContenu(dessinComplet(mo), l.groupe, l.genre) : phraseNiveau(mo.dessin, niveau);
+        ac.annoncer(arrivee + ' ' + phraseSelection(mo.dessin, [id]));
         return id;
       }
       return null;
@@ -119,8 +123,8 @@ export const SurvolToile = memo(function SurvolToile({ svgRef, chemin }: { svgRe
   const mo = useDessin(), ui = useInterface(), { choixForme } = useSaisie();
   const [survol, poserSurvol] = useState<Survol | null>(null);
   // Les ecouteurs sont poses une fois : ils lisent l'etat du dernier rendu.
-  const etat = useRef({ dessin: mo.dessin, contexte: ui.contexte?.groupe ?? null, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil });
-  etat.current = { dessin: mo.dessin, contexte: ui.contexte?.groupe ?? null, sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil };
+  const etat = useRef({ dessin: mo.dessin, contexte: niveauEdition(ui.contexte), sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil });
+  etat.current = { dessin: mo.dessin, contexte: niveauEdition(ui.contexte), sel: mo.sel, vue: ui.vues.vue, contours: ui.contours, outil: ui.outil };
 
   useEffect(() => {
     const svg = svgRef.current;
