@@ -203,6 +203,13 @@ empreintes.
 
 ### Ajouté
 
+- Groupes au clavier et au menu (modèle riche, bêta) : Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer dans le groupe (Entrée),
+  Sortir du groupe (Maj+Entrée ou Échap), au menu Édition et dans la rangée de la sélection. Dans un groupe, Tab, Page suivante et
+  Ctrl+A ne parcourent que ses éléments, et un clic sur une forme hors du groupe en fait sortir. Un fil d'Ariane (« Racine ›
+  Nuage ») dans la barre d'état remonte d'un geste. L'éditeur dit un groupe choisi, créé ou défait. « Télécharger le SVG à plat »
+  (menu Fichier) rend un SVG sans groupe ni définition. Une image se prend sur toute sa surface et ne passe pas en mode points,
+  et c'est dit. En modèle plat, rien ne change : Ctrl+G combine, Ctrl+Maj+G sépare.
+
 - « Groupes, dégradés, effets (bêta) » au menu Édition (modèle v2, étape 2, premiers paquets) : un SVG à groupes s'ouvre avec ses
   groupes, ses dégradés, ses découpes, ses effets et ses images, et se dessine sur la toile tel qu'il s'écrit. Un double-clic entre
   dans un groupe : le reste s'estompe, et seuls ses éléments se prennent, se choisissent au cadre ou au lasso et servent d'aimants ;

@@ -168,6 +168,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Les groupes se commandent en riche seulement** (ADR-0012, étape 2-C) : `zones/commandesGroupes.ts` (`groupesActifs` : le réglage
+  riche ou un dessin déjà riche) porte Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer (Entrée), Sortir (Maj+Entrée, Échap, clic hors
+  du contexte) et « Télécharger le SVG à plat » (Fichier, pas un enregistrement) ; Combiner et Séparer y perdent leur raccourci ; Tab,
+  Page suivante et Ctrl+A passent par `noeudsChoisissables(d, contexte)`, la liste d'avant pour un dessin plat ; le fil d'Ariane
+  (`FilAriane.tsx`) rend le focus à la toile ; en plat, rien n'apparaît.
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente

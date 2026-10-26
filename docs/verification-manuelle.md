@@ -110,7 +110,7 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | # | Raccourci | Réussi si |
 |---|---|---|
 | 5.1 | Ctrl (Cmd sur Mac) + Z, Y, Maj+Z | annuler / rétablir ; la touche est celle de la lettre, pas sa position |
-| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare) ; Ctrl+S garde un brouillon et dit « Brouillon gardé. », **sans fermer l’éditeur** ni ouvrir « Enregistrer sous » du navigateur |
+| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare ; avec le modèle riche, grouper et dégrouper) ; Ctrl+S garde un brouillon et dit « Brouillon gardé. », **sans fermer l’éditeur** ni ouvrir « Enregistrer sous » du navigateur |
 | 5.3 | Ctrl+] et Ctrl+[ : sur AZERTY et QWERTZ ces crochets demandent AltGr (Ctrl+Alt sous Windows) | le plan avance / recule, ou le menu Édition dit un raccourci qui marche sur cette disposition ; noter la combinaison réelle |
 | 5.4 | Lettres d’outils et de vue (R rectangle, G grille, Z zoom sur la sélection, M aimants) sur AZERTY et QWERTZ : « Z », « W », « Y » ne sont pas aux mêmes places | la lettre d’outil est celle **imprimée sur la touche** (`e.key`), pas la position QWERTY |
 | 5.5 | Alt+flèches (Windows, Linux) | l’objet se redimensionne, **le navigateur ne revient pas à la page précédente** (Chrome, Edge, Firefox) |
