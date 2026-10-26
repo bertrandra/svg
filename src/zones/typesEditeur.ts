@@ -1,7 +1,7 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, FormeDeBase, Operation, ParametresFormes, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, FormeDeBase, Operation, ParametresFormes, PoliceTexte, ReglageEffets, Style, TypeNoeud } from '../engine/editionSvg.js';
 import type { Glyphes } from '../engine/texte.js';
 import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
@@ -288,6 +288,20 @@ export interface ActionsEditeur {
   grouper: () => void;
   /** Defait les groupes choisis : leurs enfants remontent et deviennent la selection, et c'est dit (modele riche, Ctrl+Maj+G). */
   degrouper: () => void;
+  /** La forme du dessus de la selection decoupe les autres, reunies dans un groupe nouveau choisi ; c'est dit (modele riche, ADR-0012 etape 8). */
+  creerDecoupe: () => void;
+  /** Libere la decoupe du groupe choisi (ou qui contient la selection) : la forme revient, choisie, dans le groupe devenu le contexte. */
+  libererDecoupe: () => void;
+  /** L'element du dessus de la selection masque les autres, reunis dans un groupe nouveau choisi ; c'est dit. */
+  creerMasque: () => void;
+  /** Inverse le masque du groupe choisi (ou qui contient la selection), et le dit. */
+  inverserMasque: () => void;
+  /** Libere le masque du groupe choisi : son contenu revient, choisi, dans le groupe devenu le contexte. */
+  libererMasque: () => void;
+  /** Pose un reglage d'effets sur la selection ; `cle` fond un geste continu (un curseur, une frappe) en une entree d'historique. */
+  poserEffets: (r: ReglageEffets, cle?: string | null) => void;
+  /** Insere une image (`data:` base64) au centre de la vue, dans le groupe du contexte ; vrai si elle l'a ete, sinon le refus est dit. */
+  insererImage: (donnees: string) => boolean;
 }
 
 export interface Vues {

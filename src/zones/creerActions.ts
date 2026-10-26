@@ -10,6 +10,7 @@ import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } 
 import { actionsEdition, type EtatLu } from './actions.js';
 import { actionsTrace } from './actionsTrace.js';
 import { actionsGroupes } from './actionsGroupes.js';
+import { actionsContenus } from './actionsContenus.js';
 import { actionsProduction, cadreDeVue, svgDocument } from './actionsProduction.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import type { Stockage } from '../io/stockage.js';
@@ -92,6 +93,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   const metier = actionsEdition(lire, leviers);
   const trace = actionsTrace(lire, leviers);
   const groupes = actionsGroupes(lire, leviers);
+  const poserContexte: ActionsEditeur['poserContexte'] = c => { const { dessin } = lire(); s.poserContexte(c && contexteValide(dessin, c.groupe) ? c : null); };
   const production = actionsProduction(lire, leviers, { poserProduction: s.poserProduction, poserSuiteCricut: s.poserSuiteCricut, poserApercuMachine: s.poserApercuMachine });
   return {
     appliquer, finir, poserOutil,
@@ -155,7 +157,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       s.poserModele(m);
       dire(phraseModele(m, garderModele(e.stockage, m)));
     },
-    poserContexte: c => { const { dessin } = lire(); s.poserContexte(c && contexteValide(dessin, c.groupe) ? c : null); },
+    poserContexte,
     entrerGroupe: id => {
       const { dessin } = lire(), phrase = contexteValide(dessin, id) ? phraseEntreeGroupe(dessin, id) : null;
       if (!phrase) return false;
@@ -187,6 +189,8 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       s.poserRegleZone(r);
       dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
     },
-    ...metier, ...trace, ...production, ...groupes
+    ...metier, ...trace, ...production, ...groupes,
+    // Les contenus (ADR-0012, etape 8) : decoupes, masques, effets, images inserees.
+    ...actionsContenus(lire, leviers, poserContexte)
   };
 }

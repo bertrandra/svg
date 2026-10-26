@@ -30,6 +30,7 @@ import { heriter } from '../heritage.js';
 import { boiteChemin, facteur, multiplier, transformerChemin } from '../geometrie.js';
 import { inverse } from '../clones.js';
 import { normaliser } from '../arbre.js';
+import { sansTexte } from '../texteVivant.js';
 import { nb } from '../chemins.js';
 import { COORDONNEE_MAX, coordonneeSaine } from '../limites.js';
 import { lireLongueur, lireReference, NOEUDS_DEFS_MAX, PROFONDEUR_DEFS_MAX } from '../resolution.js';
@@ -264,7 +265,17 @@ function definitionMasque(mq: Masque, e: ContexteEcriture): Definition {
   const attributs = ' maskUnits="userSpaceOnUse" x="' + nb(r.x, p) + '" y="' + nb(r.y, p) + '" width="' + nb(Math.max(0, r.l), p) + '" height="' + nb(Math.max(0, r.h), p) + '"'
     + (mq.type === 'alpha' ? ' style="mask-type:alpha"' : '');
   // Le contenu s'ecrit d'abord : ses propres definitions (degrades, decoupes, masques, filtres) se deposent avant le <mask> qui les cite.
-  return { genre: 'm', balise: 'mask', attributs, enfants: e.contenu(mq.contenu) };
+  return { genre: 'm', balise: 'mask', attributs, enfants: e.contenu(enContours(mq.contenu)) };
+}
+
+/**
+ * Le contenu d'un masque tel qu'il s'ecrit : ses textes vivants en contours (ADR-0012, etape 8). Le modele les garde vivants (liberer le
+ * masque les rend retapables, le projet JSON les garde) ; le fichier n'en ecrit que les contours, sans `data-ed-*` : un masque est de la
+ * luminance, et la specification de l'ecriture (`invariants.ts`) reste fermee aux attributs du texte vivant dans un <mask>. Le meme
+ * contenu quand il n'a pas de texte.
+ */
+function enContours(c: Contenu): Contenu {
+  return c.formes.some(f => f.texte) ? { ...c, formes: c.formes.map(sansTexte) } : c;
 }
 
 // ---------------------------------------------------------------- transformation et boite

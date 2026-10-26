@@ -992,3 +992,16 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* Le brouillon d'un geste (ADR-0012, etape 7-B, zones/brouillon.ts) : au-dela de vingt noeuds a effet, les filtres se retirent le temps
    d'un glisser, d'un redimensionnement ou d'une rotation. Une regle de feuille l'emporte sur l'attribut de presentation `filter`. */
 .editeur-svg-toile .noeuds-toile[data-brouillon] [filter] { filter: none; }
+/* Les pastilles d'un groupe dans l'arbre des calques (ADR-0012, etape 8) : les icones, puis les mots (decoupe, masque, flou, ombre,
+   opacite), a l'encre douce comme le nombre d'elements, sur une bande d'une ligne ; un mot qui ne tient pas passe a la ligne suivante,
+   cachee : jamais rogne sous une bascule, jamais une deuxieme hauteur de ligne (fenetrage). */
+.calque-pastilles { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: center; align-content: flex-start; column-gap: var(--esp-xs); min-width: 0; max-width: max-content; height: 16px; overflow: hidden; line-height: 16px; color: var(--encre-douce); }
+.calque-pastilles > .icone { flex: none; height: 16px; }
+.pastille-mot { flex: none; white-space: nowrap; }
+/* La section Effets de l'inspecteur (ADR-0012, etape 8) : une case par effet, ses reglages dessous. */
+.case-effet { gap: var(--esp-s); }
+.case-effet > span { flex: 1; }
+.reglages-effet { display: grid; gap: var(--esp-s); min-width: 0; padding-inline-start: var(--esp-l); }
+@media (pointer: coarse), (max-width: 900px) {
+  .case-effet { min-height: 40px; }
+}

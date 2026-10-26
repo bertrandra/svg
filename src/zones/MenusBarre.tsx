@@ -27,6 +27,8 @@ import { adressesPermises } from './OuvrirAdresse.js';
 import { useElementsNuancier } from './actionsNuancier.js';
 import { elementsSelection } from './commandesSelection.js';
 import { elementsGroupes, groupesActifs, telechargerAPlat } from './commandesGroupes.js';
+import { elementsContenus } from './commandesContenus.js';
+import { useInsertionImage } from './InsererImage.js';
 import { useStockage } from './contexteStockage.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
@@ -107,6 +109,8 @@ function useElementsEdition(): ElementMenu[] {
     // Les groupes (ADR-0012, etape 2), en modele riche seulement : Ctrl+G et Ctrl+Maj+G y groupent et degroupent (annexe 9, question 1),
     // et Combiner et Separer gardent leur place, sans raccourci.
     ...groupes,
+    // Les decoupes et les masques (ADR-0012, etape 8), en modele riche seulement, sans raccourci (commandesContenus.ts).
+    ...elementsContenus(mo, ui, ac),
     { id: 'combiner', libelle: 'Combiner en un tracé composé', icone: 'combiner', ...(riche ? {} : { raccourci: 'Ctrl+G' }), separateur: riche, desactive: mo.sel.length < 2, onClick: ac.combinerSelection },
     { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', ...(riche ? {} : { raccourci: 'Ctrl+Maj+G' }), desactive: !mo.formeSeule || sousChemins(mo.formeSeule.d).length < 2, onClick: ac.separerSelection },
     { id: 'supprimer', libelle: 'Supprimer', icone: 'supprimer', raccourci: 'Suppr', danger: true, separateur: true, desactive: rien, onClick: ac.supprimerSelection }
@@ -122,7 +126,7 @@ export function MenuEdition() {
  * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
  * tete de cette rubrique sur un telephone (`recuperer`).
  */
-function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void): ElementMenu[] {
+function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void, image: ElementMenu | null): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
@@ -137,8 +141,10 @@ function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void
     // Le SVG a plat (ADR-0012 §6), en modele riche : les octets d'avant le modele v2, sans groupe ni definition ; un telechargement,
     // pas un enregistrement.
     ...(groupesActifs(mo.dessin, ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', separateur: true, onClick: () => telechargerAPlat(mo.dessin, ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
+    // Inserer une image (ADR-0012, etape 8), en modele riche : un PNG, JPEG, GIF ou WebP au centre de la vue.
+    ...(image ? [image] : []),
     // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
-    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: true, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
+    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: !image, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
@@ -168,10 +174,12 @@ function usePolicesDuDessin(): PoliceCreditee[] {
 export function MenuFichier({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
-  const elements = useElementsFichier(nom, poserCredits, null, poserAdresse);
+  const image = useInsertionImage();
+  const elements = useElementsFichier(nom, poserCredits, null, poserAdresse, image.element);
   return (
     <>
       <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
+      {image.entree}
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
       {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
     </>
@@ -187,7 +195,8 @@ export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
   const raccourcis = useBoiteRaccourcis();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits, useElementRecuperer(nom), poserAdresse), production = useRubriquesProduction();
+  const image = useInsertionImage();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits, useElementRecuperer(nom), poserAdresse, image.element), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
@@ -201,6 +210,7 @@ export function MenuPlus({ nom }: { nom: string }) {
   return (
     <>
       <MenuDeroulant etiquette="Plus d’actions : vue, édition, fichier" icone="options" chevron={false} alignement="droite" sections={sections} />
+      {image.entree}
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
       {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
       {raccourcis.boite}

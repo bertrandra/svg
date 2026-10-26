@@ -22,7 +22,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; **7-B (toile, brouillon, mesures) fait** le 26 octobre 2026 (ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») ; l'interface des effets est à l'étape 8 |
 | 4 Dégradés, interface | **faite** le 26 octobre 2026 (paquets 4-A et 4-B en un seul arbre ; ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 8 Découpes, masques, effets : l'interface | **faite** le 26 octobre 2026 (paquets A, B et C en un seul arbre ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 8 a posé ») ; les contextes d'édition `decoupe`/`masque` restent à faire (paquet 8-D proposé) |
+| 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -686,6 +687,99 @@ Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 ex
   panneau montre celui de la première ; la mesure sur une carte graphique ; la revue NVDA/VoiceOver des poignées (condition de la
   bascule, annexe 6 §9).
 
+### Ce que l'étape 8 a posé (26 octobre 2026)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes : 7 références nouvelles, relues), la
+lecture `plat` est inchangée, et **en modèle plat rien n'apparaît** : ni élément de menu, ni section, ni dépôt sur la toile
+(`groupesActifs` de 2-C décide partout ; e2e « à plat »). Ce que les paquets suivants trouvent :
+
+- **Les commandes** (`zones/commandesContenus.ts`, `zones/actionsContenus.ts`, phrases `zones/phrasesContenus.ts`) : « Créer une
+  découpe », « Libérer la découpe », « Créer un masque », « Inverser le masque », « Libérer le masque », au **menu Édition**, juste
+  après les groupes (il n'y a pas de menu Objet : ADR-0006 range le rare dans Édition, comme 2-C). **Aucun bouton dans la rangée de la
+  sélection** (annexe 6 §3 : « jamais un bouton de plus dans la barre ») et **aucun raccourci** : Illustrator prend Ctrl+7 et
+  Ctrl+Alt+7, qu'un clavier AZERTY n'atteint qu'avec Maj et qu'AltGr (Ctrl+Alt) confond ; aucune touche libre ne vaut sur tous les
+  claviers (la conclusion de l'annexe 9, question 1). Une commande indisponible reste visible et grisée, sa raison en infobulle
+  (`ElementMenu.raison`, une ligne de `commun/Menu.tsx` : `title` d'un élément grisé ; le DOM d'un élément sans raison ne change pas).
+  Le groupe porteur d'une libération ou d'une inversion se trouve par `porteurDe` : un groupe choisi qui en porte un, sinon le plus
+  proche ancêtre du premier élément choisi (une image découpée se choisit, la découpe est sur son enveloppe), sinon le groupe du
+  contexte. Verbes `ac.creerDecoupe`, `libererDecoupe`, `creerMasque`, `inverserMasque`, `libererMasque` (déclarés dans
+  `ActionsEditeur`, branchés dans `creerActions.ts`). Phrases : « Découpe créée : la forme du dessus découpe 2 formes. », « Découpe
+  libérée : la forme revient au premier plan du groupe, sans fond, d'un trait noir. », « Masque créé : l'élément du dessus masque 2
+  formes ; le clair laisse voir, le sombre cache. », « Masque inversé : ce qui était caché se voit, ce qui se voyait est caché. »,
+  « Masque libéré : 2 éléments reviennent au premier plan du groupe. » ; un refus du moteur (`MSG_DECOUPE`, `MSG_MASQUE`) se dit tel quel.
+- **Les contextes d'édition `decoupe` et `masque` : non faits, et pourquoi.** Le contrat (`ContexteEdition.dans`) existe, mais
+  l'éditeur édite **un** `DessinSvg`, celui de l'historique : la toile, la prise, le cadre, les aimants, l'inspecteur, les calques et
+  chaque verbe (`lire().dessin`, `appliquer`) ne voient que `formes`. Éditer `{ vb, ...groupe.decoupe.contenu }` demande une lentille
+  sur `lire`, `appliquer` et `ModeleDessin` (le contenu présenté comme un dessin, chaque résultat reposé dans son groupe, dans la même
+  entrée d'historique), la numérotation commune (I1 : `prochainNumero` voit les contenus, mais `ajouterForme` sur la vue du contenu ne
+  verrait pas le dessin), la peinture refixée des feuilles de découpe au retour (`feuilleDeDecoupe`) et la région d'un masque
+  recalculée : un paquet à lui (8-D), pas une ligne de plus. **Le minimum utile, livré** : libérer rend la forme (ou le contenu du
+  masque) **choisie**, au premier plan du groupe **devenu le contexte** (le fil d'Ariane le montre) ; on la modifie avec les outils
+  ordinaires, puis Ctrl+A dans le contexte et « Créer une découpe » (ou « Créer un masque ») la repose — sur un groupe nouveau, dans
+  l'ancien (`creerDecoupe` groupe toujours ; le fondre dans son parent changerait les références de l'étape 5).
+- **« Libérer » d'une découpe : confirmé** (sans fond, trait noir de 1, opacité 1) : une découpe ne garde que la géométrie, il n'y a
+  pas de peinture d'origine à rendre ; sans trait, la forme serait invisible et insaisissable ; le noir se voit sur le damier et sur le
+  blanc, et se repeint d'un clic. La phrase le dit.
+- **La section Effets** (`zones/SectionEffets.tsx`, une `Section` repliable de l'inspecteur, ouverte d'office quand le premier élément
+  choisi a des effets) : case « Flou » (l'écart au curseur, en racine carrée de la borne pour la précision des petits écarts, et au
+  champ chiffré « Écart du flou » ; un flou inégal lu le dit, « Flou inégal : 3 × 6. Régler l'écart le rend uniforme. ») ; case « Ombre
+  portée » (« Décalage X », « Décalage Y », « Flou de l'ombre », couleur et code, opacité au curseur, la note « L'ombre ne tourne pas
+  avec la forme. »). Les champs chiffrés s'appliquent à la validation, bornés par le moteur, et la borne atteinte se dit (« Flou :
+  écart 50. Écart au plus 50. ») ; curseurs et sélecteur de couleur sont un geste fondu par sa clé (`effets:<champ>:<ids>`), clos en
+  quittant le champ. **Un groupe choisi a désormais un inspecteur** (`InspecteurGroupe` dans `Inspecteur.tsx` : son nom, la section
+  Effets, une aide pour entrer dans le groupe) — il n'en avait aucun. L'opération est pure, bloc « étape 8 » de la façade :
+  `engine/edition/effetsOperations.ts` — `poserEffets(d, ids, reglage)` (un `ReglageEffets` champ par champ : absent ne change pas,
+  `null` retire, un objet complète l'effet existant ou celui par défaut ; sur les racines de la sélection, feuilles — images et textes
+  compris — et groupes, déverrouillés ; bornes `ecartMax`/`decalageMax` de la lecture, nombres au millième, couleur `#rrggbb` en
+  minuscules, un flou garde un écart d'au moins `ECART_FLOU_MIN` = 0,001 parce que le projet refuse « un flou sans écart » ; le même
+  dessin quand rien ne change, le champ `effets` retiré quand il n'en reste aucun, donc un dessin redevenu plat s'écrit comme avant),
+  `flouParDefaut` (un centième du plus grand côté), `ombreParDefaut` (deux centièmes vers le bas et la droite, noire à 50 %),
+  `effetsDe`. **Décision** : régler un champ d'ombre sur une sélection pose l'ombre sur chaque élément choisi, complétée par défaut
+  là où il n'y en avait pas (la sélection prend le réglage affiché, comme Illustrator).
+- **La phrase d'un flou approché** (renvoyée par 7-A) : `flousApproches(avant, apres)` (pur, mémorisé par dessin) compte les nœuds dont
+  le flou inégal est devenu uniforme ; `useVeilleFlous` (monté par `ToileEditeur`) compare chaque état au précédent et dit une fois
+  `MSG_EFFETS_OPERATIONS.approche` (« Flou approché : la transformation déforme un flou inégal ; il devient uniforme, d'écart moyen. »).
+  Une échelle par axe qui égaliserait exactement les deux écarts compte aussi (rare ; la phrase reste vraie de ce qu'on voit).
+- **Les pastilles des groupes** (renvoyées par 2-B) : `pastillesGroupe(g)` (`zones/lignesCalques.ts`) et `PastillesGroupe` dans
+  `ArbreCalques.tsx` : **les icônes d'abord** (`decoupe`, `masque`, `flou`, `ombre`, `opacite`, nouvelles dans `icones.tsx`), puis les
+  mots « découpe », « masque », « flou », « ombre », « opacité 50 % » — des **noms**, pour qu'aucune ne se lise comme l'état masqué
+  (caché) de la ligne —, sur une bande d'une ligne : un mot qui ne tient pas passe à la ligne suivante, cachée (jamais rogné sous une
+  bascule — axe le voyait recouvert —, jamais une deuxième hauteur de ligne : le fenêtrage la suppose constante). Dans le panneau des
+  calques du bureau (≈ 210 px), on voit le plus souvent les icônes seules ; le **nom accessible de la ligne** dit tout
+  (`porteParGroupe` : « Groupe « Cartes », 2 éléments, découpé, flou, opacité 50 % »), l'infobulle aussi. **Aucun jeton ajouté** :
+  l'encre douce du nombre d'éléments (4,5:1 sur le panneau, confronté par le test des jetons ; sur le voile cyan à 18 % de la ligne
+  choisie, 5,0:1 en clair et 4,8:1 en sombre, calculés, comme pour le nombre d'éléments) ; `pastille-groupe`, `contour-decoupe` et
+  `contour-masque` attendent les contextes (8-D), qui en auront l'usage.
+- **Le texte vivant dans un masque, décision** : le contenu d'un masque **s'écrit en contours** (`enContours`, dans l'écrivain du
+  `<mask>` de `fonctions/masques.ts`, donc aussi sur la toile) ; le modèle garde le texte vivant (libérer le masque le rend retapable, le
+  projet JSON le garde). La spécification de l'écriture (`invariants.ts`) reste fermée aux `data-ed-*` dans un `<mask>` : un masque est
+  de la luminance, et un texte posé (ADR-0031) y perdrait son rang. Un SVG d'inconnu qui en porterait dans un `<mask>` se relit en
+  contours à la réécriture (point fixe tenu). Aucune référence existante ne portait de texte dans un masque.
+- **« Insérer une image… »** (menu Fichier, riche seulement, avant « Insérer depuis une adresse… ») et le **dépôt d'une image sur la
+  toile** (riche seulement ; à plat aucun gestionnaire : un fichier déposé fait ce qu'il faisait) : `zones/InsererImage.tsx`
+  (`useInsertionImage`, `useDepotImage`, `insererFichierImage` : au-delà de 4 Mo le fichier n'est pas lu) ; la lecture du fichier dans
+  `io/fichiers.ts` (`donneesDuFichier` : `data:` base64, le type annoncé par le navigateur ou lu sur les premiers octets) ; la pose,
+  pure, bloc « étape 8 » : `engine/edition/imagesOperations.ts` — `insererImage(d, donnees, centre, parent?)` (vérifiée par
+  `verifierDonneesImage` de l'étape 12 : mêmes bornes, mêmes refus nommés ; 16 Mo par dessin, contenus des masques compris,
+  `octetsImages`), `cadreImage` (taille naturelle, un pixel pour une unité, réduite pour tenir dans le plan, centrée sur le centre de
+  la vue ramené dans le plan, au millième). L'image se pose au premier plan du groupe du contexte, choisie, l'outil sélection rendu ;
+  « Image insérée : 40 × 30 pixels, au centre de la vue. Déplacez-la, tournez-la ou redimensionnez-la. », ou « Cette image n'est pas
+  insérée : une image dont le contenu n'est ni un PNG, ni un JPEG, ni un GIF, ni un WebP. ».
+- **Tests** : `tests/unit/engine/interface-contenus.test.ts` (poserEffets, bornes, groupes, verrous, projet, flousApproches,
+  insererImage, refus, 16 Mo, masque à texte vivant), `v2/cas-interface-contenus.ts` (7 références `effets-op-*`, `images-op-*`,
+  `masques-op-texte-vivant`, relues, point fixe, `violationsEcriture`/`violationsNettoyage`), `tests/unit/zones/contenus.test.ts`
+  (commandes, porteur, verbes, pastilles) ; e2e `tests/e2e/decoupes-masques-effets.e2e.ts` (à plat rien ; au clavier : créer une
+  découpe, la pastille et le nom de la ligne, la libérer ; créer et inverser un masque et le retrouver à l'enregistrement ; sans
+  souris : flou et ombre depuis l'inspecteur, bornes dites, retrouvés à l'enregistrement ; « Insérer une image… » par le choix de
+  fichier, un faux PNG refusé, le dépôt sur la toile ; axe sur un groupe découpé à effets, section Effets, pastilles, menu ouvert, en
+  clair, sombre et au doigt).
+- **Reste** : les contextes `decoupe`/`masque` et leurs jetons (8-D, ci-dessus) ; la phrase d'une région de masque élargie à la
+  transformation ; la confirmation de `degrouper` sur un groupe découpé ou masqué (la phrase de 2-C dit déjà ce qui part, Ctrl+Z le
+  rend) ; l'écart vertical d'un flou inégal n'a pas de champ (on le lit, on le rend uniforme) ; « Insérer depuis une adresse » (ADR-0036)
+  n'accepte pas encore une image ; la vignette du site PHP refuse toujours `<image>`, `url(#ed-…)` ; « Créer un motif » (étape 9) se
+  rangera au menu Édition à côté des découpes et masques (une ligne de `elementsContenus` ou de `useElementsEdition`) ; contraste forcé
+  et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -907,7 +1001,7 @@ région partagent son infrastructure).
 (abandonnés, dits ; PDF raster à l'étape 13 si l'agent des exports a livré le DPI), mesures et budgets,
 corpus `inkscape-flou`. Paquets : **A** moteur (G) ; **B** toile + brouillon + mesures (M).
 
-### Étape 8 — Découpes, masques, effets : l'interface · taille G
+### Étape 8 — Découpes, masques, effets : l'interface · taille G · **faite le 26 octobre 2026**, sauf les contextes `decoupe`/`masque` (§0, « Ce que l'étape 8 a posé »)
 
 Menu Objet, contextes `decoupe`/`masque`, section Effets, phrases, jetons, axe, e2e. Après 5, 6, 7 et 2.
 Paquets : **A** menus + contextes (M) ; **B** section Effets (M) ; **C** e2e/axe (M).

@@ -16,7 +16,7 @@
 
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { ancetres, NOM_GROUPE_MAX, verrouilleEffectif, visibleEffectif, type Forme, type Groupe } from '../engine/editionSvg.js';
-import { nomDeForme, numeroDeForme } from '../engine/description.js';
+import { nomDeForme, numeroDeForme, porteParGroupe } from '../engine/description.js';
 import { segmentsFenetre } from '../util/fenetre.js';
 import { pluriel } from '../util/texte.js';
 import { genreAffiche } from './aidesEditeur.js';
@@ -26,7 +26,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useFenetre } from './Fenetre.js';
 import { gesteClavier, gestesDepot, gestesSouris, verbesArbre, type Depot, type FocusArbre, type MemoireArbre } from './gestesArbreCalques.js';
 import { Icone } from './icones.js';
-import { lignesVisibles } from './lignesCalques.js';
+import { lignesVisibles, pastillesGroupe } from './lignesCalques.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
 
 /** L'element qui porte le focus dans une ligne : aucun, la ligne, ou l'une de ses deux cellules a bouton (visibilite, verrou). */
@@ -34,7 +34,10 @@ type Arret = 'aucun' | 'ligne' | 0 | 1;
 
 /** Le nom d'un groupe tel que sa ligne le dit : « Groupe « Nuage », 3 éléments, masqué ». */
 function nomDeLigneGroupe(g: Groupe, enfants: number): string {
-  return (g.nom ? 'Groupe « ' + g.nom + ' »' : nomDeGroupe(g)) + ', ' + pluriel(enfants, 'élément') + (g.verrouille ? ', verrouillé' : '') + (g.visible ? '' : ', masqué');
+  // Ce que le groupe porte (decoupe, masque, effets, opacite : ADR-0012, etape 8) suit le nombre d'elements, avant les etats.
+  const porte = porteParGroupe(g);
+  return (g.nom ? 'Groupe « ' + g.nom + ' »' : nomDeGroupe(g)) + ', ' + pluriel(enfants, 'élément') + (porte.length ? ', ' + porte.join(', ') : '')
+    + (g.verrouille ? ', verrouillé' : '') + (g.visible ? '' : ', masqué');
 }
 
 export const ArbreCalques = memo(function ArbreCalques({ panneau }: { panneau: RefObject<HTMLElement | null> }) {
@@ -167,7 +170,7 @@ const LigneArbreCalque = memo(function LigneArbreCalque(p: ProprietesLigne) {
         {p.renomme && g
           ? <input type="text" className="calque-renommer" aria-label={'Nouveau nom du groupe ' + nomG + ' (Entrée valide, Échap annule)'} defaultValue={g.nom ?? ''} placeholder={nomDeGroupe(g)} maxLength={NOM_GROUPE_MAX} autoFocus />
           : g
-            ? <><span className="calque-genre">{g.nom ?? nomDeGroupe(g)}</span> <span className="calque-numero">{p.enfants}</span></>
+            ? <><span className="calque-genre">{g.nom ?? nomDeGroupe(g)}</span> <span className="calque-numero">{p.enfants}</span><PastillesGroupe groupe={g} /></>
             : fo ? <><span className="calque-genre">{genreAffiche(fo)}</span> <span className="calque-numero">{numeroDeForme(fo)}</span></> : null}
       </div>
       <div role="gridcell">
@@ -181,3 +184,19 @@ const LigneArbreCalque = memo(function LigneArbreCalque(p: ProprietesLigne) {
     </div>
   );
 });
+
+/**
+ * Les pastilles d'un groupe (decoupe, masque, flou, ombre, opacite) : leurs icones d'abord, qui se voient toujours, puis leurs mots, sur
+ * une bande d'une ligne ; un mot qui ne tient plus passe a la ligne suivante, cachee, plutot que de pousser les bascules ou d'etre rogne
+ * (jamais une deuxieme hauteur de ligne : le fenetrage la suppose constante). Le nom de la ligne les dit toutes, l'infobulle aussi.
+ */
+function PastillesGroupe({ groupe }: { groupe: Groupe }) {
+  const p = pastillesGroupe(groupe);
+  if (!p.length) return null;
+  return (
+    <span className="calque-pastilles" aria-hidden="true" title={p.map(x => x.mot).join(', ')}>
+      {p.map(x => <Icone key={x.icone} nom={x.icone} taille={12} />)}
+      {p.map(x => <span key={x.icone} className="pastille-mot">{x.mot}</span>)}
+    </span>
+  );
+}

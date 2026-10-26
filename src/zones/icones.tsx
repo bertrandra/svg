@@ -28,7 +28,9 @@ export type NomIcone =
   // Les regles, les reperes et les repetitions (ADR-0038).
   | 'regle' | 'repeter' | 'radiale' | 'symetrie'
   // Les groupes du modele riche (ADR-0012, etape 2).
-  | 'grouper' | 'degrouper';
+  | 'grouper' | 'degrouper'
+  // Les decoupes, les masques et les effets du modele riche (ADR-0012, etape 8) : commandes et pastilles des calques.
+  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -166,7 +168,17 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')],
   // Deux formes dans le cadre en pointilles d'un groupe ; degrouper ne garde que les coins du cadre, ouverts.
   grouper: [{ d: 'M3 3h18v18H3z', pointille: true }, t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)],
-  degrouper: [t('M3 8V3h5'), t('M16 3h5v5'), t('M21 16v5h-5'), t('M8 21H3v-5'), t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)]
+  degrouper: [t('M3 8V3h5'), t('M16 3h5v5'), t('M21 16v5h-5'), t('M8 21H3v-5'), t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)],
+  // Une forme pleine qui decoupe le cadre en pointilles de ce qu'elle garde.
+  decoupe: [{ d: 'M3 3h18v18H3z', pointille: true }, t('M12 6a6 6 0 1 0 0 12a6 6 0 1 0 0-12', true)],
+  // Un rond a moitie plein dans un cadre : le clair laisse voir, le sombre cache.
+  masque: [t('M3 3h18v18H3z'), t('M12 6a6 6 0 1 0 0 12a6 6 0 1 0 0-12'), t('M12 6a6 6 0 0 1 0 12z', true)],
+  // Un rond plein dans son halo en pointilles.
+  flou: [t('M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8', true), { d: 'M12 3.5a8.5 8.5 0 1 0 0 17a8.5 8.5 0 1 0 0-17', pointille: true }],
+  // Une forme au trait devant son ombre pleine, decalee vers le bas et la droite.
+  ombre: [t('M9 9h12v12H9z', true), t('M3 3h12v12H3z')],
+  // Un carre coupe en diagonale, une moitie pleine.
+  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];
