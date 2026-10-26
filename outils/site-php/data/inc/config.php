@@ -1,11 +1,13 @@
 <?php
-// Les reglages du site (ADR-0030, docs/deploiement-php.md). Aucun n'est a faire pour installer le site : tout a des valeurs par
-// defaut. Ne modifiez pas ce fichier : une mise a jour le remplace. Posez vos reglages dans config.local.php, a cote (jamais livre,
-// donc jamais ecrase) : chaque constante n'est definie ici que si config.local.php ne l'a pas deja fait. Exemple :
+// Les constantes avancees du site (ADR-0030, ADR-0041, docs/deploiement-php.md). Aucune n'est a regler pour installer le site :
+// les reglages ordinaires (nom du site, langue, inscriptions, courrier) vivent dans data/config/config.json, ecrit a l'installation
+// et modifiable dans l'ecran « Reglages du site » (inc/reglages.php). Ne modifiez pas ce fichier : une mise a jour le remplace.
+// Posez vos constantes dans data/config/config.local.php (jamais livre, donc jamais ecrase) : chaque constante n'est definie ici
+// que si config.local.php ne l'a pas deja fait. Exemple :
 //
 //   <?php
-//   define('DATA_DIR', '/srv/editeur-svg/data');      // le dossier des donnees ailleurs
-//   define('SESSION_INACTIVITE', 3600);
+//   define('HTTPS_FORCE', true);
+//   define('ADRESSE_OUVERTURE', false);
 //
 // Ce fichier ne produit rien : demande directement, il ne dit rien.
 
@@ -16,22 +18,27 @@ if (!defined('SVG_SITE')) {
     exit;
 }
 
-if (is_file(__DIR__ . '/config.local.php')) {
-    require __DIR__ . '/config.local.php';
+if (is_file(DATA_DIR . '/config/config.local.php')) {
+    require DATA_DIR . '/config/config.local.php';
 }
 
-// Le dossier des donnees : mot de passe, projets, polices, JSON, journaux, sessions. Par defaut `data/` a cote de ce fichier, comme
-// le livre le build : un seul dossier a envoyer par FTP. Sous la racine web, il ne tient que par son .htaccess (« Require all
-// denied », reecrit s'il manque) ; index.php verifie par HTTP que data/pwd et data/password ne se lisent pas, et avertit sinon. Sans
-// ce dossier, `../data`, hors de la racine web : la disposition recommandee quand on a la main sur le serveur.
-defined('DATA_DIR') || define('DATA_DIR', is_dir(__DIR__ . '/data') ? __DIR__ . '/data' : __DIR__ . '/../data');
-
-// La session expire apres ce temps sans aucune requete (en secondes).
+// La session expire apres ce temps sans aucune requete (en secondes) ; config.json (sessions.inactivite) a le dernier mot.
 defined('SESSION_INACTIVITE') || define('SESSION_INACTIVITE', 2 * 3600);
 
-// Les essais de connexion libres par client, puis le delai double a chaque echec, jusqu'a ce plafond (en secondes).
+// Les essais de connexion libres par client et par compte, puis le delai double a chaque echec, jusqu'a ce plafond (en secondes).
 defined('CONNEXION_ESSAIS_LIBRES') || define('CONNEXION_ESSAIS_LIBRES', 3);
 defined('CONNEXION_DELAI_MAX') || define('CONNEXION_DELAI_MAX', 15 * 60);
+// Les demandes qui font partir un mail (inscription, renvoi, mot de passe oublie) libres par client, avant le meme delai qui double.
+defined('COURRIER_DEMANDES_LIBRES') || define('COURRIER_DEMANDES_LIBRES', 5);
+
+// La duree de vie d'un lien de confirmation d'adresse (48 h) et d'un lien de reinitialisation du mot de passe (1 h), en secondes.
+defined('JETON_CONFIRMATION_DUREE') || define('JETON_CONFIRMATION_DUREE', 48 * 3600);
+defined('JETON_REINITIALISATION_DUREE') || define('JETON_REINITIALISATION_DUREE', 3600);
+
+// Le client SMTP : le delai de connexion et de chaque reponse (en secondes), et la verification du certificat du serveur de courrier
+// (a ne couper que pour un essai contre un serveur local).
+defined('COURRIER_DELAI') || define('COURRIER_DELAI', 15);
+defined('COURRIER_TLS_VERIFIER') || define('COURRIER_TLS_VERIFIER', true);
 
 // La taille maximale d'un projet enregistre (le JSON entier, polices deposees et image source comprises). Le serveur doit accepter
 // une requete de cette taille : `post_max_size` de PHP (8 Mo par defaut), `LimitRequestBody` d'Apache, `client_max_body_size` de nginx.

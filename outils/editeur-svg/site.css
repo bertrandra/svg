@@ -44,3 +44,16 @@
 .enregistrer-sous { max-width: 28rem; display: grid; gap: var(--esp-m); }
 .enregistrer-sous h2, .enregistrer-sous p { margin: 0; }
 .enregistrer-sous input { width: 100%; }
+
+/* Les pages d'avant la connexion (ADR-0041) : le selecteur de langue en haut a droite, les champs pleine largeur, les liens
+   secondaires sous la carte, le second formulaire (renvoyer le mail) plus discret. */
+.site-langue { display: flex; gap: var(--esp-s); justify-content: flex-end; margin: 0 0 var(--esp-m); font-size: var(--texte-compact); }
+.site-langue a { color: var(--encre-douce); text-decoration: none; padding: var(--esp-2xs) var(--esp-xs); border-radius: var(--rayon-bouton); }
+.site-langue a[aria-current="true"] { color: var(--encre); font-weight: 600; background: var(--table); }
+.site-langue a:hover, .site-langue a:focus-visible { color: var(--cyan); text-decoration: underline; }
+.carte-connexion input[type="email"], .carte-connexion input[type="text"], .carte-connexion select { width: 100%; }
+.carte-connexion + .carte-connexion { margin-top: var(--esp-l); }
+.carte-connexion .renvoyer { display: grid; gap: var(--esp-m); margin-top: var(--esp-m); }
+.liens-secondaires { display: flex; flex-wrap: wrap; gap: var(--esp-l); justify-content: center; margin: var(--esp-l) 0 0; font-size: var(--texte-compact); }
+.liens-secondaires a { color: var(--encre-douce); }
+.liens-secondaires a:hover, .liens-secondaires a:focus-visible { color: var(--cyan); }

@@ -14,7 +14,6 @@ declare(strict_types=1);
 
 require __DIR__ . '/outils.php';
 
-const MOT = 'un mot de passe assez long';
 $depot = dirname(__DIR__, 2);
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -30,8 +29,7 @@ define('ADRESSE_RESOLUTION_ESSAI', [
     'v6.essai' => [['2606:2800:220:1:248:1893:25c8:1946']], 'v6prive.essai' => [['fd00::1']], 'mappe.essai' => [['::ffff:10.0.0.1']],
 ]);
 mkdir(DATA_DIR, 0700, true);
-require $depot . '/outils/site-php/public/inc/amorce.php';
-require $depot . '/outils/site-php/public/inc/adresse.php';
+require $depot . '/outils/site-php/data/inc/amorce.php';
 
 test('les adresses IPv4 privees, de bouclage, lien-local, partagees, multicast, reservees ou de documentation sont interdites', function (): void {
     foreach (['127.0.0.1', '127.255.255.254', '10.0.0.1', '10.255.255.255', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '100.127.255.255',
@@ -175,6 +173,7 @@ for ($i = 0; $i < 100 && !@fsockopen('127.0.0.1', $portSource, $no, $err, 0.1); 
 $site = dossier_temporaire('site-adresse');
 register_shutdown_function(fn() => effacer($site));
 copier($depot . '/outils/site-php/public', $site . '/public');
+copier($depot . '/outils/site-php/data', $site . '/data');
 mkdir($site . '/data/json', 0700, true);
 $reglages = [
     'ADRESSE_HTTP' => true, 'ADRESSE_PORTS' => [$portSource], 'ADRESSE_RESEAUX_PERMIS' => ['127.0.0.1/32'], 'ADRESSE_OCTETS_MAX' => 300000, 'ADRESSE_DELAI' => 2,
@@ -188,12 +187,10 @@ $lignes = ['<?php'];
 foreach ($reglages as $nom => $valeur) {
     $lignes[] = 'define(' . var_export($nom, true) . ', ' . var_export($valeur, true) . ');';
 }
-file_put_contents($site . '/public/config.local.php', implode("\n", $lignes) . "\n");
-$mp = proc_open([PHP_BINARY, $site . '/public/inc/mot-de-passe.php', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $t);
-fwrite($t[0], MOT . "\n");
-fclose($t[0]);
-stream_get_contents($t[1]);
-proc_close($mp);
+mkdir($site . '/data/config', 0700, true);
+file_put_contents($site . '/data/config/config.local.php', implode("\n", $lignes) . "\n");
+ecrire_config($site . '/data');
+creer_admin($site . '/data');
 $url = serveur_php($site . '/public');
 $s = 'http://public.essai:' . $portSource;
 
@@ -201,7 +198,7 @@ $s = 'http://public.essai:' . $portSource;
 function client_connecte(string $url): array
 {
     $c = new Client($url);
-    [$statut] = $c->connecter(MOT);
+    [$statut] = $c->connecter(ADMIN_EMAIL, MOT);
     egal(303, $statut, 'connexion');
     return [$c, $c->jeton()];
 }

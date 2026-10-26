@@ -14,7 +14,7 @@ const MOTIF_SHA256 = '/^[A-Za-z0-9+\/]{43}=$/';
 function servir_json(mixed $nom): never
 {
     if (!is_string($nom) || preg_match('/^[a-z0-9-]{1,40}$/', $nom) !== 1 || !is_file(donnees('json/' . $nom . '.json'))) {
-        repondre_erreur(404, 'introuvable', 'Ces données sont introuvables sur le serveur.');
+        repondre_erreur(404, 'introuvable', t('Ces données sont introuvables sur le serveur.'));
     }
     $f = donnees('json/' . $nom . '.json');
     servir_fichier($f, 'application/json; charset=utf-8', '"' . sha1_file($f) . '"', 'private, no-cache');
@@ -23,7 +23,7 @@ function servir_json(mixed $nom): never
 function servir_fonte(mixed $fichier): never
 {
     if (!is_string($fichier) || preg_match('/^[a-z0-9-]{1,40}\.(ttf|otf|woff)$/', $fichier, $m) !== 1 || !is_file(donnees('font/' . $fichier))) {
-        repondre_erreur(404, 'introuvable', 'Cette fonte est introuvable sur le serveur.');
+        repondre_erreur(404, 'introuvable', t('Cette fonte est introuvable sur le serveur.'));
     }
     $f = donnees('font/' . $fichier);
     servir_fichier($f, ['ttf' => 'font/ttf', 'otf' => 'font/otf', 'woff' => 'font/woff'][$m[1]], '"' . sha1_file($f) . '"', 'private, max-age=86400');
@@ -135,7 +135,7 @@ function telecharger(string $url): ?string
 function police_du_catalogue(mixed $sha): array
 {
     if (!is_string($sha) || preg_match(MOTIF_SHA256, $sha) !== 1) {
-        return ['statut' => 400, 'erreur' => 'invalide', 'message' => 'Cette empreinte de police est mal formée.'];
+        return ['statut' => 400, 'erreur' => 'invalide', 'message' => t('Cette empreinte de police est mal formée.')];
     }
     $chemin = donnees('font/catalogue/' . bin2hex((string) base64_decode($sha, true)) . '.fonte');
     if (is_file($chemin) && sha256_b64((string) file_get_contents($chemin)) === $sha) {
@@ -144,7 +144,7 @@ function police_du_catalogue(mixed $sha): array
     $trouve = trouver_dans_catalogue($sha);
     if ($trouve === null) {
         journaliser('polices', 'refus hors index sha=' . $sha);
-        return ['statut' => 404, 'erreur' => 'hors_index', 'message' => 'Cette police n’est pas dans l’index du site : le serveur ne la télécharge pas.'];
+        return ['statut' => 404, 'erreur' => 'hors_index', 'message' => t('Cette police n’est pas dans l’index du site : le serveur ne la télécharge pas.')];
     }
     [$famille, $variante, $sous] = $trouve;
     foreach (adresses_fichier($famille, $variante, $sous) as $url) {
@@ -161,7 +161,7 @@ function police_du_catalogue(mixed $sha): array
         journaliser('polices', 'rangee ' . $url);
         return ['chemin' => $chemin];
     }
-    return ['statut' => 502, 'erreur' => 'source', 'message' => 'Le site n’a pas pu télécharger cette police depuis sa source (ou le fichier reçu n’avait pas l’empreinte attendue).'];
+    return ['statut' => 502, 'erreur' => 'source', 'message' => t('Le site n’a pas pu télécharger cette police depuis sa source (ou le fichier reçu n’avait pas l’empreinte attendue).')];
 }
 
 function servir_police_catalogue(mixed $sha): never

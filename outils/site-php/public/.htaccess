@@ -1,16 +1,12 @@
-# La securite de base du site (ADR-0030, docs/deploiement-php.md), pour Apache. PHP pose lui-meme ses en-tetes (politique de
-# securite du contenu comprise) ; ce fichier couvre ce que PHP ne sert pas : les fichiers de assets/.
+# La securite de base du site (ADR-0030, ADR-0041, docs/deploiement-php.md), pour Apache. PHP pose lui-meme ses en-tetes (politique
+# de securite du contenu comprise) ; ce fichier couvre ce que PHP ne sert pas : les fichiers de assets/ et de aide/. Le code et les
+# donnees vivent dans data/, que son propre .htaccess refuse en entier.
 
 # Pas de listage d'un dossier, et la page d'accueil est index.php.
 Options -Indexes
 DirectoryIndex index.php
 
-# Les reglages et le code ne se servent jamais directement.
-<FilesMatch "^(config|config\.local)\.php$">
-  <IfModule mod_authz_core.c>
-    Require all denied
-  </IfModule>
-</FilesMatch>
+# Les fichiers caches ne se servent jamais.
 <FilesMatch "^\.">
   <IfModule mod_authz_core.c>
     Require all denied

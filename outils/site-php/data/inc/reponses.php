@@ -1,5 +1,6 @@
 <?php
-// Les reponses de l'API (ADR-0030) : du JSON, jamais mis en cache, et une erreur toujours avec son code et sa phrase en francais.
+// Les reponses de l'API (ADR-0030) : du JSON, jamais mis en cache, et une erreur toujours avec son code et sa phrase, dans la langue
+// de la session.
 
 declare(strict_types=1);
 
@@ -22,7 +23,7 @@ function repondre_erreur(int $statut, string $code, string $message, array $extr
     repondre_json($statut, ['erreur' => $code, 'message' => $message] + $extra);
 }
 
-/** Le resultat d'une operation sur un projet (projets.php) : sa fiche, ou son erreur avec son statut. */
+/** Le resultat d'une operation (projets, comptes) : son contenu, ou son erreur avec son statut. */
 function repondre_resultat(array $r): never
 {
     if (isset($r['statut'])) {

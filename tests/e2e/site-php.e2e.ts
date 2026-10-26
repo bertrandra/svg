@@ -1,6 +1,6 @@
-// Le site PHP (ADR-0030), dans un vrai navigateur, contre `php -S` sur une copie de dist/php (la disposition livree : le seul dossier
-// public/, data/ dedans, sous le routeur inc/serveur-local.php qui imite les .htaccess) : premier mot de passe, par data/password
-// (FTP) puis choisi dans la page, connexion par mot de passe, ecran
+// Le site PHP (ADR-0030, ADR-0041), dans un vrai navigateur, contre `php -S` sur une copie de dist/php (la disposition livree : le
+// seul dossier public/, data/ dedans, sous le routeur data/inc/serveur-local.php qui imite les .htaccess) : l'administrateur cree a la
+// premiere visite, connexion par adresse et mot de passe, ecran
 // « Projets », creer, enregistrer, rouvrir a l'identique (un texte vivant, un projet Cricut a operations melees), renommer,
 // dupliquer, supprimer, deconnexion, acces refuse sans session, police du catalogue servie par le site (sa source simulee par un
 // petit serveur local, jamais le vrai reseau), axe sans violation sur la connexion et l'ecran Projets. La page ne contacte que le site.
@@ -22,6 +22,7 @@ import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
 
 const MOT = 'un mot de passe assez long';
+const ADMIN_EMAIL = 'admin@exemple.org';
 const DIST_PHP = resolve(RACINE_DEPOT, 'dist/php');
 /** Le dossier des donnees de la copie servie : sous la racine web, comme le build le livre. */
 const donnees = (chemin: string) => join(racine, 'public/data', chemin);
@@ -68,18 +69,20 @@ beforeAll(async () => {
     res.writeHead(404); res.end();
   }).listen(portSource, '127.0.0.1');
   const s = 'http://127.0.0.1:' + portSource;
-  writeFileSync(join(racine, 'public/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n'
+  writeFileSync(join(racine, 'public/data/config/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n'
     + "define('ADRESSE_HTTP', true);\ndefine('ADRESSE_PORTS', [" + portSource + "]);\ndefine('ADRESSE_RESEAUX_PERMIS', ['127.0.0.1/32']);\n"
     + "define('ADRESSE_RESOLUTION_ESSAI', ['fichiers.essai' => [['127.0.0.1']], 'interne.essai' => [['10.0.0.8']]]);\n");
   writeFileSync(donnees('json/polices-catalogue.json'), JSON.stringify(INDEX));
-  // Aucun mot de passe : le premier test le pose comme l'administrateur, par FTP (data/password).
+  // Le courrier en mode fichier : rien ne part, chaque message s'ecrit dans data/journal/courrier.
+  writeFileSync(donnees('config/config.json'), JSON.stringify({ format: 'editeur-svg/config', version: 1, site: { nom: 'Éditeur SVG', langue: 'fr', adresse: '' }, inscriptions: { ouvertes: true }, courrier: { expediteur: 'no-reply@exemple.org', nom: 'Éditeur SVG', mode: 'fichier', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '', motDePasse: '' } }, sessions: { inactivite: 7200 } }));
+  // Aucun compte : le premier test cree l'administrateur dans la page ; les autres le creent en ligne de commande s'il manque.
   const port = await portLibre();
   site = 'http://127.0.0.1:' + port;
   // Plusieurs travailleurs : pendant la page de l'application, le site se demande a lui-meme si data/pwd se lit (index.php,
   // http_lisible) ; sous un seul travailleur, `php -S` ne servirait cette requete qu'apres la page, qui attendrait les 3 s de son
   // delai et avertirait faute de reponse (mesure). Le routeur refuse data/ et inc/ comme le feraient les .htaccess, que `php -S`
   // ignore ; le site, qui se demande a lui-meme si data/pwd se lit, doit voir ce refus (sinon il avertit).
-  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public'), join(racine, 'public/inc/serveur-local.php')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
+  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public'), join(racine, 'public/data/inc/serveur-local.php')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
   await attendrePort(site);
 });
 
@@ -98,10 +101,23 @@ async function sansViolationGrave(page: Page, ecran: string): Promise<void> {
   expect(graves.map(v => ecran + ' : ' + v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);
 }
 
-/** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. Sans mot de passe (un test lance
- * seul), il est pose comme par FTP : data/password, que la premiere page convertit. */
-async function ouvrirSite(navigateur: ReturnType<typeof pilote>, poserMotDePasse = true): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
-  if (poserMotDePasse && !existsSync(donnees('pwd'))) writeFileSync(donnees('password'), MOT + '\n');
+/** Les fichiers de compte (data/comptes/<id>.json). */
+const comptes = () => readdirSync(donnees('comptes')).filter(f => /^[a-f0-9]{16}\.json$/.test(f));
+/** L'identifiant du compte qui porte cette adresse, ou ''. */
+const idDuCompte = (email: string) => comptes().find(f => (JSON.parse(readFileSync(donnees('comptes/' + f), 'utf8')) as { email: string }).email === email)?.replace('.json', '') ?? '';
+
+/** Cree l'administrateur en ligne de commande (data/inc/compte.php --admin --stdin : adresse, nom, mot de passe, langue), comme un
+ * script d'installation ; rien si un compte existe deja. */
+function installer(): void {
+  if (comptes().length > 0) return;
+  const r = spawnSync('php', [join(racine, 'public/data/inc/compte.php'), '--admin', '--stdin'], { input: ADMIN_EMAIL + '\nAdmin\n' + MOT + '\nfr\n', encoding: 'utf8' });
+  if (r.status !== 0) throw new Error('compte.php --admin : ' + r.stdout + r.stderr);
+}
+
+/** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. Sans compte (un test lance seul),
+ * l'administrateur est cree en ligne de commande. */
+async function ouvrirSite(navigateur: ReturnType<typeof pilote>, creerAdmin = true): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
+  if (creerAdmin) installer();
   const s = await navigateur.ouvrir({ naviguer: false });
   const requetes: string[] = [];
   s.page.on('request', r => { if (!r.url().startsWith('data:') && !r.url().startsWith('blob:')) requetes.push(r.url()); });
@@ -111,6 +127,7 @@ async function ouvrirSite(navigateur: ReturnType<typeof pilote>, poserMotDePasse
 }
 
 async function connecter(page: Page): Promise<void> {
+  await page.locator('#email').fill(ADMIN_EMAIL);
   await page.locator('#mot-de-passe').fill(MOT);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await page.getByRole('heading', { name: 'Mes projets' }).waitFor();
@@ -118,6 +135,12 @@ async function connecter(page: Page): Promise<void> {
 }
 
 const etat = (page: Page) => texteDe(page.locator('.editeur-etat .etat-enregistrement'));
+
+/** La deconnexion : le menu du compte (icone en haut a droite), puis « Se deconnecter » (le formulaire index.php). */
+async function seDeconnecter(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^Compte : / }).click();
+  await page.getByRole('menuitem', { name: 'Se déconnecter' }).click();
+}
 const ligneProjet = (page: Page, nom: string) => page.locator('.liste-projets .projet', { has: page.getByRole('button', { name: nom, exact: true }) });
 
 async function projets(page: Page): Promise<Array<{ id: string; nom: string; revision: number }>> {
@@ -155,58 +178,43 @@ describe('le site PHP', () => {
   // groupe de contextes (aide.ts, `coopIgnoreeParFirefox`).
   const navigateur = pilote({ coopIgnoreeParFirefox: true });
 
-  it('sans mot de passe, la page dit de creer data/password ; le fichier depose devient le mot de passe, disparait, et data/ ne se lit pas', async () => {
-    rmSync(donnees('pwd'), { force: true });
+  it('sans compte, la page cree l administrateur et ouvre l application ; ensuite la route n existe plus, et data/ ne se lit pas', async () => {
+    for (const f of comptes()) rmSync(donnees('comptes/' + f));
     const { page, requetes } = await ouvrirSite(navigateur, false);
-    await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).waitFor();
-    expect(await texteDe(page.locator('form.carte-connexion'))).toContain('data/password');
-    // L'administrateur depose le fichier par FTP, puis recharge la page.
-    writeFileSync(donnees('password'), '  ' + MOT + '\r\n');
-    await page.reload();
-    await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Mot de passe enregistré, et le fichier data/password supprimé : connectez-vous avec ce mot de passe.');
-    expect(existsSync(donnees('password'))).toBe(false);
-    await connecter(page);
-    expect(await page.locator('.site-avertissement').count()).toBe(0);
-    // Ni l'empreinte ni un mot de passe en clair ne se lisent par HTTP (le routeur, comme data/.htaccess, refuse data/).
-    writeFileSync(donnees('password'), 'un fichier oublie');
-    for (const f of ['data/password', 'data/pwd', 'data/.htaccess', 'data/sessions/']) {
-      const r = await page.request.get(site + '/' + f);
-      expect([403, 404], f).toContain(r.status());
-      expect(await r.text(), f).not.toMatch(/oublie|\$argon2|\$2y\$/);
-    }
-    rmSync(donnees('password'));
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
-  });
-
-  it('a la premiere visite, le mot de passe se choisit dans la page, qui ouvre l application ; ensuite, le choix n existe plus', async () => {
-    rmSync(donnees('pwd'), { force: true });
-    const { page, requetes } = await ouvrirSite(navigateur, false);
-    await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).waitFor();
-    await sansViolationGrave(page, 'premier mot de passe');
+    await page.getByRole('heading', { name: 'Créer le compte administrateur' }).waitFor();
+    await sansViolationGrave(page, 'installation');
+    await page.getByLabel('Adresse de courrier').fill(ADMIN_EMAIL);
+    await page.getByLabel('Votre nom').fill('Admin');
     await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
     await page.getByLabel('Le même, de nouveau').fill(MOT + ' autre');
-    await page.getByRole('button', { name: 'Enregistrer le mot de passe' }).click();
-    await attend(() => texteDe(page.getByRole('alert'))).toBe('Les deux saisies diffèrent : rien n’est enregistré.');
-    expect(existsSync(donnees('pwd'))).toBe(false);
-    await sansViolationGrave(page, 'premier mot de passe en erreur');
+    await page.getByRole('button', { name: 'Créer le compte et entrer' }).click();
+    await attend(() => texteDe(page.getByRole('alert'))).toBe('Les deux saisies du mot de passe diffèrent : rien n’est enregistré.');
+    expect(comptes()).toEqual([]);
+    await sansViolationGrave(page, 'installation en erreur');
     await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
     await page.getByLabel('Le même, de nouveau').fill(MOT);
-    await page.getByRole('button', { name: 'Enregistrer le mot de passe' }).click();
-    // La personne vient de le choisir : l'application s'ouvre, sans connexion de plus.
+    await page.getByRole('button', { name: 'Créer le compte et entrer' }).click();
+    // La personne vient de creer son compte : l'application s'ouvre, sans connexion de plus.
     await page.getByRole('heading', { name: 'Mes projets' }).waitFor();
-    expect(existsSync(donnees('pwd'))).toBe(true);
-    await page.getByRole('button', { name: 'Se déconnecter' }).click();
+    expect(comptes()).toHaveLength(1);
+    expect(await page.locator('.site-avertissement').count()).toBe(0);
+    await seDeconnecter(page);
     await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Vous êtes déconnecté.');
-    expect(await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).count()).toBe(0);
+    expect(await page.getByRole('heading', { name: 'Créer le compte administrateur' }).count()).toBe(0);
     await connecter(page);
-    // Le choix n'est plus accessible : un envoi direct est refuse, le mot de passe reste.
-    const empreinte = readFileSync(donnees('pwd'), 'utf8');
+    // La route n'existe plus : un envoi direct est refuse, le compte reste.
     const html = await (await page.request.get(site + '/index.php?au-revoir')).text();
-    expect(html).not.toContain('Choisissez le mot de passe');
-    const refus = await page.request.post(site + '/index.php', { form: { action: 'choisir', csrf: /(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/.exec(html)?.[1] ?? '', mot_de_passe: 'le mot de passe pirate', confirmation: 'le mot de passe pirate' } });
+    expect(html).not.toContain('Créer le compte administrateur');
+    const refus = await page.request.post(site + '/index.php', { form: { action: 'installer', csrf: /(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/.exec(html)?.[1] ?? '', email: 'pirate@exemple.org', nom: 'Pirate', mot_de_passe: 'le mot de passe pirate', confirmation: 'le mot de passe pirate', langue: 'fr' } });
     expect(refus.status()).toBe(403);
-    expect(await refus.text()).toContain('Un mot de passe a déjà été posé');
-    expect(readFileSync(donnees('pwd'), 'utf8')).toBe(empreinte);
+    expect(await refus.text()).toContain('Le site a déjà un administrateur');
+    expect(comptes()).toHaveLength(1);
+    // Ni le code, ni les reglages, ni les comptes ne se lisent par HTTP (le routeur, comme data/.htaccess, refuse data/).
+    for (const f of ['data/config/config.json', 'data/comptes/' + comptes()[0], 'data/comptes/', 'data/.htaccess', 'data/sessions/', 'data/inc/amorce.php', 'data/inc/compte.php']) {
+      const r = await page.request.get(site + '/' + f);
+      expect([403, 404], f).toContain(r.status());
+      expect(await r.text(), f).not.toMatch(/editeur-svg\/|\$argon2|\$2y\$|<\?php/);
+    }
     expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
   });
 
@@ -217,9 +225,10 @@ describe('le site PHP', () => {
     expect(((await refus.json()) as { erreur: string }).erreur).toBe('session');
     await page.getByRole('heading', { name: 'Éditeur SVG' }).waitFor();
     await sansViolationGrave(page, 'connexion');
+    await page.locator('#email').fill(ADMIN_EMAIL);
     await page.locator('#mot-de-passe').fill('pas le bon');
     await page.getByRole('button', { name: 'Se connecter' }).click();
-    await attend(() => texteDe(page.getByRole('alert'))).toBe('Mot de passe incorrect.');
+    await attend(() => texteDe(page.getByRole('alert'))).toBe('Adresse ou mot de passe incorrect.');
     expect(await page.locator('#mot-de-passe').getAttribute('aria-describedby')).toBe('erreur-connexion');
     await sansViolationGrave(page, 'connexion en erreur');
     await connecter(page);
@@ -298,10 +307,10 @@ describe('le site PHP', () => {
     await confirmation.getByRole('button', { name: 'Supprimer', exact: true }).click();
     await attend(() => ligneProjet(page, 'Carte renommée (copie)').count()).toBe(0);
     expect((await projets(page)).map(p => p.nom).sort()).toEqual(['Carte renommée', 'exemple']);
-    expect(readdirSync(donnees('projets/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
+    expect(readdirSync(donnees('projets/' + idDuCompte(ADMIN_EMAIL) + '/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
 
-    // Se deconnecter : retour a la connexion, l'API refuse.
-    await page.getByRole('button', { name: 'Se déconnecter' }).click();
+    // Se deconnecter (le menu du compte) : retour a la connexion, l'API refuse.
+    await seDeconnecter(page);
     await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Vous êtes déconnecté.');
     expect((await page.request.get(site + '/api.php?r=projets')).status()).toBe(401);
     expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);

@@ -125,31 +125,31 @@ function nom_hote_valide(string $hote): bool
 function adresse_decouper(mixed $url): array
 {
     if (!is_string($url) || $url === '' || strlen($url) > ADRESSE_LONGUEUR_MAX || preg_match('/[^\x21-\x7e]/', $url) === 1 || str_contains($url, '\\')) {
-        return adresse_refus(400, 'adresse_invalide', 'Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».');
+        return adresse_refus(400, 'adresse_invalide', t('Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».'));
     }
     $p = parse_url($url);
     $schema = is_array($p) && isset($p['scheme']) ? strtolower($p['scheme']) : (preg_match('/^([a-z][a-z0-9+.-]*):/i', $url, $m) === 1 ? strtolower($m[1]) : '');
     if ($schema === 'http' && !ADRESSE_HTTP) {
-        return adresse_refus(403, 'schema', 'Ce site n’ouvre que les adresses « https:// » : un fichier envoyé en clair peut être modifié en chemin.');
+        return adresse_refus(403, 'schema', t('Ce site n’ouvre que les adresses « https:// » : un fichier envoyé en clair peut être modifié en chemin.'));
     }
     if ($schema !== '' && $schema !== 'https' && $schema !== 'http') {
-        return adresse_refus(403, 'schema', 'Seules les adresses web « https:// » s’ouvrent ici (« ' . $schema . ': » est refusé).');
+        return adresse_refus(403, 'schema', t('Seules les adresses web « https:// » s’ouvrent ici (« {schema}: » est refusé).', ['schema' => $schema]));
     }
     if (!is_array($p) || $schema === '' || !isset($p['host'])) {
-        return adresse_refus(400, 'adresse_invalide', 'Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».');
+        return adresse_refus(400, 'adresse_invalide', t('Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».'));
     }
     if (isset($p['user']) || isset($p['pass'])) {
-        return adresse_refus(400, 'adresse_invalide', 'Une adresse qui porte un identifiant ou un mot de passe ne s’ouvre pas ici.');
+        return adresse_refus(400, 'adresse_invalide', t('Une adresse qui porte un identifiant ou un mot de passe ne s’ouvre pas ici.'));
     }
     $hote = strtolower($p['host']);
     $nu = str_starts_with($hote, '[') && str_ends_with($hote, ']') ? substr($hote, 1, -1) : $hote;
     $ip = filter_var($nu, FILTER_VALIDATE_IP) !== false ? $nu : null;
     if (($ip === null && !nom_hote_valide($nu)) || ($ip !== null && str_contains($ip, ':') && $nu === $hote)) {
-        return adresse_refus(400, 'adresse_invalide', 'Le nom de serveur de cette adresse n’est pas valide.');
+        return adresse_refus(400, 'adresse_invalide', t('Le nom de serveur de cette adresse n’est pas valide.'));
     }
     $port = $p['port'] ?? ($schema === 'https' ? 443 : 80);
     if (!in_array($port, ADRESSE_PORTS, true)) {
-        return adresse_refus(403, 'port', 'Ce site n’ouvre que les adresses sur le port ' . implode(' ou ', ADRESSE_PORTS) . ' (ici : ' . $port . ').');
+        return adresse_refus(403, 'port', t('Ce site n’ouvre que les adresses sur le port {ports} (ici : {port}).', ['ports' => implode(t(' ou '), ADRESSE_PORTS), 'port' => $port]));
     }
     $chemin = $p['path'] ?? '';
     if ($chemin === '' || $chemin[0] !== '/') {
@@ -200,11 +200,11 @@ function adresse_ip_verifiee(array $d): string|array
 {
     $ips = $d['ip'] !== null ? [$d['ip']] : resoudre_nom($d['hote']);
     if (!$ips) {
-        return adresse_refus(502, 'injoignable', 'Le nom de serveur « ' . $d['hote'] . ' » ne se trouve pas : vérifiez l’adresse.');
+        return adresse_refus(502, 'injoignable', t('Le nom de serveur « {hote} » ne se trouve pas : vérifiez l’adresse.', ['hote' => $d['hote']]));
     }
     foreach ($ips as $ip) {
         if (ip_interdite($ip, ADRESSE_RESEAUX_PERMIS)) {
-            return adresse_refus(403, 'adresse_interdite', 'Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.');
+            return adresse_refus(403, 'adresse_interdite', t('Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.'));
         }
     }
     foreach ($ips as $ip) {
@@ -316,16 +316,16 @@ function adresse_un_saut(array $d, string $ip, $sortie, float $fin): array
     $erreur = curl_errno($c);
     unset($c);
     if ($trop) {
-        return adresse_refus(413, 'trop_gros', 'Ce fichier dépasse ' . round(ADRESSE_OCTETS_MAX / 1048576, 1) . ' Mo : il est trop gros pour être ouvert ici.');
+        return adresse_refus(413, 'trop_gros', t('Ce fichier dépasse {mo} Mo : il est trop gros pour être ouvert ici.', ['mo' => round(ADRESSE_OCTETS_MAX / 1048576, 1)]));
     }
     if ($hors || $erreur === CURLE_OPERATION_TIMEDOUT) {
-        return adresse_refus(504, 'delai', 'Le fichier n’est pas arrivé en ' . ADRESSE_DELAI . ' secondes : le site a arrêté le téléchargement.');
+        return adresse_refus(504, 'delai', t('Le fichier n’est pas arrivé en {n} secondes : le site a arrêté le téléchargement.', ['n' => ADRESSE_DELAI]));
     }
     if ($erreur !== 0 && !($code !== 0 && $code !== 200 && $erreur === CURLE_WRITE_ERROR)) {
         $tls = in_array($erreur, [35, 51, 53, 54, 58, 59, 60, 64, 66, 77, 80, 82, 83, 90, 91], true);
         return adresse_refus(502, 'injoignable', $tls
-            ? 'Le serveur de cette adresse n’a pas présenté de certificat valide : le site ne lit pas le fichier.'
-            : 'Le serveur de cette adresse ne répond pas : vérifiez l’adresse, puis réessayez.');
+            ? t('Le serveur de cette adresse n’a pas présenté de certificat valide : le site ne lit pas le fichier.')
+            : t('Le serveur de cette adresse ne répond pas : vérifiez l’adresse, puis réessayez.'));
     }
     return ['code' => $code, 'location' => $location, 'octets' => $octets];
 }
@@ -337,7 +337,7 @@ function adresse_un_saut(array $d, string $ip, $sortie, float $fin): array
 function telecharger_adresse(mixed $url, $sortie): array
 {
     if (!function_exists('curl_init') || !defined('CURLOPT_RESOLVE')) {
-        return adresse_refus(503, 'indisponible', 'Ce site ne peut pas ouvrir une adresse : l’extension cURL de PHP manque (voir docs/deploiement-php.md).');
+        return adresse_refus(503, 'indisponible', t('Ce site ne peut pas ouvrir une adresse : l’extension cURL de PHP manque (voir docs/deploiement-php.md).'));
     }
     $fin = microtime(true) + ADRESSE_DELAI;
     $courante = $url;
@@ -367,8 +367,8 @@ function telecharger_adresse(mixed $url, $sortie): array
             $courante = $suivante;
             continue;
         }
-        return adresse_refus(502, 'statut', 'Le serveur a répondu par une erreur (statut ' . $r['code'] . ')'
-            . (in_array($r['code'], [404, 410], true) ? ' : aucun fichier à cette adresse.' : (in_array($r['code'], [401, 403], true) ? ' : ce fichier n’est pas public.' : ' : vérifiez l’adresse, puis réessayez.')));
+        return adresse_refus(502, 'statut', t('Le serveur a répondu par une erreur (statut {code})', ['code' => $r['code']])
+            . (in_array($r['code'], [404, 410], true) ? t(' : aucun fichier à cette adresse.') : (in_array($r['code'], [401, 403], true) ? t(' : ce fichier n’est pas public.') : t(' : vérifiez l’adresse, puis réessayez.'))));
     }
     return adresse_refus(502, 'redirections', 'Cette adresse redirige plus de ' . ADRESSE_REDIRECTIONS_MAX . ' fois : le site ne la suit pas plus loin.');
 }
@@ -384,13 +384,13 @@ function hote_pour_journal(mixed $url): string
 function servir_adresse(object $corps): never
 {
     if (!ADRESSE_OUVERTURE) {
-        repondre_erreur(404, 'indisponible', 'Ouvrir depuis une adresse est désactivé sur ce site.');
+        repondre_erreur(404, 'indisponible', t('Ouvrir depuis une adresse est désactivé sur ce site.'));
     }
     $url = $corps->adresse ?? null;
     @set_time_limit(ADRESSE_DELAI + 30);
     $sortie = fopen('php://temp/maxmemory:2097152', 'w+b');
     if ($sortie === false) {
-        repondre_erreur(500, 'serveur', 'Le serveur a rencontré une erreur.');
+        repondre_erreur(500, 'serveur', t('Le serveur a rencontré une erreur.'));
     }
     $r = telecharger_adresse($url, $sortie);
     $hote = hote_pour_journal($url);

@@ -1,6 +1,6 @@
-# Le dossier des donnees du site (ADR-0030) : jamais servi par HTTP (mot de passe, projets, journaux, sessions). Le build le place
-# sous la racine web (public/data) ; ce fichier y refuse tout acces direct, a tous les fichiers, avec ou sans extension (pwd,
-# password compris), Apache 2.4 et 2.2 en repli. Sous nginx : `location ^~ /data/ { return 404; }` (docs/deploiement-php.md).
+# Le dossier des donnees du site (ADR-0030, ADR-0041) : jamais servi par HTTP (code, reglages, comptes, sessions, jetons, projets,
+# journaux). Le build le place sous la racine web (public/data) ; ce fichier y refuse tout acces direct, a tous les fichiers, avec ou
+# sans extension, Apache 2.4 et 2.2 en repli. Sous nginx : `location ^~ /data/ { return 404; }` (docs/deploiement-php.md).
 <IfModule mod_authz_core.c>
   Require all denied
 </IfModule>
