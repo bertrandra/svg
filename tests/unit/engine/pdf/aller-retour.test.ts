@@ -7,9 +7,10 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { boiteChemin, depart, lireDessin, opaciteDuContour, opaciteDuRemplissage, transformerChemin, type Chemin, type DessinSvg, type Forme, type Matrice } from '../../../../src/engine/editionSvg.js';
-import { ecrirePdf, type OptionsPdf } from '../../../../src/export/pdf.js';
+import { type OptionsPdf } from '../../../../src/export/pdf.js';
 import { miseEnPage } from '../../../../src/export/pdfPage.js';
 import { lu } from './fabrique.js';
+import { ecrirePdf } from '../../export/plats.js';
 
 const DOSSIER = resolve(__dirname, '../../../fixtures/svg');
 

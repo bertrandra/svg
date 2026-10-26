@@ -4,10 +4,10 @@
 import { describe, expect, it } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { choixDeMarque, constatsBloquants, constatsPreparation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgPourStylo } from '../../../src/export/stylo.js';
 import { CHOIX_CRICUT_DEFAUT, NOMS_PROCEDE, OUTILS_A_VENIR } from '../../../src/model/contextes.js';
 import { etapesDesignSpace, etatExport, libelleExport, libelleSelecteur } from '../../../src/zones/parcoursCricut.js';
 import { modeParDefaut } from '../../../src/zones/actionsTexte.js';
+import { svgPourStylo } from '../export/plats.js';
 
 const STYLO = { contexte: 'cricut' as const, ...CHOIX_CRICUT_DEFAUT, procede: 'dessin-stylo' as const };
 const profil = (): ProfilProduction => { const p = resoudreProfil(STYLO); if (!p) throw new Error('profil'); return p; };

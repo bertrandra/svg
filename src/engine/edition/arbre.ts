@@ -100,12 +100,28 @@ export function arbreDe(d: Contenu): Arbre {
     (pile[pile.length - 1]?.enfants ?? racine).push(n);
     if (!parId.has(id)) parId.set(id, n);
   };
+  // La chaine des groupes d'une feuille (de la racine a son parent), calculee une fois par groupe : les feuilles d'un meme groupe la
+  // partagent (5 000 feuilles dans 500 groupes : 500 chaines, pas 5 000 remontees).
+  const chaines = new Map<string, readonly string[]>();
+  const chaineDe = (parent: string | undefined): readonly string[] => {
+    if (parent === undefined || !groupeDe(d, parent)) return [];
+    let c = chaines.get(parent);
+    if (!c) {
+      // La remontee d'`ancetres`, sans sa table des feuilles : du parent vers la racine, finie meme sur un cycle.
+      const t: string[] = [], vus = new Set<string>();
+      for (let g = groupeDe(d, parent); g && !vus.has(g.id) && t.length <= PROFONDEUR_GROUPES_MAX + 1; g = groupeDe(d, g.parent)) { vus.add(g.id); t.push(g.id); }
+      c = t.reverse();
+      chaines.set(parent, c);
+    }
+    return c;
+  };
   d.formes.forEach((f, index) => {
-    const chaine = d.groupes ? ancetres(d, f.id).reverse() : [];
+    const chaine = d.groupes ? chaineDe(f.parent) : [];
     let k = 0;
     while (k < pile.length && k < chaine.length && pile[k]?.groupe.id === chaine[k]) k++;
     while (pile.length > k) { const g = pile.pop(); if (g) g.fin = index; }
-    for (const id of chaine.slice(k)) {
+    for (let i = k; i < chaine.length; i++) {
+      const id = chaine[i] ?? '';
       const groupe = groupeDe(d, id);
       if (!groupe) break;
       const g: GroupeOuvert = { genre: 'groupe', groupe, enfants: [], debut: index, fin: index };

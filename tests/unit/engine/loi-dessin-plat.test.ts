@@ -8,13 +8,21 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   FONCTIONNALITES, arbreDe, coller, dupliquer, ecrireDessin, estPlat, feuillesDe, inserer, lireDessin, modifier, normaliser, poidsDessin, promouvoir,
-  rotation, translation, echelle, multiplier, transformer, unites, verifierDessin, type DessinSvg, type Matrice
+  rotation, translation, echelle, multiplier, transformer, unites, verifierDessin, type DessinSvg, type Matrice,
+  aligner, modifierTrait, supprimer, prochainId, ordonner, montrerSeulement, combiner, retirerPetites, regrouper, ajusterPlan, visibilitesDe,
+  restaurerVisibilites, visibilitesConformes, ajouterForme, boiteDe, etoile, type Alignement, type Ordre
 } from '../../../src/engine/editionSvg.js';
+import { appliquerBooleen, BOOLEENS } from '../../../src/engine/booleens.js';
 import { refusDe } from '../../../src/engine/edition/heritage.js';
 import { aplatirPour, CAPACITES_PLAT } from '../../../src/engine/aplatir.js';
 import { au } from '../../../src/util/tableaux.js';
 import { ecrireDessinAncien } from './anciennes/ecriture.js';
 import { collerAncien, dupliquerAncien, insererAncien, modifierAncien, refusDeAncien, transformerAncien } from './anciennes/operations.js';
+import {
+  ajouterFormeAncien, ajusterPlanAncien, alignerAncien, appliquerBooleenAncien, boiteDeAncien, combinerAncien, modifierTraitAncien, montrerSeulementAncien,
+  ordonnerAncien, prochainIdAncien, regrouperAncien, restaurerVisibilitesAncien, retirerPetitesAncien, supprimerAncien, visibilitesConformesAncien,
+  visibilitesDeAncien
+} from './anciennes/etape1.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const textes = readdirSync(DOSSIER).filter(n => n.endsWith('.svg')).sort().map(nom => ({ nom, svg: readFileSync(resolve(DOSSIER, nom), 'utf8').replace(/\r\n/g, '\n') }));
@@ -109,12 +117,88 @@ describe('la loi du dessin plat', () => {
     }
   });
 
+  // ---- etape 1 : les corps qui ont pris un chemin riche derriere `estPlat`
+
+  it('etape 1 : boiteDe, prochainId, supprimer, ordonner, montrerSeulement rendent ce que rendaient les anciens', () => {
+    const ordres: readonly Ordre[] = ['premier', 'avant', 'arriere', 'dernier'];
+    for (const { nom, d } of corpus) {
+      const ids = d.formes.map(f => f.id), moitie = ids.filter((_, i) => i % 2 === 0), tiers = ids.filter((_, i) => i % 3 === 1);
+      expect(boiteDe(d, moitie), nom).toEqual(boiteDeAncien(d, moitie));
+      expect(prochainId(d), nom).toBe(prochainIdAncien(d));
+      expect(supprimer(d, tiers), nom).toEqual(supprimerAncien(d, tiers));
+      expect(supprimer(d, []), nom).toBe(d);
+      for (const o of ordres) {
+        const n = ordonner(d, tiers, o), a = ordonnerAncien(d, tiers, o);
+        expect(n, nom + ' ' + o).toEqual(a);
+        expect(n === d, nom + ' ' + o).toBe(a === d);
+      }
+      expect(montrerSeulement(d, moitie), nom).toEqual(montrerSeulementAncien(d, moitie));
+      const tout = montrerSeulement(d, ids);
+      expect(tout === d, nom).toBe(montrerSeulementAncien(d, ids) === d);
+    }
+  });
+
+  it('etape 1 : aligner, modifierTrait, combiner, ajouterForme rendent ce que rendaient les anciens', () => {
+    const alignements: readonly Alignement[] = ['gauche', 'centreH', 'droite', 'haut', 'centreV', 'bas'];
+    for (const { nom, d } of corpus) {
+      const ids = d.formes.map(f => f.id), tiers = ids.filter((_, i) => i % 3 === 0);
+      for (const a of alignements) expect(aligner(d, tiers, a), nom + ' ' + a).toEqual(alignerAncien(d, tiers, a));
+      expect(aligner(d, ids.slice(0, 1), 'gauche'), nom).toEqual(alignerAncien(d, ids.slice(0, 1), 'gauche'));
+      expect(modifierTrait(d, tiers, { pointilles: [3, 1], bout: 'round' }), nom).toEqual(modifierTraitAncien(d, tiers, { pointilles: [3, 1], bout: 'round' }));
+      expect(combiner(d, tiers), nom).toEqual(combinerAncien(d, tiers));
+      const style = { remplissage: '#123456', contour: null, epaisseur: 1 };
+      expect(ajouterForme(d, etoile(5, 5, 20, 20), style), nom).toEqual(ajouterFormeAncien(d, etoile(5, 5, 20, 20), style));
+      expect(ajouterForme(d, etoile(5, 5, 20, 20), style, 'evenodd', 'g-inconnu'), nom).toEqual(ajouterFormeAncien(d, etoile(5, 5, 20, 20), style, 'evenodd'));
+    }
+  });
+
+  it('etape 1 : retirerPetites, regrouper, ajusterPlan et l isolement rendent ce que rendaient les anciens, le meme objet compris', () => {
+    for (const { nom, d } of corpus) {
+      for (const part of [0, 0.001, 0.05]) {
+        const n = retirerPetites(d, part), a = retirerPetitesAncien(d, part);
+        expect(n, nom).toEqual(a);
+        expect(n.dessin === d, nom).toBe(a.dessin === d);
+      }
+      const r = regrouper(d), ra = regrouperAncien(d);
+      expect(r, nom).toEqual(ra);
+      expect(r.dessin === d, nom).toBe(ra.dessin === d);
+      expect(ajusterPlan(d), nom).toEqual(ajusterPlanAncien(d));
+      expect(ajusterPlan(d, 0.1), nom).toEqual(ajusterPlanAncien(d, 0.1));
+      const avant = visibilitesDe(d);
+      expect(avant, nom).toEqual(visibilitesDeAncien(d));
+      const isole = montrerSeulement(d, d.formes.slice(0, 1).map(f => f.id));
+      expect(restaurerVisibilites(isole, avant), nom).toEqual(restaurerVisibilitesAncien(isole, avant));
+      expect(restaurerVisibilites(d, avant), nom).toBe(d);
+      expect(visibilitesConformes(isole, avant), nom).toBe(visibilitesConformesAncien(isole, avant));
+      expect(visibilitesConformes(d, avant), nom).toBe(true);
+    }
+  });
+
+  it('etape 1 : les booleens rendent ce que rendaient les anciens', () => {
+    for (const { nom, d } of corpus.slice(0, 40)) {
+      const pleines = d.formes.filter(f => f.remplissage !== null && f.visible && !f.verrouille).slice(0, 3).map(f => f.id);
+      for (const op of BOOLEENS) expect(appliquerBooleen(d, pleines, op), nom + ' ' + op).toEqual(appliquerBooleenAncien(d, pleines, op));
+      expect(appliquerBooleen(d, pleines.slice(0, 1), 'union'), nom).toEqual(appliquerBooleenAncien(d, pleines.slice(0, 1), 'union'));
+    }
+  });
+
   it('la lecture riche lit comme la plate tout SVG sans groupe (et tout SVG tant que le catalogue est vide)', () => {
     for (const { nom, svg } of textes) {
       const plat = lireDessin(svg), explicite = lireDessin(svg, { modele: 'plat' });
       expect(explicite, nom).toEqual(plat);
       // Les 17 entrees sans <g> ne bougent jamais, meme en riche (annexe 2 §3) ; les autres, tant qu'aucune fonctionnalite n'est inscrite.
       if (!/<(?:g|a)[\s>/]/.test(svg) || FONCTIONNALITES.length === 0) expect(lireDessin(svg, { modele: 'riche' }), nom).toEqual(plat);
+    }
+  });
+
+  it('un SVG a groupes lu en riche, puis descendu, redonne les formes de la lecture plate (memes refus, memes pertes dites)', () => {
+    for (const { nom, svg } of textes) {
+      const plat = lireDessin(svg), riche = lireDessin(svg, { modele: 'riche' });
+      expect('erreur' in riche, nom).toBe('erreur' in plat);
+      if ('erreur' in riche || 'erreur' in plat) { if ('erreur' in riche && 'erreur' in plat) expect(riche.erreur, nom).toBe(plat.erreur); continue; }
+      expect(riche.ignores, nom).toEqual(plat.ignores);
+      expect(verifierDessin(riche.dessin), nom).toEqual([]);
+      expect(aplatirPour(riche.dessin, CAPACITES_PLAT).dessin.formes, nom).toEqual(plat.dessin.formes);
     }
   });
 });

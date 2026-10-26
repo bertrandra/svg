@@ -5,7 +5,7 @@
 // `heritage.ts` (ce qui se transmet), `elements.ts` (les formes de base).
 
 import { analyserXml, phraseErreurXml } from '../../util/xml.js';
-import type { DessinSvg, Forme } from './types.js';
+import type { DessinSvg, Forme, Groupe } from './types.js';
 import { phrasesRemplacements, type ContexteTexte, type PolicesTexte } from './texteSvg.js';
 import { IDENTITE } from './types.js';
 import { lireOpacite } from './opacites.js';
@@ -17,6 +17,9 @@ import { lireProduction, type MarqueProduction } from './production.js';
 import { resoudreLiens } from './texteVivant.js';
 import { prisesDe, type Fonctionnalite } from './fonctionnalites.js';
 import { FONCTIONNALITES } from './catalogue.js';
+import { ATTRIBUT_MODELE, VERSION_MODELE } from './ecritureRiche.js';
+import { ignoresDeFusion } from './fusion.js';
+import { normaliser } from './arbre.js';
 
 /**
  * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
@@ -43,12 +46,23 @@ export interface OptionsLecture {
   /**
    * Le modele lu (ADR-0012, annexe 2 §1). `plat`, le defaut : le contrat de l'ADR-0001, fige (les groupes se fondent ; decoupes, masques,
    * filtres, degrades, motifs, images refuses en les nommant). `riche` : la lecture consulte aussi les fonctionnalites du catalogue
-   * (catalogue.ts) ; tant qu'il est vide, elle lit exactement comme `plat`.
+   * (catalogue.ts) : les <g> et les <a> restent des groupes (etape 1), avec leur opacite et leur nom ; un SVG sans groupe se lit
+   * exactement comme en `plat`.
    */
   readonly modele?: 'plat' | 'riche';
 }
 
 const AUCUNE: readonly Fonctionnalite[] = [];
+
+/**
+ * Le refus d'un fichier ecrit par une version plus recente du modele (ADR-0012, annexe 5 §3) : jamais lu « au mieux », dans les deux
+ * modes. Un marqueur egal ou inferieur a celui qu'on connait, ou illisible, se lit normalement (il n'est pas requis pour lire).
+ */
+function refusDuMarqueur(attributs: Readonly<Record<string, string>>): string | null {
+  const m = /^\s*(\d{1,9})\s*$/.exec(attributs[ATTRIBUT_MODELE] ?? '');
+  const v = m ? Number(m[1]) : 0;
+  return v > VERSION_MODELE ? 'Ce fichier vient d’une version plus récente de l’éditeur (modèle ' + v + ') : mettez l’éditeur à jour pour l’ouvrir.' : null;
+}
 
 /** Le dessin d'un SVG et ce qu'il a fallu laisser tomber, ou ce qui empeche de l'editer. Ne leve jamais : un texte hostile est un refus nomme. */
 export function lireDessin(svg: string, options: OptionsLecture = {}): LectureDessin {
@@ -72,6 +86,8 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const racine = doc.racine.enfants.find(e => e.nom === 'svg');
   if (!racine) return { erreur: 'Ce SVG ne se lit pas.' };
   const plan = planDe(racine.attributs);
+  const marqueur = refusDuMarqueur(racine.attributs);
+  if (marqueur) return { erreur: marqueur };
   if (!plan) return { erreur: 'Ce SVG n’a ni viewBox ni dimensions.' };
   if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ') : corrigez son viewBox.' };
   // L'ecriture garde le millieme : un plan plus petit s'ecrirait « width="0" », que plus rien ne relit.
@@ -79,13 +95,16 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const analyse = analyser(racine);
   const formesLues: Forme[] = [], refus = new Set<string>();
   const texte: ContexteTexte | null = options.polices ? { analyse, polices: options.polices, formes: formesLues, refus, remplacements: new Map(), caracteres: 0 } : null;
-  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte, liens: [], fonctions };
+  // Le mode riche : la table ou le lecteur des groupes range ce qu'il lit (absente en plat, ou les groupes se fondent).
+  const groupesLus = fonctions.length ? new Map<string, Groupe>() : undefined;
+  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte, liens: [], fonctions, ...(groupesLus ? { groupes: groupesLus } : {}) };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
   const prRacine = proprietesDe(analyse, racine);
   const refusRacine = refusDe(prRacine, prisesDe(fonctions));
   if (refusRacine) p.refus.add(refusRacine);
+  for (const msg of ignoresDeFusion(prRacine, racine)) analyse.ignores.add(msg);
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };
   racine.enfants.forEach(e => visiter(p, e, ctx));
   if (analyse.effort.depasse) {
@@ -96,5 +115,7 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const formes = resoudreLiens(p.formes, p.liens ?? []).filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
   const production = lireProduction(racine.attributs);
-  return { dessin: { vb: plan, formes }, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };
+  // Les groupes du mode riche : un groupe dont aucune feuille n'a ete gardee part (en cascade), la table vide aussi (arbre.ts).
+  const dessin: DessinSvg = groupesLus?.size ? normaliser({ vb: plan, formes, groupes: Object.fromEntries(groupesLus) }) : { vb: plan, formes };
+  return { dessin, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };
 }

@@ -18,6 +18,14 @@ la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de v
   définitions par empreinte (`definitions.ts`), la descente (`engine/aplatir.ts`) et les gardes-fous (manifeste des références
   v1, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`, extensions de l'écriture permise, champs du
   projet). Le détail est à l'annexe 8 §0.
+- **L'étape 1, groupes (le moteur), est faite** (26 octobre 2026 ; aucun octet d'un dessin plat ne bouge, la lecture `plat` est
+  inchangée) : la lecture `riche` garde les `<g>` et les `<a>` en groupes (opacité au groupe, nom, bornes de 64 niveaux et de
+  20 000 groupes, structure de la cible d'un `<use>`), refuse un marqueur `data-ed-modele` plus récent dans les deux modes et dit
+  le mode de fusion, l'ordre de peinture et `vector-effect` dans les deux modes ; l'écriture riche ne pose le marqueur que si
+  quelque chose de riche s'écrit ; `grouper`, `degrouper`, `deplacerDans`, `renommer` et chaque opération de l'annexe 3 §2 ont leur
+  chemin riche derrière `estPlat` ; « Lettres séparées » donne un groupe (`vectoriserLettresEnGroupes`) ; la descente des groupes
+  (`engine/descente/groupes.ts`) et la marque de type de `DessinPlat` ; le projet JSON porte les groupes au format 2 (un dessin plat
+  reste au format 1, octet pour octet). Le détail et les écarts : annexe 8 §0 et §1 « Étape 1 ».
 - **Révision du plan** (annexe 8 §0 et §3) : ce que les ADR fusionnés depuis ont rendu caduc ou déjà fait (texte vivant,
   `util/empreinte.ts`, `<text>` étranger lu en lettres, corpus hostile, CI à trois moteurs, exports DXF/EPS/PDF CMJN), ce
   qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux

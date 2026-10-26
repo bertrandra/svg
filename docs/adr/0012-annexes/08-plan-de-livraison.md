@@ -12,9 +12,10 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | Étape | État |
 |---|---|
 | 0 Coutures | **faite** le 25 octobre 2026 (ce qui a été posé : ci-dessous, et §1 « Étape 0 ») |
+| 1 Groupes, moteur | **faite** le 26 octobre 2026 (ce qui a été posé et les écarts : ci-dessous, et §1 « Étape 1 ») |
 | 10 Texte vivant, moteur | **faite** autrement (ADR-0022, 0027, 0031, 0032) ; reste un morceau, porté par l'étape 1 (voir « Caduc ») |
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
-| 1 à 9, 12, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 2 à 9, 12, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -63,6 +64,44 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   (`projet-v2.test.ts` : chaque champ de `Forme` et de `DessinSvg` est « porté » par le projet JSON ou attend son étape) ;
   **architecture** (`tests/unit/export/descente.test.ts` : `src/export` ne lit ni `groupes` ni un champ v2, ses points d'entrée
   prennent un `DessinPlat`).
+
+### Ce que l'étape 1 a posé
+
+- **Lecture** : `edition/fonctions/groupes.ts` (lecteurs `g` et `a` du mode riche, `nomDuGroupe`, `GROUPES_MAX`, `NOM_GROUPE_MAX`,
+  écrivain `attributsGroupe`), une ligne de `catalogue.ts` ; dans `parcours.ts`, `Contexte.parent`, `Pret.opaciteDuParent`,
+  `Parcours.groupes`, le `parent` posé par `poserForme` et sur les lettres d'un `<text>` lu dans un groupe ; dans `lecture.ts`, la
+  table rendue en riche (passée par `normaliser` : un groupe sans feuille gardée part) et le refus d'un `data-ed-modele` supérieur
+  à `VERSION_MODELE` dans les deux modes ; `edition/fusion.ts` (`mix-blend-mode`, `paint-order`, `vector-effect`, dans les deux
+  modes).
+- **Écriture** : `ecritureRiche.ts` ne pose plus le marqueur (ni `<defs>`) que si quelque chose de riche s'écrit (un `<g>`, une
+  définition, un attribut ou un élément d'une fonctionnalité) : un dessin riche dont les groupes sont tous masqués ou vides donne les
+  octets de l'écriture plate, et le point fixe tient (trouvé par la suite aléatoire).
+- **Opérations** : `edition/groupes.ts` (`grouper`, `degrouper` avec ses `porteurs`, `deplacerDans`, `renommer`, et les chemins
+  riches : `reglerGroupes`, `transformerGroupesDe`, `dupliquerNoeuds`, `ordonnerNoeuds`, `montrerSeulementNoeuds`, `insererContenu`,
+  `collerContenu`, `egales`) ; derrière `estPlat`, chaque ligne de l'annexe 3 §2 dans `operations.ts` (`transformer` par la
+  fermeture, `aligner` par unité, `modifier` au groupe ou aux feuilles, `modifierTrait`, `supprimer`, `prochainId` →
+  `prochainNumero`, `dupliquer`, `ordonner`, `montrerSeulement`), `assemblage.ts` (`inserer`, `combiner` qui dit
+  `MSG_MEME_PARENT`, `coller` qui accepte les groupes du presse-papiers), `nettoyage.ts` (`retirerPetites`, `regrouper`,
+  `ajusterPlan` par `boiteVisuelle`), `isolement.ts` (l'instantané garde les groupes), `formes.ts` (`ajouterForme(…, parent)`),
+  `geometrie.ts` (`boiteDe` d'un nœud = celle de ses feuilles), `booleens.ts` (même règle de parent) ; `etendue.ts`
+  (`boiteVisuelle`, par les crochets `etendue`) ; `engine/texte/vectoriser.ts` (`vectoriserLettresEnGroupes`, `nomGroupeTexte`).
+  `arbreDe` calcule la chaîne des groupes une fois par groupe (mesure : 2,4 ms sur 5 000 feuilles et 520 groupes, quand l'arbre plat
+  de 5 000 feuilles en prend 1,4 sur la même machine ; le budget de 2 ms est à reprendre sur la machine de référence de l'ADR-0008).
+- **Descente et exports** : `engine/descente/groupes.ts` (dernière ligne de `REGLES_DESCENTE`, `MSG_OPACITE_COMPOSEE`),
+  `DessinPlat` verrouillé (`unique symbol`), `phrasePertes` ; `zones/actionsExport.ts` et `actionsProduction.ts` passent par
+  `aplatirPour` et ajoutent la phrase au message ; les tests d'export passent par `tests/unit/export/plats.ts`.
+- **Projet** : `model/projetV2/champs.ts` (`CHAMPS_FORME_V2`, `CHAMPS_GROUPE_V2`, `OutilsProjet`), `model/projetV2/groupes.ts`
+  (`GroupeProjet`, `lireGroupesProjet`), `engine/projetV2/champs.ts` (`ALLERS_RETOURS_FORME`, `ALLERS_RETOURS_GROUPE`,
+  `groupeProjet`, `groupeDuProjet`) : une ligne par champ et par étape. **Règle de version confirmée** : `VERSION_PROJET = 2`,
+  `VERSION_PROJET_PLAT = 1` ; un dessin plat s'écrit au format 1 (octet pour octet celui d'avant), un dessin à groupes au format 2 ;
+  `MIGRATIONS[1]` est l'identité (le même objet : `migre` reste faux) ; un projet au format 1 qui porterait des groupes est refusé ;
+  un arbre abîmé est refusé à l'ouverture (`verifierDessin`, « Ce projet porte des groupes mal formés. »).
+- **Tests** : `v2/cas-groupes.ts` (les 10 entrées v1 à `<g>` et `texte-vivant-lecture` en `riche-*`, 4 entrées `groupes-*`, 12
+  opérations), `groupes.test.ts` (lecture, bornes, marqueur, opérations, lois, suite aléatoire de 100 opérations sur trois graines,
+  budget), `descente-groupes.test.ts`, `corpus-v2.test.ts` et `tests/fixtures/svg/corpus/` (`inkscape-calques`,
+  `illustrator-calque`), cinq hostiles `v2-groupes-*`, l'extension d'écriture « étape 1 : groupes », la règle du texte vivant sous
+  un `<g>` (`invariants.ts`), les anciens corps dans `anciennes/etape1.ts` et leurs cas dans `loi-dessin-plat.test.ts`, plus une loi :
+  un SVG lu en riche puis descendu redonne les formes de la lecture plate.
 
 ### Caduc
 
@@ -139,7 +178,18 @@ l'exige pas ; l'étape 1 verrouille la marque et branche les appels, avec l'affi
   A d'abord (il tient `types.ts`) ; B, C, D ensuite en parallèle.
 - Octets : **zéro différence** (G3). Retour : `git revert`.
 
-### Étape 1 — Groupes : le moteur · taille G · risque moyen (le cœur du modèle)
+### Étape 1 — Groupes : le moteur · taille G · risque moyen (le cœur du modèle) · **faite le 26 octobre 2026**
+
+*Réalisée en un seul arbre (les trois paquets d'un coup) ; ce qui a été posé est listé au §0. Écarts aux consignes du §5.1 :*
+*« Lettres séparées » en groupe est une fonction à côté (`vectoriserLettresEnGroupes`), le corps de `vectoriserTextes` ne change
+pas (le choix du modèle appartient à l'interface, étape 2) ; `formesDeBase.ts` n'avait rien à changer (il ne construit que des
+tracés) ; `isolation` n'a pas de phrase (sans mode de fusion, isoler ne change aucun rendu) ; la boîte d'un groupe pour
+transformer et aligner est celle de ses feuilles sans le trait (loi 4 de l'annexe 7 §3 : redimensionner un groupe, c'est
+redimensionner ses feuilles), la boîte visuelle (`boiteVisuelle`) servant à `ajusterPlan` ; un groupe sans feuille compte pour
+`GROUPES_MAX` (une bombe de groupes vides est refusée sans rien construire) ; le nom tiré de l'identifiant (`id`) est gardé tel que
+le plan le dit, y compris les identifiants automatiques d'Inkscape (« g2 ») ; un `<use>` à opacité ne devient pas un groupe (son
+opacité se multiplie sur les feuilles du clone, comme en plat) ; la prise (`engine/prise.ts`) et la sélection par zone voient
+encore les feuilles d'un groupe masqué ou verrouillé (leur fichier est à l'étape 2, qui y passe le contexte d'édition).*
 
 - Lecture `riche` des `<g>`/`<a>` et de la structure des `<use>` (annexe 2) ; opacité de groupe ; noms ;
   bornes ; phrases `ignores` de `mix-blend-mode`/`paint-order`/`vector-effect` (deux modes).

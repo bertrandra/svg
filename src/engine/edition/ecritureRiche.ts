@@ -6,6 +6,10 @@
 // Squelette pose a l'etape 0 : la balise <svg> et son marqueur, <defs> en premier enfant et seulement s'il y a une definition
 // employee, le corps en parcours de l'arbre (un groupe visible ecrit <g …> et ses enfants, un groupe masque rien), les attributs et
 // les definitions des fonctionnalites. Les etapes y branchent leurs crochets ; elles n'ont pas a editer ce fichier.
+//
+// Le marqueur ne se pose que si l'ecriture porte vraiment quelque chose du modele v2 (un <g>, une definition, un attribut ou un
+// element d'une fonctionnalite) : un dessin riche dont rien de riche ne s'ecrit (ses groupes masques ou vides) donne les octets de
+// l'ecriture plate, et sa relecture, plate, les redonne (le point fixe de l'annexe 2 §3, point 7).
 
 import { nb } from './chemins.js';
 import type { Contenu, DessinSvg, Forme } from './types.js';
@@ -31,29 +35,35 @@ export type EcrivainFeuilles = (dessin: DessinSvg, ecrites: readonly Forme[]) =>
 export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): string {
   const [x, y, l, h] = dessin.vb;
   const definitions = recueil();
+  let riche = false;
   const corps = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
     const ecrites = c.formes.filter(f => visibleEffectif(c, f.id));
     const ecrire = ecrivain(c, ecrites);
     const feuille = (f: Forme): string => {
       for (const k of fonctions) {
         const e = k.ecriture?.elementFeuille?.(f, ctx);
-        if (e !== null && e !== undefined) return e;
+        if (e !== null && e !== undefined) { riche = true; return e; }
       }
       const peinte = fonctions.reduce<Forme>((v, k) => k.ecriture?.peindreFeuille?.(v, ctx) ?? v, f);
       const s = ecrire(peinte), a = attributsTries(fonctions.flatMap(k => k.ecriture?.attributsFeuille?.(f, ctx) ?? []));
+      if (peinte !== f || a) riche = true;
       return a ? s.slice(0, -2) + a + '/>' : s;
     };
     const noeuds = (t: readonly NoeudArbre[]): string => t.map(n => {
       if (n.genre === 'feuille') return n.forme.visible ? feuille(n.forme) : '';
       if (!n.groupe.visible) return '';
       const dedans = noeuds(n.enfants);
-      return dedans ? '<g' + attributsTries(fonctions.flatMap(k => k.ecriture?.attributsGroupe?.(n.groupe, ctx) ?? [])) + '>' + dedans + '</g>' : '';
+      if (!dedans) return '';
+      riche = true;
+      return '<g' + attributsTries(fonctions.flatMap(k => k.ecriture?.attributsGroupe?.(n.groupe, ctx) ?? [])) + '>' + dedans + '</g>';
     }).join('');
     return { texte: noeuds(arbreDe(c).racine), ecrites };
   };
   const ctx: ContexteEcriture = { precision, definitions, contenu: (c: Contenu) => corps({ ...c, vb: dessin.vb }).texte };
   const { texte, ecrites } = corps(dessin);
+  const defs = definitions.ecrire();
+  const marqueur = riche || defs !== '' ? ' ' + ATTRIBUT_MODELE + '="' + VERSION_MODELE + '"' : '';
   const xlink = dessin.formes.some(f => f.image !== undefined) ? ' xmlns:xlink="' + ESPACE_XLINK + '"' : '';
-  return '<svg xmlns="http://www.w3.org/2000/svg"' + xlink + ' viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '" '
-    + ATTRIBUT_MODELE + '="' + VERSION_MODELE + '">' + definitions.ecrire() + metadonnees(ecrites) + texte + '</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg"' + xlink + ' viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '"'
+    + marqueur + '>' + defs + metadonnees(ecrites) + texte + '</svg>';
 }

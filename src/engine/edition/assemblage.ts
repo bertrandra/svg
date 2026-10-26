@@ -1,18 +1,23 @@
 // Assembler et defaire : inserer un dessin dans un autre, combiner des formes en une seule, separer
-// un chemin en ses sous-chemins, coller des formes copiees.
+// un chemin en ses sous-chemins, coller des formes copiees. Un dessin a groupes (ADR-0012, etape 1) prend le chemin riche de
+// groupes.ts derriere `estPlat` : un dessin plat, celui d'avant.
 
-import type { Boite, Chemin, Commande, DessinSvg, Forme } from './types.js';
+import type { Boite, Chemin, Commande, DessinSvg, Forme, Groupe } from './types.js';
 import { boiteForme, echelle, multiplier, translation, unir } from './geometrie.js';
 import { prochainId } from './operations.js';
 import { avecOrigines, originesDe } from './provenance.js';
 import { relierCopies } from './texteVivant.js';
 import { transformerFeuille } from './transformation.js';
+import { estPlat, feuillePlate, feuillesDe, verrouilleEffectif } from './arbre.js';
+import { collerContenu, insererContenu, MSG_MEME_PARENT } from './groupes.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
  * gardant leurs proportions, centrees ; rend les identifiants nouveaux.
  */
 export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { dessin: DessinSvg; ids: string[] } {
+  // Le chemin riche : les groupes de l'autre dessin viennent avec ses formes (renumerotes), au premier plan.
+  if (!estPlat(dessin) || !estPlat(autre)) return insererContenu(dessin, autre, cible);
   const visibles = autre.formes.filter(f => f.visible);
   const b = unir(visibles.map(boiteForme));
   if (!b || !(cible.l > 0) || !(cible.h > 0)) return { dessin, ids: [] };
@@ -32,8 +37,20 @@ export function inserer(dessin: DessinSvg, autre: DessinSvg, cible: Boite): { de
 /**
  * Reunir les formes choisies en une seule, au style et a la place de la plus haute dans
  * l'empilement : un chemin a plusieurs sous-chemins, que la regle pair-impair sait creuser.
+ * Dans un dessin a groupes, un groupe choisi compte par ses feuilles, et toutes doivent etre dans le meme groupe : sinon le
+ * dessin ne change pas, et `erreur` le dit (annexe 3 §2). La forme reunie garde le parent de la plus haute.
  */
-export function combiner(dessin: DessinSvg, ids: readonly string[]): { dessin: DessinSvg; id: string | null } {
+export function combiner(dessin: DessinSvg, ids: readonly string[]): { dessin: DessinSvg; id: string | null; erreur?: string } {
+  if (!estPlat(dessin)) {
+    const feuilles = feuillesDe(dessin, ids).filter(id => !verrouilleEffectif(dessin, id));
+    const parents = new Set(dessin.formes.filter(f => feuilles.includes(f.id)).map(f => f.parent));
+    if (feuilles.length > 1 && parents.size > 1) return { dessin, id: null, erreur: MSG_MEME_PARENT };
+    return combinerFeuilles(dessin, feuilles);
+  }
+  return combinerFeuilles(dessin, ids);
+}
+
+function combinerFeuilles(dessin: DessinSvg, ids: readonly string[]): { dessin: DessinSvg; id: string | null } {
   const voulus = new Set(ids);
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille);
   const haute = choisies[choisies.length - 1];
@@ -65,8 +82,13 @@ export function separer(dessin: DessinSvg, id: string): { dessin: DessinSvg; ids
   return { dessin: { ...dessin, formes: dessin.formes.flatMap(f => (f.id === id ? nouvelles : [f])) }, ids };
 }
 
-/** Coller des formes copiees, au premier plan, decalees ; rend les identifiants nouveaux. */
-export function coller(dessin: DessinSvg, formes: readonly Forme[], dx = 0, dy = 0): { dessin: DessinSvg; ids: string[] } {
+/**
+ * Coller des formes copiees, au premier plan, decalees ; rend les identifiants nouveaux. `groupes` : les groupes du presse-papiers
+ * qui contiennent ces formes (modele v2) ; donnes, la copie garde leur structure sous des identifiants neufs, et les identifiants
+ * rendus sont ceux des noeuds au sommet de la copie.
+ */
+export function coller(dessin: DessinSvg, formes: readonly Forme[], dx = 0, dy = 0, groupes?: Readonly<Record<string, Groupe>>): { dessin: DessinSvg; ids: string[] } {
+  if (!estPlat(dessin) || groupes !== undefined || !formes.every(feuillePlate)) return collerContenu(dessin, formes, dx, dy, groupes);
   let n = prochainId(dessin);
   const ids: string[] = [], copies = new Map<string, string>();
   const copiees = formes.map(f => {

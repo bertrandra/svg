@@ -19,9 +19,6 @@ import {
   type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, type FormeDeBase, type ParametresFormes, ajouterForme, ellipse, formeDeBase, FORMES_DE_BASE, FICHES_FORMES, PARAMETRES_FORMES_DEFAUT, regleDeForme, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg, polygone,
 } from '../../../src/engine/editionSvg.js';
 import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { exportParOperation } from '../../../src/export/operations.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { printThenCut } from '../../../src/export/printThenCut.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
@@ -32,12 +29,12 @@ import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/t
 import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
 import { composerDispose } from '../../../src/engine/texte/disposition.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
-import { svgDecoupe } from '../../../src/export/svgs.js';
 import { svgStylo } from '../../../src/export/stylo.js';
 import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
+import { exportParOperation, printThenCut, svgCricut, svgDecoupe } from '../export/plats.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';

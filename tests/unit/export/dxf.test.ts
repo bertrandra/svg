@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { ecrireDxf, indexAci, nomCalque } from '../../../src/export/dxf.js';
+import { indexAci, nomCalque } from '../../../src/export/dxf.js';
 import { polylignes } from '../../../src/export/aplatissement.js';
 import { lireChemin } from '../../../src/engine/editionSvg.js';
+import { ecrireDxf } from './plats.js';
 
 const dessin = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const K = 25.4 / 96;

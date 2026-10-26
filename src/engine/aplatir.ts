@@ -8,6 +8,7 @@
 // cout et sans un octet de difference.
 
 import { estPlat, visibleEffectif, type DessinSvg, type Forme } from './editionSvg.js';
+import { descenteGroupes } from './descente/groupes.js';
 
 /** Ce qu'un exporteur fait d'une fonction du modele : il la sait, il l'approche, il la rend en image, ou il la refuse. */
 export type Niveau = 'natif' | 'approche' | 'raster' | 'refus';
@@ -18,12 +19,13 @@ export type FonctionV2 = 'groupes' | 'decoupes' | 'masques' | 'degrades' | 'moti
 /** Les capacites d'un exporteur, fonction par fonction (le tableau de l'annexe 5 §4). */
 export type Capacites = Readonly<Record<FonctionV2, Niveau>>;
 
+declare const plat: unique symbol;
+
 /**
- * Un dessin sans groupe ni champ v2, pret pour un exporteur. A l'etape 0, un simple alias de `DessinSvg` (les exporteurs le prennent
- * deja, rien d'autre ne change) ; l'etape 1 le verrouille par une marque de type, de sorte qu'un exporteur qui recoit un `DessinSvg`
- * sans passer par `aplatirPour` ne compile plus.
+ * Un dessin sans groupe ni champ v2, pret pour un exporteur. Une marque de type (aucun champ a l'execution) verrouillee a l'etape 1 :
+ * un exporteur qui recoit un `DessinSvg` sans passer par `aplatirPour` ne compile plus.
  */
-export type DessinPlat = DessinSvg;
+export type DessinPlat = DessinSvg & { readonly [plat]: true };
 
 /** Un dessin descendu et ce qui a ete approche, en phrases a montrer a l'export (comme « courbes rebaties » des booleens). */
 export interface Descente { readonly dessin: DessinPlat; readonly pertes: readonly string[] }
@@ -39,6 +41,7 @@ export interface RegleDescente {
  * decoupes et les masques, les groupes en dernier). Vide a l'etape 0.
  */
 export const REGLES_DESCENTE: readonly RegleDescente[] = [
+  descenteGroupes
 ];
 
 /** Le SVG « a plat » (menu Fichier, des l'etape 2) : les octets du contrat d'avant le modele v2, le texte en contours. */
@@ -57,7 +60,7 @@ const FILET = {
   images: 'les images'
 } as const;
 
-function filet(d: DessinSvg): Descente {
+function filet(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[] } {
   const pertes = new Set<string>();
   if (d.groupes) pertes.add(FILET.groupes);
   const formes: Forme[] = [];
@@ -80,7 +83,7 @@ function filet(d: DessinSvg): Descente {
  * declare, puis le filet retire ce qui resterait. Pur.
  */
 export function aplatirPour(d: DessinSvg, capacites: Capacites, regles: readonly RegleDescente[] = REGLES_DESCENTE): Descente {
-  if (estPlat(d)) return { dessin: d, pertes: AUCUNE_PERTE };
+  if (estPlat(d)) return { dessin: d as DessinPlat, pertes: AUCUNE_PERTE };
   let courant = d;
   const pertes: string[] = [];
   for (const r of regles) {
@@ -88,8 +91,11 @@ export function aplatirPour(d: DessinSvg, capacites: Capacites, regles: readonly
     courant = x.dessin;
     for (const p of x.pertes) if (!pertes.includes(p)) pertes.push(p);
   }
-  if (estPlat(courant)) return { dessin: courant, pertes };
+  if (estPlat(courant)) return { dessin: courant as DessinPlat, pertes };
   const reste = filet(courant);
   for (const p of reste.pertes) if (!pertes.includes(p)) pertes.push(p);
-  return { dessin: reste.dessin, pertes };
+  return { dessin: reste.dessin as DessinPlat, pertes };
 }
+
+/** La phrase des pertes a ajouter au message d'un export ; vide quand rien n'a ete approche (tout dessin plat). */
+export const phrasePertes = (pertes: readonly string[]): string => (pertes.length ? 'Approché par ce format : ' + pertes.join(' ; ') + '.' : '');

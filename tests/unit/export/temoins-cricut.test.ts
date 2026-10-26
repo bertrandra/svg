@@ -10,17 +10,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from 'node:path';
 import { ecrireDessin, lireDessin, marquerProduction, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { constatsPreparation, marqueDeProfil, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { printThenCut } from '../../../src/export/printThenCut.js';
 import { svgExporte } from '../../../src/export/svgs.js';
 import { CHOIX_CRICUT_DEFAUT } from '../../../src/model/contextes.js';
-import { svgPourStylo } from '../../../src/export/stylo.js';
-import { exportParOperation } from '../../../src/export/operations.js';
 import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { cheminDuTexte } from '../../../src/engine/texte/bloc.js';
 import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
 import { glyphesTrait, type DonneesTrait } from '../../../src/io/policesTrait.js';
 import { pathToFileURL } from 'node:url';
+import { exportParOperation, printThenCut, svgCricut, svgPourStylo } from './plats.js';
 
 const DOSSIER = resolve(__dirname, '../../../docs/cricut/temoins');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';

@@ -5,10 +5,9 @@
 import { describe, expect, it } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { constatsPreparation, partagerOperations, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { archiveOperations, exportParOperation, modeDEmploiOperations, nomsOperations, operationsPeintes, svgCombine, type ExportParOperation } from '../../../src/export/operations.js';
-import { svgPourStylo } from '../../../src/export/stylo.js';
+import { modeDEmploiOperations, nomsOperations, operationsPeintes, svgCombine, type ExportParOperation } from '../../../src/export/operations.js';
 import { CHOIX_CRICUT_DEFAUT, DESIGN_SPACE_OPERATIONS, type Procede } from '../../../src/model/contextes.js';
+import { archiveOperations, exportParOperation, svgCricut, svgPourStylo } from './plats.js';
 
 const lire = (corps: string): DessinSvg => { const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 288">' + corps + '</svg>'); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const profil = (procede: Procede): ProfilProduction => {

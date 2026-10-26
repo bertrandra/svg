@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 100 100">
+  <g data-ed-nom="javascript:alert(1)"><path d="M0 0h10v10h-10z" fill="#c81e28"/></g>
+  <g data-ed-nom="%22%20onload%3D%22alert(1)" inkscape:label="&quot; onload=&quot;alert(2)"><path d="M20 0h10v10h-10z" fill="#1428a0"/></g>
+  <g data-name="url(http://exemple.invalid/x) @import &lt;script&gt;"><path d="M40 0h10v10h-10z" fill="#228b22"/></g>
+</svg>

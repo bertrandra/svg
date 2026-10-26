@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+  <!-- L'opacite d'un groupe compose au groupe : deux formes qui se recouvrent ne s'eclaircissent pas l'une l'autre. -->
+  <g opacity="0.5">
+    <path d="M5 5h30v30h-30z" fill="#c81e28"/>
+    <path d="M20 20h30v30h-30z" fill="#1428a0"/>
+  </g>
+  <!-- Emboitees, chacune reste a son groupe ; celle d'une forme reste a la forme. -->
+  <g style="opacity:80%">
+    <g opacity=".5"><path d="M60 5h20v20h-20z" fill="#228b22" opacity="0.5"/></g>
+    <path d="M85 5h20v20h-20z" fill="#228b22" stroke="#15181d" stroke-width="2"/>
+  </g>
+  <!-- Une opacite nulle se garde ; une opacite hors bornes se ramene dans [0, 1]. -->
+  <g opacity="0"><path d="M60 35h20v20h-20z" fill="#6a2c91"/></g>
+  <g opacity="3"><path d="M85 35h20v20h-20z" fill="#6a2c91"/></g>
+</svg>

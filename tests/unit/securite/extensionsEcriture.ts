@@ -20,6 +20,25 @@ export interface ExtensionEcriture {
   readonly attribut?: (e: ElementEcrit, nom: string, valeur: string) => boolean | undefined;
 }
 
-/** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images) ; vide a l'etape 0. */
+/** Le texte encode en pourcentage (comme `data-ed-texte`) : lettres ASCII et chiffres en clair, tout le reste en %XX. */
+const ENCODE = /^(?:[A-Za-z0-9]|%[0-9A-F]{2})+$/;
+const OPACITE = /^(?:0(?:\.\d{1,3})?|1)$/;
+
+/**
+ * Etape 1, groupes : des <g> a toute profondeur sous la racine (dans <svg> ou dans un autre <g>), avec au plus `opacity` (une opacite
+ * de groupe, jamais pleine) et `data-ed-nom` (encode) ; le marqueur `data-ed-modele="2"` sur la racine.
+ */
+const groupes: ExtensionEcriture = {
+  nom: 'etape 1 : groupes',
+  element: e => (e.nom === 'g' ? e.profondeur >= 1 && (e.parent === 'svg' || e.parent === 'g') : undefined),
+  attribut: (e, nom, valeur) => {
+    if (e.nom === 'g') return nom === 'opacity' ? OPACITE.test(valeur) && valeur !== '1' : nom === 'data-ed-nom' ? ENCODE.test(valeur) : false;
+    if (e.profondeur === 0 && nom === 'data-ed-modele') return valeur === '2';
+    return undefined;
+  }
+};
+
+/** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images). */
 export const EXTENSIONS_ECRITURE: readonly ExtensionEcriture[] = [
+  groupes
 ];

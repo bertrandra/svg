@@ -9,6 +9,8 @@ import {
   resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
 } from '../engine/preparation.js';
 import { archiveOperations, exportParOperation, nomsOperations, operationsPeintes } from '../export/operations.js';
+import { aplatirPour, phrasePertes } from '../engine/aplatir.js';
+import { CAPACITES_PRODUCTION } from '../export/capacites.js';
 import { toutesLesPolices } from '../io/polices.js';
 import { policeTraitProche } from '../model/polices.js';
 import { natureDuTexte } from '../engine/texte/vivant.js';
@@ -101,21 +103,25 @@ const remettre = (nom: string, donnees: Uint8Array | Blob, dire: (t: string) => 
  * Le SVG de decoupe, le SVG du stylo, l'archive d'un dessin qui mele les deux (ADR-0028), ou l'archive Print Then Cut (avec son PNG
  * a la resolution du profil), remis au telechargement. Faux s'il est refuse.
  */
-function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, dire: (t: string) => void): boolean {
+function exporter(dessin: DessinSvg, p: ProfilProduction, nom: string, direSeul: (t: string) => void): boolean {
+  // Le dessin tel que la machine le recoit (ADR-0012 §6) : le meme objet pour un dessin plat ; sinon descendu, et ce qui a ete
+  // approche s'ajoute au message.
+  const { dessin: plat, pertes } = aplatirPour(dessin, CAPACITES_PRODUCTION), approche = phrasePertes(pertes);
+  const dire = (t: string) => direSeul(approche ? t + ' ' + approche : t);
   if (operationsApplicables(p.procede)) {
-    const r = exportParOperation(dessin, p);
+    const r = exportParOperation(plat, p);
     if ('erreur' in r) { dire(r.erreur); return false; }
     const t = resumePreparation(dessin).taille, taille = t ? ', ' + texteTaille(t.l, t.h, p.unite) : '';
     if (r.genre === 'ecriture') remettre(nom + '-stylo.svg', texteOctets(r.svg), dire, pluriel(r.couches, 'couleur') + ' : ' + pluriel(r.couches, 'stylo') + taille + '.');
     else if (r.genre === 'decoupe') remettre(nom + '-cricut.svg', texteOctets(r.svg), dire, phraseCouches(r.couches) + taille + '.');
     else {
       const f = nomsOperations(nom);
-      remettre(f.archive, new Blob([archiveOperations(nom, dessin, p, r) as BlobPart], { type: 'application/zip' }), dire,
+      remettre(f.archive, new Blob([archiveOperations(nom, plat, p, r) as BlobPart], { type: 'application/zip' }), dire,
         'Un fichier à couper (' + phraseCouches(r.couches) + '), un fichier à écrire (' + pluriel(r.stylos, 'stylo') + ') et les deux ensemble' + taille + '.');
     }
     return true;
   }
-  const r = printThenCut(dessin, p);
+  const r = printThenCut(plat, p);
   if ('erreur' in r) { dire(r.erreur); return false; }
   const resolution = p.printThenCut?.resolution ?? 300;
   const largeur = Math.max(1, Math.round(versUnite(r.vb[2], 'in') * resolution));

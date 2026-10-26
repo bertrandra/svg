@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { ecrireEps, texteDsc } from '../../../src/export/eps.js';
+import { texteDsc } from '../../../src/export/eps.js';
+import { ecrireEps } from './plats.js';
 
 const dessin = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const PT = 72 / 96;

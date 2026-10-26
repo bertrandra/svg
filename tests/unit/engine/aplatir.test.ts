@@ -56,7 +56,7 @@ describe('aplatirPour', () => {
     expect(estPlat(r.dessin)).toBe(true);
   });
 
-  it('les capacites declarees : le texte est toujours natif (ses contours sont dans d), aucune regle inscrite a l etape 0', () => {
+  it('les capacites declarees : le texte est toujours natif (ses contours sont dans d), une seule regle par fonction', () => {
     for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE, CAPACITES_PDF, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION]) expect(c.texte).toBe('natif');
     expect(new Set(REGLES_DESCENTE.map(r => r.fonction)).size).toBe(REGLES_DESCENTE.length);
   });

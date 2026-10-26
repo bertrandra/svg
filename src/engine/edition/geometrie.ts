@@ -4,6 +4,7 @@
 import type { Boite, Chemin, Commande, DessinSvg, Forme, Matrice } from './types.js';
 import { IDENTITE } from './types.js';
 import { ancre, depart } from './chemins.js';
+import { feuillesDe } from './arbre.js';
 
 export function multiplier(m: Matrice, n: Matrice): Matrice {
   return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
@@ -122,7 +123,11 @@ export function boiteForme(f: Forme): Boite | null {
   return cacheBoites.get(f) ?? null;
 }
 
+/**
+ * La boite des formes choisies. Un groupe choisi compte par ses feuilles (ADR-0012, annexe 7 §3, loi 4 : redimensionner un groupe,
+ * c'est redimensionner ses feuilles) ; un dessin plat prend le calcul d'avant.
+ */
 export function boiteDe(dessin: DessinSvg, ids: readonly string[]): Boite | null {
-  const voulus = new Set(ids);
+  const voulus = new Set(dessin.groupes ? feuillesDe(dessin, ids) : ids);
   return unir(dessin.formes.filter(f => voulus.has(f.id)).map(boiteForme));
 }

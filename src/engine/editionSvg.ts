@@ -120,6 +120,13 @@ export { ATTRIBUT_MODELE, VERSION_MODELE } from './edition/ecritureRiche.js';
 export { transformerFeuille, transformerGroupe } from './edition/transformation.js';
 
 // ---- etape 1 : groupes (moteur)
+export {
+  grouper, degrouper, deplacerDans, renommer, groupeDe, reglerGroupes, dupliquerNoeuds, ordonnerNoeuds, montrerSeulementNoeuds, insererContenu,
+  collerContenu, egales, MSG_MEME_PARENT, type OrdreNoeuds
+} from './edition/groupes.js';
+export { groupes, nomDuGroupe, GROUPES_MAX, NOM_GROUPE_MAX, ATTRIBUT_NOM, MSG_GROUPES_PROFONDS, MSG_GROUPES_NOMBREUX } from './edition/fonctions/groupes.js';
+export { boiteVisuelle } from './edition/etendue.js';
+export { ignoresDeFusion, MSG_FUSION, MSG_ORDRE_PEINTURE, MSG_VECTOR_EFFECT } from './edition/fusion.js';
 
 // ---- etape 3 : definitions et degrades
 

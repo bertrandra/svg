@@ -3,9 +3,13 @@
 // <use> se deplie en autant de formes independantes (ids neufs) que sa cible en porte, avec l'heritage DU <use>
 // (un clone voit les valeurs heritees du <use>, pas celles du parent d'origine de sa cible, comme en CSS).
 // Ce qui ne se ramene pas a des chemins pleins est refuse en le nommant. Pur.
+//
+// En mode riche (ADR-0012, etape 1), le lecteur des groupes (fonctions/groupes.ts) garde chaque <g> comme un groupe : il le range
+// dans `Parcours.groupes` et lit ses enfants avec `Contexte.parent`, que chaque feuille posee recopie. La matrice et l'heritage se
+// resolvent toujours sur les feuilles ; seule l'opacite du groupe reste au groupe.
 
 import type { Noeud } from '../../util/xml.js';
-import type { Forme, Matrice } from './types.js';
+import type { Forme, Groupe, Matrice } from './types.js';
 import { IDENTITE } from './types.js';
 import { boiteChemin, facteur, lireTransformation, multiplier, transformerChemin, translation } from './geometrie.js';
 import { COULEUR_COURANTE, lirePeintureAlpha } from './peinture.js';
@@ -25,6 +29,7 @@ import {
   cibleDe, depasseDuCadre, CLONES_MAX, inverse, lireAspect, lireVue, longueurUse, matriceCadre, PROFONDEUR_USE_MAX, type Cadre
 } from './clones.js';
 import { completerFeuille, lecteurDe, prisesDe, resoudrePeinture, type Fonctionnalite, type Marche, type PeintureResolue } from './fonctionnalites.js';
+import { ignoresDeFusion } from './fusion.js';
 
 const IGNORES = new Set(['defs', 'title', 'desc', 'metadata', 'style', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'pattern', 'symbol', 'marker', 'filter']);
 const NON_PRIS: ReadonlyMap<string, string> = new Map([
@@ -55,16 +60,30 @@ export interface Parcours {
    * vide) en mode plat, qui lit alors exactement comme avant (ADR-0012, annexe 2 §1).
    */
   readonly fonctions?: readonly Fonctionnalite[];
+  /**
+   * Les groupes lus en mode riche, par identifiant, dans l'ordre de lecture (le lecteur des groupes les y range) ; absente en mode
+   * plat, ou les groupes se fondent dans leurs feuilles.
+   */
+  readonly groupes?: Map<string, Groupe>;
 }
 
 const AUCUNE: readonly Fonctionnalite[] = [];
 const fonctionsDe = (p: Parcours): readonly Fonctionnalite[] => p.fonctions ?? AUCUNE;
 
-/** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
-export interface Contexte { readonly m: Matrice; readonly heritees: Proprietes; readonly opacite: number; readonly profondeur: number }
+/**
+ * Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. `parent` : le groupe que lit le mode riche
+ * (absent a la racine, et toujours en mode plat).
+ */
+export interface Contexte { readonly m: Matrice; readonly heritees: Proprietes; readonly opacite: number; readonly profondeur: number; readonly parent?: string }
 
-/** Un element prepare : son contexte (matrice et opacite avec les siennes) et ses proprietes propres. */
-export interface Pret extends Contexte { readonly pr: Proprietes }
+/**
+ * Un element prepare : son contexte (matrice et opacite avec les siennes) et ses proprietes propres. `opaciteDuParent` est l'opacite
+ * recue, avant la sienne : un groupe du mode riche garde la sienne pour lui et ne la transmet pas a ses feuilles.
+ */
+export interface Pret extends Contexte { readonly pr: Proprietes; readonly opaciteDuParent: number }
+
+/** Le groupe du contexte, a etaler dans un contexte ou une forme : rien hors d'un groupe. */
+const parentDe = (ctx: Contexte): { parent?: string } => (ctx.parent !== undefined ? { parent: ctx.parent } : {});
 
 /** Le contexte d'un element, ou null s'il ne se dessine pas (cache) ou se refuse (nomme dans `refus`). */
 function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
@@ -77,12 +96,16 @@ function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
   const t = n.attributs.transform ? lireTransformation(n.attributs.transform) : IDENTITE;
   if (!t) { p.refus.add('une transformation illisible'); return null; }
+  // Ce qui se perdait sans etre dit (fusion, ordre de peinture, vector-effect) : dit, dans les deux modes (fusion.ts).
+  for (const msg of ignoresDeFusion(pr, n)) p.analyse.ignores.add(msg);
   return {
     pr,
     heritees: heriter(ctx.heritees, pr),
     opacite: ctx.opacite * (pr.opacity !== undefined ? lireOpacite(pr.opacity) : 1),
+    opaciteDuParent: ctx.opacite,
     m: multiplier(ctx.m, t),
-    profondeur: ctx.profondeur
+    profondeur: ctx.profondeur,
+    ...parentDe(ctx)
   };
 }
 
@@ -165,6 +188,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
     verrouille: false,
+    ...parentDe(b),
     ...(peintureR ? { peintureRemplissage: peintureR.peinture } : {}),
     ...(peintureC ? { peintureContour: peintureC.peinture } : {})
   };
@@ -184,7 +208,8 @@ function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
     m: multiplier(b.m, matriceCadre(vue, cadre, lireAspect(s.attributs.preserveAspectRatio))),
     heritees: heriter(b.heritees, pr),
     opacite: b.opacite * (pr.opacity !== undefined ? lireOpacite(pr.opacity) : 1),
-    profondeur: b.profondeur
+    profondeur: b.profondeur,
+    ...parentDe(b)
   };
   const avant = p.formes.length;
   parcourirEnfants(p, s, ctx);
@@ -238,8 +263,16 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (lecteur) lecteur(n, b, marche(p));
   else if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
-  else if (n.nom === 'text' && p.texte) lireTexte(p.texte, n, b.heritees, b.m, b.opacite);
+  else if (n.nom === 'text' && p.texte) lireTexteDans(p, p.texte, n, b);
   else poserForme(p, n, b);
+}
+
+/** Un <text> lu en lettres ; dans un groupe du mode riche, ses lettres en sont des feuilles. */
+function lireTexteDans(p: Parcours, texte: ContexteTexte, n: Noeud, b: Pret): void {
+  const avant = p.formes.length;
+  lireTexte(texte, n, b.heritees, b.m, b.opacite);
+  if (b.parent === undefined) return;
+  for (let i = avant; i < p.formes.length; i++) { const f = p.formes[i]; if (f) p.formes[i] = { ...f, parent: b.parent }; }
 }
 
 const marches = new WeakMap<Parcours, Marche>();

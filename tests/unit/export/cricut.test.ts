@@ -10,12 +10,12 @@ import { regionDeForme, toleranceBooleen } from '../../../src/engine/booleens.js
 import { aireDeRegion } from '../../../src/engine/contour/region.js';
 import { ecrireDessin, lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { resoudreProfil, silhouetteDe, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { archivePrintThenCut, modeDEmploi, printThenCut, FORMES_MAX_PRINT_THEN_CUT, type FichiersPrintThenCut } from '../../../src/export/printThenCut.js';
+import { archivePrintThenCut, modeDEmploi, FORMES_MAX_PRINT_THEN_CUT, type FichiersPrintThenCut } from '../../../src/export/printThenCut.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { au } from '../../../src/util/tableaux.js';
 import { violationsNettoyage } from '../securite/invariants.js';
+import { printThenCut, svgCricut } from './plats.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
