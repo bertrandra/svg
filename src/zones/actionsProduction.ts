@@ -3,7 +3,7 @@
 // l'appel, chaque correction n'ouvre qu'une entree d'historique (Ctrl+Z la defait) et se dit a voix haute.
 
 import { useEffect, useRef, useState } from 'react';
-import { ecrireDessin, marquerProduction, type DessinSvg } from '../engine/editionSvg.js';
+import { ecrireDessin, marquerProduction, marquerReperes, type DessinSvg } from '../engine/editionSvg.js';
 import {
   cadreTapis, constatsPreparation, corrigerPreparation, etendueVisible, marqueDeChoix, normaliserChoix, operationsAEcrire, operationsApplicables, poserOperation,
   resoudreProfil, resumePreparation, texteMesure, texteTaille, unionCadres, versUnite, type CadreTapis, type ProfilProduction
@@ -35,7 +35,8 @@ import type { ActionsEditeur, EtatPreparation, SuiteCricut } from './typesEditeu
 export function svgDocument(dessin: DessinSvg, production: ChoixProduction): string {
   const choix = normaliserChoix(production);
   const procede = choix.contexte === 'cricut' ? choix.procede : null;
-  return marquerProduction(ecrireDessin(operationsAEcrire(dessin, procede), 3, procede !== null), marqueDeChoix(choix));
+  // Les reperes (ADR-0038) suivent la marque du contexte, seulement s'il y en a : un document sans repere garde ses octets.
+  return marquerReperes(marquerProduction(ecrireDessin(operationsAEcrire(dessin, procede), 3, procede !== null), marqueDeChoix(choix)), dessin.reperes);
 }
 
 /** La phrase qui dit le contexte choisi. */

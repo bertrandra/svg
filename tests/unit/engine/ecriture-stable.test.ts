@@ -34,6 +34,8 @@ import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
+import { ajouterRepere, dupliquerEnGrille, marquerReperes, repetitionRadiale, symetrie } from '../../../src/engine/editionSvg.js';
+import { largeurVariable } from '../../../src/engine/contours.js';
 import { exportParOperation, printThenCut, svgCricut, svgDecoupe } from '../export/plats.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
@@ -449,7 +451,19 @@ const CAS: readonly Cas[] = [
   // le prouvent) ; en contexte Cricut, le document porte `data-ed-operation` sur une forme dont le choix differe de la regle ; et
   // l'export d'un dessin mele livre trois fichiers aux octets figes.
   { nom: 'cricut-operations', entree: 'stylo', produire: t => nettoyerSvg(documentCricut(aEcrire(lire(t))))?.svg ?? 'REFUSE' },
-  ...(['a-couper', 'a-ecrire', 'combine'] as const).map((fichier): Cas => ({ nom: 'couper-ecrire-' + fichier, entree: 'stylo', produire: t => couperEcrire(t, fichier) }))
+  ...(['a-couper', 'a-ecrire', 'combine'] as const).map((fichier): Cas => ({ nom: 'couper-ecrire-' + fichier, entree: 'stylo', produire: t => couperEcrire(t, fichier) })),
+  // Les outils de l'ADR-0038 : des cas NEUFS, aucune reference reecrite. Repeter la selection (grille, radiale, symetrie) pose des
+  // formes ordinaires ; arrondir un seul coin ; la largeur variable d'un trait ; et les reperes, ecrits en `data-ed-reperes` sur la
+  // racine du document seulement quand il y en a (toutes les references ci-dessus, sans repere, le prouvent).
+  { nom: 'repetition-grille', entree: 'arrondi', operation: d => dupliquerEnGrille(d, ['f1', 'f4'], { lignes: 2, colonnes: 3, pasX: 12.5, pasY: 15 }).dessin },
+  {
+    nom: 'repetition-radiale', entree: 'arrondi',
+    operation: enchainer(d => repetitionRadiale(d, ['f4'], { exemplaires: 6, angle: 360, centre: [100, 60], orienter: true }).dessin, d => repetitionRadiale(d, ['f1'], { exemplaires: 3, angle: 90, centre: [50, 60], orienter: false }).dessin)
+  },
+  { nom: 'repetition-symetrie', entree: 'arrondi', operation: enchainer(d => symetrie(d, ['f2'], { sens: 'h', axe: 100, garder: true }).dessin, d => symetrie(d, ['f3'], { sens: 'v', axe: 60, garder: false }).dessin) },
+  { nom: 'arrondir-coin', entree: 'arrondi', operation: d => arrondirFormes(d, ['f1'], 8, new Set([2])).dessin },
+  { nom: 'largeur-variable', entree: 'arrondi', operation: d => largeurVariable(d, ['f2'], { debut: 1, milieu: 8, fin: 2 }).dessin },
+  { nom: 'reperes-document', entree: 'arrondi', produire: t => { const d = ajouterRepere(ajouterRepere(ajouterRepere(lire(t), 'h', 60), 'h', 12.3456), 'v', 100); return nettoyerSvg(marquerReperes(ecrireDessin(d, 3), d.reperes))?.svg ?? 'REFUSE'; } }
 ];
 
 const produire = (cas: Cas): string => {

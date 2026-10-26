@@ -111,6 +111,26 @@ describe('la lecture riche des groupes', () => {
     expect('erreur' in sansPerte ? null : sansPerte.ignores).toEqual([]);
   });
 
+  it('un degrade et une image sous des groupes transformes : leur groupe, la matrice composee, l opacite au groupe', () => {
+    const d = fixture('v2/groupes-degrade-image.svg');
+    expect(Object.values(d.groupes ?? {}).map(x => [x.id, x.parent ?? null, x.nom ?? null, x.opacite ?? 1])).toEqual([
+      ['g1', null, 'Ciel', 0.8], ['g2', 'g1', null, 1], ['g3', null, 'Photo', 1]
+    ]);
+    expect(d.formes.map(x => [x.parent, !!x.peintureRemplissage, !!x.peintureContour, !!x.image, x.opacite])).toEqual([
+      ['g1', true, false, false, 1], ['g2', true, true, false, 1], ['g3', false, false, true, 1], ['g3', false, false, false, 1]
+    ]);
+    const image = d.formes.find(x => x.image)?.image;
+    expect(image?.matrice).toBeDefined();
+    expect(verifierDessin(d)).toEqual([]);
+    // Deplacer le groupe emmene la peinture et l'image : la boite du groupe et le cadre de l'image suivent.
+    const deplace = deplacer(d, ['g3'], 10, 5);
+    expect(boiteDe(deplace, ['g3'])).toEqual({ ...(boiteDe(d, ['g3']) ?? { x: 0, y: 0, l: 0, h: 0 }), x: (boiteDe(d, ['g3'])?.x ?? 0) + 10, y: (boiteDe(d, ['g3'])?.y ?? 0) + 5 });
+    expect(deplace.formes.find(x => x.image)?.image).not.toEqual(image);
+    const tourne = transformer(d, ['g1'], translation(3, 0));
+    expect(tourne.formes[0]?.peintureRemplissage).not.toEqual(d.formes[0]?.peintureRemplissage);
+    expect(verifierDessin(tourne)).toEqual([]);
+  });
+
   it('toute fixture v2 et tout SVG du corpus lus en riche respectent les invariants', () => {
     const noms = [...readdirSync(join(FIXTURES, 'v2')).filter(n => n.endsWith('.svg')).map(n => 'v2/' + n), ...readdirSync(FIXTURES).filter(n => n.endsWith('.svg'))];
     let lus = 0;

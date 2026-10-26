@@ -4,12 +4,9 @@
 // reste sous la limite de pointe, et un bout carre prolonge le trait d'une demi-epaisseur le long de sa
 // tangente (ses coins sortent donc de la boite des points d'un demi-cote). Pur.
 
-import type { Boite, Chemin, Contenu, Forme } from './types.js';
-import { boiteForme, unir } from './geometrie.js';
+import type { Boite, Chemin, Forme } from './types.js';
+import { boiteForme } from './geometrie.js';
 import { LIMITE_MITRE_DEFAUT } from './trait.js';
-import { arbreDe, type NoeudArbre } from './arbre.js';
-import { etendreFeuille, etendreGroupe, type Fonctionnalite } from './fonctionnalites.js';
-import { FONCTIONNALITES } from './catalogue.js';
 
 type Vec = readonly [number, number];
 
@@ -145,22 +142,3 @@ export function boiteAvecTrait(f: Forme): Boite | null {
   return { x: x0, y: y0, l: x1 - x0, h: y1 - y0 };
 }
 
-/**
- * La boite visuelle d'un noeud (ADR-0012, annexe 3 §2) : ce qui se voit, pour `ajusterPlan` et la region d'un filtre. Une feuille :
- * sa boite avec son trait, que chaque fonctionnalite peut elargir (ses effets) ; un groupe : l'union de ses enfants visibles, que
- * chaque fonctionnalite peut rogner (sa decoupe) ou elargir (ses effets). Les etapes 5 et 7 remplissent ces crochets
- * (`etendue.feuille`, `etendue.groupe`) sans toucher a ce fichier. null : un noeud inconnu ou sans rien de visible.
- */
-export function boiteVisuelle(d: Contenu, id: string, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): Boite | null {
-  const noeud = arbreDe(d).parId.get(id);
-  return noeud ? boiteDuNoeud(noeud, fonctions) : null;
-}
-
-function boiteDuNoeud(n: NoeudArbre, fonctions: readonly Fonctionnalite[]): Boite | null {
-  if (n.genre === 'feuille') {
-    const b = boiteAvecTrait(n.forme);
-    return b ? etendreFeuille(fonctions, n.forme, b) : null;
-  }
-  const b = unir(n.enfants.filter(e => (e.genre === 'feuille' ? e.forme.visible : e.groupe.visible)).map(e => boiteDuNoeud(e, fonctions)));
-  return b ? etendreGroupe(fonctions, n.groupe, b) : null;
-}

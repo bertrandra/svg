@@ -154,6 +154,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
+  plus ce schéma dans `data-href-externe` (trouvé par le fuzzing sur le corpus réuni ; vecteur ajouté au corpus).
 - Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
   corpus a changé) ; rien ne peut plus le recomposer.
 - Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
@@ -198,6 +200,27 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle v2, étape 3 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les dégradés linéaires et radiaux
+  sont lus (unités de boîte, pourcentages, transformation, chaîne `href`, 64 arrêts au plus), réécrits sous un identifiant
+  d'empreinte, une seule définition par dégradé, et suivent leur forme. Les exports qui ne savent pas peindre un dégradé (PDF, SVG
+  de découpe, DXF, EPS, fichiers Cricut) reçoivent sa couleur moyenne et le disent ; le nuancier lit les couleurs des arrêts. Le
+  projet du site garde dégradés et images au format 2 ; un dessin plat reste au format 1, octet pour octet. La vignette du site
+  montre les dégradés.
+
+- Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se
+  lit en mode riche, vérifiée sur ses octets (une « image » qui est un SVG ou une adresse extérieure sont refusées en le nommant ;
+  4 Mo par image, 16 Mo par dessin, 64 millions de pixels lus dans l'en-tête), s'écrit en `xlink:href` à l'identique, suit ses
+  transformations, et les exports de tracés (PDF, DXF, EPS, découpe) l'abandonnent en le disant.
+
+- **Règles et repères** (ADR-0038) : règles en haut et à gauche de la toile (unités du plan, ou mm et pouces d'un contexte de
+  production), repères qu'on tire d'une règle, qu'on déplace, verrouille, retire (glisser hors de la toile ou Suppr) et pose à
+  une valeur exacte (double-clic, ou le panneau « Repères ») ; les aimants s'y accrochent ; menu Vue : Maj+R, Ctrl+;, Ctrl+Alt+;,
+  Ctrl+Maj+;. Le document les garde en `data-ed-reperes` sur la racine, seulement s'il y en a, et le projet aussi ; aucun export.
+- **Répéter la sélection** : dupliquer en grille, répétition radiale, symétrie autour du centre ou d'un repère, en gardant ou non
+  l'original, avec aperçu en direct (menu Édition et menu « Répéter » de la sélection). Coins arrondis en direct (un curseur) et
+  « Arrondir ce coin » en mode points. Largeur variable du trait : le trait devient une surface qui suit un profil début, milieu,
+  fin. Aucune référence d'écriture ne change ; six références neuves.
 
 - **Les outils de sélection** (ADR-0035) : le cadre prend toute forme dont le tracé réel (surface remplie selon sa règle, ou encre
   du trait) touche le rectangle, même en partie — plus le trou d'un anneau, ni le coin vide de la boîte d'une diagonale ; « Les

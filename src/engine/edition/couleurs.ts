@@ -1,8 +1,18 @@
 // Les couleurs du dessin : lesquelles, combien de formes, remplacement partout. Une couleur dont on
 // a tout masque reste dans la liste, sans quoi on ne pourrait plus la rendre.
+//
+// Un cote peint d'un degrade ou d'un motif (modele v2, ADR-0012 annexe 1 §6) n'est pas une couleur du dessin : sa couleur de repli
+// n'est qu'une approximation pour qui ne connait que les couleurs unies. Les listes l'ignorent et les remplacements n'y touchent pas
+// (jamais un repli qui changerait sans que le degrade change) ; les arrets deviendront des couleurs a l'etape 13. Sur un dessin plat,
+// `fondUni` et `traitUni` rendent exactement `remplissage` et `contour` : rien n'y change (loi du dessin plat).
 
 import { au } from '../../util/tableaux.js';
 import type { DessinSvg, Forme } from './types.js';
+
+/** Le remplissage tel que les listes de couleurs le lisent : rien sous une peinture non unie. */
+export const fondUni = (f: Forme): string | null => (f.peintureRemplissage === undefined ? f.remplissage : null);
+/** Le contour tel que les listes de couleurs le lisent : rien sous une peinture non unie. */
+export const traitUni = (f: Forme): string | null => (f.peintureContour === undefined ? f.contour : null);
 
 export interface CouleurDuDessin { couleur: string; formes: number }
 
@@ -11,7 +21,7 @@ export function couleursDuDessin(dessin: DessinSvg): CouleurDuDessin[] {
   const n = new Map<string, number>();
   for (const f of dessin.formes) {
     if (!f.visible) continue;
-    for (const c of [f.remplissage, f.contour]) if (c) n.set(c, (n.get(c) ?? 0) + 1);
+    for (const c of [fondUni(f), traitUni(f)]) if (c) n.set(c, (n.get(c) ?? 0) + 1);
   }
   return [...n].map(([couleur, formes]) => ({ couleur, formes })).sort((a, b) => b.formes - a.formes || (a.couleur < b.couleur ? -1 : 1));
 }
@@ -19,7 +29,7 @@ export function couleursDuDessin(dessin: DessinSvg): CouleurDuDessin[] {
 export function remplacerCouleur(dessin: DessinSvg, de: string, vers: string | null): DessinSvg {
   let change = false;
   const formes = dessin.formes.map(f => {
-    const r = f.remplissage === de ? vers : f.remplissage, c = f.contour === de ? vers : f.contour;
+    const r = fondUni(f) === de ? vers : f.remplissage, c = traitUni(f) === de ? vers : f.contour;
     if (r === f.remplissage && c === f.contour) return f;
     change = true;
     return { ...f, remplissage: r, contour: c };
@@ -38,11 +48,11 @@ export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string 
   let change = false;
   const formes = dessin.formes.map(f => {
     if (sur === 'remplissage') {
-      if (f.remplissage !== de || vers === de) return f;
+      if (fondUni(f) !== de || vers === de) return f;
       change = true;
       return { ...f, remplissage: vers };
     }
-    if (f.contour !== de || vers === de) return f;
+    if (traitUni(f) !== de || vers === de) return f;
     change = true;
     return { ...f, contour: vers };
   });
@@ -50,7 +60,7 @@ export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string 
 }
 
 export const idsDeCouleur = (dessin: DessinSvg, couleur: string): string[] =>
-  dessin.formes.filter(f => f.visible && !f.verrouille && (f.remplissage === couleur || f.contour === couleur)).map(f => f.id);
+  dessin.formes.filter(f => f.visible && !f.verrouille && (fondUni(f) === couleur || traitUni(f) === couleur)).map(f => f.id);
 
 /** La couleur lue sur le remplissage, sur le contour, ou sur l'un et l'autre. */
 export type SurCouleur = 'tout' | 'remplissage' | 'contour';
@@ -65,7 +75,8 @@ export interface GroupeCouleur { couleur: string; ids: string[]; libres: string[
 export function groupesDeCouleur(dessin: DessinSvg, sur: SurCouleur = 'tout'): GroupeCouleur[] {
   const groupes = new Map<string, Forme[]>();
   for (const f of dessin.formes) {
-    const lues = sur === 'remplissage' ? [f.remplissage] : sur === 'contour' ? [f.contour] : f.remplissage === f.contour ? [f.remplissage] : [f.remplissage, f.contour];
+    const fond = fondUni(f), trait = traitUni(f);
+    const lues = sur === 'remplissage' ? [fond] : sur === 'contour' ? [trait] : fond === trait ? [fond] : [fond, trait];
     // On ajoute au groupe en place : recopier le tableau a chaque forme couterait n au carre pour une couleur dominante.
     for (const c of lues) if (c) { const g = groupes.get(c); if (g) g.push(f); else groupes.set(c, [f]); }
   }
@@ -120,6 +131,8 @@ export function memesCouleurs(avant: readonly Forme[], apres: readonly Forme[]):
     const a = au(avant, i), b = au(apres, i);
     if (a === b) continue;
     if (a.id !== b.id || a.remplissage !== b.remplissage || a.contour !== b.contour || a.visible !== b.visible || a.verrouille !== b.verrouille) return false;
+    // Poser ou retirer un degrade change ce que les listes lisent, meme a couleur de repli egale ; le deplacer, non.
+    if ((a.peintureRemplissage === undefined) !== (b.peintureRemplissage === undefined) || (a.peintureContour === undefined) !== (b.peintureContour === undefined)) return false;
   }
   return true;
 }
@@ -184,8 +197,8 @@ export function lireCouleursDuDessin(dessin: DessinSvg, precedente: LectureCoule
 export function idsMemeCouleur(dessin: DessinSvg, idModele: string): string[] {
   const modele = dessin.formes.find(f => f.id === idModele);
   if (!modele) return [];
-  const sur: SurCouleur = modele.remplissage ? 'remplissage' : 'contour';
-  const couleur = modele.remplissage ?? modele.contour;
+  const sur: SurCouleur = fondUni(modele) ? 'remplissage' : 'contour';
+  const couleur = fondUni(modele) ?? traitUni(modele);
   if (!couleur) return [];
-  return dessin.formes.filter(f => f.visible && !f.verrouille && (sur === 'remplissage' ? f.remplissage : f.contour) === couleur).map(f => f.id);
+  return dessin.formes.filter(f => f.visible && !f.verrouille && (sur === 'remplissage' ? fondUni(f) : traitUni(f)) === couleur).map(f => f.id);
 }

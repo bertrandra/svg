@@ -11,8 +11,15 @@ import { join, resolve } from 'node:path';
 import { ecrireDessin, lireDessin, verifierDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { violationsEcriture } from '../securite/invariants.js';
+import type { CasV2 } from './v2/cas.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg/corpus');
+
+/** Les cas v2 de toutes les etapes : certains jouent un fichier du corpus (les degrades, etape 3). */
+const CAS_V2: CasV2[] = [];
+for (const n of readdirSync(resolve(__dirname, 'v2')).filter(x => /^cas-[a-z0-9-]+\.ts$/.test(x)).sort()) {
+  CAS_V2.push(...(((await import('./v2/' + n.replace(/\.ts$/, '.js'))) as { CAS?: readonly CasV2[] }).CAS ?? []));
+}
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
 
 interface Entree {
@@ -40,9 +47,13 @@ const lirePage = (svg: string): { dessin: DessinSvg; ignores: readonly string[] 
 const ecrireEnregistre = (d: DessinSvg): string => nettoyerSvg(ecrireDessin(d, 3))?.svg ?? '';
 
 describe('le corpus d acceptation du modele v2', () => {
-  it('chaque fichier du dossier a sa ligne, et reciproquement', () => {
+  it('chaque fichier du dossier est joue : par une ligne d ici (et sa reference a cote), ou par un cas v2 (`entree: \'../corpus/…\'`)', () => {
     const sur = readdirSync(DOSSIER).filter(n => n.endsWith('.svg') && !n.endsWith('.attendu.svg')).map(n => n.slice(0, -4)).sort();
-    expect(CORPUS.map(c => c.fichier).sort()).toEqual(sur);
+    const parCas = CAS_V2.flatMap(c => (c.entree?.startsWith('../corpus/') ? [c.entree.slice('../corpus/'.length)] : []));
+    for (const c of CORPUS) expect(sur, c.fichier).toContain(c.fichier);
+    expect(sur.filter(n => !CORPUS.some(c => c.fichier === n) && !parCas.includes(n)), 'fichiers du corpus que rien ne joue').toEqual([]);
+    const references = readdirSync(DOSSIER).filter(n => n.endsWith('.attendu.svg')).map(n => n.slice(0, -'.attendu.svg'.length));
+    expect(references.filter(r => !CORPUS.some(c => c.fichier === r)), 'references orphelines').toEqual([]);
   });
 
   for (const c of CORPUS) {

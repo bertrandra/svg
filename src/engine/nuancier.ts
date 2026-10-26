@@ -11,7 +11,8 @@ import { lireCode, versHex, versOklab, type Oklab } from '../util/couleur.js';
 import { creerIndexVoisins } from '../util/voisinsOklab.js';
 import { PLAFOND_NUANCIER, TEINTES_NUANCIER_MAX, type NuancierDessin, type ProvenanceNuancier, type TeinteDessin } from '../model/nuancier.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './edition/opacites.js';
-import type { DessinSvg, Forme } from './edition/types.js';
+import type { DessinSvg, Forme, Peinture } from './edition/types.js';
+import { estDegrade, poidsArrets } from './edition/degrades.js';
 import { aireDeChemin, longueurDeChemin } from './nuancier/surfaces.js';
 
 export { aireDeChemin, longueurDeChemin } from './nuancier/surfaces.js';
@@ -48,9 +49,24 @@ function hexDe(peinture: string | null): string | null {
 const memo = new WeakMap<Forme, readonly Apport[]>();
 
 /**
+ * Ce qu'une peinture couvre. Unie : sa couleur, toute la surface. Un degrade (modele v2, ADR-0012 etape 3) : chaque arret pour sa part
+ * du degrade (`poidsArrets`) et a son opacite, jamais la couleur de repli, qui n'est pas une couleur du dessin. Un motif (etape 9) :
+ * rien encore.
+ */
+function couvrir(r: Apport[], peinture: Peinture | undefined, hex: string, opacite: number, surface: number): void {
+  if (peinture === undefined) { r.push({ hex, opacite, surface }); return; }
+  if (!estDegrade(peinture)) return;
+  const poids = poidsArrets(peinture.arrets);
+  peinture.arrets.forEach((a, i) => {
+    const o = arrondi(opacite * (a.opacite ?? 1), 0.01), s = surface * (poids[i] ?? 0);
+    if (o > 0 && s > 0) r.push({ hex: a.couleur, opacite: o, surface: s });
+  });
+}
+
+/**
  * Ce qu'une forme apporte au nuancier : son remplissage (l'aire peinte) et son contour (la longueur du trace par son
  * epaisseur), chacun a son opacite effective (celle de la forme par celle de la peinture), au centieme. Une peinture invisible
- * (opacite nulle, trait d'epaisseur nulle, aire nulle) n'apporte rien : elle n'est pas employee.
+ * (opacite nulle, trait d'epaisseur nulle, aire nulle) n'apporte rien : elle n'est pas employee. Sous un degrade, ses arrets.
  */
 export function apportsDe(f: Forme): readonly Apport[] {
   const deja = memo.get(f);
@@ -59,11 +75,11 @@ export function apportsDe(f: Forme): readonly Apport[] {
   const fond = hexDe(f.remplissage), trait = hexDe(f.contour);
   if (fond) {
     const opacite = arrondi(f.opacite * opaciteDuRemplissage(f), 0.01), surface = opacite > 0 ? aireDeChemin(f.d, f.regle) : 0;
-    if (surface > 0) r.push({ hex: fond, opacite, surface });
+    if (surface > 0) couvrir(r, f.peintureRemplissage, fond, opacite, surface);
   }
   if (trait && f.epaisseur > 0) {
     const opacite = arrondi(f.opacite * opaciteDuContour(f), 0.01), surface = opacite > 0 ? longueurDeChemin(f.d) * f.epaisseur : 0;
-    if (surface > 0) r.push({ hex: trait, opacite, surface });
+    if (surface > 0) couvrir(r, f.peintureContour, trait, opacite, surface);
   }
   memo.set(f, r);
   return r;

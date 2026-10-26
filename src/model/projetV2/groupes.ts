@@ -1,7 +1,8 @@
 // Les groupes dans le projet JSON (ADR-0012, etape 1 ; ADR-0030) : la table `dessin.groupes`, champ pour champ celle du modele
 // (engine/edition/types.ts, `Groupe`), absente d'un dessin plat. La validation borne et verifie ce qu'elle peut sans le moteur
 // (chaque cle est l'identifiant de son groupe, chaque parent existe, la table n'est jamais vide) ; l'arbre lui-meme (cycles,
-// profondeur, contiguite) est verifie a l'ouverture par le moteur (`verifierDessin`, engine/projet.ts). Pur.
+// profondeur, contiguite) est verifie a l'ouverture par le moteur (`verifierDessin`, engine/projet.ts). Comme tout champ v2, la
+// table n'existe qu'au format 2 : un projet au format 1 qui en porterait une la voit ignoree (model/projet.ts). Pur.
 
 import { CHAMPS_GROUPE_V2, type ChampsGroupeV2, type OutilsProjet } from './champs.js';
 
@@ -20,8 +21,6 @@ export type GroupeProjet = {
 export const GROUPES_PROJET_MAX = 20_000;
 /** La longueur d'un nom de groupe : celle que la lecture garde. */
 export const NOM_GROUPE_PROJET_MAX = 200;
-
-const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 
 /**
  * La table des groupes d'un projet, reconstruite dans l'ordre de ses cles et l'ordre des champs du format. `origines` : la lecture
@@ -58,6 +57,3 @@ export function lireGroupesProjet(v: unknown, o: OutilsProjet, origines: (v: unk
   }
   return out;
 }
-
-/** Vrai si un objet de projet (forme ou dessin) porte un champ du modele v2 : il demande le format 2. */
-export const porteChampsV2 = (o: unknown, cles: readonly string[]): boolean => estObjet(o) && cles.some(k => o[k] !== undefined);

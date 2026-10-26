@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <linearGradient id="reflechi" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="40" y2="0" spreadMethod="reflect">
+    <stop offset="0" stop-color="#b3202c"/>
+    <stop offset="1" stop-color="#f4efe6"/>
+  </linearGradient>
+  <radialGradient id="repete" gradientUnits="userSpaceOnUse" cx="150" cy="60" r="12" spreadMethod="repeat">
+    <stop offset="0" stop-color="#111118"/>
+    <stop offset="0.5" stop-color="#08d9d6"/>
+    <stop offset="1" stop-color="#111118"/>
+  </radialGradient>
+  <linearGradient id="etale" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="40" y2="0" spreadMethod="pad">
+    <stop offset="0" stop-color="#b3202c"/>
+    <stop offset="1" stop-color="#f4efe6"/>
+  </linearGradient>
+  <rect x="10" y="10" width="90" height="45" fill="url(#reflechi)"/>
+  <rect x="10" y="65" width="90" height="45" fill="url(#etale)"/>
+  <circle cx="150" cy="60" r="45" fill="url(#repete)"/>
+</svg>

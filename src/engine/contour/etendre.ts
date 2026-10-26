@@ -99,10 +99,10 @@ const CHAMPS_TRAIT = ['pointilles', 'decalagePointilles', 'bout', 'jonction', 'l
 const sansChamps = (f: Forme, cles: readonly string[]): Record<string, unknown> => Object.fromEntries(Object.entries(f).filter(([c]) => !cles.includes(c)));
 
 /** La forme sans contour ni rien de son style de trait : son fond reste tel quel. */
-const sansContour = (f: Forme): Forme => ({ ...sansChamps(f, CHAMPS_TRAIT), contour: null } as Forme);
+export const sansContour = (f: Forme): Forme => ({ ...sansChamps(f, CHAMPS_TRAIT), contour: null } as Forme);
 
 /** La silhouette du trait de `f` : couleur du trait en fond, son alpha en alpha de fond, plus de contour. */
-function silhouette(f: Forme, id: string, d: Chemin): Forme {
+export function silhouette(f: Forme, id: string, d: Chemin): Forme {
   const alpha = opaciteDuContour(f);
   return { ...sansChamps(f, [...CHAMPS_TRAIT, 'opaciteRemplissage']), id, d, remplissage: f.contour, contour: null, regle: 'nonzero', ...(alpha < 1 ? { opaciteRemplissage: alpha } : {}) } as Forme;
 }

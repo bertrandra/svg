@@ -20,6 +20,10 @@ import { FONCTIONNALITES } from './catalogue.js';
 import { ATTRIBUT_MODELE, VERSION_MODELE } from './ecritureRiche.js';
 import { ignoresDeFusion } from './fusion.js';
 import { normaliser } from './arbre.js';
+import { ATTRIBUT_REPERES, lireReperes } from './reperes.js';
+
+/** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038). */
+export const MSG_REPERES_ILLISIBLES = 'les repères du document (illisibles)';
 
 /**
  * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
@@ -115,7 +119,15 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const formes = resoudreLiens(p.formes, p.liens ?? []).filter(f => f.d.length > 0);
   if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
   const production = lireProduction(racine.attributs);
+  // Les reperes du document (ADR-0038) : un attribut de la racine ; illisible, il est laisse de cote, et c'est dit.
+  const texteReperes = racine.attributs[ATTRIBUT_REPERES];
+  const reperes = texteReperes === undefined ? null : lireReperes(texteReperes);
+  const perdus = texteReperes !== undefined && texteReperes.trim() !== '' && !reperes ? [MSG_REPERES_ILLISIBLES] : [];
+  const lu: DessinSvg = { vb: plan, formes, ...(reperes ? { reperes } : {}) };
   // Les groupes du mode riche : un groupe dont aucune feuille n'a ete gardee part (en cascade), la table vide aussi (arbre.ts).
-  const dessin: DessinSvg = groupesLus?.size ? normaliser({ vb: plan, formes, groupes: Object.fromEntries(groupesLus) }) : { vb: plan, formes };
-  return { dessin, ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : [])], ...(production ? { production } : {}) };
+  const dessin: DessinSvg = groupesLus?.size ? normaliser({ ...lu, groupes: Object.fromEntries(groupesLus) }) : lu;
+  return {
+    dessin,
+    ignores: [...analyse.ignores, ...(texte ? phrasesRemplacements(texte) : []), ...perdus], ...(production ? { production } : {})
+  };
 }

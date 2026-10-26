@@ -82,6 +82,13 @@ jamais** ce qu’elle ne sait pas réécrire, et refuse en le nommant : texte, i
 imbriqué, `<use>` en cycle ou vers l’extérieur, plus de 16 niveaux de `<use>`, plus de 20 000 clones. Elle ne lève jamais :
 une pile qui déborderait malgré les bornes devient un refus.
 
+En mode `riche` du modèle v2 (ADR-0012, étape 12, pas encore atteignable depuis la page), une `<image>` se lit, et seulement en
+`data:` : ses **octets** décident (`engine/natureOctets.ts`), jamais le type annoncé ; une « image » qui est un SVG, une adresse
+extérieure, un type autre que PNG, JPEG, GIF, WebP sont refusés en le nommant ; 4 Mo par image, 16 Mo par dessin (clones
+compris) et 64 millions de pixels lus dans l’en-tête (`edition/dimensionsImage.ts`), pour que la bombe de décompression n’atteigne
+jamais le décodeur du navigateur. L’écriture ne pose que `xlink:href="data:image/(png|jpeg|gif|webp);base64,…"`, de sa forme
+exacte (extension « étape 12 : images » de la spécification de l’écriture). Corpus : `tests/fixtures/hostile/v2-images-*`.
+
 ### `lirePdf` : un PDF se lit, rien ne s’y exécute (ADR-0020)
 
 Le PDF est lu par un analyseur linéaire écrit à la main sur ses octets (`engine/pdf/lexique.ts`) : objets, table des objets

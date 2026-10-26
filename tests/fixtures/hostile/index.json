@@ -1024,6 +1024,126 @@
       "attendu": "ouvre"
     },
     {
+      "fichier": "v2-images-bombe-pixels.svg",
+      "famille": "image",
+      "vecteur": "Bombe de decompression (modele v2, images) : un PNG de 177 octets, un GIF et un WebP etendu (VP8X) qui annoncent 65 000 x 65 000 pixels et plus ; la lecture riche refuse sur l'en-tete, avant tout decodeur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-octets-mensongers.svg",
+      "famille": "image",
+      "vecteur": "Type annonce mensonger (modele v2, images) : un RIFF/WAVE annonce WebP, un BMP annonce PNG, un SVG a script annonce JPEG (marque d'ordre et blancs devant), un PNG sans IHDR, un GIF de 0 x 0 ; la nature se lit sur les octets",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-adresses-actives.svg",
+      "famille": "image",
+      "vecteur": "Adresses d'image actives (modele v2, images) : javascript: en casse mixte et blancs devant, data:text/html, donnees non base64, data:image/svg+xml qui charge une image distante, href distant qui l'emporte sur un xlink:href en ligne",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-base64-abime.svg",
+      "famille": "image",
+      "vecteur": "Base64 abime dans une image en ligne (modele v2, images) : un = au milieu, des caracteres de l'alphabet d'URL, une longueur qui n'est pas un multiple de 4, un echappement pour-cent",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-jpeg-segments-pieges.svg",
+      "famille": "image",
+      "vecteur": "Segments JPEG pieges (modele v2, images) : longueur nulle, remplissage 0xFF sans fin, trame SOF coupee, segment qui pointe au-dela du fichier, donnees SOS sans trame ; la lecture des dimensions termine et refuse",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-cycle-href.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrades dont le href boucle (a -> b -> a) : refuse en mode riche, « un cycle de dégradés »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-arrets-massifs.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade de 2 000 arrets (le million est engendre par degrades-hostiles.test.ts) : 64 gardes, le reste dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-matrice-nulle.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform nulle ou scale(0) : rien n est peint, comme un navigateur, et c est dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-stop-color-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "stop-color en url(http://...) par attribut et par style : une couleur illisible vaut le noir, jamais suivie",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-href-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade utilise dont xlink:href vise un autre fichier : refuse en mode riche, jamais telecharge",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-fill-url-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "fill et stroke en url() vers une adresse exterieure, avec couleur de secours : refuses, jamais suivis",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-chaine-longue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Chaine href de 21 degrades : au-dela de 16 maillons, refusee en le nommant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-reference-absente.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#inexistant), avec et sans couleur de secours : rien ou la couleur de secours, et c est dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-autre-genre.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#a) vers un clipPath ou un rect : ce n est pas un degrade, rien n est peint",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-coordonnees-demesurees.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnee de degrade a 1e300 : refusee, aucune valeur demesuree n entre dans le modele",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-id-double.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Deux degrades de meme id : le premier l emporte, comme un navigateur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-style-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Feuille de style qui reintroduit un stroke url(https://...) sur une forme a degrade",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-entites-javascript.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform qui compose javascript: par entites numeriques : illisible, refuse",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-unite-inconnue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnees de degrade en mm et en em : ni nombre, ni pixels, ni pourcentage, refusees",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-href-schema-coupe.svg",
+      "famille": "use",
+      "vecteur": "Renvoi externe d un <use> dont le schema est coupe par un blanc ou un invisible (d<TAB>ata:, java&#10;script:) : rien ne le recompose dans data-href-externe",
+      "attendu": "refus"
+    },
+    {
       "fichier": "v2-groupes-65-niveaux.svg",
       "famille": "v2-groupes",
       "vecteur": "64 + 1 groupes emboites : le mode riche refuse au-dela de PROFONDEUR_GROUPES_MAX, le mode plat les fond",

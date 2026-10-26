@@ -125,10 +125,18 @@ export {
   collerContenu, egales, MSG_MEME_PARENT, type OrdreNoeuds
 } from './edition/groupes.js';
 export { groupes, nomDuGroupe, GROUPES_MAX, NOM_GROUPE_MAX, ATTRIBUT_NOM, MSG_GROUPES_PROFONDS, MSG_GROUPES_NOMBREUX } from './edition/fonctions/groupes.js';
-export { boiteVisuelle } from './edition/etendue.js';
+export { boiteVisuelle } from './edition/etendueVisuelle.js';
 export { ignoresDeFusion, MSG_FUSION, MSG_ORDRE_PEINTURE, MSG_VECTOR_EFFECT } from './edition/fusion.js';
 
 // ---- etape 3 : definitions et degrades
+export {
+  ARRETS_MAX, estDegrade, poidsArrets, couleurDeRepli, transformerDegrade, definitionDegrade
+} from './edition/degrades.js';
+export {
+  CHAINE_HREF_MAX, PROFONDEUR_DEFS_MAX, NOEUDS_DEFS_MAX, lireReference, chaineHref, attributHerite, hrefDe, lireLongueur, lireFraction,
+  type Reference, type Chaine, type Longueur
+} from './edition/resolution.js';
+export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degrades.js';
 
 // ---- etape 5 : decoupes
 
@@ -139,3 +147,18 @@ export { ignoresDeFusion, MSG_FUSION, MSG_ORDRE_PEINTURE, MSG_VECTOR_EFFECT } fr
 // ---- etape 9 : motifs
 
 // ---- etape 12 : images
+// Les reperes du document et la repetition d'une selection (ADR-0038).
+export type { Reperes } from './edition/types.js';
+export {
+  ATTRIBUT_REPERES, REPERES_MAX, normaliserReperes, avecReperes, ajouterRepere, deplacerRepere, supprimerRepere, effacerReperes,
+  repereLePlusProche, nombreReperes, ecrireReperes, lireReperes, marquerReperes, boitesReperes, type AxeRepere
+} from './edition/reperes.js';
+export {
+  REPETITION_MAX, copierPar, matricesGrille, pasGrilleParDefaut, dupliquerEnGrille, pasRadial, matricesRadiales, repetitionRadiale,
+  matriceSymetrie, axeParDefaut, symetrie, type ResultatRepetition, type ReglageGrille, type ReglageRadial, type ReglageSymetrie
+} from './edition/repetition.js';
+export {
+  IMAGE_OCTETS_MAX, IMAGES_OCTETS_MAX, IMAGE_PIXELS_MAX, MSG_POINTS_IMAGE, DONNEES_IMAGE, ASPECT_IMAGE, verifierDonneesImage, rectangleImage,
+  lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
+} from './edition/fonctions/images.js';
+export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';

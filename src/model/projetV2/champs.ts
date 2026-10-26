@@ -1,52 +1,88 @@
-// Les champs du modele v2 dans le projet JSON (ADR-0012, ADR-0030) : un point d'entree par champ, pour que chaque etape qui livre
-// un champ (degrades a l'etape 3, decoupes a la 5, masques a la 6, effets a la 7, motifs a la 9, images a la 12) l'ajoute par UNE
-// ligne ici, et une ligne de `engine/projetV2/champs.ts`, sans editer le corps de `lireForme` (model/projet.ts) ni celui de
-// `formeProjet` (engine/projet.ts).
+// Les champs du modele v2 dans le projet JSON (ADR-0012, annexe 8 §0 et §5.1, paquet 1-C ; ADR-0030) : chaque etape qui livre un
+// champ de forme y ajoute UNE ligne (sa cle, son lecteur, sa garde), et son lecteur vit dans un fichier a elle (`peinture.ts` pour
+// l'etape 3). Le corps de `lireForme` (model/projet.ts) n'a plus a changer : il lit ces lignes, dans cet ordre. Un groupe (etape 1)
+// a sa base dans `groupes.ts` ; ce que les etapes suivantes lui ajoutent (decoupe, masque, effets) entre par `CHAMPS_GROUPE_V2`.
 //
-// Un champ v2 d'une forme s'ecrit APRES les champs d'avant (apres `verrouille`), dans l'ordre de ces listes, et seulement quand il
-// est present : un projet plat garde exactement ses octets. Sa presence fait du projet un projet au format 2 (model/projet.ts,
-// `VERSION_PROJET_PLAT`). Pur : la validation ne leve que par `refuser`, que `validerProjet` rattrape.
+// Un champ v2 n'existe qu'au format 2 : dans un projet au format 1, il est inconnu, donc ignore (« un champ inconnu n'y entre pas »),
+// comme le ferait un programme d'avant lui. Pur ; un lecteur refuse par `o.refuser`, qui remonte jusqu'a `lireProjet` sans lever.
 
-/** Ce que la validation du projet prete a un champ : ses lectures bornees, et le refus nomme. */
+import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
+import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
+
+/** Ce que la validation du projet prete a un lecteur de champ : ses gardes, qui refusent en nommant (jamais une exception visible). */
 export interface OutilsProjet {
+  refuser(raison: string): never;
   texte(v: unknown, quoi: string, max: number): string;
   nombre(v: unknown, quoi: string, min?: number, max?: number): number;
   booleen(v: unknown, quoi: string): boolean;
   tableau(v: unknown, quoi: string, max: number): readonly unknown[];
   objet(v: unknown, quoi: string): Record<string, unknown>;
   choix<T extends string>(v: unknown, quoi: string, permis: readonly T[]): T;
-  refuser(raison: string): never;
   /** La forme d'un identifiant de forme ou de groupe. */
   readonly identifiant: RegExp;
 }
 
-/** Un champ facultatif du modele v2 : sa cle dans l'objet, et sa lecture (la valeur reconstruite, ou le refus). */
-export interface ChampProjet {
-  readonly cle: string;
-  lire(v: unknown, o: OutilsProjet): unknown;
-}
-
-/** Les champs v2 d'une forme de projet (une ligne par etape) : `parent`, le groupe de la forme (etape 1). */
+/** Les champs v2 d'une forme de projet, tels que les lecteurs les rendent. */
 export interface ChampsFormeV2 {
+  /** Le groupe de la forme (etape 1) ; sa presence est confrontee a la table des groupes du dessin (model/projet.ts). */
   readonly parent?: string;
+  readonly peintureRemplissage?: PeintureProjet;
+  readonly peintureContour?: PeintureProjet;
+  readonly image?: ImageIntegreeProjet;
 }
 
-/** Les champs v2 d'un groupe de projet au-dela de sa base (decoupe, masque, effets : une ligne par etape). */
-export type ChampsGroupeV2 = Record<never, never>;
-
-/** Un identifiant de groupe : celui de l'arbre, par la meme regle que celui d'une forme. */
-function lireIdentifiantGroupe(v: unknown, o: OutilsProjet, quoi: string): string {
-  const s = o.texte(v, quoi, 64);
-  return o.identifiant.test(s) ? s : o.refuser(quoi + ' est mal désigné');
+/** Une ligne : la cle du champ, son lecteur, et la garde qui le confronte au reste de la forme (deja lue). */
+export interface ChampFormeV2 {
+  readonly cle: keyof ChampsFormeV2;
+  readonly lire: (v: unknown, o: OutilsProjet) => unknown;
+  readonly verifier?: (forme: { readonly remplissage: string | null; readonly contour: string | null }, o: OutilsProjet) => void;
 }
 
-/** Les champs v2 d'une forme, dans l'ordre ou ils s'ecrivent. */
-export const CHAMPS_FORME_V2: readonly ChampProjet[] = [
-  { cle: 'parent', lire: (v, o) => lireIdentifiantGroupe(v, o, 'le groupe d’une forme') }
+/** Les champs v2 d'une forme, dans l'ordre ou ils se lisent et s'ecrivent. Une ligne par etape. */
+export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
+  // Etape 1 : le groupe parent, un identifiant de l'arbre.
+  {
+    cle: 'parent',
+    lire: (v, o) => { const s = o.texte(v, 'le groupe d’une forme', 64); return o.identifiant.test(s) ? s : o.refuser('le groupe d’une forme est mal désigné'); }
+  },
+  // Etape 3 : les degrades. Sous une peinture non unie, la couleur de repli est obligatoire (annexe 1 §5, I5).
+  {
+    cle: 'peintureRemplissage', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du remplissage'),
+    verifier: (f, o) => { if (f.remplissage === null) o.refuser('un dégradé de remplissage n’a pas de couleur de repli'); }
+  },
+  {
+    cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du contour'),
+    verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé de contour n’a pas de couleur de repli'); }
+  },
+  // Etape 12 : l'image integree. Sa forme est validee ici ; ses octets (nature, dimensions, pixels, 16 Mo par dessin) le sont par le
+  // moteur a l'ouverture (engine/projetV2/champs.ts, `refusChampsV2`). Une image ne porte ni remplissage ni contour.
+  {
+    cle: 'image', lire: (v, o) => { const r = lireImageProjet(v); return 'erreur' in r ? o.refuser(r.erreur) : r.image; },
+    verifier: (f, o) => { if (f.remplissage !== null || f.contour !== null) o.refuser('une image porte un remplissage ou un contour'); }
+  }
 ];
 
-/** Les champs v2 d'un groupe au-dela de sa base, dans l'ordre ou ils s'ecrivent ; vide a l'etape 1. */
-export const CHAMPS_GROUPE_V2: readonly ChampProjet[] = [];
+/** Les champs v2 presents dans l'objet d'une forme, lus et gardes, dans l'ordre des lignes ; rien au format 1. */
+export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly remplissage: string | null; readonly contour: string | null }, version: number, outils: OutilsProjet): ChampsFormeV2 {
+  if (version < 2) return {};
+  const lus: Record<string, unknown> = {};
+  for (const c of CHAMPS_FORME_V2) {
+    const v = o[c.cle];
+    if (v === undefined) continue;
+    lus[c.cle] = c.lire(v, outils);
+    c.verifier?.(forme, outils);
+  }
+  return lus as ChampsFormeV2;
+}
 
-/** Les cles de tous les champs v2 d'une forme : leur presence demande le format 2. */
-export const CLES_FORME_V2: readonly string[] = CHAMPS_FORME_V2.map(c => c.cle);
+/** Les champs v2 d'un groupe de projet au-dela de sa base (decoupe, masque, effets : une ligne par etape) ; aucun a l'etape 1. */
+export type ChampsGroupeV2 = Record<never, never>;
+
+/** Une ligne d'un champ de groupe : sa cle et son lecteur. */
+export interface ChampGroupeV2 {
+  readonly cle: string;
+  readonly lire: (v: unknown, o: OutilsProjet) => unknown;
+}
+
+/** Les champs v2 d'un groupe, dans l'ordre ou ils se lisent et s'ecrivent (apres la base du groupe) ; vide a l'etape 1. */
+export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [];

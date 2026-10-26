@@ -26,6 +26,10 @@ export const CAS: readonly CasV2[] = [
   { nom: 'groupes-opacite', entree: 'groupes-opacite' },
   { nom: 'groupes-nom-piegeux', entree: 'groupes-nom-piegeux' },
   { nom: 'groupes-use', entree: 'groupes-use' },
+  // Un degrade et une image sous des groupes transformes (etapes 3 et 12) : relus, puis le groupe deplace, tourne, duplique.
+  { nom: 'groupes-degrade-image', entree: 'groupes-degrade-image' },
+  { nom: 'groupes-degrade-image-transformer', entree: 'groupes-degrade-image', operation: changeant(d => transformer(redimensionner(d, ['g1'], { x: 5, y: 5, l: 50, h: 50 }), ['g3'], rotation(25, 110, 40))) },
+  { nom: 'groupes-degrade-image-dupliquer', entree: 'groupes-degrade-image', operation: changeant(d => dupliquer(d, ['g1', 'g3'], 0, 40).dessin) },
   // Un groupe masque n'ecrit rien (« masquer, a l'enregistrement, c'est retirer ») ; un groupe verrouille s'ecrit comme un autre.
   { nom: 'groupes-masque', entree: 'groupes-imbriques', operation: changeant(d => modifier(d, ['g2'], { visible: false })) },
   { nom: 'groupes-verrouille', entree: 'groupes-imbriques', operation: changeant(d => modifier(d, ['g1'], { verrouille: true })) },

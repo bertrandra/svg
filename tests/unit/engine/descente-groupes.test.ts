@@ -68,6 +68,20 @@ describe('la descente des groupes', () => {
     expect((svgDecoupe(aplatirPour(dessin(false), CAPACITES_SVG_DECOUPE).dessin).match(/<path /g) ?? []).length).toBe(3);
   });
 
+  it('sous un groupe, le degrade descend en couleur de repli, l image part, l opacite du groupe se multiplie ; tout est dit', () => {
+    const lu = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg/v2/groupes-degrade-image.svg'), 'utf8'), { modele: 'riche' });
+    if ('erreur' in lu) throw new Error(lu.erreur);
+    const r = aplatirPour(lu.dessin, CAPACITES_PDF);
+    expect(estPlat(r.dessin)).toBe(true);
+    expect(verifierDessin(r.dessin)).toEqual([]);
+    expect(r.dessin.formes.map(x => [x.id, x.remplissage, x.opacite])).toEqual(
+      lu.dessin.formes.filter(x => !x.image).map(x => [x.id, x.remplissage, x.parent === 'g1' || x.parent === 'g2' ? 0.8 : 1])
+    );
+    expect(r.pertes.length).toBeGreaterThanOrEqual(2);
+    expect(phrasePertes(r.pertes)).toMatch(/image/);
+    expect(ecrirePdf(r.dessin).length).toBeGreaterThan(100);
+  });
+
   it('la descente de chaque fixture lue en riche est plate, bien formee, et s ecrit en un SVG que la lecture plate accepte', () => {
     const dossier = resolve(__dirname, '../../fixtures/svg');
     const noms = [...readdirSync(dossier).filter(n => n.endsWith('.svg')), ...readdirSync(join(dossier, 'v2')).filter(n => n.endsWith('.svg')).map(n => 'v2/' + n)];

@@ -1,6 +1,7 @@
 // Le format 2 du projet (ADR-0012, etape 1 ; ADR-0030) : le format 1 plus les champs du modele v2. La regle de version : un projet
 // plat s'ecrit au format 1 (et un programme du format 1 le lit toujours), un projet a groupes au format 2 ; la migration du format 1
-// est l'identite ; un format plus recent est refuse en le nommant ; la table des groupes se valide sans lever.
+// est l'identite ; au format 1, un champ v2 (groupes compris) est inconnu, donc ignore ; un format plus recent est refuse en le
+// nommant ; la table des groupes se valide sans lever.
 
 import { describe, expect, it } from 'vitest';
 import { FORMAT_PROJET, MIGRATIONS, VERSION_PROJET, VERSION_PROJET_PLAT, lireProjet, migrer, type Projet } from '../../../src/model/projet.js';
@@ -8,7 +9,8 @@ import { FORMAT_PROJET, MIGRATIONS, VERSION_PROJET, VERSION_PROJET_PLAT, lirePro
 const projet = (version: number, dessin: Record<string, unknown>): Record<string, unknown> => ({
   format: FORMAT_PROJET, version, nom: 'Carte', dessin, production: { contexte: 'generique' }, nuancier: [], ressources: { polices: [], images: [] }
 });
-const forme = (id: string, p: Record<string, unknown> = {}) => ({ id, d: 'M0 0L10 0L10 10Z', remplissage: '#c81e28', contour: null, epaisseur: 0, opacite: 1, regle: 'nonzero', visible: true, verrouille: false, ...p });
+// Les champs v2 d'une forme s'ecrivent apres `operation`, avant `regle` (model/projetV2/champs.ts).
+const forme = (id: string, p: Record<string, unknown> = {}) => ({ id, d: 'M0 0L10 0L10 10Z', remplissage: '#c81e28', contour: null, epaisseur: 0, opacite: 1, ...p, regle: 'nonzero', visible: true, verrouille: false });
 const avecGroupes = (p: Record<string, unknown> = {}) => ({
   vb: [0, 0, 10, 10],
   formes: [forme('f1', { parent: 'g2' }), forme('f2')],
@@ -36,10 +38,11 @@ describe('le format 2 du projet', () => {
     expect(JSON.stringify('erreur' in r ? null : r.projet)).toBe(JSON.stringify(brut));
   });
 
-  it('refuse un format plus recent, et un projet au format 1 qui porterait des groupes', () => {
+  it('refuse un format plus recent ; au format 1, les groupes sont inconnus, donc ignores, comme tout champ v2', () => {
     expect(erreur(projet(3, avecGroupes()))).toContain('version plus récente de l’éditeur (format 3)');
-    expect(erreur(projet(1, avecGroupes()))).toBe('Ce projet est illisible : un projet au format 1 ne porte pas de groupes.');
-    expect(erreur(projet(1, { vb: [0, 0, 10, 10], formes: [forme('f1', { parent: 'g1' })] }))).not.toBe('');
+    const p = lu(projet(1, avecGroupes()));
+    expect(p.dessin.groupes).toBeUndefined();
+    expect(p.dessin.formes.every(f => f.parent === undefined)).toBe(true);
   });
 
   it('valide la table des groupes sans lever : cle, identifiant, parent, opacite, nom', () => {

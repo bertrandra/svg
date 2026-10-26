@@ -5,7 +5,8 @@
 import type { Boite, DessinSvg, Forme } from './types.js';
 import { boiteForme, seCroisent, unir } from './geometrie.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
-import { boiteAvecTrait, boiteVisuelle } from './etendue.js';
+import { boiteAvecTrait } from './etendue.js';
+import { boiteVisuelle } from './etendueVisuelle.js';
 import { arbreDe, estPlat, normaliser } from './arbre.js';
 import { egales } from './groupes.js';
 import { memeTrait } from './trait.js';

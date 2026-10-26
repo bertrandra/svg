@@ -26,11 +26,25 @@ la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de v
   chemin riche derrière `estPlat` ; « Lettres séparées » donne un groupe (`vectoriserLettresEnGroupes`) ; la descente des groupes
   (`engine/descente/groupes.ts`) et la marque de type de `DessinPlat` ; le projet JSON porte les groupes au format 2 (un dessin plat
   reste au format 1, octet pour octet). Le détail et les écarts : annexe 8 §0 et §1 « Étape 1 ».
+- **L'étape 3, dégradés (moteur), est faite** (26 octobre 2026 ; aucun octet d'un dessin plat ne bouge, la lecture `plat` refuse
+  comme avant) : résolution des références (`edition/resolution.ts`), dégradés linéaires et radiaux lus en `riche`
+  (`edition/fonctions/degrades.ts` : unités de boîte et pourcentages, `gradientTransform`, chaîne `href`, arrêts bornés à 64,
+  `stop-color` et `stop-opacity` par la cascade), écrits canoniques et dédoublonnés (`edition/degrades.ts` : un linéaire toujours
+  sans matrice, un radial à matrice de déterminant 1 quand ce n'est pas une similitude ; point fixe vérifié), emmenés par les
+  transformations, descendus en couleur de repli pour tout exporteur d'aujourd'hui (`engine/descente/degrades.ts`), ignorés des
+  listes et des remplacements de couleurs mais lus par leurs arrêts dans le nuancier, portés par le projet JSON (format 2 seulement
+  pour un dessin non plat), admis dans la vignette du site PHP. Le détail et les écarts sont à l'annexe 8 §1, « Étape 3 ».
 - **Révision du plan** (annexe 8 §0 et §3) : ce que les ADR fusionnés depuis ont rendu caduc ou déjà fait (texte vivant,
   `util/empreinte.ts`, `<text>` étranger lu en lettres, corpus hostile, CI à trois moteurs, exports DXF/EPS/PDF CMJN), ce
   qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux
   groupes « À couper / À écrire » de l'ADR-0028 dans les calques ; la vignette du site PHP), les vagues revues (vague 1 : étapes
   1, 3, 12 ; vague 2 : 2, 4, 5, 7) et les consignes de chaque paquet d'agent (annexe 8 §5). Les autres étapes restent proposées.
+- **L'étape 12, images, est faite pour le moteur** (26 octobre 2026, annexe 8 §5.3) : `<image>` en `data:` lue en mode `riche`
+  en une feuille (son rectangle en `d`), vérifiée sur ses octets (nature, en-tête, 4 Mo, 16 Mo, 64 millions de pixels ; une
+  « image » SVG ou une adresse extérieure refusées en les nommant), écrite en `xlink:href` (mêmes entrées, mêmes octets), qui suit
+  ses transformations, abandonnée et dite par la descente des exporteurs de tracés. Restent, chacun à son étape : l'affichage sur la
+  toile et le refus des points (étape 2), le branchement dans le projet JSON (après l'étape 1, fonctions prêtes), l'image native du
+  PDF (13a), et une interface d'insertion qu'aucune étape ne prévoit encore (annexe 8 §0).
 
 Les annexes, dans [`0012-annexes/`](0012-annexes/), portent les types, les tables et le plan ; cette page porte
 les décisions et leurs raisons.

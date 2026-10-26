@@ -101,6 +101,22 @@ test('une vignette n est gardee que si elle est le SVG inerte de l editeur', fun
     }
 });
 
+test('une vignette a degrade (modele v2, etape 3) est gardee ; toute autre reference reste refusee', function (): void {
+    $degrade = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="10" height="10" data-ed-modele="2"><defs><linearGradient id="ed-d-11f2ea1d7027e8" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="10" y2="0"><stop offset="0" stop-color="#c81e28"/><stop offset="1" stop-color="#1f5fb0" stop-opacity="0.5"/></linearGradient></defs><path d="M0 0L10 0L10 10Z" fill="url(#ed-d-11f2ea1d7027e8)" stroke="url(#ed-d-11f2ea1d7027e8-2)" stroke-width="1"/></svg>';
+    egal(true, vignette_sure($degrade));
+    foreach ([
+        str_replace('url(#ed-d-11f2ea1d7027e8)', 'url(#autre)', $degrade),
+        str_replace('url(#ed-d-11f2ea1d7027e8)', 'url(http://x.invalid/#ed-d-11f2ea1d7027e8)', $degrade),
+        str_replace('url(#ed-d-11f2ea1d7027e8)', 'url(#ed-d-11f2ea1d7027e8) url(http://x)', $degrade),
+        str_replace('="url(#ed-d-11f2ea1d7027e8)"', '="javasurl(#ed-d-11f2ea1d7027e8)cript:"', $degrade),
+        str_replace('url(#ed-d-11f2ea1d7027e8)', 'url(#ed-c-11f2ea1d7027e8)', $degrade),
+        str_replace('<defs>', '<defs><style>@import url(x)</style>', $degrade),
+        str_replace('id="ed-d-11f2ea1d7027e8"', 'id="ed-d-11f2ea1d7027e8" href="http://x"', $degrade),
+    ] as $v) {
+        egal(false, vignette_sure($v), mb_substr($v, 150, 120));
+    }
+});
+
 test('enregistrer un projet neuf, puis par-dessus avec la bonne revision ; refuser une revision depassee ou absente', function (): void {
     $r = enregistrer_projet(null, projet('Première'), null, '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0Z"/></svg>');
     affirmer(isset($r['meta']), 'enregistre : ' . json_encode($r));
