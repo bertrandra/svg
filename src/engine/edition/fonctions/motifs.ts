@@ -18,8 +18,9 @@
 // chaine `href` suivie (attributs et contenu herites, bornee, cycle refuse), contenu lu par `contenus.ts` (feuilles, groupes, degrades,
 // decoupes, masques, effets, motifs imbriques ; pile, tables et budget communs a toutes les definitions). Refus nommes : renvoi a un
 // autre fichier, cycle (un motif peint par sa propre tuile), imbrication au-dela de `PROFONDEUR_DEFS_MAX`, contenus au-dela de
-// `NOEUDS_DEFS_MAX`, tuile vide, nulle ou plus petite qu'un centieme, coordonnees demesurees, une image dans une tuile (l'ecriture ne
-// declarerait pas l'espace de noms de `xlink:href` dans une definition). Dit : une tuile qui deborde (`overflow: visible`) est rognee.
+// `NOEUDS_DEFS_MAX`, tuile vide, nulle ou plus petite qu'un centieme, coordonnees demesurees, une image dans une tuile (l'ecriture la
+// saurait poser, `xmlns:xlink` compris ; mais le projet JSON porte une copie de la tuile par forme peinte, sans partage, et n'en verifie
+// pas les octets : une image de 4 Mo sur mille formes y pese 4 Go). Dit : une tuile qui deborde (`overflow: visible`) est rognee.
 
 import type { Noeud } from '../../../util/xml.js';
 import type { Fonctionnalite, Marche, PeintureResolue, ContexteEcriture } from '../fonctionnalites.js';
@@ -35,7 +36,7 @@ import { nb } from '../chemins.js';
 import { normaliser, visibleEffectif } from '../arbre.js';
 import { COORDONNEE_MAX } from '../limites.js';
 import { attributHerite, chaineHref, lireLongueur, lireReference, NOEUDS_DEFS_MAX, PROFONDEUR_DEFS_MAX } from '../resolution.js';
-import { ancetresDe, etatContenus, lireContenu } from '../contenus.js';
+import { ancetresDe, etatContenus, lireContenu, visiterSousBudget } from '../contenus.js';
 import { lireCode, versOklab, depuisOklch, versHex } from '../../../util/couleur.js';
 import { aireDeChemin, longueurDeChemin } from '../../nuancier/surfaces.js';
 import type { Recueil } from '../definitions.js';
@@ -247,21 +248,7 @@ function lireTuile(porteur: Noeud, repere: Matrice, profondeur: number, marche: 
   const chaine = ancetresDe(a, porteur);
   const heritees = chaine.slice().reverse().reduce<Proprietes>((h, x) => heriter(h, proprietesDe(a, x)), {});
   const ctx: Contexte = { m: repere, heritees, opacite: 1, profondeur };
-  const lu = lireContenu(marche, etat, table, porteur, () => {
-    // Au-dela du budget commun, inutile de lire la suite : le contenu est refuse. Seules comptent les feuilles gardees (les places
-    // vides qu'un contenu imbrique laisse derriere lui sont deja dans `etat.noeuds`), comptees au fil de la lecture.
-    let vu = p.formes.length, lues = 0;
-    for (const e of porteur.enfants) {
-      for (; vu < p.formes.length; vu++) if ((p.formes[vu]?.d.length ?? 0) > 0) lues++;
-      if (p.trop) break;
-      if (etat.noeuds + lues > NOEUDS_DEFS_MAX) {
-        if (!etat.trop) marche.refuser(REFUS_MOTIFS.trop);
-        etat.trop = true;
-        break;
-      }
-      marche.visiter(e, ctx);
-    }
-  }, REFUS_MOTIFS.trop);
+  const lu = lireContenu(marche, etat, table, porteur, () => visiterSousBudget(marche, etat, porteur.enfants, e => marche.visiter(e, ctx), REFUS_MOTIFS.trop), REFUS_MOTIFS.trop);
   if (!lu) return null;
   if (lu.feuilles.some(f => f.image)) { marche.refuser(REFUS_MOTIFS.image); return null; }
   return normaliser<Contenu>(lu.groupes.length ? { formes: lu.feuilles, groupes: Object.fromEntries(parNumero(lu.groupes)) } : { formes: lu.feuilles });

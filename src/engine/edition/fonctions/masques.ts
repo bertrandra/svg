@@ -35,7 +35,7 @@ import { COORDONNEE_MAX, coordonneeSaine } from '../limites.js';
 import { lireLongueur, lireReference, NOEUDS_DEFS_MAX, PROFONDEUR_DEFS_MAX } from '../resolution.js';
 import type { Definition } from '../definitions.js';
 import {
-  ancetresDe, boiteDescendants, boiteFeuille, etatContenus, intersectionBoites, lireContenu, placeVide, reserverGroupe, type EtatContenus
+  ancetresDe, boiteDescendants, boiteFeuille, etatContenus, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
 
 // ---------------------------------------------------------------- phrases
@@ -205,14 +205,7 @@ function lireMasque(valeur: string, base: Matrice, boite: () => Boite | null, pr
   const chaine = ancetresDe(a, cible);
   const heritees = chaine.slice().reverse().reduce<Proprietes>((h, x) => heriter(h, proprietesDe(a, x)), {});
   const ctx: Contexte = { m, heritees, opacite: 1, profondeur };
-  const lu = lireContenu(marche, etat, table, cible, () => {
-    // Au-dela du budget commun, inutile de lire la suite : le contenu sera refuse (un <mask> de 100 000 formes s'arrete tot).
-    const avant = p.formes.length;
-    for (const e of cible.enfants) {
-      if (p.trop || etat.noeuds + p.formes.length - avant > NOEUDS_DEFS_MAX) break;
-      marche.visiter(e, ctx);
-    }
-  }, REFUS_MASQUES.trop);
+  const lu = lireContenu(marche, etat, table, cible, () => visiterSousBudget(marche, etat, cible.enfants, e => marche.visiter(e, ctx), REFUS_MASQUES.trop), REFUS_MASQUES.trop);
   if (!lu) return null;
   const contenu = normaliser<Contenu>(lu.groupes.length ? { formes: lu.feuilles, groupes: Object.fromEntries(parNumero(lu.groupes)) } : { formes: lu.feuilles });
   if (!gardeLesAxes(base) && !contenuDansRegion(contenu, local, base)) marche.ignorer(MSG_MASQUES.regionTournee);

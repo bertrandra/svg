@@ -30,7 +30,7 @@ import { ancetres, visibleEffectif } from '../arbre.js';
 import { lireReference, NOEUDS_DEFS_MAX, PROFONDEUR_DEFS_MAX } from '../resolution.js';
 import type { Definition, Recueil } from '../definitions.js';
 import {
-  ancetresDe, boiteDescendants, boiteFeuille, etatContenus, FORMES, intersectionBoites, lireContenu, placeVide, reserverGroupe, type EtatContenus
+  ancetresDe, boiteDescendants, boiteFeuille, etatContenus, FORMES, intersectionBoites, lireContenu, placeVide, reserverGroupe, visiterSousBudget, type EtatContenus
 } from '../contenus.js';
 
 // ---------------------------------------------------------------- phrases
@@ -146,17 +146,17 @@ function lireDecoupe(valeur: string, base: Matrice, boite: () => Boite | null, p
     const chaine = ancetresDe(a, cible);
     const heritees = chaine.slice().reverse().reduce<Proprietes>((h, x) => heriter(h, proprietesDe(a, x)), {});
     const ctx: Contexte = { m, heritees, opacite: 1, profondeur, ...(parent !== undefined ? { parent } : {}) };
-    for (const e of cible.enfants) {
-      if (p.trop) break;
-      if (!ADMIS.has(e.nom)) { if (!MUETS.has(e.nom)) marche.ignorer(MSG_DECOUPES.elements); continue; }
+    // Au-dela du budget commun, la lecture s'arrete tot (un <clipPath> de 100 000 formes), comme celle d'un masque ou d'une tuile.
+    visiterSousBudget(marche, etat, cible.enfants, e => {
+      if (!ADMIS.has(e.nom)) { if (!MUETS.has(e.nom)) marche.ignorer(MSG_DECOUPES.elements); return; }
       const visee = e.nom === 'use' ? cibleAdmise(a, e) : null;
-      if (visee === 'autre') { marche.ignorer(MSG_DECOUPES.elements); continue; }
+      if (visee === 'autre') { marche.ignorer(MSG_DECOUPES.elements); return; }
       const i0 = p.formes.length;
       marche.visiter(e, ctx);
       // La regle d'un clone : celle de sa cible, sinon celle du <use> (dont le clone herite), puis celles du <clipPath> et des siens.
       const regle = regleDe([...(visee ? [visee] : []), e, ...chaine]);
       for (let i = i0; i < p.formes.length; i++) { const f = p.formes[i]; if (f && !regles.has(f.id)) regles.set(f.id, regle); }
-    }
+    }, REFUS_DECOUPES.trop);
   }, REFUS_DECOUPES.trop);
   if (!lu) return null;
   // Les feuilles lues deviennent de la geometrie ; un groupe du contenu sans feuille est deja parti, et la table avec lui si elle se vide.

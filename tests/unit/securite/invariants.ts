@@ -280,7 +280,17 @@ export function violationsEcriture(svg: string, extensions: readonly ExtensionEc
   // Le seul texte permis est la mention d'attribution des formes creditees (model/credits.ts), dans <metadata> : une
   // phrase fixe et des origines validees, jamais ce que l'entree contenait.
   if (a.textes.some(t => t.texte.trim() !== '' && !(t.parent === 'metadata' && MENTION_ECRITE.test(t.texte)))) d.push('texte dans une ecriture');
+  // Les prefixes declares sur chaque element et ses ancetres (xml est predefini) : un prefixe employe sans declaration rend le
+  // document mal forme pour un analyseur XML avec espaces de noms (le `xlink:href` d'une image dans une definition, etape 9).
+  const portees: Array<ReadonlySet<string>> = [];
   for (const e of a.elements) {
+    const heritees = portees[e.profondeur - 1] ?? new Set(['xml']);
+    const declares = e.attributs.some(([nom]) => nom.startsWith('xmlns:')) ? new Set([...heritees, ...e.attributs.filter(([nom]) => nom.startsWith('xmlns:')).map(([nom]) => nom.slice(6))]) : heritees;
+    portees.length = e.profondeur;
+    portees.push(declares);
+    const prefixeNon = (nom: string): boolean => nom.includes(':') && nom !== 'xmlns' && !nom.startsWith('xmlns:') && !declares.has(nom.slice(0, nom.indexOf(':')));
+    if (prefixeNon(e.nom)) d.push('prefixe non declare <' + e.nom.slice(0, 40) + '>');
+    for (const [nom] of e.attributs) if (prefixeNon(nom)) d.push('prefixe non declare ' + nom.slice(0, 40) + ' sur <' + e.nom.slice(0, 40) + '>');
     const permis = avis(x => x.element?.(e));
     if (permis === false || (permis === undefined && !ELEMENTS_ECRITURE.has(e.nom))) d.push('element ecrit inattendu <' + e.nom.slice(0, 40) + '>');
     if ((e.nom === 'svg') !== (e.profondeur === 0)) d.push('<svg> hors de la racine');

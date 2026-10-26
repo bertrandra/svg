@@ -31,13 +31,17 @@ const ESPACE_XLINK = 'http://www.w3.org/1999/xlink';
  */
 export type EcrivainFeuilles = (dessin: DessinSvg, ecrites: readonly Forme[]) => (f: Forme) => string;
 
+/** Un attribut prefixe par `xlink:` dans un element ecrit par une fonctionnalite (le `xlink:href` d'une image). */
+const EMPLOIE_XLINK = /\sxlink:[A-Za-z-]+="/;
+
 /**
  * Le corps d'un contenu riche (feuilles et groupes, dans l'ordre de l'arbre), et les feuilles qui s'y ecrivent. `signaler` est appele
- * des que quelque chose de riche s'ecrit (un <g>, une feuille peinte, un attribut ou un element d'une fonctionnalite). Partage par
- * l'ecriture (ci-dessous) et par le rendu de la toile (rendu.ts), qui y ecrit le contenu d'une definition : ce qui se voit est ce qui
- * s'ecrit.
+ * des que quelque chose de riche s'ecrit (un <g>, une feuille peinte, un attribut ou un element d'une fonctionnalite), avec 'xlink'
+ * quand l'element ecrit emploie cet espace de noms (une image, ou qu'elle soit : le dessin ou le contenu d'une definition). Partage
+ * par l'ecriture (ci-dessous) et par le rendu de la toile (rendu.ts), qui y ecrit le contenu d'une definition : ce qui se voit est ce
+ * qui s'ecrit.
  */
-export function ecrireCorps(c: DessinSvg, ctx: ContexteEcriture, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[], signaler: () => void): { texte: string; ecrites: Forme[] } {
+export function ecrireCorps(c: DessinSvg, ctx: ContexteEcriture, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[], signaler: (espace?: 'xlink') => void): { texte: string; ecrites: Forme[] } {
   const ecrites = c.formes.filter(f => visibleEffectif(c, f.id));
   const ecrire = ecrivain(c, ecrites);
   // Les attributs v2 d'une feuille, apres sa peinture (les definitions se deposent dans l'ordre ou l'element les cite).
@@ -47,6 +51,7 @@ export function ecrireCorps(c: DessinSvg, ctx: ContexteEcriture, ecrivain: Ecriv
       const e = k.ecriture?.elementFeuille?.(f, ctx);
       if (e === null || e === undefined) continue;
       signaler();
+      if (EMPLOIE_XLINK.test(e)) signaler('xlink');
       // Un element entier (une image) recoit aussi les attributs v2 de la feuille (son filtre), avant de se fermer.
       const a = e.endsWith('/>') ? attributs(f) : '';
       return a ? e.slice(0, -2) + a + '/>' : e;
@@ -71,8 +76,8 @@ export function ecrireCorps(c: DessinSvg, ctx: ContexteEcriture, ecrivain: Ecriv
 export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain: EcrivainFeuilles, fonctions: readonly Fonctionnalite[] = FONCTIONNALITES): string {
   const [x, y, l, h] = dessin.vb;
   const definitions = recueil();
-  let riche = false;
-  const signaler = (): void => { riche = true; };
+  let riche = false, xlinkEcrit = false;
+  const signaler = (espace?: 'xlink'): void => { riche = true; if (espace === 'xlink') xlinkEcrit = true; };
   // Le contenu en cours d'ecriture, pour `ctx.courant` : le dessin, ou le contenu imbrique qu'ecrit `ctx.contenu`, le temps de l'ecrire.
   let courant: Contenu = dessin;
   const corps = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
@@ -88,7 +93,9 @@ export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain
   const { texte, ecrites } = corps(dessin);
   const defs = definitions.ecrire();
   const marqueur = riche || defs !== '' ? ' ' + ATTRIBUT_MODELE + '="' + VERSION_MODELE + '"' : '';
-  const xlink = dessin.formes.some(f => f.image !== undefined) ? ' xmlns:xlink="' + ESPACE_XLINK + '"' : '';
+  // L'espace de noms se declare des qu'une image s'ecrit, definitions comprises (un masque, une decoupe, une tuile de motif) : la racine
+  // se decide apres le corps et les definitions. Une image du dessin, meme cachee, le declare comme avant (aucun octet ne bouge).
+  const xlink = xlinkEcrit || dessin.formes.some(f => f.image !== undefined) ? ' xmlns:xlink="' + ESPACE_XLINK + '"' : '';
   return '<svg xmlns="http://www.w3.org/2000/svg"' + xlink + ' viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '"'
     + marqueur + '>' + defs + metadonnees(ecrites) + texte + '</svg>';
 }

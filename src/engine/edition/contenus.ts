@@ -166,6 +166,28 @@ export interface ContenuLu {
 }
 
 /**
+ * Visite les enfants d'une definition sous le budget commun : au-dela, inutile de lire la suite, le contenu sera refuse (un <mask> de
+ * 100 000 formes s'arrete tot), et le refus est dit ici. Seules comptent les feuilles que ce contenu garde, au fil de la lecture : les
+ * places vides qu'un contenu imbrique laisse derriere lui sont deja dans `etat.noeuds` (les compter encore arretait la lecture sous la
+ * borne, en silence, et perdait des formes). Les groupes ne comptent qu'a la fin (`lireContenu`) : ce compte ne refuse jamais plus tot
+ * que lui.
+ */
+export function visiterSousBudget(marche: Marche, etat: EtatContenus, enfants: readonly Noeud[], visiter: (e: Noeud) => void, trop: string): void {
+  const p = marche.parcours;
+  let vu = p.formes.length, lues = 0;
+  for (const e of enfants) {
+    for (; vu < p.formes.length; vu++) if ((p.formes[vu]?.d.length ?? 0) > 0) lues++;
+    if (p.trop) break;
+    if (etat.noeuds + lues > NOEUDS_DEFS_MAX) {
+      if (!etat.trop) marche.refuser(trop);
+      etat.trop = true;
+      break;
+    }
+    visiter(e);
+  }
+}
+
+/**
  * Lit le contenu de la definition `cible` : `lire` visite ses enfants (le genre choisit lesquels, dans quel contexte) pendant qu'elle
  * est active et que sa table `locale` recoit les groupes que le genre y pose. Ensuite les feuilles lues quittent la liste des formes
  * (leurs places restent, vides), les <g> que la marche a ranges dans la table de la lecture rejoignent la table locale (une place
