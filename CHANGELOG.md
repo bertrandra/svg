@@ -5,6 +5,22 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Ajouté
+
+- **Le socle de l'interface en français et en anglais** (ADR-0042). `src/util/i18n.ts` : `t('phrase française', { valeurs })`, la
+  phrase française pour clé, l'entrée du dictionnaire anglais en anglais, la clé sinon ; `pluriel(n, mot, plurielIrrégulier ?)`
+  passe le mot par `t` ; `nombre`, `locale` et `dateCourte` suivent la langue (les `toLocaleString('fr-FR')` épars y passent).
+  Les dictionnaires vivent dans `src/i18n/en/<dossier>.json` (clés triées, une traduction par clé), fusionnés par `npm run langues`
+  en une annexe `dist/langue-en.js` (et `data/json/langue-en.json` pour le site), chargée **seulement quand la langue vaut `en`**,
+  avant le premier rendu ; si elle manque, l'interface reste en français et le dit une fois. Le réglage `svg.langue` (`fr` par
+  défaut) se choisit au pied de l'accueil (« Français / English ») et à la fin du menu Aide de l'éditeur (« Language: English » /
+  « Langue : français ») : la page écrit le réglage et se recharge, `<html lang>` suit. Chez un hôte : l'option `langue` d'`EditeurSvg.ouvrir`
+  (validée : « fr » par défaut ou « en ») et la propriété `langue` du composant ; `preparerLangue` (`src/io/langue.ts`) pour un hôte
+  React ou le site. `tests/unit/i18n/couverture.test.ts` exige une traduction pour chaque clé de `t` et de `pluriel`, aucune clé
+  orpheline, les mêmes `{valeurs}`, et tient le cliquet des textes français hors `t` (`tests/fixtures/i18n/restes.json`, qui ne fait
+  que baisser ; `npm run i18n:restes` les liste). Seuls le titre et le chapeau de l'accueil, le sélecteur et les mots de `pluriel`
+  sont traduits pour l'instant : les textes de l'éditeur arrivent par vagues.
+
 ### Version majeure : des octets écrits changent
 
 - **Cricut : le tapis fixe par défaut** (ADR-0039, révision du 26 octobre 2026 ; décision du propriétaire : « le tapis est fixe dès

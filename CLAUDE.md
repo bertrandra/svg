@@ -321,6 +321,17 @@ npm run test:php     # les tests du site PHP (tests/php/)
   et le mode Cricut s'écrivent dans `outils/aide/` (texte, `src="img:<nom>"`, captures `images/*.webp` refaites à la main sur
   l'application), `scripts/documentation.mjs` les rend d'un seul tenant dans `dist/aide/` (images et fontes en data: URI, aucune
   requête), le site les sert dans `public/aide/` ; chaque page passe axe-core sans violation (`tests/e2e/documentation.e2e.ts`).
+- **L'interface en français et en anglais** (ADR-0042) : la clé d'un texte est la phrase française (`t('Annuler')`, `util/i18n.ts`,
+  `{valeurs}` interpolées, repli sur la clé), `pluriel(n, mot, plurielIrrégulier?)` passe par `t`, `nombre` et `locale` formatent selon la
+  langue (plus un seul `'fr-FR'` dans `src/`) ; `fr` par défaut partout, la langue est un état de module posé avant tout rendu par
+  `preparerLangue` (`io/langue.ts`) et **aucun octet écrit n'en dépend** ; un dictionnaire par langue dans `src/i18n/en/<dossier>.json`
+  (clés triées, `npm run langues` les fusionne en l'annexe `langue-en.js`, chargée seulement en `en`, absente : français et c'est dit) ;
+  réglage `svg.langue` (page : accueil et menu Aide, puis `location.reload()`), option et prop `langue` chez un hôte, le geste de
+  changement posé par l'hôte (`definirChangementLangue`, jamais l'embarquement) ; `tests/unit/i18n/couverture.test.ts` exige la
+  traduction de chaque clé de `t` et de `pluriel`, refuse les orphelines, et tient le cliquet des textes français hors `t`
+  (`tests/fixtures/i18n/restes.json`, baissé par `ACTUALISER_REFERENCES=1`, jamais remonté ; `npm run i18n:restes`) ; les données
+  (événements, machines, formes de base, lexiques, jetons) sont exclues du cliquet (`tests/fixtures/i18n/exclus.json`) et se traduisent
+  à l'affichage ; un test de navigateur pose la langue par l'option `langue` de session.
 - **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
   pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
   se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin

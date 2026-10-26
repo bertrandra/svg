@@ -6,6 +6,8 @@ s'embarque aussi comme composant React dans un autre produit.
 
 ## Ce que fait la page
 
+- **En français, et en anglais** : l'interface est en français par défaut ; « English » au pied de l'accueil ou au menu Aide la
+  passe en anglais (réglage gardé dans le navigateur, dictionnaire `langue-en.js` chargé à la demande ; ADR-0042, traduction en cours).
 - **Un accueil par public** : « Pour quoi dessinez-vous ? » (machine de découpe, retouche, intégration), facultatif et retenu ; chaque public voit son circuit jusqu’au fichier prêt, les voies dans son ordre, l’éditeur réglé pour une Cricut (Maker, découpe, millimètres) ou, pour les intégrateurs, l’embarquement expliqué et essayé comme un hôte (ADR-0024).
 - **Ouvrir un SVG ou un PDF** : un fichier déposé ou choisi, un code SVG collé, ou l'exemple ; d'un PDF, les tracés et le texte de la première page (ou de celle qu'on choisit) deviennent des formes, et ce qui n'est pas repris est dit (ADR-0020).
 - **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, affiché dès le dépôt, fond détouré
@@ -116,7 +118,7 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/langue-en.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
 npm run test:php     # les tests du site PHP (PHP 8.1+, cURL), sans dépendance
 npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
@@ -135,6 +137,8 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` et une annexe par source libre, `dist/bibliotheque-<source>.js` |
 | `npm run polices` | Les dix fontes seules, `dist/polices.js`, et l'index des polices téléchargeables, `dist/polices-catalogue.js` (tiré de l'instantané commis `data/catalogue-polices.json`, sans réseau), et ses aperçus, `dist/polices-apercus.js` (tirés de `data/apercus-polices.json`) |
+| `npm run langues` | Le dictionnaire anglais seul : `dist/langue-en.js`, fusion de `src/i18n/en/*.json` (ADR-0042) ; `node scripts/langues.mjs --trier` range les clés |
+| `npm run i18n:restes` | Les textes français encore hors de `t('…')`, par fichier (`npm run i18n:restes -- src/zones` : le détail) ; le plafond est `tests/fixtures/i18n/restes.json` |
 | `node scripts/catalogue-polices.mjs` | À la main seulement : rafraîchit l'instantané `data/catalogue-polices.json` depuis Fontsource, jsDelivr, GitLab et Fontshare (`NODE_USE_ENV_PROXY=1` derrière un proxy) ; une version remplacée passe dans `anciennes`, pour qu'un dessin d'hier se recompose (ADR-0025) |
 | `node scripts/apercus-polices.mjs` | À la main seulement, après l'index : redessine `data/apercus-polices.json`, le nom de chaque famille dans sa propre fonte (chaque fichier vérifié par l'empreinte de l'index ; `APERCUS_CACHE=<dossier>` garde les fichiers téléchargés) (ADR-0026) |
 
