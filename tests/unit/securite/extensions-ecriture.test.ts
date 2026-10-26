@@ -26,6 +26,16 @@ describe('les extensions de l ecriture permise', () => {
     expect(violationsEcriture(SVG.replace('data-ed-modele="2"', 'data-ed-modele="3"'), [groupes])).toEqual(['data-ed-modele refuse par le modele v2 : 3']);
   });
 
+  it('un prefixe employe sans etre declare sur l element ou un ancetre est une violation, quelles que soient les extensions', () => {
+    const image = (racine: string, defs: string) => '<svg xmlns="http://www.w3.org/2000/svg"' + racine + ' viewBox="0 0 10 10"><defs' + defs + '><mask id="ed-m-1"><image xlink:href="data:image/png;base64,AAAA" width="1" height="1"/></mask></defs></svg>';
+    const toutPermis: ExtensionEcriture = { nom: 'essai : tout', element: () => true, attribut: () => true };
+    expect(violationsEcriture(image('', ''), [toutPermis])).toEqual(['prefixe non declare xlink:href sur <image>']);
+    expect(violationsEcriture(image(' xmlns:xlink="http://www.w3.org/1999/xlink"', ''), [toutPermis])).toEqual([]);
+    expect(violationsEcriture(image('', ' xmlns:xlink="http://www.w3.org/1999/xlink"'), [toutPermis])).toEqual([]);
+    expect(violationsEcriture(image('', '').replace('<defs>', '<defs><g xmlns:xlink="http://www.w3.org/1999/xlink"/>'), [toutPermis])).toEqual(['prefixe non declare xlink:href sur <image>']);
+    expect(violationsEcriture(image('', '').replace('<image', '<svg:image').replace('xlink:href', 'href'), [toutPermis])).toEqual(['prefixe non declare <svg:image>']);
+  });
+
   it('les extensions inscrites ont des noms uniques', () => {
     expect(new Set(EXTENSIONS_ECRITURE.map(x => x.nom)).size).toBe(EXTENSIONS_ECRITURE.length);
   });

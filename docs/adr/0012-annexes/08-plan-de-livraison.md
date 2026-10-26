@@ -771,8 +771,10 @@ avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'on
   longue, imbrication, plus de `NOEUDS_DEFS_MAX` formes (compté au fil de la lecture, refus dit — la lecture s'arrêtait avant en silence :
   les places vides des contenus imbriqués comptaient deux fois), plus de 20 000 motifs distincts, **tuile vide, nulle ou plus petite que
   `TUILE_MIN` = 0,01** (décision : refusée, pas peinte « rien »), longueur dans une autre unité, transformation illisible ou dégénérée,
-  coordonnées démesurées, **une image dans une tuile** (l'écriture riche ne déclare `xmlns:xlink` que pour une image du dessin même : à
-  lever dans `ecritureRiche.ts`, propriétaire S1). Dit (`MSG_MOTIFS`) : une tuile qui déborde (`overflow: visible`) est rognée.
+  coordonnées démesurées, **une image dans une tuile** (l'écriture la sait poser depuis le correctif qui suit l'étape, `xmlns:xlink`
+  compris ; le refus reste parce que le projet JSON porte une copie de la tuile par forme peinte, sans partage, et que `refusChampsV2`
+  n'en vérifie pas les octets : une image de 4 Mo sur mille formes y pèserait 4 Go — à lever avec un partage des tuiles dans le projet).
+  Dit (`MSG_MOTIFS`) : une tuile qui déborde (`overflow: visible`) est rognée.
 - **Couleur de repli** (décision, `couleurDeRepliMotif`) : la moyenne OKLab des couleurs de la tuile, pondérée par ce que chacune couvre
   (aire d'un fond, longueur d'un trait par son épaisseur, comme le nuancier, `nuancier/surfaces.ts`) et par son opacité ; le transparent
   de la tuile ne compte pas ; un motif ou un dégradé de la tuile par leur repli ; rien de peint : le noir. Mémorisée par tuile.
@@ -813,11 +815,18 @@ avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'on
   comparées à la main dans Chromium, Firefox et WebKit (moins de 0,25 % de pixels à plus de 200/255 d'écart, l'anticrénelage des tuiles
   tournées).
 - **Reste** : l'interface (étape 8 : contexte `motif` pour éditer la tuile — `ContexteEdition.dans: 'motif'` existe —, dimensions
-  numériques, choix de la cible au lieu du rectangle, section Remplissage « Motif » de l'étape 4) ; les images dans une tuile (et dans un
-  masque : le même `xmlns:xlink` manque à l'écriture d'une image de contenu, trouvé ici) ; la vignette du site PHP refuse
-  `url(#ed-p-…)` : un projet à motif n'a pas de vignette (rien ne casse) ; le motif de pavage du PDF (13a) ; la boucle de lecture des
-  masques (`fonctions/masques.ts`) compte deux fois les places vides d'un contenu imbriqué et s'arrête alors en silence sous la borne
-  (corrigé ici pour les motifs seulement : à reprendre pour les masques).
+  numériques, choix de la cible au lieu du rectangle, section Remplissage « Motif » de l'étape 4) ; les images dans une tuile (le
+  partage des tuiles dans le projet d'abord, voir les refus) ; la vignette du site PHP refuse `url(#ed-p-…)` : un projet à motif n'a pas
+  de vignette (rien ne casse) ; le motif de pavage du PDF (13a).
+- **Corrigé après l'étape** (deux défauts trouvés ici) : (1) la boucle de lecture des masques comptait deux fois les places vides d'un
+  contenu imbriqué et s'arrêtait en silence sous la borne (150 groupes masqués dans un masque : 100 formes gardées sur 150) ; la boucle
+  bornée est désormais une seule fonction, `visiterSousBudget` (`edition/contenus.ts`), pour les masques, les motifs et les découpes (qui
+  ne perdaient rien, mais lisaient jusqu'au bout un `<clipPath>` de 100 000 formes avant de le refuser) : seules les feuilles gardées
+  comptent, et le refus est dit ; (2) une image dans le seul contenu d'une définition (un masque) s'écrivait avec `xlink:href` sans que
+  la racine déclare `xmlns:xlink` (XML mal formé) : `ecrireCorps` signale `'xlink'` quand un élément écrit l'emploie, et
+  `ecrireDessinRiche` décide de la racine après le corps et les définitions (une image du dessin, même cachée, la déclare comme avant :
+  aucune référence n'a bougé) ; `violationsEcriture` refuse désormais tout préfixe employé sans déclaration sur l'élément ou un ancêtre.
+  Références nouvelles : `v2/masques-image`, `v2/masques-image-deplacer`.
 
 ### Caduc
 

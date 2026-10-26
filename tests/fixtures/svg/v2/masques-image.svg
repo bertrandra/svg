@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <mask id="photo" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="120">
+      <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" x="20" y="10" width="160" height="100" preserveAspectRatio="none"/>
+      <circle cx="100" cy="60" r="30" fill="#000"/>
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="200" height="120" fill="#f2b705"/>
+  <g mask="url(#photo)">
+    <rect x="10" y="10" width="180" height="100" fill="#1f5fb0"/>
+  </g>
+</svg>
