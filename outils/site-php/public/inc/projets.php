@@ -129,7 +129,12 @@ function projet_invalide(mixed $p): ?string
     return null;
 }
 
-/** La vignette d'un projet : le SVG que l'editeur ecrit (un <svg> et des <path>), refuse au moindre element ou attribut actif. */
+/**
+ * La vignette d'un projet : le SVG que l'editeur ecrit (un <svg> et des <path>), refuse au moindre element ou attribut actif. Une seule
+ * reference y est admise, celle d'un degrade du modele v2 (ADR-0012, etape 3) sous sa forme exacte : une valeur d'attribut entiere
+ * `url(#ed-d-<14 chiffres hexadecimaux>)`, vers une definition du meme fichier. Elle est remplacee par `none` le temps du controle
+ * (une valeur entiere, entre ses guillemets : rien ne peut s'y recoller), et tout autre `url(` reste refuse.
+ */
 function vignette_sure(mixed $svg): bool
 {
     if (!is_string($svg) || $svg === '' || strlen($svg) > VIGNETTE_OCTETS_MAX || !mb_check_encoding($svg, 'UTF-8')) {
@@ -138,7 +143,11 @@ function vignette_sure(mixed $svg): bool
     if (!str_starts_with($svg, '<svg xmlns="http://www.w3.org/2000/svg"') || !str_ends_with($svg, '</svg>')) {
         return false;
     }
-    return preg_match('/<\s*(script|foreignobject|iframe|image|use|style|a\b|animate|set\b)|<[!?]|\bon[a-z]+\s*=|javascript:|href|url\s*\(|@import/i', $svg) !== 1;
+    $controle = preg_replace('/="url\(#ed-d-[0-9a-f]{14}(?:-[0-9]{1,6})?\)"/', '="none"', $svg);
+    if (!is_string($controle)) {
+        return false;
+    }
+    return preg_match('/<\s*(script|foreignobject|iframe|image|use|style|a\b|animate|set\b)|<[!?]|\bon[a-z]+\s*=|javascript:|href|url\s*\(|@import/i', $controle) !== 1;
 }
 
 /** Le projet, ses champs du serveur (nom, dates) en tete dans l'ordre du format, le reste tel qu'il est venu. */

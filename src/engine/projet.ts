@@ -5,10 +5,11 @@
 
 import type { ChoixProduction } from '../model/contextes.js';
 import {
-  FORMAT_PROJET, VERSION_PROJET, nomDeProjet,
+  FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, nomDeProjet,
   type FormeProjet, type ImageProjet, type PoliceProjet, type Projet, type TeinteProjet, type TexteProjet
 } from '../model/projet.js';
-import { peintureSure, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
+import { estPlat, peintureSure, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
+import { champsV2VersModele, champsV2VersProjet } from './projetV2/champs.js';
 import type { DispositionProjet } from '../model/projet.js';
 import type { NuancierDessin } from '../model/nuancier.js';
 
@@ -100,6 +101,7 @@ export function formeProjet(f: Forme): FormeProjet {
     ...facultatifs(f),
     ...(f.texte !== undefined ? { texte: texteProjet(f.texte) } : {}),
     ...(f.operation !== undefined ? { operation: f.operation } : {}),
+    ...champsV2VersProjet(f),
     regle: f.regle, visible: f.visible, verrouille: f.verrouille
   } as FormeProjet;
 }
@@ -111,6 +113,7 @@ export function formeDuProjet(f: FormeProjet): Forme {
     ...facultatifs(f),
     ...(f.texte !== undefined ? { texte: texteVivant(f.texte) } : {}),
     ...(f.operation !== undefined ? { operation: f.operation } : {}),
+    ...champsV2VersModele(f),
     regle: f.regle, visible: f.visible, verrouille: f.verrouille
   } as Forme;
 }
@@ -127,10 +130,14 @@ const nuancierCopie = (n: NuancierDessin | undefined): { nuancier?: NuancierDess
   nuancier: { provenance: n.provenance, teintes: n.teintes.map(t => (t.opacite === undefined ? { hex: t.hex } : { hex: t.hex, opacite: t.opacite })) }
 });
 
-/** Le projet d'un etat de l'editeur : le nom assaini, les champs dans l'ordre du format, les dates seulement quand le serveur les a posees. */
+/**
+ * Le projet d'un etat de l'editeur : le nom assaini, les champs dans l'ordre du format, les dates seulement quand le serveur les a
+ * posees. Un dessin plat s'ecrit au format 1, octet pour octet comme avant le modele v2 ; un dessin qui ne l'est pas, au format 2
+ * (ADR-0012, annexe 8 §0), qu'un programme d'avant refuse en le disant au lieu de le lire « au mieux ».
+ */
 export function projetDe(e: EtatProjet): Projet {
   return {
-    format: FORMAT_PROJET, version: VERSION_PROJET, nom: nomDeProjet(e.nom),
+    format: FORMAT_PROJET, version: estPlat(e.dessin) ? VERSION_PROJET_PLAT : VERSION_PROJET, nom: nomDeProjet(e.nom),
     ...(e.creeLe !== undefined ? { creeLe: e.creeLe } : {}),
     ...(e.modifieLe !== undefined ? { modifieLe: e.modifieLe } : {}),
     dessin: { vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier) },

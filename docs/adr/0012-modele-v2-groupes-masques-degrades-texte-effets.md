@@ -18,6 +18,14 @@ la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de v
   définitions par empreinte (`definitions.ts`), la descente (`engine/aplatir.ts`) et les gardes-fous (manifeste des références
   v1, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`, extensions de l'écriture permise, champs du
   projet). Le détail est à l'annexe 8 §0.
+- **L'étape 3, dégradés (moteur), est faite** (26 octobre 2026 ; aucun octet d'un dessin plat ne bouge, la lecture `plat` refuse
+  comme avant) : résolution des références (`edition/resolution.ts`), dégradés linéaires et radiaux lus en `riche`
+  (`edition/fonctions/degrades.ts` : unités de boîte et pourcentages, `gradientTransform`, chaîne `href`, arrêts bornés à 64,
+  `stop-color` et `stop-opacity` par la cascade), écrits canoniques et dédoublonnés (`edition/degrades.ts` : un linéaire toujours
+  sans matrice, un radial à matrice de déterminant 1 quand ce n'est pas une similitude ; point fixe vérifié), emmenés par les
+  transformations, descendus en couleur de repli pour tout exporteur d'aujourd'hui (`engine/descente/degrades.ts`), ignorés des
+  listes et des remplacements de couleurs mais lus par leurs arrêts dans le nuancier, portés par le projet JSON (format 2 seulement
+  pour un dessin non plat), admis dans la vignette du site PHP. Le détail et les écarts sont à l'annexe 8 §1, « Étape 3 ».
 - **Révision du plan** (annexe 8 §0 et §3) : ce que les ADR fusionnés depuis ont rendu caduc ou déjà fait (texte vivant,
   `util/empreinte.ts`, `<text>` étranger lu en lettres, corpus hostile, CI à trois moteurs, exports DXF/EPS/PDF CMJN), ce
   qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux

@@ -14,7 +14,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 0 Coutures | **faite** le 25 octobre 2026 (ce qui a été posé : ci-dessous, et §1 « Étape 0 ») |
 | 10 Texte vivant, moteur | **faite** autrement (ADR-0022, 0027, 0031, 0032) ; reste un morceau, porté par l'étape 1 (voir « Caduc ») |
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
-| 1 à 9, 12, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
+| 1, 2, 4 à 9, 12, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -179,6 +180,74 @@ l'exige pas ; l'étape 1 verrouille la marque et branche les appels, avec l'affi
 - *Révision (25 octobre 2026)* : `definitions.ts` (recueil, empreinte, dédoublonnage, `<defs>`) et la composition dans
   `transformerFeuille` (un crochet) existent depuis l'étape 0 ; le **branchement sur la toile** passe à l'étape 2 (paquet A, un
   rendu générique par les crochets d'écriture), l'étape 3 ne touche aucun fichier de `zones/`. Consignes : §5.
+- **Faite le 26 octobre 2026** (les trois paquets en un arbre, aucune ligne de `zones/`). Ce qui a été posé :
+  - `edition/resolution.ts` (paquet A) : `lireReference` (`url(#id)`, guillemets, couleur de secours, renvoi extérieur reconnu),
+    `chaineHref` (bornée à `CHAINE_HREF_MAX` = 16, cycle et renvoi extérieur dits, cible d'un autre genre ignorée), `attributHerite`,
+    `lireLongueur` (nombre, pixels, pourcentage ; une autre unité se dit), `lireFraction` ; bornes `PROFONDEUR_DEFS_MAX`,
+    `NOEUDS_DEFS_MAX` pour les étapes 5 à 9.
+  - `edition/fonctions/degrades.ts` (paquet B) et une ligne de `catalogue.ts` : `lecture.peinture` (linéaire et radial, `fx fy
+    fr`, unités de boîte résolues par la boîte **locale** de la forme puis composées avec `pret.m`, pourcentages du plan,
+    `gradientTransform`, `spreadMethod`, coordonnées héritées d'un dégradé du même genre seulement, arrêts du premier maillon qui en
+    porte, triés, 64 au plus et dit, `stop-color`/`stop-opacity` par la cascade, `currentColor`, `transparent`) ; ce qu'un navigateur
+    ne peint pas ne peint rien (référence absente ou d'un autre genre, avec sa couleur de secours s'il y en a une ; dégradé sans arrêt ;
+    boîte plate ; matrice dégénérée), et c'est dit ; un seul arrêt, une longueur ou un rayon nuls peignent la couleur du dernier ;
+    `ecriture.peindreFeuille` (la définition au recueil, `url(#ed-d-…)` à la place de la couleur, la forme repeinte mémorisée pour que
+    le cache de l'écriture plate tienne) ; `transformation.feuille` (une translation déplace les coordonnées, le reste compose la
+    matrice ; un même dégradé au fond et au trait reste un seul objet). Les phrases (`MSG_DEGRADES`, `REFUS_DEGRADES`) sont dans le
+    fichier.
+  - `edition/degrades.ts` : `poidsArrets` (chaque intervalle partagé par moitié), `couleurDeRepli` (moyenne OKLab pondérée par la part
+    et l'opacité), `transformerDegrade`, `definitionDegrade` — l'écriture **canonique** : un linéaire se ramène toujours, exactement, à
+    un dégradé du plan sans matrice (la couleur d'un point est une fonction affine, deux extrémités l'expriment) ; un radial garde une
+    matrice ramenée à un déterminant de 1 quand ce n'est pas une similitude (l'échelle passe dans les grandeurs, qui gardent la
+    précision du plan), aucune sinon. Le modèle, lui, garde le dégradé tel qu'il a été lu (coordonnées de son repère, matrice
+    composée) : les transformations sont exactes, l'écriture choisit. Point fixe vérifié sur toutes les fixtures et sur 400 dégradés
+    tirés au hasard (graine imprimée).
+  - Couleurs (paquet B) : `fondUni`/`traitUni` (`edition/couleurs.ts`) ; `couleursDuDessin`, `groupesDeCouleur`, `idsDeCouleur`,
+    `idsMemeCouleur`, `remplacerCouleur(Sur)`, les nuances proches et leur fusion (et par eux les palettes) ignorent **le côté** peint
+    d'un dégradé ou d'un motif, l'autre côté reste une couleur ; `memesCouleurs` voit qu'on pose ou retire une peinture. Anciens corps
+    dans `anciennes/couleurs.ts`, `anciennes/couleursProches.ts`, cas dans `loi-dessin-plat.test.ts`.
+  - **Nuancier** (ADR-0037), décision : une forme à dégradé apporte **les couleurs de ses arrêts**, chacun pour sa part du dégradé
+    et à son opacité, jamais la couleur de repli ; un motif, rien encore. Le nuancier ne remplace rien (il lit), la règle « jamais un
+    repli qui change sans que le dégradé change » ne le concerne pas, et un logo en dégradés aurait sinon un nuancier vide. Ancien
+    corps de `apportsDe` dans `anciennes/nuancier.ts`.
+  - `engine/descente/degrades.ts` (paquet C), premier de `REGLES_DESCENTE` : la peinture part, la couleur de repli reste, « les
+    dégradés (remplacés par leur couleur moyenne) » ; `natif` garde le dégradé (le PDF à l'étape 13 a) ; `raster` et `refus`
+    descendent comme `approche`. **Par exporteur** (`export/capacites.ts`, inchangé) : SVG et PNG écrivent le dégradé ; SVG « à plat »,
+    PDF, SVG de découpe, DXF, EPS et fichiers de production reçoivent la couleur de repli. Les exporteurs ne passent pas encore par
+    `aplatirPour` (l'étape 1, paquet C, le branche dans `zones/`), mais ne lisant que `remplissage`/`contour`, ils écrivent déjà la
+    couleur de repli.
+  - Projet JSON (ADR-0030) : `model/projetV2/peinture.ts` (validation : genre linéaire ou radial, un motif refusé en le nommant,
+    2 à 64 arrêts qui ne reculent pas, `#rrggbb`, matrice de six nombres, bornes du projet), `engine/projetV2/peinture.ts`
+    (aller-retour champ pour champ), branchés par **le cadre du paquet 1-C posé ici** : `model/projetV2/champs.ts` (une ligne par
+    champ : clé, lecteur, garde I5) et `engine/projetV2/champs.ts` (une ligne d'aller-retour) ; `VERSION_PROJET` = 2,
+    `VERSION_PROJET_PLAT` = 1 (un dessin plat s'écrit au format 1, octet pour octet), `MIGRATIONS[1]` est l'identité et `migre` ne
+    vaut vrai que si une migration a changé quelque chose (un projet au format 1 ne s'annonce pas « complété ») ; un champ v2 dans un
+    projet au format 1 y est inconnu, donc ignoré. `projet-v2.test.ts` : les deux peintures « porte ».
+  - Vignette du site PHP : `vignette_sure` admet une valeur d'attribut **entière** `url(#ed-d-<14 hex>)` (remplacée par `none` le temps
+    du contrôle) ; tout autre `url(` reste refusé ; test PHP.
+  - Tests : `v2/cas-degrades.ts` (12 lectures, 6 transformations, 3 fichiers du corpus `figma-degrade`, `sketch-degrade-pourcent`,
+    `inkscape-degrade-chaine` dans `tests/fixtures/svg/corpus/`, références dans `v2/`) ; `degrades.test.ts` (résolution, lecture,
+    lecture plate refusée avec la phrase d'aujourd'hui, partage, point fixe aléatoire, `violationsEcriture` et `violationsNettoyage`
+    sur chaque cas, une définition pour 5 000 formes) ; `descente-degrades.test.ts` ; `couleurs-degrades.test.ts` ; 14 hostiles
+    `v2-degrades-*` (cycle, 2 000 arrêts, matrice nulle, `stop-color` en `url(http…)`, `href` et `fill` extérieurs, chaîne de 21,
+    référence absente ou d'un autre genre, coordonnée démesurée, `id` en double, style qui réintroduit une adresse, entités qui
+    composent `javascript:`, unités inconnues), passés en mode plat par `corpus.test.ts` et en mode riche, sur les deux chemins, par
+    `securite/degrades-hostiles.test.ts` ; l'extension d'écriture « étape 3 : degrades » (et `data-ed-modele="2"` sur la racine).
+- *Écarts au §5.2* : (1) le crochet `lecture.peinture` ne sait rendre qu'une peinture du modèle, pas « rien » ni une couleur de
+  secours : la fonctionnalité rend une peinture marquée que son crochet `feuille` remplace aussitôt (aucune ne survit à la lecture) ;
+  à l'étape suivante qui touche `fonctionnalites.ts`, le chef de chantier peut laisser `peinture` rendre aussi une couleur (`{ couleur,
+  alpha }`). (2) Le cadre du projet (version, lecteur par champ) devait venir de l'étape 1 : posé ici, à la forme que le §5.1 décrit,
+  pour que les dégradés soient portés dès la fusion ; l'étape 1 n'y ajoute que ses lignes (`parent`, `groupes` — ce dernier au
+  niveau du dessin, hors de la liste des champs de forme). (3) Un million d'arrêts dépasse la borne des éléments de l'analyse XML
+  (1 000 000) : refusé là ; 999 000 arrêts exercent `ARRETS_MAX` (le test le fait, le fichier commis en porte 2 000). (4) Le corpus
+  se joue par le harnais v2 (`entree: '../corpus/…'`) ; l'équivalence pixel (`rendu-v2`) reste à l'étape d'interface qui ouvre l'e2e
+  (2 ou 4). (5) `illustrator-degrade-decoupe` attend les découpes (étape 5). (6) Les listes de couleurs ignorent un **côté** plutôt
+  qu'une forme entière, par deux lectures (`fondUni`, `traitUni`) qui rendent le champ tel quel sur un dessin plat, plutôt qu'un
+  `if (estPlat) return <corps>` qui dédoublerait chaque corps (la loi du dessin plat le prouve). *Points de rencontre avec l'étape 1* :
+  une ligne de `catalogue.ts`, de `REGLES_DESCENTE` (les groupes en dernier), de `extensionsEcriture.ts` (le marqueur), le bloc
+  « étape 3 » de la façade, `model/projet.ts`, `engine/projet.ts`, `model|engine/projetV2/champs.ts`, `projet-v2.test.ts`,
+  `loi-dessin-plat.test.ts`. Retour : `git revert -m 1 <fusion>` (un dessin plat ne bouge pas ; un projet au format 2 deviendrait
+  illisible, refusé en le nommant).
 
 ### Étape 4 — Dégradés : l'interface · taille M
 

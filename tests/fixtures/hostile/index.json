@@ -1022,6 +1022,90 @@
       "famille": "encodage",
       "vecteur": "Le lien d'un texte pose vers sa forme (ADR-0031) piege : un texte qui se designe lui-meme, deux textes qui se designent l'un l'autre, un rang demesure, un trace encode qui decode en schema actif ou en nombre demesure, une regle qui porte url(), un rang et un trace a la fois, un guillemet qui ferme l'attribut, une marge negative dans un groupe transforme, un reglage sans disposition",
       "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-cycle-href.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrades dont le href boucle (a -> b -> a) : refuse en mode riche, « un cycle de dégradés »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-arrets-massifs.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade de 2 000 arrets (le million est engendre par degrades-hostiles.test.ts) : 64 gardes, le reste dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-matrice-nulle.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform nulle ou scale(0) : rien n est peint, comme un navigateur, et c est dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-stop-color-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "stop-color en url(http://...) par attribut et par style : une couleur illisible vaut le noir, jamais suivie",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-href-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade utilise dont xlink:href vise un autre fichier : refuse en mode riche, jamais telecharge",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-fill-url-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "fill et stroke en url() vers une adresse exterieure, avec couleur de secours : refuses, jamais suivis",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-chaine-longue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Chaine href de 21 degrades : au-dela de 16 maillons, refusee en le nommant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-reference-absente.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#inexistant), avec et sans couleur de secours : rien ou la couleur de secours, et c est dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-autre-genre.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#a) vers un clipPath ou un rect : ce n est pas un degrade, rien n est peint",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-coordonnees-demesurees.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnee de degrade a 1e300 : refusee, aucune valeur demesuree n entre dans le modele",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-id-double.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Deux degrades de meme id : le premier l emporte, comme un navigateur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-style-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Feuille de style qui reintroduit un stroke url(https://...) sur une forme a degrade",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-entites-javascript.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform qui compose javascript: par entites numeriques : illisible, refuse",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-unite-inconnue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnees de degrade en mm et en em : ni nombre, ni pixels, ni pourcentage, refusees",
+      "attendu": "refus"
     }
   ]
 }

@@ -15,6 +15,16 @@ import { aplatirPour, CAPACITES_PLAT } from '../../../src/engine/aplatir.js';
 import { au } from '../../../src/util/tableaux.js';
 import { ecrireDessinAncien } from './anciennes/ecriture.js';
 import { collerAncien, dupliquerAncien, insererAncien, modifierAncien, refusDeAncien, transformerAncien } from './anciennes/operations.js';
+import {
+  couleursDuDessin, groupesDeCouleur, idsDeCouleur, idsMemeCouleur, memesCouleurs, remplacerCouleur, remplacerCouleurSur
+} from '../../../src/engine/edition/couleurs.js';
+import { couleursProches, fusionnerCouleursProches, idsDeNuancesProches } from '../../../src/engine/edition/couleursProches.js';
+import { apportsDe } from '../../../src/engine/nuancier.js';
+import {
+  couleursDuDessinAncien, groupesDeCouleurAncien, idsDeCouleurAncien, idsMemeCouleurAncien, memesCouleursAncien, remplacerCouleurAncien, remplacerCouleurSurAncien
+} from './anciennes/couleurs.js';
+import { couleursProchesAncien, fusionnerCouleursProchesAncien, idsDeNuancesProchesAncien } from './anciennes/couleursProches.js';
+import { apportsDeAncien } from './anciennes/nuancier.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const textes = readdirSync(DOSSIER).filter(n => n.endsWith('.svg')).sort().map(nom => ({ nom, svg: readFileSync(resolve(DOSSIER, nom), 'utf8').replace(/\r\n/g, '\n') }));
@@ -95,6 +105,33 @@ describe('la loi du dessin plat', () => {
       for (const r of reglages) expect(modifier(d, ids, r), nom).toEqual(modifierAncien(d, ids, r));
       const premiere = d.formes[0];
       if (premiere) expect(modifier(d, [premiere.id], { remplissage: premiere.remplissage }), nom).toBe(d);
+    }
+  });
+
+  it('les listes et remplacements de couleurs, les nuances proches et le nuancier rendent ce que rendaient les anciens (etape 3)', () => {
+    const SUR = ['tout', 'remplissage', 'contour'] as const;
+    for (const { nom, d } of corpus) {
+      expect(couleursDuDessin(d), nom).toEqual(couleursDuDessinAncien(d));
+      for (const sur of SUR) {
+        expect(groupesDeCouleur(d, sur), nom).toEqual(groupesDeCouleurAncien(d, sur));
+        expect(couleursProches(d, 0.08, sur), nom).toEqual(couleursProchesAncien(d, 0.08, sur));
+        const fusion = fusionnerCouleursProches(d, 0.08, sur), ancienne = fusionnerCouleursProchesAncien(d, 0.08, sur);
+        expect(fusion, nom).toEqual(ancienne);
+        if (ancienne.dessin === d) expect(fusion.dessin, nom).toBe(d);
+      }
+      const premiere = d.formes.find(f => f.remplissage ?? f.contour), couleur = premiere ? premiere.remplissage ?? premiere.contour : null;
+      if (premiere && couleur) {
+        expect(idsDeCouleur(d, couleur), nom).toEqual(idsDeCouleurAncien(d, couleur));
+        expect(idsMemeCouleur(d, premiere.id), nom).toEqual(idsMemeCouleurAncien(d, premiere.id));
+        for (const sur of SUR) expect(idsDeNuancesProches(d, couleur, 0.05, sur), nom).toEqual(idsDeNuancesProchesAncien(d, couleur, 0.05, sur));
+        for (const vers of ['#123456', null]) {
+          expect(remplacerCouleur(d, couleur, vers), nom).toEqual(remplacerCouleurAncien(d, couleur, vers));
+          for (const sur of SUR) expect(remplacerCouleurSur(d, couleur, vers, sur), nom).toEqual(remplacerCouleurSurAncien(d, couleur, vers, sur));
+        }
+      }
+      expect(remplacerCouleur(d, '#fedcba', '#000000'), nom).toBe(d);
+      expect(memesCouleurs(d.formes, d.formes.map(f => ({ ...f }))), nom).toBe(memesCouleursAncien(d.formes, d.formes.map(f => ({ ...f }))));
+      for (const f of d.formes) expect(apportsDe(f), nom + ' ' + f.id).toEqual(apportsDeAncien(f));
     }
   });
 
