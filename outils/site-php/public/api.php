@@ -112,7 +112,8 @@ switch ($route) {
     case 'enregistrer':
         $corps = corps_ecriture($csrfValide, PROJET_OCTETS_MAX + VIGNETTE_OCTETS_MAX + 4096);
         $id = isset($_GET['id']) ? id_demande() : null;
-        $attendue = preg_match('/^"?(\d{1,10})"?$/', (string) ($_SERVER['HTTP_IF_MATCH'] ?? ''), $m) === 1 ? (int) $m[1] : null;
+        // Un mandataire peut affaiblir l'etiquette (`W/"3"`) : la revision y est la meme.
+        $attendue = preg_match('/^(?:W\/)?"?(\d{1,10})"?$/', (string) ($_SERVER['HTTP_IF_MATCH'] ?? ''), $m) === 1 ? (int) $m[1] : null;
         repondre_resultat(enregistrer_projet($id, $corps->projet ?? null, $attendue, $corps->vignette ?? null));
     case 'renommer':
         $corps = corps_ecriture($csrfValide, 8192);

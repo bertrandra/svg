@@ -351,6 +351,11 @@ test('creer, lister, ouvrir (ETag), ecraser avec la revision ; un autre onglet e
     egal(2, json_decode($corps, true)['meta']['revision']);
     egal(428, $c->ecrire('api.php?r=enregistrer&id=' . $m['id'], ['projet' => projet_json()], $csrf)[0], 'sans revision');
     egal('Onglet A', json_decode($c->get('api.php?r=projet&id=' . $m['id'])[2], true)['nom']);
+    // Une etiquette affaiblie par un mandataire (W/"2") vaut la revision 2.
+    [$statut, , $corps] = $c->ecrire('api.php?r=enregistrer&id=' . $m['id'], ['projet' => projet_json('Onglet C')], $csrf, ['If-Match: W/"2"']);
+    egal(200, $statut, $corps);
+    egal(3, json_decode($corps, true)['meta']['revision']);
+    egal('Onglet C', json_decode($c->get('api.php?r=projet&id=' . $m['id'])[2], true)['nom']);
 });
 
 test('renommer, dupliquer, supprimer par l API', function () use ($url): void {

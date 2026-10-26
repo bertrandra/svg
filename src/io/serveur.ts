@@ -229,7 +229,8 @@ export function creerServeur(options: OptionsServeur): Serveur {
     ouvrir: async id => {
       const r = await demander({ r: 'projet', id }, lecture, BORNES_PROJET.octets);
       if (!r.ok) return r;
-      const revision = Number(/^"?(\d+)"?$/.exec(r.valeur.reponse.headers.get('etag') ?? '')?.[1] ?? NaN);
+      // Un serveur qui compresse la reponse (nginx en gzip ou brotli) affaiblit l'ETag : `W/"3"`. La revision y est la meme.
+      const revision = Number(/^(?:W\/)?"?(\d+)"?$/.exec(r.valeur.reponse.headers.get('etag') ?? '')?.[1] ?? NaN);
       const lu = lireProjet(r.valeur.corps);
       if ('erreur' in lu) return echec('invalide', lu.erreur);
       return Number.isInteger(revision) && revision > 0 ? { ok: true, valeur: { projet: lu.projet, revision, migre: lu.migre } } : echec('serveur');

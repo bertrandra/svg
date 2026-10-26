@@ -31,6 +31,9 @@ describe('le serveur du site', () => {
   it('ouvre un projet avec sa revision (ETag), et refuse un projet invalide ou plus recent en le nommant', async () => {
     const ok = faux(() => json(200, PROJET, { ETag: '"3"' }));
     expect(await ok.serveur.ouvrir(META.id)).toEqual({ ok: true, valeur: { projet: PROJET, revision: 3, migre: false } });
+    // Un serveur qui compresse la reponse (nginx, gzip ou brotli) rend un ETag faible : le projet s'ouvre quand meme (vu en ligne).
+    const faible = faux(() => json(200, PROJET, { ETag: 'W/"3"' }));
+    expect(await faible.serveur.ouvrir(META.id)).toEqual({ ok: true, valeur: { projet: PROJET, revision: 3, migre: false } });
     const recent = faux(() => json(200, { ...PROJET, version: VERSION_PROJET + 1 }, { ETag: '"3"' }));
     const r = await recent.serveur.ouvrir(META.id);
     expect(r.ok ? '' : r.message).toMatch(/version plus récente/);
