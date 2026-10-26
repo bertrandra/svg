@@ -1254,7 +1254,7 @@
     {
       "fichier": "v2-effets-primitive-interdite.svg",
       "famille": "v2-effets",
-      "vecteur": "Primitives hors du sous-ensemble (modele v2, effets) : feImage vers une adresse (pixel espion), feBlend, feTurbulence, feDisplacementMap ; refuse en nommant la primitive, jamais rien de charge",
+      "vecteur": "Primitives hors du sous-ensemble (modele v2, effets) : feImage vers une adresse (pixel espion, fusionnee par feBlend), feTurbulence, feDisplacementMap ; refuse en nommant la primitive, jamais rien de charge",
       "attendu": "refus"
     },
     {
@@ -1279,6 +1279,12 @@
       "fichier": "v2-effets-fusion-demesuree.svg",
       "famille": "v2-effets",
       "vecteur": "feMerge de 500 noeuds (modele v2, effets) : refuse a la borne de 16 noeuds, sans construire de pile",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-matrice-couleurs.svg",
+      "famille": "v2-effets",
+      "vecteur": "Matrices de couleurs et fusions hostiles (modele v2, etape 13b) : cinq mille nombres, NaN, 1e309, rotation de teinte de 1e308 degres, coefficients arithmetiques demesures, mode de fusion invalide portant une adresse, alpha multiplie par 1e308 ; refuse en nommant la matrice illisible, sans lever ni rien charger",
       "attendu": "refus"
     },
     {

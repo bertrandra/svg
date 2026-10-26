@@ -25,7 +25,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
 | 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
 | 13d Couleurs | **faite** le 26 octobre 2026 (moteur et listes ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 13d a posé ») |
-| 8, 13a, 13b, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 13b Idiomes de filtres | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les mesures et ce qui reste : ci-dessous, « Ce que l'étape 13b a posé ») |
+| 8, 13a, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -870,6 +871,83 @@ de l'étape 3 (« les listes ignorent un côté peint ») est levé.
 - **Reste** : l'ombre portée dans les listes (ci-dessus) ; une ligne « Motifs » à côté de « Dégradés » si l'interface des motifs (étape 8)
   en a besoin ; le nuancier de l'ADR-0037 n'a pas changé (il lisait déjà arrêts et tuiles).
 
+### Ce que l'étape 13b a posé (26 octobre 2026, moteur)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes), la lecture `plat` est inchangée (elle
+refuse tout filtre, « un filtre », et tout masque, comme avant). Seul le mode riche lit davantage : des filtres jusqu'ici refusés
+(« un filtre (feColorMatrix) », « un filtre (feBlend) », ou « ni un flou ni une ombre portée ») se lisent désormais quand ils calculent
+exactement un flou, une ombre portée, les deux, ou rien.
+
+- **Décision : la reconnaissance passe par le calcul, pas par des reconnaisseurs à motif.** L'annexe 4 B §3 prévoyait un reconnaisseur
+  par idiome ; l'évaluation de l'étape 7 suffit, étendue dans un module pur, `edition/filtres.ts` (l'image symbolique, ses
+  constructeurs simplificateurs, `matriceCouleurs`, `appliquerMatrice`, `fusion`, `arithmetique`, `pile`, `reconnaitre`), que
+  `fonctions/effets.ts` appelle après avoir lu attributs et cascade. Ce qu'un navigateur calcule exactement se simplifie à mesure : un
+  aplat transparent ne laisse rien ; une fusion (`feBlend`, tout mode de Compositing) avec une image transparente rend l'autre image
+  (la formule de composition le dit : c'est l'aplat « BackgroundImageFix » de Figma, qui rend la fusion de l'ombre neutre quel que
+  soit son mode) ; `normal` pose `in` sur `in2` ; une matrice identité ne change rien (`saturate` 1, `hueRotate` 0 compris) ; une matrice
+  qui ne pose qu'une couleur (cinquième colonne) et un facteur d'alpha **teint** une silhouette, calculée en RVB linéaire si le filtre
+  l'est (la couleur d'une ombre de Sketch, qui ne fixe pas `color-interpolation-filters`, est une couleur linéaire : `0,29 0,56 0,89` se
+  voit `#93c6f2`, et c'est ce que la lecture garde) ; un facteur au-delà de 1 **durcit** l'alpha (le ×127 de Figma) ; une image de
+  couleur uniforme se recolore tant que ses couleurs ne dépendent pas de l'alpha ; `feComposite` `out` retire, `arithmetic` se garde
+  pour être nommé. L'image finale se reconnaît : le graphique, flou ou non, et au plus une ombre dessous, l'ombre étant une silhouette
+  (au plus un flou, un décalage, un durcissement, une découpe sous la forme), teinte par un aplat ou noire (l'alpha seul : `AI_Shadow`).
+- **Idiomes lus** (corpus `figma-ombre`, `figma-flou-calque`, `sketch-ombre`, `illustrator-ombre`, `illustrator-masque-opacite`, joués par
+  `v2/cas-idiomes.ts`, 5 références relues) : l'ombre portée de Figma (aplat transparent, alpha ×127, décalage, flou, `out` sous la
+  forme, teinte, deux fusions `normal`), sur une feuille ou un groupe ; son flou de calque ; l'ombre de Sketch (alpha décalé, flou, teint,
+  `feMerge` sous le graphique, unités de boîte en pourcentages) ; `AI_Shadow_1` d'Illustrator ; `Adobe_OpacityMaskFilter` (matrice
+  identité sur le contenu d'un `<mask>`) : **neutre**, rien n'est gardé ni dit — il l'est pour un masque de luminance comme d'alpha. En
+  plus, sans l'avoir cherché : l'ombre portée d'Inkscape 1 (aplat composé dans le graphique, puis flou et décalé), que l'étape 7 refusait.
+- **L'ombre « pleine » de Figma** : l'alpha durci et la découpe sous la forme n'équivalent à l'ombre du modèle (calculée sur l'alpha,
+  dessinée sous la forme) que sous une forme **opaque**. La lecture le vérifie sur les feuilles (`feuilleOpaque` : opacités pleines,
+  dégradé aux arrêts pleins, pas de motif, pas d'effet propre, une image en JPEG seulement) et sur chaque groupe entre la feuille et le
+  groupe à filtre (ni opacité, ni masque, ni effet) — l'opacité, le masque ou la découpe du groupe à filtre lui-même s'appliquent après le
+  filtre et ne comptent pas. Sinon : refus, « une ombre portée calculée sur la forme pleine, sous une forme en partie transparente
+  (Figma) ». Le crochet `groupe` étant appelé avant les enfants, la vérification se fait au fil des feuilles (`verifierPleines`, comme
+  `verifierRegionsDesGroupes`).
+- **Refus nommés, avec l'idiome** (`REFUS_IDIOMES`, `refusFusion`, `avecIdiome` ; bloc « étape 13b » de la façade) : « une ombre
+  intérieure (Figma) » ou « (Sketch) » (une composition arithmétique qui retranche), « plusieurs ombres portées (Figma) », « un flou
+  appliqué à la forme et à son ombre ensemble (Figma) » (le flou de calque de Figma floute aussi l'ombre : ni l'ombre nette sous la forme
+  floue du modèle, ni une ombre plus floue, le flou d'une composition n'étant pas la composition des flous), « un mode de fusion autre
+  que normal (multiply, Figma) » (entre deux images visibles), « un filtre qui change les couleurs de la forme », « un filtre qui
+  inverse les couleurs de la forme (Illustrator) » (le masque inversé), « un fond de couleur posé par un filtre (Illustrator) » (la
+  variante à aplat blanc d'`Adobe_OpacityMaskFilter`), « un filtre qui efface la forme », « une matrice de couleurs illisible
+  (feColorMatrix) », « un filtre (feMorphology, Figma) » (l'étalement d'une ombre). L'idiome ne sert qu'à nommer : un identifiant
+  `AI_…` ou `Adobe_…` (Illustrator), un aplat transparent cité par une fusion (Figma), une matrice de teinte sans aplat ni fusion
+  (Sketch) ; il ne se cherche que dans un filtre court (une chaîne démesurée est refusée sans rien lire de ses valeurs).
+- **Un filtre neutre dont la région rognait la forme** le dit désormais (`MSG_EFFETS.regionNeutre`) et une région vide le refuse, comme
+  pour un effet : l'étape 7 laissait passer l'un et l'autre en silence.
+- **Mesuré dans les trois moteurs** (Playwright, à la main ; l'entrée du corpus telle qu'un navigateur l'ouvre contre sa référence, à
+  l'échelle 3 puis 1, fond blanc) : **hors des bords des formes** (un pixel dont un voisin diffère de plus de 24 dans l'une ou l'autre
+  image, élargi d'une unité), l'écart est de 0 à 4 niveaux sur 255 dans Chromium et Firefox pour les cinq fichiers, Firefox 5 pour le
+  masque d'Illustrator (la matrice identité calculée en RVB linéaire, l'arrondi sur 8 bits) ; dans WebKit, qui calcule les filtres à la
+  résolution CSS, l'alpha durci de Figma élargit la silhouette de l'anticrénelage d'un pixel CSS : un halo diffus d'au plus 8 niveaux
+  dans l'ombre près des bords courbes (à l'échelle 1, le même halo dans les trois moteurs ; `inkscape-flou`, déjà au corpus, montre 13
+  niveaux dans WebKit). **Sur les bords**, l'écart va jusqu'à 100 niveaux sur une ligne d'un pixel : l'anticrénelage (la découpe `out`
+  de Figma retire l'ombre sous les pixels de bord, la fusion de Sketch se fait en RVB linéaire, la région fractionnaire d'Illustrator
+  rééchantillonne dans Firefox). **Témoins** : une opacité d'ombre de 0,25 portée à 0,3, la couleur naïve `#4a90e2` au lieu de
+  `#93c6f2`, un décalage d'une unité donnent, hors des bords, 2 000 à 9 000 pixels au-delà de 4 niveaux (jusqu'à 28) : la mesure voit
+  une erreur d'ombre.
+- **Touché hors du fichier de la fonctionnalité, et pourquoi** : (1) `edition/filtres.ts` (nouveau) ; (2) la façade, un bloc « étape
+  13b » ; (3) `util/assainirSvg.ts` : le fuzzing (corpus déplacé par le nouvel hostile) a trouvé `@ import` dans un `<style>`, qu'aucun
+  navigateur ne lit comme une règle mais que l'invariant du nettoyage refuse : retiré comme `@import` (une entrée dans
+  `tests/fixtures/regressions/css-import-espace.svg`) ; (4) `effets.test.ts` : la phrase d'une matrice illisible n'est plus « un filtre
+  (feColorMatrix) ». `types.ts` et `fonctionnalites.ts` n'ont pas changé ; aucun crochet n'a manqué.
+- **Tests** : `idiomes.test.ts` (le corpus par le chemin de la page avec ses `ignores` exacts, le refus en plat, les refus nommés de
+  Figma, Sketch et Illustrator, l'ombre pleine sous une forme translucide, le filtre neutre rogné, l'ombre d'Inkscape 1, l'évaluation
+  seule : matrices, teintes en RVB linéaire, durcissement, fusions, piles, reconnaissance), `v2/cas-idiomes.ts`, un hostile
+  `v2-effets-matrice-couleurs` (cinq mille nombres, NaN, 1e309, rotation de teinte de 1e308 degrés, coefficients arithmétiques démesurés,
+  mode de fusion invalide portant une adresse, alpha ×1e308) ; engendrés dans `effets-hostiles.test.ts`, seize fusions de seize couches
+  et seize compositions emboîtées sur un même résultat : une pile ne s'aplatit qu'en deçà de 32 couches et une image partagée n'est
+  parcourue qu'une fois (sans quoi 16^16 couches).
+- **Reste** : l'ombre de Sketch en `<use filter>` (la variante récente : un `<use>` noir dont le filtre ne rend **que** l'ombre, suivi du
+  `<use>` de la forme) reste refusée, « un filtre (posé sur un clone <use>) » : un filtre qui efface sa forme ne se représente pas, et
+  fondre deux clones frères en une feuille serait une reconnaissance de motif (le tableau de l'annexe 7 §7 la prévoyait : remplacée par
+  la variante `feMerge`) ; une chaîne de Figma à trois ombres ou plus dépasse 16 primitives et se refuse « trop long » plutôt que
+  « plusieurs ombres » ; l'opacité des lettres d'un `<text>` lu en groupe n'est pas vérifiée sous une ombre pleine (elles ne passent pas
+  par le crochet `feuille`, l'écart déjà noté par l'étape 13c pour la région) ; le masque inversé et le fond blanc d'Illustrator se
+  représenteraient (le contenu aux couleurs complémentaires, un rectangle blanc sous le contenu) mais demandent de modifier le contenu
+  après sa lecture, ce qu'aucun crochet n'offre ; la vignette du site PHP refuse toujours `url(#ed-f-…)`.
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -1124,7 +1202,7 @@ ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *R
 
 - **13a PDF natif** : `shading` axial/radial, découpe `W n`, masque doux, motif de pavage, image XObject,
   raster des effets ; avec l'agent des exports (même fichier `export/pdf.ts`) · après 3, 5, 6, 12.
-- **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7.
+- **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7 · **fait pour le moteur le 26 octobre 2026** (§0) : par l'évaluation, pas par des reconnaisseurs à motif.
 - **13c `<svg>` imbriqué**, et en mode riche un `<text>` lu en **groupe** de lettres · après 1 · **fait pour le moteur le 26 octobre 2026** (§0). *Révision : le `<text>` étranger
   se lit déjà en lettres, polices remplacées et dites (ADR-0020, `io/texteSvg.ts`) ; la liste `aComposer` est caduque.*
 - **13d Couleurs** : arrêts de dégradé et motifs traités par `remplacerCouleur`, palettes et listes · après 3, 9.

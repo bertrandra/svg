@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  ecrireDessin, lireDessin, MSG_EFFETS, NOEUDS_A_EFFET_MAX, REFUS_EFFETS, msgDecalageBorne, msgEcartBorne, refusPrimitive, type DessinSvg
+  ecrireDessin, lireDessin, MSG_EFFETS, NOEUDS_A_EFFET_MAX, REFUS_EFFETS, REFUS_IDIOMES, msgDecalageBorne, msgEcartBorne, refusPrimitive, type DessinSvg
 } from '../../../src/engine/editionSvg.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { violationsEcriture, violationsNettoyage } from './invariants.js';
@@ -49,7 +49,8 @@ const CAS: readonly Cas[] = [
   { fichier: 'v2-effets-filtre-externe.svg', brut: { refus: REFUS_EFFETS.externe } },
   { fichier: 'v2-effets-href-cycle.svg', brut: { refus: REFUS_EFFETS.heritage } },
   { fichier: 'v2-effets-chaine-demesuree.svg', brut: { refus: REFUS_EFFETS.long } },
-  { fichier: 'v2-effets-fusion-demesuree.svg', brut: { refus: REFUS_EFFETS.long } }
+  { fichier: 'v2-effets-fusion-demesuree.svg', brut: { refus: REFUS_EFFETS.long } },
+  { fichier: 'v2-effets-matrice-couleurs.svg', brut: { refus: REFUS_IDIOMES.matrice } }
 ];
 
 /** Une lecture riche mesuree : jamais d'exception, sous le budget. */
@@ -111,6 +112,21 @@ describe('les effets hostiles, en lecture riche', () => {
     expect(performance.now() - t0).toBeLessThan(20_000);
     expect('erreur' in r ? r.erreur : '').toContain(REFUS_EFFETS.long);
   }, 60_000);
+
+  it('des resultats partages (seize fusions de seize couches, seize compositions emboitees) : evalues sans exploser, et vite', () => {
+    const chaine = (n: number, corps: string) => Array.from({ length: n }, () => corps).join('');
+    const cas = [
+      '<filter id="f"><feOffset dx="1" in="SourceAlpha" result="r"/>' + chaine(15, '<feMerge result="r">' + '<feMergeNode in="r"/>'.repeat(16) + '</feMerge>') + '</filter>',
+      '<filter id="f"><feOffset dx="1" in="SourceAlpha" result="r"/>' + chaine(15, '<feComposite in="r" in2="r" operator="out" result="r"/>') + '</filter>',
+      '<filter id="f"><feOffset dx="1" in="SourceAlpha" result="r"/>' + chaine(15, '<feComposite in="r" in2="r" operator="arithmetic" k2="1" k3="1" result="r"/>') + '</filter>'
+    ];
+    for (const filtre of cas) {
+      const t0 = performance.now();
+      const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">' + filtre + '<rect width="10" height="10" filter="url(#f)"/></svg>', { modele: 'riche' });
+      expect(performance.now() - t0).toBeLessThan(BUDGET_MS);
+      expect('erreur' in r ? r.erreur : 'ouvert').toMatch(/^Ce SVG /);
+    }
+  });
 
   it('au-dela de deux mille noeuds a effet, les suivants perdent leurs effets, et c est dit', () => {
     const n = NOEUDS_A_EFFET_MAX + 3;
