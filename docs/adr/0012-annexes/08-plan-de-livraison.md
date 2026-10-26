@@ -20,7 +20,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; 2-B, 2-D proposés |
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
-| 4, 6, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
+| 4, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -435,6 +436,107 @@ réglage à `riche`, **ou un dessin déjà riche** (un projet du site s'ouvre te
   reconnaisseurs d'idiomes Figma, Sketch, Illustrator (13b) ; la vignette du site PHP refuse `url(#ed-f-…)` : un projet à effets n'a pas
   de vignette (rien ne casse), l'admettre demanderait la liste des primitives dans `vignette_sure`.
 
+### Ce que l'étape 6 a posé (26 octobre 2026, moteur)
+
+- **`edition/contenus.ts`** (le conseil de l'étape 5, au deuxième emploi) : la lecture d'un contenu de définition, partagée par les
+  découpes et les masques — `etatContenus` (la pile des définitions actives, commune : un `<clipPath>` dans un `<mask>` dans un
+  `<clipPath>` compte trois niveaux de `PROFONDEUR_DEFS_MAX`, et y revenir est un cycle ; les tables locales ; le groupe en attente ;
+  le budget `NOEUDS_DEFS_MAX`, **commun** à toutes les définitions, la phrase étant celle du genre qui le franchit), `reserverGroupe`,
+  `placeVide`, `lireContenu` (les feuilles quittent `formes` en y laissant leur place ; un `<g>` du contenu, que le lecteur des groupes
+  range dans la table de la lecture, rejoint la table locale en y laissant une place ; les groupes sans feuille partent),
+  `boiteDescendants` (elle compte désormais une `<image>` par son cadre : un groupe qui ne contient qu'une image n'est plus une « boîte
+  plate » — sans effet sur les références des découpes), `boiteFeuille`, `ancetresDe`, `intersectionBoites`. Les découpes y passent
+  sans qu'un octet de leurs références bouge (vérifié avant tout le reste).
+- **Lecture** (`edition/fonctions/masques.ts`, une ligne de `catalogue.ts` entre les découpes et les effets ; `prises: ['masque']`,
+  crochets `feuille` et `groupe`) : un `mask` (attribut, `style`, feuille `<style>`) vers un `<mask>` devient `Groupe.masque`. Son contenu
+  est un contenu **peint**, lu par la marche (couleurs, opacités, dégradés par leur fonctionnalité — unités de boîte comprises —,
+  images, `<use>`, `<g>` avec leur opacité et leur nom, effets, découpes et masques imbriqués), dans le repère de l'élément masqué
+  (`maskContentUnits="objectBoundingBox"` résolu par la boîte de la feuille ou des descendants du groupe) ; il hérite de l'endroit où
+  le `<mask>` est écrit (le `fill="white"` de Figma et de Sketch). `mask-type` (règle ou style, puis attribut) donne `luminance` ou
+  `alpha`. La région (`maskUnits`, défaut `objectBoundingBox`, `x y width height` à -10 % / 120 % par défaut, nombres ou pourcentages ;
+  en unités du plan, un pourcentage est une part du plan de travail) est rangée en boîte du plan : sous une rotation ou une
+  inclinaison, le rectangle qui enferme ses coins (dit seulement si le contenu dépasse la vraie région, `MSG_MASQUES.regionTournee`).
+  Une feuille masquée (une image comprise) s'enveloppe dans un groupe ; avec une découpe aussi, le groupe du masque est dans celui de la
+  découpe. Ce qu'un navigateur ignore est ignoré et dit (`MSG_MASQUES` : référence absente ou vers autre chose qu'un `<mask>`,
+  `transform` posé sur un `<mask>` — SVG ne le transforme pas —, découpe, masque, filtre ou opacité posés sur le `<mask>` lui-même, un
+  masque posé dans une découpe, une unité qui ne se calcule pas, boîte plate en unités de boîte : rien n'est dessiné). Refus nommés
+  (`REFUS_MASQUES`) : masque CSS (`mask-image`, `mask-mode`, `mask-composite`, `mask-border`, leurs formes `-webkit-`, ou une valeur
+  `mask` qui n'est pas un seul `url(#…)` : plusieurs couches, une position, un dégradé CSS), sur l'élément ou un de ses ancêtres ;
+  renvoi extérieur (la phrase des découpes) ; cycle ; imbrication ; budget (la lecture s'arrête dès qu'il est franchi : un `<mask>` de
+  100 000 formes est refusé en 0,4 s, l'analyse XML comprise) ; région démesurée (la phrase des coordonnées). Un masque posé sur un
+  `<use>`, un `<symbol>`, un texte lu en lettres ou la racine est refusé par la marche en disant où (`refusHorsFeuille` de l'étape 7 :
+  le pendant de la phrase « découpe posée sur un `<use>` » existait donc déjà). Le groupe en cours de pose prend sa place dans la table
+  **avant** la lecture du contenu (les `<g>` du masque prennent les numéros suivants). Aucun fichier de la lecture n'a changé.
+- **Écriture** (`ecriture.attributsGroupe`) : `mask="url(#ed-m-…)"` au rang `RANG_GROUPE.masque` ; `<mask id="ed-m-<14 hex>"
+  maskUnits="userSpaceOnUse" x y width height [style="mask-type:alpha"]>` puis le contenu écrit **comme le dessin**
+  (`ContexteEcriture.contenu` : ses dégradés, découpes, masques et filtres se déposent avant le `<mask>` qui les cite). Dédoublonné par
+  empreinte (deux groupes au même masque, une définition) ; **pas de mémoire par masque** : le contenu dépose ses définitions dans le
+  recueil de l'écriture en cours, une mémoire devrait les reposer dans chaque recueil (le piège trouvé à l'étape 5) ; le contenu
+  d'une feuille passe par le cache de l'écriture plate. Point fixe vérifié sur chaque cas.
+- **Transformation** : le crochet `transformation.groupe` reçoit désormais un troisième argument, `outils` (`OutilsTransformation` :
+  `feuille(f)` et `groupe(g)`, transformés par la même matrice et **toutes** les fonctionnalités) — voir « Touché hors des crochets ».
+  Le masque suit son groupe dans la fermeture : son contenu par `outils` (un dégradé, une image, un flou du contenu suivent), sa région
+  enfermée dans ses coins transformés ; une feuille seule déplacée bouge sous un masque immobile. **Boîte visuelle** (`etendue.groupe`) :
+  l'intersection avec la région.
+- **Opérations** (`edition/masques.ts`, bloc « étape 6 » de la façade) : `creerMasque(d, ids)` (parmi les éléments visibles et
+  déverrouillés, le plus haut — une forme, une image ou un groupe entier, ses identifiants gardés — devient le contenu, en luminance,
+  peint comme il l'était ; les autres sont groupés par `grouper` **avant** que le dessus parte, pour que le numéro du groupe nouveau ne
+  reprenne pas celui d'un groupe du contenu ; la région couvre le masque et ce qu'il masque, boîtes visuelles comprises ; un dessus qui
+  ne laisse rien voir est refusé) ; `libererMasque(d, id)` (le contenu revient au premier plan du groupe, peint, ses groupes avec lui) ;
+  `inverserMasque(d, id)` (luminance : le contenu aux couleurs complémentaires, dégradés et ombres compris, sur un fond blanc qui couvre
+  la région — exact quand la luminance se calcule sur les composantes sRVB ; inverser deux fois redonne le masque à l'octet, le fond se
+  reconnaissant même tourné ; alpha : le contenu en noir à ses opacités sur le fond blanc, en luminance ; une image ou une couleur qui
+  n'est pas un code `#rrggbb` empêchent l'inversion, dit) ; `MSG_MASQUE` (phrases au vouvoiement). `renumeroterContenus` (étape 5)
+  portait déjà le masque : une copie de groupe masqué ne reprend aucun identifiant, contenus imbriqués compris (vérifié).
+- **Descente** (`engine/descente/masques.ts`, dans `REGLES_DESCENTE` après les découpes, avant les effets et les groupes) : le masque part,
+  ce qu'il masquait est exporté entier, et c'est dit (`MSG_DESCENTE_MASQUES`) pour un groupe qui s'exporte ; `natif` garde tout ;
+  `raster` descend comme `approche`. Un SVG à masques lu en riche puis descendu redonne la lecture plate du même SVG sans `mask`.
+- **Projet JSON** (format 2) : `model/projetV2/masque.ts` (`lireMasqueProjet` : type, région, formes et groupes **entiers**, validés
+  comme ceux du dessin par deux gardes de plus, `OutilsProjet.forme` et `OutilsProjet.groupes` ; imbrication bornée à 8, 20 000 nœuds,
+  identifiants uniques dans le masque, parents présents) et `engine/projetV2/masque.ts` (aller-retour exact ; `formesDesMasques`), une
+  ligne de `CHAMPS_GROUPE_V2` et d'`ALLERS_RETOURS_GROUPE` ; les octets d'une image du contenu sont vérifiés à l'ouverture comme ceux du
+  dessin (`refusChampsV2(formes, groupes)`). `masque` est « porte » dans `projet-v2.test.ts` : plus aucun champ de groupe n'attend.
+- **Nuancier** : il lit `dessin.formes`, donc ne compte pas les couleurs d'un contenu de masque (un masque est de la luminance, pas une
+  palette ; annexe 3 §2) ; les listes de couleurs non plus. Vérifié par un test.
+- **Tests** : `v2/cas-masques.ts` (11 lectures, 9 opérations, 2 fichiers du corpus `figma-trait-interieur` — le trait intérieur
+  doublé et masqué par sa forme — et `sketch-masque-use` — un `<mask fill="white"><use/></mask>` dans un groupe transformé, cité par
+  deux feuilles —, 22 références relues), `masques.test.ts`, `descente-masques.test.ts`, dix hostiles `v2-masques-*` (cycles, `<use>`
+  vers son `<mask>` et vers le groupe masqué, bombe d'imbrication, bombe de références, renvoi extérieur, masque CSS par une adresse et
+  par une feuille de style, masque sur un `<use>`, région démesurée) et `securite/masques-hostiles.test.ts` (plus le `<mask>` de 100 000
+  formes engendré dans le test), l'extension d'écriture « étape 6 : masques » (avant celle des groupes), les masques dans
+  `projet-v2.test.ts`, l'assertion d'`images.test.ts` sur une image à `mask` (elle s'enveloppe désormais).
+- **Touché hors des crochets, et pourquoi** : (1) `fonctionnalites.ts` : `CrochetsTransformation.groupe(g, m, outils)` et l'interface
+  `OutilsTransformation` — **bloquant** : un fichier de fonctionnalité ne peut pas importer `transformation.ts` (cycle), et sans cela le
+  contenu peint d'un masque ne pouvait pas faire suivre ses dégradés, ses images ni ses effets ; les crochets existants ignorent
+  l'argument ; (2) `transformation.ts` : `transformerGroupe` construit ces outils (corps changé pour les seuls groupes, donc rien pour un
+  dessin plat : pas d'ancien corps à geler) ; (3) `model/projet.ts` : `OUTILS` gagne `forme` et `groupes` (comme l'étape 5 avait ajouté
+  `chemin`) ; (4) `engine/projet.ts` et `engine/projetV2/champs.ts` : `groupeProjet`/`groupeDuProjet` reçoivent la conversion d'une forme
+  (`ConversionFormes`, prêtée par `engine/projet.ts` : l'importer d'ici ferait un cycle), et `refusChampsV2` les groupes.
+- **Écarts et reste** : la région reste une boîte (le type de l'étape 0) : sous une rotation, elle s'élargit au rectangle de ses
+  coins, exact tant que le contenu tient dans la région, dit à la lecture sinon, **pas** dit à la transformation (le crochet n'a pas de
+  canal de message ; à l'interface de l'étape 8) ; le contenu d'un masque se transforme avec l'échelle de trait de la matrice, même
+  quand l'opération garde les traits (`transformerGroupe` n'a pas de `k`) ; un `mask-type` posé par une feuille `<style>` est lu (la
+  cascade garde toute propriété), pas un `mask-type` hérité ; un `<mask>` qui porte `opacity` ou un filtre est dit ignoré (à mesurer dans
+  les trois moteurs avec `rendu-v2`) ; une référence vers rien laisse la forme dessinée sans masque, comme pour une découpe (CSS
+  Masking parle d'une couche transparente : à mesurer de même) ; la spécification de l'écriture (`invariants.ts`) n'admet pas
+  encore les attributs du texte vivant sur un `<path>` d'un `<mask>` : créer un masque dont le dessus est un texte vivant écrirait des
+  `data-ed-*` que `violationsEcriture` refuserait (à ouvrir, une ligne, avec l'étape 8, ou vectoriser le texte avant) ; la vignette du site
+  PHP refuse `url(#ed-m-…)` : un projet à masque n'a pas de vignette (rien ne casse) ; le PDF masque doux est à 13a, l'idiome
+  `Adobe_OpacityMaskFilter` à 13b ; l'équivalence pixel (`rendu-v2`) attend l'étape d'interface qui ouvre l'e2e.
+- **Pour l'étape 9 (motifs)** : la tuile d'un motif est un contenu peint, comme un masque : la lire par `lireContenu` (`etatContenus` :
+  pile, tables, budget communs ; un `<g>` de la tuile rejoint la table locale tout seul) dans le repère de la tuile (`patternUnits`,
+  `patternContentUnits`, `viewBox` résolus comme `maskUnits`/`maskContentUnits`), l'écrire par `ContexteEcriture.contenu` sans mémoire
+  (ou en reposant les dépendances), la transformer par `outils` si elle suit la forme ; `parcourirContenus` porte déjà la tuile ;
+  `renumeroterContenus` ne la porte **pas** encore (il ne voit que découpes et masques des groupes : une ligne pour les peintures) ;
+  `boiteDescendants` sert pour `objectBoundingBox`.
+- **Pour l'étape 8 (interface)** : rien à ajouter à la toile (le rendu générique de 2-A, `engine/edition/rendu.ts`, note tout ce que
+  dépose le contenu d'un masque — ses dégradés avant le `<mask>` — et pose `mask` sur le `<g>` : vérifié par `masques.test.ts`) ; le contexte `masque` édite `{ vb, ...groupe.masque.contenu }`
+  avec les outils ordinaires (le contenu est peint : rien à refixer au retour, contrairement à une découpe), puis recalcule ou garde la
+  région (choix à faire : l'élargir à la boîte du contenu modifié serait le plus sûr) ; commandes « Créer un masque d'opacité »,
+  « Libérer le masque », « Inverser le masque » (`creerMasque`, `libererMasque`, `inverserMasque`, phrases `MSG_MASQUE`), confirmation
+  de `degrouper` sur un groupe masqué (`porteurs` le dit déjà), jeton `contour-masque`, pastille « masque d'opacité » dans les calques ;
+  la phrase d'une région élargie à la transformation.
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -643,7 +745,7 @@ par intersection booléenne** des remplissages (`aplatir.ts`), fixtures, hostile
 `inkscape-decoupe`, `figma-cadre-decoupe`, `illustrator-degrade-decoupe` (reste). Paquets : **A** lecture/écriture (G) ;
 **B** opérations + boîtes (M) ; **C** descente + toile (M).
 
-### Étape 6 — Masques d'opacité · taille M
+### Étape 6 — Masques d'opacité · taille M · **faite pour le moteur le 26 octobre 2026** (§0, « Ce que l'étape 6 a posé »)
 
 `Masque` (luminance, alpha, région), lecture de `<mask>`, écriture, création/libération/inversion, rendu,
 descente (ignoré et dit, ou image), corpus `figma-trait-interieur`, `sketch-masque-use`. Après 5 (contenu et
