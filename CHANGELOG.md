@@ -203,6 +203,13 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 9 : les motifs. En mode riche, une peinture `url(#…)` vers un `<pattern>` s'ouvre (unités de la tuile et du
+  contenu, viewBox, transformation, héritage `href`, tuile peinte avec dégradés et motifs imbriqués) et se réécrit en
+  `<pattern id="ed-p-…">` canonique et dédoublonné. Le motif suit sa forme, sa couleur de repli est la moyenne de sa tuile, le
+  nuancier lit les couleurs de la tuile, et les formats de tracés le remplacent par sa couleur moyenne en le disant. « Créer un
+  motif depuis la sélection » (menu Édition, modèle riche). Le projet JSON porte les motifs. Les cycles, les tuiles vides ou
+  minuscules et les renvois extérieurs sont refusés en les nommant.
+
 - Modèle riche (bêta) : un `<svg>` imbriqué s'ouvre en groupe, à sa place et à son échelle (viewBox, preserveAspectRatio), rogné à
   sa fenêtre sauf `overflow` visible. Un texte lu en lettres devient un groupe « Texte « … » » qui garde sa découpe, son masque ou
   son filtre au lieu d'être refusé. Ce que les navigateurs ne rendent pas tous pareil est dit à l'ouverture. Rien ne change en

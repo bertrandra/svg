@@ -1376,6 +1376,72 @@
       "famille": "v2-imbrications",
       "vecteur": "Cent <svg> imbriques les uns dans les autres : refuse en mode riche par la borne des groupes emboites ; le mode plat refuse le SVG imbrique",
       "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-soi.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Un <pattern> dont la tuile se peint du meme motif : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-croise.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Deux motifs dont chacun peint la tuile de l'autre (fond et trait) : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-href.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Deux motifs qui heritent l'un de l'autre (href et xlink:href en boucle) : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-recursif.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Dix motifs emboites, chacun peint par le suivant : refuse au-dela de PROFONDEUR_DEFS_MAX, en le nommant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-bombe-references.svg",
+      "famille": "v2-motifs",
+      "vecteur": "150 carres d'une tuile peints par un motif en unites de boite de 150 carres (relu pour chaque taille) : refuse a la borne NOEUDS_DEFS_MAX, vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-minuscule.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile de 1e-300 (un motif qui se repeterait 10^600 fois) : refusee en le nommant, rien ne se pave cote moteur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-nulle.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile de largeur nulle : refusee en le nommant (« la tuile est vide, nulle… »)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-vide.svg",
+      "famille": "v2-motifs",
+      "vecteur": "<pattern> sans contenu : refuse en le nommant (rien ne s'y repete)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-renvoi-externe.svg",
+      "famille": "v2-motifs",
+      "vecteur": "<pattern> qui herite d'un fichier distant (xlink:href https://…) : refuse, jamais suivi",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-demesure.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile demesuree (x=-1e308, width=1e309) : refusee, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-image.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Une <image> dans une tuile : refusee en le nommant (l'ecriture ne declarerait pas xlink dans une definition)",
+      "attendu": "refus"
     }
   ]
 }

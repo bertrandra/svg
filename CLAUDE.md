@@ -173,6 +173,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Un motif est une peinture en ligne, sa tuile un contenu à part** (ADR-0012, étape 9) : `edition/fonctions/motifs.ts` lit `<pattern>`
+  par `contenus.ts`, le contenu dans le repère de la tuile, origine au coin (x, y) ; l'écriture pose
+  `<pattern id="ed-p-…" patternUnits="userSpaceOnUse">` par empreinte ; la couleur de repli est la moyenne OKLab de la tuile ; ses
+  identifiants forment un espace à part (pas de renumérotation, `verifierDessin` juge chaque tuile) ; `creerMotif` fait de la
+  sélection la tuile ; la descente rend la couleur de repli et le dit ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-motifs-*`.
 - **Un `<svg>` imbriqué et un `<text>` lu sont des groupes en riche** (ADR-0012, étape 13c) : `edition/fonctions/imbrications.ts` lit
   `svg` (cadre, viewBox et aspect cuits dans les feuilles par `matriceCadre`, fenêtre en découpe sauf `overflow` visible ou auto) et
   `text` (ses lettres en groupe « Texte « … » », ses prises posées par leurs fonctionnalités, la boîte des lettres par

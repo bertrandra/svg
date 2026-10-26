@@ -11,7 +11,9 @@ import { lireCode, versHex, versOklab, type Oklab } from '../util/couleur.js';
 import { creerIndexVoisins } from '../util/voisinsOklab.js';
 import { PLAFOND_NUANCIER, TEINTES_NUANCIER_MAX, type NuancierDessin, type ProvenanceNuancier, type TeinteDessin } from '../model/nuancier.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './edition/opacites.js';
-import type { DessinSvg, Forme, Peinture } from './edition/types.js';
+import type { Contenu, DessinSvg, Forme, Peinture } from './edition/types.js';
+import { visibleEffectif } from './edition/arbre.js';
+import { estMotif } from './edition/fonctions/motifs.js';
 import { estDegrade, poidsArrets } from './edition/degrades.js';
 import { aireDeChemin, longueurDeChemin } from './nuancier/surfaces.js';
 
@@ -50,11 +52,21 @@ const memo = new WeakMap<Forme, readonly Apport[]>();
 
 /**
  * Ce qu'une peinture couvre. Unie : sa couleur, toute la surface. Un degrade (modele v2, ADR-0012 etape 3) : chaque arret pour sa part
- * du degrade (`poidsArrets`) et a son opacite, jamais la couleur de repli, qui n'est pas une couleur du dessin. Un motif (etape 9) :
- * rien encore.
+ * du degrade (`poidsArrets`) et a son opacite, jamais la couleur de repli, qui n'est pas une couleur du dessin. Un motif (etape 9) : les
+ * couleurs de sa tuile, chacune pour sa part de ce que la tuile peint (ce qu'elle laisse transparent ne compte pas) et a son opacite par
+ * celle de la peinture, jamais la couleur de repli ; un motif ou un degrade de la tuile, par leurs propres couleurs.
  */
 function couvrir(r: Apport[], peinture: Peinture | undefined, hex: string, opacite: number, surface: number): void {
   if (peinture === undefined) { r.push({ hex, opacite, surface }); return; }
+  if (estMotif(peinture)) {
+    const tuile = apportsDeTuile(peinture.contenu), total = tuile.reduce((s, a) => s + a.surface, 0);
+    if (!(total > 0)) return;
+    for (const a of tuile) {
+      const o = arrondi(opacite * a.opacite, 0.01), s = (surface * a.surface) / total;
+      if (o > 0 && s > 0) r.push({ hex: a.hex, opacite: o, surface: s });
+    }
+    return;
+  }
   if (!estDegrade(peinture)) return;
   const poids = poidsArrets(peinture.arrets);
   peinture.arrets.forEach((a, i) => {
@@ -92,6 +104,16 @@ export function apportsDe(f: Forme): readonly Apport[] {
     if (opacite > 0) r.push({ hex: teinteOmbre, opacite, surface: silhouette });
   }
   memo.set(f, r);
+  return r;
+}
+
+const memoTuiles = new WeakMap<Contenu, readonly Apport[]>();
+/** Ce que les feuilles visibles d'une tuile de motif apportent, memorise par tuile (un motif partage ne se mesure qu'une fois). */
+function apportsDeTuile(c: Contenu): readonly Apport[] {
+  const deja = memoTuiles.get(c);
+  if (deja) return deja;
+  const r = c.formes.filter(f => visibleEffectif(c, f.id)).flatMap(f => apportsDe(f));
+  memoTuiles.set(c, r);
   return r;
 }
 

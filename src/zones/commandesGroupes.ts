@@ -5,7 +5,7 @@
 // d'Ariane (FilAriane.tsx) appellent les memes fonctions, sur l'etat qu'on leur donne : rien n'est capture.
 
 import { aplatirPour, CAPACITES_PLAT, phrasePertes } from '../engine/aplatir.js';
-import { estPlat, groupeDe, uniteDans, type DessinSvg } from '../engine/editionSvg.js';
+import { creerMotif, estPlat, groupeDe, uniteDans, MSG_MOTIF, type DessinSvg } from '../engine/editionSvg.js';
 import { formeVoisine } from '../engine/navigation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
@@ -74,8 +74,24 @@ export function elementsGroupes(m: ModeleDessin, u: EtatInterface, ac: ActionsEd
     { id: 'grouper', libelle: 'Grouper', icone: 'grouper', raccourci: 'Ctrl+G', separateur: true, desactive: !m.sel.length, onClick: ac.grouper },
     { id: 'degrouper', libelle: 'Dégrouper', icone: 'degrouper', raccourci: 'Ctrl+Maj+G', desactive: !aUnGroupe(m), onClick: ac.degrouper },
     { id: 'entrer-groupe', libelle: 'Entrer dans le groupe', raccourci: 'Entrée', desactive: seul === null, onClick: () => { if (seul !== null) entrerDansGroupe(m, ac, seul); } },
-    { id: 'sortir-groupe', libelle: 'Sortir du groupe', raccourci: 'Maj+Entrée', desactive: !u.contexte, onClick: () => sortirDuGroupe(ac) }
+    { id: 'sortir-groupe', libelle: 'Sortir du groupe', raccourci: 'Maj+Entrée', desactive: !u.contexte, onClick: () => sortirDuGroupe(ac) },
+    // Le motif (ADR-0012, etape 9) : la commande minimale, en riche seulement ; son interface complete (contexte « motif ») attend l'etape 8.
+    { id: 'creer-motif', libelle: 'Créer un motif depuis la sélection', separateur: true, desactive: !m.sel.length, onClick: () => creerMotifDepuisSelection(m, ac) }
   ];
+}
+
+/**
+ * « Créer un motif depuis la sélection » (menu Edition, modele riche ; ADR-0012, etape 9) : la selection devient la tuile d'un motif, qui
+ * peint un rectangle neuf de trois tuiles sur trois a sa place (edition/motifs.ts, `creerMotif`) ; le rectangle est choisi, une phrase le
+ * dit, Ctrl+Z defait le tout. Rien ne change et la raison est dite quand la selection ne s'y prete pas.
+ */
+export function creerMotifDepuisSelection(m: Pick<ModeleDessin, 'dessin' | 'sel'>, ac: ActionsEditeur): void {
+  const r = creerMotif(m.dessin, m.sel);
+  if (r.id === null) { ac.dire(r.erreur ?? MSG_MOTIF.selection); return; }
+  const id = r.id;
+  ac.faire(() => r.dessin, 'Motif créé : la sélection se répète dans un rectangle, à sa place. Ctrl+Z la rend.');
+  ac.choisir([id]);
+  ac.poserPoint(null);
 }
 
 /**

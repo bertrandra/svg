@@ -7,7 +7,7 @@
 // unites de boite et pourcentages resolus, `gradientTransform` compose avec tout ce qui pose la forme, chaine `href` suivie (attributs
 // et arrets herites, bornee, cycle refuse), arrets tries et bornes (64), `stop-color`/`stop-opacity` par la cascade (classes et
 // style compris). Ce qu'un navigateur ne peint pas (reference absente, degrade sans arret, boite plate, matrice degeneree) ne peint
-// rien ici non plus, et c'est dit. Un renvoi a un autre fichier est refuse. Un motif (<pattern>) attend l'etape 9 : il reste refuse.
+// rien ici non plus, et c'est dit. Un renvoi a un autre fichier est refuse. Un motif (<pattern>) est lu par sa fonctionnalite (etape 9).
 
 import type { Noeud } from '../../../util/xml.js';
 import type { Fonctionnalite, Marche, PeintureResolue } from '../fonctionnalites.js';
@@ -226,7 +226,7 @@ function resoudre(url: string, cote: 'remplissage' | 'contour', n: Noeud, pret: 
   if (!ref) return null;
   if (ref.genre === 'externe') { marche.refuser(REFUS_DEGRADES.externe); return substitut(RIEN); }
   const cible = marche.parcours.analyse.ids.get(ref.id);
-  // Un motif : l'etape 9. Ne rien rendre laisse le refus d'aujourd'hui (« un dégradé ou un motif »).
+  // Un motif : la fonctionnalite des motifs le lit (etape 9, apres celle-ci dans le catalogue).
   if (cible?.nom === 'pattern') return null;
   if (!cible || !estElementDegrade(cible)) { marche.ignorer(MSG_DEGRADES.reference); return substitut(secours(ref.secours)); }
   const memo = memoire(marche);

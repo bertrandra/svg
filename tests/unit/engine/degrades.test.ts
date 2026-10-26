@@ -107,9 +107,9 @@ describe('la lecture', () => {
     expect(e?.peintureRemplissage).not.toBe(g?.peintureRemplissage);
   });
 
-  it('un motif reste refuse en riche (etape 9), un espace colorimetrique se dit, un arret en recul vaut le precedent', () => {
-    const motif = lireDessin(svg('<pattern id="p" width="10" height="10"><rect width="5" height="5"/></pattern><rect width="10" height="10" fill="url(#p)"/>'), { modele: 'riche' });
-    expect('erreur' in motif ? motif.erreur : '').toContain('un dégradé ou un motif');
+  it('un motif passe a sa fonctionnalite en riche (etape 9), un espace colorimetrique se dit, un arret en recul vaut le precedent', () => {
+    const motif = lireDessin(svg('<pattern id="p" width="1" height="1"><rect width="5" height="5"/></pattern><rect width="10" height="10" fill="url(#p)"/>'), { modele: 'riche' });
+    expect('erreur' in motif ? motif.erreur : motif.dessin.formes[0]?.peintureRemplissage?.genre).toBe('motif');
     const lin = riche(svg('<linearGradient id="g" color-interpolation="linearRGB"><stop offset="0.6" stop-color="#000"/><stop offset="0.2" stop-color="#fff"/></linearGradient><rect width="10" height="10" fill="url(#g)"/>'));
     expect(lin.ignores).toContain(MSG_DEGRADES.interpolation);
     const p = lin.dessin.formes[0]?.peintureRemplissage;

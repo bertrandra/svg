@@ -57,14 +57,15 @@ export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
     cle: 'parent',
     lire: (v, o) => { const s = o.texte(v, 'le groupe d’une forme', 64); return o.identifiant.test(s) ? s : o.refuser('le groupe d’une forme est mal désigné'); }
   },
-  // Etape 3 : les degrades. Sous une peinture non unie, la couleur de repli est obligatoire (annexe 1 §5, I5).
+  // Etape 3 : les degrades, et les motifs (etape 9, motif.ts, par le meme lecteur). Sous une peinture non unie, la couleur de repli est
+  // obligatoire (annexe 1 §5, I5).
   {
-    cle: 'peintureRemplissage', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du remplissage'),
-    verifier: (f, o) => { if (f.remplissage === null) o.refuser('un dégradé de remplissage n’a pas de couleur de repli'); }
+    cle: 'peintureRemplissage', lire: (v, o) => lirePeintureProjet(v, o, 'la peinture du remplissage'),
+    verifier: (f, o) => { if (f.remplissage === null) o.refuser('un dégradé ou un motif de remplissage n’a pas de couleur de repli'); }
   },
   {
-    cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du contour'),
-    verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé de contour n’a pas de couleur de repli'); }
+    cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'la peinture du contour'),
+    verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé ou un motif de contour n’a pas de couleur de repli'); }
   },
   // Etape 7 : les effets (flou, ombre portee), en unites du plan.
   { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'une forme') },

@@ -1,8 +1,9 @@
 // Une peinture non unie dans le projet JSON (ADR-0012, etape 3 ; ADR-0030) : un degrade lineaire ou radial, champ pour champ comme
-// le modele (`Degrade`, engine/edition/types.ts), a pleine precision. Un motif y entrera a l'etape 9 ; d'ici la, il est refuse en le
-// nommant. Pur ; chaque valeur est bornee, et un projet valide se reconstruit dans un ordre de champs fixe.
+// le modele (`Degrade`, engine/edition/types.ts), a pleine precision ; un motif (etape 9) dans son fichier, `motif.ts`. Pur ; chaque
+// valeur est bornee, et un projet valide se reconstruit dans un ordre de champs fixe.
 
 import type { OutilsProjet } from './champs.js';
+import { lireMotifProjet, type MotifProjet } from './motif.js';
 
 /** Les arrets d'un degrade, au plus : la borne de la lecture d'un SVG (engine/edition/degrades.ts, `ARRETS_MAX`). */
 export const ARRETS_PROJET_MAX = 64;
@@ -19,7 +20,8 @@ export interface RadialProjet extends CommunProjet {
   readonly genre: 'radial'; readonly cx: number; readonly cy: number; readonly r: number;
   readonly fx?: number; readonly fy?: number; readonly fr?: number;
 }
-export type PeintureProjet = LineaireProjet | RadialProjet;
+export type DegradeProjet = LineaireProjet | RadialProjet;
+export type PeintureProjet = DegradeProjet | MotifProjet;
 
 const HEX = /^#[0-9a-f]{6}$/;
 
@@ -44,11 +46,11 @@ function lireMatrice(v: unknown, o: OutilsProjet, quoi: string): readonly [numbe
   return t.map(x => o.nombre(x, 'la matrice de ' + quoi)) as unknown as readonly [number, number, number, number, number, number];
 }
 
-/** Un degrade de projet, lu et borne ; `quoi` le nomme dans un refus (« le dégradé du remplissage »). */
+/** Un degrade ou un motif de projet, lu et borne ; `quoi` le nomme dans un refus (« la peinture du remplissage »). */
 export function lirePeintureProjet(v: unknown, o: OutilsProjet, quoi: string): PeintureProjet {
   const p = o.objet(v, quoi);
   const genre = p['genre'];
-  if (genre === 'motif') o.refuser('les motifs (' + quoi + ') attendent une version plus récente de l’éditeur');
+  if (genre === 'motif') return lireMotifProjet(p, o, quoi);
   const g = o.choix(genre, 'le genre de ' + quoi, ['lineaire', 'radial'] as const);
   const n = (cle: string, min?: number) => o.nombre(p[cle], 'une coordonnée de ' + quoi, min);
   const commun = (): CommunProjet => ({
