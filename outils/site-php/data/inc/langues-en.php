@@ -36,6 +36,7 @@ const TRADUCTIONS_EN = [
     'Cette adresse de courrier n’est pas valide.' => 'This email address is not valid.',
     'Indiquez votre nom (120 caractères au plus).' => 'Enter your name (120 characters at most).',
     'Choisissez une langue.' => 'Choose a language.',
+    'Le dictionnaire « {langue} » est introuvable sur le serveur : relancez la construction du site.' => 'The “{langue}” dictionary cannot be found on the server: rebuild the site.',
     'Un compte porte déjà cette adresse.' => 'An account already uses this address.',
     'Le site a déjà un administrateur : connectez-vous.' => 'The site already has an administrator: sign in.',
     // courrier.php

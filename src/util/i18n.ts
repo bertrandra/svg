@@ -18,6 +18,23 @@ export const estLangue = (v: unknown): v is Langue => v === 'fr' || v === 'en';
 /** Un dictionnaire : la phrase francaise vers sa traduction, les `{valeurs}` gardees telles quelles. */
 export type Dictionnaire = Readonly<Record<string, string>>;
 
+/** Un dictionnaire pose a la forme attendue : un objet de textes vers des textes, rien d'autre n'en sort ; undefined sinon. */
+export function validerDictionnaire(v: unknown): Dictionnaire | undefined {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
+  const table: Record<string, string> = {};
+  for (const [cle, valeur] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof valeur !== 'string') return undefined;
+    table[cle] = valeur;
+  }
+  return table;
+}
+
+/** La globale que l'hote pose avant de charger ce code quand la langue est deja choisie : `__langueSvgLangue = 'en'`. */
+export const GLOBALE_LANGUE = '__langueSvgLangue';
+
+/** La globale que pose l'annexe du dictionnaire d'une langue (`langue-en.js` : `window.__langueSvg_en = {…}`). */
+export const globaleDictionnaire = (l: Langue): string => '__langueSvg_' + l;
+
 /** Ce que `t` interpole : une valeur par nom, telle quelle (un nombre a formater passe d'abord par `nombre`). */
 export type Valeurs = Readonly<Record<string, string | number>>;
 
@@ -74,3 +91,25 @@ export const locale = (): string => LOCALES[courante];
 export function nombre(v: number, decimales?: number): string {
   return v.toLocaleString(locale(), decimales === undefined ? undefined : { maximumFractionDigits: decimales });
 }
+
+/**
+ * L'amorce : la langue et son dictionnaire poses AVANT ce code par l'hote, lus a l'initialisation de ce module. Pourquoi : des
+ * constantes de module (`const X = t('…')`) et des objets de donnees s'evaluent au chargement, avant que `preparerLangue` (io) ait
+ * pu poser quoi que ce soit ; sans amorce, ils resteraient en francais chez une personne qui lit l'anglais. La page autonome (un
+ * script d'amorce avant le moteur), le site PHP (sa page) et un hote qui embarque posent donc `globalThis.__langueSvgLangue` et
+ * chargent `langue-en.js` avant le bundle ; ici, si la langue est connue et le dictionnaire bien forme, les deux se posent tout de
+ * suite. C'est la seule lecture d'un global du coeur pur, et elle reste pure : le choix est deja fait quand ce code se charge,
+ * rien du DOM, de l'horloge ni du hasard n'y entre, et un global absent ou mal forme ne change rien (le francais, comme avant).
+ * `preparerLangue` garde la voie tardive (un hote qui appelle `ouvrir({ langue: 'en' })` sans amorce) et ne recharge pas une
+ * annexe deja posee ici.
+ */
+function amorcer(): void {
+  const globaux = globalThis as unknown as Readonly<Record<string, unknown>>;
+  const l = globaux[GLOBALE_LANGUE];
+  if (!estLangue(l) || l === 'fr') return;
+  const table = validerDictionnaire(globaux[globaleDictionnaire(l)]);
+  if (table === undefined) return;
+  dictionnaires.set(l, table);
+  courante = l;
+}
+amorcer();

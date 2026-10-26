@@ -32,8 +32,8 @@ function repondre_resultat(array $r): never
     repondre_json(200, $r);
 }
 
-/** Sert un fichier avec son ETag : un 304 quand le navigateur l'a deja. */
-function servir_fichier(string $chemin, string $type, string $etag, string $cache, array $entetes = []): never
+/** Les en-tetes d'une reponse a ETag, puis un 304 (et rien d'autre) quand le navigateur a deja cette version. */
+function entetes_etag(string $etag, string $cache, array $entetes): void
 {
     header('ETag: ' . $etag);
     header('Cache-Control: ' . $cache);
@@ -46,8 +46,24 @@ function servir_fichier(string $chemin, string $type, string $etag, string $cach
         http_response_code(304);
         exit;
     }
+}
+
+/** Sert un fichier avec son ETag : un 304 quand le navigateur l'a deja. */
+function servir_fichier(string $chemin, string $type, string $etag, string $cache, array $entetes = []): never
+{
+    entetes_etag($etag, $cache, $entetes);
     header('Content-Type: ' . $type);
     header('Content-Length: ' . (string) filesize($chemin));
     readfile($chemin);
+    exit;
+}
+
+/** Sert un texte calcule (le script d'une langue) avec son ETag : un 304 quand le navigateur l'a deja. */
+function servir_texte(string $contenu, string $type, string $etag, string $cache): never
+{
+    entetes_etag($etag, $cache, []);
+    header('Content-Type: ' . $type);
+    header('Content-Length: ' . (string) strlen($contenu));
+    echo $contenu;
     exit;
 }

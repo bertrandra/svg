@@ -269,5 +269,10 @@ function page_application(array $avertissements, array $compte): never
         . ' data-compte="' . $json(compte_public($compte)) . '" data-site="' . $json(site_public()) . '">'
         . '<main class="accueil"><p class="message">' . h(t('Chargement de l’éditeur… Si ce message reste affiché, JavaScript est désactivé ou ce navigateur est trop ancien : utilisez une version récente de Chrome, Edge, Firefox ou Safari.')) . '</p></main>'
         . '</div>';
-    rendre_page(titre_page(t('Mes projets')), $corps, 200, '<script src="assets/site.js" defer></script>' . "\n");
+    // L'amorce de la langue (ADR-0042) : en anglais, le dictionnaire se charge AVANT l'application, par un script classique servi par
+    // l'API (la politique de securite n'admet aucun script en ligne), pour que les textes evalues au chargement des modules soient
+    // deja traduits ; en francais, rien de plus.
+    $langue = langue_valide($compte['langue'] ?? null) ? $compte['langue'] : 'fr';
+    $amorce = $langue === 'fr' ? '' : '<script src="api.php?r=langue&l=' . h($langue) . '"></script>' . "\n";
+    rendre_page(titre_page(t('Mes projets')), $corps, 200, $amorce . '<script src="assets/site.js" defer></script>' . "\n");
 }

@@ -344,6 +344,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   langue (plus un seul `'fr-FR'` dans `src/`) ; `fr` par défaut partout, la langue est un état de module posé avant tout rendu par
   `preparerLangue` (`io/langue.ts`) et **aucun octet écrit n'en dépend** ; un dictionnaire par langue dans `src/i18n/en/<dossier>.json`
   (clés triées, `npm run langues` les fusionne en l'annexe `langue-en.js`, chargée seulement en `en`, absente : français et c'est dit) ;
+  **le dictionnaire se charge avant le code quand la langue est `en`** (l'amorce : la page autonome écrit la balise `langue-en.js` avant le
+  moteur d'après `svg.langue`, le site sert `api.php?r=langue&l=en`, un hôte charge l'annexe avant le bundle) et `util/i18n.ts` lit
+  `globalThis.__langueSvgLangue` et `__langueSvg_en` à son initialisation, seule lecture d'une globale par le cœur, pour que les
+  constantes de module soient traduites ; `preparerLangue` reste la voie tardive ; un second cliquet (`tests/fixtures/i18n/constantes.json`)
+  empêche d'ajouter des `const X = t('…')` au niveau d'un module, une fonction leur est préférée ;
   réglage `svg.langue` (page : accueil et menu Aide, puis `location.reload()`), option et prop `langue` chez un hôte, le geste de
   changement posé par l'hôte (`definirChangementLangue`, jamais l'embarquement) ; `tests/unit/i18n/couverture.test.ts` exige la
   traduction de chaque clé de `t` et de `pluriel`, refuse les orphelines, et tient le cliquet des textes français hors `t`
