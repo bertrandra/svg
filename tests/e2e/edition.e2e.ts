@@ -43,7 +43,8 @@ describe('edition', () => {
       const toile = await haut('.editeur-svg-toile'), cale = page.locator('.editeur-cale-selection');
       expect(await cale.count()).toBe(1);
       expect(await cale.getAttribute('aria-hidden')).toBe('true');
-      await forme(page, 'f2').click();
+      // Au doigt, un toucher : sous Firefox, un contexte tactile ne choisit pas une forme par un clic de souris synthetique.
+      if (tactile) await forme(page, 'f2').tap(); else await forme(page, 'f2').click();
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
       expect(await cale.count()).toBe(0);
       expect(await haut('.editeur-svg-toile')).toBe(toile);

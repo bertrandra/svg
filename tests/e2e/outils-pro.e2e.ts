@@ -86,8 +86,10 @@ describe('regles, reperes et repetitions', () => {
       // La forme choisie d'abord : la rangee de la selection qui apparait ferait descendre la toile pendant le geste.
       await page.keyboard.press('Control+a');
       await attend(() => page.locator('.editeur-barre-selection').count()).toBe(1);
-      // Le carre (haut a 50) glisse de 97 unites : son haut passe a 147, a 3 du repere ; il s'y colle.
-      const depart = await ecran(page, 70, 70), arrivee = await ecran(page, 70, 167);
+      // Le carre (haut a 50) glisse de 98 unites : son haut passe a 148, a 2 du repere ; il s'y colle. L'aimant attire a 6 px de
+      // l'ecran ; Firefox tronque au pixel les coordonnees du pointeur (jusqu'a 1 px de perdu sur le geste) : a 3 unites (5,8 px a
+      // l'echelle de la vue), la marge dependait de la fraction de pixel ou tombait la toile, et la cale de la rangee l'a changee.
+      const depart = await ecran(page, 70, 70), arrivee = await ecran(page, 70, 168);
       await page.mouse.move(depart.x, depart.y);
       await page.mouse.down();
       await page.mouse.move(arrivee.x, arrivee.y, { steps: 8 });
