@@ -16,7 +16,7 @@ import { useActionsTexte } from './actionsTexte.js';
 import { MODES_VECTORISATION, NOMS_MODES } from '../engine/texte/vectoriser.js';
 import { useRubriquesProduction } from './Production.js';
 import { operationsApplicables } from '../engine/preparation.js';
-import { AutresFormatsRepliees, useElementRecuperer } from './Recuperer.js';
+import { AutresFormatsRepliees, useElementsRecuperer } from './Recuperer.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
@@ -123,31 +123,48 @@ export function MenuEdition() {
 }
 
 /**
- * Les elements du menu Fichier : le geste de fin (son libelle vient de la page ou de l'hote), garder un brouillon (Ctrl+S, qui ne
- * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
- * tete de cette rubrique sur un telephone (`recuperer`).
+ * Les rubriques du menu Fichier, les memes au bureau (le bouton a l'icone de document) et dans « Plus » au telephone :
+ * - Insérer : une image, un SVG depuis une adresse (seulement ce que l'hote et le modele permettent) ;
+ * - Récupérer le dessin : « Télécharger le SVG », le SVG a plat en modele riche, l'export de la machine en contexte Cricut, puis
+ *   les autres formats replies (des telechargements, jamais un enregistrement : rien ne s'ecrit sans le geste de fin) ;
+ * - Fichier : le geste de fin (son libelle vient de la page ou de l'hote), les gestes de l'hote, garder un brouillon (Ctrl+S, qui
+ *   ne ferme jamais), les credits, fermer.
  */
-function useElementsFichier(nom: string, poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void, image: ElementMenu | null): ElementMenu[] {
+function useSectionsFichier(nom: string, poserCredits: (ouvert: boolean) => void, poserAdresse: (ouvert: boolean) => void, image: ElementMenu | null): SectionMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
+  const [svg, ...machine] = useElementsRecuperer(nom);
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
   const hote: ElementMenu[] = (ui.fin.actionsHote ?? []).map(a => ({ id: 'hote-' + a.id, libelle: a.libelle, onClick: () => a.faire({ dessin: dessinComplet(mo), production: ui.production }) }));
-  return [
-    ...(recuperer ? [recuperer] : []),
-    // Le geste de fin acheve l'etape « Récupérez votre dessin » chez un hote, ou le dessin se recupere par lui (sans visite, rien).
-    // Pas de coche pour « Terminer » : dans un menu, la colonne des icones dit aussi un etat coche, et on y lirait un choix fait.
-    { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
-    ...hote,
-    ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
-    // Le SVG a plat (ADR-0012 §6), en modele riche : les octets d'avant le modele v2, sans groupe ni definition ; un telechargement,
-    // pas un enregistrement.
-    ...(groupesActifs(dessinComplet(mo), ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', separateur: true, onClick: () => telechargerAPlat(dessinComplet(mo), ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
+  const inserer: ElementMenu[] = [
     // Inserer une image (ADR-0012, etape 8), en modele riche : un PNG, JPEG, GIF ou WebP au centre de la vue.
     ...(image ? [image] : []),
     // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
-    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: !image, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
-    { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
-    { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
+    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', onClick: () => poserAdresse(true) } satisfies ElementMenu] : [])
+  ];
+  return [
+    ...(inserer.length ? [{ id: 'inserer', titre: 'Insérer', elements: inserer } satisfies SectionMenu] : []),
+    {
+      id: 'recuperer', titre: 'Récupérer le dessin', libre: <AutresFormatsRepliees nom={nom} />,
+      elements: [
+        ...(svg ? [svg] : []),
+        // Le SVG a plat (ADR-0012 §6), en modele riche : les octets d'avant le modele v2, sans groupe ni definition.
+        ...(groupesActifs(dessinComplet(mo), ui.modele) ? [{ id: 'svg-a-plat', libelle: 'Télécharger le SVG à plat', icone: 'telecharger', onClick: () => telechargerAPlat(dessinComplet(mo), ui.production, nom, ac.dire) } satisfies ElementMenu] : []),
+        ...machine
+      ]
+    },
+    {
+      id: 'fichier', titre: 'Fichier',
+      elements: [
+        // Le geste de fin acheve l'etape « Récupérez votre dessin » chez un hote, ou le dessin se recupere par lui (sans visite, rien).
+        // Pas de coche pour « Terminer » : dans un menu, la colonne des icones dit aussi un etat coche, et on y lirait un choix fait.
+        { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
+        ...hote,
+        ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
+        { id: 'credits', libelle: 'À propos et crédits', separateur: true, onClick: () => poserCredits(true) },
+        { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', onClick: ac.demanderFermeture }
+      ]
+    }
   ];
 }
 
@@ -171,15 +188,19 @@ function usePolicesDuDessin(): PoliceCreditee[] {
   return [...new Set(textes.map(p => p.famille ?? p.id))].map(nom => ({ nom, source: '', licence: null }));
 }
 
-/** Fichier : le geste de fin, le brouillon, le SVG a plat en modele riche, les credits, fermer. */
+/**
+ * Fichier, au bureau : un bouton a l'icone de document (nom accessible et infobulle « Fichier »), a droite de la barre, avant le
+ * geste de fin. Il porte tout ce qui sort du dessin : inserer, recuperer (le SVG, l'export de la machine, les autres formats),
+ * terminer, les credits, fermer.
+ */
 export function MenuFichier({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
   const image = useInsertionImage();
-  const elements = useElementsFichier(nom, poserCredits, null, poserAdresse, image.element);
+  const sections = useSectionsFichier(nom, poserCredits, poserAdresse, image.element);
   return (
     <>
-      <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
+      <MenuDeroulant etiquette="Fichier" icone="fichier" chevron={false} alignement="droite" className="menu-fichier" sections={sections} />
       {image.entree}
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
       {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
@@ -190,20 +211,22 @@ export function MenuFichier({ nom }: { nom: string }) {
 /**
  * « Plus » : sous une largeur de telephone, la barre ne porte plus que les outils, les couleurs et l'historique ; Vue, Edition et
  * Fichier (avec ses exports) tiennent dans ce seul menu, rubrique par rubrique. L'ordre est celui de l'usage : Aide d'abord, puis Edition (ce qu'on fait
- * de la selection), Fichier, puis Vue, le zoom en dernier, puis le contexte de production. Au doigt, les raccourcis se taisent (CSS).
+ * de la selection), les rubriques du menu Fichier (Insérer, Récupérer le dessin, Fichier), puis Vue, le zoom en dernier, puis le
+ * contexte de production. Au doigt, les raccourcis se taisent (CSS).
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
   const [adresse, poserAdresse] = useState(false);
   const raccourcis = useBoiteRaccourcis();
   const image = useInsertionImage();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(nom, poserCredits, useElementRecuperer(nom), poserAdresse, image.element), production = useRubriquesProduction();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useSectionsFichier(nom, poserCredits, poserAdresse, image.element), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
     { id: 'aide', titre: 'Aide', elements: aide },
     { id: 'edition', titre: 'Édition', elements: edition },
-    { id: 'fichier', titre: 'Fichier', elements: fichier, libre: <AutresFormatsRepliees nom={nom} /> },
+    // Les rubriques du menu Fichier du bureau, dans le meme ordre : inserer, recuperer le fichier (« Télécharger le SVG » en tete), Fichier.
+    ...fichier,
     { id: 'vue', titre: 'Vue', elements: vue },
     // Le contexte de production (ADR-0013) : la barre du bureau le porte, le telephone le range ici, en dernier.
     ...production

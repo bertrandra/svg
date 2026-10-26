@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, modifications, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
+import { aLeFocus, attend, telechargerParFichier, modifications, nombreDeCalques, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe } from './aide.js';
 import { champPolice, choisirPolice, valeurPolice } from './polices.js';
 
 const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
@@ -31,7 +31,7 @@ describe('le texte vivant', () => {
 
   /** Le SVG telecharge par « Télécharger le SVG » de la barre : ce que l'on rouvre. */
   async function enregistrerEtTelecharger(page: Page): Promise<string> {
-    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     return readFileSync(await telechargement.path(), 'utf8');
   }
 

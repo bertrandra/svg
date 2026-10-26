@@ -131,7 +131,7 @@ export function verifierLibelle(v: unknown): string | null {
   const t = v.trim();
   if (t === '') return 'L’option « libelleEnregistrer » ne peut pas être vide : sans elle, le bouton dit « Enregistrer ».';
   if (CONTROLE.test(t)) return 'L’option « libelleEnregistrer » doit tenir sur une ligne, sans caractère de contrôle.';
-  if ([...t].length > LONGUEUR_LIBELLE_MAX) return 'L’option « libelleEnregistrer » dépasse ' + LONGUEUR_LIBELLE_MAX + ' caractères : le bouton ne tiendrait plus dans la barre.';
+  if ([...t].length > LONGUEUR_LIBELLE_MAX) return 'L’option « libelleEnregistrer » dépasse ' + LONGUEUR_LIBELLE_MAX + ' caractères : le libellé ne tiendrait plus dans le menu Fichier ni dans la confirmation.';
   return null;
 }
 

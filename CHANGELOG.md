@@ -74,6 +74,18 @@ empreintes.
 
 ### Modifié
 
+- **La barre de l'éditeur, plus calme** (demande du propriétaire, 26 octobre 2026) : « Fichier » devient un bouton à icône (une
+  feuille au coin replié), nommé et titré « Fichier », qui ouvre le même menu, désormais en trois rubriques : « Insérer », puis
+  « Récupérer le dessin » (« Télécharger le SVG » en tête, « Télécharger le SVG à plat » en modèle riche, en contexte Cricut
+  « Exporter pour Cricut » — ou pour Print Then Cut, ou pour le stylo —, grisé avec sa raison tant qu'un constat le bloque, puis
+  « Autres formats », replié), puis « Fichier » (le geste de fin, le brouillon, les crédits, fermer). « Télécharger le SVG » et
+  son chevron « Autres formats » ne sont plus des boutons de la barre. Le geste de fin (« Terminer » dans la page,
+  « Enregistrer » ou le libellé de l'hôte) n'est plus qu'une icône, un carré plein, toujours la seule action pleine : le libellé
+  est son nom accessible et son infobulle (avec Ctrl+S sur le site) ; de même dans la barre d'état du téléphone. Le menu « Plus »
+  du téléphone range les mêmes trois rubriques après Édition. Tab, depuis un élément d'un menu, entre dans un contenu libre qui le
+  suit (« Autres formats ») au lieu de fermer le menu. La visite guidée mène au bouton Fichier (« Cliquez « Fichier », l'icône de
+  feuille en haut à droite, puis « Télécharger le SVG ». ») et dit où est le bouton plein chez un hôte. Aucun octet écrit ne
+  change : les éléments du menu appellent les mêmes exports qu'avant.
 - Site PHP : un seul dossier à envoyer par FTP (ADR-0030, révision) : `dist/php/public/` contient tout, `data/` compris, sans
   réglage. Le mot de passe se choisit dans la page à la première visite, ou se dépose dans `data/password` (converti en empreinte
   puis supprimé, il remplace l'ancien). Le changer ferme les sessions ouvertes. L'outil en ligne de commande devient

@@ -38,7 +38,8 @@ phrase identique rejouée (même action deux fois de suite) est redite.
 | 1.7 | Entrée (forme choisie), Tab, flèches | « Point 1 sur 3 : départ, à 130, 120. » puis « Point 2 sur 3 : angle, à 170, 40. » | le point et son rang sont dits |
 | 1.8 | Ctrl+Z deux fois, Ctrl+Y | « Annulé. », « Annulé. », « Rétabli. » ; au fond de l’historique « Rien à annuler. » | |
 | 1.9 | Outil rectangle (R), flèches, Entrée | le réticule se déplace sans bruit ; Entrée dit la forme posée | le réticule n’apparaît pas dans le SVG enregistré |
-| 1.10 | Menu Fichier : Entrée, flèches, Échap | « Fichier, menu, réduit/développé » puis chaque élément avec son raccourci | Échap rend le focus au bouton du menu |
+| 1.10 | Menu Fichier (le bouton à icône de feuille) : Entrée, flèches, Tab sur « Télécharger le SVG », Échap | « Fichier, bouton de menu, réduit/développé », puis chaque rubrique (Insérer, Récupérer le dessin, Fichier) et chaque élément avec son raccourci ; Tab mène à « Autres formats, réduit » | Échap rend le focus au bouton du menu |
+| 1.10b | Le geste de fin (l’icône pleine, à droite de la barre ; en bas au téléphone) | « Terminer, bouton » dans la page (« Enregistrer, bouton, estompé : Aucune modification à enregistrer » chez un hôte, avant une modification) | le libellé est lu, pas « bouton » seul ; l’infobulle le redit |
 | 1.11 | Supprimer une forme, Fichier › Fermer l’éditeur | la confirmation d’abandon est une alerte ; « Continuer l’édition » a le focus | Échap la ferme et rend le focus |
 | 1.12 | Fermer l’éditeur | le focus revient au bouton qui l’avait ouvert | pas au début de la page |
 | 1.13 | Téléphone 420 px : bouton Calques, balayage, bouton Calques | le tiroir s’annonce, son contenu est lu, la fermeture rend la barre | le voile est atteignable et ferme le tiroir |
@@ -113,7 +114,7 @@ paysage.
 | 3.9 | Champs (Rotation, Échelle, Texte) | le clavier virtuel s’ouvre, **la page ne saute pas**, la valeur s’applique avec le bouton « Appliquer » |
 | 3.10 | Ouvrir un SVG depuis Fichiers, une image depuis la photothèque | l’éditeur s’ouvre ; l’image se dépose |
 | 3.11 | Convertir une image de 12 mégapixels (photo d’appareil), mode par défaut | un résultat, ou un message en français ; **jamais** page blanche ni rechargement de l’onglet (limite mémoire de WebAssembly et du canvas sur iOS) |
-| 3.12 | « Télécharger le SVG », puis le PNG et le PDF sous « Autres formats » | le fichier s’ouvre dans l’aperçu / la feuille de partage / les téléchargements, avec le bon nom |
+| 3.12 | « Plus » › « Télécharger le SVG », puis le PNG et le PDF sous « Autres formats » | le fichier s’ouvre dans l’aperçu / la feuille de partage / les téléchargements, avec le bon nom |
 | 3.13 | Copier le code (en `https`) puis en `file://` ou `http` | « copié » en `https` ; en contexte non sécurisé la page dit qu’elle n’a pas pu copier |
 | 3.14 | Rotation de l’appareil pendant l’édition | la toile se réajuste, le dessin et la sélection restent |
 | 3.15 | Mode sombre du système, bascule en direct | l’interface suit sans recharger ; contraste du texte sur les boutons |

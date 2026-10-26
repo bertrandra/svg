@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, imageDeTest, ouvrirExemple, pilote, type Session, URL_PAGE } from './aide.js';
+import { attend, boutonFichier, imageDeTest, ouvrirExemple, pilote, type Session, URL_PAGE } from './aide.js';
 import { champPolice, listePolices, ouvrirPolices } from './polices.js';
 
 /** Les familles et graisses que l'interface demande, telles que scripts/fontes-interface.mjs les declare. */
@@ -111,7 +111,7 @@ describe('hors ligne : la page autonome ne contacte aucun hote', () => {
   it('l\'editeur ouvert sur l\'exemple et ses menus se passent de reseau', async () => {
     const { page, reseau } = await session();
     await ouvrirExemple(page);
-    await page.locator('.menu-bouton', { hasText: 'Fichier' }).click();
+    await boutonFichier(page).click();
     await attend(() => page.locator('[role=menu]:visible').count()).toBeGreaterThan(0);
     await verifierPolices(page);
     // La police a chasse fixe sert dans l'editeur (le pourcentage de zoom, les codes de couleur).

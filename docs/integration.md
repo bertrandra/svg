@@ -109,7 +109,7 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `bibliotheque` | `'a-charger'` ou la bibliothèque chargée | aucune | Les formes à insérer. `'a-charger'` : le fichier `bibliotheque.js` se charge au premier besoin. Sans l’option, la section n’apparaît pas |
 | `baseAnnexes` | `string` | `''` | Le dossier où chercher `bibliotheque.js` et `polices.js` (voir « Les fichiers à servir ») |
 | `fermerApresEnregistrer` | `boolean` | `true` | Fermer l’éditeur dès que le dessin est enregistré, comme le fait la page |
-| `libelleEnregistrer` | `string` | `'Enregistrer'` | Le libellé du bouton qui rend le dessin à `onEnregistrer` (« Valider », « Mettre à jour le logo »…). Une ligne, de 1 à 40 caractères, blancs du bord retirés. La confirmation d’abandon, le menu Fichier et la visite guidée le reprennent. La page autonome dit « Terminer » |
+| `libelleEnregistrer` | `string` | `'Enregistrer'` | Le libellé du bouton qui rend le dessin à `onEnregistrer` (« Valider », « Mettre à jour le logo »…). Une ligne, de 1 à 40 caractères, blancs du bord retirés. Le bouton de la barre n’en montre que l’icône : le libellé est son nom accessible et son infobulle ; la confirmation d’abandon, le menu Fichier et la visite guidée le disent en toutes lettres. La page autonome dit « Terminer » |
 | `onFermer` | `() => void` | | Appelée **une fois**, quand l’éditeur se ferme, quelle qu’en soit la cause |
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S`. Rendre `false` dit que le brouillon n’a pas été gardé : l’éditeur l’annonce au lieu de « Brouillon gardé. » |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
@@ -191,9 +191,10 @@ La version du paquet (`package.json`) qui a construit le bundle.
 - `onBrouillon` n’est pas un enregistrement : c’est le SVG du moment, de quoi reprendre après un
   rechargement. Il n’est **pas** passé par `nettoyerSvg`. Appelée seulement quand le dessin a changé (une seconde après,
   ou à `Ctrl+S`).
-- **Récupérer un fichier** sans rien rendre à votre page : « Télécharger le SVG » de la barre (en contexte Cricut, « Exporter
-  pour Cricut ») et « Autres formats » à côté (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code). Ce sont des
-  téléchargements pour la personne, pas des enregistrements : `onEnregistrer` n’est pas appelée.
+- **Récupérer un fichier** sans rien rendre à votre page : le menu Fichier de la barre (une icône), rubrique « Récupérer le
+  dessin » : « Télécharger le SVG » (en contexte Cricut, « Exporter pour Cricut » le suit) et « Autres formats » dessous (PDF,
+  PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code). Ce sont des téléchargements pour la personne, pas des
+  enregistrements : `onEnregistrer` n’est pas appelée.
 - « Fermer » avec des modifications non enregistrées demande confirmation : « Abandonner », « Enregistrer » (votre
   libellé : rend le dessin puis ferme, jamais l’un sans l’autre) ou « Continuer l’édition ».
 

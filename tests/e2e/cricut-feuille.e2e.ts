@@ -155,6 +155,12 @@ describe('le tapis fixe et la feuille, en Cricut', () => {
     };
     await axe();
     await toutChoisir(page);
+    // Le panneau flottant se pose sur la toile, en haut a droite. Quand le bord de la feuille (un rectangle peint du gabarit) passe
+    // sous un paragraphe du panneau, axe doute du fond de ce texte (« partially overlaps »), bien que le panneau soit opaque : un doute
+    // de mesure, qu'on n'admet pas. Il est apparu quand la barre a tenu sur une ligne a 1 280 px (Fichier et le geste de fin devenus
+    // des icones) : la toile plus haute, la vue ajustee grossit, et le bord de la feuille tombait sous un texte. La vue se dezoome d'un
+    // cran (-) : le bord de la feuille ne coupe plus les textes du panneau, et l'audit juge le panneau entier.
+    await page.keyboard.press('-');
     await ouvrirMenu(page, 'Édition');
     await page.getByRole('menuitem', { name: 'Dupliquer sur la feuille…' }).click();
     await page.getByRole('dialog', { name: 'Dupliquer sur la feuille' }).waitFor();

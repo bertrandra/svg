@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
+import { aLeFocus, attend, boutonFichier, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
 
 const VERT = '#1f8a3a';
 const bulle = (page: Page) => page.locator('.bulle-visite');
@@ -76,11 +76,14 @@ describe('la visite guidee', () => {
     await dite(3);
     await bulle(page).getByRole('button', { name: 'Suivant' }).click();
     await attend(() => etape(page)).toBe('4');
-    expect(await lu(page)).toContain('Cliquez « Télécharger le SVG », en haut à droite.');
+    expect(await lu(page)).toContain('Cliquez « Fichier », l’icône de feuille en haut à droite, puis « Télécharger le SVG ».');
     await dite(4);
-    // Le filet de l'etape entoure le bouton unique de la barre : un geste, plus un menu a ouvrir.
+    // Le filet de l'etape entoure le bouton du menu Fichier, qui porte « Télécharger le SVG » en tete.
     await attend(() => page.locator('.visite-cible').count()).toBe(1);
-    const fichier = await telecharger(page, () => boutonTelecharger(page).click());
+    const cible = await page.locator('.visite-cible').boundingBox(), bouton = await boutonFichier(page).boundingBox();
+    expect(cible && bouton && cible.x <= bouton.x && cible.y <= bouton.y && cible.x + cible.width >= bouton.x + bouton.width).toBe(true);
+    await boutonFichier(page).click();
+    const fichier = await telecharger(page, () => page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).click());
     expect(fichier.nom).toBe('exemple.svg');
     expect(fichier.texte).toContain('fill="' + VERT + '"');
     expect(fichier.texte).not.toContain('#c81e28');
@@ -126,16 +129,21 @@ describe('la visite guidee', () => {
     await page.keyboard.press('Enter');
     await attend(() => etape(page)).toBe('4');
     // Le focus est reste dans la bulle. F6 rend la toile ; Echap y defait la selection (la visite reste), et Maj+Tab
-    // remonte de la toile, par les calques, jusqu'au bouton « Télécharger le SVG » de la barre.
+    // remonte de la toile, par les calques, jusqu'au bouton Fichier de la barre ; Entree ouvre son menu, les fleches vont a
+    // « Télécharger le SVG ».
     expect(await page.evaluate(() => !!document.activeElement?.closest('.bulle-visite'))).toBe(true);
     await page.keyboard.press('F6');
     await attend(() => aLeFocus(toile(page))).toBe(true);
     await page.keyboard.press('Escape');
     await attend(() => page.locator('.editeur-barre-selection').count()).toBe(0);
     expect(await etape(page)).toBe('4');
-    const recuperer = boutonTelecharger(page);
-    for (let i = 0; i < 60 && !(await aLeFocus(recuperer)); i++) await page.keyboard.press('Shift+Tab');
-    expect(await aLeFocus(recuperer)).toBe(true);
+    const fichier = boutonFichier(page);
+    for (let i = 0; i < 60 && !(await aLeFocus(fichier)); i++) await page.keyboard.press('Shift+Tab');
+    expect(await aLeFocus(fichier)).toBe(true);
+    await page.keyboard.press('Enter');
+    const svg = page.locator('.menu-panneau').getByRole('menuitem', { name: 'Télécharger le SVG', exact: true });
+    for (let i = 0; i < 4 && !(await aLeFocus(svg)); i++) await page.keyboard.press('ArrowDown');
+    expect(await aLeFocus(svg)).toBe(true);
     const f = await telecharger(page, () => page.keyboard.press('Enter'));
     expect(f.texte).toContain('fill="' + VERT + '"');
     await attend(() => etape(page)).toBe('5');
@@ -343,7 +351,7 @@ describe('la visite dans l editeur embarque', () => {
     await attend(() => etape(page)).toBe('3');
     await bulle(page).getByRole('button', { name: 'Suivant' }).click();
     await attend(() => etape(page)).toBe('4');
-    expect(await lu(page)).toContain('Cliquez « Enregistrer » : votre dessin retouché revient dans la page qui a ouvert l’éditeur.');
+    expect(await lu(page)).toContain('Cliquez « Enregistrer », le bouton plein en haut à droite : votre dessin retouché revient dans la page qui a ouvert l’éditeur.');
     await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await attend(() => etape(page)).toBe('5');
     expect(await page.evaluate(() => (window as unknown as { __recu: string }).__recu)).toContain(VERT);

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, formesVisibles, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
+import { aLeFocus, attend, boutonFichier, formesVisibles, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
 
 describe('clavier et lecteur d ecran', () => {
   const navigateur = pilote();
@@ -346,7 +346,7 @@ describe('clavier et lecteur d ecran', () => {
       const page = await editeur();
       await choisirForme(page, 2);
       await page.keyboard.press('ArrowRight');
-      const fichier = page.locator('.menu-bouton', { hasText: 'Fichier' });
+      const fichier = boutonFichier(page);
       await fichier.focus();
       await page.keyboard.press('Enter');
       await page.getByRole('menuitem', { name: /Fermer/ }).press('Enter');

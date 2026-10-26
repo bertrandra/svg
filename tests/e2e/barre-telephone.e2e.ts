@@ -42,12 +42,12 @@ describe('barre de l editeur sur un telephone', () => {
       ['Choisir un outil de sélection', 'Formes (F)', 'Plus d’actions : vue, édition, fichier']
     );
     await plus(page).tap();
-    for (const nom of ['Vue', 'Fichier', 'Édition']) await page.getByRole('menu', { name: nom }).waitFor();
+    for (const nom of ['Vue', 'Récupérer le dessin', 'Fichier', 'Édition']) await page.getByRole('menu', { name: nom }).waitFor();
     await page.getByRole('menuitem', { name: /^Dézoomer/ }).waitFor();
-    // Recuperer le fichier ouvre la rubrique Fichier : un geste, le premier.
-    expect(await page.getByRole('menu', { name: 'Fichier' }).getByRole('menuitem').first().innerText()).toContain('Télécharger le SVG');
+    // Recuperer le fichier a sa rubrique, comme dans le menu Fichier du bureau : « Télécharger le SVG » en est le premier element.
+    expect(await page.getByRole('menu', { name: 'Récupérer le dessin' }).getByRole('menuitem').first().innerText()).toContain('Télécharger le SVG');
     await page.getByRole('menuitem', { name: /^Annuler/ }).waitFor();
-    // Les autres formats sont la, sous les elements de Fichier, replies : ils ne s'ouvrent que si on les demande.
+    // Les autres formats sont la, sous les elements qui recuperent le fichier, replies : ils ne s'ouvrent que si on les demande.
     expect(await page.locator('.menu-panneau .contenu-export').isVisible()).toBe(false);
     await page.locator('.menu-panneau details.autres-formats-repli > summary').tap();
     await page.locator('.menu-panneau .contenu-export').waitFor();
@@ -94,7 +94,8 @@ describe('barre de l editeur sur un telephone', () => {
     const bouton = enregistrer(page, 'Enregistrer');
     expect(await bouton.getAttribute('aria-disabled')).toBe('true');
     expect(await bouton.isDisabled()).toBe(true);
-    expect(await bouton.getAttribute('title')).toBe('Aucune modification à enregistrer');
+    // Une icone seule : l'infobulle redit le libelle avant la raison ; la raison seule est la description.
+    expect(await bouton.getAttribute('title')).toBe('Enregistrer — Aucune modification à enregistrer');
     const raison = await bouton.getAttribute('aria-describedby');
     expect(await page.locator('#' + (raison ?? 'absent')).innerText()).toBe('Aucune modification à enregistrer');
     // Au clavier : on peut le focaliser, et l'activer dit la raison dans la region vocale sans rien enregistrer.

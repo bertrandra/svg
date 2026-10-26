@@ -12,7 +12,7 @@ export type NomIcone =
   | 'annuler' | 'retablir' | 'copier' | 'couper' | 'coller'
   | 'zoom-moins' | 'zoom-plus' | 'ajuster' | 'zoom-selection' | 'taille-reelle'
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
-  | 'telecharger' | 'fermer' | 'enregistrer'
+  | 'telecharger' | 'fermer' | 'enregistrer' | 'fichier'
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
   | 'texte-gauche' | 'texte-centre' | 'texte-droite' | 'texte-justifie' | 'texte-libre' | 'texte-sur' | 'texte-dans'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
@@ -88,6 +88,8 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   telecharger: [t('M12 3v12'), t('M7 10l5 5 5-5'), t('M4 20h16')],
   fermer: [t('M6 6l12 12'), t('M18 6L6 18')],
   enregistrer: [t('M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'), t('M17 21v-8H7v8'), t('M7 3v5h8')],
+  // Une feuille au coin replie et deux lignes de texte : le menu Fichier de la barre, ou l'on telecharge, exporte et ferme.
+  fichier: [t('M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'), t('M14 3v6h6'), t('M8 13h8'), t('M8 17h5')],
   'aligner-gauche': [t('M4 3v18'), t('M8 7h11v4H8z'), t('M8 13h7v4H8z')],
   'aligner-centre-h': [t('M12 3v18'), t('M6 7h12v4H6z'), t('M8 13h8v4H8z')],
   'aligner-droite': [t('M20 3v18'), t('M5 7h11v4H5z'), t('M9 13h7v4H9z')],

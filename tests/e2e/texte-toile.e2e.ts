@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { readFileSync } from 'node:fs';
 import type { Download } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, modifications, nombreDeCalques, NAVIGATEUR, ouvrirCode, permettrePressePapiers, pilote, texteDe } from './aide.js';
+import { aLeFocus, attend, telechargerParFichier, modifications, nombreDeCalques, NAVIGATEUR, ouvrirCode, permettrePressePapiers, pilote, texteDe } from './aide.js';
 import { champPolice, choisirPolice, valeurPolice } from './polices.js';
 
 const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
@@ -270,7 +270,7 @@ describe('le texte se tape sur la toile', () => {
     expect(await modifications(page)).toBe(2);
     // Le panneau le dit aussi ; l'export ecrit des lignes, sans aucun fond, et de quoi rouvrir le trace.
     await expect(page.locator('.section-texte').getByRole('button', { name: 'Médian' }).getAttribute('aria-pressed')).resolves.toBe('true');
-    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [telechargement]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     const svg = readFileSync(await telechargement.path(), 'utf8');
     const texte = /<path [^>]*data-ed-texte="Lune"[^>]*\/>/.exec(svg)?.[0] ?? '';
     expect(texte).toContain('data-ed-trace="median"');

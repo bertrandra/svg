@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, telechargerParFichier, modifications, ouvrirCode, pilote, RACINE_DEPOT, texteDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 /** Les captures du rapport (1280 et 390 px, clair et sombre), quand CAPTURES le demande. */
@@ -217,7 +217,7 @@ describe('le texte sur et dans une forme', () => {
     await attend(() => page.locator('.editeur-svg-toile path[data-id="f3"]').getAttribute('fill')).toBe('none');
     const t1 = await boite(page, 'f3');
     expect(Math.abs(centre(t1).x - centre(t0).x)).toBeLessThan(6);
-    const [t]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [t]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     const svg = readFileSync(await t.path(), 'utf8');
     expect(svg).not.toMatch(/<text|textPath|font-family/);
     expect(svg).toMatch(/<path d="M[^"]+" fill="none" stroke="[^"]+" stroke-width="[^"]+"[^>]* data-ed-trace="median"[^>]* data-ed-disposition="sur"[^>]* data-ed-forme="1"/);
@@ -233,7 +233,7 @@ describe('le texte sur et dans une forme', () => {
     // Masquee, la forme ne se dessine plus ; son trace se voit en tirets tant que le texte est choisi.
     await attend(() => page.locator('.editeur-svg-toile path[data-id="f1"]').count()).toBe(0);
     expect(await page.locator('.guide-disposition .guide-forme').count()).toBe(1);
-    const [t]: [Download, void] = await Promise.all([page.waitForEvent('download'), boutonTelecharger(page).click()]);
+    const [t]: [Download, void] = await Promise.all([page.waitForEvent('download'), telechargerParFichier(page)]);
     const svg = readFileSync(await t.path(), 'utf8');
     expect(svg.match(/<path /g)).toHaveLength(2);
     expect(svg).toMatch(/data-ed-disposition="sur"[^>]* data-ed-forme-d="M/);

@@ -211,10 +211,12 @@ describe('embarquement : exemples/integration.html', () => {
 
     // Dedans, ni la casse, ni l'espacement, ni l'alignement, ni la police de l'hote.
     const dedans = await page.evaluate(() => {
-      const bouton = getComputedStyle(document.querySelector('.editeur-barre button.primaire.texte') as HTMLElement);
+      // Un bouton a texte (le menu Vue) pour la casse et l'espacement, le geste de fin (une icone pleine) pour le fond.
+      const bouton = getComputedStyle(document.querySelector('.editeur-barre .menu-bouton.texte') as HTMLElement);
+      const plein = getComputedStyle(document.querySelector('.editeur-barre button.primaire.bouton-fin') as HTMLElement);
       const titre = getComputedStyle(document.querySelector('.editeur-titre') as HTMLElement);
       return {
-        casse: bouton.textTransform, espacement: bouton.letterSpacing, boutonFond: bouton.backgroundColor,
+        casse: bouton.textTransform, espacement: bouton.letterSpacing, boutonFond: plein.backgroundColor,
         alignement: getComputedStyle(document.querySelector('.editeur-inspecteur') as HTMLElement).textAlign, police: titre.fontFamily
       };
     });
@@ -263,8 +265,9 @@ describe('embarquement : exemples/integration.html', () => {
     const { page } = await hote();
     await editer(page);
     // Rien a enregistrer tant que rien n'a change.
-    const enregistrer = page.locator('.editeur-barre button.primaire.texte');
-    expect(await texteDe(enregistrer)).toBe('Enregistrer');
+    // Le geste de fin n'est qu'une icone : son nom accessible est le libelle.
+    const enregistrer = page.locator('.editeur-barre button.primaire.bouton-fin');
+    expect(await enregistrer.getAttribute('aria-label')).toBe('Enregistrer');
     expect(await enregistrer.isDisabled()).toBe(true);
 
     await calque(page, 3).click();
@@ -445,7 +448,10 @@ describe('embarquement : exemples/integration.html', () => {
     const { page } = await hote();
     await ouvrirParApi(page, { libelleEnregistrer: '  Mettre à jour le logo ', fermerApresEnregistrer: false });
     const bouton = page.locator('.editeur-barre .groupe.fin button.primaire');
-    expect(await texteDe(bouton)).toBe('Mettre à jour le logo');
+    // Une icone seule : le libelle de l'hote est son nom accessible, et son infobulle.
+    expect(await bouton.getAttribute('aria-label')).toBe('Mettre à jour le logo');
+    expect(await page.locator('.editeur-barre .groupe.fin').getByRole('button', { name: 'Mettre à jour le logo', exact: true }).count()).toBe(1);
+    expect((await bouton.innerText()).trim()).toBe('');
     await calque(page, 1).click();
     await page.keyboard.press('Delete');
     await attend(() => formesVisibles(page)).toBe(1);

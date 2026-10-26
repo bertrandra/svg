@@ -334,8 +334,8 @@ taille se décide dans le registre, avec sa raison.
 ## Layout
 
 L'éditeur est une grille d'application plein écran : une barre en haut (outils, couleurs, historique, zoom,
-menus Vue, Édition, Aide, la machine, puis le groupe du fichier : « Télécharger le SVG » et son chevron « Autres formats »,
-le menu Fichier, le geste de fin), les calques à gauche, la toile au centre
+menus Vue, Édition, Aide, la machine, puis le groupe du fichier, deux icônes : le menu Fichier, qui porte « Télécharger le SVG »,
+l'export Cricut et les autres formats, et le geste de fin, seule action pleine), les calques à gauche, la toile au centre
 sur la table, l'inspecteur à droite (sections repliables), une barre d'état en bas qui dit l'aide du moment et le
 nombre de modifications. L'accueil est une colonne centrée : le titre et son chapeau, la question du public (ou la ligne qui
 la rappelle), le circuit du public, puis trois voies côte à côte, une seule visible à la fois, dans l'ordre du public (Ouvrir,
@@ -346,13 +346,14 @@ Le rythme est serré, sur une base de 4 avec un pas de 6 : 2, 4, 6, 8, 12, 16, 2
 test interdit un espacement, un rayon ou une couche écrits en dur. 4 px dans la barre, 6 px dans les listes,
 12 px entre cartes, 16 px à l'intérieur d'une carte.
 
-- **Au-dessous de 1 440 px** : les groupes et les menus de la barre se resserrent ; vers 1 280 px, le groupe du fichier passe
-  à la ligne, entier et rangé à droite, plutôt que de couper un geste de son menu.
+- **Au-dessous de 1 440 px** : les groupes et les menus de la barre se resserrent ; plus étroite, la barre passe à la ligne, le
+  groupe du fichier (deux icônes) entier et rangé à droite.
 - **Au-dessous de 900 px ou au doigt** : les panneaux deviennent des tiroirs sur voile, les cibles passent à
   40 px (44 px dans les menus).
-- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Aide en tête, puis Édition, Fichier, Vue avec
-  le zoom en dernier, puis la machine : l'ordre de l'usage ; la rubrique Fichier commence par « Télécharger le SVG » et finit
-  par « Autres formats », replié) ; le geste de fin passe dans la barre d'état ; les voies de
+- **Au-dessous de 640 px** : la barre tient sans défiler : outils et un menu « Plus » (Aide en tête, puis Édition, les trois
+  rubriques du menu Fichier, Vue avec le zoom en dernier, puis la machine : l'ordre de l'usage ; la rubrique « Récupérer le
+  dessin » commence par « Télécharger le SVG » et finit par « Autres formats », replié) ; le geste de fin, icône seule, passe
+  dans la barre d'état ; les voies de
   l'accueil s'empilent ; un tiroir ouvert masque le dessin qu'il recouvre (le voile reçoit les touchers).
 - **Au doigt jusqu'à 1 200 px, et sous 640 px** : la rangée de la sélection se resserre : le compte, trois gestes
   fréquents (dupliquer, miroir horizontal, tourner à droite), son menu « Plus » rubrique par rubrique (transformer,
@@ -566,15 +567,20 @@ changer). Sur la toile vide, la phrase est une étiquette de feuille (filet, coi
 traversent.
 
 ### Récupérer le fichier (la fin du parcours)
-- **Le geste du moment, seul et nommé** : « Télécharger le SVG » (secondaire, icône de téléchargement) ouvre le groupe du
-  fichier ; en contexte Cricut il devient « Exporter pour Cricut » (ou « Exporter pour Print Then Cut »). Un chevron accolé,
-  nommé « Autres formats », ouvre la liste des formats, comme celui de l'outil des formes.
+- **Tout dans le menu Fichier** (le propriétaire, 26 octobre 2026 : une barre plus calme) : un bouton à icône (une feuille au
+  coin replié), nommé et titré « Fichier », trois rubriques : « Insérer » (une image, depuis une adresse), « Récupérer le
+  dessin » (« Télécharger le SVG » en tête, le SVG à plat en modèle riche, en contexte Cricut « Exporter pour Cricut » — ou pour
+  Print Then Cut, ou pour le stylo — grisé avec sa raison tant qu'un constat le bloque, puis « Autres formats », replié derrière
+  un chevron), puis « Fichier » (le geste de fin, le brouillon, les crédits, fermer). Hors d'un contexte de production, pas
+  d'export Cricut : « Générique » n'écrit aucun octet de plus. Tab, depuis un élément, entre dans « Autres formats ».
 - **Les autres formats** : une ligne par format, en deux colonnes alignées : le bouton (et son réglage : largeur du PNG,
   couleur de découpe), puis à quoi il sert, en Aide à l'encre douce (« PNG : une image pour un site ou un message »), qui est
   aussi sa description pour un lecteur d'écran. Puis « Options d'export », replié. Aucune action pleine : ce sont des choix.
-- **Le geste de fin** porte le libellé que la page ou l'hôte donne : « Terminer » dans la page (une coche ; il ramène à la
-  fiche, même sans modification), « Enregistrer » par défaut (une disquette ; grisé tant que rien n'a changé). `Ctrl+S` garde
-  un brouillon, il ne ferme jamais.
+- **Le geste de fin** est une icône seule, un carré plein de la taille d'un bouton d'outil (30 px, 40 au doigt), la seule
+  action pleine de la barre ; son nom accessible est le libellé que la page ou l'hôte donne, que l'infobulle redit avec son
+  raccourci : « Terminer » dans la page (une coche ; il ramène à la fiche, même sans modification), « Enregistrer » par défaut
+  (une disquette ; grisé tant que rien n'a changé). Le menu Fichier, la confirmation d'abandon et la visite guidée le disent en
+  toutes lettres. `Ctrl+S` garde un brouillon, il ne ferme jamais (sauf sur le site, où il enregistre).
 - **La fiche du dessin**, après « Terminer » : « Télécharger le SVG » est la seule action pleine et prend le focus,
   « Reprendre l'édition » secondaire, « Autres formats » en menu, « Fermer » discret ; au-dessus, un message neutre.
 

@@ -86,11 +86,12 @@ function texteBrut(e: EtapeVisite, c: ContexteVisite): TexteEtape {
     case 'annuler':
       return { titre: 'Vous pouvez toujours revenir en arrière', corps: 'Cette flèche annule le dernier changement (Ctrl+Z) ; sa voisine le refait. Essayez si vous voulez, ou passez à la suite.' };
     case 'recuperer':
-      if (c.recuperation === 'enregistrer') return { titre: 'Récupérez votre dessin', corps: 'Cliquez « ' + (c.libelleFin ?? 'Enregistrer') + ' » : votre dessin retouché revient dans la page qui a ouvert l’éditeur.' };
-      // Un seul geste au bureau, le bouton de la barre ; le telephone le range en tete de la rubrique Fichier de « Plus ».
+      // Le geste de fin n'est plus qu'une icone : la bulle dit son nom et ou le trouver (le bouton plein, en haut, ou en bas au telephone).
+      if (c.recuperation === 'enregistrer') return { titre: 'Récupérez votre dessin', corps: 'Cliquez « ' + (c.libelleFin ?? 'Enregistrer') + ' », le bouton plein ' + (c.telephone ? 'en bas' : 'en haut') + ' à droite : votre dessin retouché revient dans la page qui a ouvert l’éditeur.' };
+      // Au bureau, le menu Fichier (une icone de feuille) le porte en tete ; le telephone le range dans « Plus », rubrique Récupérer le dessin.
       return {
         titre: 'Récupérez votre dessin',
-        corps: (c.telephone ? 'Touchez « Plus » (les trois points), puis « Télécharger le SVG ».' : 'Cliquez « Télécharger le SVG », en haut à droite.') + ' Le fichier arrive dans vos téléchargements.'
+        corps: (c.telephone ? 'Touchez « Plus » (les trois points), puis « Télécharger le SVG ».' : 'Cliquez « Fichier », l’icône de feuille en haut à droite, puis « Télécharger le SVG ».') + ' Le fichier arrive dans vos téléchargements.'
       };
     case 'fin':
       return { titre: 'Votre première retouche est faite', corps: 'Choisir une forme, changer sa couleur, récupérer le fichier : vous connaissez le chemin. Pour la suite :' };
@@ -122,7 +123,7 @@ export function cibleEtape(e: EtapeVisite, c: Pick<ContexteVisite, 'telephone' |
       return '.editeur-barre button[aria-label="Annuler (Ctrl+Z)"]';
     case 'recuperer':
       if (c.recuperation === 'enregistrer') return c.telephone ? '.editeur-etat button.primaire' : '.editeur-barre .groupe.fin button.primaire';
-      return c.telephone ? '.editeur-barre .groupe.plus .menu-bouton' : '.editeur-barre .recuperer-principal';
+      return c.telephone ? '.editeur-barre .groupe.plus .menu-bouton' : '.editeur-barre .menu-fichier .menu-bouton';
   }
 }
 

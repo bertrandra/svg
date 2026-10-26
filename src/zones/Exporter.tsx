@@ -4,7 +4,8 @@
 // dans l'editeur et sur la fiche de la page. Les options sont un etat de session, jamais stocke.
 //
 // Pourquoi une ligne par format : neuf boutons de meme poids (« EPS », « DXF », « WebP ») ne disaient rien a un debutant, qui ne
-// savait pas lequel prendre. Le plus frequent (le SVG) n'est plus parmi eux : il a son bouton a lui.
+// savait pas lequel prendre. Le plus frequent (le SVG) n'est plus parmi eux : il a son geste a lui (le bouton primaire de la fiche,
+// le premier element du menu Fichier de l'editeur).
 
 import { useId, useState, type ReactNode } from 'react';
 import { lireDessin, type DessinSvg } from '../engine/editionSvg.js';
@@ -19,8 +20,6 @@ interface Proprietes {
   svg: string; dessin?: DessinSvg; nom: string; dire: (t: string) => void;
   /** Le modele de lecture de `svg` quand le dessin n'est pas donne (la page, ADR-0012 annexe 5 §3) ; absent : `plat`. */
   modele?: Modele;
-  /** Une ligne de plus en tete (l'export du contexte, ou le SVG quand le bouton principal est un autre format). */
-  enTete?: ReactNode;
 }
 
 // Ce que la personne a regle survit a la fermeture du menu (qui demonte son contenu) le temps de la session ;
@@ -51,7 +50,7 @@ export function LigneFormat({ libelle, aide, desactive, onClick, children }: { l
 }
 
 /** Les autres formats, une ligne chacun, puis les options d'export repliees. */
-export function ListeFormats({ svg, dessin, nom, dire, enTete, modele }: Proprietes) {
+export function ListeFormats({ svg, dessin, nom, dire, modele }: Proprietes) {
   const [options, poserOptions] = useState<OptionsExport>(session.options);
   const [largeurPng, poserLargeurPng] = useState(session.largeurPng);
   const [couleurDecoupe, poserCouleurDecoupe] = useState(session.couleurDecoupe);
@@ -60,7 +59,6 @@ export function ListeFormats({ svg, dessin, nom, dire, enTete, modele }: Proprie
   const vect = !c.lu;
   return (
     <div className="contenu-export" role="group" aria-label="Autres formats">
-      {enTete}
       <LigneFormat libelle="PDF vectoriel" aide="un document à imprimer ou à envoyer, net à toute taille" desactive={vect} onClick={() => exporterPdf(c)} />
       <LigneFormat libelle="PNG" aide="une image pour un site ou un message, fond transparent" onClick={() => exporterPng(c)}>
         <select aria-label="Largeur du PNG" value={largeurPng} onChange={e => { session.largeurPng = Number(e.target.value); poserLargeurPng(Number(e.target.value)); }}>
@@ -78,11 +76,6 @@ export function ListeFormats({ svg, dessin, nom, dire, enTete, modele }: Proprie
       <OptionsExportPanneau o={options} poser={poser} dessin={c.lu} />
     </div>
   );
-}
-
-/** La ligne du SVG, quand le bouton principal fait autre chose (l'export d'une machine) : le dessin tel quel, pour tout logiciel. */
-export function LigneSvg({ faire }: { faire: () => void }) {
-  return <LigneFormat libelle="SVG" aide="le dessin tel quel, pour tout logiciel de dessin" onClick={faire} />;
 }
 
 /** « Télécharger le SVG » de la page : le SVG avec les options d'export du moment, comme le faisait le bouton « SVG » du menu. */
