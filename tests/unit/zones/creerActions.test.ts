@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { lireDessin, modifier, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
+import { boiteDe, lireDessin, modifier, STYLE_DEFAUT, type DessinSvg } from '../../../src/engine/editionSvg.js';
 import { stockageMemoire, type Stockage } from '../../../src/io/stockage.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
@@ -32,6 +32,7 @@ function monter(stockage: Stockage | null = null, svg = SVG, modele: 'plat' | 'r
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
     poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(),
+    poserVerrouProportions: u => { etat.verrouProportions = typeof u === 'function' ? u(etat.verrouProportions ?? false) : u; },
     poserModele: u => { etat.modele = typeof u === 'function' ? u(etat.modele ?? 'plat') : u; },
     poserContexte: u => { etat.contexte = typeof u === 'function' ? u(etat.contexte ?? null) : u; },
     poserDeplies: u => { deplies = typeof u === 'function' ? u(deplies) : u; },
@@ -511,5 +512,41 @@ describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)'
     etat.formeSeule = forme;
     actions.poserOutil('points');
     expect(setters.poserOutilBrut).toHaveBeenCalledWith('points');
+  });
+});
+
+describe('creerActions : conserver les proportions', () => {
+  it('coupe par defaut : aucune proportion a garder ; pose ou coupe, le dit', () => {
+    const { actions, etat, messages, annonces } = monter();
+    etat.sel = ['f2'];
+    expect(actions.proportionsDe(etat.sel, boiteDe(etat.dessin, etat.sel))).toBeNull();
+    actions.poserVerrouProportions(true);
+    expect(etat.verrouProportions).toBe(true);
+    expect(messages.at(-1)).toBe('Proportions conservées.');
+    expect(annonces.at(-1)).toBe('Proportions conservées.');
+    actions.poserVerrouProportions(false);
+    expect(etat.verrouProportions).toBe(false);
+    expect(messages.at(-1)).toBe('Proportions libres.');
+    expect(actions.proportionsDe(etat.sel, boiteDe(etat.dessin, etat.sel))).toBeNull();
+  });
+
+  it('garde la proportion du moment ou le verrou a ete pose, puis celle d une nouvelle selection', () => {
+    const { actions, etat } = monter();
+    etat.sel = ['f2'];
+    actions.poserVerrouProportions(true);
+    const ref = actions.proportionsDe(['f2'], boiteDe(etat.dessin, ['f2']));
+    expect(ref).toMatchObject({ l: 20, h: 20 });
+    // Une taille de la meme proportion : la meme reference, pas une nouvelle tiree de la boite qu'a laissee l'arrondi.
+    expect(actions.proportionsDe(['f2'], { x: 20, y: 20, l: 60, h: 60 })).toBe(ref);
+    expect(actions.proportionsDe(['f1', 'f2'], boiteDe(etat.dessin, ['f1', 'f2']))).toMatchObject({ l: 40, h: 40 });
+  });
+
+  it('ne s applique pas a une ligne (un cote nul) et ne leve rien', () => {
+    const LIGNE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 50H80" stroke="#000" fill="none"/></svg>';
+    const { actions, etat } = monter(null, LIGNE);
+    etat.sel = ['f1'];
+    expect(() => actions.poserVerrouProportions(true)).not.toThrow();
+    expect(actions.proportionsDe(['f1'], boiteDe(etat.dessin, ['f1']))).toBeNull();
+    expect(actions.proportionsDe([], null)).toBeNull();
   });
 });

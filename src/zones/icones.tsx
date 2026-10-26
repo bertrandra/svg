@@ -30,7 +30,9 @@ export type NomIcone =
   // Les groupes du modele riche (ADR-0012, etape 2).
   | 'grouper' | 'degrouper'
   // Les decoupes, les masques et les effets du modele riche (ADR-0012, etape 8) : commandes et pastilles des calques.
-  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite';
+  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite'
+  // Le verrou des proportions de « Position et taille » : une chaine fermee, ou rompue.
+  | 'proportions-liees' | 'proportions-libres';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -178,7 +180,11 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   // Une forme au trait devant son ombre pleine, decalee vers le bas et la droite.
   ombre: [t('M9 9h12v12H9z', true), t('M3 3h12v12H3z')],
   // Un carre coupe en diagonale, une moitie pleine.
-  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)]
+  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)],
+  // Deux demi-maillons tenus par une barre : la largeur et la hauteur vont ensemble.
+  'proportions-liees': [t('M10 8H7a4 4 0 0 0 0 8h3'), t('M14 8h3a4 4 0 0 1 0 8h-3'), t('M8 12h8')],
+  // Les memes, ecartes et sans barre, deux traits de cassure entre eux : chaque cote va seul.
+  'proportions-libres': [t('M9 8H7a4 4 0 0 0 0 8h2'), t('M15 8h2a4 4 0 0 1 0 8h-2'), t('M12 4v2'), t('M12 18v2')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

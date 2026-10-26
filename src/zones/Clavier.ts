@@ -6,6 +6,7 @@ import { useEffect, useRef, type RefObject } from 'react';
 import { ancre, boiteDe, deplacer, deplacerAncre, redimensionner } from '../engine/editionSvg.js';
 import { boiteRedimensionnee, coteMinimal, directionDe, noeudsChoisissables, pasDeplacement, type Direction } from '../engine/navigation.js';
 import { tournerAutour } from '../engine/transformations.js';
+import { boiteRedimensionneeProportionnelle } from '../engine/proportions.js';
 import { phrasePoint, phrasePosition, phraseRotation, phraseTaille } from './annonces.js';
 import { toucheToile } from './ClavierToile.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
@@ -129,11 +130,15 @@ function fleche(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur, direction
   } else pousser(m, u, ac, direction, e.shiftKey);
 }
 
-/** Alt et fleches : droite et bas agrandissent la selection, gauche et haut la reduisent, le coin haut gauche reste. */
+/**
+ * Alt et fleches : droite et bas agrandissent la selection, gauche et haut la reduisent, le coin haut gauche reste. « Conserver les
+ * proportions » pose, l'autre cote suit (une ligne, sans proportion, se redimensionne comme avant).
+ */
 function etirer(m: ModeleDessin, ac: ActionsEditeur, direction: Direction, fort: boolean) {
   const b = boiteDe(m.dessin, m.sel), vb = m.dessin.vb;
   if (!b) return;
-  const cible = boiteRedimensionnee(b, direction, pasDeplacement(vb, fort), coteMinimal(vb));
+  const ref = ac.proportionsDe(m.sel, b), pas = pasDeplacement(vb, fort), min = coteMinimal(vb);
+  const cible = ref ? boiteRedimensionneeProportionnelle(b, direction, pas, min, ref) : boiteRedimensionnee(b, direction, pas, min);
   if (cible === b) { ac.annoncer('Taille minimale atteinte.'); return; }
   const apres = redimensionner(m.dessin, m.sel, cible);
   ac.appliquer(() => apres);

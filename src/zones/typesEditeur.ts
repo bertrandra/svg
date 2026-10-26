@@ -14,6 +14,7 @@ import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
 import type { Version } from './session.js';
 import type { RegleZone } from '../engine/selection.js';
+import type { Cotes } from '../engine/proportions.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
@@ -161,6 +162,11 @@ export interface EtatInterface {
   enregistrement?: EtatEnregistrement | null;
   /** Ce que le cadre et le lasso prennent (ADR-0035) : les formes touchees (defaut) ou entierement dedans. Un reglage de la session. */
   regleZone: RegleZone;
+  /**
+   * « Conserver les proportions » : redimensionner garde la proportion de la selection (le coin, Maj l'inversant le temps du geste ;
+   * les champs L et H ; Alt et fleches). Un reglage de la session, coupe a l'ouverture ; sans effet sur une ligne (un cote nul).
+   */
+  verrouProportions: boolean;
   /** Le modele de lecture du moment : celui de l'hote, ou le reglage du menu Edition (garde par le stockage injecte). */
   modele: Modele;
   /** L'hote a fixe le modele (`modele` donne a l'editeur) : le reglage du menu Edition ne se montre pas. */
@@ -283,6 +289,13 @@ export interface ActionsEditeur {
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
   /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */
   poserRegleZone: (r: RegleZone) => void;
+  /** Pose ou coupe « Conserver les proportions », et le dit ; pose, la proportion de la selection du moment devient la reference. */
+  poserVerrouProportions: (v: boolean) => void;
+  /**
+   * La proportion a garder pour ces formes et leur boite : la reference du verrou (prise quand il a ete pose, ou quand la selection
+   * ou sa proportion ont change ; voir engine/proportions.ts), ou null quand le verrou est coupe ou que la boite n'a pas de proportion.
+   */
+  proportionsDe: (ids: readonly string[], b: Boite | null) => Cotes | null;
   /** Change le reglage du modele (menu Edition), le garde dans le stockage injecte et le dit ; sans effet si l'hote l'a fixe. */
   poserModele: (m: Modele) => void;
   /** Pose le contexte d'edition tel quel (null : la racine) ; un groupe qui n'existe pas fait revenir a la racine. */

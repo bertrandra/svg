@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  basculerSegment, diviserSegment, genrePointilles, groupeDe, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
+  basculerSegment, diviserSegment, genrePointilles, groupeDe, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage,
   type Forme, type GenrePointilles, type Reglage, type ReglageTrait
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
@@ -19,6 +19,7 @@ import { SectionTexte } from './InspecteurTexte.js';
 import { SectionNuancier } from './SectionNuancier.js';
 import { PeintureDegradable, useDegradesPermis } from './EditeurDegrade.js';
 import { SectionEffets } from './SectionEffets.js';
+import { SectionPositionTaille } from './SectionPositionTaille.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
 import { lentilleDe } from './lentille.js';
 import { RAISONS_LENTILLE } from './phrasesContenus.js';
@@ -71,16 +72,7 @@ export function Inspecteur() {
       {/* Flou et ombre portee (ADR-0012, etape 8), en modele riche seulement : a plat, rien. */}
       <SectionEffets />
       <SectionNuancier />
-      {boite ? (
-        <Section titre="Position et taille" ouverte>
-          <div className="grille-2">
-            <Nombre libelle="X" valeur={boite.x} poser={v => ac.appliquer(d => redimensionner(d, sel, { ...boite, x: v }))} />
-            <Nombre libelle="Y" valeur={boite.y} poser={v => ac.appliquer(d => redimensionner(d, sel, { ...boite, y: v }))} />
-            <Nombre libelle="L" valeur={boite.l} min={0} poser={v => ac.appliquer(d => redimensionner(d, sel, { ...boite, l: v }))} />
-            <Nombre libelle="H" valeur={boite.h} min={0} poser={v => ac.appliquer(d => redimensionner(d, sel, { ...boite, h: v }))} />
-          </div>
-        </Section>
-      ) : null}
+      {boite ? <SectionPositionTaille boite={boite} /> : null}
       <Section titre="Transformer" note="angle, échelle, contour">
         <TransformationsNumeriques />
         <OutilsTrace />

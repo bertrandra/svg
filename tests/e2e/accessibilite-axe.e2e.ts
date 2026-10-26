@@ -246,6 +246,21 @@ describe('axe-core : accessibilite automatique', () => {
       });
     }
 
+    // « Conserver les proportions » pose, puis coupe : le bouton bascule de « Position et taille » dans ses deux etats, clair et sombre.
+    for (const schema of ['light', 'dark'] as const) {
+      it('avec le verrou des proportions de « Position et taille » (' + schema + ')', async () => {
+        const page = await editeur({ schema });
+        await page.locator('.editeur-svg-toile path[data-id="f2"]').click();
+        const verrou = page.getByRole('button', { name: 'Conserver les proportions' });
+        await verrou.click();
+        await attend(() => verrou.getAttribute('aria-pressed')).toBe('true');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, proportions conservées (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
+        await verrou.click();
+        await attend(() => verrou.getAttribute('aria-pressed')).toBe('false');
+        exigerSansViolationGrave(await auditer(page, 'éditeur, proportions libres (' + (schema === 'light' ? 'clair' : 'sombre') + ')'));
+      });
+    }
+
     it('avec plusieurs formes choisies et l inspecteur ouvert sur ses sections', async () => {
       const page = await editeur();
       await page.keyboard.press('Control+a');

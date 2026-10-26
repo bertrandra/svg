@@ -84,6 +84,9 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [apercuMachine, poserApercuMachine] = useState(true);
   // Ce que le cadre et le lasso prennent (ADR-0035) : un reglage de la session, qui revient aux formes touchees a chaque ouverture.
   const [regleZone, poserRegleZone] = useState<RegleZone>('touche');
+  // « Conserver les proportions » (section Position et taille) : un reglage de la session, coupe a chaque ouverture et retenu tant
+  // que l'editeur reste ouvert, quelle que soit la selection. Coupe par defaut : le coin et Maj gardent le sens qu'ils ont toujours eu.
+  const [verrouProportions, poserVerrouProportions] = useState(false);
   // Le modele de lecture (ADR-0012, annexe 5 §3) : il change au menu Edition pour les SVG lus ensuite (versions, insertions).
   const [modeleLecture, poserModele] = useState<Modele>(p.modele ?? 'plat');
   const modeleFixe = p.modeleFixe ?? false;
@@ -133,11 +136,11 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const moment = useRef<EtatDuMoment | null>(null);
   moment.current = {
     dessin, complet, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
-    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement, modele: modeleLecture, modeleFixe, contexte
+    fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement, modele: modeleLecture, modeleFixe, contexte, verrouProportions
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, poserModele, poserContexte, poserDeplies, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, poserVerrouProportions, poserModele, poserContexte, poserDeplies, toile }
   ));
 
   // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
@@ -178,8 +181,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, complet, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, modele: modeleLecture, modeleFixe, contexte, deplies }),
-    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, modeleLecture, modeleFixe, contexte, deplies]
+    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, verrouProportions, modele: modeleLecture, modeleFixe, contexte, deplies }),
+    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, verrouProportions, modeleLecture, modeleFixe, contexte, deplies]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

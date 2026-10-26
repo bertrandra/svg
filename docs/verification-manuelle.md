@@ -42,6 +42,7 @@ phrase identique rejouée (même action deux fois de suite) est redite.
 | 1.11 | Supprimer une forme, Fichier › Fermer l’éditeur | la confirmation d’abandon est une alerte ; « Continuer l’édition » a le focus | Échap la ferme et rend le focus |
 | 1.12 | Fermer l’éditeur | le focus revient au bouton qui l’avait ouvert | pas au début de la page |
 | 1.13 | Téléphone 420 px : bouton Calques, balayage, bouton Calques | le tiroir s’annonce, son contenu est lu, la fermeture rend la barre | le voile est atteignable et ferme le tiroir |
+| 1.14 | Forme 2 choisie, inspecteur « Position et taille » : Tab jusqu’au bouton entre L et H, Espace ; puis L à 100, Entrée ; puis sur la toile Alt+flèche droite | « Conserver les proportions, bouton bascule, non enfoncé », puis « Proportions conservées. » ; « 100 × 100. » ; « 100,2 × 100,2. » | le nom du bouton ne change pas, son état (enfoncé) si ; H suit sans qu’on l’ait touché ; Espace à nouveau dit « Proportions libres. » |
 
 Particularités à noter, pas à corriger ici : sur **VoiceOver macOS**, Tab ne s’arrête sur les boutons et liens
 que si « Appuyer sur Tab pour mettre en évidence chaque élément » est coché dans Safari › Réglages ›
@@ -148,6 +149,7 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | 5.9 | Saisir « é », « ç » et le texte de la forme avec les dispositions ci-dessus | le texte en formes écrit les bons caractères |
 | 5.10 | Alt+C (même couleur de contour), et en contexte Cricut Alt+Maj+X et Alt+Maj+E (tout ce qui est à couper, à écrire), sous Windows (barre de menus du navigateur visible ou non) et Option sur macOS | la sélection change ; aucun menu du navigateur ne s’ouvre ; sur macOS, Option+C ne tape pas « ç » dans la toile |
 | 5.11 | Alt+glisser sur le vide (retirer de la sélection) sous un bureau Linux qui réserve Alt+glisser au déplacement des fenêtres | noter si la fenêtre se déplace au lieu du cadre ; Alt+cadre avec l’outil Cadre (B) aussi |
+| 5.12 | Coin de la sélection avec Maj, verrou « Conserver les proportions » coupé puis posé (souris, puis stylet si disponible) | verrou coupé : sans Maj le coin étire librement, avec Maj il garde les proportions ; verrou posé : sans Maj il les garde, avec Maj il étire librement le temps du geste ; une ligne droite s’étire dans les deux cas sans erreur ; la barre d’état dit « (Maj : proportions) » puis « (Maj : librement) » |
 
 ## 6. Zoom et taille du texte (5 min)
 

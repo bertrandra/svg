@@ -276,6 +276,8 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .champs-feuille .champ-ligne > span:first-child { min-width: 9.5em; }
 .grille-2 .champ-ligne > span:first-child { min-width: 14px; }
 .grille-2 .champ-ligne input { width: 100%; min-width: 0; }
+/* Position et taille : X et Y, puis L, le verrou des proportions et H ; la colonne du milieu garde X au-dessus de L, Y de H. */
+.grille-taille { grid-template-columns: 1fr auto 1fr; align-items: center; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
 .nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet-fort); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
