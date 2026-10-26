@@ -28,7 +28,7 @@ export function lireModele(v: unknown): Modele | null {
  * Le modele de la page autonome et du site PHP quand le stockage n'en garde aucun (ou un illisible). Une seule valeur, pour que la
  * bascule (ADR-0012, etape 14) tienne en un seul commit, que l'on defait seul. L'embarquement ne la lit jamais.
  */
-export const MODELE_PAGE: Modele = 'plat';
+export const MODELE_PAGE: Modele = 'riche';
 
 /** Le modele retenu dans ce stockage ; `defaut` sans stockage, ou sans reglage lisible (`plat` si l'appelant ne dit rien). */
 export const modeleRetenu = (s: Stockage | null, defaut: Modele = 'plat'): Modele => lireModele(s?.lire<unknown>(CLE_MODELE)) ?? defaut;

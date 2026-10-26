@@ -17,11 +17,14 @@ import { passer } from '../unit/securite/passage.js';
 
 const DOSSIER = resolve(RACINE_DEPOT, 'tests/fixtures/hostile');
 /**
- * `attendu` est l'issue de la lecture pure (et de l'embarquement sans polices) ; `attenduPage`, quand il differe, celle de la
- * page, qui met le texte en lettres avec ses fontes (ADR-0020) : un fichier hostile qui porte du texte s'y ouvre, et ses
+ * `attendu` est l'issue de la lecture pure a plat (et de l'embarquement sans polices, qui lit a plat) ; `attenduRiche`, quand il
+ * differe, celle de la lecture riche, le defaut de la page depuis la bascule (ADR-0012, etape 14) ; `attenduPage`, quand il differe,
+ * celle de la page, qui met le texte en lettres avec ses fontes (ADR-0020) : un fichier hostile qui porte du texte s'y ouvre, et ses
  * invariants (aucun script, aucune requete, exports inertes) sont alors verifies comme pour tout fichier ouvert.
  */
-interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus'; attenduPage?: 'ouvre' | 'refus' }
+interface Ligne { fichier: string; famille: string; vecteur: string; attendu: 'ouvre' | 'refus'; attenduRiche?: 'ouvre' | 'refus'; attenduPage?: 'ouvre' | 'refus' }
+/** L'issue attendue d'un fichier dans la page, qui lit en riche. */
+const attenduDansLaPage = (l: Ligne): 'ouvre' | 'refus' => l.attenduPage ?? l.attenduRiche ?? l.attendu;
 const index = JSON.parse(readFileSync(resolve(DOSSIER, 'index.json'), 'utf8')) as { fichiers: Ligne[] };
 const octetsDe = (nom: string): Buffer => readFileSync(resolve(DOSSIER, nom));
 /** Le texte comme la page le lit : `File.text()` decode en UTF-8 et retire la marque d'ordre des octets. */
@@ -204,7 +207,7 @@ describe('securite : le corpus hostile entre par la page', () => {
     expect(violationsNettoyage(brut.toString('utf8')), nom + ' : SVG telecharge sans edition').toEqual([]);
     await rouvrir(s, brut, nom);
     if (!complet) return;
-    // Apres « Terminer » : l'ecriture, regeneree depuis le modele a plat, et ses trois formats. Sans modification, « Terminer » ne
+    // Apres « Terminer » : l'ecriture, regeneree depuis le modele (riche, celui de la page), et ses trois formats. Sans modification, « Terminer » ne
     // reecrit rien (la fiche garde le fichier tel qu'il est venu ; Ctrl+S ne garde qu'un brouillon) : un changement de machine, qui ne
     // touche pas au dessin, suffit a ce que le dessin soit rendu, reecrit et nettoye, comme le faisait Ctrl+S.
     await page.getByRole('button', { name: 'Reprendre l’édition' }).click();
@@ -237,13 +240,13 @@ describe('securite : le corpus hostile entre par la page', () => {
       // HTML ramene les fins de ligne d'un <textarea> a LF ; Chromium garde pourtant CR dans la valeur lue (constate). Ni l'un ni
       // l'autre n'est un changement du texte.
       const ramene = texte.replace(/\r\n?/g, '\n');
-      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(l.attenduPage ?? l.attendu);
+      if (recu === texte || recu === ramene) expect(issueCode, l.vecteur).toBe(attenduDansLaPage(l));
       else {
         // Le navigateur a change le texte avant la page : seul le retrait de caracteres de controle est admis, et la page doit
         // faire du texte recu exactement ce qu'en fait le moteur, sans rompre un invariant. Le vecteur d'origine, octets exacts,
         // passe toujours par le fichier depose (test suivant), qui garde son issue attendue dans tous les moteurs.
         expect(sansQueDesControles(recu.includes('\r') ? texte : ramene, recu), l.fichier + ' : la zone de texte a change autre chose que des caracteres de controle').toBe(true);
-        const moteur = passer(recu);
+        const moteur = passer(recu, undefined, false, 'riche');
         expect(moteur.defauts, l.fichier + ' : texte recu par la zone de saisie').toEqual([]);
         expect(issueCode, l.vecteur + ' (texte recu par la zone de saisie)').toBe(moteur.ouvre ? 'ouvre' : 'refus');
       }
@@ -254,7 +257,7 @@ describe('securite : le corpus hostile entre par la page', () => {
     it(l.fichier + ' : fichier depose', async () => {
       const s = await session();
       const issueDepot = await deposer(s.page, octetsDe(l.fichier), l.fichier);
-      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(l.attenduPage ?? l.attendu);
+      if (!DECODAGE_DU_NAVIGATEUR.has(l.fichier)) expect(issueDepot, l.vecteur).toBe(attenduDansLaPage(l));
       await s.garde.verifier('apres depot');
     }, 120_000);
   }
@@ -264,7 +267,8 @@ describe('securite : le corpus hostile entre par la page', () => {
       const s = await session();
       await s.page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] input[type=file]').setInputFiles({ name: nom, mimeType: 'image/svg+xml', buffer: octetsDe(nom) });
       const sortie = await issue(s.page);
-      if (!DECODAGE_DU_NAVIGATEUR.has(nom)) expect(sortie, nom).toBe(index.fichiers.find(f => f.fichier === nom)?.attendu);
+      const ligne = index.fichiers.find(f => f.fichier === nom);
+      if (!DECODAGE_DU_NAVIGATEUR.has(nom) && ligne) expect(sortie, nom).toBe(attenduDansLaPage(ligne));
       await s.garde.verifier(nom);
     }
   });

@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { ecrireDessin, lireDessin } from '../../../src/engine/editionSvg.js';
 import { stockageMemoire } from '../../../src/io/stockage.js';
-import { CLE_MODELE, estModele, garderModele, lireModele, modeleRetenu, optionsModele, porteModeleRiche, refusAvecRepli, refusModele } from '../../../src/zones/modele.js';
+import { CLE_MODELE, estModele, garderModele, lireModele, MODELE_PAGE, modeleRetenu, optionsModele, porteModeleRiche, refusAvecRepli, refusModele } from '../../../src/zones/modele.js';
 import { estEditable, verifierOptions } from '../../../src/zones/embarque.js';
 import { editable } from '../../../src/zones/EditeurSvg.js';
 
@@ -63,6 +63,16 @@ describe('un brouillon ou une version ecrits en riche, rouverts a plat', () => {
     expect(refusModele(ecritRiche(), 'plat', 'brouillon')).toMatch(/^Ce brouillon emploie des groupes/);
     expect(refusModele(ecritRiche(), 'riche', 'version')).toBeNull();
     expect(refusModele(GROUPE, 'plat', 'version')).toBeNull();
+  });
+});
+
+describe('la bascule (ADR-0012, etape 14)', () => {
+  it('la page et le site lisent en riche sans reglage lisible ; tout autre appelant, l embarquement compris, a plat', () => {
+    expect(MODELE_PAGE).toBe('riche');
+    expect(modeleRetenu(stockageMemoire(), MODELE_PAGE)).toBe('riche');
+    expect(modeleRetenu(stockageMemoire({ [CLE_MODELE]: { modele: 'plat' } }), MODELE_PAGE)).toBe('plat');
+    expect(modeleRetenu(stockageMemoire())).toBe('plat');
+    expect(estEditable(GROUPE.replace('fill="#c81e28"', 'fill="url(#a)"'))).toBe(false);
   });
 });
 

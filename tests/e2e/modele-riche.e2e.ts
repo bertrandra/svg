@@ -1,7 +1,8 @@
 // Le modele riche sur la toile (ADR-0012, etape 2, paquets 2-0 et 2-A). Le reglage du menu Edition, garde dans le stockage ; un SVG
 // a groupes et a degrade ouvert en riche se dessine par noeud (un <g> par groupe, le degrade par ses definitions) ; un clic prend le
 // groupe entier, un double-clic y entre (le reste s'estompe, le groupe montre sa boite), un enfant s'y deplace seul, Echap vide la
-// selection puis sort du groupe ; « Terminer » rend un SVG qui garde ses <g>. Et a plat (le defaut), rien de tout cela.
+// selection puis sort du groupe ; « Terminer » rend un SVG qui garde ses <g>. Le riche est le defaut de la page depuis l'etape 14 ; a
+// plat (la case du menu Edition decochee), rien de tout cela.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -62,8 +63,23 @@ describe('le modele riche sur la toile', () => {
     });
   }
 
-  it('a plat, par defaut : le degrade est refuse, les groupes se fondent ; le reglage du menu Edition se garde', async () => {
+  it('en riche, par defaut (etape 14) : groupes et degrade s ouvrent ; la case du menu Edition ramene a plat les fichiers suivants', async () => {
     const p = await page(null);
+    await ouvrir(p, GROUPES);
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
+    expect(await p.locator('.editeur-svg-toile defs linearGradient').count()).toBe(1);
+    await ouvrirMenu(p, 'Édition');
+    const reglage = p.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets' });
+    expect(await reglage.getAttribute('aria-checked')).toBe('true');
+    await reglage.click();
+    await attend(() => p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'plat' }));
+    await attend(() => annonce(p)).toMatch(/^Groupes, dégradés et effets désactivés : les prochains fichiers s’ouvrent à plat\./);
+    // Le dessin ouvert reste tel qu'il a ete lu : le reglage vaut pour les prochains fichiers.
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
+    await ouvrirMenu(p, 'Fichier');
+    await p.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
+    await p.locator('.editeur-cadre').waitFor({ state: 'detached' });
+    // A plat : le degrade est refuse en le nommant, les groupes se fondent, la case est decochee.
     await p.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(GROUPES);
     await p.getByRole('button', { name: 'Ouvrir ce code' }).click();
     await attend(() => p.locator('.message').first().textContent()).toMatch(/un dégradé ou un motif/);
@@ -71,13 +87,14 @@ describe('le modele riche sur la toile', () => {
     expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
     expect(await p.locator('.editeur-svg-toile path[data-id]').count()).toBe(3);
     await ouvrirMenu(p, 'Édition');
-    const reglage = p.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets' });
-    expect(await reglage.getAttribute('aria-checked')).toBe('false');
-    await reglage.click();
-    await attend(() => p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'riche' }));
-    await attend(() => annonce(p)).toMatch(/Groupes, dégradés et effets activés :/);
-    // Le dessin ouvert reste tel qu'il a ete lu : le reglage vaut pour les prochains fichiers.
-    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
+    expect(await p.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets' }).getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('un reglage illisible dans le stockage vaut le defaut de la page, riche', async () => {
+    const p = await page(null);
+    await p.evaluate(() => { localStorage.setItem('svg.modele', '"riche"'); });
+    await ouvrir(p, GROUPES);
+    expect(await p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
   });
 
   it('en riche : un clic prend le groupe, un double-clic y entre, un enfant s y deplace seul, Echap en sort, les <g> restent', async () => {

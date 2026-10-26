@@ -106,8 +106,20 @@ describe('clavier et lecteur d ecran : la suite', () => {
     it('dit la combinaison puis la separation', async () => {
       const page = await editeur();
       await page.keyboard.press('Control+a');
-      await cliquerEtLire(page, 'Combiner en une forme (Ctrl+G)', /^4 formes combinées en une\. /);
-      await cliquerEtLire(page, 'Séparer les tracés (Ctrl+Maj+G)', /^Forme séparée en \d+ tracés\.$/);
+      await cliquerEtLire(page, 'Combiner en une forme', /^4 formes combinées en une\. /);
+      await cliquerEtLire(page, 'Séparer les tracés', /^Forme séparée en \d+ tracés\.$/);
+    });
+
+    it('a plat (la case du menu Edition decochee) : Ctrl+G combine, Ctrl+Maj+G separe, et les boutons portent ces raccourcis', async () => {
+      const page = await editeur({ modele: 'plat' });
+      await page.keyboard.press('Control+a');
+      await attend(() => dit(page)).toBe('4 formes sélectionnées.');
+      expect(await barre(page, 'Combiner en une forme (Ctrl+G)').count()).toBe(1);
+      await page.keyboard.press('Control+g');
+      await attend(() => dit(page)).toMatch(/^4 formes combinées en une\. /);
+      await attend(() => barre(page, 'Séparer les tracés (Ctrl+Maj+G)').count()).toBe(1);
+      await page.keyboard.press('Control+Shift+G');
+      await attend(() => dit(page)).toMatch(/^Forme séparée en \d+ tracés\.$/);
     });
 
     for (const [nom, phrase] of [
