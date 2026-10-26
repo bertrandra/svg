@@ -2,19 +2,22 @@
 // `npm run construire`, il reprend ce qu'ils ont ecrit dans dist/.
 //
 //   dist/php/
-//     public/                  la racine web
-//       index.php, api.php, config.php, .htaccess, inc/     (outils/site-php/public)
+//     public/                  LE dossier a envoyer (par FTP, a la racine du site) : rien n'est a regler (ADR-0030, revision)
+//       index.php, api.php, config.php, .htaccess          (outils/site-php/public)
+//       inc/                   le code, refuse en acces direct ; inc/mot-de-passe.php (ligne de commande), inc/serveur-local.php
+//                              (le routeur de `php -S`, qui imite les .htaccess)
 //       assets/site.js         l'application (src/site), compilee
 //       assets/site.css        les styles de la page autonome (jetons, base, page, editeur, fontes de l'interface) et ceux du site
 //       assets/vtracer.js      le traceur, charge a la demande comme dans la page
 //       MENTIONS.txt           les licences des composants redistribues
-//     data/                    hors de la racine web
-//       .htaccess              « Require all denied », le filet si data/ doit vivre sous public/
-//       json/                  les annexes de donnees en JSON : bibliotheques, index et apercus des polices, liste des fontes livrees
-//       font/                  les dix fontes livrees (fichiers), puis celles du catalogue que le serveur range
-//       projets/               les projets enregistres
-//     outils/mot-de-passe.php  pose l'empreinte du mot de passe dans data/pwd
+//       data/                  les donnees, sous la racine web : config.php le prend par defaut
+//         .htaccess            « Require all denied » : tout acces direct refuse (pwd et password compris)
+//         json/                les annexes de donnees en JSON : bibliotheques, index et apercus des polices, liste des fontes livrees
+//         font/                les dix fontes livrees (fichiers), puis celles du catalogue que le serveur range
+//         projets/             les projets enregistres
 //
+// Le mot de passe n'est jamais livre : l'administrateur le choisit a la premiere visite, ou depose data/password par FTP.
+// Qui a la main sur le serveur peut sortir data/ de la racine (a cote de public/) : config.php le trouve alors en ../data.
 // Rien ici ne contacte le reseau, et rien de construit n'est commis.
 //
 //   node scripts/site-php.mjs   (apres les autres scripts de « npm run construire »)
@@ -28,6 +31,8 @@ import { POLICES, POLICES_TRAIT, lirePoliceSvg } from './polices.mjs';
 const DIST = depuisRacine('dist');
 const SORTIE = depuisRacine('dist/php');
 const SOURCES = depuisRacine('outils/site-php');
+/** Les donnees vivent sous la racine web, dans le dossier unique a envoyer. */
+const DONNEES = join(SORTIE, 'public/data');
 
 /** Les annexes de donnees de dist/, sorties en JSON pour le serveur : le texte du script, sans `window.X=` ni le `;` final. */
 const ANNEXES_JSON = ['bibliotheque', 'bibliotheque-mdi', 'bibliotheque-ph', 'bibliotheque-tabler', 'bibliotheque-healthicons', 'bibliotheque-lucide', 'polices-catalogue', 'polices-apercus'];
@@ -62,17 +67,17 @@ async function construireStyles() {
   return page.slice(debut + '<style>'.length, fin).trim() + '\n\n' + readFileSync(depuisRacine('outils/editeur-svg/site.css'), 'utf8');
 }
 
-/** Les fontes livrees : leurs fichiers dans data/font, et la liste (data/json/polices.json) que le site lit a la place de polices.js. */
+/** Les fontes livrees : leurs fichiers dans public/data/font, et la liste (public/data/json/polices.json) que le site lit a la place de polices.js. */
 function construirePolicesSite() {
   const liste = [];
   for (const [id, nom, chemin] of POLICES) {
     const fichier = id + '.ttf';
-    copyFileSync(depuisRacine('node_modules/@expo-google-fonts', chemin), join(SORTIE, 'data/font', fichier));
+    copyFileSync(depuisRacine('node_modules/@expo-google-fonts', chemin), join(DONNEES, 'font', fichier));
     liste.push({ id, nom, fichier });
   }
   // Une fonte a trait unique est une police SVG lue en donnees (ADR-0022) : elle reste dans la liste, comme dans polices.js.
   for (const [id, nom, paquet, chemin] of POLICES_TRAIT) liste.push({ id, nom, nature: 'trait', ...lirePoliceSvg(readFileSync(depuisRacine('node_modules', paquet, chemin), 'utf8')) });
-  return ecrire(join(SORTIE, 'data/json/polices.json'), JSON.stringify(liste));
+  return ecrire(join(DONNEES, 'json/polices.json'), JSON.stringify(liste));
 }
 
 export async function construireSitePhp() {
@@ -81,15 +86,15 @@ export async function construireSitePhp() {
   }
   rmSync(SORTIE, { recursive: true, force: true });
   cpSync(join(SOURCES, 'public'), join(SORTIE, 'public'), { recursive: true });
-  cpSync(join(SOURCES, 'outils'), join(SORTIE, 'outils'), { recursive: true });
-  for (const d of ['data/json', 'data/font/catalogue', 'data/projets/corbeille', 'public/assets']) mkdirSync(join(SORTIE, d), { recursive: true });
-  copyFileSync(join(SOURCES, 'data/.htaccess'), join(SORTIE, 'data/.htaccess'));
+  for (const d of ['json', 'font/catalogue', 'projets/corbeille']) mkdirSync(join(DONNEES, d), { recursive: true });
+  mkdirSync(join(SORTIE, 'public/assets'), { recursive: true });
+  copyFileSync(join(SOURCES, 'data/.htaccess'), join(DONNEES, '.htaccess'));
   const script = ecrire(join(SORTIE, 'public/assets/site.js'), await construireScript());
   const styles = ecrire(join(SORTIE, 'public/assets/site.css'), await construireStyles());
   copyFileSync(join(DIST, 'vtracer.js'), join(SORTIE, 'public/assets/vtracer.js'));
   copyFileSync(join(DIST, 'MENTIONS.txt'), join(SORTIE, 'public/MENTIONS.txt'));
   let donnees = 0;
-  for (const nom of ANNEXES_JSON) donnees += ecrire(join(SORTIE, 'data/json', nom + '.json'), jsonDeAnnexe(readFileSync(join(DIST, nom + '.js'), 'utf8'), nom + '.js'));
+  for (const nom of ANNEXES_JSON) donnees += ecrire(join(DONNEES, 'json', nom + '.json'), jsonDeAnnexe(readFileSync(join(DIST, nom + '.js'), 'utf8'), nom + '.js'));
   donnees += construirePolicesSite();
   return { script, styles, donnees };
 }

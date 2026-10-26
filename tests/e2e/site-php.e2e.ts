@@ -1,4 +1,6 @@
-// Le site PHP (ADR-0030), dans un vrai navigateur, contre `php -S` sur une copie de dist/php : connexion par mot de passe, ecran
+// Le site PHP (ADR-0030), dans un vrai navigateur, contre `php -S` sur une copie de dist/php (la disposition livree : le seul dossier
+// public/, data/ dedans, sous le routeur inc/serveur-local.php qui imite les .htaccess) : premier mot de passe, par data/password
+// (FTP) puis choisi dans la page, connexion par mot de passe, ecran
 // « Projets », creer, enregistrer, rouvrir a l'identique (un texte vivant, un projet Cricut a operations melees), renommer,
 // dupliquer, supprimer, deconnexion, acces refuse sans session, police du catalogue servie par le site (sa source simulee par un
 // petit serveur local, jamais le vrai reseau), axe sans violation sur la connexion et l'ecran Projets. La page ne contacte que le site.
@@ -21,6 +23,8 @@ import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../
 
 const MOT = 'un mot de passe assez long';
 const DIST_PHP = resolve(RACINE_DEPOT, 'dist/php');
+/** Le dossier des donnees de la copie servie : sous la racine web, comme le build le livre. */
+const donnees = (chemin: string) => join(racine, 'public/data', chemin);
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
 // Une police du catalogue d'essai : Inter mise en WOFF, que la source simulee sert a l'adresse jsDelivr que l'index designe.
@@ -67,14 +71,15 @@ beforeAll(async () => {
   writeFileSync(join(racine, 'public/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n'
     + "define('ADRESSE_HTTP', true);\ndefine('ADRESSE_PORTS', [" + portSource + "]);\ndefine('ADRESSE_RESEAUX_PERMIS', ['127.0.0.1/32']);\n"
     + "define('ADRESSE_RESOLUTION_ESSAI', ['fichiers.essai' => [['127.0.0.1']], 'interne.essai' => [['10.0.0.8']]]);\n");
-  writeFileSync(join(racine, 'data/json/polices-catalogue.json'), JSON.stringify(INDEX));
-  const mot = spawnSync('php', [join(racine, 'outils/mot-de-passe.php'), '--stdin'], { input: MOT + '\n' });
-  if (mot.status !== 0) throw new Error('mot-de-passe.php : ' + String(mot.stderr));
+  writeFileSync(donnees('json/polices-catalogue.json'), JSON.stringify(INDEX));
+  // Aucun mot de passe : le premier test le pose comme l'administrateur, par FTP (data/password).
   const port = await portLibre();
   site = 'http://127.0.0.1:' + port;
   // Plusieurs travailleurs : sous Firefox, une connexion gardee ouverte par la page d'un test precedent occupait le seul
   // travailleur de `php -S`, et le chargement suivant attendait jusqu'a son delai (une fois sur deux en local, tous les tests).
-  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
+  // Le routeur refuse data/ et inc/ comme le feraient les .htaccess, que `php -S` ignore ; le site, qui se demande a lui-meme si
+  // data/pwd se lit, doit voir ce refus (sinon il avertit).
+  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public'), join(racine, 'public/inc/serveur-local.php')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
   await attendrePort(site);
 });
 
@@ -93,8 +98,10 @@ async function sansViolationGrave(page: Page, ecran: string): Promise<void> {
   expect(graves.map(v => ecran + ' : ' + v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);
 }
 
-/** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. */
-async function ouvrirSite(navigateur: ReturnType<typeof pilote>): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
+/** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. Sans mot de passe (un test lance
+ * seul), il est pose comme par FTP : data/password, que la premiere page convertit. */
+async function ouvrirSite(navigateur: ReturnType<typeof pilote>, poserMotDePasse = true): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
+  if (poserMotDePasse && !existsSync(donnees('pwd'))) writeFileSync(donnees('password'), MOT + '\n');
   const s = await navigateur.ouvrir({ naviguer: false });
   const requetes: string[] = [];
   s.page.on('request', r => { if (!r.url().startsWith('data:') && !r.url().startsWith('blob:')) requetes.push(r.url()); });
@@ -144,6 +151,61 @@ async function enregistrerSous(page: Page, nom: string): Promise<void> {
 
 describe('le site PHP', () => {
   const navigateur = pilote();
+
+  it('sans mot de passe, la page dit de creer data/password ; le fichier depose devient le mot de passe, disparait, et data/ ne se lit pas', async () => {
+    rmSync(donnees('pwd'), { force: true });
+    const { page, requetes } = await ouvrirSite(navigateur, false);
+    await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).waitFor();
+    expect(await texteDe(page.locator('form.carte-connexion'))).toContain('data/password');
+    // L'administrateur depose le fichier par FTP, puis recharge la page.
+    writeFileSync(donnees('password'), '  ' + MOT + '\r\n');
+    await page.reload();
+    await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Mot de passe enregistré, et le fichier data/password supprimé : connectez-vous avec ce mot de passe.');
+    expect(existsSync(donnees('password'))).toBe(false);
+    await connecter(page);
+    expect(await page.locator('.site-avertissement').count()).toBe(0);
+    // Ni l'empreinte ni un mot de passe en clair ne se lisent par HTTP (le routeur, comme data/.htaccess, refuse data/).
+    writeFileSync(donnees('password'), 'un fichier oublie');
+    for (const f of ['data/password', 'data/pwd', 'data/.htaccess', 'data/sessions/']) {
+      const r = await page.request.get(site + '/' + f);
+      expect([403, 404], f).toContain(r.status());
+      expect(await r.text(), f).not.toMatch(/oublie|\$argon2|\$2y\$/);
+    }
+    rmSync(donnees('password'));
+    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+  });
+
+  it('a la premiere visite, le mot de passe se choisit dans la page, qui ouvre l application ; ensuite, le choix n existe plus', async () => {
+    rmSync(donnees('pwd'), { force: true });
+    const { page, requetes } = await ouvrirSite(navigateur, false);
+    await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).waitFor();
+    await sansViolationGrave(page, 'premier mot de passe');
+    await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
+    await page.getByLabel('Le même, de nouveau').fill(MOT + ' autre');
+    await page.getByRole('button', { name: 'Enregistrer le mot de passe' }).click();
+    await attend(() => texteDe(page.getByRole('alert'))).toBe('Les deux saisies diffèrent : rien n’est enregistré.');
+    expect(existsSync(donnees('pwd'))).toBe(false);
+    await sansViolationGrave(page, 'premier mot de passe en erreur');
+    await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
+    await page.getByLabel('Le même, de nouveau').fill(MOT);
+    await page.getByRole('button', { name: 'Enregistrer le mot de passe' }).click();
+    // La personne vient de le choisir : l'application s'ouvre, sans connexion de plus.
+    await page.getByRole('heading', { name: 'Mes projets' }).waitFor();
+    expect(existsSync(donnees('pwd'))).toBe(true);
+    await page.getByRole('button', { name: 'Se déconnecter' }).click();
+    await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Vous êtes déconnecté.');
+    expect(await page.getByRole('heading', { name: 'Choisissez le mot de passe du site' }).count()).toBe(0);
+    await connecter(page);
+    // Le choix n'est plus accessible : un envoi direct est refuse, le mot de passe reste.
+    const empreinte = readFileSync(donnees('pwd'), 'utf8');
+    const html = await (await page.request.get(site + '/index.php?au-revoir')).text();
+    expect(html).not.toContain('Choisissez le mot de passe');
+    const refus = await page.request.post(site + '/index.php', { form: { action: 'choisir', csrf: /(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/.exec(html)?.[1] ?? '', mot_de_passe: 'le mot de passe pirate', confirmation: 'le mot de passe pirate' } });
+    expect(refus.status()).toBe(403);
+    expect(await refus.text()).toContain('Un mot de passe a déjà été posé');
+    expect(readFileSync(donnees('pwd'), 'utf8')).toBe(empreinte);
+    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+  });
 
   it('refuse l acces sans session ; la connexion dit une erreur claire ; connexion et Projets sans violation axe', async () => {
     const { page, requetes } = await ouvrirSite(navigateur);
@@ -219,7 +281,7 @@ describe('le site PHP', () => {
     await confirmation.getByRole('button', { name: 'Supprimer', exact: true }).click();
     await attend(() => ligneProjet(page, 'Carte renommée (copie)').count()).toBe(0);
     expect((await projets(page)).map(p => p.nom).sort()).toEqual(['Carte renommée', 'exemple']);
-    expect(readdirSync(join(racine, 'data/projets/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
+    expect(readdirSync(donnees('projets/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
 
     // Se deconnecter : retour a la connexion, l'API refuse.
     await page.getByRole('button', { name: 'Se déconnecter' }).click();
@@ -273,7 +335,7 @@ describe('le site PHP', () => {
     await ligne.click();
     await attend(() => valeurPolice(zone)).toBe(ID_ESSAI);
     expect(demandesSource).toEqual(['/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff']);
-    expect(readdirSync(join(racine, 'data/font/catalogue')).length).toBe(1);
+    expect(readdirSync(donnees('font/catalogue')).length).toBe(1);
     expect(requetes.some(u => u.startsWith(site + '/api.php?r=police&sha='))).toBe(true);
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await page.locator('.editeur-barre .groupe.fin button.primaire').click();
@@ -313,7 +375,7 @@ describe('le site PHP', () => {
     expect(demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret', '/photo.svg']);
     expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
     expect(requetes.filter(u => u.startsWith(site + '/api.php?r=adresse')).length).toBe(3);
-    const journal = readFileSync(join(racine, 'data/journal/adresses.log'), 'utf8');
+    const journal = readFileSync(donnees('journal/adresses.log'), 'utf8');
     expect(journal).toContain('hote=fichiers.essai');
     expect(journal).not.toContain('secret');
     // Le refus du serveur (403) s'ecrit dans la console du navigateur de lui-meme : ce n'est pas la page.

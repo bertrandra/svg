@@ -1,11 +1,13 @@
 <?php
 // Pose le mot de passe du site (ADR-0030) : son empreinte (`password_hash`, argon2id quand PHP l'a, bcrypt sinon) dans data/pwd,
-// jamais le mot de passe lui-meme. En ligne de commande seulement :
+// jamais le mot de passe lui-meme. En ligne de commande seulement, depuis le dossier du site (celui d'index.php) :
 //
-//   php outils/mot-de-passe.php            demande le mot de passe deux fois, sans l'afficher
-//   php outils/mot-de-passe.php --stdin    le lit sur l'entree standard (une ligne), pour un script d'installation
+//   php inc/mot-de-passe.php            demande le mot de passe deux fois, sans l'afficher
+//   php inc/mot-de-passe.php --stdin    le lit sur l'entree standard (une ligne), pour un script d'installation
 //
-// Relancer l'outil change le mot de passe ; les sessions ouvertes restent valides jusqu'a leur expiration.
+// Sans ligne de commande (un hebergement FTP), un fichier data/password fait la meme chose : voir inc/connexion.php. Il vit dans
+// inc/, que le .htaccess refuse au Web, et ne fait rien hors de la ligne de commande. Relancer l'outil change le mot de passe ; les
+// sessions ouvertes sont fermees (elles portent la marque de l'ancienne empreinte, voir inc/session.php).
 
 declare(strict_types=1);
 
@@ -15,10 +17,8 @@ if (PHP_SAPI !== 'cli') {
 }
 
 define('SVG_SITE', true);
-require __DIR__ . '/../public/inc/amorce.php';
-require __DIR__ . '/../public/inc/connexion.php';
-
-const LONGUEUR_MIN = 10;
+require __DIR__ . '/amorce.php';
+require __DIR__ . '/connexion.php';
 
 function lire_cache(string $invite): string
 {
@@ -45,8 +45,9 @@ if ($stdin) {
         exit(1);
     }
 }
-if (mb_strlen($mot) < LONGUEUR_MIN) {
-    fwrite(STDERR, 'Le mot de passe doit compter au moins ' . LONGUEUR_MIN . " caractères : rien n’est changé.\n");
+$refus = mot_de_passe_refuse($mot);
+if ($refus !== null) {
+    fwrite(STDERR, $refus . " : rien n’est changé.\n");
     exit(1);
 }
 

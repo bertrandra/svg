@@ -22,11 +22,24 @@ function rendre_page(string $titre, string $corps, int $statut = 200, string $sc
     exit;
 }
 
+/** Les avertissements de l'administrateur, chacun lu tout de suite. */
+function avertissements_html(array $avertissements): string
+{
+    $html = '';
+    foreach ($avertissements as $a) {
+        if (is_string($a) && $a !== '') {
+            $html .= '<p class="message site-avertissement" role="alert">' . h($a) . '</p>';
+        }
+    }
+    return $html;
+}
+
 /** Le formulaire de connexion, avec son erreur quand il y en a une (liee au champ, lue tout de suite). */
-function page_connexion(string $erreur = '', string $info = '', int $statut = 200): never
+function page_connexion(string $erreur = '', string $info = '', int $statut = 200, array $avertissements = []): never
 {
     $idErreur = $erreur !== '' ? ' aria-describedby="erreur-connexion" aria-invalid="true"' : '';
-    $corps = '<main class="accueil connexion">'
+    $corps = avertissements_html($avertissements)
+        . '<main class="accueil connexion">'
         . '<header class="tete"><h1>Éditeur SVG</h1><p>Ce site est réservé : saisissez son mot de passe pour retrouver vos projets.</p></header>'
         . ($info !== '' ? '<p class="message neutre" role="status">' . h($info) . '</p>' : '')
         . '<form class="carte-connexion" method="post" action="index.php">'
@@ -38,6 +51,31 @@ function page_connexion(string $erreur = '', string $info = '', int $statut = 20
         . '<div class="actions"><button type="submit" class="primaire">Se connecter</button></div>'
         . '</form></main>';
     rendre_page('Connexion · Éditeur SVG', $corps, $statut);
+}
+
+/**
+ * La premiere visite, tant qu'aucun mot de passe n'est pose : le choisir dans la page (deux saisies identiques, dix caracteres au
+ * moins), et, plus discret, les autres voies (data/password par FTP, la ligne de commande).
+ */
+function page_premier_mot_de_passe(string $erreur = '', int $statut = 200): never
+{
+    $lie = $erreur !== '' ? ' aria-describedby="erreur-choix regle-choix" aria-invalid="true"' : ' aria-describedby="regle-choix"';
+    $corps = '<main class="accueil connexion">'
+        . '<header class="tete"><h1>Éditeur SVG</h1><p>Première visite : ce site n’a pas encore de mot de passe. Choisissez-le maintenant ; il protégera vos projets, et vous le saisirez à chaque connexion.</p></header>'
+        . '<form class="carte-connexion" method="post" action="index.php" aria-labelledby="titre-choix">'
+        . '<h2 id="titre-choix">Choisissez le mot de passe du site</h2>'
+        . '<input type="hidden" name="action" value="choisir">'
+        . '<input type="hidden" name="csrf" value="' . h(jeton_csrf()) . '">'
+        . ($erreur !== '' ? '<p class="message" role="alert" id="erreur-choix">' . h($erreur) . '</p>' : '')
+        . '<p class="aide" id="regle-choix">' . MOT_DE_PASSE_LONGUEUR_MIN . ' caractères au moins.</p>'
+        . '<label class="champ" for="nouveau-mot-de-passe"><span>Mot de passe</span></label>'
+        . '<input id="nouveau-mot-de-passe" name="mot_de_passe" type="password" autocomplete="new-password" minlength="' . MOT_DE_PASSE_LONGUEUR_MIN . '" required autofocus' . $lie . '>'
+        . '<label class="champ" for="confirmation-mot-de-passe"><span>Le même, de nouveau</span></label>'
+        . '<input id="confirmation-mot-de-passe" name="confirmation" type="password" autocomplete="new-password" minlength="' . MOT_DE_PASSE_LONGUEUR_MIN . '" required' . $lie . '>'
+        . '<div class="actions"><button type="submit" class="primaire">Enregistrer le mot de passe</button></div>'
+        . '<p class="aide">Tant qu’il n’est pas choisi, n’importe quel visiteur pourrait le faire : ne tardez pas. Vous pouvez aussi le poser sans cette page : créez par FTP un fichier data/password qui contient le mot de passe, puis rechargez la page (le site en garde l’empreinte et supprime le fichier) ; ou, en ligne de commande dans le dossier du site : php inc/mot-de-passe.php</p>'
+        . '</form></main>';
+    rendre_page('Premier mot de passe · Éditeur SVG', $corps, $statut);
 }
 
 /** Ce que l'administrateur doit encore faire : la phrase, et la commande quand il y en a une. Personne n'entre. */
@@ -53,10 +91,10 @@ function page_installation(string $phrase, string $commande = ''): never
     rendre_page('Installation · Éditeur SVG', $corps, 503);
 }
 
-/** L'application : le conteneur, son jeton CSRF et l'avertissement de l'administrateur s'il y en a un, puis le script. */
-function page_application(string $avertissement): never
+/** L'application : le conteneur, son jeton CSRF et les avertissements de l'administrateur s'il y en a, puis le script. */
+function page_application(array $avertissements): never
 {
-    $corps = ($avertissement !== '' ? '<p class="message site-avertissement" role="alert">' . h($avertissement) . '</p>' : '')
+    $corps = avertissements_html($avertissements)
         . '<div id="site" data-csrf="' . h(jeton_csrf()) . '" data-api="api.php" data-assets="assets/" data-adresse="' . (ADRESSE_OUVERTURE ? '1' : '0') . '" data-adresse-http="' . (ADRESSE_HTTP ? '1' : '0') . '">'
         . '<main class="accueil"><p class="message">Chargement de l’éditeur… Si ce message reste affiché, JavaScript est désactivé ou ce navigateur est trop ancien : utilisez une version récente de Chrome, Edge, Firefox ou Safari.</p></main>'
         . '</div>';

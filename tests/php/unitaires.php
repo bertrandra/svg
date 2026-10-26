@@ -1,6 +1,7 @@
 <?php
 // Les fonctions du site, appelees directement sur un dossier de donnees temporaire (ADR-0030) : noms et chemins hostiles, structure
-// d'un projet, ecriture atomique, controle de version, corbeille, mot de passe, limitation des essais, polices hors de l'index.
+// d'un projet, ecriture atomique, controle de version, corbeille, mot de passe (empreinte, data/password, premier choix dans la
+// page), limitation des essais, polices hors de l'index.
 
 declare(strict_types=1);
 
@@ -207,6 +208,109 @@ test('le mot de passe se verifie contre son empreinte, jamais en clair', functio
     file_put_contents(fichier_mot_de_passe(), "en clair\n");
     egal(false, mot_de_passe_pose(), 'un fichier en clair n est pas une empreinte');
     egal(false, verifier_mot_de_passe('en clair'));
+});
+
+/** Ecrit data/password comme l'administrateur le fait par FTP. */
+function deposer(string $contenu): void
+{
+    file_put_contents(fichier_mot_de_passe_clair(), $contenu);
+}
+
+function empreinte(): string
+{
+    return is_file(fichier_mot_de_passe()) ? trim((string) file_get_contents(fichier_mot_de_passe())) : '';
+}
+
+test('data/password devient l empreinte de data/pwd, puis disparait ; blancs, fins de ligne et BOM retires', function (): void {
+    @unlink(fichier_mot_de_passe());
+    egal(null, convertir_mot_de_passe_clair(), 'rien a faire sans data/password');
+    deposer("\xEF\xBB\xBF  mon mot de passe FTP \r\n\n");
+    egal(['pose' => true], convertir_mot_de_passe_clair());
+    egal(false, file_exists(fichier_mot_de_passe_clair()), 'le fichier en clair est supprime');
+    affirmer(password_verify('mon mot de passe FTP', empreinte()), 'l empreinte verifie le mot de passe sans ses blancs');
+    egal(false, password_verify(' mon mot de passe FTP ', empreinte()), 'les blancs des extremites ne comptent pas');
+    egal(false, str_contains(empreinte(), 'FTP'), 'jamais en clair');
+    egal(true, (fileperms(fichier_mot_de_passe()) & 0o077) === 0o040 || (fileperms(fichier_mot_de_passe()) & 0o077) === 0, 'memes droits que l outil');
+    egal(true, mot_de_passe_pose());
+    egal(true, verifier_mot_de_passe('mon mot de passe FTP'));
+    $journal = (string) file_get_contents(donnees('journal/connexions.log'));
+    contient('mot de passe pose depuis data/password', $journal);
+    egal(false, str_contains($journal, 'FTP'), 'le journal ne dit jamais le mot de passe');
+    egal([], array_values(array_filter(scandir(donnees()) ?: [], fn($n) => str_starts_with($n, '.tmp-'))), 'aucun temporaire');
+});
+
+test('un data/password trop court, vide ou pas en UTF-8 est refuse sans rien ecrire, et reste en place', function (): void {
+    $avant = empreinte();
+    foreach (["court\n", "   \n", '', "mot de pass\xe9 latin-1"] as $contenu) {
+        deposer($contenu);
+        $r = convertir_mot_de_passe_clair();
+        contient('data/password est refusé', $r['erreur'] ?? '', var_export($contenu, true));
+        egal(true, is_file(fichier_mot_de_passe_clair()), 'le fichier reste, pour etre corrige');
+        egal($avant, empreinte(), 'data/pwd n a pas change');
+    }
+    deposer("neuf car.\n");
+    contient('au moins 10 caractères', convertir_mot_de_passe_clair()['erreur'] ?? '');
+    unlink(fichier_mot_de_passe_clair());
+});
+
+test('un data/password remplace un mot de passe existant', function (): void {
+    poser_mot_de_passe('l ancien mot de passe');
+    deposer('le nouveau mot de passe');
+    egal(['pose' => true], convertir_mot_de_passe_clair());
+    egal(true, verifier_mot_de_passe('le nouveau mot de passe'));
+    egal(false, verifier_mot_de_passe('l ancien mot de passe'));
+    contient('mot de passe change depuis data/password', (string) file_get_contents(donnees('journal/connexions.log')));
+});
+
+test('un data/password qui ne se supprime pas : l empreinte est posee, un avertissement le dit, le journal aussi, une seule fois', function (): void {
+    $erreurs = (string) ini_get('error_log');
+    file_put_contents($erreurs, '');
+    deposer("encore un autre mot de passe\n");
+    $refuse = fn(string $f): bool => false;
+    $r = convertir_mot_de_passe_clair($refuse);
+    contient('Supprimez le fichier data/password par FTP : le mot de passe y est lisible en clair', $r['avertissement'] ?? '');
+    egal(true, is_file(fichier_mot_de_passe_clair()));
+    egal(true, verifier_mot_de_passe('encore un autre mot de passe'), 'l empreinte est quand meme posee');
+    contient('data/password ne se supprime pas', (string) file_get_contents($erreurs));
+    egal(false, str_contains((string) file_get_contents($erreurs), 'encore un autre'), 'le journal ne dit pas le mot de passe');
+    // La requete suivante reconnait le fichier deja converti : l'avertissement reste, l'empreinte n'est pas refaite.
+    $empreinte = empreinte();
+    contient('Supprimez le fichier data/password', convertir_mot_de_passe_clair($refuse)['avertissement'] ?? '');
+    egal($empreinte, empreinte(), 'pas d empreinte refaite a chaque requete');
+    // L'administrateur y met un autre mot de passe : il est pris.
+    deposer("et finalement celui-ci\n");
+    convertir_mot_de_passe_clair($refuse);
+    egal(true, verifier_mot_de_passe('et finalement celui-ci'));
+    // Il finit par le supprimer : plus d'avertissement, plus de note.
+    unlink(fichier_mot_de_passe_clair());
+    egal(null, convertir_mot_de_passe_clair());
+    egal(false, is_file(donnees('journal/password-restant.txt')));
+});
+
+test('le premier mot de passe se choisit seulement sans data/pwd ; saisies differentes ou trop courtes refusees sans rien ecrire', function (): void {
+    @unlink(fichier_mot_de_passe());
+    contient('diffèrent', (string) poser_premier_mot_de_passe('un premier mot de passe', 'un premier mot de passf'));
+    contient('au moins 10 caractères', (string) poser_premier_mot_de_passe('court', 'court'));
+    contient('au moins 10 caractères', (string) poser_premier_mot_de_passe(['tableau'], ['tableau']));
+    egal(false, file_exists(fichier_mot_de_passe()), 'rien n est ecrit');
+    egal(null, poser_premier_mot_de_passe('un premier mot de passe', 'un premier mot de passe'));
+    egal(true, verifier_mot_de_passe('un premier mot de passe'));
+    egal(MSG_MOT_DE_PASSE_DEJA, poser_premier_mot_de_passe('un second mot de passe', 'un second mot de passe'));
+    egal(true, verifier_mot_de_passe('un premier mot de passe'), 'le premier reste');
+    // Meme un data/pwd illisible ou mal forme ferme la route : on ne remplace jamais un fichier existant par la page.
+    file_put_contents(fichier_mot_de_passe(), "pas une empreinte\n");
+    egal(MSG_MOT_DE_PASSE_DEJA, poser_premier_mot_de_passe('un second mot de passe', 'un second mot de passe'));
+    egal("pas une empreinte\n", file_get_contents(fichier_mot_de_passe()));
+    unlink(fichier_mot_de_passe());
+});
+
+test('data/.htaccess se reecrit s il manque, a l identique de celui que livre le build', function (): void {
+    $f = donnees('.htaccess');
+    egal(file_get_contents(dirname(__DIR__, 2) . '/outils/site-php/data/.htaccess'), HTACCESS_DONNEES, 'la constante et le fichier livre');
+    @unlink($f);
+    egal(null, preparer_donnees());
+    egal(HTACCESS_DONNEES, file_get_contents($f));
+    contient('Require all denied', HTACCESS_DONNEES);
 });
 
 test('les essais de connexion attendent un delai qui double apres les essais libres, puis le plafond', function (): void {

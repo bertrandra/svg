@@ -1,8 +1,9 @@
 <?php
 // Le site par HTTP, comme un navigateur le voit (ADR-0030) : `php -S` sur une copie de outils/site-php, un dossier de donnees
 // temporaire, et une source de polices simulee par un second `php -S` (jamais le vrai reseau). Connexion (bon et mauvais mot de
-// passe, CSRF, limitation, expiration), en-tetes, toute route sous session, ecritures sous jeton, chemins hostiles, JSON geant ou
-// invalide, controle de version, polices hors index et empreinte fausse.
+// passe, CSRF, limitation, expiration), premier mot de passe choisi dans la page, data/password par FTP, disposition livree (data/
+// dans public/, sous le routeur qui imite les .htaccess), en-tetes, toute route sous session, ecritures sous jeton, chemins
+// hostiles, JSON geant ou invalide, controle de version, polices hors index et empreinte fausse.
 
 declare(strict_types=1);
 
@@ -11,13 +12,12 @@ require __DIR__ . '/outils.php';
 const MOT = 'un mot de passe assez long';
 $depot = dirname(__DIR__, 2);
 
-/** Une copie du site : public/ (avec un config.local.php), outils/, data/ vide ; et ses reglages. */
+/** Une copie du site, data/ a cote de public/ (avec un config.local.php), data/ vide ; et ses reglages. */
 function installer(string $depot, array $reglages, bool $avecMotDePasse = true): array
 {
     $t = dossier_temporaire('site-http');
     register_shutdown_function(fn() => effacer($t));
     copier($depot . '/outils/site-php/public', $t . '/public');
-    copier($depot . '/outils/site-php/outils', $t . '/outils');
     mkdir($t . '/data/json', 0700, true);
     $lignes = ["<?php"];
     foreach ($reglages as $nom => $valeur) {
@@ -25,7 +25,7 @@ function installer(string $depot, array $reglages, bool $avecMotDePasse = true):
     }
     file_put_contents($t . '/public/config.local.php', implode("\n", $lignes) . "\n");
     if ($avecMotDePasse) {
-        $p = proc_open([PHP_BINARY, $t . '/outils/mot-de-passe.php', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $tubes);
+        $p = proc_open([PHP_BINARY, $t . '/public/inc/mot-de-passe.php', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $tubes);
         fwrite($tubes[0], MOT . "\n");
         fclose($tubes[0]);
         $sortie = stream_get_contents($tubes[1]) . stream_get_contents($tubes[2]);
@@ -35,6 +35,22 @@ function installer(string $depot, array $reglages, bool $avecMotDePasse = true):
         }
     }
     return ['racine' => $t, 'url' => serveur_php($t . '/public')];
+}
+
+/**
+ * La disposition livree, telle qu'on l'envoie par FTP : public/ seul, data/ dedans (avec son .htaccess), aucun config.local.php,
+ * aucun mot de passe. `php -S` n'applique pas les .htaccess : avec `$routeur`, inc/serveur-local.php refuse data/ a leur place ;
+ * sans, data/ se sert comme un fichier ordinaire (un .htaccess ignore). Rend la racine web, data/ et l'adresse.
+ */
+function installer_livre(string $depot, bool $routeur = true): array
+{
+    $t = dossier_temporaire('site-livre');
+    register_shutdown_function(fn() => effacer($t));
+    copier($depot . '/outils/site-php/public', $t . '/public');
+    mkdir($t . '/public/data/json', 0700, true);
+    copy($depot . '/outils/site-php/data/.htaccess', $t . '/public/data/.htaccess');
+    $public = $t . '/public';
+    return ['public' => $public, 'data' => $public . '/data', 'url' => serveur_php($public, $routeur ? $public . '/inc/serveur-local.php' : null, 4)];
 }
 
 // La source de polices simulee : un fichier juste (400) et un faux (700) aux adresses de jsDelivr et de Bunny.
@@ -146,17 +162,133 @@ test('apres trois echecs, chaque essai attend un delai qui double, meme avec le 
     egal(false, str_contains($journal, '127.0.0.1'), 'le journal ne garde pas l adresse');
 });
 
-test('sans data/pwd, l administrateur lit comment le poser, et personne n entre', function () use ($depot): void {
+/** Le jeton CSRF du formulaire de la page courante. */
+function jeton_de(string $page): string
+{
+    return preg_match('/name="csrf" value="([a-f0-9]{64})"/', $page, $m) === 1 ? $m[1] : '';
+}
+
+test('sans aucun mot de passe, la page le fait choisir, dit les autres voies, et personne n entre autrement', function () use ($depot): void {
     $s = installer($depot, [], false);
     $c = new Client($s['url']);
     [$statut, , $page] = $c->get('index.php');
-    egal(503, $statut);
-    contient('php outils/mot-de-passe.php', $page);
-    [$statut] = $c->formulaire('index.php', ['action' => 'connexion', 'csrf' => '', 'mot_de_passe' => '']);
-    egal(503, $statut);
+    egal(200, $statut);
+    contient('<h2 id="titre-choix">Choisissez le mot de passe du site</h2>', $page);
+    contient('autocomplete="new-password"', $page);
+    contient('data/password', $page);
+    contient('php inc/mot-de-passe.php', $page);
+    egal(false, str_contains($page, 'name="action" value="connexion"'), 'pas de formulaire de connexion');
+    [$statut, , $page] = $c->formulaire('index.php', ['action' => 'connexion', 'csrf' => $c->jeton(), 'mot_de_passe' => 'nimporte quoi de long']);
+    egal(200, $statut);
+    contient('Choisissez le mot de passe du site', $page, 'une connexion sans mot de passe ramene au choix');
     [$statut, , $corps] = $c->get('api.php?r=projets');
     egal(401, $statut);
     egal('session', json_decode($corps, true)['erreur'] ?? null);
+});
+
+test('le premier mot de passe : CSRF exige, saisies differentes ou trop courtes refusees sans rien ecrire, puis la session s ouvre', function () use ($depot): void {
+    $s = installer($depot, [], false);
+    $pwd = $s['racine'] . '/data/pwd';
+    $c = new Client($s['url']);
+    [, , $page] = $c->get('index.php');
+    $jeton = jeton_de($page);
+    [$statut, , $page] = $c->formulaire('index.php', ['action' => 'choisir', 'mot_de_passe' => 'un premier mot de passe', 'confirmation' => 'un premier mot de passe']);
+    egal(200, $statut);
+    contient('La page a expiré', $page);
+    egal(false, file_exists($pwd), 'sans jeton, rien n est ecrit');
+    [, , $page] = $c->formulaire('index.php', ['action' => 'choisir', 'csrf' => str_repeat('0', 64), 'mot_de_passe' => 'un premier mot de passe', 'confirmation' => 'un premier mot de passe']);
+    contient('La page a expiré', $page);
+    [, , $page] = $c->formulaire('index.php', ['action' => 'choisir', 'csrf' => $jeton, 'mot_de_passe' => 'un premier mot de passe', 'confirmation' => 'un autre mot de passe']);
+    contient('Les deux saisies diffèrent', $page);
+    contient('role="alert" id="erreur-choix"', $page);
+    contient('aria-invalid="true"', $page);
+    [, , $page] = $c->formulaire('index.php', ['action' => 'choisir', 'csrf' => $jeton, 'mot_de_passe' => 'court', 'confirmation' => 'court']);
+    contient('au moins 10 caractères', $page);
+    egal(false, file_exists($pwd), 'aucun refus n a rien ecrit');
+    [$statut, $h] = $c->formulaire('index.php', ['action' => 'choisir', 'csrf' => $jeton, 'mot_de_passe' => 'un premier mot de passe', 'confirmation' => 'un premier mot de passe']);
+    egal(303, $statut);
+    contient('svg_session=', $h['set-cookie'] ?? '', 'un nouvel identifiant de session');
+    affirmer(password_verify('un premier mot de passe', trim((string) file_get_contents($pwd))), 'l empreinte est ecrite');
+    egal(true, (fileperms($pwd) & 0o077) === 0o040 || (fileperms($pwd) & 0o077) === 0, 'memes droits que l outil');
+    [, , $app] = $c->get('index.php');
+    contient('<div id="site" data-csrf="', $app, 'la session est ouverte : l application');
+    egal(200, $c->get('api.php?r=projets')[0]);
+    contient('mot de passe pose depuis la page de premiere visite', (string) file_get_contents($s['racine'] . '/data/journal/connexions.log'));
+    // Le formulaire n'existe plus : un autre visiteur voit la connexion, et un envoi direct est refuse.
+    $autre = new Client($s['url']);
+    [, , $page] = $autre->get('index.php');
+    contient('name="action" value="connexion"', $page);
+    egal(false, str_contains($page, 'Choisissez le mot de passe'), 'plus de formulaire de choix');
+    $empreinte = file_get_contents($pwd);
+    [$statut, , $page] = $autre->formulaire('index.php', ['action' => 'choisir', 'csrf' => jeton_de($page), 'mot_de_passe' => 'le mot de passe pirate', 'confirmation' => 'le mot de passe pirate']);
+    egal(403, $statut);
+    contient('Un mot de passe a déjà été posé', $page);
+    egal($empreinte, file_get_contents($pwd), 'le mot de passe reste');
+    egal(303, $autre->connecter('un premier mot de passe')[0], 'la connexion marche avec le mot de passe choisi');
+});
+
+test('un data/pwd mal forme ne rouvre pas le choix : l administrateur lit quoi faire', function () use ($depot): void {
+    $s = installer($depot, [], false);
+    file_put_contents($s['racine'] . '/data/pwd', "pas une empreinte\n");
+    [$statut, , $page] = (new Client($s['url']))->get('index.php');
+    egal(503, $statut);
+    contient('ne contient pas d’empreinte reconnue', $page);
+    contient('data/password', $page);
+});
+
+test('la disposition livree : data/ dans public/, data/password par FTP devient le mot de passe, data/ ne se lit pas par HTTP', function () use ($depot): void {
+    $s = installer_livre($depot);
+    $c = new Client($s['url']);
+    contient('Choisissez le mot de passe du site', $c->get('index.php')[2]);
+    file_put_contents($s['data'] . '/password', "court\n");
+    [$statut, , $page] = $c->get('index.php');
+    egal(503, $statut, 'trop court : refuse');
+    contient('data/password est refusé', $page);
+    egal(true, is_file($s['data'] . '/password'));
+    egal(false, is_file($s['data'] . '/pwd'));
+    file_put_contents($s['data'] . '/password', "  le mot de passe par FTP\r\n");
+    [$statut, , $page] = $c->get('index.php');
+    egal(200, $statut);
+    contient('Mot de passe enregistré, et le fichier data/password supprimé', $page);
+    egal(false, file_exists($s['data'] . '/password'), 'le fichier en clair a disparu');
+    affirmer(password_verify('le mot de passe par FTP', trim((string) file_get_contents($s['data'] . '/pwd'))), 'empreinte dans public/data/pwd');
+    egal(303, $c->connecter('le mot de passe par FTP')[0]);
+    [, , $app] = $c->get('index.php');
+    contient('<div id="site"', $app);
+    egal(false, str_contains($app, 'site-avertissement'), 'la verification HTTP de data/ passe : aucun avertissement');
+    $vu = json_decode((string) file_get_contents($s['data'] . '/journal/verification-http.json'), true);
+    egal(false, $vu['lisible'] ?? null, 'le site s est demande data/pwd, et le serveur a refuse');
+    file_put_contents($s['data'] . '/password', 'un fichier oublie');
+    foreach (['data/pwd', 'data/password', 'data/.htaccess', 'data/secret', 'data/journal/connexions.log', 'DATA/pwd', 'assets/../data/pwd', 'data%2Fpwd', 'inc/mot-de-passe.php', 'inc/serveur-local.php'] as $f) {
+        [$statut, , $corps] = (new Client($s['url']))->get($f);
+        affirmer(in_array($statut, [403, 404], true), $f . ' : ' . $statut);
+        egal(false, str_contains($corps, 'oublie') || str_contains($corps, '$argon2') || str_contains($corps, '$2y$'), $f . ' ne dit rien');
+    }
+});
+
+test('sans .htaccess applique, la disposition livree avertit que data/ se lit par HTTP', function () use ($depot): void {
+    $s = installer_livre($depot, false);
+    $c = new Client($s['url']);
+    file_put_contents($s['data'] . '/password', 'un mot de passe assez long');
+    $c->get('index.php');
+    egal(303, $c->connecter('un mot de passe assez long')[0]);
+    [, , $app] = $c->get('index.php');
+    contient('le dossier des données est lisible depuis le Web', $app);
+    contient('se lit par HTTP', (string) file_get_contents($s['data'] . '/journal/erreurs.log'));
+});
+
+test('changer le mot de passe par data/password ferme les sessions ouvertes, l API comprise', function () use ($depot): void {
+    $s = installer($depot, []);
+    [$c] = connecte($s['url']);
+    egal(200, $c->get('api.php?r=projets')[0]);
+    file_put_contents($s['racine'] . '/data/password', "le nouveau mot de passe\n");
+    egal(401, $c->get('api.php?r=projets')[0], 'l API ferme la session sans que personne ne recharge la page');
+    egal(false, file_exists($s['racine'] . '/data/password'), 'converti par l API');
+    contient('Le mot de passe du site a changé : reconnectez-vous.', $c->get('index.php')[2]);
+    $d = new Client($s['url']);
+    contient('Mot de passe incorrect.', $d->connecter(MOT)[2] ?? '');
+    egal(303, $d->connecter('le nouveau mot de passe')[0]);
+    egal(200, $d->get('api.php?r=projets')[0]);
 });
 
 test('toute route de l API exige la session', function () use ($url): void {
@@ -311,7 +443,7 @@ test('la deconnexion ferme la session ; une session inactive expire', function (
 
 test('config.php, inc/ et l outil du mot de passe ne disent rien demandes directement', function () use ($url): void {
     $c = new Client($url);
-    foreach (['config.php', 'config.local.php', 'inc/amorce.php', 'inc/projets.php', 'inc/session.php'] as $f) {
+    foreach (['config.php', 'config.local.php', 'inc/amorce.php', 'inc/projets.php', 'inc/session.php', 'inc/connexion.php', 'inc/mot-de-passe.php', 'inc/serveur-local.php'] as $f) {
         [$statut, , $corps] = $c->get($f);
         affirmer($corps === '', $f . ' a repondu : ' . mb_substr($corps, 0, 80));
         affirmer($statut === 404 || $statut === 200, $f . ' : ' . $statut);

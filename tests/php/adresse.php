@@ -175,7 +175,6 @@ for ($i = 0; $i < 100 && !@fsockopen('127.0.0.1', $portSource, $no, $err, 0.1); 
 $site = dossier_temporaire('site-adresse');
 register_shutdown_function(fn() => effacer($site));
 copier($depot . '/outils/site-php/public', $site . '/public');
-copier($depot . '/outils/site-php/outils', $site . '/outils');
 mkdir($site . '/data/json', 0700, true);
 $reglages = [
     'ADRESSE_HTTP' => true, 'ADRESSE_PORTS' => [$portSource], 'ADRESSE_RESEAUX_PERMIS' => ['127.0.0.1/32'], 'ADRESSE_OCTETS_MAX' => 300000, 'ADRESSE_DELAI' => 2,
@@ -190,7 +189,7 @@ foreach ($reglages as $nom => $valeur) {
     $lignes[] = 'define(' . var_export($nom, true) . ', ' . var_export($valeur, true) . ');';
 }
 file_put_contents($site . '/public/config.local.php', implode("\n", $lignes) . "\n");
-$mp = proc_open([PHP_BINARY, $site . '/outils/mot-de-passe.php', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $t);
+$mp = proc_open([PHP_BINARY, $site . '/public/inc/mot-de-passe.php', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $t);
 fwrite($t[0], MOT . "\n");
 fclose($t[0]);
 stream_get_contents($t[1]);

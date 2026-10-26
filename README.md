@@ -128,9 +128,11 @@ retrouve ses **projets** d’une session à l’autre, derrière un **mot de pas
 natif du modèle, avec tout ce qu’il faut pour le rouvrir à l’identique (formes, textes vivants, opérations Cricut, contexte de
 production, nuancier, fonte déposée, image source) ; le SVG reste un export.
 
-- `public/` est la racine web (`index.php` : la connexion, puis l’écran « Projets » ; `api.php` : projets, données, polices) ;
-  `data/` vit **à côté**, hors de portée du navigateur (`data/pwd`, `data/projets`, `data/json`, `data/font`).
-- `php outils/mot-de-passe.php` pose l’empreinte du mot de passe ; sans elle, personne n’entre.
+- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : la connexion, puis l’écran
+  « Projets » ; `api.php` : projets, données, polices) ; `data/` est dedans, refusé au Web par son `.htaccess` (`data/pwd`,
+  `data/projets`, `data/json`, `data/font`), ou à côté de `public/` pour qui a la main sur le serveur.
+- Le mot de passe se choisit dans la page à la première visite, ou par un fichier `data/password` (converti en empreinte, puis
+  supprimé), ou par `php inc/mot-de-passe.php` ; seule son empreinte est gardée.
 - « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
   Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
 - Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
@@ -175,7 +177,7 @@ React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteu
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
 | `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |
-| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `outils/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
+| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `public/inc/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
 | `tests/php/` | Les tests du site PHP, sans dépendance (`npm run test:php`) |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |

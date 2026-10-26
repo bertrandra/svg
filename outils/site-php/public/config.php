@@ -1,10 +1,10 @@
 <?php
-// Les reglages du site (ADR-0030, docs/deploiement-php.md). Ne modifiez pas ce fichier : une mise a jour le remplace. Posez vos
-// reglages dans config.local.php, a cote (jamais livre, donc jamais ecrase) : chaque constante n'est definie ici que si
-// config.local.php ne l'a pas deja fait. Exemple :
+// Les reglages du site (ADR-0030, docs/deploiement-php.md). Aucun n'est a faire pour installer le site : tout a des valeurs par
+// defaut. Ne modifiez pas ce fichier : une mise a jour le remplace. Posez vos reglages dans config.local.php, a cote (jamais livre,
+// donc jamais ecrase) : chaque constante n'est definie ici que si config.local.php ne l'a pas deja fait. Exemple :
 //
 //   <?php
-//   define('DATA_DIR', __DIR__ . '/data');      // un hebergeur qui impose tout sous la racine web
+//   define('DATA_DIR', '/srv/editeur-svg/data');      // le dossier des donnees ailleurs
 //   define('SESSION_INACTIVITE', 3600);
 //
 // Ce fichier ne produit rien : demande directement, il ne dit rien.
@@ -20,10 +20,11 @@ if (is_file(__DIR__ . '/config.local.php')) {
     require __DIR__ . '/config.local.php';
 }
 
-// Le dossier des donnees : mot de passe, projets, polices, JSON, journaux, sessions. Par defaut A COTE de la racine web (public/),
-// hors de portee du navigateur. Un hebergeur qui impose tout sous la racine : `__DIR__ . '/data'`, et le .htaccess de data/
-// refuse alors tout acces direct (index.php verifie qu'il le fait, et avertit sinon).
-defined('DATA_DIR') || define('DATA_DIR', __DIR__ . '/../data');
+// Le dossier des donnees : mot de passe, projets, polices, JSON, journaux, sessions. Par defaut `data/` a cote de ce fichier, comme
+// le livre le build : un seul dossier a envoyer par FTP. Sous la racine web, il ne tient que par son .htaccess (« Require all
+// denied », reecrit s'il manque) ; index.php verifie par HTTP que data/pwd et data/password ne se lisent pas, et avertit sinon. Sans
+// ce dossier, `../data`, hors de la racine web : la disposition recommandee quand on a la main sur le serveur.
+defined('DATA_DIR') || define('DATA_DIR', is_dir(__DIR__ . '/data') ? __DIR__ . '/data' : __DIR__ . '/../data');
 
 // La session expire apres ce temps sans aucune requete (en secondes).
 defined('SESSION_INACTIVITE') || define('SESSION_INACTIVITE', 2 * 3600);

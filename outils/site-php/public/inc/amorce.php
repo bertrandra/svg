@@ -28,6 +28,25 @@ function donnees(string $sous = ''): string
 const DOSSIERS_DONNEES = ['projets', 'projets/corbeille', 'font', 'font/catalogue', 'json', 'journal', 'sessions'];
 
 /**
+ * Le .htaccess de data/, le meme que celui que livre le build (outils/site-php/data/.htaccess, un test les compare) : reecrit s'il
+ * manque, parce qu'un client FTP qui cache les fichiers commencant par un point ne l'envoie pas toujours, et que data/ vit sous la
+ * racine web dans la disposition par defaut.
+ */
+const HTACCESS_DONNEES = <<<'HTACCESS'
+# Le dossier des donnees du site (ADR-0030) : jamais servi par HTTP (mot de passe, projets, journaux, sessions). Le build le place
+# sous la racine web (public/data) ; ce fichier y refuse tout acces direct, a tous les fichiers, avec ou sans extension (pwd,
+# password compris), Apache 2.4 et 2.2 en repli. Sous nginx : `location ^~ /data/ { return 404; }` (docs/deploiement-php.md).
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order deny,allow
+  Deny from all
+</IfModule>
+
+HTACCESS;
+
+/**
  * Prepare data/ : cree les dossiers qui manquent et branche le journal des erreurs. Rend la phrase a dire a l'administrateur si
  * data/ n'existe pas ou ne s'ecrit pas, null sinon.
  */
@@ -35,7 +54,7 @@ function preparer_donnees(): ?string
 {
     $racine = donnees();
     if (!is_dir($racine)) {
-        return 'Le dossier des données (' . $racine . ') est introuvable. Créez-le à côté du dossier public/ et rendez-le accessible en écriture au serveur web, ou réglez DATA_DIR dans config.local.php.';
+        return 'Le dossier des données (data/) est introuvable. Envoyez-le avec le reste du site, dans le même dossier qu’index.php, et rendez-le accessible en écriture au serveur web (ou réglez DATA_DIR dans config.local.php).';
     }
     foreach (DOSSIERS_DONNEES as $sous) {
         $d = donnees($sous);
@@ -47,6 +66,13 @@ function preparer_donnees(): ?string
         return 'Le dossier des données (' . $racine . ') n’est pas accessible en écriture au serveur web : donnez-lui les droits d’écriture (voir docs/deploiement-php.md).';
     }
     ini_set('error_log', donnees('journal/erreurs.log'));
+    if (!is_file(donnees('.htaccess'))) {
+        try {
+            ecrire_atomique(donnees('.htaccess'), HTACCESS_DONNEES, 0644);
+        } catch (Throwable $e) {
+            error_log('securite : data/.htaccess manque et ne s ecrit pas (' . $e->getMessage() . ')');
+        }
+    }
     return null;
 }
 
