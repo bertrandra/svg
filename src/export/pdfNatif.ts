@@ -144,14 +144,17 @@ class EcrivainScene {
     return l.join('\n');
   }
 
-  private incrustation(n: ImageScene): string {
+  private incrustation(n: ImageScene, flux: Flux): string {
     const img = this.images?.parDonnees.get(n.source.donnees);
     if (!img) return '';
-    let x = this.imagesEcrites.get(n.source.donnees);
+    // Dans le contenu d'un masque (en gris), la variante grise de l'image, quand elle en a une : sa luminance calculee comme celle des formes.
+    const variante = flux.mode === 'gris' && img.gris ? img.gris : null, cle = n.source.donnees + (variante ? '\u0000gris' : '');
+    let x = this.imagesEcrites.get(cle);
     if (!x) {
-      const alpha = img.alpha ? this.r.ajouter(fluxOctets(img.alpha.dict, img.alpha.flux)) : null;
-      x = this.r.xobjet(this.r.ajouter(fluxOctets(img.dict + (alpha === null ? '' : ' /SMask ' + alpha + ' 0 R'), img.flux)));
-      this.imagesEcrites.set(n.source.donnees, x);
+      const alpha = img.alpha ? this.r.unique('alpha ' + n.source.donnees, () => fluxOctets(img.alpha?.dict ?? '', img.alpha?.flux ?? new Uint8Array())) : null;
+      const corps = variante ?? img;
+      x = this.r.xobjet(this.r.ajouter(fluxOctets(corps.dict + (alpha === null ? '' : ' /SMask ' + alpha + ' 0 R'), corps.flux)));
+      this.imagesEcrites.set(cle, x);
     }
     const { m, cadre } = placementImage(n.source, img, this.vb), a = nb(n.opacite), l = ['q'];
     if (a !== '1') l.push('/' + this.r.etat('<< /ca ' + a + ' >>') + ' gs');
@@ -183,7 +186,7 @@ class EcrivainScene {
   }
 
   noeuds(liste: readonly NoeudScene[], flux: Flux): string {
-    return liste.map(n => (n.genre === 'forme' ? this.feuille(n, flux) : n.genre === 'image' ? this.incrustation(n) : this.portee(n, flux))).filter(Boolean).join('\n');
+    return liste.map(n => (n.genre === 'forme' ? this.feuille(n, flux) : n.genre === 'image' ? this.incrustation(n, flux) : this.portee(n, flux))).filter(Boolean).join('\n');
   }
 }
 

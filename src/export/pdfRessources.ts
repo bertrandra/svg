@@ -51,9 +51,12 @@ export class RessourcesPdf {
   /** Une fonction rangee a part, pour etre citee par plusieurs periodes d'un degrade. */
   readonly fonction = (texte: string): number => this.unique('fonction ' + texte, () => texte);
 
-  /** Un groupe de transparence (XObject de formulaire) sur une boite du PDF ; `cs` precise son espace de couleur. */
+  /**
+   * Un groupe de transparence (XObject de formulaire) sur une boite du PDF ; `cs` precise son espace de couleur. Isole, comme le rendu
+   * a part d'un groupe SVG (masque, opacite) : un masque doux y lit sa luminance sur le fond noir, alpha compris.
+   */
   groupe(bbox: readonly number[], cs: string, contenu: string): number {
-    const dict = '/Type /XObject /Subtype /Form /BBox ' + tableau4(bbox) + ' /Group << /S /Transparency' + cs + ' >> /Resources 6 0 R';
+    const dict = '/Type /XObject /Subtype /Form /BBox ' + tableau4(bbox) + ' /Group << /S /Transparency' + cs + ' /I true >> /Resources 6 0 R';
     return this.unique('groupe ' + dict + '\n' + contenu, () => fluxTexte(dict, contenu));
   }
 

@@ -861,7 +861,9 @@ avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'on
   écrite comme une scène dans son repère (axe vertical retourné), `/Matrix` rapportée à l'espace du flux qui le peint (la page et sa mise
   en page, ou l'identité dans un groupe ou une tuile). Découpe : `W n`/`W* n` dans un `q … Q` (le trait est rogné exactement). Masque :
   le contenu masqué en groupe de transparence, peint sous `/SMask << /S /Luminosity|/Alpha /G … >>`, le contenu du masque en gris de
-  luminance (coefficients de `luminanceToAlpha` sur le sRVB : exact, dégradés compris). Groupe translucide : groupe de transparence à
+  luminance (coefficients de `luminanceToAlpha` sur le sRVB : exact, dégradés compris ; une image en couleur y prend sa variante grise
+  calculée de même, un JPEG garde la conversion du lecteur, dit) ; chaque groupe est isolé (`/I true`, le rendu à part d'un groupe SVG :
+  sans lui, Poppler lisait la luminance d'un pixel translucide sans son alpha, mesuré). Groupe translucide : groupe de transparence à
   `/ca /CA`. Image : JPEG en `/DCTDecode` tel quel (gris, RVB, CMJN avec `/Decode` inversé sous le marqueur Adobe ; arithmétique,
   sans perte ou douze bits : perdu, dit), PNG sans alpha en `/FlateDecode` et `/Predictor 15` tel quel (gris, RVB, palette en
   `/Indexed`), PNG à alpha, à couleur clé, à alphas de palette, entrelacé ou de seize bits décodé (`engine/images/png.ts`, défiltrage et

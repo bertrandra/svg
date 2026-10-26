@@ -134,7 +134,7 @@ describe('le PDF natif d un dessin riche', () => {
     expect(dec.page.match(/\nW n\n/g)?.length).toBeGreaterThanOrEqual(3);
     const msq = contenu('masques');
     expect(msq.ressources).toMatch(/\/S \/Alpha /);
-    expect([...msq.o.values()].filter(x => /\/Group << \/S \/Transparency \/CS \/DeviceGray >>/.test(x.dict))).toHaveLength(2);
+    expect([...msq.o.values()].filter(x => /\/Group << \/S \/Transparency \/CS \/DeviceGray \/I true >>/.test(x.dict))).toHaveLength(2);
     // Le contenu d'un masque de luminance s'ecrit en gris : sa luminance.
     expect([...msq.o.values()].some(x => /\/CS \/DeviceGray/.test(x.dict) && / g\n/.test(decode(x).toString('latin1')))).toBe(true);
     const mot = contenu('motifs');
@@ -154,6 +154,20 @@ describe('le PDF natif d un dessin riche', () => {
     const cmjn = contenu('mixte-a4-cmjn');
     expect(cmjn.page).not.toMatch(/ (rg|RG)\n/);
     expect(cmjn.ressources).toMatch(/\/DeviceCMYK/);
+  });
+
+  it('une image en couleur dans un masque de luminance y est peinte par sa luminance, calculee comme celle des formes', () => {
+    const svg = readFileSync(resolve(__dirname, '../../fixtures/svg/v2/masques-image.svg'), 'utf8');
+    const o = lire(exporterPdf(riche(svg)).octets);
+    // Le PNG est un pixel rouge a demi transparent : sa luminance (0,2125 x 255 = 54) en gris, son alpha (127) en /SMask.
+    const gris = [...o.values()].find(x => /\/Subtype \/Image [^>]*\/ColorSpace \/DeviceGray [^>]*\/SMask \d+ 0 R/.test(x.dict));
+    expect(gris && [...decode(gris)]).toEqual([54]);
+    const alpha = gris ? o.get(Number(/\/SMask (\d+) 0 R/.exec(gris.dict)?.[1])) : undefined;
+    expect(alpha && [...decode(alpha)]).toEqual([127]);
+    // Un JPEG ne se decode pas : sa luminance est celle du lecteur, et c'est dit.
+    const jpeg = /href="(data:image\/jpeg;base64,[^"]+)"/.exec(readFileSync(join(DOSSIER, 'images.svg'), 'utf8'))?.[1] ?? '';
+    const avecJpeg = riche('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><image href="' + jpeg + '" width="100" height="100" preserveAspectRatio="none"/></mask><rect width="100" height="100" fill="#000" mask="url(#m)"/></svg>');
+    expect(exporterPdf(avecJpeg).phrase).toBe('Approché par ce format : une image JPEG dans un masque de luminance (sa luminance est calculée par le lecteur du PDF).');
   });
 
   it('se rend par pdftoppm (Poppler) quand il est installe : les couleurs du navigateur aux points sur', () => {
