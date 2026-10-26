@@ -1,8 +1,9 @@
 // Le projet (ADR-0030) : le JSON natif d'un travail, ce que le site PHP enregistre dans data/projets. Ce n'est pas le SVG (qui
 // reste un export) mais tout ce qu'il faut pour rouvrir le travail a l'identique : le dessin du modele (formes, styles, textes
-// vivants complets, operations, origines, verrouillage, visibilite, ordre), le plan de travail, le contexte de production, le
-// nuancier, le nom, les dates (posees par le serveur, jamais par le coeur pur) et les ressources que rien d'autre ne garde : une
-// fonte deposee par la personne, l'image source d'une conversion.
+// vivants complets, operations, origines, verrouillage, visibilite, ordre, et le modele v2 : groupes, peintures, images, decoupes,
+// masques, effets, motifs), le plan de travail, le contexte de production, le nuancier, le nom, les dates (posees par le serveur,
+// jamais par le coeur pur) et les ressources que rien d'autre ne garde : une fonte deposee par la personne, l'image source d'une
+// conversion.
 //
 // Pur : des donnees en entree, des donnees en sortie. La lecture d'un projet vient d'un fichier, d'un serveur ou d'un autre
 // onglet : on ne le croit pas sur parole. `lireProjet` migre, valide champ par champ, borne chaque taille et refuse en le nommant,
@@ -18,14 +19,13 @@ import { lireGroupesProjet, type GroupeProjet } from './projetV2/groupes.js';
 /** Le nom du format : ce qui distingue un projet de l'editeur de tout autre JSON. */
 export const FORMAT_PROJET = 'editeur-svg/projet';
 /**
- * La version courante du format, la plus recente que ce programme lit. Un projet plus recent est refuse en le nommant ; un plus ancien
- * passe par `migrer`. Le format 2 porte le modele v2 (ADR-0012 : degrades, puis groupes, decoupes…) ; un projet dont le dessin est plat
- * s'ecrit toujours au format 1 (`VERSION_PROJET_PLAT`), octet pour octet comme avant, comme un SVG plat ne porte pas `data-ed-modele`.
+ * La version du format, la seule que ce programme lit et ecrit. Un seul format porte tout le modele : les champs du modele v2 (ADR-0012 :
+ * groupes, peintures, images, decoupes, masques, effets, motifs) y sont des champs facultatifs comme les autres, absents d'un dessin plat,
+ * dont le projet reste ainsi le texte d'avant eux. Aucun projet d'un format anterieur n'existait quand le format est devenu unique
+ * (ADR-0030, revision du 26 octobre 2026) : un projet plus recent est refuse en le nommant, un plus ancien passerait par `migrer`.
  */
-export const VERSION_PROJET = 2;
-/** Le format d'un projet dont le dessin est plat (engine/projet.ts, `projetDe`) : celui d'avant le modele v2. */
-export const VERSION_PROJET_PLAT = 1;
-export type VersionProjet = typeof VERSION_PROJET_PLAT | typeof VERSION_PROJET;
+export const VERSION_PROJET = 1;
+export type VersionProjet = typeof VERSION_PROJET;
 
 /** Ce qu'un projet porte au plus : au-dela, ce n'est pas un projet de ce programme (ou il ne tiendrait pas dans un onglet). */
 export const BORNES_PROJET = {
@@ -84,7 +84,7 @@ export type DispositionProjet =
  * Une forme du dessin, champ pour champ celle du modele (engine/edition/types.ts), sauf `d` : le chemin en texte, chaque nombre a
  * sa pleine precision (le plus court texte qui redonne le meme nombre), pour qu'un projet rouvert reecrive les memes octets.
  */
-/** Une forme de projet : ses champs du modele plat, et ceux du modele v2 (model/projetV2/champs.ts), au format 2 seulement. */
+/** Une forme de projet : ses champs du modele plat, et ceux du modele v2 (model/projetV2/champs.ts), facultatifs comme les autres. */
 export interface FormeProjet extends ChampsFormeV2 {
   readonly id: string;
   readonly d: string;
@@ -120,7 +120,7 @@ export interface DessinProjet {
   readonly formes: readonly FormeProjet[];
   readonly nuancier?: NuancierDessin;
   readonly reperes?: ReperesProjet;
-  /** Les groupes du modele v2 (ADR-0012, etape 1), par identifiant ; absents d'un dessin plat, et ignores au format 1. */
+  /** Les groupes du modele v2 (ADR-0012, etape 1), par identifiant ; absents d'un dessin plat. */
   readonly groupes?: Readonly<Record<string, GroupeProjet>>;
 }
 
@@ -150,15 +150,15 @@ export interface Projet {
 
 export type ResultatProjet = { readonly projet: Projet; readonly migre: boolean } | { readonly erreur: string };
 
-// --- Les migrations : une fonction par version, de n vers n + 1. La chaine n'est jamais tronquee. ---
+// --- Les migrations : une fonction par version, de n vers n + 1. La chaine n'est jamais tronquee (a partir du format unique 1). ---
 
 type Migration = (ancien: Record<string, unknown>) => Record<string, unknown>;
 
 /**
- * Les migrations connues, par version de depart ; un test verifie que chaque version anterieure a la sienne. Du format 1 au format 2,
- * l'identite : le format 2 n'ajoute que des champs facultatifs, un projet au format 1 se lit tel quel (et reste au format 1).
+ * Les migrations connues, par version de depart ; un test verifie que chaque version anterieure a la sienne. Vide tant qu'il n'y a qu'un
+ * format : le jour ou le format 2 existera, la migration du format 1 y entrera, et n'en sortira plus.
  */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: p => p };
+export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
 
 const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 
@@ -346,12 +346,12 @@ function chemin(v: unknown, quoi: string): string {
 
 const OUTILS: OutilsProjet = {
   refuser, texte, nombre, booleen, tableau, objet, choix, chemin, identifiant: ID,
-  // Le contenu d'un masque (etape 6) : des formes et des groupes du format 2, valides comme ceux du dessin.
-  forme: (v, i) => lireForme(v, i, VERSION_PROJET),
+  // Le contenu d'un masque (etape 6) : des formes et des groupes, valides comme ceux du dessin.
+  forme: (v, i) => lireForme(v, i),
   groupes: v => lireGroupesProjet(v, OUTILS, lireOrigine)
 };
 
-function lireForme(v: unknown, i: number, version: number): FormeProjet {
+function lireForme(v: unknown, i: number): FormeProjet {
   const o = objet(v, 'la forme ' + (i + 1));
   const id = texte(o['id'], 'l’identifiant d’une forme', BORNES_PROJET.identifiant);
   if (!ID.test(id)) refuser('l’identifiant de la forme ' + (i + 1) + ' est mal formé');
@@ -372,14 +372,14 @@ function lireForme(v: unknown, i: number, version: number): FormeProjet {
     ...facultatif(o, 'origine', lireOrigine),
     ...facultatif(o, 'texte', lireTexte),
     ...facultatif(o, 'operation', x => choix(x, 'l’opération d’une forme', ['decoupe', 'ecriture'] as const)),
-    ...lireChampsFormeV2(o, { remplissage, contour }, version, OUTILS),
+    ...lireChampsFormeV2(o, { remplissage, contour }, OUTILS),
     regle: choix(o['regle'], 'la règle de remplissage', ['nonzero', 'evenodd'] as const),
     visible: booleen(o['visible'], 'la visibilité d’une forme'),
     verrouille: booleen(o['verrouille'], 'le verrouillage d’une forme')
   };
 }
 
-function lireDessinProjet(v: unknown, version: number): DessinProjet {
+function lireDessinProjet(v: unknown): DessinProjet {
   const o = objet(v, 'le dessin');
   const vb = tableau(o['vb'], 'le plan de travail', 4);
   if (vb.length !== 4) refuser('le plan de travail n’a pas quatre valeurs');
@@ -389,15 +389,15 @@ function lireDessinProjet(v: unknown, version: number): DessinProjet {
   let trace = 0;
   const vus = new Set<string>();
   const formes = brutes.map((f, i) => {
-    const forme = lireForme(f, i, version);
+    const forme = lireForme(f, i);
     trace += forme.d.length;
     if (trace > BORNES_PROJET.trace) refuser('le tracé du dessin dépasse ' + BORNES_PROJET.trace + ' caractères');
     if (vus.has(forme.id)) refuser('deux formes portent l’identifiant « ' + forme.id + ' »');
     vus.add(forme.id);
     return forme;
   });
-  // Les groupes (etape 1) : comme tout champ v2, seulement au format 2 ; chaque parent nomme un groupe de la table.
-  const groupes = version >= VERSION_PROJET && o['groupes'] !== undefined ? lireGroupesProjet(o['groupes'], OUTILS, lireOrigine) : undefined;
+  // Les groupes (etape 1), absents d'un dessin plat ; chaque parent nomme un groupe de la table.
+  const groupes = o['groupes'] !== undefined ? lireGroupesProjet(o['groupes'], OUTILS, lireOrigine) : undefined;
   for (const f of formes) {
     if (f.parent !== undefined && !(groupes && Object.prototype.hasOwnProperty.call(groupes, f.parent))) refuser('la forme « ' + f.id + ' » est dans un groupe absent');
     if (groupes && Object.prototype.hasOwnProperty.call(groupes, f.id)) refuser('une forme et un groupe portent l’identifiant « ' + f.id + ' »');
@@ -478,14 +478,13 @@ function date(v: unknown, quoi: string): string {
 /** Le projet a la version courante, valide et reconstruit ; ou le refus nomme. Ne leve jamais. */
 export function validerProjet(x: Record<string, unknown>): Projet | { erreur: string } {
   try {
-    const version = x['version'];
-    if (x['format'] !== FORMAT_PROJET || (version !== VERSION_PROJET_PLAT && version !== VERSION_PROJET)) return { erreur: 'Ce projet n’est pas au format ' + VERSION_PROJET + '.' };
+    if (x['format'] !== FORMAT_PROJET || x['version'] !== VERSION_PROJET) return { erreur: 'Ce projet n’est pas au format ' + VERSION_PROJET + '.' };
     return {
-      format: FORMAT_PROJET, version,
+      format: FORMAT_PROJET, version: VERSION_PROJET,
       nom: texte(x['nom'], 'le nom du projet', BORNES_PROJET.nom),
       ...facultatif(x, 'creeLe', v => date(v, 'la date de création')),
       ...facultatif(x, 'modifieLe', v => date(v, 'la date de modification')),
-      dessin: lireDessinProjet(x['dessin'], version),
+      dessin: lireDessinProjet(x['dessin']),
       production: lireProduction(x['production']),
       nuancier: lireNuancier(x['nuancier']),
       ressources: lireRessources(x['ressources'])

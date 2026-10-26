@@ -1,10 +1,9 @@
-// Le format 2 du projet (ADR-0012, etape 1 ; ADR-0030) : le format 1 plus les champs du modele v2. La regle de version : un projet
-// plat s'ecrit au format 1 (et un programme du format 1 le lit toujours), un projet a groupes au format 2 ; la migration du format 1
-// est l'identite ; au format 1, un champ v2 (groupes compris) est inconnu, donc ignore ; un format plus recent est refuse en le
-// nommant ; la table des groupes se valide sans lever.
+// Le format unique du projet (ADR-0030, revision du 26 octobre 2026 ; ADR-0012, etape 1) : une seule version, 1, qui porte tout le
+// modele ; les champs v2 (groupes compris) y sont facultatifs, lus et valides toujours ; aucune migration n'existe encore ; toute
+// autre version est refusee en la nommant ; la table des groupes se valide sans lever.
 
 import { describe, expect, it } from 'vitest';
-import { FORMAT_PROJET, MIGRATIONS, VERSION_PROJET, VERSION_PROJET_PLAT, lireProjet, migrer, type Projet } from '../../../src/model/projet.js';
+import { FORMAT_PROJET, MIGRATIONS, VERSION_PROJET, lireProjet, migrer, type Projet } from '../../../src/model/projet.js';
 
 const projet = (version: number, dessin: Record<string, unknown>): Record<string, unknown> => ({
   format: FORMAT_PROJET, version, nom: 'Carte', dessin, production: { contexte: 'generique' }, nuancier: [], ressources: { polices: [], images: [] }
@@ -20,29 +19,29 @@ const avecGroupes = (p: Record<string, unknown> = {}) => ({
 const erreur = (x: unknown): string => { const r = lireProjet(x); return 'erreur' in r ? r.erreur : ''; };
 const lu = (x: unknown): Projet => { const r = lireProjet(x); if ('erreur' in r) throw new Error(r.erreur); return r.projet; };
 
-describe('le format 2 du projet', () => {
-  it('lit un projet a groupes au format 2, champ pour champ, et le reecrit a l identique', () => {
+describe('le format unique du projet', () => {
+  it('lit un projet a groupes, champ pour champ, et le reecrit a l identique', () => {
     const brut = projet(VERSION_PROJET, avecGroupes());
     const p = lu(brut);
-    expect(p.version).toBe(2);
+    expect(p.version).toBe(1);
+    expect(p.dessin.groupes).toBeDefined();
     expect(JSON.stringify(p)).toBe(JSON.stringify(brut));
   });
 
-  it('un projet plat reste au format 1 ; sa migration est l identite, rien n est dit « complete »', () => {
-    expect(VERSION_PROJET_PLAT).toBe(1);
+  it('un seul format, sans migration : un projet plat se lit tel quel, rien n est dit « complete »', () => {
+    expect(VERSION_PROJET).toBe(1);
+    expect(MIGRATIONS).toEqual({});
     const brut = projet(1, { vb: [0, 0, 10, 10], formes: [forme('f1')] });
-    expect(MIGRATIONS[1]?.(brut)).toBe(brut);
     expect(migrer(brut)).toEqual({ donnees: brut, migre: false });
     const r = lireProjet(brut);
     expect('erreur' in r ? r.erreur : [r.projet.version, r.migre]).toEqual([1, false]);
     expect(JSON.stringify('erreur' in r ? null : r.projet)).toBe(JSON.stringify(brut));
   });
 
-  it('refuse un format plus recent ; au format 1, les groupes sont inconnus, donc ignores, comme tout champ v2', () => {
-    expect(erreur(projet(3, avecGroupes()))).toContain('version plus récente de l’éditeur (format 3)');
-    const p = lu(projet(1, avecGroupes()));
-    expect(p.dessin.groupes).toBeUndefined();
-    expect(p.dessin.formes.every(f => f.parent === undefined)).toBe(true);
+  it('refuse toute autre version en la nommant : une plus recente, une illisible', () => {
+    expect(erreur(projet(2, avecGroupes()))).toContain('version plus récente de l’éditeur (format 2)');
+    expect(erreur(projet(3, { vb: [0, 0, 10, 10], formes: [forme('f1')] }))).toContain('version plus récente de l’éditeur (format 3)');
+    for (const v of [0, 1.5, '1', null]) expect(erreur(projet(v as number, avecGroupes())), String(v)).toBe('Ce projet n’a pas de version lisible.');
   });
 
   it('valide la table des groupes sans lever : cle, identifiant, parent, opacite, nom', () => {
@@ -57,6 +56,6 @@ describe('le format 2 du projet', () => {
       [avecGroupes({ formes: [forme('g1')] }), 'une forme et un groupe portent l’identifiant « g1 »'],
       [avecGroupes({ groupes: [1, 2] }), 'les groupes du dessin n’est pas un objet']
     ];
-    for (const [dessin, phrase] of cas) expect(erreur(projet(2, dessin)), phrase).toContain(phrase);
+    for (const [dessin, phrase] of cas) expect(erreur(projet(VERSION_PROJET, dessin)), phrase).toContain(phrase);
   });
 });

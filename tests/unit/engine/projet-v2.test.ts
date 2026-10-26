@@ -2,8 +2,8 @@
 // perdrait en silence ce que le modele v2 ajoute. Les tables ci-dessous classent chaque champ ; le typage force a classer un champ
 // nouveau (une cle manquante ne compile pas), et le test verifie que les champs dits « porte » font l'aller-retour exact. Une etape
 // qui livre un champ v2 le porte (une ligne de model/projetV2/champs.ts et de engine/projetV2/champs.ts, son lecteur et son
-// aller-retour dans ses fichiers), puis le passe ici a « porte » (ADR-0012, annexe 8). Les champs du dessin (nuancier, reperes) ne
-// rendent pas le dessin non plat : un projet plat qui les porte reste au format 1.
+// aller-retour dans ses fichiers), puis le passe ici a « porte » (ADR-0012, annexe 8). Le projet n'a qu'un format (ADR-0030, revision
+// du 26 octobre 2026) : un dessin plat ou riche s'ecrit en `version: 1`, les champs v2 n'y paraissent que presents.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ import {
   creerDecoupe, creerMasque, creerMotif, dupliquer, ecrireDessin, inverserMasque, lireDessin, transformer, rotation, verifierDessin, type Degrade, type DessinSvg, type Forme, type Groupe, type Masque
 } from '../../../src/engine/editionSvg.js';
 import { etatDuProjet, formeDuProjet, formeProjet, projetDe, texteDuProjet, type EtatProjet } from '../../../src/engine/projet.js';
-import { FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, lireProjet } from '../../../src/model/projet.js';
+import { FORMAT_PROJET, VERSION_PROJET, lireProjet } from '../../../src/model/projet.js';
 import { ARRETS_PROJET_MAX } from '../../../src/model/projetV2/peinture.js';
 import { ARRETS_MAX } from '../../../src/engine/edition/degrades.js';
 
@@ -85,17 +85,17 @@ describe('le projet porte tout le modele', () => {
     expect(duGroupe).toEqual([]);
   });
 
-  it('un dessin plat garde son nuancier et ses reperes, au format 1', () => {
+  it('un dessin plat garde son nuancier et ses reperes, au format unique', () => {
     const d: DessinSvg = { ...lire('chemins.svg'), nuancier: { provenance: 'dessin', teintes: [{ hex: '#c81e28' }, { hex: '#1f5fb0', opacite: 0.5 }] }, reperes: { h: [10.5], v: [3, 40] } };
     const { texte, rouvert } = allerRetour(etat(d));
-    expect(JSON.parse(texte).version).toBe(VERSION_PROJET_PLAT);
+    expect(JSON.parse(texte).version).toBe(VERSION_PROJET);
     expect(rouvert.dessin).toEqual(d);
     expect(texteDuProjet(projetDe(rouvert))).toBe(texte);
   });
 });
 
 describe('les images dans le projet (etape 12)', () => {
-  it('un dessin a images s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+  it('un dessin a images s ecrit au format unique et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
     for (const nom of ['images-png', 'images-jpeg', 'images-gif-webp', 'images-rotation', 'images-type-corrige']) {
       const d = lire('v2/' + nom + '.svg', 'riche');
       expect(d.formes.some(f => f.image), nom).toBe(true);
@@ -126,7 +126,7 @@ describe('les images dans le projet (etape 12)', () => {
 });
 
 describe('les degrades dans le projet (etape 3)', () => {
-  it('un dessin a degrades s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+  it('un dessin a degrades s ecrit au format unique et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
     for (const nom of ['degrades-chaine', 'degrades-boite', 'degrades-opacite', 'degrades-contour', 'degrades-transformes']) {
       const d = lire('v2/' + nom + '.svg', 'riche');
       const tourne = transformer(d, d.formes.map(f => f.id), rotation(17, 40, 30));
@@ -140,22 +140,23 @@ describe('les degrades dans le projet (etape 3)', () => {
     }
   });
 
-  it('un dessin plat reste au format 1, et un projet au format 1 se lit sans « migration » annoncee', () => {
+  it('un dessin plat s ecrit au format unique, et se lit sans « migration » annoncee', () => {
     const d = lire('chemins.svg');
     const { texte } = allerRetour(etat(d));
-    expect(JSON.parse(texte).version).toBe(VERSION_PROJET_PLAT);
+    expect(JSON.parse(texte).version).toBe(VERSION_PROJET);
     const r = lireProjet(JSON.parse(texte));
     expect('erreur' in r ? r.erreur : r.migre).toBe(false);
-    expect('erreur' in r ? null : r.projet.version).toBe(VERSION_PROJET_PLAT);
+    expect('erreur' in r ? null : r.projet.version).toBe(VERSION_PROJET);
   });
 
-  it('un champ v2 n existe pas au format 1 : il y est ignore, comme le ferait un programme d avant', () => {
+  it('un champ v2 se lit sans condition de version : le meme projet en version 2 est refuse, plus recent que le programme', () => {
     const d = lire('v2/degrades-lineaire.svg', 'riche');
     const projet = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { version: number; dessin: { formes: Array<Record<string, unknown>> } };
-    projet.version = 1;
+    expect(projet.version).toBe(1);
     const r = lireProjet(projet);
     if ('erreur' in r) throw new Error(r.erreur);
-    expect(r.projet.dessin.formes.every(f => f.peintureRemplissage === undefined)).toBe(true);
+    expect(r.projet.dessin.formes.some(f => f.peintureRemplissage !== undefined)).toBe(true);
+    expect(erreur({ ...projet, version: 2 })).toBe('Ce projet a été enregistré par une version plus récente de l’éditeur (format 2) ; cette version lit les projets jusqu’au format 1. Mettez le site à jour pour l’ouvrir.');
   });
 
   it('refuse en le nommant un degrade mal forme, un degrade pris pour un motif, un degrade sans couleur de repli, un format plus recent', () => {
@@ -182,7 +183,7 @@ describe('les degrades dans le projet (etape 3)', () => {
 });
 
 describe('les effets dans le projet (etape 7)', () => {
-  it('un dessin a effets (feuilles, groupes, image) s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+  it('un dessin a effets (feuilles, groupes, image) s ecrit au format unique et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
     for (const nom of ['effets-flou', 'effets-ombre', 'effets-flou-ombre', 'effets-rotation', 'effets-echelle', 'effets-image']) {
       const d = lire('v2/' + nom + '.svg', 'riche');
       const tourne = transformer(d, d.formes.map(f => f.id), rotation(17, 40, 30));
@@ -196,7 +197,7 @@ describe('les effets dans le projet (etape 7)', () => {
     }
   });
 
-  it('refuse en le nommant des effets vides, un flou sans ecart, une ombre mal coloree ou hors bornes ; ignores au format 1', () => {
+  it('refuse en le nommant des effets vides, un flou sans ecart, une ombre mal coloree ou hors bornes', () => {
     const d = lire('v2/effets-flou-ombre.svg', 'riche');
     const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { version: number; dessin: { formes: Array<Record<string, unknown>>; groupes: Record<string, Record<string, unknown>> } };
     const avec = (champs: Record<string, unknown>) => ({ ...base, dessin: { ...base.dessin, formes: [{ ...base.dessin.formes[0], ...champs }, ...base.dessin.formes.slice(1)] } });
@@ -209,15 +210,11 @@ describe('les effets dans le projet (etape 7)', () => {
     expect(erreur(avec({ effets: { flou: { ecart: 1 } } }))).toBe('');
     const g1 = base.dessin.groupes['g1'] ?? {};
     expect(erreur({ ...base, dessin: { ...base.dessin, groupes: { ...base.dessin.groupes, g1: { ...g1, effets: { ombre: { ...ombre, dx: 'x' } } } } } })).toMatch(/décalage d’une ombre/);
-    const ancien = { ...base, version: VERSION_PROJET_PLAT };
-    const r = lireProjet(ancien);
-    if ('erreur' in r) throw new Error(r.erreur);
-    expect(r.projet.dessin.formes.every(f => f.effets === undefined)).toBe(true);
   });
 });
 
 describe('les groupes dans le projet (etape 1)', () => {
-  it('un dessin a groupes fait l aller-retour exact, au format 2, et reecrit le meme SVG', () => {
+  it('un dessin a groupes fait l aller-retour exact, au format unique, et reecrit le meme SVG', () => {
     for (const nom of ['v2/groupes-imbriques.svg', 'v2/groupes-nom-piegeux.svg', 'v2/groupes-use.svg', 'v2/groupes-degrade-image.svg', 'lecture-use-imbriques.svg', 'texte-vivant-lecture.svg']) {
       const d = lire(nom, 'riche');
       expect(d.groupes, nom).toBeDefined();
@@ -229,13 +226,12 @@ describe('les groupes dans le projet (etape 1)', () => {
     }
   });
 
-  it('les groupes, comme tout champ v2, n existent pas au format 1 : ils y sont ignores, le dessin se lit plat', () => {
+  it('les groupes, comme tout champ v2, se lisent toujours : une table mal formee est refusee, jamais ignoree', () => {
     const projet = JSON.parse(texteDuProjet(projetDe(etat(lire('v2/groupes-imbriques.svg', 'riche'))))) as { version: number; dessin: { groupes?: unknown; formes: Array<Record<string, unknown>> } };
-    projet.version = VERSION_PROJET_PLAT;
+    expect(projet.version).toBe(VERSION_PROJET);
     const r = lireProjet(projet);
-    if ('erreur' in r) throw new Error(r.erreur);
-    expect(r.projet.dessin.groupes).toBeUndefined();
-    expect(r.projet.dessin.formes.every(f => f.parent === undefined)).toBe(true);
+    expect('erreur' in r ? r.erreur : Object.keys(r.projet.dessin.groupes ?? {}).length > 0).toBe(true);
+    expect(erreur({ ...projet, dessin: { ...projet.dessin, groupes: [1, 2] } })).toMatch(/les groupes du dessin n’est pas un objet/);
   });
 
   it('refuse en le nommant une forme d un groupe absent, et un arbre abime a l ouverture', () => {
@@ -279,7 +275,7 @@ describe('les decoupes dans le projet (etape 5)', () => {
     expect(allerRetour(etat(x)).rouvert.dessin.groupes?.[g.id]).toEqual(g);
   });
 
-  it('un dessin a decoupes s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+  it('un dessin a decoupes s ecrit au format unique et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
     const noms = ['decoupes-groupe', 'decoupes-feuille', 'decoupes-boite', 'decoupes-use', 'decoupes-regles', 'decoupes-imbriquees', 'decoupes-ignorees', 'decoupes-opacite'];
     for (const nom of noms) {
       const d = lire('v2/' + nom + '.svg', 'riche');
@@ -312,16 +308,13 @@ describe('les decoupes dans le projet (etape 5)', () => {
     void _p;
     // L'identifiant d'une forme du dessin, repris dans une decoupe : I1, verifie a l'ouverture.
     expect(ouvrir(avec({ formes: [{ ...sansParent, id: d.formes[0]?.id }] }))).toBe('Ce projet porte des groupes mal formés.');
-    // Au format 1, la table des groupes, et la decoupe avec elle, est ignoree.
-    const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
-    expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.groupes).toBeUndefined();
   });
 });
 
 describe('les masques dans le projet (etape 6)', () => {
   const noms = ['masques-groupe', 'masques-feuille', 'masques-alpha', 'masques-region', 'masques-contenu-boite', 'masques-degrade', 'masques-transformes', 'masques-use', 'masques-imbriques', 'masques-ignores', 'masques-partages'];
 
-  it('un dessin a masques s ecrit au format 2 et fait l aller-retour exact : modele, contenu peint, texte JSON et SVG ecrit', () => {
+  it('un dessin a masques s ecrit au format unique et fait l aller-retour exact : modele, contenu peint, texte JSON et SVG ecrit', () => {
     for (const nom of noms) {
       const d = lire('v2/' + nom + '.svg', 'riche');
       const tous = d.formes.map(f => f.id);
@@ -378,16 +371,13 @@ describe('les masques dans le projet (etape 6)', () => {
       profond = { type: 'luminance', region: { x: 0, y: 0, l: 1, h: 1 }, formes: [{ ...mq.formes[0], id: 'f' + (800 + i), parent: g }], groupes: { [g]: { id: g, visible: true, verrouille: false, masque: profond } } };
     }
     expect(ouvrir(avec(profond))).toMatch(/masques emboîtés sur plus de 8 niveaux/);
-    // Au format 1, la table des groupes, et le masque avec elle, est ignoree.
-    const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
-    expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.groupes).toBeUndefined();
   });
 });
 
 describe('les motifs dans le projet (etape 9)', () => {
   const noms = ['motifs-plan', 'motifs-boite', 'motifs-viewbox', 'motifs-transformes', 'motifs-href', 'motifs-contour', 'motifs-imbriques', 'motifs-ignores'];
 
-  it('un dessin a motifs s ecrit au format 2 et fait l aller-retour exact : modele, tuile peinte, texte JSON et SVG ecrit', () => {
+  it('un dessin a motifs s ecrit au format unique et fait l aller-retour exact : modele, tuile peinte, texte JSON et SVG ecrit', () => {
     for (const nom of noms) {
       const d = lire('v2/' + nom + '.svg', 'riche');
       const tous = d.formes.map(f => f.id);
@@ -409,7 +399,7 @@ describe('les motifs dans le projet (etape 9)', () => {
     expect(allerRetour(etat(cree.dessin)).rouvert.dessin).toEqual(cree.dessin);
   });
 
-  it('refuse en le nommant un motif mal forme, vide, a image, trop emboite ; au format 1, il est ignore', () => {
+  it('refuse en le nommant un motif mal forme, vide, a image, trop emboite', () => {
     const d = lire('v2/motifs-plan.svg', 'riche');
     const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { dessin: { formes: Array<Record<string, unknown>> } };
     const p = base.dessin.formes[0]?.['peintureRemplissage'] as { formes: Array<Record<string, unknown>> } & Record<string, unknown>;
@@ -428,7 +418,5 @@ describe('les motifs dans le projet (etape 9)', () => {
     let profond: unknown = p;
     for (let i = 0; i < 9; i++) profond = { ...p, formes: [{ ...p.formes[0], remplissage: '#000000', peintureRemplissage: profond }] };
     expect(ouvrir(avec(profond))).toMatch(/motifs emboîtés sur plus de 8 niveaux/);
-    const v1 = lireProjet({ ...base, version: VERSION_PROJET_PLAT });
-    expect('erreur' in v1 ? v1.erreur : v1.projet.dessin.formes.every(f => f.peintureRemplissage === undefined)).toBe(true);
   });
 });

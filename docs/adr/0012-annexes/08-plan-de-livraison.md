@@ -30,6 +30,14 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 13b Idiomes de filtres | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les mesures et ce qui reste : ci-dessous, « Ce que l'étape 13b a posé ») |
 | 14 | proposée ; vagues et consignes revues (§2, §5) |
 
+**Révision du 26 octobre 2026 — le projet JSON n’a qu’un format** (ADR-0030, « Révision du 26 octobre 2026 »). Le site PHP n’a jamais
+été mis en ligne, aucun projet n’est à conserver : `VERSION_PROJET = 1` porte tout le modèle, `VERSION_PROJET_PLAT` n’existe plus,
+`MIGRATIONS` est vide, toute autre version est refusée en la nommant. **Le cadre des champs v2** : un champ v2 de forme ou de groupe
+entre au projet par **une ligne de `model|engine/projetV2/champs.ts`** (sa clé, son lecteur, sa garde ; son aller-retour), son lecteur
+dans un fichier à lui, et passe à « porte » dans `projet-v2.test.ts` ; il est facultatif, lu et validé toujours, sans condition de
+version, et ne touche jamais à `VERSION_PROJET`. Partout plus bas, « au format 2 » (ce qui a été posé, étape par étape) se lit
+désormais « au format unique » : la règle « au format 1, un champ v2 est inconnu, donc ignoré » est caduque.
+
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
 - **Types** (`engine/edition/types.ts`, dernière édition du chantier) : `Forme.parent`, `peintureRemplissage`, `peintureContour`,
@@ -106,7 +114,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   `aplatirPour` et ajoutent la phrase au message ; les tests d'export passent par `tests/unit/export/plats.ts`.
 - **Projet** : `model/projetV2/champs.ts` (`CHAMPS_FORME_V2`, `CHAMPS_GROUPE_V2`, `OutilsProjet`), `model/projetV2/groupes.ts`
   (`GroupeProjet`, `lireGroupesProjet`), `engine/projetV2/champs.ts` (`ALLERS_RETOURS_FORME`, `ALLERS_RETOURS_GROUPE`,
-  `groupeProjet`, `groupeDuProjet`) : une ligne par champ et par étape. **Règle de version confirmée** : `VERSION_PROJET = 2`,
+  `groupeProjet`, `groupeDuProjet`) : une ligne par champ et par étape. *(Règle de version caduque depuis le 26 octobre 2026 : un seul
+  format, voir la révision en tête du §0.)* **Règle de version confirmée** : `VERSION_PROJET = 2`,
   `VERSION_PROJET_PLAT = 1` ; un dessin plat s'écrit au format 1 (octet pour octet celui d'avant), un dessin à groupes au format 2 ;
   `MIGRATIONS[1]` est l'identité (le même objet : `migre` reste faux) ; au format 1, les groupes et `parent` sont inconnus, donc
   ignorés, comme tout champ v2 (la règle générale de l'étape 3) ; un arbre abîmé est refusé à l'ouverture (`verifierDessin`, « Ce
@@ -1220,11 +1229,11 @@ l'étape 8 tient). On modifie maintenant le contenu d'une découpe ou d'un masqu
 ### Ajouté par les ADR fusionnés depuis
 
 - **Le projet JSON (ADR-0030) doit porter le modèle v2** : un projet rouvert perdrait en silence ce que `model/projet.ts`
-  ne lit pas (« un champ inconnu n'y entre pas »). Chaque étape qui livre un champ le porte (validation dans `model/projet.ts`,
-  aller-retour dans `engine/projet.ts`) et le passe à « porté » dans `projet-v2.test.ts`. **Règle de version** (proposée, à
-  confirmer à l'étape 1) : un projet s'écrit en `version: 2` **seulement** si son dessin n'est pas plat, comme le marqueur
-  `data-ed-modele` ; `MIGRATIONS[1]` est l'identité ; un programme v1 refuse un projet v2 en le disant (jamais « au mieux ») ;
-  le serveur PHP admet déjà les versions 1 à 1000.
+  ne lit pas (« un champ inconnu n'y entre pas »). Chaque étape qui livre un champ le porte (une ligne de
+  `model|engine/projetV2/champs.ts`, son lecteur et son aller-retour dans ses fichiers) et le passe à « porté » dans
+  `projet-v2.test.ts`. **Un seul format** (révision du 26 octobre 2026, en tête du §0) : `VERSION_PROJET = 1` pour tout dessin,
+  plat ou riche, sans migration ; une version plus récente est refusée en le disant (jamais « au mieux ») ; le serveur PHP admet
+  les versions 1 à 1000 et laisse le client juger.
 - **La vignette du site PHP** (`vignette_sure`, `outils/site-php/public/inc/projets.php`) refuse `url(`, `href`, `<image>` : un
   projet à dégradé, découpe, masque, effet ou image n'aura pas de vignette (rien ne casse). Chaque étape concernée choisit :
   l'accepter et le dire, ou admettre `url(#ed-…)` (et `data:image/…` à l'étape 12) dans cette fonction, avec son test PHP.
@@ -1359,7 +1368,8 @@ encore les feuilles d'un groupe masqué ou verrouillé (leur fichier est à l'é
   - Projet JSON (ADR-0030) : `model/projetV2/peinture.ts` (validation : genre linéaire ou radial, un motif refusé en le nommant,
     2 à 64 arrêts qui ne reculent pas, `#rrggbb`, matrice de six nombres, bornes du projet), `engine/projetV2/peinture.ts`
     (aller-retour champ pour champ), branchés par **le cadre du paquet 1-C posé ici** : `model/projetV2/champs.ts` (une ligne par
-    champ : clé, lecteur, garde I5) et `engine/projetV2/champs.ts` (une ligne d'aller-retour) ; `VERSION_PROJET` = 2,
+    champ : clé, lecteur, garde I5) et `engine/projetV2/champs.ts` (une ligne d'aller-retour) ; *(la règle de version qui suit est
+    caduque depuis le 26 octobre 2026 : un seul format, révision en tête du §0)* `VERSION_PROJET` = 2,
     `VERSION_PROJET_PLAT` = 1 (un dessin plat s'écrit au format 1, octet pour octet), `MIGRATIONS[1]` est l'identité et `migre` ne
     vaut vrai que si une migration a changé quelque chose (un projet au format 1 ne s'annonce pas « complété ») ; un champ v2 dans un
     projet au format 1 y est inconnu, donc ignoré. `projet-v2.test.ts` : les deux peintures « porte ».

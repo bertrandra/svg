@@ -3,8 +3,8 @@
 // l'etape 3). Le corps de `lireForme` (model/projet.ts) n'a plus a changer : il lit ces lignes, dans cet ordre. Un groupe (etape 1)
 // a sa base dans `groupes.ts` ; ce que les etapes suivantes lui ajoutent (decoupe, masque, effets) entre par `CHAMPS_GROUPE_V2`.
 //
-// Un champ v2 n'existe qu'au format 2 : dans un projet au format 1, il est inconnu, donc ignore (« un champ inconnu n'y entre pas »),
-// comme le ferait un programme d'avant lui. Pur ; un lecteur refuse par `o.refuser`, qui remonte jusqu'a `lireProjet` sans lever.
+// Le projet n'a qu'un format (ADR-0030, revision du 26 octobre 2026) : un champ v2 y est un champ facultatif comme les autres, lu et
+// valide toujours, absent d'un dessin plat. Pur ; un lecteur refuse par `o.refuser`, qui remonte jusqu'a `lireProjet` sans lever.
 
 import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
 import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
@@ -27,7 +27,7 @@ export interface OutilsProjet {
   chemin(v: unknown, quoi: string): string;
   /** La forme d'un identifiant de forme ou de groupe. */
   readonly identifiant: RegExp;
-  /** Une forme entiere, validee comme une forme du dessin au format 2 (etape 6 : les feuilles peintes d'un masque) ; `i` son rang. */
+  /** Une forme entiere, validee comme une forme du dessin (etape 6 : les feuilles peintes d'un masque) ; `i` son rang. */
   forme(v: unknown, i: number): FormeProjet;
   /** Une table de groupes, validee comme celle du dessin (etape 6 : les groupes du contenu d'un masque). */
   groupes(v: unknown): Readonly<Record<string, GroupeProjet>>;
@@ -77,9 +77,8 @@ export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
   }
 ];
 
-/** Les champs v2 presents dans l'objet d'une forme, lus et gardes, dans l'ordre des lignes ; rien au format 1. */
-export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly remplissage: string | null; readonly contour: string | null }, version: number, outils: OutilsProjet): ChampsFormeV2 {
-  if (version < 2) return {};
+/** Les champs v2 presents dans l'objet d'une forme, lus et gardes, dans l'ordre des lignes. */
+export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly remplissage: string | null; readonly contour: string | null }, outils: OutilsProjet): ChampsFormeV2 {
   const lus: Record<string, unknown> = {};
   for (const c of CHAMPS_FORME_V2) {
     const v = o[c.cle];

@@ -12,7 +12,7 @@ import { lireDessinAvec } from '../../../src/engine/edition/lecture.js';
 import { aplatirPour, CAPACITES_PLAT } from '../../../src/engine/aplatir.js';
 import { boiteChemin } from '../../../src/engine/edition/geometrie.js';
 import { etatDuProjet, projetDe, texteDuProjet, type EtatProjet } from '../../../src/engine/projet.js';
-import { lireProjet } from '../../../src/model/projet.js';
+import { VERSION_PROJET, lireProjet } from '../../../src/model/projet.js';
 import { nomGroupeTexte } from '../../../src/engine/texte/vectoriser.js';
 import { policesFactices } from './v2/polices.js';
 import { violationsEcriture, violationsNettoyage } from '../securite/invariants.js';
@@ -202,7 +202,7 @@ const etat = (dessin: DessinSvg): EtatProjet => ({ nom: 'essai', dessin, product
 function allerRetour(d: DessinSvg): void {
   const relu = lireProjet(JSON.parse(texteDuProjet(projetDe(etat(d)))));
   if ('erreur' in relu) throw new Error(relu.erreur);
-  expect(relu.projet.version).toBe(2);
+  expect(relu.projet.version).toBe(VERSION_PROJET);
   const rouvert = etatDuProjet(relu.projet);
   if ('erreur' in rouvert) throw new Error(rouvert.erreur);
   expect(rouvert.dessin).toEqual(d);

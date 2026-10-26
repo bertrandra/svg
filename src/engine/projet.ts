@@ -5,10 +5,10 @@
 
 import type { ChoixProduction } from '../model/contextes.js';
 import {
-  FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, nomDeProjet,
+  FORMAT_PROJET, VERSION_PROJET, nomDeProjet,
   type FormeProjet, type ImageProjet, type PoliceProjet, type Projet, type TeinteProjet, type TexteProjet
 } from '../model/projet.js';
-import { estPlat, peintureSure, verifierDessin, type DessinSvg, type DispositionTexte, type Forme, type TexteVivant } from './editionSvg.js';
+import { peintureSure, verifierDessin, type DessinSvg, type DispositionTexte, type Forme, type TexteVivant } from './editionSvg.js';
 import { ecrireCheminProjet, lireCheminProjet } from './projetV2/chemin.js';
 import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, refusChampsV2, tableVers, type ConversionFormes } from './projetV2/champs.js';
 import type { DispositionProjet } from '../model/projet.js';
@@ -118,19 +118,19 @@ const nuancierCopie = (n: NuancierDessin | undefined): { nuancier?: NuancierDess
 
 /**
  * Le projet d'un etat de l'editeur : le nom assaini, les champs dans l'ordre du format, les dates seulement quand le serveur les a
- * posees. Un dessin plat s'ecrit au format 1, octet pour octet comme avant le modele v2 ; un dessin qui ne l'est pas, au format 2
- * (ADR-0012, annexe 8 §0), qu'un programme d'avant refuse en le disant au lieu de le lire « au mieux ».
+ * posees. Un seul format (ADR-0030, revision du 26 octobre 2026) : les champs du modele v2 n'y paraissent que presents, ce qui garde le
+ * projet d'un dessin plat octet pour octet celui d'avant le modele v2.
  */
 export function projetDe(e: EtatProjet): Projet {
   return {
-    format: FORMAT_PROJET, version: estPlat(e.dessin) ? VERSION_PROJET_PLAT : VERSION_PROJET, nom: nomDeProjet(e.nom),
+    format: FORMAT_PROJET, version: VERSION_PROJET, nom: nomDeProjet(e.nom),
     ...(e.creeLe !== undefined ? { creeLe: e.creeLe } : {}),
     ...(e.modifieLe !== undefined ? { modifieLe: e.modifieLe } : {}),
     dessin: {
       vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier),
       // Les reperes (ADR-0038), seulement s'il y en a : le projet d'un dessin sans repere reste le meme texte.
       ...(e.dessin.reperes ? { reperes: { h: [...e.dessin.reperes.h], v: [...e.dessin.reperes.v] } } : {}),
-      // Les groupes (ADR-0012, etape 1), seulement s'il y en a : un dessin a groupes n'est pas plat, son projet est au format 2.
+      // Les groupes (ADR-0012, etape 1), seulement s'il y en a : le projet d'un dessin sans groupe reste le meme texte.
       ...tableVers(e.dessin.groupes, g => groupeProjet(g, CONVERSION))
     },
     production: choixCopie(e.production),
