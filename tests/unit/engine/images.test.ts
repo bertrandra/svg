@@ -277,21 +277,26 @@ describe('la descente des images', () => {
   const d = riche(lire(V2, 'images-png.svg'));
 
   it('chaque exporteur de traces abandonne les images et le dit ; le reste est intact', () => {
-    for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE, CAPACITES_PDF, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION]) {
+    for (const c of [CAPACITES_PLAT, CAPACITES_SVG_DECOUPE, CAPACITES_DXF, CAPACITES_EPS, CAPACITES_PRODUCTION]) {
       const r = aplatirPour(d, c);
       expect(r.dessin.formes.map(f => f.id)).toEqual(['f1', 'f4']);
       expect(r.pertes).toEqual([perteImages(2)]);
+      expect(r.perdus).toEqual([perteImages(2)]);
       expect(r.dessin.formes[0]).toBe(d.formes[0]);
     }
     expect(perteImages(1)).toBe('une image (ce format ne porte que des tracés : elle n’est pas exportée)');
   });
 
-  it('une image masquee part sans perte dite ; un exporteur natif la garde (etape 13)', () => {
+  it('une image masquee part sans perte dite ; un exporteur natif la garde (le PDF, etape 13a), dans sa scene', () => {
     const masquee: DessinSvg = { ...d, formes: d.formes.map(f => (f.image ? { ...f, visible: false } : f)) };
-    expect(aplatirPour(masquee, CAPACITES_PDF).pertes).toEqual([]);
-    const natif: Capacites = { ...CAPACITES_PDF, images: 'natif' };
-    // Natif : la regle la laisse ; le filet la retire tant qu'aucun exporteur ne sait l'ecrire (DessinPlat reste plat).
-    expect(aplatirPour(d, natif).pertes).toEqual(['les images']);
+    for (const c of [CAPACITES_PDF, CAPACITES_SVG_DECOUPE]) expect(aplatirPour(masquee, c).pertes).toEqual([]);
+    const r = aplatirPour(d, CAPACITES_PDF);
+    expect(r.pertes).toEqual([]);
+    expect(r.dessin.formes.map(f => f.id)).toEqual(['f1', 'f4']);
+    expect(r.scene?.noeuds.filter(n => n.genre === 'image')).toHaveLength(2);
+    // Natif sans scene possible (un exporteur qui ne declare que les images, sans les ecrire) : la regle la laisse, la scene la prend.
+    const natif: Capacites = { ...CAPACITES_PLAT, images: 'natif' };
+    expect(aplatirPour(d, natif).pertes).toEqual([]);
   });
 });
 

@@ -13,7 +13,7 @@ export const perteEffets = (n: number): string =>
     : 'le flou ou l’ombre portée de ' + n + ' formes ou groupes (ce format ne les porte pas : ils ne sont pas exportés)';
 
 /** Le dessin sans effets, sur les feuilles et les groupes ; le meme dessin s'il n'en porte pas. */
-export function descendreEffets(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[] } {
+export function descendreEffets(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus?: readonly string[] } {
   const table = d.groupes;
   const groupesAEffets = table ? Object.values(table).filter(g => g.effets !== undefined) : [];
   if (!groupesAEffets.length && !d.formes.some(f => f.effets !== undefined)) return { dessin: d, pertes: [] };
@@ -38,7 +38,8 @@ export function descendreEffets(d: DessinSvg): { readonly dessin: DessinSvg; rea
     }
     groupes = t;
   }
-  return { dessin: { ...d, formes, ...(groupes ? { groupes } : {}) }, pertes: vus ? [perteEffets(vus)] : [] };
+  const p = vus ? [perteEffets(vus)] : [];
+  return { dessin: { ...d, formes, ...(groupes ? { groupes } : {}) }, pertes: p, perdus: p };
 }
 
 export const effets: RegleDescente = {

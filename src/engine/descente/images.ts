@@ -16,6 +16,7 @@ export const images: RegleDescente = {
     if (niveau === 'natif' || !d.formes.some(f => f.image)) return { dessin: d, pertes: [] };
     // Une image masquee ne s'exporte pas plus qu'elle ne s'enregistre : elle part sans perte dite.
     const vues = d.formes.filter(f => f.image && f.visible).length;
-    return { dessin: { ...d, formes: d.formes.filter(f => !f.image) }, pertes: vues ? [perteImages(vues)] : [] };
+    const p = vues ? [perteImages(vues)] : [];
+    return { dessin: { ...d, formes: d.formes.filter(f => !f.image) }, pertes: p, perdus: p };
   }
 };

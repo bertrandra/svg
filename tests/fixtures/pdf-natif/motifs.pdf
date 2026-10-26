@@ -1,0 +1,242 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 240 160] /Contents 4 0 R /Resources 6 0 R >>
+endobj
+4 0 obj
+<< /Length 820 >>
+stream
+q
+/Pattern cs /P0 scn
+10 150 m
+80 150 l
+80 90 l
+10 90 l
+h
+f
+Q
+q
+/Pattern cs /P1 scn
+90 150 m
+150 150 l
+150 90 l
+90 90 l
+h
+f
+Q
+q
+0 0 0 RG
+1 w
+1 j
+90 150 m
+150 150 l
+150 90 l
+90 90 l
+h
+S
+Q
+q
+1 0.973 0.878 rg
+167 120 m
+167 104.536 179.536 92 195 92 c
+210.464 92 223 104.536 223 120 c
+223 135.464 210.464 148 195 148 c
+179.536 148 167 135.464 167 120 c
+h
+f
+Q
+q
+/Pattern CS /P2 SCN
+8 w
+1 j
+167 120 m
+167 104.536 179.536 92 195 92 c
+210.464 92 223 104.536 223 120 c
+223 135.464 210.464 148 195 148 c
+179.536 148 167 135.464 167 120 c
+h
+S
+Q
+q
+/Pattern cs /P3 scn
+10 75 m
+80 75 l
+80 10 l
+10 10 l
+h
+f
+Q
+q
+/Pattern cs /P5 scn
+90 75 m
+150 75 l
+150 10 l
+90 10 l
+h
+f
+Q
+q
+/GS0 gs
+/Pattern cs /P6 scn
+160 43 m
+160 26.431 175.67 13 195 13 c
+214.33 13 230 26.431 230 43 c
+230 59.569 214.33 73 195 73 c
+175.67 73 160 59.569 160 43 c
+h
+f
+Q
+endstream
+endobj
+5 0 obj
+<< /Producer (svg) >>
+endobj
+6 0 obj
+<< /ExtGState << /GS0 << /ca 0.7 >> >> /Shading << /Sh0 << /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 1 1] /Function << /FunctionType 2 /Domain [0 1] /C0 [0.4784 0 0.7529] /C1 [0 0.6902 0.7529] /N 1 >> /Extend [true true] >> >> /Pattern << /P0 7 0 R /P1 8 0 R /P2 9 0 R /P3 10 0 R /P4 11 0 R /P5 12 0 R /P6 13 0 R >> >>
+endobj
+7 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 20 20] /XStep 20 /YStep 20 /Resources 6 0 R /Matrix [1 0 0 1 10 130] /Length 117 >>
+stream
+q
+0.784 0.118 0.157 rg
+0 20 m
+10 20 l
+10 10 l
+0 10 l
+h
+f
+Q
+q
+0.122 0.306 0.549 rg
+10 10 m
+20 10 l
+20 0 l
+10 0 l
+h
+f
+Q
+endstream
+endobj
+8 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 7.5 15] /XStep 7.5 /YStep 15 /Resources 6 0 R /Matrix [0.866025 -0.5 0.5 0.866025 65.4423 93.3494] /Length 56 >>
+stream
+q
+0.165 0.541 0.353 rg
+0 15 m
+4 15 l
+4 -5 l
+0 -5 l
+h
+f
+Q
+endstream
+endobj
+9 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 6 6] /XStep 6 /YStep 6 /Resources 6 0 R /Matrix [1 0 0 1 0 154] /Length 121 >>
+stream
+q
+0.878 0.722 0.29 rg
+1 3 m
+1 1.895 1.895 1 3 1 c
+4.105 1 5 1.895 5 3 c
+5 4.105 4.105 5 3 5 c
+1.895 5 1 4.105 1 3 c
+h
+f
+Q
+endstream
+endobj
+10 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 25 25] /XStep 25 /YStep 25 /Resources 6 0 R /Matrix [1 0 0 1 0 135] /Length 64 >>
+stream
+q
+2 23 m
+23 23 l
+23 2 l
+2 2 l
+h
+W n
+21 0 0 -21 2 23 cm
+/Sh0 sh
+Q
+endstream
+endobj
+11 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 6 6] /XStep 6 /YStep 6 /Resources 6 0 R /Matrix [1 0 0 1 0 24] /Length 121 >>
+stream
+q
+0.878 0.722 0.29 rg
+1 3 m
+1 1.895 1.895 1 3 1 c
+4.105 1 5 1.895 5 3 c
+5 4.105 4.105 5 3 5 c
+1.895 5 1 4.105 1 3 c
+h
+f
+Q
+endstream
+endobj
+12 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 30 30] /XStep 30 /YStep 30 /Resources 6 0 R /Matrix [1 0 0 1 0 130] /Length 111 >>
+stream
+q
+0.957 0.941 0.91 rg
+0 30 m
+30 30 l
+30 0 l
+0 0 l
+h
+f
+Q
+q
+/Pattern cs /P4 scn
+5 25 m
+25 25 l
+25 5 l
+5 5 l
+h
+f
+Q
+endstream
+endobj
+13 0 obj
+<< /Type /Pattern /PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 16 16] /XStep 16 /YStep 16 /Resources 6 0 R /Matrix [1 0 0 1 0 144] /Length 54 >>
+stream
+q
+0.125 0.125 0.125 rg
+0 16 m
+8 16 l
+8 8 l
+0 8 l
+h
+f
+Q
+endstream
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000225 00000 n 
+0000001096 00000 n 
+0000001133 00000 n 
+0000001476 00000 n 
+0000001781 00000 n 
+0000002054 00000 n 
+0000002358 00000 n 
+0000002609 00000 n 
+0000002913 00000 n 
+0000003212 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R /Info 5 0 R >>
+startxref
+3453
+%%EOF

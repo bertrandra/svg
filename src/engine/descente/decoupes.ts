@@ -26,7 +26,7 @@ const aire = (r: MultiPolygon): number => r.reduce((s, poly) => s + poly.reduce(
 const courbe = (f: Forme): boolean => f.d.some(c => c.c === 'C' || c.c === 'Q');
 
 /** La region d'une decoupe : l'union de ses feuilles visibles, chacune rognee par les decoupes de ses groupes dans le contenu. */
-function regionDecoupe(dec: Decoupe, tolerance: number, memo: Map<Decoupe, MultiPolygon>): MultiPolygon {
+export function regionDecoupe(dec: Decoupe, tolerance: number, memo: Map<Decoupe, MultiPolygon>): MultiPolygon {
   const deja = memo.get(dec);
   if (deja) return deja;
   const c = dec.contenu;
@@ -47,7 +47,7 @@ function regionDecoupe(dec: Decoupe, tolerance: number, memo: Map<Decoupe, Multi
 }
 
 /** Vrai si une decoupe ou ses contenus portent des courbes (le resultat se rebatit alors en courbes). */
-const decoupeCourbe = (dec: Decoupe): boolean =>
+export const decoupeCourbe = (dec: Decoupe): boolean =>
   dec.contenu.formes.some(courbe) || Object.values(dec.contenu.groupes ?? {}).some(g => !!g.decoupe && decoupeCourbe(g.decoupe));
 
 /** Une boite en region. */

@@ -206,6 +206,11 @@ empreintes.
 
 ### Ajouté
 
+- Le PDF vectoriel d'un dessin riche garde ses dégradés (shading), ses motifs (pavage), ses découpes (chemin de découpe, traits
+  compris), ses masques d'opacité (masque doux), l'opacité de ses groupes (groupe de transparence) et ses images (JPEG tel quel,
+  PNG et GIF décodés, alpha compris, orientation EXIF) ; le message de l'export distingue ce qui est approché de ce qui est perdu
+  (flou et ombre, image WebP). Un dessin plat garde son PDF à l'octet.
+
 - Découpes, masques et effets dans l'éditeur (modèle riche, bêta) : au menu Édition, « Créer une découpe », « Libérer la découpe »,
   « Créer un masque », « Inverser le masque », « Libérer le masque », grisés avec leur raison, sans raccourci ; une section Effets
   dans l'inspecteur (flou, ombre portée : décalage, flou, couleur, opacité), aussi pour un groupe ; les groupes des calques montrent

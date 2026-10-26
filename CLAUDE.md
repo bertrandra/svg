@@ -173,6 +173,12 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Le PDF écrit ce qu'il sait, par une scène native** (ADR-0012, étape 13a) : `CAPACITES_PDF` déclare natifs les dégradés, motifs,
+  découpes, masques, images et groupes ; `aplatirPour` rend alors une `scene` (`engine/descente/scene.ts`) que `export/pdfNatif.ts`
+  écrit (shading, pavage, `W n`, `/SMask`, groupe de transparence isolé, XObject) ; les PNG se décodent en pur, leur décompression
+  injectée par `io/exportPdf.ts`, et se recompressent par `export/deflate.ts`, déterministe ; sans scène, le PDF d'avant à l'octet ;
+  `phrasePertes(pertes, perdus)` dit « approché » ou « perdu » ; les effets restent abandonnés tant que le PDF n'a pas de résolution
+  d'export.
 - **Découpes, masques et effets se commandent en riche seulement** (ADR-0012, étape 8) : menu Édition sans raccourci ni bouton,
   commandes grisées avec leur raison (`zones/commandesContenus.ts`) ; libérer rend le contenu choisi dans le groupe devenu le
   contexte ; section Effets sur `poserEffets` (pur, bornes de la lecture, feuilles et groupes) ; pastilles des groupes en icônes puis
