@@ -17,7 +17,7 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; 2-B, 2-C, 2-D proposés |
+| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-B** (calques en arbre) **fait** le 26 octobre 2026 (« Ce que le paquet 2-B a posé ») ; 2-C, 2-D proposés |
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
 | 4, 6, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
@@ -238,6 +238,69 @@ plat, le rendu de la toile au corps d'avant recopié, en vue normale et en vue �
   les effets écrits par `effets.ts` (attributs `filter`, définitions `<filter>`) se verront sans toucher la toile ; le mode brouillon
   d'un geste peut se poser sur `<g class="noeuds-toile" data-brouillon>` (un attribut de `NoeudsToile`) et retirer les filtres par
   le CSS, ou passer à `renduDe` une liste sans les effets (`renduDe(d, fonctions)` n'est pas mémorisé).
+
+### Ce que le paquet 2-B a posé (26 octobre 2026)
+
+Aucun octet écrit ne bouge, la lecture `plat` est inchangée, et **un dessin plat garde la liste des calques d'avant au nœud près**
+(`tests/unit/zones/calques.test.ts` : l'empreinte du DOM rendu du panneau, prise sur le code d'avant l'arbre, pour chaque SVG de
+référence plat — sans sélection, avec, en contexte Cricut —, un dessin de 300 formes fenêtré et les deux états vides ;
+`tests/fixtures/calques/plat.sha256.json`, réécrit seulement par `ACTUALISER_REFERENCES=1`). Ce que les paquets suivants trouvent :
+
+- **Le partage** : `Calques.tsx` garde son corps ; un dessin riche (`!estPlat`) y remplace la liste `<ol>` par `ArbreCalques`, dans le
+  même `<aside>` (la barre « Tout / Aucun / Inverser / Tout afficher », « Par couleur » et l'état vide sont communs ; « Tout afficher »
+  montre aussi les groupes masqués). Le dessin qui redevient plat (son dernier groupe défait) repasse à la liste, le focus revient au
+  panneau. `Fenetre.ts` : `useFenetre<L>` est générique (la grille est un `div`), rien d'autre.
+- **Cricut** (ADR-0028), décision : les deux groupes « À couper / À écrire » restent la vue première (ce qu'on règle feuille par
+  feuille avant d'exporter) ; **pour un dessin riche seulement**, l'arbre vient dessous, replié au départ (les groupes de la racine
+  seuls), pour garder la structure atteignable (masquer, verrouiller, déplacer un groupe) sans doubler la liste. Un dessin plat en
+  Cricut n'a toujours que les deux groupes (garde ci-dessus).
+- **Le calcul, pur** : `zones/lignesCalques.ts` — `lignesVisibles(d, deplies)` (les nœuds dont tous les ancêtres sont dépliés, du
+  premier plan au fond, avec niveau, rang parmi les frères, parent ; mémorisé par dessin et par ensemble déplié), `enfantsDe`,
+  `parentDe`, `groupeCommun(d, ids)` (le contexte qu'un choix amène), `destinations(d, ids)` (« Déplacer vers… » : la racine puis
+  chaque groupe par son chemin « Ciel › Nuage », refusés : les groupes déplacés, leurs descendants, le parent commun), `etendue`.
+  `zones/deplacerCalques.ts` — `ciblesDe` (la sélection si la ligne en est, ses unités ; sinon la ligne), `changerDeRang`
+  (Ctrl+Maj+Haut/Bas, `ordonnerNoeuds`), `sortirDuGroupe` (Ctrl+Maj+Gauche : frère du parent, juste sous lui ; s'il se vide, à sa
+  place), `entrerAuDessus` (Ctrl+Maj+Droite : dans le frère juste au-dessus s'il est un groupe, tout en bas ; entrer puis sortir rend
+  le dessin d'avant), `deplacerVers` (menu et dépôt : au premier plan du groupe, ou sous une feuille ; jamais en lui-même),
+  `renommerGroupe` ; chacun rend `{ dessin, phrase, deplier }` et passe par les opérations du moteur (`deplacerDans`,
+  `ordonnerNoeuds`, `renommer`). `zones/phrasesCalques.ts` : les phrases (plier, déplier, `*`, déplacer, monter, sortir, renommer,
+  refus), tournées autour du verbe pour ne pas accorder un participe au genre d'une forme.
+- **La grille** : `zones/ArbreCalques.tsx` — un `role="treegrid"` (`aria-multiselectable`, `aria-rowcount` des lignes visibles),
+  des lignes `role="row"` (`aria-level`, `aria-posinset`, `aria-setsize`, `aria-rowindex`, `aria-expanded` pour un groupe,
+  `aria-selected`, `aria-current` pour le groupe du contexte, nom accessible : celui de la liste plate pour une feuille, « Groupe
+  « Nuage », 3 éléments[, verrouillé][, masqué] » pour un groupe), trois cellules : le nom (chevron de groupe, échantillon de feuille,
+  nombre d'enfants), la visibilité, le verrou. **Tabindex itinérant** : un seul arrêt dans la grille (la ligne active, ou l'un de ses
+  deux boutons), Tab en sort. Fenêtrée au-delà de 150 lignes visibles avec deux cales `data-cale`, la ligne active épinglée
+  (`segmentsFenetre`) ; lignes mémorisées (`LigneArbreCalque`), gestes délégués à la grille (`zones/gestesArbreCalques.ts` :
+  `verbesArbre`, `gestesSouris`, `gesteClavier`, `gestesDepot`). Le retrait par niveau est `calc(var(--esp-l) * n)` ; **aucun jeton
+  ajouté** (le choix, le focus et le dépôt reprennent `--cyan` et `repli-cyan-18`, `Highlight` en contraste forcé ; 40 px au doigt).
+- **Le clavier** (annexe 6 §1) : Haut/Bas (Maj : étendre), Droite (déplie ; sur un groupe déplié, premier enfant ; sur une feuille,
+  ses boutons), Gauche (replie, sinon parent ; sur un bouton, cellule précédente puis la ligne), Haut/Bas sur un bouton gardent la
+  colonne, Origine/Fin, Page préc./suiv., Entrée (groupe : `ac.entrerGroupe` et il se déplie ; feuille : la choisit), Espace
+  (ajoute ou retire), F2 (renommer un groupe en place, Entrée valide, Échap abandonne ; une feuille : dit pourquoi non), `*` (déplie
+  les groupes frères), Maj+F10 ou la touche Menu (ouvre « Déplacer vers… », la ligne choisie d'abord), Ctrl+Maj+flèches. Le reste
+  (Suppr, Échap, Ctrl+A…) descend aux raccourcis de l'éditeur. Souris : clic (Maj : étendue, Ctrl : bascule), double-clic sur un
+  groupe y entre, chevron, glisser-déposer d'une ligne (sur un groupe : dedans ; sur une feuille : juste sous elle). « Déplacer
+  vers… » est un `MenuDeroulant` au-dessus de la grille, au clavier comme au doigt.
+- **Le contexte suit le choix fait dans l'arbre** : choisir une ligne pose le contexte d'édition au groupe qui contient tout le choix
+  (`groupeCommun`, la racine sinon), par `ac.poserContexte`, sans phrase de plus ; une forme choisie sur la toile déplie ses groupes
+  et la liste défile jusqu'à elle.
+- **Mesure** (méthode ADR-0008 : Chromium, `TaskDuration` du fil principal, médiane de trois, plat et riche entrelacés ; 2 000
+  feuilles, en 200 groupes de 10 pour le riche, à plat pour le témoin) : ouvrir 469 ms (plat 429, × 1,09) ; Ctrl+A 179 ms (plat
+  208) ; DOM de la grille repliée 698 nœuds pour 200 lignes (36 dessinées ; la liste plate : 559 nœuds), du panneau 1 175 (plat
+  1 030) ; tout déplier (`*`, 200 groupes, 2 200 lignes) 95 à 123 ms, DOM déplié 661 ; Fin 46 ms, Origine 70 ms, choisir une
+  ligne 169 ms, Ctrl+Maj+Bas 97 ms, replier 88 ms. **Hors budget** (annexe 7 §4, à trancher par 2-D) : la grille dépasse 400
+  nœuds (≈ 19 nœuds par ligne : trois boutons à icône SVG ; la liste plate, 559, ne tient pas non plus ce budget) ; rien n'a été
+  optimisé avant d'être mesuré.
+- **Tests** : `tests/unit/zones/calques.test.ts` (la garde plate, la grille rendue, fenêtrage, Cricut), `arbre-calques.test.ts`
+  (lignes, destinations, contexte, déplacements et phrases), `rendreCalques.ts` (le panneau rendu hors navigateur) ; e2e
+  `tests/e2e/calques-arbre.e2e.ts` (le parcours sans souris : déplier, replier, choisir, renommer, « Déplacer vers… », Ctrl+Maj+flèches,
+  entrer, Tab qui sort, « Terminer » ; les boutons d'une ligne ; axe replié, déplié, en contexte et menu ouvert, en clair, sombre et
+  au doigt avec cibles de 40 px ; le glisser-déposer ; un dessin plat sans grille).
+- **Reste** : les pastilles des groupes (« découpé », « ombre portée », « opacité 50 % ») et leur jeton `pastille-groupe` (2-C ou
+  l'étape 8) ; un menu contextuel complet (Maj+F10 n'ouvre que « Déplacer vers… ») ; Suppr dans la grille supprime la sélection, pas
+  la ligne active ; « Tout / Inverser » de la barre prennent encore les feuilles (Ctrl+A de 2-C voit le contexte) ; une revue NVDA /
+  VoiceOver de l'arbre (condition de la bascule) ; le budget DOM ci-dessus.
 
 ### Ce que l'étape 5 a posé (26 octobre 2026)
 
