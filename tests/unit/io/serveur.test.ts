@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creerServeur, lireMeta } from '../../../src/io/serveur.js';
+import { REGLAGES_PAR_DEFAUT, creerServeur, lireCompte, lireFiche, lireMeta, lireReglages, lireSite, type Reglages } from '../../../src/io/serveur.js';
 import { FORMAT_PROJET, VERSION_PROJET, type Projet } from '../../../src/model/projet.js';
 
 // Le client de l'API du site (ADR-0030) : jamais d'exception, toujours un code et une phrase ; le jeton CSRF sur chaque ecriture,
@@ -118,6 +118,111 @@ describe('le serveur du site', () => {
     expect(lireMeta({ ...META, id: '0123456789ABCDEF' })).toBeNull();
     expect(lireMeta({ ...META, revision: 0 })).toBeNull();
     expect(lireMeta('x')).toBeNull();
+  });
+});
+
+describe('les comptes du site (ADR-0041)', () => {
+  const COMPTE = { id: 'fedcba9876543210', nom: 'Anne', email: 'anne@exemple.org', langue: 'fr', role: 'admin' };
+  const FICHE = { ...COMPTE, etat: 'actif', creeLe: '2026-10-01T10:00:00Z', confirmeLe: '2026-10-01T10:05:00Z', approuveLe: '2026-10-02T09:00:00Z', projets: 3 };
+  const SITE = { nom: 'Mon site', langue: 'fr', inscriptions: true };
+  const CONFIG = {
+    format: 'editeur-svg/config', version: 1,
+    site: { nom: 'Mon site', langue: 'en', adresse: 'https://exemple.org/svg/' }, inscriptions: { ouvertes: false },
+    courrier: { expediteur: 'no-reply@exemple.org', nom: 'Mon site', mode: 'smtp', smtp: { hote: 'smtp.exemple.org', port: 465, securite: 'ssl', utilisateur: 'anne' } },
+    sessions: { inactivite: 3600 }, smtpMotDePassePose: true
+  };
+  const entetes = (a: Appel | undefined) => a?.init.headers as Record<string, string>;
+
+  it('lit la personne connectee, le site et les demandes en attente ; refuse une reponse mal formee', async () => {
+    const ok = await faux(() => json(200, { compte: { ...COMPTE, etat: 'actif' }, site: SITE, admin: { enAttente: 2 } })).serveur.compte();
+    expect(ok).toEqual({ ok: true, valeur: { compte: COMPTE, site: SITE, enAttente: 2 } });
+    const simple = await faux(() => json(200, { compte: COMPTE, site: SITE })).serveur.compte();
+    expect(simple).toEqual({ ok: true, valeur: { compte: COMPTE, site: SITE, enAttente: null } });
+    expect(await faux(() => json(200, { compte: { ...COMPTE, role: 'dieu' }, site: SITE })).serveur.compte()).toMatchObject({ ok: false, code: 'serveur' });
+    expect(await faux(() => json(401, { erreur: 'session', message: 'x' })).serveur.compte()).toMatchObject({ ok: false, code: 'session' });
+  });
+
+  it('ne croit qu un compte, une fiche ou un site de la bonne forme', () => {
+    expect(lireCompte(COMPTE)).toEqual(COMPTE);
+    expect(lireCompte({ ...COMPTE, id: 'FEDCBA9876543210' })).toBeNull();
+    expect(lireCompte({ ...COMPTE, langue: 'de' })).toBeNull();
+    expect(lireCompte({ ...COMPTE, nom: 'x'.repeat(121) })).toBeNull();
+    expect(lireCompte(null)).toBeNull();
+    expect(lireFiche(FICHE)).toEqual(FICHE);
+    expect(lireFiche({ ...FICHE, confirmeLe: null, approuveLe: '' })).toEqual({ ...COMPTE, etat: 'actif', creeLe: FICHE.creeLe, projets: 3 });
+    expect(lireFiche({ ...FICHE, etat: 'banni' })).toBeNull();
+    expect(lireFiche({ ...FICHE, projets: -1 })).toBeNull();
+    expect(lireFiche({ ...FICHE, derniereConnexion: 42 })).toBeNull();
+    expect(lireSite(SITE)).toEqual(SITE);
+    expect(lireSite({ ...SITE, inscriptions: 'oui' })).toBeNull();
+    expect(lireSite('x')).toBeNull();
+  });
+
+  it('ecrit le profil, le mot de passe et la deconnexion par POST avec le jeton', async () => {
+    const { serveur, appels } = faux(a => (a.url.includes('r=profil') ? json(200, { compte: { ...COMPTE, nom: 'Anne D.' } }) : json(200, { ok: true })));
+    expect(await serveur.profil({ nom: 'Anne D.' })).toEqual({ ok: true, valeur: { ...COMPTE, nom: 'Anne D.' } });
+    expect(await serveur.motDePasse('ancien-secret', 'nouveau-secret')).toEqual({ ok: true, valeur: null });
+    expect(await serveur.deconnexion()).toEqual({ ok: true, valeur: null });
+    expect(appels.map(a => [a.url, a.init.method, entetes(a)['X-CSRF']])).toEqual([
+      ['api.php?r=profil', 'POST', 'jeton'], ['api.php?r=mot-de-passe', 'POST', 'jeton'], ['api.php?r=deconnexion', 'POST', 'jeton']
+    ]);
+    expect(JSON.parse(String(appels[0]?.init.body))).toEqual({ nom: 'Anne D.' });
+    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ ancien: 'ancien-secret', nouveau: 'nouveau-secret' });
+    const refus = await faux(() => json(400, { erreur: 'invalide', message: 'L’ancien mot de passe est incorrect.' })).serveur.motDePasse('a', 'b');
+    expect(refus).toEqual({ ok: false, code: 'invalide', message: 'L’ancien mot de passe est incorrect.' });
+  });
+
+  it('liste les comptes en ecartant les fiches mal formees, et agit sur un compte par sa route', async () => {
+    const { serveur, appels } = faux(a => {
+      if (a.url === 'api.php?r=comptes') return json(200, { comptes: [FICHE, { ...FICHE, id: 'nope' }, 7] });
+      if (a.url.includes('compte-supprimer')) return json(200, { ok: true });
+      if (a.url.includes('compte-retrograder')) return json(403, { erreur: 'dernier-admin', message: 'Dernier administrateur.' });
+      return json(200, { compte: { ...FICHE, etat: 'refuse' } });
+    });
+    expect(await serveur.comptes()).toEqual({ ok: true, valeur: [FICHE] });
+    expect(await serveur.actionCompte('refuser', FICHE.id, { raison: 'Adresse inconnue' })).toEqual({ ok: true, valeur: { ...FICHE, etat: 'refuse' } });
+    expect(await serveur.actionCompte('supprimer', FICHE.id)).toEqual({ ok: true, valeur: null });
+    expect(await serveur.actionCompte('creer', null, { email: 'b@exemple.org', nom: 'B', langue: 'fr', motDePasse: 'provisoire-10' })).toMatchObject({ ok: true });
+    expect(await serveur.actionCompte('retrograder', FICHE.id)).toEqual({ ok: false, code: 'dernier-admin', message: 'Dernier administrateur.' });
+    expect(appels.map(a => a.url)).toEqual([
+      'api.php?r=comptes', 'api.php?r=compte-refuser&id=fedcba9876543210', 'api.php?r=compte-supprimer&id=fedcba9876543210', 'api.php?r=compte-creer', 'api.php?r=compte-retrograder&id=fedcba9876543210'
+    ]);
+    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ raison: 'Adresse inconnue' });
+    expect(JSON.parse(String(appels[2]?.init.body))).toEqual({});
+    expect(entetes(appels[3])['X-CSRF']).toBe('jeton');
+    // Un refus sans phrase du serveur garde une phrase a dire.
+    const muet = await faux(() => json(403, { erreur: 'soi-meme' })).serveur.actionCompte('suspendre', FICHE.id);
+    expect(muet.ok ? '' : muet.message).toMatch(/votre propre compte/);
+  });
+
+  it('lit les reglages champ par champ, chacun a son defaut, et ne renvoie le mot de passe SMTP que tape', async () => {
+    const { serveur, appels } = faux(a => (a.init.method === 'POST' ? json(200, { ok: true }) : json(200, CONFIG)));
+    const lu = await serveur.reglages();
+    const attendu: Reglages = { site: { ...CONFIG.site, langue: 'en' }, inscriptions: CONFIG.inscriptions, courrier: { ...CONFIG.courrier, mode: 'smtp', smtp: { ...CONFIG.courrier.smtp, securite: 'ssl' } }, sessions: CONFIG.sessions, smtpMotDePassePose: true };
+    expect(lu).toEqual({ ok: true, valeur: attendu });
+    expect(lireReglages({ site: { nom: 'X', langue: 'xx' }, courrier: { mode: 'pigeon', smtp: { port: 70000 } } })).toEqual({
+      ...REGLAGES_PAR_DEFAUT, site: { ...REGLAGES_PAR_DEFAUT.site, nom: 'X' }
+    });
+    expect(lireReglages([])).toBeNull();
+    const sans = await serveur.poserReglages(attendu, '');
+    expect(sans).toEqual({ ok: true, valeur: attendu });
+    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ site: CONFIG.site, inscriptions: CONFIG.inscriptions, courrier: CONFIG.courrier, sessions: CONFIG.sessions });
+    const avec = await serveur.poserReglages({ ...attendu, smtpMotDePassePose: false }, 'secret');
+    expect(avec).toEqual({ ok: true, valeur: attendu });
+    expect(JSON.parse(String(appels[2]?.init.body)).courrier.smtp).toEqual({ ...CONFIG.courrier.smtp, motDePasse: 'secret' });
+    expect(entetes(appels[2])['X-CSRF']).toBe('jeton');
+    // Un serveur qui rend la configuration relue : on la croit, elle.
+    const relu = await faux(() => json(200, { ...CONFIG, site: { ...CONFIG.site, nom: 'Relu' } })).serveur.poserReglages(attendu, '');
+    expect(relu.ok ? relu.valeur.site.nom : '').toBe('Relu');
+  });
+
+  it('envoie un mail d essai, avec ou sans destinataire, et dit l echec du courrier', async () => {
+    const { serveur, appels } = faux(() => json(200, { ok: true }));
+    expect(await serveur.courrierEssai()).toEqual({ ok: true, valeur: null });
+    expect(await serveur.courrierEssai('b@exemple.org')).toEqual({ ok: true, valeur: null });
+    expect(appels.map(a => [a.url, JSON.parse(String(a.init.body))])).toEqual([['api.php?r=courrier-essai', {}], ['api.php?r=courrier-essai', { destinataire: 'b@exemple.org' }]]);
+    const echec = await faux(() => json(502, { erreur: 'courrier', message: 'SMTP : connexion refusée.' })).serveur.courrierEssai();
+    expect(echec).toEqual({ ok: false, code: 'courrier', message: 'SMTP : connexion refusée.' });
   });
 });
 

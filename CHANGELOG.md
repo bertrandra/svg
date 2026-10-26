@@ -331,6 +331,33 @@ empreintes.
 
 ### Ajouté
 
+- **Le menu du profil** (ADR-0041 §5) : en haut à droite de « Mes projets », un rond aux initiales du nom (`Compte : <nom>`)
+  ouvre un menu : le nom et l’adresse en tête, « Mon profil… », pour un administrateur « Comptes » (avec le nombre de demandes en
+  attente, en pastille sur l’icône et dans le libellé) et « Réglages du site… », puis « Se déconnecter », qui soumet le même
+  formulaire POST sous jeton CSRF qu’avant. La page donne la personne et le site en JSON (`data-compte`, `data-site` sur `#site`),
+  lus sans lever ; un attribut illisible ouvre l’application sans le menu, avec la déconnexion d’avant, et le dit.
+  « Mon profil » est une boîte modale (Échap ferme, le focus revient) : le nom (120 caractères), la langue (Français / English ;
+  la page se recharge quand elle change), le mot de passe (l’actuel, le nouveau deux fois, dix caractères au moins, chaque
+  erreur liée à son champ), chaque formulaire avec son propre retour. `src/site/MenuProfil.tsx`, `src/site/Profil.tsx`,
+  `src/site/Formulaire.tsx` ; la part pure dans `src/site/comptesSite.ts` (initiales, validations), testée dans
+  `tests/unit/site/`. `MenuDeroulant` accepte un contenu de bouton (`contenu`) et un en-tête hors menu (`entete`).
+- **L’écran Comptes** (ADR-0041 §5, administrateur) : un écran à la place de « Mes projets » (« ← Mes projets » y ramène), trois
+  onglets au clavier (En attente, Actifs, Autres, chacun avec son nombre et son état vide), une ligne par compte (nom, adresse,
+  langue, rôle, dates, nombre de projets). Approuver est la seule action pleine ; Refuser (avec une raison d’une ligne),
+  Suspendre, Nommer ou retirer l’administration, Changer l’adresse et Supprimer se confirment dans la ligne, jamais dans une
+  fenêtre du navigateur ; Réactiver et Renvoyer le mail partent au clic. Les gestes qu’on ne fait pas sur soi-même ni sur le
+  dernier administrateur actif sont grisés avec leur raison, et le refus du serveur se montre en clair. « Créer un compte… »
+  (adresse, nom, langue, mot de passe provisoire) ouvre un compte actif d’emblée. `src/site/Comptes.tsx` ; classement, gestes
+  par état et raisons dans `src/site/comptesSite.ts`.
+- **Réglages du site** (ADR-0041 §7, administrateur) : le formulaire de `data/config/config.json` : nom du site, langue par
+  défaut, adresse du site, inscriptions ouvertes, courrier (expéditeur, nom, mode mail / SMTP / fichier, serveur, port, sécurité,
+  utilisateur, mot de passe laissé vide pour ne pas le changer, jamais renvoyé par le serveur), « Envoyer un mail d’essai » vers
+  l’adresse de son choix, « Enregistrer ». `src/site/Reglages.tsx`.
+- **Le client de l’API du site** (`io/serveur.ts`) connaît les routes des comptes : `compte`, `profil`, `motDePasse`,
+  `deconnexion`, `comptes`, `actionCompte`, `reglages`, `poserReglages`, `courrierEssai`, avec des lecteurs qui ne croient que des
+  champs de la bonne forme (`lireCompte`, `lireFiche`, `lireSite`, `lireReglages` : chaque réglage à son défaut) ; les codes de
+  refus (`role`, `existe`, `dernier-admin`, `soi-meme`, `courrier`, `limite`) ont une phrase de repli. Testé dans
+  `tests/unit/io/serveur.test.ts`.
 - **Deux documentations dans le menu Aide** : « Guide de l’éditeur » (seize fonctions en six chapitres, chacune en une capture
   et quelques étapes, avec un sommaire qui suit la lecture, Précédent / Suivant, et un tiroir au téléphone) et « La Cricut, c’est
   simple » (sept étapes en images : la machine, le tapis, la feuille, les copies, les liens, couper ou écrire, l’export). Elles

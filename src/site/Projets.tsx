@@ -87,12 +87,14 @@ interface Proprietes {
   gestes: GestesProjets;
   /** Le jeton CSRF de la session, pour le formulaire de deconnexion (un vrai formulaire : il marche meme si le script a echoue). */
   csrf: string;
+  /** Le menu du profil (ADR-0041), en haut a droite ; null quand la page n'a pas pu dire qui est connecte : la deconnexion reste. */
+  menu: ReactNode;
   /** Les voies pour commencer d'un fichier, d'une image, d'une forme (celles de la page autonome). */
   voies: ReactNode;
   pied: ReactNode;
 }
 
-export function EcranProjets({ projets, message, gestes, csrf, voies, pied }: Proprietes) {
+export function EcranProjets({ projets, message, gestes, csrf, menu, voies, pied }: Proprietes) {
   const [mode, poserMode] = useState<Mode>(null);
   return (
     <main className="accueil site-projets">
@@ -101,11 +103,13 @@ export function EcranProjets({ projets, message, gestes, csrf, voies, pied }: Pr
           <h1>Mes projets</h1>
           <p>Vos dessins enregistrés sur ce site, avec tout ce qu’il faut pour les rouvrir à l’identique. Le SVG, le PDF et les autres formats se téléchargent depuis l’éditeur.</p>
         </div>
-        <form method="post" action="index.php" className="site-deconnexion">
-          <input type="hidden" name="action" value="deconnexion" />
-          <input type="hidden" name="csrf" value={csrf} />
-          <button type="submit" className="discret">Se déconnecter</button>
-        </form>
+        {menu ?? (
+          <form method="post" action="index.php" className="site-deconnexion">
+            <input type="hidden" name="action" value="deconnexion" />
+            <input type="hidden" name="csrf" value={csrf} />
+            <button type="submit" className="discret">Se déconnecter</button>
+          </form>
+        )}
       </header>
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
       <section className="projets" aria-labelledby="titre-projets">

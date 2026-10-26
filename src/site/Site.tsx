@@ -12,7 +12,7 @@ import { planDOuverture } from '../engine/preparation.js';
 import { nomDeProjet, type TeinteProjet } from '../model/projet.js';
 import { CHOIX_GENERIQUE } from '../model/contextes.js';
 import { stockageNavigateur } from '../io/stockage.js';
-import type { MetaProjet, Serveur } from '../io/serveur.js';
+import type { Compte, InfosSite, MetaProjet, Serveur } from '../io/serveur.js';
 import { EditeurSvg, type ActionHote, type EtatEnregistrement, type EtatRendu } from '../zones/EditeurSvg.js';
 import { EXEMPLE, NUANCIER_EXEMPLE, OuvrirSvg, Voies } from '../zones/Application.js';
 import { SectionBibliotheque } from '../zones/Bibliotheque.js';
@@ -31,6 +31,7 @@ import type { TonMessage } from '../zones/commun/Message.js';
 import { nomDeFichier } from '../util/texte.js';
 import type { Voie } from '../zones/publics.js';
 import { EcranProjets, type GestesProjets } from './Projets.js';
+import { EcransCompte } from './EcransCompte.js';
 import { imageSource, memeEtat, projetAEnregistrer, travailDuProjet, travailDuSvg, type TravailOuvert } from './projetSite.js';
 
 const STOCKAGE = stockageNavigateur();
@@ -103,13 +104,24 @@ function PiedDuSite({ montrerCredits }: { montrerCredits: () => void }) {
   );
 }
 
-export function Site({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
-  return <FournisseurStockage stockage={STOCKAGE}><FournisseurReperes actif={false}><Hote serveur={serveur} csrf={csrf} /></FournisseurReperes></FournisseurStockage>;
+interface ProprietesSite {
+  serveur: Serveur;
+  csrf: string;
+  /** La personne connectee (ADR-0041), lue de la page ; null si la page ne l'a pas dite lisiblement : l'application marche sans le menu du profil. */
+  compte: Compte | null;
+  /** Ce que la page dit du site ; lu et valide pour l'ADR-0042 (la langue de l'interface), aucun ecran ne l'emploie encore. */
+  site: InfosSite | null;
+  /** Une phrase a dire a l'ouverture (un attribut de la page illisible). */
+  avertissement?: string;
 }
 
-function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
+export function Site(p: ProprietesSite) {
+  return <FournisseurStockage stockage={STOCKAGE}><FournisseurReperes actif={false}><Hote {...p} /></FournisseurReperes></FournisseurStockage>;
+}
+
+function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const [projets, poserProjets] = useState<readonly MetaProjet[] | null>(null);
-  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'info' });
+  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: avertissement ?? '', ton: 'alerte' });
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
   const [edition, poserEdition] = useState<Edition | null>(null);
   const [enregistrement, poserEnregistrement] = useState<EtatEnregistrement>({ etat: 'enregistre' });
@@ -243,7 +255,7 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
   const t = edition?.travail;
   return (
     <>
-      <EcranProjets projets={projets} message={message} gestes={gestes} csrf={csrf} voies={voies} pied={pied} />
+      <EcransCompte serveur={serveur} csrf={csrf} compte={compte} projets={menu => <EcranProjets projets={projets} message={message} gestes={gestes} csrf={csrf} menu={menu} voies={voies} pied={pied} />} />
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
       {edition && t ? (
         <EditeurSvg key={edition.cle} svg="" dessin={t.dessin} titre={t.nom} nom={nomDeFichier(t.nom, 'projet')} nuancier={t.nuancier} bibliotheque="a-charger" stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE}
