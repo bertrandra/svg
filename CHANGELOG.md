@@ -154,6 +154,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : le nettoyage d'une feuille de style retire aussi `@ import` écrit avec un blanc après l'arobase (trouvé par le fuzzing ;
+  régression ajoutée).
 - Modèle riche : un masque dont le contenu porte des groupes eux-mêmes masqués ou découpés garde toutes ses formes, ou est refusé
   en le nommant s'il dépasse la borne (il en perdait en silence) ; une image dans le contenu d'un masque s'écrit dans un SVG bien
   formé (`xmlns:xlink` déclaré), et le contrôle d'écriture refuse désormais tout préfixe non déclaré.
@@ -205,6 +207,18 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
+  menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le
+  masque se dessine tel quel, cerné. Les outils ordinaires s'y appliquent, chaque geste s'annule en une fois, et l'on sort par
+  Échap, Maj+Entrée ou le fil d'Ariane « Racine › Groupe › Découpe ». Une découpe vidée refuse la sortie et dit quoi faire ; le
+  texte, et les effets dans une découpe, y sont grisés avec leur raison.
+
+- Modèle v2, étape 13b : en mode riche, les ombres portées et les flous écrits par Figma (ombre portée, flou de calque), Sketch
+  (ombres en `feMerge`) et Illustrator (`AI_Shadow`) s'ouvrent comme des effets de l'éditeur ; le filtre `Adobe_OpacityMaskFilter`
+  des masques d'Illustrator est reconnu comme neutre ; l'ombre portée d'Inkscape 1 s'ouvre aussi. Ce qui n'y équivaut pas (ombre
+  intérieure, plusieurs ombres, mode de fusion autre que normal, ombre de Figma sous une forme transparente) est refusé en nommant
+  l'idiome, par exemple « une ombre intérieure (Figma) ».
 
 - Le PDF vectoriel d'un dessin riche garde ses dégradés (shading), ses motifs (pavage), ses découpes (chemin de découpe, traits
   compris), ses masques d'opacité (masque doux), l'opacité de ses groupes (groupe de transparence) et ses images (JPEG tel quel,

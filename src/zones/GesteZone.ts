@@ -9,6 +9,7 @@ import { appliquerZone, noeudsDansZone, pointLasso, rectangleDe, type EffetZone,
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { effetDe, phraseZone } from './commandesSelection.js';
 import type { OutilZone } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 /** Ce que la toile montre d'un geste de zone en cours : sa forme, ses points (deux coins, ou le lasso), sa regle, et l'apercu. */
 export interface ZoneEnCours {
@@ -72,7 +73,7 @@ export function useGesteZone() {
   const apercu = (z: Omit<ZoneEnCours, 'ids'>, avant: readonly string[]): readonly string[] => {
     const geo = zoneDe(z.forme, z.points);
     // Au niveau du contexte d'edition (ADR-0012, annexe 6 §2) ; un dessin plat : ses formes, comme avant.
-    const ids = geo ? noeudsDansZone(mo.dessin, ui.contexte?.groupe ?? null, geo, { regle: z.regle, contours: ui.contours }) : [];
+    const ids = geo ? noeudsDansZone(mo.dessin, niveauEdition(ui.contexte), geo, { regle: z.regle, contours: ui.contours }) : [];
     return memes(ids, avant) ? avant : ids;
   };
   const poser = magasin.poser;
@@ -127,7 +128,7 @@ export function useGesteZone() {
         return true;
       }
       const geo = zoneDe(z.forme, points);
-      const pris = geo ? noeudsDansZone(mo.dessin, ui.contexte?.groupe ?? null, geo, { regle: z.regle, contours: ui.contours }) : [];
+      const pris = geo ? noeudsDansZone(mo.dessin, niveauEdition(ui.contexte), geo, { regle: z.regle, contours: ui.contours }) : [];
       const apres = appliquerZone(mo.sel, pris, z.effet);
       ac.choisir(apres);
       ac.poserPoint(null);

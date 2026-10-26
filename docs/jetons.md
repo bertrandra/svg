@@ -54,6 +54,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--encre-toile` | `#15181d` | `#15181d` | L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe) |
 | `--apercu-coupe` | `#cc4a1a` | `#cc4a1a` | L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier |
 | `--apercu-stylo` | `#3d6fe0` | `#3d6fe0` | L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier |
+| `--contour-decoupe` | `#8e5bd4` | `#8e5bd4` | Le contenu d’une découpe qu’on modifie (ADR-0012, paquet 8-D) : sa géométrie tracée en contour sur la toile, le reste estompé ; lisible sur le plan blanc, sombre et en damier |
+| `--contour-masque` | `#1e8f6a` | `#1e8f6a` | Le contenu d’un masque qu’on modifie (ADR-0012, paquet 8-D) : le filet qui cerne ses formes, peintes telles quelles, et les tirets de sa région ; lisible sur le plan blanc, sombre et en damier |
 
 ### Les ombres et voiles, translucides
 
@@ -111,6 +113,12 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--apercu-stylo` sur `--toile-blanc` | 4.62 | 4.62 | ligne du stylo de l’aperçu de la machine sur le plan blanc |
 | `--apercu-stylo` sur `--toile-sombre` | 3.66 | 3.66 | ligne du stylo de l’aperçu de la machine sur le plan sombre |
 | `--apercu-stylo` sur `--damier-b` | 3.70 | 3.70 | ligne du stylo de l’aperçu de la machine sur la case grise du damier |
+| `--contour-decoupe` sur `--toile-blanc` | 4.57 | 4.57 | le contour du contenu d’une découpe qu’on modifie, sur le plan blanc |
+| `--contour-decoupe` sur `--toile-sombre` | 3.70 | 3.70 | le contour du contenu d’une découpe qu’on modifie, sur le plan sombre |
+| `--contour-decoupe` sur `--damier-b` | 3.66 | 3.66 | le contour du contenu d’une découpe qu’on modifie, sur la case grise du damier |
+| `--contour-masque` sur `--toile-blanc` | 4.04 | 4.04 | le filet et la région du contenu d’un masque qu’on modifie, sur le plan blanc |
+| `--contour-masque` sur `--toile-sombre` | 4.18 | 4.18 | le filet et la région du contenu d’un masque qu’on modifie, sur le plan sombre |
+| `--contour-masque` sur `--damier-b` | 3.24 | 3.24 | le filet et la région du contenu d’un masque qu’on modifie, sur la case grise du damier |
 
 ### La typographie : cinq tailles nommées par leur rôle
 

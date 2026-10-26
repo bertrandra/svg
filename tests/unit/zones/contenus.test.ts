@@ -42,7 +42,8 @@ describe('les commandes des decoupes et des masques', () => {
     expect(menu(plat, ['f1', 'f2'], 'plat')).toEqual([]);
     const els = menu(plat, ['f1'], 'riche');
     expect(els.map(e => [e.id, e.raccourci, !!e.desactive])).toEqual([
-      ['creer-decoupe', undefined, true], ['liberer-decoupe', undefined, true], ['creer-masque', undefined, true], ['inverser-masque', undefined, true], ['liberer-masque', undefined, true]
+      ['creer-decoupe', undefined, true], ['modifier-decoupe', undefined, true], ['liberer-decoupe', undefined, true], ['creer-masque', undefined, true],
+      ['modifier-masque', undefined, true], ['inverser-masque', undefined, true], ['liberer-masque', undefined, true]
     ]);
     expect(els[0]?.raison).toBe(RAISONS_CONTENUS.deux);
     expect(menu(plat, ['f1', 'f3'], 'riche').filter(e => !e.desactive).map(e => e.id)).toEqual(['creer-decoupe', 'creer-masque']);
@@ -55,7 +56,7 @@ describe('les commandes des decoupes et des masques', () => {
     expect(porteurDe(r.dessin, [enfant], null, 'decoupe')).toBe(g);
     expect(porteurDe(r.dessin, [], g, 'decoupe')).toBe(g);
     expect(porteurDe(r.dessin, [g], null, 'masque')).toBeNull();
-    expect(menu(r.dessin, [enfant], 'plat').filter(e => !e.desactive).map(e => e.id)).toEqual(['liberer-decoupe']);
+    expect(menu(r.dessin, [enfant], 'plat').filter(e => !e.desactive).map(e => e.id)).toEqual(['modifier-decoupe', 'liberer-decoupe']);
   });
 });
 

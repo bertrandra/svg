@@ -19,9 +19,10 @@ import { phraseZone } from './commandesSelection.js';
 import { zoneDe } from './GesteZone.js';
 import type { ContexteToile } from './ClavierToile.js';
 import type { OutilZone } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 // Au niveau du contexte d'edition (ADR-0012, annexe 6 §2) ; un dessin plat : ses formes, comme avant.
-const dansLaZone = (c: ContexteToile, z: Zone): string[] => noeudsDansZone(c.m.dessin, c.u.contexte?.groupe ?? null, z, { regle: c.u.regleZone, contours: c.u.contours });
+const dansLaZone = (c: ContexteToile, z: Zone): string[] => noeudsDansZone(c.m.dessin, niveauEdition(c.u.contexte), z, { regle: c.u.regleZone, contours: c.u.contours });
 
 /** Ce que la zone prendrait, dit apres la position : « 3 formes à prendre. » */
 function aPrendre(c: ContexteToile, outil: OutilZone, points: readonly PointPlan[]): string {

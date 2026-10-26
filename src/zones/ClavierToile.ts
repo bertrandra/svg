@@ -33,6 +33,8 @@ import { toucheGroupes } from './commandesGroupes.js';
 import { entrerDansPoignees, poigneeDe, touchePoignee } from './PoigneesDegrade.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 import type { EtatSaisie } from './contexteSaisie.js';
+import { lentilleDe, niveauEdition } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 export interface ContexteToile { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur; toile: RefObject<HTMLDivElement | null>; sx?: EtatSaisie }
 
@@ -45,7 +47,7 @@ function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
     return true;
   }
   if (!m.sel.length) return false;
-  const id = formeVoisine(m.dessin, m.sel, sens, false, u.contexte?.groupe ?? null);
+  const id = formeVoisine(m.dessin, m.sel, sens, false, niveauEdition(u.contexte));
   if (id === null) return false;
   ac.choisir([id]);
   ac.poserPoint(null);
@@ -54,7 +56,7 @@ function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
 
 /** PageSuiv et PageReg : la forme suivante ou precedente, en boucle, meme sans rien de choisi. */
 function changerForme({ m, u, ac }: ContexteToile, sens: Sens): boolean {
-  const id = formeVoisine(m.dessin, m.sel, sens, true, u.contexte?.groupe ?? null);
+  const id = formeVoisine(m.dessin, m.sel, sens, true, niveauEdition(u.contexte));
   if (id === null) { ac.annoncer('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.'); return true; }
   ac.choisir([id]);
   ac.poserPoint(null);
@@ -175,6 +177,8 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
   // Modele riche (ADR-0012, annexe 6 §2) : Entree sur un groupe choisi y entre, Maj+Entree sort d'un niveau.
   if (toucheGroupes(e, c.m, c.u, c.ac)) return true;
+  // Dans une decoupe ou un masque (paquet 8-D), un texte ne se retape pas, et ses points le vectoriseraient : on dit pourquoi.
+  if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && lentilleDe(c.u.contexte)) { c.ac.dire(RAISONS_LENTILLE.texte); return true; }
   // Entree sur un texte vivant le rouvre sur la toile (ADR-0027) ; sur une autre forme, le mode points.
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && !c.m.formeSeule.verrouille && c.sx) { c.sx.ouvrir(c.m.formeSeule.id); return true; }
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule) { c.ac.poserOutil('points'); return true; }

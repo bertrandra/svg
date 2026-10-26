@@ -184,6 +184,9 @@ export {
 export { insererImage, cadreImage, octetsImages } from './edition/imagesOperations.js';
 export { MSG_IMAGE_LOURDE, MSG_IMAGE_ILLISIBLE } from './edition/fonctions/images.js';
 
+// ---- paquet 8-D : modifier le contenu d'une decoupe ou d'un masque sur place (la lentille)
+export { contenuDuGroupe, contenuEnDessin, contenuVide, reposerContenu, renommagesDe, type GenreContenu } from './edition/lentilles.js';
+
 // ---- etape 9 : motifs
 export { motifs, REFUS_MOTIFS, MSG_MOTIFS, TUILE_MIN, estMotif, couleurDeRepliMotif, transformerMotif } from './edition/fonctions/motifs.js';
 export { creerMotif, MSG_MOTIF } from './edition/motifs.js';
@@ -204,6 +207,9 @@ export {
   lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
 } from './edition/fonctions/images.js';
 export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';
+
+// ---- etape 13b : idiomes des filtres (Figma, Sketch, Illustrator), reconnus par le calcul
+export { REFUS_IDIOMES, refusFusion, avecIdiome, type Idiome } from './edition/filtres.js';
 
 // ---- etape 13c : <svg> imbrique, <text> lu en groupe de lettres
 export { imbrications, REFUS_IMBRICATIONS, MSG_IMBRICATIONS } from './edition/fonctions/imbrications.js';

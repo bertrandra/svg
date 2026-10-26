@@ -18,6 +18,7 @@ import { creerNuancierDepuisSelection } from './actionsNuancier.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
 import { toucheSelection } from './commandesSelection.js';
 import { ctrlG } from './commandesGroupes.js';
+import { niveauEdition } from './lentille.js';
 
 const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte', b: 'cadre', q: 'lasso' };
 
@@ -48,7 +49,7 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       // La bulle de la visite garde ses touches (Tab, Entree, Echap) : une fleche n'y deplace pas la forme choisie derriere elle.
       if (cible?.closest('.bulle-visite')) return;
       // Ctrl+A : tout ce qu'on peut choisir, au niveau du contexte d'edition sur un dessin riche (ADR-0012, annexe 6 §2).
-      if (mod && t === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, u.contexte?.groupe ?? null)); return; }
+      if (mod && t === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, niveauEdition(u.contexte))); return; }
       if (mod && t === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
       if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }
       if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }

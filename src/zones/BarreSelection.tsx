@@ -20,6 +20,7 @@ import { DispositionSelection, useSectionDisposition } from './ChoixDisposition.
 import { useElementsRepetition } from './menusOutilsPro.js';
 import { MenuNuancierSelection } from './SectionNuancier.js';
 import { useSectionNuancier } from './actionsNuancier.js';
+import { dessinComplet } from './lentille.js';
 
 const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
   ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
@@ -36,10 +37,10 @@ export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]
 
 /** Les gestes de la rangee, une fois pour ses deux mises en page : chacun a son nom, son icone et ce qu'il fait. */
 function useGestes() {
-  const { sel, formeSeule, dessin } = useDessin(), ac = useActions(), { rencontrer } = useReperes(), { modele } = useInterface();
+  const mo = useDessin(), { sel, formeSeule, dessin } = mo, ac = useActions(), { rencontrer } = useReperes(), { modele } = useInterface();
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
   // Le modele riche (ADR-0012, etape 2) : Grouper et Degrouper rejoignent les formes, et prennent Ctrl+G a Combiner et Separer.
-  const riche = groupesActifs(dessin, modele), degroupable = riche && aUnGroupe({ dessin, sel });
+  const riche = groupesActifs(dessinComplet(mo), modele), degroupable = riche && aUnGroupe({ dessin, sel });
   const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
   return {
     sel, ac, surPlan,

@@ -20,6 +20,8 @@ import { PanneauRepetition } from './PanneauRepetition.js';
 import { FormesToile } from './ToileNoeuds.js';
 import { useDepotImage } from './InsererImage.js';
 import { useVeilleFlous } from './SectionEffets.js';
+import { dessinComplet, lentilleDe, niveauEdition } from './lentille.js';
+import { ToileLentille } from './ToileLentille.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
@@ -31,6 +33,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
   const aide = useId();
   const tactile = useTactile();
   const { dessin } = mo, { vues, fond, grille, pas, contours } = ui;
+  const lentille = lentilleDe(ui.contexte);
   const z = vues.vue.zoom;
   const [vx, vy, vl, vh] = dessin.vb;
   return (
@@ -51,8 +54,11 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           <GabaritTapis />
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
           {/* L'apercu de la machine (ADR-0028) : avant les formes, qu'il rend transparentes (editeur.css) ; elles gardent les clics. */}
-          <ApercuMachine />
-          <FormesToile dessin={dessin} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} contexte={ui.contexte?.groupe ?? null} brouillon={gestes.brouillon} />
+          {lentille ? null : <ApercuMachine />}
+          {/* Dans une decoupe ou un masque (paquet 8-D), le reste estompe et le contenu par-dessus ; sinon les formes du dessin. */}
+          {lentille
+            ? <ToileLentille complet={dessinComplet(mo)} vue={dessin} lentille={lentille} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} niveau={niveauEdition(ui.contexte)} brouillon={gestes.brouillon} />
+            : <FormesToile dessin={dessin} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} contexte={niveauEdition(ui.contexte)} brouillon={gestes.brouillon} />}
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, tactile, !!sx.saisie)}</g>

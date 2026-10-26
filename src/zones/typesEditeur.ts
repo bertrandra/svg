@@ -51,11 +51,13 @@ export interface OptionsFin {
 export type Modele = 'plat' | 'riche';
 
 /**
- * Le contexte d'edition (ADR-0012, annexe 6 §2) : le groupe ou l'on est entre, et, plus tard, sa decoupe, son masque ou la tuile
- * de son motif. Null : la racine. La prise, le cadre, le lasso et les aimants ne voient que les noeuds de ce niveau ; le reste de la
- * toile est estompe. Un etat d'interface, jamais ecrit ni garde dans l'historique.
+ * Le contexte d'edition (ADR-0012, annexe 6 §2) : le groupe ou l'on est entre, et, s'il le faut, sa decoupe ou son masque (paquet 8-D :
+ * on en modifie alors le contenu par la lentille, `zones/lentille.ts`) ; la tuile d'un motif (`motif`) reste a faire. Null : la racine.
+ * `sous` : dans une decoupe ou un masque, le groupe du contenu ou l'on est entre (absent : la racine du contenu). La prise, le cadre,
+ * le lasso et les aimants ne voient que les noeuds de ce niveau ; le reste de la toile est estompe. Un etat d'interface, jamais ecrit
+ * ni garde dans l'historique.
  */
-export interface ContexteEdition { readonly groupe: string; readonly dans?: 'decoupe' | 'masque' | 'motif' }
+export interface ContexteEdition { readonly groupe: string; readonly dans?: 'decoupe' | 'masque' | 'motif'; readonly sous?: string }
 
 /** Ce que l'editeur rend a l'hote avec le SVG (ADR-0030) : le dessin du modele et le contexte choisi, de quoi ecrire un projet. */
 export interface EtatRendu { readonly dessin: DessinSvg; readonly production: ChoixProduction }
@@ -75,7 +77,13 @@ export interface ActionHote { readonly id: string; readonly libelle: string; rea
 /** Le dessin et ce qu'on en tire : l'historique, la selection, le nuancier, les versions, le presse-papiers. */
 export interface ModeleDessin {
   h: Historique<DessinSvg>;
+  /**
+   * Le dessin qu'on edite : celui de l'historique, ou, dans une decoupe ou un masque (paquet 8-D), le dessin de travail que la lentille
+   * en tire (`contenuEnDessin`) ; la toile, la prise, la selection, l'inspecteur et les calques le lisent.
+   */
   dessin: DessinSvg;
+  /** Le dessin complet, celui de l'historique, quand `dessin` est un dessin de travail ; absent : `dessin` (voir `dessinComplet`). */
+  complet?: DessinSvg;
   sel: string[];
   /** Les memes identifiants en ensemble : savoir si une forme est choisie sans parcourir toute la selection. */
   choisies: ReadonlySet<string>;
@@ -278,6 +286,16 @@ export interface ActionsEditeur {
   poserModele: (m: Modele) => void;
   /** Pose le contexte d'edition tel quel (null : la racine) ; un groupe qui n'existe pas fait revenir a la racine. */
   poserContexte: (c: ContexteEdition | null) => void;
+  /**
+   * Pose le niveau ou l'on edite, dans le dessin qu'on voit : un groupe, ou la racine (null). Hors d'une lentille, c'est
+   * `poserContexte({ groupe })` ; dans une decoupe ou un masque, le niveau est un groupe du contenu, et l'on y reste.
+   */
+  poserNiveau: (groupe: string | null) => void;
+  /**
+   * « Modifier la découpe », « Modifier le masque » (paquet 8-D) : le contenu de `groupe` (ou du groupe choisi, de celui qui contient
+   * la selection, de celui du contexte) se modifie sur place ; son premier element est choisi, et c'est dit. Faux, et la raison dite, sinon.
+   */
+  modifierContenu: (genre: 'decoupe' | 'masque', groupe?: string) => boolean;
   /** Entre dans un groupe : il devient le contexte, la selection se vide, et c'est dit. Faux si ce n'est pas un groupe du dessin. */
   entrerGroupe: (id: string) => boolean;
   /** Sort d'un niveau : le parent du contexte devient le contexte, le groupe quitte est choisi, et c'est dit. Faux a la racine. */

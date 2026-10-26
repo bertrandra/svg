@@ -22,12 +22,13 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; **7-B (toile, brouillon, mesures) fait** le 26 octobre 2026 (ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») ; l'interface des effets est à l'étape 8 |
 | 4 Dégradés, interface | **faite** le 26 octobre 2026 (paquets 4-A et 4-B en un seul arbre ; ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 8 Découpes, masques, effets : l'interface | **faite** le 26 octobre 2026 (paquets A, B et C en un seul arbre ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 8 a posé ») ; les contextes d'édition `decoupe`/`masque` restent à faire (paquet 8-D proposé) |
+| 8 Découpes, masques, effets : l'interface | **faite** le 26 octobre 2026 (paquets A, B et C en un seul arbre ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 8 a posé ») ; les contextes d'édition `decoupe`/`masque` **faits** par le paquet 8-D le 26 octobre 2026 (ci-dessous, « Ce que le paquet 8-D a posé ») |
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
 | 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
 | 13d Couleurs | **faite** le 26 octobre 2026 (moteur et listes ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 13d a posé ») |
 | 13a PDF natif | **fait** le 26 octobre 2026, sauf le raster des effets (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13a a posé ») |
-| 13b, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 13b Idiomes de filtres | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les mesures et ce qui reste : ci-dessous, « Ce que l'étape 13b a posé ») |
+| 14 | proposée ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -1025,6 +1026,173 @@ lecture `plat` est inchangée, et **en modèle plat rien n'apparaît** : ni él�
   rangera au menu Édition à côté des découpes et masques (une ligne de `elementsContenus` ou de `useElementsEdition`) ; contraste forcé
   et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
 
+### Ce que l'étape 13b a posé (26 octobre 2026, moteur)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes), la lecture `plat` est inchangée (elle
+refuse tout filtre, « un filtre », et tout masque, comme avant). Seul le mode riche lit davantage : des filtres jusqu'ici refusés
+(« un filtre (feColorMatrix) », « un filtre (feBlend) », ou « ni un flou ni une ombre portée ») se lisent désormais quand ils calculent
+exactement un flou, une ombre portée, les deux, ou rien.
+
+- **Décision : la reconnaissance passe par le calcul, pas par des reconnaisseurs à motif.** L'annexe 4 B §3 prévoyait un reconnaisseur
+  par idiome ; l'évaluation de l'étape 7 suffit, étendue dans un module pur, `edition/filtres.ts` (l'image symbolique, ses
+  constructeurs simplificateurs, `matriceCouleurs`, `appliquerMatrice`, `fusion`, `arithmetique`, `pile`, `reconnaitre`), que
+  `fonctions/effets.ts` appelle après avoir lu attributs et cascade. Ce qu'un navigateur calcule exactement se simplifie à mesure : un
+  aplat transparent ne laisse rien ; une fusion (`feBlend`, tout mode de Compositing) avec une image transparente rend l'autre image
+  (la formule de composition le dit : c'est l'aplat « BackgroundImageFix » de Figma, qui rend la fusion de l'ombre neutre quel que
+  soit son mode) ; `normal` pose `in` sur `in2` ; une matrice identité ne change rien (`saturate` 1, `hueRotate` 0 compris) ; une matrice
+  qui ne pose qu'une couleur (cinquième colonne) et un facteur d'alpha **teint** une silhouette, calculée en RVB linéaire si le filtre
+  l'est (la couleur d'une ombre de Sketch, qui ne fixe pas `color-interpolation-filters`, est une couleur linéaire : `0,29 0,56 0,89` se
+  voit `#93c6f2`, et c'est ce que la lecture garde) ; un facteur au-delà de 1 **durcit** l'alpha (le ×127 de Figma) ; une image de
+  couleur uniforme se recolore tant que ses couleurs ne dépendent pas de l'alpha ; `feComposite` `out` retire, `arithmetic` se garde
+  pour être nommé. L'image finale se reconnaît : le graphique, flou ou non, et au plus une ombre dessous, l'ombre étant une silhouette
+  (au plus un flou, un décalage, un durcissement, une découpe sous la forme), teinte par un aplat ou noire (l'alpha seul : `AI_Shadow`).
+- **Idiomes lus** (corpus `figma-ombre`, `figma-flou-calque`, `sketch-ombre`, `illustrator-ombre`, `illustrator-masque-opacite`, joués par
+  `v2/cas-idiomes.ts`, 5 références relues) : l'ombre portée de Figma (aplat transparent, alpha ×127, décalage, flou, `out` sous la
+  forme, teinte, deux fusions `normal`), sur une feuille ou un groupe ; son flou de calque ; l'ombre de Sketch (alpha décalé, flou, teint,
+  `feMerge` sous le graphique, unités de boîte en pourcentages) ; `AI_Shadow_1` d'Illustrator ; `Adobe_OpacityMaskFilter` (matrice
+  identité sur le contenu d'un `<mask>`) : **neutre**, rien n'est gardé ni dit — il l'est pour un masque de luminance comme d'alpha. En
+  plus, sans l'avoir cherché : l'ombre portée d'Inkscape 1 (aplat composé dans le graphique, puis flou et décalé), que l'étape 7 refusait.
+- **L'ombre « pleine » de Figma** : l'alpha durci et la découpe sous la forme n'équivalent à l'ombre du modèle (calculée sur l'alpha,
+  dessinée sous la forme) que sous une forme **opaque**. La lecture le vérifie sur les feuilles (`feuilleOpaque` : opacités pleines,
+  dégradé aux arrêts pleins, pas de motif, pas d'effet propre, une image en JPEG seulement) et sur chaque groupe entre la feuille et le
+  groupe à filtre (ni opacité, ni masque, ni effet) — l'opacité, le masque ou la découpe du groupe à filtre lui-même s'appliquent après le
+  filtre et ne comptent pas. Sinon : refus, « une ombre portée calculée sur la forme pleine, sous une forme en partie transparente
+  (Figma) ». Le crochet `groupe` étant appelé avant les enfants, la vérification se fait au fil des feuilles (`verifierPleines`, comme
+  `verifierRegionsDesGroupes`).
+- **Refus nommés, avec l'idiome** (`REFUS_IDIOMES`, `refusFusion`, `avecIdiome` ; bloc « étape 13b » de la façade) : « une ombre
+  intérieure (Figma) » ou « (Sketch) » (une composition arithmétique qui retranche), « plusieurs ombres portées (Figma) », « un flou
+  appliqué à la forme et à son ombre ensemble (Figma) » (le flou de calque de Figma floute aussi l'ombre : ni l'ombre nette sous la forme
+  floue du modèle, ni une ombre plus floue, le flou d'une composition n'étant pas la composition des flous), « un mode de fusion autre
+  que normal (multiply, Figma) » (entre deux images visibles), « un filtre qui change les couleurs de la forme », « un filtre qui
+  inverse les couleurs de la forme (Illustrator) » (le masque inversé), « un fond de couleur posé par un filtre (Illustrator) » (la
+  variante à aplat blanc d'`Adobe_OpacityMaskFilter`), « un filtre qui efface la forme », « une matrice de couleurs illisible
+  (feColorMatrix) », « un filtre (feMorphology, Figma) » (l'étalement d'une ombre). L'idiome ne sert qu'à nommer : un identifiant
+  `AI_…` ou `Adobe_…` (Illustrator), un aplat transparent cité par une fusion (Figma), une matrice de teinte sans aplat ni fusion
+  (Sketch) ; il ne se cherche que dans un filtre court (une chaîne démesurée est refusée sans rien lire de ses valeurs).
+- **Un filtre neutre dont la région rognait la forme** le dit désormais (`MSG_EFFETS.regionNeutre`) et une région vide le refuse, comme
+  pour un effet : l'étape 7 laissait passer l'un et l'autre en silence.
+- **Mesuré dans les trois moteurs** (Playwright, à la main ; l'entrée du corpus telle qu'un navigateur l'ouvre contre sa référence, à
+  l'échelle 3 puis 1, fond blanc) : **hors des bords des formes** (un pixel dont un voisin diffère de plus de 24 dans l'une ou l'autre
+  image, élargi d'une unité), l'écart est de 0 à 4 niveaux sur 255 dans Chromium et Firefox pour les cinq fichiers, Firefox 5 pour le
+  masque d'Illustrator (la matrice identité calculée en RVB linéaire, l'arrondi sur 8 bits) ; dans WebKit, qui calcule les filtres à la
+  résolution CSS, l'alpha durci de Figma élargit la silhouette de l'anticrénelage d'un pixel CSS : un halo diffus d'au plus 8 niveaux
+  dans l'ombre près des bords courbes (à l'échelle 1, le même halo dans les trois moteurs ; `inkscape-flou`, déjà au corpus, montre 13
+  niveaux dans WebKit). **Sur les bords**, l'écart va jusqu'à 100 niveaux sur une ligne d'un pixel : l'anticrénelage (la découpe `out`
+  de Figma retire l'ombre sous les pixels de bord, la fusion de Sketch se fait en RVB linéaire, la région fractionnaire d'Illustrator
+  rééchantillonne dans Firefox). **Témoins** : une opacité d'ombre de 0,25 portée à 0,3, la couleur naïve `#4a90e2` au lieu de
+  `#93c6f2`, un décalage d'une unité donnent, hors des bords, 2 000 à 9 000 pixels au-delà de 4 niveaux (jusqu'à 28) : la mesure voit
+  une erreur d'ombre.
+- **Touché hors du fichier de la fonctionnalité, et pourquoi** : (1) `edition/filtres.ts` (nouveau) ; (2) la façade, un bloc « étape
+  13b » ; (3) `util/assainirSvg.ts` : le fuzzing (corpus déplacé par le nouvel hostile) a trouvé `@ import` dans un `<style>`, qu'aucun
+  navigateur ne lit comme une règle mais que l'invariant du nettoyage refuse : retiré comme `@import` (une entrée dans
+  `tests/fixtures/regressions/css-import-espace.svg`) ; (4) `effets.test.ts` : la phrase d'une matrice illisible n'est plus « un filtre
+  (feColorMatrix) ». `types.ts` et `fonctionnalites.ts` n'ont pas changé ; aucun crochet n'a manqué.
+- **Tests** : `idiomes.test.ts` (le corpus par le chemin de la page avec ses `ignores` exacts, le refus en plat, les refus nommés de
+  Figma, Sketch et Illustrator, l'ombre pleine sous une forme translucide, le filtre neutre rogné, l'ombre d'Inkscape 1, l'évaluation
+  seule : matrices, teintes en RVB linéaire, durcissement, fusions, piles, reconnaissance), `v2/cas-idiomes.ts`, un hostile
+  `v2-effets-matrice-couleurs` (cinq mille nombres, NaN, 1e309, rotation de teinte de 1e308 degrés, coefficients arithmétiques démesurés,
+  mode de fusion invalide portant une adresse, alpha ×1e308) ; engendrés dans `effets-hostiles.test.ts`, seize fusions de seize couches
+  et seize compositions emboîtées sur un même résultat : une pile ne s'aplatit qu'en deçà de 32 couches et une image partagée n'est
+  parcourue qu'une fois (sans quoi 16^16 couches).
+- **Reste** : l'ombre de Sketch en `<use filter>` (la variante récente : un `<use>` noir dont le filtre ne rend **que** l'ombre, suivi du
+  `<use>` de la forme) reste refusée, « un filtre (posé sur un clone <use>) » : un filtre qui efface sa forme ne se représente pas, et
+  fondre deux clones frères en une feuille serait une reconnaissance de motif (le tableau de l'annexe 7 §7 la prévoyait : remplacée par
+  la variante `feMerge`) ; une chaîne de Figma à trois ombres ou plus dépasse 16 primitives et se refuse « trop long » plutôt que
+  « plusieurs ombres » ; l'opacité des lettres d'un `<text>` lu en groupe n'est pas vérifiée sous une ombre pleine (elles ne passent pas
+  par le crochet `feuille`, l'écart déjà noté par l'étape 13c pour la région) ; le masque inversé et le fond blanc d'Illustrator se
+  représenteraient (le contenu aux couleurs complémentaires, un rectangle blanc sous le contenu) mais demandent de modifier le contenu
+  après sa lecture, ce qu'aucun crochet n'offre ; la vignette du site PHP refuse toujours `url(#ed-f-…)`.
+
+### Ce que le paquet 8-D a posé (26 octobre 2026)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes : 5 références nouvelles, relues), la
+lecture `plat` est inchangée, et **en modèle plat rien n'apparaît** (`elementsContenus` rend toujours `[]` : le test « à plat » de
+l'étape 8 tient). On modifie maintenant le contenu d'une découpe ou d'un masque **sur place**, avec les outils ordinaires.
+
+- **La lentille, pure** (`engine/edition/lentilles.ts`, bloc « paquet 8-D » de la façade) : `contenuEnDessin(d, groupe, genre)` présente
+  le contenu comme un dessin de travail (le plan, le nuancier et les repères du dessin, les feuilles et les groupes du contenu, déjà
+  dans le repère du plan ; mémorisé par contenu : deux appels rendent le même objet) ; `reposerContenu(d, groupe, genre, travail)` le
+  remet à sa place et rend `{ dessin, renommes }` — **le même dessin quand rien n'a changé** (entrer puis sortir rend le même objet),
+  le contenu ramené à ses invariants (`normaliser`), puis : (I1) chaque identifiant **neuf** du contenu qui reprendrait celui d'un nœud
+  du reste du dessin prend un numéro au-delà de tous (`renommagesDe(dessin)` garde la table, pour que la sélection suive) ; (découpe)
+  les feuilles refixées par `feuilleDeDecoupe` (fond, trait, opacité, texte, effets posés dans la lentille n'y entrent pas ; la règle des
+  trous reste, c'est le `clip-rule`), les groupes réduits à nom, visibilité, verrou et découpe ; (masque) **la région suit le contenu
+  quand elle le suivait** — elle valait la boîte visuelle du contenu et des enfants du groupe, comme `creerMasque` la pose —, sinon
+  (région lue d'un fichier, masque inversé dont le fond blanc la couvre, `estFond` exporté de `edition/masques.ts`) elle ne bouge pas.
+  Le plan (`vb`) ne change jamais par la lentille ; le nuancier et les repères, réglages du document, y passent dans les deux sens.
+  `contenuVide(c)` : aucune feuille visible qui ait un tracé. `types.ts` et `fonctionnalites.ts` n'ont pas bougé.
+- **Le contexte** (`ContexteEdition` dans `typesEditeur.ts`) : `{ groupe, dans?: 'decoupe' | 'masque' | 'motif', sous? }` — `sous` est le
+  groupe **du contenu** où l'on est entré (absent : la racine du contenu) ; `motif` reste sans lentille (la tuile d'un motif, plus tard).
+  `zones/lentille.ts` : `lentilleDe(c)`, `niveauEdition(c)` (le niveau dans le dessin qu'on voit : le groupe du contexte, ou dans une
+  lentille `sous ?? null`), `avecNiveau(c, g)`, `contexteDuDessin(d, c)` (un groupe disparu ramène à la racine, un contenu disparu —
+  libéré, annulé — laisse dans le groupe, un `sous` disparu ramène à la racine du contenu ; le même objet quand il reste valable),
+  `dessinComplet(m)`. **Tous les consommateurs de `contexte?.groupe ?? null` passent par `niveauEdition`** (prise, survol, sortie par
+  un clic, cadre, lasso, aimants, Tab, Page suivante, Ctrl+A, Espace, commandes de sélection, toile, calques).
+- **L'état** (`etatEditeur.ts`) : `complet = h.present` ; dans une lentille, `dessin` (de `ModeleDessin` et de `lire()`) est le dessin de
+  travail, `ModeleDessin.complet` et `EtatLu.complet` le dessin de l'historique (absents hors d'une lentille : `dessinComplet`). La
+  sélection est faite d'identifiants du contenu ; un renommage I1 la suit (`renommagesDe`, puis la sélection gardée le prend). Ce qui
+  vise **le dessin entier** lit `complet` : enregistrer, brouillon, `changement` de l'hôte, gestes de l'hôte, versions, téléchargements
+  (SVG, à plat, autres formats), polices des crédits, « Ajuster », la préparation et les actions de production (jugées et corrigées
+  sur le dessin entier, par `appliquerComplet`), `groupesActifs` (un contenu plat ne fait pas disparaître les commandes riches).
+- **Les verbes** (`creerActions.ts`) : `appliquer(f, cle)` lit la lentille au moment de l'appel et, s'il y en a une, applique `f` au
+  dessin de travail (avec la garde du texte et le suivi des textes posés, au niveau du contenu) puis `reposerContenu` : **un geste
+  reste une entrée d'historique du dessin complet**, et Ctrl+Z revient à l'état d'avant en une fois (la lentille reste si le contenu
+  existe encore). `appliquerComplet` pour ce qui vise le dessin entier. Les verbes du contexte vivent dans `zones/actionsContexte.ts`
+  (nouveau ; `creerActions` dépassait la longueur permise) : `poserContexte` (validé sur le dessin complet), **`poserNiveau(g)`** (le
+  niveau dans le dessin qu'on voit ; le choix d'une ligne des calques et la sortie par un clic l'emploient), `entrerGroupe` (dans une
+  lentille, un groupe du contenu), `sortirGroupe` (dans une lentille : d'un groupe du contenu vers son parent, puis de la racine du
+  contenu hors de la lentille), `deplier`. **`ac.modifierContenu(genre, groupe?)`** (`actionsContenus.ts`) : le groupe visé, ou le
+  porteur de la sélection (`porteurDe`), devient `{ groupe, dans }`, le premier élément du contenu est choisi (les flèches le déplacent
+  aussitôt, Tab parcourt les autres), l'outil sélection revient, et c'est dit. Libérer et inverser depuis la lentille visent son groupe
+  dans le dessin complet ; libérer fait revenir dans le groupe (la lentille tombe d'elle-même, son contenu n'existe plus).
+- **Entrer, sortir** : « Modifier la découpe » et « Modifier le masque » au menu Édition (après « Créer une découpe », « Créer un
+  masque » ; grisés avec leur raison), et le **double-clic sur la pastille** « découpe » ou « masque » d'une ligne de groupe des calques
+  (`data-pastille`, les icônes enveloppées dans `.pastille-icone`) ; ailleurs sur la ligne, le double-clic entre dans le groupe comme
+  avant. Sortir : Échap (après le point et la sélection), Maj+Entrée, le fil d'Ariane (`Racine › Cartes › Découpe`, puis les groupes du
+  contenu ; les niveaux du dessin sortent de la lentille, ceux du contenu y laissent : `remonterDansLentille` dans
+  `commandesGroupes.ts`). **Décision : un contenu vide refuse la sortie** (il cacherait tout le groupe) et dit les trois issues —
+  dessiner, annuler, « Libérer la découpe » (qui marche depuis la lentille) ; on reste dedans, Tab sort toujours de la toile (rien ne
+  piège le focus) ; « Terminer » enregistre quand même (un `<clipPath>` vide se relit en point fixe). Un appui sur le vide dans la
+  lentille garde la lentille (le cadre y commence) : on n'en sort pas par un clic dehors, parce que tout ce qui est dehors est inerte.
+- **La toile** (`zones/ToileLentille.tsx`, nouveau) : le dessin complet, estompé (`hors-contexte`, l'opacité de 2-A) et inerte, tel qu'il
+  s'écrit — le groupe découpé ou masqué par son contenu **du moment**, à chaque geste — ; par-dessus, le contenu, seul à prendre le
+  pointeur : une découpe **toujours en contour** au jeton `contour-decoupe` (1,5 px, plus épais que la vue « contours ») ; un masque
+  **tel quel**, cerné d'un filet `contour-masque` (on le voit même blanc sur le plan blanc) et sa région en tirets du même jeton.
+  L'aperçu de la machine se retire dans une lentille. Contraste forcé : `CanvasText` (la sélection garde `Highlight`).
+- **Jetons** : `contour-decoupe` `#8e5bd4` et `contour-masque` `#1e8f6a` (rôle `toile`, même valeur dans les deux thèmes, comme
+  l'aperçu de la machine : le plan est blanc, sombre ou en damier quel que soit le thème) ; confrontés à 3:1 sur `toile-blanc`
+  (4,57 et 4,04), `toile-sombre` (3,70 et 4,18) et `damier-b` (3,66 et 3,24) ; `docs/jetons.md` régénéré. `pastille-groupe` n'a
+  toujours pas d'usage (les pastilles reprennent l'encre douce, étape 8).
+- **Ce qui ne passe pas par la lentille, grisé avec sa raison** (`RAISONS_LENTILLE`, `phrasesContenus.ts`) : l'outil Texte (bouton
+  grisé, touche T et Entrée ou double-clic sur un texte refusés et dits : une découpe n'en garderait que les contours, un masque
+  l'écrit en contours) ; dans une découpe, l'apparence (l'inspecteur ne montre que les trous et une phrase), la section Effets,
+  « Créer un masque », « Insérer une image… » et le dépôt d'une image ; une seconde lentille (« Modifier… » grisés dedans) ; les
+  commandes qui visent l'autre contenu du groupe ; « Ajuster le plan de travail ». **Les booléens passent** (de la géométrie pure,
+  refixée dans une découpe ; test). Une forme insérée de la bibliothèque, collée ou dupliquée entre dans le contenu.
+- **Phrases** : « Dans la découpe du groupe « Cartes », 1 forme, tracée en contour : seule la forme compte ; le reste est estompé.
+  Échap ou Maj+Entrée en sort. » (suivie de la sélection), « Dans le masque du groupe « Ciel », 1 forme : le clair laisse voir, le
+  sombre cache ; … », « Découpe reposée. Dans le groupe « Cartes », 2 éléments. », « Masque reposé. … », « De retour dans la découpe
+  du groupe « Cartes ». », la phrase du contenu vide, et les raisons ci-dessus.
+- **Tests** : `tests/unit/engine/lentilles.test.ts` (aller-retour au même objet, déplacement valide et le reste au même objet,
+  peinture refixée et groupes réduits, renumérotation I1 et `renommagesDe`, région qui suit, région lue et masque inversé qui ne
+  bougent pas, plan inchangé, contenu vide) ; `tests/unit/zones/lentille.test.ts` (contexte ramené au dessin, entrer au menu, une
+  entrée d'historique, annuler en une fois, sortir et sa phrase, copie renumérotée, booléen, contenu vide refusé puis libéré, refus
+  du texte, des effets et d'une seconde lentille, masque par la pastille et sa région) ; `v2/cas-lentilles.ts` (5 références
+  `lentilles-op-*` : déplacer, peindre — seul `clip-rule` reste —, dupliquer une découpe, repeindre un masque lu — sa région reste —,
+  déplacer un masque créé — sa région suit ; relues, point fixe) ; e2e `tests/e2e/lentilles.e2e.ts` (au clavier : entrer dans une
+  découpe, la déplacer, Ctrl+Z en une fois, Échap, « Terminer » et le `<clipPath>` déplacé ; de même pour un masque par Maj+Entrée ;
+  contenu vide refusé, fil d'Ariane qui rend le focus à la toile, double-clic sur la pastille ; axe dans une découpe — menu ouvert —
+  et dans un masque, en clair, sombre et au doigt).
+- **Reste** : la tuile d'un motif (`dans: 'motif'`) par la même lentille (le contenu d'une tuile est dans son propre repère : il faudra
+  une matrice à l'aller et au retour) ; la phrase d'une sélection dans une découpe nomme encore la peinture refixée (« fond noir ») ;
+  les aimants et le cadre ne voient que le contenu (pas le reste du dessin, inerte) ; le premier clic sur une ligne de groupe des
+  calques décale la liste d'une ligne (observé en e2e : un double-clic sur une ligne non choisie tombe sur la voisine ; hors de ce
+  paquet, à regarder par 2-D) ; contraste forcé et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
+  `tests/e2e/modele-riche.e2e.ts` « un brouillon écrit en riche… » a échoué trois fois (juste après une construction de la page, dont
+  une fois dans la série complète), puis passé cinq fois de suite, sur la même construction : le brouillon écrit, présent avant le
+  rechargement, n'y était plus après (un rechargement qui suit de près l'écriture) ; instrumenté, il a passé : cause non trouvée, à
+  surveiller par 2-D.
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -1247,7 +1415,7 @@ région partagent son infrastructure).
 (abandonnés, dits ; PDF raster à l'étape 13 si l'agent des exports a livré le DPI), mesures et budgets,
 corpus `inkscape-flou`. Paquets : **A** moteur (G) ; **B** toile + brouillon + mesures (M).
 
-### Étape 8 — Découpes, masques, effets : l'interface · taille G · **faite le 26 octobre 2026**, sauf les contextes `decoupe`/`masque` (§0, « Ce que l'étape 8 a posé »)
+### Étape 8 — Découpes, masques, effets : l'interface · taille G · **faite le 26 octobre 2026**, contextes `decoupe`/`masque` compris (paquet 8-D ; §0, « Ce que l'étape 8 a posé » et « Ce que le paquet 8-D a posé »)
 
 Menu Objet, contextes `decoupe`/`masque`, section Effets, phrases, jetons, axe, e2e. Après 5, 6, 7 et 2.
 Paquets : **A** menus + contextes (M) ; **B** section Effets (M) ; **C** e2e/axe (M).
@@ -1280,7 +1448,7 @@ ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *R
 - **13a PDF natif** : `shading` axial/radial, découpe `W n`, masque doux, motif de pavage, image XObject,
   raster des effets ; avec l'agent des exports (même fichier `export/pdf.ts`) · après 3, 5, 6, 12 · **fait le 26 octobre 2026, sauf le
   raster des effets** (§0, « Ce que l'étape 13a a posé »).
-- **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7.
+- **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7 · **fait pour le moteur le 26 octobre 2026** (§0) : par l'évaluation, pas par des reconnaisseurs à motif.
 - **13c `<svg>` imbriqué**, et en mode riche un `<text>` lu en **groupe** de lettres · après 1 · **fait pour le moteur le 26 octobre 2026** (§0). *Révision : le `<text>` étranger
   se lit déjà en lettres, polices remplacées et dites (ADR-0020, `io/texteSvg.ts`) ; la liste `aComposer` est caduque.*
 - **13d Couleurs** : arrêts de dégradé et motifs traités par `remplacerCouleur`, palettes et listes · après 3, 9.

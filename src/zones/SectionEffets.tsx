@@ -14,6 +14,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { estHex } from './aidesEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { nombreDit, phraseFlou, phraseOmbre } from './phrasesContenus.js';
+import { dessinComplet, lentilleDe } from './lentille.js';
 
 /** La valeur ramenee a ses bornes, et la phrase qui le dit quand elle l'a ete. */
 function borne(v: number, min: number, max: number, quoi: string): { v: number; dit: string } {
@@ -22,11 +23,13 @@ function borne(v: number, min: number, max: number, quoi: string): { v: number; 
   return { v, dit: '' };
 }
 
-/** La section Effets ; rien a plat, ni sans selection. */
+/** La section Effets ; rien a plat, ni sans selection, ni dans une decoupe. */
 export function SectionEffets() {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
   const [premier] = mo.sel;
-  if (premier === undefined || !groupesActifs(mo.dessin, ui.modele)) return null;
+  if (premier === undefined || !groupesActifs(dessinComplet(mo), ui.modele)) return null;
+  // Une decoupe ne garde que la geometrie (paquet 8-D) : l'inspecteur le dit dans sa section Apparence, la section Effets n'y est pas.
+  if (lentilleDe(ui.contexte)?.genre === 'decoupe') return null;
   return <CorpsEffets dessin={mo.dessin} premier={premier} poser={ac.poserEffets} finir={ac.finir} annoncer={ac.annoncer} />;
 }
 

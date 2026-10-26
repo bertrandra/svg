@@ -34,6 +34,7 @@ import { Icone } from './icones.js';
 import { useSurvolFin } from './Vue.js';
 import { lignesVisibles, pastillesGroupe } from './lignesCalques.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
+import { niveauEdition } from './lentille.js';
 
 /** L'element qui porte le focus dans une ligne : aucun, la ligne, ou l'une de ses deux cellules a bouton (visibilite, verrou). */
 type Arret = 'aucun' | 'ligne' | 0 | 1;
@@ -142,7 +143,7 @@ export const ArbreCalques = memo(function ArbreCalques({ panneau }: { panneau: R
           return (
             <LigneArbreCalque key={id} id={id} niveau={l.niveau} position={l.position} freres={l.freres} rang={sg.index + 1}
               forme={n.genre === 'feuille' ? n.forme : null} groupe={n.genre === 'groupe' ? n.groupe : null} enfants={n.genre === 'groupe' ? n.enfants.length : 0}
-              deplie={deplies.has(id)} choisie={choisies.has(id)} arret={arret} contexte={contexte?.groupe === id} renomme={renomme === id}
+              deplie={deplies.has(id)} choisie={choisies.has(id)} arret={arret} contexte={niveauEdition(contexte) === id} renomme={renomme === id}
               depot={depot?.id === id ? depot.mode : null} verrouille={verrouilleEffectif(dessin, id)} masquee={!visibleEffectif(dessin, id)}
               boutons={!survolFin || id === actif || id === survol} />
           );
@@ -209,14 +210,16 @@ const LigneArbreCalque = memo(function LigneArbreCalque(p: ProprietesLigne) {
  * Les pastilles d'un groupe (decoupe, masque, flou, ombre, opacite) : leurs icones d'abord, qui se voient toujours, puis leurs mots, sur
  * une bande d'une ligne ; un mot qui ne tient plus passe a la ligne suivante, cachee, plutot que de pousser les bascules ou d'etre rogne
  * (jamais une deuxieme hauteur de ligne : le fenetrage la suppose constante). Le nom de la ligne les dit toutes, l'infobulle aussi.
+ * Le double-clic sur celle d'une decoupe ou d'un masque fait modifier ce contenu ; au clavier, c'est la commande du menu Edition.
  */
 function PastillesGroupe({ groupe }: { groupe: Groupe }) {
   const p = pastillesGroupe(groupe);
   if (!p.length) return null;
   return (
     <span className="calque-pastilles" aria-hidden="true" title={p.map(x => x.mot).join(', ')}>
-      {p.map(x => <Icone key={x.icone} nom={x.icone} taille={12} />)}
-      {p.map(x => <span key={x.icone} className="pastille-mot">{x.mot}</span>)}
+      {/* Un double-clic sur la pastille d'une decoupe ou d'un masque en modifie le contenu (paquet 8-D) : `data-pastille` la nomme. */}
+      {p.map(x => <span key={x.icone} className="pastille-icone" data-pastille={x.icone}><Icone nom={x.icone} taille={12} /></span>)}
+      {p.map(x => <span key={x.icone} className="pastille-mot" data-pastille={x.icone}>{x.mot}</span>)}
     </span>
   );
 }
