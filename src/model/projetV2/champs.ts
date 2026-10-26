@@ -6,6 +6,7 @@
 // Le projet n'a qu'un format (ADR-0030, revision du 26 octobre 2026) : un champ v2 y est un champ facultatif comme les autres, lu et
 // valide toujours, absent d'un dessin plat. Pur ; un lecteur refuse par `o.refuser`, qui remonte jusqu'a `lireProjet` sans lever.
 
+import { t } from '../../util/i18n.js';
 import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
 import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
 import { lireDecoupeProjet, type DecoupeProjet } from './decoupe.js';
@@ -55,25 +56,25 @@ export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
   // Etape 1 : le groupe parent, un identifiant de l'arbre.
   {
     cle: 'parent',
-    lire: (v, o) => { const s = o.texte(v, 'le groupe d’une forme', 64); return o.identifiant.test(s) ? s : o.refuser('le groupe d’une forme est mal désigné'); }
+    lire: (v, o) => { const s = o.texte(v, t('le groupe d’une forme'), 64); return o.identifiant.test(s) ? s : o.refuser(t('le groupe d’une forme est mal désigné')); }
   },
   // Etape 3 : les degrades, et les motifs (etape 9, motif.ts, par le meme lecteur). Sous une peinture non unie, la couleur de repli est
   // obligatoire (annexe 1 §5, I5).
   {
-    cle: 'peintureRemplissage', lire: (v, o) => lirePeintureProjet(v, o, 'la peinture du remplissage'),
-    verifier: (f, o) => { if (f.remplissage === null) o.refuser('un dégradé ou un motif de remplissage n’a pas de couleur de repli'); }
+    cle: 'peintureRemplissage', lire: (v, o) => lirePeintureProjet(v, o, t('la peinture du remplissage')),
+    verifier: (f, o) => { if (f.remplissage === null) o.refuser(t('un dégradé ou un motif de remplissage n’a pas de couleur de repli')); }
   },
   {
-    cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'la peinture du contour'),
-    verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé ou un motif de contour n’a pas de couleur de repli'); }
+    cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, t('la peinture du contour')),
+    verifier: (f, o) => { if (f.contour === null) o.refuser(t('un dégradé ou un motif de contour n’a pas de couleur de repli')); }
   },
   // Etape 7 : les effets (flou, ombre portee), en unites du plan.
-  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'une forme') },
+  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, t('une forme')) },
   // Etape 12 : l'image integree. Sa forme est validee ici ; ses octets (nature, dimensions, pixels, 16 Mo par dessin) le sont par le
   // moteur a l'ouverture (engine/projetV2/champs.ts, `refusChampsV2`). Une image ne porte ni remplissage ni contour.
   {
     cle: 'image', lire: (v, o) => { const r = lireImageProjet(v); return 'erreur' in r ? o.refuser(r.erreur) : r.image; },
-    verifier: (f, o) => { if (f.remplissage !== null || f.contour !== null) o.refuser('une image porte un remplissage ou un contour'); }
+    verifier: (f, o) => { if (f.remplissage !== null || f.contour !== null) o.refuser(t('une image porte un remplissage ou un contour')); }
   }
 ];
 
@@ -112,5 +113,5 @@ export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [
   // Etape 6 : le masque d'opacite, son contenu peint lu comme le dessin.
   { cle: 'masque', lire: (v, o) => lireMasqueProjet(v, o) },
   // Etape 7 : les effets du groupe.
-  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'un groupe') }
+  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, t('un groupe')) }
 ];

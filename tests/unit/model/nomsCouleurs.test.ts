@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { nomDeCouleur, phraseOpacite } from '../../../src/model/nomsCouleurs.js';
+import { definirDictionnaire, definirLangue } from '../../../src/util/i18n.js';
 
 describe('le nom approche d’une couleur', () => {
   it('dit les neutres par leur clarte', () => {
@@ -29,5 +32,19 @@ describe('le nom approche d’une couleur', () => {
     expect(phraseOpacite(undefined)).toBe('');
     expect(phraseOpacite(1)).toBe('');
     expect(phraseOpacite(0.5)).toBe('opacité 50 %');
+  });
+
+  it('se dit en anglais par le dictionnaire, la nuance avant le nom (ADR-0042)', () => {
+    definirDictionnaire('en', JSON.parse(readFileSync(resolve(__dirname, '../../../src/i18n/en/model.json'), 'utf8')) as Record<string, string>);
+    definirLangue('en');
+    try {
+      expect(nomDeCouleur('#1428a0')).toBe('Dark blue');
+      expect(nomDeCouleur('#87ceeb')).toBe('Light blue');
+      expect(nomDeCouleur('#8b4513')).toBe('Brown');
+      expect(nomDeCouleur('#333333')).toBe('Dark gray');
+      expect(phraseOpacite(0.5)).toBe('opacity 50%');
+    } finally {
+      definirLangue('fr');
+    }
   });
 });

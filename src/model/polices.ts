@@ -13,7 +13,8 @@
 //   - la chasse fixe (Courier, Consolas…) n'a pas d'equivalent : Inter, et le dire ;
 //   - aucune fonte embarquee n'est italique : une italique demandee se penche de 12 degres (italique synthetique), et c'est dit.
 
-import { nombre } from '../util/i18n.js';
+import { t } from '../util/i18n.js';
+import { pluriel } from '../util/texte.js';
 
 export type IdPolice = 'inter' | 'inter-gras' | 'oswald' | 'bebas' | 'playfair' | 'lobster' | 'pacifico' | 'caveat' | 'fredoka';
 /** Les fontes a trait unique (ADR-0022) : un trace ouvert par trait de plume, pour le stylo d'une machine, jamais un remplissage. */
@@ -166,5 +167,8 @@ export function remplacerFamilles(familles: string, d: Omit<DemandePolice, 'nom'
 
 /** La phrase d'un remplacement pour `ignores` : « 3 textes en Arial, police remplacee par Inter ». */
 export function phraseRemplacement(textes: number, r: Remplacement): string {
-  return nombre(textes) + ' texte' + (textes > 1 ? 's' : '') + ' en ' + r.demandee + ', police remplacée par ' + NOMS_POLICES[r.id] + (r.penchee ? ' penchée (italique synthétique)' : '');
+  const valeurs = { textes: pluriel(textes, 'texte'), demandee: r.demandee, police: NOMS_POLICES[r.id] };
+  return r.penchee
+    ? t('{textes} en {demandee}, police remplacée par {police} penchée (italique synthétique)', valeurs)
+    : t('{textes} en {demandee}, police remplacée par {police}', valeurs);
 }
