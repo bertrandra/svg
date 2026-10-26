@@ -17,13 +17,14 @@ import type { Teinte } from './typesEditeur.js';
 import { Nombre } from './commun/Nombre.js';
 import { SectionTexte } from './InspecteurTexte.js';
 import { SectionNuancier } from './SectionNuancier.js';
+import { PeintureDegradable, useDegradesPermis } from './EditeurDegrade.js';
 
 // Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
 export { Nombre };
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
 export function Inspecteur() {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), degradesPermis = useDegradesPermis();
   const { dessin, sel, boite } = mo;
   const premiere = dessin.formes.find(f => f.id === sel[0]);
   if (!premiere) return null;
@@ -39,8 +40,13 @@ export function Inspecteur() {
       {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
       {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
       <Section titre="Apparence" ouverte>
-        <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
-        <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
+        {/* Uni, ou un degrade (ADR-0012, etape 4) quand le modele riche est regle ou que le dessin l'est deja ; sinon le selecteur d'avant. */}
+        <PeintureDegradable cote="remplissage" libelle="Remplissage" forme={premiere}>
+          <Peinture libelle="Remplissage" sansTitre={degradesPermis} valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
+        </PeintureDegradable>
+        <PeintureDegradable cote="contour" libelle="Contour" forme={premiere}>
+          <Peinture libelle="Contour" sansTitre={degradesPermis} valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
+        </PeintureDegradable>
         {premiere.contour ? <Nombre libelle="Épaisseur" valeur={premiere.epaisseur} min={0} poser={v => regler({ epaisseur: v }, null)} /> : null}
         {premiere.contour ? <StyleDeTrait forme={premiere} poser={r => ac.appliquer(d => modifierTrait(d, sel, r), ac.nouvelleCle())} /> : null}
         <Opacite libelle="Opacité" titre="La forme entière, fond et contour ensemble" valeur={premiere.opacite} poser={v => regler({ opacite: v }, 'opacite')} finir={ac.finir} />
@@ -152,7 +158,7 @@ function PanneauPoint({ forme }: { forme: Forme }) {
 }
 
 /** Une couleur : selecteur, code, « aucune », et le nuancier. */
-export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { libelle: string; valeur: string | null; mixte: boolean; nuancier: readonly Teinte[]; poser: (v: string | null, continu: boolean) => void; finir: () => void }) {
+export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir, sansTitre = false }: { libelle: string; valeur: string | null; mixte: boolean; nuancier: readonly Teinte[]; poser: (v: string | null, continu: boolean) => void; finir: () => void; sansTitre?: boolean }) {
   const [texte, poserTexte] = useState(valeur ?? '');
   useEffect(() => { poserTexte(valeur ?? ''); }, [valeur]);
   const valider = () => {
@@ -163,7 +169,8 @@ export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { l
   };
   return (
     <div className="peinture" role="group" aria-label={libelle}>
-      <span className="peinture-titre">{libelle}{mixte ? <span className="aide"> · mixte</span> : null}</span>
+      {/* Sous le choix Uni / Dégradé (EditeurDegrade.tsx), le titre est sa legende : il ne se repete pas. */}
+      {sansTitre ? (mixte ? <span className="aide">mixte</span> : null) : <span className="peinture-titre">{libelle}{mixte ? <span className="aide"> · mixte</span> : null}</span>}
       <div className="champ-ligne">
         <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser(e.target.value, true)} onBlur={finir} />
         <input type="text" aria-label={libelle + ' (code)'} value={texte} placeholder="aucun" size={8} onChange={e => poserTexte(e.target.value)} onBlur={valider} onKeyDown={e => { if (e.key === 'Enter') valider(); }} />

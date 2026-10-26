@@ -17,12 +17,13 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; 2-B, 2-D proposés |
+| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-B** (calques en arbre) **fait** le 26 octobre 2026 (« Ce que le paquet 2-B a posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; 2-D proposé |
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
+| 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; **7-B (toile, brouillon, mesures) fait** le 26 octobre 2026 (ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») ; l'interface des effets est à l'étape 8 |
+| 4 Dégradés, interface | **faite** le 26 octobre 2026 (paquets 4-A et 4-B en un seul arbre ; ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
-| 4, 8, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 8, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -298,6 +299,69 @@ réglage à `riche`, **ou un dessin déjà riche** (un projet du site s'ouvre te
   2-B** : la ligne « Entrée » d'un groupe dans la grille peut appeler `entrerDansGroupe` ; « Tout » et « Inverser » des calques
   (`Calques.tsx`) voient encore toutes les feuilles : `noeudsChoisissables` est prêt.
 
+### Ce que le paquet 2-B a posé (26 octobre 2026)
+
+Aucun octet écrit ne bouge, la lecture `plat` est inchangée, et **un dessin plat garde la liste des calques d'avant au nœud près**
+(`tests/unit/zones/calques.test.ts` : l'empreinte du DOM rendu du panneau, prise sur le code d'avant l'arbre, pour chaque SVG de
+référence plat — sans sélection, avec, en contexte Cricut —, un dessin de 300 formes fenêtré et les deux états vides ;
+`tests/fixtures/calques/plat.sha256.json`, réécrit seulement par `ACTUALISER_REFERENCES=1`). Ce que les paquets suivants trouvent :
+
+- **Le partage** : `Calques.tsx` garde son corps ; un dessin riche (`!estPlat`) y remplace la liste `<ol>` par `ArbreCalques`, dans le
+  même `<aside>` (la barre « Tout / Aucun / Inverser / Tout afficher », « Par couleur » et l'état vide sont communs ; « Tout afficher »
+  montre aussi les groupes masqués). Le dessin qui redevient plat (son dernier groupe défait) repasse à la liste, le focus revient au
+  panneau. `Fenetre.ts` : `useFenetre<L>` est générique (la grille est un `div`), rien d'autre.
+- **Cricut** (ADR-0028), décision : les deux groupes « À couper / À écrire » restent la vue première (ce qu'on règle feuille par
+  feuille avant d'exporter) ; **pour un dessin riche seulement**, l'arbre vient dessous, replié au départ (les groupes de la racine
+  seuls), pour garder la structure atteignable (masquer, verrouiller, déplacer un groupe) sans doubler la liste. Un dessin plat en
+  Cricut n'a toujours que les deux groupes (garde ci-dessus).
+- **Le calcul, pur** : `zones/lignesCalques.ts` — `lignesVisibles(d, deplies)` (les nœuds dont tous les ancêtres sont dépliés, du
+  premier plan au fond, avec niveau, rang parmi les frères, parent ; mémorisé par dessin et par ensemble déplié), `enfantsDe`,
+  `parentDe`, `groupeCommun(d, ids)` (le contexte qu'un choix amène), `destinations(d, ids)` (« Déplacer vers… » : la racine puis
+  chaque groupe par son chemin « Ciel › Nuage », refusés : les groupes déplacés, leurs descendants, le parent commun), `etendue`.
+  `zones/deplacerCalques.ts` — `ciblesDe` (la sélection si la ligne en est, ses unités ; sinon la ligne), `changerDeRang`
+  (Ctrl+Maj+Haut/Bas, `ordonnerNoeuds`), `sortirDuGroupe` (Ctrl+Maj+Gauche : frère du parent, juste sous lui ; s'il se vide, à sa
+  place), `entrerAuDessus` (Ctrl+Maj+Droite : dans le frère juste au-dessus s'il est un groupe, tout en bas ; entrer puis sortir rend
+  le dessin d'avant), `deplacerVers` (menu et dépôt : au premier plan du groupe, ou sous une feuille ; jamais en lui-même),
+  `renommerGroupe` ; chacun rend `{ dessin, phrase, deplier }` et passe par les opérations du moteur (`deplacerDans`,
+  `ordonnerNoeuds`, `renommer`). `zones/phrasesCalques.ts` : les phrases (plier, déplier, `*`, déplacer, monter, sortir, renommer,
+  refus), tournées autour du verbe pour ne pas accorder un participe au genre d'une forme.
+- **La grille** : `zones/ArbreCalques.tsx` — un `role="treegrid"` (`aria-multiselectable`, `aria-rowcount` des lignes visibles),
+  des lignes `role="row"` (`aria-level`, `aria-posinset`, `aria-setsize`, `aria-rowindex`, `aria-expanded` pour un groupe,
+  `aria-selected`, `aria-current` pour le groupe du contexte, nom accessible : celui de la liste plate pour une feuille, « Groupe
+  « Nuage », 3 éléments[, verrouillé][, masqué] » pour un groupe), trois cellules : le nom (chevron de groupe, échantillon de feuille,
+  nombre d'enfants), la visibilité, le verrou. **Tabindex itinérant** : un seul arrêt dans la grille (la ligne active, ou l'un de ses
+  deux boutons), Tab en sort. Fenêtrée au-delà de 150 lignes visibles avec deux cales `data-cale`, la ligne active épinglée
+  (`segmentsFenetre`) ; lignes mémorisées (`LigneArbreCalque`), gestes délégués à la grille (`zones/gestesArbreCalques.ts` :
+  `verbesArbre`, `gestesSouris`, `gesteClavier`, `gestesDepot`). Le retrait par niveau est `calc(var(--esp-l) * n)` ; **aucun jeton
+  ajouté** (le choix, le focus et le dépôt reprennent `--cyan` et `repli-cyan-18`, `Highlight` en contraste forcé ; 40 px au doigt).
+- **Le clavier** (annexe 6 §1) : Haut/Bas (Maj : étendre), Droite (déplie ; sur un groupe déplié, premier enfant ; sur une feuille,
+  ses boutons), Gauche (replie, sinon parent ; sur un bouton, cellule précédente puis la ligne), Haut/Bas sur un bouton gardent la
+  colonne, Origine/Fin, Page préc./suiv., Entrée (groupe : `ac.entrerGroupe` et il se déplie ; feuille : la choisit), Espace
+  (ajoute ou retire), F2 (renommer un groupe en place, Entrée valide, Échap abandonne ; une feuille : dit pourquoi non), `*` (déplie
+  les groupes frères), Maj+F10 ou la touche Menu (ouvre « Déplacer vers… », la ligne choisie d'abord), Ctrl+Maj+flèches. Le reste
+  (Suppr, Échap, Ctrl+A…) descend aux raccourcis de l'éditeur. Souris : clic (Maj : étendue, Ctrl : bascule), double-clic sur un
+  groupe y entre, chevron, glisser-déposer d'une ligne (sur un groupe : dedans ; sur une feuille : juste sous elle). « Déplacer
+  vers… » est un `MenuDeroulant` au-dessus de la grille, au clavier comme au doigt.
+- **Le contexte suit le choix fait dans l'arbre** : choisir une ligne pose le contexte d'édition au groupe qui contient tout le choix
+  (`groupeCommun`, la racine sinon), par `ac.poserContexte`, sans phrase de plus ; une forme choisie sur la toile déplie ses groupes
+  et la liste défile jusqu'à elle.
+- **Mesure** (méthode ADR-0008 : Chromium, `TaskDuration` du fil principal, médiane de trois, plat et riche entrelacés ; 2 000
+  feuilles, en 200 groupes de 10 pour le riche, à plat pour le témoin) : ouvrir 469 ms (plat 429, × 1,09) ; Ctrl+A 179 ms (plat
+  208) ; DOM de la grille repliée 698 nœuds pour 200 lignes (36 dessinées ; la liste plate : 559 nœuds), du panneau 1 175 (plat
+  1 030) ; tout déplier (`*`, 200 groupes, 2 200 lignes) 95 à 123 ms, DOM déplié 661 ; Fin 46 ms, Origine 70 ms, choisir une
+  ligne 169 ms, Ctrl+Maj+Bas 97 ms, replier 88 ms. **Hors budget** (annexe 7 §4, à trancher par 2-D) : la grille dépasse 400
+  nœuds (≈ 19 nœuds par ligne : trois boutons à icône SVG ; la liste plate, 559, ne tient pas non plus ce budget) ; rien n'a été
+  optimisé avant d'être mesuré.
+- **Tests** : `tests/unit/zones/calques.test.ts` (la garde plate, la grille rendue, fenêtrage, Cricut), `arbre-calques.test.ts`
+  (lignes, destinations, contexte, déplacements et phrases), `rendreCalques.ts` (le panneau rendu hors navigateur) ; e2e
+  `tests/e2e/calques-arbre.e2e.ts` (le parcours sans souris : déplier, replier, choisir, renommer, « Déplacer vers… », Ctrl+Maj+flèches,
+  entrer, Tab qui sort, « Terminer » ; les boutons d'une ligne ; axe replié, déplié, en contexte et menu ouvert, en clair, sombre et
+  au doigt avec cibles de 40 px ; le glisser-déposer ; un dessin plat sans grille).
+- **Reste** : les pastilles des groupes (« découpé », « ombre portée », « opacité 50 % ») et leur jeton `pastille-groupe` (2-C ou
+  l'étape 8) ; un menu contextuel complet (Maj+F10 n'ouvre que « Déplacer vers… ») ; Suppr dans la grille supprime la sélection, pas
+  la ligne active ; « Tout / Inverser » de la barre prennent encore les feuilles (Ctrl+A de 2-C voit le contexte) ; une revue NVDA /
+  VoiceOver de l'arbre (condition de la bascule) ; le budget DOM ci-dessus.
+
 ### Ce que l'étape 5 a posé (26 octobre 2026)
 
 - **Lecture** (`edition/fonctions/decoupes.ts`, une ligne de `catalogue.ts` entre les dégradés et les images ; `prises: ['decoupe']`,
@@ -537,6 +601,91 @@ réglage à `riche`, **ou un dessin déjà riche** (un projet du site s'ouvre te
   « Libérer le masque », « Inverser le masque » (`creerMasque`, `libererMasque`, `inverserMasque`, phrases `MSG_MASQUE`), confirmation
   de `degrouper` sur un groupe masqué (`porteurs` le dit déjà), jeton `contour-masque`, pastille « masque d'opacité » dans les calques ;
   la phrase d'une région élargie à la transformation.
+
+### Ce que l'étape 4 et le paquet 7-B ont posé (26 octobre 2026)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes), la lecture `plat` est inchangée, et
+**un dessin plat montre l'inspecteur d'avant, au DOM près**, tant que le réglage du modèle vaut `plat`.
+
+- **Décision : où un dégradé se propose.** Poser un dégradé rend un dessin plat riche (`estPlat` devient faux, l'écriture pose
+  `data-ed-modele="2"`, le projet passe au format 2). Le choix Uni / Dégradé linéaire / Dégradé radial ne se montre donc que si le
+  réglage `modele` vaut `riche` (menu Édition, ou l'hôte) **ou** si le dessin ouvert est déjà riche (`useDegradesPermis`,
+  `zones/EditeurDegrade.tsx` ; le même critère que `groupesActifs` de 2-C). Un hôte qui fixe `plat` (l'embarquement par défaut) ne le
+  voit jamais. Le style des formes à venir (`PanneauDessin`, `StyleNouvelleForme`) reste uni : rien n'y a changé.
+- **Opérations pures** (`engine/edition/degradesOperations.ts`, bloc « étape 4 » de la façade) : `poserDegrade(d, ids, cote, genre)`
+  (dans la boîte de la forme : linéaire de gauche à droite par son milieu, radial de son centre à son plus grand demi-côté ; une couleur
+  unie devient le premier arrêt, le blanc — le noir sur une couleur très claire — le second ; changer de genre garde arrêts et
+  étalement ; un trait qui apparaît prend l'épaisseur 1), `retirerDegrade` (la couleur de repli reste, unie), `ajouterArret` (à
+  mi-chemin du suivant, couleur et opacité interpolées en OKLab, 64 au plus ; `rangAjoute` donne son rang), `retirerArret` (2 au moins),
+  `modifierArret` (couleur `#rrggbb` en minuscules, position **bornée par les voisins** et opacité au millième, l'opacité absente à 1 :
+  le rang d'un arrêt ne change jamais pendant un geste), `echangerArrets` (l'ordre : couleurs et opacités échangées, positions gardées),
+  `inverserArrets`, `reglerEtalement` (`pad` est l'absence), `reglerAngle` (autour du milieu de l'axe, même longueur, posé dans le plan
+  sans matrice), `reglerCentre`/`reglerRayon` (une translation ou une échelle composée : le foyer suit, une ellipse garde sa
+  proportion), `deplacerExtremite` (les poignées), et pour la toile `axeDegrade`, `pointSurAxe`, `positionSurAxe` (projection sur l'axe
+  d'un linéaire, distance rapportée au rayon d'un radial dans son repère), `angleDegrade`, `centreRayon`, `formesADegrade`,
+  `degradesDistincts`. Chacune rend le même objet quand rien ne change ; la couleur de repli est recalculée comme à la lecture
+  (`couleurDeRepli`). Une sélection de groupes peint leurs feuilles, une image est laissée. `degrades.ts` n'a gagné qu'un `export`
+  (`lineaireDansLePlan`, l'axe canonique que la toile montre).
+- **Phrases** : `degradeDit` (`engine/description.ts`) et `peintureDite` qui dit « fond dégradé linéaire du rouge #c81e28 au bleu
+  #1f5fb0 » plutôt que la couleur de repli (ancien corps dans `anciennes/etape4.ts`, cas dans `loi-dessin-plat.test.ts`) ;
+  `zones/phrasesDegrades.ts` (« Arrêt 2 sur 3, rouge #c81e28, à 40 % », « Arrêt 2 : 55 %. », « Début du dégradé : 30, 100. »,
+  « Remplissage : dégradé linéaire. », « Arrêt ajouté : 3 sur 4. », « Arrêt retiré : 2 arrêts restent. »).
+- **Le panneau** (4-A) : `zones/EditeurDegrade.tsx` — `PeintureDegradable` enveloppe le sélecteur de couleur de l'inspecteur
+  (`Inspecteur.tsx`, Remplissage et Contour ; `Peinture` gagne `sansTitre`, la légende du choix étant son titre) : un `fieldset` de
+  boutons radio natifs, puis, sous un dégradé, la liste des arrêts (`role="listbox"`, un seul arrêt de tabulation par
+  `aria-activedescendant`, flèches, Début/Fin, Suppr retire ; une option ne porte aucune commande, son texte visible est son nom) et
+  les réglages de l'arrêt choisi (couleur et code, position en curseur et en champ, opacité, Monter / Descendre, « Retirer l'arrêt »
+  grisé avec sa raison à deux arrêts), « Ajouter un arrêt », « Inverser », « Étalement » (Prolonger, Refléter, Répéter), l'angle (curseur
+  par 15°, champ au degré) ou le centre et le rayon. Curseurs et sélecteur de couleur sont un geste fondu par sa clé, clos en quittant
+  le champ. **La ligne « Dégradés »** (`zones/LigneDegrades.tsx`, dans `CouleursDuDessin.tsx` et `ParCouleur.tsx`, selon le fond, le
+  trait ou les deux) compte les dégradés distincts et leurs formes et les choisit d'un clic ; absente sans dégradé (le DOM des listes
+  reste celui d'avant). `LigneCouleurDessin.tsx` et `ListeCouleurs.tsx` n'ont pas bougé.
+- **Les poignées** (4-B) : `zones/PoigneesDegrade.tsx`, poussées par la `surcouche` de `Toile.tsx` pour la forme choisie seule
+  (outil de sélection, déverrouillée ; le remplissage s'il est en dégradé, sinon le contour) : l'axe et un rail parallèle des arrêts
+  (un arrêt à 0 % ne recouvre pas l'extrémité), un rond par arrêt (la couleur du dessin, cernée du jeton), un losange par extrémite
+  (début et fin d'un linéaire, centre et bord d'un radial). Chaque poignée est un `role="slider"` (`aria-valuenow` en %,
+  `aria-valuetext` « Arrêt 2 sur 3, rouge #c81e28, à 40 % », l'aide dans son `<title>`), cible de 40 px au doigt. **Clavier**
+  (`ClavierToile.ts`, deux lignes) : Tab depuis la toile sur une forme à dégradé entre dans les poignées (début, arrêts, fin), Tab après
+  la dernière passe à la forme suivante (ou quitte la toile : jamais de piège), Maj+Tab revient, flèches ±1 %, Maj ±10 %, Début/Fin
+  aux bornes, Suppr retire (le focus passe à la poignée précédente ; la forme reste), une extrémité se déplace du pas du plan (Maj ×10),
+  Échap rend la toile ; un geste de touches est fondu par sa clé, clos en quittant la poignée ; la phrase d'aide de la toile le dit.
+  **Souris et doigt** (`Gestes.ts`, `data-poignee-degrade` comme un coin) : un arrêt glisse le long de l'axe (projection du pointeur),
+  une extrémité suit le pointeur aimanté ; un seul geste d'historique.
+- **Jetons** : `poignee-degrade` (`#9c2a7a` / `#e07ac0`, 6,5:1 et 6,2:1 sur le panneau) et `arret-selectionne` (`#15181d` /
+  `#e6e9ec`), rôle « trait », chacun dans `PAIRES_GRAPHIQUES` (3:1 sur son halo de panneau) ; en contraste forcé, `Highlight`, `Canvas`,
+  `CanvasText`. `docs/jetons.md` régénéré.
+- **Le brouillon des effets** (7-B) : `zones/brouillon.ts` — `noeudsAEffet` (feuilles et groupes visibles à flou ou ombre, mémorisé par
+  dessin), `SEUIL_EFFETS_AU_REPOS` = 20, `effetsAuRepos`, `PHRASE_EFFETS_AU_REPOS`. **Décision** : jusqu'à 20 nœuds à effet, les effets
+  se rendent en direct pendant un geste (annexe 7 §4 : le budget tient) ; au-delà, `useGestes` pose `brouillon` au premier mouvement
+  d'un glisser, d'un redimensionnement ou d'une rotation, `NoeudsToile` le porte en `data-brouillon` sur `<g class="noeuds-toile">`,
+  la feuille de style retire les filtres (`[data-brouillon] [filter] { filter: none }`), et le relâcher (ou un pincement) le retire ; la
+  barre d'état le dit une fois par éditeur (« Effets affichés au repos : … »). Le dessin, l'historique et l'écriture n'en savent rien ;
+  `renduDe(d, liste sans effets)` n'a pas servi (il n'est pas mémorisé, et la feuille de style suffit).
+- **Mesuré, puis corrigé** (méthode de l'ADR-0008 : Chromium sans écran, 1 920 × 1 080, tâches du fil principal par mouvement d'un
+  glisser, médiane de trois passages entrelacés ; machine de l'agent) : avant correction, 200 ronds à ombre coûtaient **71,6 ms** par
+  mouvement sans brouillon et **35,4 ms** avec (200 ronds floutés : 38,6 et 25,1 ; 200 ronds sans effet : 16,3). La cause n'était pas le
+  rendu des filtres mais le `<defs>` de la toile, réécrit d'un seul tenant à chaque mouvement (la région du filtre de la forme déplacée
+  change, donc la chaîne des définitions). **Correction** (`ToileNoeuds.tsx`, `morceauxDefinitions`) : une définition par `<g>` de
+  `<defs>`, à la clé de son identifiant d'empreinte, mémorisée : seule celle qui change se réécrit (le test de la toile riche relit
+  le texte des définitions, morceaux réunis). Après : témoin 11,9 ms, 200 floutés 16,4 (brouillon) / 17,5 (sans), 200 à ombre
+  18,8 / 18,9, 20 à ombre en direct 10,1, 200 à dégradés tous différents 20,5 ; ouvrir (tâches) : témoin 234 ms, 200 floutés 307, 200
+  à ombre 304, 200 dégradés distincts 321 (**+87 ms**, budget de l'annexe 7 §4 : ≤ 150). L'intervalle des images mesuré dans la page
+  reste à 16,6–17,4 ms dans tous les cas (≥ 57 images/s). **Limite** : sans écran, le tramage des filtres se fait hors du fil principal
+  et ne se voit pas dans ces chiffres ; le gain du brouillon y est faible après la correction (0,1 à 1 ms), il reste la garde pour une
+  carte graphique réelle, à mesurer sur la machine de référence. Le script de mesure n'est pas commis (il pilote la page construite) ;
+  sa méthode est celle-ci.
+- **Tests** : `degrades-operations.test.ts` (17 cas), `v2/cas-degrades-operations.ts` (14 références `v2/degrades-op-*`, relues, point
+  fixe, `violationsEcriture`/`violationsNettoyage`), `description.test.ts`, `loi-dessin-plat.test.ts` (étape 4),
+  `tests/unit/zones/degrades.test.ts` (phrases, côté des poignées, compte des nœuds à effet, découpe des définitions),
+  `toile.test.ts` (les définitions par morceaux) ; e2e `tests/e2e/degrades.e2e.ts` (à plat rien ne change ; sans souris : poser un
+  linéaire, ajouter, déplacer et retirer un arrêt par le panneau et par les poignées, enregistrer et retrouver le `<linearGradient>` ;
+  à la souris : arrêt et extrémité ; contraste forcé ; le brouillon pendant un glisser et retiré au relâcher ; axe sur l'éditeur
+  linéaire et radial en clair, sombre et au doigt).
+- **Reste** : le motif dans le choix du genre (étape 9) ; les poignées d'un contour en dégradé quand le remplissage l'est
+  aussi (la toile ne montre que celles du remplissage ; le panneau règle les deux) ; le foyer d'un radial (`fx fy fr`) n'a ni champ ni
+  poignée (il suit le centre et le rayon) ; un dégradé sur plusieurs formes choisies se règle forme par forme au même rang d'arrêt, le
+  panneau montre celui de la première ; la mesure sur une carte graphique ; la revue NVDA/VoiceOver des poignées (condition de la
+  bascule, annexe 6 §9).
 
 ### Ce que l'étape 9 a posé (26 octobre 2026, moteur)
 
@@ -803,7 +952,7 @@ encore les feuilles d'un groupe masqué ou verrouillé (leur fichier est à l'é
   `loi-dessin-plat.test.ts`. Retour : `git revert -m 1 <fusion>` (un dessin plat ne bouge pas ; un projet au format 2 deviendrait
   illisible, refusé en le nommant).
 
-### Étape 4 — Dégradés : l'interface · taille M
+### Étape 4 — Dégradés : l'interface · taille M · **faite le 26 octobre 2026** (§0, « Ce que l'étape 4 et le paquet 7-B ont posé »)
 
 Section Remplissage/Contour, liste d'arrêts, champs, poignées de la toile (curseur-glisseur), clavier, phrases,
 jetons, axe, e2e. Paquets : **A** panneau + liste (M) ; **B** poignées de toile + clavier (M).
@@ -822,7 +971,7 @@ par intersection booléenne** des remplissages (`aplatir.ts`), fixtures, hostile
 descente (ignoré et dit, ou image), corpus `figma-trait-interieur`, `sketch-masque-use`. Après 5 (contenu et
 région partagent son infrastructure).
 
-### Étape 7 — Effets · taille G · risque moyen (performance) · **paquet 7-A fait le 26 octobre 2026** (§0)
+### Étape 7 — Effets · taille G · risque moyen (performance) · **paquets 7-A et 7-B faits le 26 octobre 2026** (§0)
 
 `Effets`, lecture du sous-ensemble (annexe 4 B §3), écriture des formes exactes, région calculée, `boiteVisuelle`
 (effets) et `ajusterPlan`, rendu de la toile avec mode brouillon pendant les gestes, plafonds, descente

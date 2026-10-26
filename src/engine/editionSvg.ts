@@ -142,6 +142,15 @@ export {
 } from './edition/resolution.js';
 export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degrades.js';
 
+// ---- etape 4 : degrades (interface) : les operations sur les degrades et leurs arrets
+export { lineaireDansLePlan } from './edition/degrades.js';
+export {
+  ARRETS_MIN, degradeDe, poserDegrade, retirerDegrade, rangAjoute, ajouterArret, retirerArret, modifierArret, echangerArrets, inverserArrets,
+  reglerEtalement, axeDegrade, pointSurAxe, positionSurAxe, angleDegrade, reglerAngle, centreRayon, reglerCentre, reglerRayon, deplacerExtremite,
+  formesADegrade, degradesDistincts,
+  type CoteDegrade, type GenreDegrade, type EtalementDegrade, type ReglageArret, type PointDegrade, type ExtremiteDegrade
+} from './edition/degradesOperations.js';
+
 // ---- etape 5 : decoupes
 export {
   decoupes, REFUS_DECOUPES, MSG_DECOUPES, feuilleDeDecoupe, transformerDecoupe, boiteDecoupe

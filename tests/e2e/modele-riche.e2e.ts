@@ -139,6 +139,8 @@ describe('le modele riche sur la toile', () => {
     await ouvrir(p, GROUPES);
     const centre = await versEcran(p, 80, 70);
     await p.mouse.click(centre.x, centre.y);
+    // Sous charge, le clic peut n'etre pas encore pris quand la fleche part : on attend la selection dite.
+    await attend(() => annonce(p)).toMatch(/sélectionné/);
     await p.keyboard.press('ArrowRight');
     await terminer(p);
     // Le reglage repasse a plat ; le brouillon reste.
@@ -150,7 +152,7 @@ describe('le modele riche sur la toile', () => {
     await reprise.getByRole('button', { name: 'Activer le modèle riche et reprendre' }).click();
     await p.locator('.editeur-cadre').waitFor();
     await attend(() => p.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
-    expect(await p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'riche' }));
+    await attend(() => p.evaluate(() => localStorage.getItem('svg.modele'))).toBe(JSON.stringify({ modele: 'riche' }));
   });
 
   /** Trois formes a plat : en riche, elles se groupent au clavier. */
