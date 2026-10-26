@@ -1,24 +1,26 @@
-// Construit le site PHP (ADR-0030) dans dist/php, a cote de la page autonome (qui ne change pas) : lance apres les autres scripts de
-// `npm run construire`, il reprend ce qu'ils ont ecrit dans dist/.
+// Construit le site PHP (ADR-0030, ADR-0041) dans dist/php, a cote de la page autonome (qui ne change pas) : lance apres les autres
+// scripts de `npm run construire`, il reprend ce qu'ils ont ecrit dans dist/.
 //
 //   dist/php/
-//     public/                  LE dossier a envoyer (par FTP, a la racine du site) : rien n'est a regler (ADR-0030, revision)
-//       index.php, api.php, config.php, .htaccess          (outils/site-php/public)
-//       inc/                   le code, refuse en acces direct ; inc/mot-de-passe.php (ligne de commande), inc/serveur-local.php
-//                              (le routeur de `php -S`, qui imite les .htaccess)
+//     public/                  LE dossier a envoyer (par FTP, a la racine du site) : rien n'est a regler
+//       index.php, api.php, .htaccess                       (outils/site-php/public : trois lignes, le code est dans data/inc)
 //       assets/site.js         l'application (src/site), compilee
 //       assets/site.css        les styles de la page autonome (jetons, base, page, editeur, fontes de l'interface) et ceux du site
 //       assets/vtracer.js      le traceur, charge a la demande comme dans la page
 //       MENTIONS.txt           les licences des composants redistribues
 //       aide/                  les documentations du menu Aide (scripts/documentation.mjs), reprises de dist/aide
-//       data/                  les donnees, sous la racine web : config.php le prend par defaut
-//         .htaccess            « Require all denied » : tout acces direct refuse (pwd et password compris)
-//         json/                les annexes de donnees en JSON : bibliotheques, index et apercus des polices, liste des fontes livrees
+//       data/                  jamais servi (« Require all denied »), sous la racine web : index.php le trouve la, sinon a cote
+//         .htaccess, inc/      le code entier (outils/site-php/data) ; inc/compte.php (ligne de commande), inc/serveur-local.php
+//                              (le routeur de `php -S`, qui imite les .htaccess)
+//         config/              config.json, ecrit a l'installation ; config.local.php facultatif (les constantes avancees)
+//         comptes/ sessions/ jetons/   les comptes, les sessions par jeton, les jetons des mails
+//         json/                les annexes de donnees en JSON : bibliotheques, index et apercus des polices, liste des fontes
+//                              livrees, le dictionnaire anglais (langue-en, s'il est construit)
 //         font/                les dix fontes livrees (fichiers), puis celles du catalogue que le serveur range
-//         projets/             les projets enregistres
+//         projets/             les projets, un dossier par compte ; projets/corbeille-comptes/ : ceux des comptes supprimes
 //
-// Le mot de passe n'est jamais livre : l'administrateur le choisit a la premiere visite, ou depose data/password par FTP.
-// Qui a la main sur le serveur peut sortir data/ de la racine (a cote de public/) : config.php le trouve alors en ../data.
+// Aucun compte n'est livre : l'administrateur se cree a la premiere visite (ou par `php data/inc/compte.php --admin`).
+// Qui a la main sur le serveur peut sortir data/ de la racine (a cote de public/) : index.php le trouve alors en ../data.
 // Rien ici ne contacte le reseau, et rien de construit n'est commis.
 //
 //   node scripts/site-php.mjs   (apres les autres scripts de « npm run construire »)
@@ -36,7 +38,9 @@ const SOURCES = depuisRacine('outils/site-php');
 const DONNEES = join(SORTIE, 'public/data');
 
 /** Les annexes de donnees de dist/, sorties en JSON pour le serveur : le texte du script, sans `window.X=` ni le `;` final. */
-const ANNEXES_JSON = ['bibliotheque', 'bibliotheque-mdi', 'bibliotheque-ph', 'bibliotheque-tabler', 'bibliotheque-healthicons', 'bibliotheque-lucide', 'polices-catalogue', 'polices-apercus', 'langue-en'];
+const ANNEXES_JSON = ['bibliotheque', 'bibliotheque-mdi', 'bibliotheque-ph', 'bibliotheque-tabler', 'bibliotheque-healthicons', 'bibliotheque-lucide', 'polices-catalogue', 'polices-apercus'];
+/** Les annexes facultatives (ADR-0042 : le dictionnaire anglais, construit par scripts/langues.mjs) : reprises seulement si elles existent. */
+const ANNEXES_JSON_FACULTATIVES = ['langue-en'];
 
 const ecrire = (chemin, texte) => { mkdirSync(join(chemin, '..'), { recursive: true }); writeFileSync(chemin, texte); return texte.length; };
 
@@ -87,16 +91,16 @@ export async function construireSitePhp() {
   }
   rmSync(SORTIE, { recursive: true, force: true });
   cpSync(join(SOURCES, 'public'), join(SORTIE, 'public'), { recursive: true });
-  for (const d of ['json', 'font/catalogue', 'projets/corbeille']) mkdirSync(join(DONNEES, d), { recursive: true });
+  cpSync(join(SOURCES, 'data'), DONNEES, { recursive: true });
+  for (const d of ['config', 'comptes', 'sessions', 'jetons', 'json', 'font/catalogue', 'projets/corbeille-comptes', 'journal']) mkdirSync(join(DONNEES, d), { recursive: true });
   mkdirSync(join(SORTIE, 'public/assets'), { recursive: true });
-  copyFileSync(join(SOURCES, 'data/.htaccess'), join(DONNEES, '.htaccess'));
   const script = ecrire(join(SORTIE, 'public/assets/site.js'), await construireScript());
   const styles = ecrire(join(SORTIE, 'public/assets/site.css'), await construireStyles());
   copyFileSync(join(DIST, 'vtracer.js'), join(SORTIE, 'public/assets/vtracer.js'));
   copyFileSync(join(DIST, 'MENTIONS.txt'), join(SORTIE, 'public/MENTIONS.txt'));
   cpSync(join(DIST, 'aide'), join(SORTIE, 'public/aide'), { recursive: true });
   let donnees = 0;
-  for (const nom of ANNEXES_JSON) donnees += ecrire(join(DONNEES, 'json', nom + '.json'), jsonDeAnnexe(readFileSync(join(DIST, nom + '.js'), 'utf8'), nom + '.js'));
+  for (const nom of [...ANNEXES_JSON, ...ANNEXES_JSON_FACULTATIVES.filter(n => existsSync(join(DIST, n + '.js')))]) donnees += ecrire(join(DONNEES, 'json', nom + '.json'), jsonDeAnnexe(readFileSync(join(DIST, nom + '.js'), 'utf8'), nom + '.js'));
   donnees += construirePolicesSite();
   return { script, styles, donnees };
 }

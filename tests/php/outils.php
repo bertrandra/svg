@@ -191,8 +191,87 @@ final class Client
         return preg_match('/(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/', $page, $m) === 1 ? $m[1] : '';
     }
 
-    public function connecter(string $mot): array
+    public function connecter(string $email, string $mot): array
     {
-        return $this->formulaire('index.php', ['action' => 'connexion', 'csrf' => $this->jeton(), 'mot_de_passe' => $mot]);
+        return $this->formulaire('index.php', ['action' => 'connexion', 'csrf' => $this->jeton(), 'email' => $email, 'mot_de_passe' => $mot]);
     }
+}
+
+/** L'administrateur des tests, et son mot de passe. */
+const ADMIN_EMAIL = 'admin@exemple.org';
+const MOT = 'un mot de passe assez long';
+
+/**
+ * Cree l'administrateur par l'outil de ligne de commande (data/inc/compte.php --admin --stdin), comme un script d'installation.
+ * `$data` est le dossier des donnees de la copie du site.
+ */
+function creer_admin(string $data, string $email = ADMIN_EMAIL, string $nom = 'Admin', string $mot = MOT, string $langue = 'fr'): string
+{
+    $p = proc_open([PHP_BINARY, $data . '/inc/compte.php', '--admin', '--stdin'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $tubes);
+    fwrite($tubes[0], $email . "\n" . $nom . "\n" . $mot . "\n" . $langue . "\n");
+    fclose($tubes[0]);
+    $sortie = stream_get_contents($tubes[1]) . stream_get_contents($tubes[2]);
+    $code = proc_close($p);
+    if ($code !== 0) {
+        throw new RuntimeException('compte.php --admin : ' . $sortie);
+    }
+    return $sortie;
+}
+
+/** Ecrit data/config/config.json : le courrier en mode fichier (rien ne part), un expediteur, le nom du site. */
+function ecrire_config(string $data, array $surcharge = []): void
+{
+    if (!is_dir($data . '/config')) {
+        mkdir($data . '/config', 0700, true);
+    }
+    $config = array_replace_recursive([
+        'format' => 'editeur-svg/config', 'version' => 1,
+        'site' => ['nom' => 'Site d’essai', 'langue' => 'fr', 'adresse' => ''],
+        'inscriptions' => ['ouvertes' => true],
+        'courrier' => ['expediteur' => 'no-reply@exemple.org', 'nom' => 'Site d’essai', 'mode' => 'fichier', 'smtp' => ['hote' => '', 'port' => 587, 'securite' => 'starttls', 'utilisateur' => '', 'motDePasse' => '']],
+        'sessions' => ['inactivite' => 7200],
+    ], $surcharge);
+    file_put_contents($data . '/config/config.json', json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+/** Les mails ecrits en mode fichier, du plus ancien au plus recent : [['entetes' => [...], 'corps' => texte decode, 'a' => …, 'sujet' => …]]. */
+function mails_ecrits(string $data): array
+{
+    $d = $data . '/journal/courrier';
+    $liste = [];
+    foreach (is_dir($d) ? (scandir($d) ?: []) : [] as $f) {
+        if (!str_ends_with($f, '.eml')) {
+            continue;
+        }
+        $t = (string) file_get_contents($d . '/' . $f);
+        [$h, $c] = array_pad(explode("\r\n\r\n", $t, 2), 2, '');
+        $entetes = [];
+        foreach (explode("\r\n", $h) as $ligne) {
+            $m = explode(': ', $ligne, 2);
+            if (count($m) === 2) {
+                $entetes[$m[0]] = $m[1];
+            }
+        }
+        $sujet = $entetes['Subject'] ?? '';
+        $liste[] = ['fichier' => $f, 'entetes' => $entetes, 'corps' => quoted_printable_decode($c), 'a' => $entetes['To'] ?? '', 'sujet' => mb_decode_mimeheader($sujet)];
+    }
+    return $liste;
+}
+
+/** Le dernier mail ecrit a cette adresse, ou null. */
+function dernier_mail(string $data, string $a): ?array
+{
+    $trouve = null;
+    foreach (mails_ecrits($data) as $m) {
+        if ($m['a'] === $a) {
+            $trouve = $m;
+        }
+    }
+    return $trouve;
+}
+
+/** Le jeton d'un lien (`?confirmer=` ou `?reinitialiser=`) dans le corps d'un mail, ou ''. */
+function jeton_du_mail(?array $mail, string $parametre): string
+{
+    return $mail !== null && preg_match('/index\\.php\\?' . $parametre . '=([a-f0-9]{64})/', $mail['corps'], $m) === 1 ? $m[1] : '';
 }

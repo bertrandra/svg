@@ -149,21 +149,24 @@ d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la b
 ## Le site PHP
 
 Une autre cible, à côté de la page autonome (qui ne change pas) : `npm run construire` écrit aussi `dist/php/`, un site PHP où l’on
-retrouve ses **projets** d’une session à l’autre, derrière un **mot de passe** (ADR-0030). Un projet n’est pas le SVG mais le JSON
+retrouve ses **projets** d’une session à l’autre, avec un **compte** (ADR-0030, ADR-0041). Un projet n’est pas le SVG mais le JSON
 natif du modèle, avec tout ce qu’il faut pour le rouvrir à l’identique (formes, textes vivants, opérations Cricut, contexte de
 production, nuancier, fonte déposée, image source) ; le SVG reste un export.
 
-- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : la connexion, puis l’écran
-  « Projets » ; `api.php` : projets, données, polices) ; `data/` est dedans, refusé au Web par son `.htaccess` (`data/pwd`,
-  `data/projets`, `data/json`, `data/font`), ou à côté de `public/` pour qui a la main sur le serveur.
-- Le mot de passe se choisit dans la page à la première visite, ou par un fichier `data/password` (converti en empreinte, puis
-  supprimé), ou par `php inc/mot-de-passe.php` ; seule son empreinte est gardée.
+- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : installation, connexion,
+  inscription, puis l’écran « Projets » ; `api.php` : projets, compte, administration, données, polices) ; `data/` est dedans,
+  refusé au Web par son `.htaccess`, et porte tout le reste : le code (`data/inc/`), les réglages (`data/config/config.json`), les
+  comptes, les sessions, les projets (un dossier par compte), les JSON et les fontes ; ou à côté de `public/` pour qui a la main
+  sur le serveur.
+- Des comptes : l’administrateur se crée à la première visite (ou par `php data/inc/compte.php --admin`) ; une personne s’inscrit,
+  confirme son adresse par mail, puis un administrateur l’approuve (écran « Comptes ») ; mot de passe oublié par mail ; chaque
+  compte a sa langue (français, anglais) ; les mots de passe ne sont gardés qu’en empreinte.
 - « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
   Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
 - Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
   est téléchargée et vérifiée par le serveur, puis gardée dans `data/font`.
 
-Installation sur un hébergeur (où poser `public/` et `data/`, droits, mot de passe, HTTPS, mise à jour) :
+Installation sur un hébergeur (où poser `public/` et `data/`, droits, comptes, courrier, HTTPS, mise à jour) :
 [`docs/deploiement-php.md`](docs/deploiement-php.md) ; sécurité : [`docs/securite.md`](docs/securite.md), § 9.
 
 ## Embarquer l'éditeur
@@ -205,7 +208,7 @@ rien changer. Il passe `modele: 'riche'` pour garder groupes, dégradés, décou
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
 | `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |
-| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `public/inc/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
+| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `.htaccess` : trois lignes) et `data/` (`.htaccess`, `inc/` : tout le code, dont `compte.php` en ligne de commande et `serveur-local.php` pour `php -S`) ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
 | `tests/php/` | Les tests du site PHP, sans dépendance (`npm run test:php`) |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |

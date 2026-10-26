@@ -198,7 +198,8 @@ export function retirerFin(fins: ReglagesFins | undefined, id: keyof ReglagesFin
 function nomCourtMode(m: ModeVectorisation): string {
   switch (m) {
     case 'aplats': return t('Aplats');
-    case 'trait': return t('Trait');
+    // « Trait » est aussi le trait d'une forme (« Stroke ») : la cle du mode porte une valeur vide pour avoir sa propre traduction.
+    case 'trait': return t('Trait{mode}', { mode: '' });
     case 'fidele': return t('Fidèle');
     case 'mediane': return t('Ligne médiane');
   }

@@ -1,24 +1,51 @@
 <?php
-// Les projets du site (ADR-0030), dans data/projets : pour chacun, son JSON natif (`<id>.json`), sa fiche (`<id>.meta.json` : nom,
-// dates, revision, taille) et, facultative, sa vignette (`<id>.svg`). L'identifiant sur le disque est tire au hasard (16 chiffres
-// hexadecimaux) : un nom affiche n'est jamais un chemin. Chaque ecriture passe sous un verrou (`flock`) et d'un seul geste (un
-// fichier temporaire puis `rename`) ; ecraser un projet demande la revision qu'on a ouverte, pour ne pas ecraser le travail d'un
-// autre onglet. Supprimer met le projet dans data/projets/corbeille.
+// Les projets du site (ADR-0030, ADR-0041 §6), dans data/projets/<compte>/ : pour chacun, son JSON natif (`<id>.json`), sa fiche
+// (`<id>.meta.json` : nom, dates, revision, taille) et, facultative, sa vignette (`<id>.svg`). Toute fonction est bornee au compte
+// pose par `definir_compte_projets` (celui de la session) : un identifiant d'un autre compte est « introuvable », pas « interdit ».
+// L'identifiant sur le disque est tire au hasard (16 chiffres hexadecimaux) : un nom affiche n'est jamais un chemin. Chaque
+// ecriture passe sous un verrou (`flock`) et d'un seul geste (un fichier temporaire puis `rename`) ; ecraser un projet demande la
+// revision qu'on a ouverte, pour ne pas ecraser le travail d'un autre onglet. Supprimer met le projet dans la corbeille du compte.
 
 declare(strict_types=1);
 
 defined('SVG_SITE') || exit;
 
 const FORMAT_PROJET = 'editeur-svg/projet';
-const MOTIF_ID = '/^[a-f0-9]{16}$/';
 const JSON_PROJET = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR;
 /** Ce que la validation du serveur borne (le client valide chaque champ ; ici, la structure minimale et le format). */
 const FORMES_MAX = 200000;
 const NOM_MAX = 120;
 
+/** Le compte dont on manipule les projets, pose pour la requete ; sans lui, aucun chemin ne se fabrique. */
+function compte_projets(?string $poser = null): string
+{
+    static $compte = '';
+    if ($poser !== null) {
+        if (!id_compte_valide($poser)) {
+            throw new InvalidArgumentException('compte des projets invalide');
+        }
+        $compte = $poser;
+    }
+    if ($compte === '') {
+        throw new LogicException('aucun compte pose pour les projets');
+    }
+    return $compte;
+}
+
+function definir_compte_projets(string $compteId): void
+{
+    compte_projets($compteId);
+    foreach (['', '/corbeille'] as $sous) {
+        $d = donnees('projets/' . $compteId . $sous);
+        if (!is_dir($d) && !@mkdir($d, 0750, true) && !is_dir($d)) {
+            throw new RuntimeException('dossier des projets du compte impossible');
+        }
+    }
+}
+
 function dossier_projets(): string
 {
-    return donnees('projets');
+    return donnees('projets/' . compte_projets());
 }
 
 /** Le chemin d'un fichier de projet ; un identifiant mal forme ne fabrique jamais de chemin. */
@@ -35,25 +62,10 @@ function id_valide(mixed $id): bool
     return is_string($id) && preg_match(MOTIF_ID, $id) === 1;
 }
 
-function maintenant_iso(): string
-{
-    return gmdate('Y-m-d\TH:i:s\Z');
-}
-
-/** Execute `$faire` sous le verrou des projets : une ecriture a la fois. */
+/** Execute `$faire` sous le verrou des projets du compte : une ecriture a la fois. */
 function avec_verrou(callable $faire): mixed
 {
-    $v = fopen(dossier_projets() . '/.verrou', 'c');
-    if ($v === false) {
-        throw new RuntimeException('verrou des projets impossible');
-    }
-    try {
-        flock($v, LOCK_EX);
-        return $faire();
-    } finally {
-        flock($v, LOCK_UN);
-        fclose($v);
-    }
+    return sous_verrou(dossier_projets() . '/.verrou', $faire);
 }
 
 /**
@@ -77,7 +89,7 @@ function nom_propre(mixed $brut): string
     $t = trim(preg_replace('/\s+/u', ' ', $t) ?? '');
     $t = trim(ltrim($t, '.'));
     $t = trim(mb_substr($t, 0, NOM_MAX));
-    return $t === '' ? 'Sans titre' : $t;
+    return $t === '' ? t('Sans titre') : $t;
 }
 
 function est_nombre(mixed $v): bool
@@ -92,39 +104,39 @@ function est_nombre(mixed $v): bool
 function projet_invalide(mixed $p): ?string
 {
     if (!is_object($p)) {
-        return 'ce n’est pas un objet JSON';
+        return t('ce n’est pas un objet JSON');
     }
     if (($p->format ?? null) !== FORMAT_PROJET) {
-        return 'ce n’est pas un projet de l’éditeur (format)';
+        return t('ce n’est pas un projet de l’éditeur (format)');
     }
     if (!is_int($p->version ?? null) || $p->version < 1 || $p->version > 1000) {
-        return 'sa version est illisible';
+        return t('sa version est illisible');
     }
     if (!is_string($p->nom ?? null)) {
-        return 'il n’a pas de nom';
+        return t('il n’a pas de nom');
     }
     $d = $p->dessin ?? null;
     if (!is_object($d) || !is_array($d->vb ?? null) || count($d->vb) !== 4 || !array_is_list($d->vb)) {
-        return 'son plan de travail est illisible';
+        return t('son plan de travail est illisible');
     }
     foreach ($d->vb as $v) {
         if (!est_nombre($v)) {
-            return 'son plan de travail est illisible';
+            return t('son plan de travail est illisible');
         }
     }
     if (!is_array($d->formes ?? null) || !array_is_list($d->formes) || count($d->formes) > FORMES_MAX) {
-        return 'ses formes sont illisibles';
+        return t('ses formes sont illisibles');
     }
     foreach ($d->formes as $f) {
         if (!is_object($f) || !is_string($f->id ?? null) || !is_string($f->d ?? null)) {
-            return 'une forme est illisible';
+            return t('une forme est illisible');
         }
     }
     if (!is_object($p->production ?? null) || !is_string($p->production->contexte ?? null)) {
-        return 'son contexte de production est illisible';
+        return t('son contexte de production est illisible');
     }
     if (!is_array($p->nuancier ?? null) || !is_object($p->ressources ?? null) || !is_array($p->ressources->polices ?? null) || !is_array($p->ressources->images ?? null)) {
-        return 'son nuancier ou ses ressources sont illisibles';
+        return t('son nuancier ou ses ressources sont illisibles');
     }
     return null;
 }
@@ -234,7 +246,7 @@ function enregistrer_projet(?string $id, mixed $projet, ?int $attendue, mixed $v
 {
     $raison = projet_invalide($projet);
     if ($raison !== null) {
-        return ['statut' => 400, 'erreur' => 'invalide', 'message' => 'Le serveur refuse ce projet : ' . $raison . '.'];
+        return ['statut' => 400, 'erreur' => 'invalide', 'message' => t('Le serveur refuse ce projet : {raison}.', ['raison' => $raison])];
     }
     return avec_verrou(function () use ($id, $projet, $attendue, $vignette): array {
         $maintenant = maintenant_iso();
@@ -244,13 +256,13 @@ function enregistrer_projet(?string $id, mixed $projet, ?int $attendue, mixed $v
         } else {
             $meta = lire_meta($id);
             if ($meta === null) {
-                return ['statut' => 404, 'erreur' => 'introuvable', 'message' => 'Ce projet n’existe plus sur le serveur.'];
+                return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
             }
             if ($attendue === null) {
-                return ['statut' => 428, 'erreur' => 'conflit', 'message' => 'Écraser un projet demande la version ouverte.', 'meta' => $meta];
+                return ['statut' => 428, 'erreur' => 'conflit', 'message' => t('Écraser un projet demande la version ouverte.'), 'meta' => $meta];
             }
             if ($meta['revision'] !== $attendue) {
-                return ['statut' => 409, 'erreur' => 'conflit', 'message' => 'Ce projet a été enregistré ailleurs depuis son ouverture.', 'meta' => $meta];
+                return ['statut' => 409, 'erreur' => 'conflit', 'message' => t('Ce projet a été enregistré ailleurs depuis son ouverture.'), 'meta' => $meta];
             }
         }
         $nom = nom_propre($projet->nom);
@@ -258,7 +270,7 @@ function enregistrer_projet(?string $id, mixed $projet, ?int $attendue, mixed $v
         try {
             return ['meta' => ecrire_projet($id, projet_ordonne($projet, $nom, $meta['creeLe'], $maintenant), $meta, $vignette)];
         } catch (LengthException) {
-            return ['statut' => 413, 'erreur' => 'trop_gros', 'message' => 'Ce projet dépasse la taille que le serveur accepte.'];
+            return ['statut' => 413, 'erreur' => 'trop_gros', 'message' => t('Ce projet dépasse la taille que le serveur accepte.')];
         }
     });
 }
@@ -284,7 +296,7 @@ function renommer_projet(string $id, mixed $nomBrut): array
         $meta = lire_meta($id);
         $projet = $meta === null ? null : lire_projet($id);
         if ($meta === null || $projet === null) {
-            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => 'Ce projet n’existe plus sur le serveur.'];
+            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
         }
         $nom = nom_propre($nomBrut);
         $maintenant = maintenant_iso();
@@ -299,10 +311,10 @@ function dupliquer_projet(string $id): array
         $meta = lire_meta($id);
         $projet = $meta === null ? null : lire_projet($id);
         if ($meta === null || $projet === null) {
-            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => 'Ce projet n’existe plus sur le serveur.'];
+            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
         }
         $neuf = nouvel_id();
-        $nom = nom_propre($meta['nom'] . ' (copie)');
+        $nom = nom_propre($meta['nom'] . ' ' . t('(copie)'));
         $maintenant = maintenant_iso();
         $svg = chemin_projet($id, '.svg');
         $vignette = is_file($svg) ? (string) file_get_contents($svg) : null;
@@ -311,12 +323,12 @@ function dupliquer_projet(string $id): array
     });
 }
 
-/** Met le projet a la corbeille (data/projets/corbeille), horodate : rien n'est efface du disque. */
+/** Met le projet a la corbeille du compte (data/projets/<compte>/corbeille), horodate : rien n'est efface du disque. */
 function supprimer_projet(string $id): array
 {
     return avec_verrou(function () use ($id): array {
         if (lire_meta($id) === null) {
-            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => 'Ce projet n’existe plus sur le serveur.'];
+            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
         }
         $prefixe = dossier_projets() . '/corbeille/' . gmdate('Ymd\THis\Z') . '-';
         // La fiche d'abord : sans elle, le projet n'est plus liste, meme si le reste tardait.

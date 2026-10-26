@@ -107,6 +107,14 @@ empreintes.
 
 ### Modifié
 
+- **Mettre à jour un site PHP d’avant demande de recréer un administrateur** (ADR-0041) : le **mot de passe unique disparaît**
+  (`data/pwd`, `data/password`, `data/connexions.json`, `inc/mot-de-passe.php` n’existent plus), ainsi que `config.php`,
+  `public/inc/` et `DATA_DIR` (le code est dans `data/inc/`, les constantes avancées dans `data/config/config.local.php`). À la
+  première visite après la mise à jour, la page demande de créer le compte administrateur : les projets existants lui sont
+  rattachés, puis chacun crée son compte. Le routeur de `php -S` devient `data/inc/serveur-local.php` ; la vérification que `data/`
+  ne se lit pas par HTTP porte sur `data/config/config.json`. `scripts/site-php.mjs` reprend l’annexe facultative `langue-en` quand
+  elle est construite.
+
 - **Le menu Aide devient une icône**, un point d’interrogation à droite de la barre, juste avant Fichier (là où l’on cherche l’aide
   d’habitude) ; il garde la visite guidée et les raccourcis, et ouvre désormais les deux documentations. Sur un téléphone, l’Aide
   reste la première rubrique de « Plus ».
@@ -358,6 +366,27 @@ empreintes.
   champs de la bonne forme (`lireCompte`, `lireFiche`, `lireSite`, `lireReglages` : chaque réglage à son défaut) ; les codes de
   refus (`role`, `existe`, `dernier-admin`, `soi-meme`, `courrier`, `limite`) ont une phrase de repli. Testé dans
   `tests/unit/io/serveur.test.ts`.
+- **Les comptes du site PHP** (ADR-0041). Le site n’a plus un mot de passe partagé mais **des comptes** : l’administrateur se crée à
+  la première visite (adresse, nom, mot de passe, langue, nom du site, adresse d’expédition des mails ; ou en ligne de commande,
+  `php data/inc/compte.php --admin`), une personne **s’inscrit**, **confirme son adresse** par le lien reçu (48 h), puis un
+  **administrateur l’approuve** (ou la refuse, avec une raison), prévenu par mail, et la personne l’est aussi ; **mot de passe
+  oublié** par un lien d’une heure, à usage unique ; profil (nom, langue, mot de passe) ; chaque compte a **ses projets**
+  (`data/projets/<compte>/`, sa corbeille dedans), un identifiant d’un autre compte est introuvable. L’API d’administration
+  (`comptes`, `compte-approuver|refuser|suspendre|reactiver|promouvoir|retrograder|renvoyer|email|supprimer|creer`, `reglages`,
+  `courrier-essai`) relit le rôle à chaque requête et refuse de retirer le dernier administrateur actif ou soi-même ; supprimer un
+  compte emporte ses projets dans `data/projets/corbeille-comptes/`. Les **sessions** sont des jetons aléatoires en fichier (cookie
+  `svg_session`, nouveau jeton à la connexion, état et rôle relus à chaque requête : un compte suspendu ou au mot de passe changé perd
+  ses autres sessions à leur requête suivante). Les **réglages** vivent dans `data/config/config.json` (nom et langue du site,
+  inscriptions ouvertes, courrier : `mail`, `smtp` ou `fichier`), validés champ par champ, modifiables dans « Réglages du site »
+  avec « Envoyer un mail d’essai » ; le **client SMTP** minimal fait STARTTLS ou SSL, AUTH PLAIN ou LOGIN, et n’envoie rien en clair si
+  STARTTLS est refusé. Les **pages d’avant la connexion et les mails** existent en français et en anglais (`t()` côté serveur,
+  sélecteur FR / EN par cookie, la langue du compte ensuite, un mail dans la langue de son destinataire). La limitation des essais
+  compte par client **et** par compte, les demandes de mail par client. `public/` ne garde que `index.php`, `api.php`, `.htaccess`,
+  `assets/`, `aide/`, `MENTIONS.txt` et `data/` : **tout le code PHP vit dans `data/inc/`**, jamais servi. Tests : `tests/php/`
+  (comptes, installation et migration, jetons, sessions, limitation, configuration, courrier en mode fichier, SMTP contre un faux
+  serveur local avec certificat auto-signé, couverture du dictionnaire anglais ; par HTTP, le circuit entier et l’API
+  d’administration), `docs/deploiement-php.md` et `docs/securite.md` § 9.
+
 - **Deux documentations dans le menu Aide** : « Guide de l’éditeur » (seize fonctions en six chapitres, chacune en une capture
   et quelques étapes, avec un sommaire qui suit la lecture, Précédent / Suivant, et un tiroir au téléphone) et « La Cricut, c’est
   simple » (sept étapes en images : la machine, le tapis, la feuille, les copies, les liens, couper ou écrire, l’export). Elles

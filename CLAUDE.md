@@ -133,15 +133,33 @@ npm run test:php     # les tests du site PHP (tests/php/)
   locale si elle est livrée, déposée, lue ou gardée en cache (seules les clés se lisent) ; la marque est une icône et des mots,
   jamais la seule couleur ; seul le choix télécharge ; les tests passent par `tests/e2e/polices.ts`.
 - **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/public/`, un seul dossier à envoyer par FTP, sans
-  réglage (`data/` dedans, tenu par son `.htaccess` réécrit s'il manque et vérifié par HTTP ; `DATA_DIR` vaut `public/data`, sinon
-  `../data`, `config.local.php` le fixe ; `inc/serveur-local.php` imite les `.htaccess` sous `php -S`) ; un seul mot de passe en
-  empreinte dans `data/pwd`, choisi dans la page tant qu'il n'existe pas (CSRF, revu sous verrou), ou déposé en clair dans
-  `data/password` (converti puis supprimé, il remplace l'ancien), ou par `php inc/mot-de-passe.php` ; le changer ferme les sessions ; `src/site/` monte l'éditeur, qui ne
-  connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet (`model/projet.ts`,
-  `engine/projet.ts`) garde tout le modèle à pleine précision en un seul format (`VERSION_PROJET = 1`, migrations vides, toute autre version
-  refusée en la nommant), se valide sans lever et réécrit le même SVG à l'octet ;
+  réglage (`data/` dedans, tenu par son `.htaccess` réécrit s'il manque et vérifié par HTTP, ou à côté : `index.php` le cherche
+  dans son dossier, sinon en `../data` ; `data/inc/serveur-local.php` imite les `.htaccess` sous `php -S`) ; `src/site/` monte
+  l'éditeur, qui ne connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet
+  (`model/projet.ts`, `engine/projet.ts`) garde tout le modèle à pleine précision en un seul format (`VERSION_PROJET = 1`,
+  migrations vides, toute autre version refusée en la nommant), se valide sans lever et réécrit le même SVG à l'octet ;
   les annexes de données passent par `definirSourceDonnees`, les polices du catalogue par le serveur, qui les vérifie ; toute
   route sous session, toute écriture sous jeton CSRF et révision.
+- **Les comptes du site** (ADR-0041) : `public/` ne garde que `index.php`, `api.php`, `.htaccess`, `assets/`, `aide/`, `MENTIONS.txt` et
+  `data/` ; tout le code PHP vit dans `data/inc/` (entrées `entree-index.php` et `entree-api.php`, amorce, `comptes`, `session`,
+  `jetons`, `courrier`, `langues`, `reglages`, `limitation`, `pages`, `projets`, `polices`, `adresse`, `compte.php` en ligne de
+  commande), les constantes avancées dans `data/inc/config.php` et `data/config/config.local.php`, les réglages dans
+  `data/config/config.json` (validé champ par champ, défauts, écrit à l'installation, « Réglages du site » pour un administrateur,
+  mot de passe SMTP jamais renvoyé) ; un compte est un fichier `data/comptes/<id>.json` validé à la lecture (`compte_valide`, jamais
+  lu au mieux), adresse unique normalisée, mot de passe en empreinte seule (argon2id, bcrypt sinon, dix caractères), rôle `admin` ou
+  `utilisateur`, état `a-confirmer` → `en-attente` → `actif`, `refuse`, `suspendu` ; le premier administrateur se crée à la première
+  visite tant qu'aucun compte n'existe (ou `php data/inc/compte.php --admin [--stdin]` : adresse, nom, mot de passe, langue, une par
+  ligne), reprend les projets d'un site d'avant et supprime `data/pwd`, `data/password`, `data/connexions.json` : le mot de passe unique
+  n'existe plus ; les sessions sont des jetons en fichier (`data/sessions/<sha256>.json`, cookie `svg_session`, anonyme pour le CSRF
+  des formulaires, nouveau jeton à la connexion, marque de l'empreinte, état et rôle relus à chaque requête) ; les jetons des mails
+  (`data/jetons/`, confirmation 48 h, réinitialisation 1 h à usage unique) sont rangés hachés ; le courrier part par `mail`, `smtp`
+  (client minimal : STARTTLS ou SSL, AUTH PLAIN ou LOGIN, délais, rien en clair si STARTTLS est refusé) ou `fichier` (tests :
+  `data/journal/courrier/*.eml`) ; les pages d'avant la connexion et les mails passent par `t()` (`langues.php`, dictionnaire
+  `langues-en.php`, un test de couverture), langue du compte, sinon cookie `svg_langue`, sinon `site.langue` ; les projets vivent
+  dans `data/projets/<compte>/` (corbeille dedans ; `corbeille-comptes/` à la suppression), un identifiant d'un autre compte est
+  introuvable ; la limitation compte par client et par compte (`data/essais.json`), les demandes de mail par client ; l'API admin
+  (`comptes`, `compte-*`, `reglages`, `courrier-essai`) refuse `dernier-admin` et `soi-meme` ; les erreurs sont `{erreur, message}`,
+  codes en tête d'`entree-api.php` ; un vecteur nouveau entre dans `tests/php/` (unitaires, HTTP, faux SMTP).
 - **Ouvrir depuis une adresse, le type sur les octets** (ADR-0036) : rien ne part sans « Ouvrir », un lien glissé ou une adresse
   collée seule ; le champ n'existe que si l'hôte pose `definirOuvertureAdresse` (page, site ; jamais l'embarquement) ; https
   seulement (`model/adresse.ts`) ; la nature se lit sur les octets (`engine/natureOctets.ts`), puis la lecture d'un fichier
