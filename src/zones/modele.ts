@@ -2,8 +2,9 @@
 // images, decoupes refuses en les nommant), ou `riche`, la beta des groupes, degrades et effets. Il dit comment se LIT un SVG : un
 // dessin deja lu s'affiche et s'ecrit selon ce qu'il porte (estPlat), quel que soit le reglage.
 //
-// La page et le site le gardent dans le stockage injecte (cle `svg.modele`) ; sans stockage, c'est `plat`. Un hote qui passe
-// `modele` le fixe : le reglage du menu Edition disparait, et la promesse d'« a l'identique demain » tient tant qu'il garde `plat`.
+// La page et le site le gardent dans le stockage injecte (cle `svg.modele`) ; sans reglage lisible, c'est le defaut de la page
+// (`MODELE_PAGE`), et `plat` pour tout autre appelant. Un hote qui passe `modele` le fixe : le reglage du menu Edition disparait, et
+// la promesse d'« a l'identique demain » tient tant qu'il garde `plat` (le defaut de l'embarquement ne change pas : annexe 9, question 3).
 // Tout ce qui vient du stockage se valide (ADR-0014) : une valeur qu'on n'a pas ecrite se lit comme absente.
 
 import type { DessinSvg, OptionsLecture } from '../engine/editionSvg.js';
@@ -23,8 +24,14 @@ export function lireModele(v: unknown): Modele | null {
   return estModele(m) ? m : null;
 }
 
-/** Le modele retenu dans ce stockage ; `plat` sans stockage, ou sans reglage lisible. */
-export const modeleRetenu = (s: Stockage | null): Modele => lireModele(s?.lire<unknown>(CLE_MODELE)) ?? 'plat';
+/**
+ * Le modele de la page autonome et du site PHP quand le stockage n'en garde aucun (ou un illisible). Une seule valeur, pour que la
+ * bascule (ADR-0012, etape 14) tienne en un seul commit, que l'on defait seul. L'embarquement ne la lit jamais.
+ */
+export const MODELE_PAGE: Modele = 'plat';
+
+/** Le modele retenu dans ce stockage ; `defaut` sans stockage, ou sans reglage lisible (`plat` si l'appelant ne dit rien). */
+export const modeleRetenu = (s: Stockage | null, defaut: Modele = 'plat'): Modele => lireModele(s?.lire<unknown>(CLE_MODELE)) ?? defaut;
 
 /** Garde le reglage ; faux si le stockage le refuse (ou manque). Un objet : un champ de plus demain ne cassera pas la lecture. */
 export const garderModele = (s: Stockage | null, m: Modele): boolean => s?.ecrire(CLE_MODELE, { modele: m }) ?? false;

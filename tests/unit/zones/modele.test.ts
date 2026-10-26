@@ -27,6 +27,14 @@ describe('le reglage du modele, garde par le stockage', () => {
     expect(estModele('riche') && estModele('plat') && !estModele('Riche')).toBe(true);
   });
 
+  it('prend le defaut que l appelant donne quand le stockage ne garde rien de lisible, jamais au-dessus d un reglage garde', () => {
+    expect(modeleRetenu(null, 'riche')).toBe('riche');
+    expect(modeleRetenu(stockageMemoire(), 'riche')).toBe('riche');
+    expect(modeleRetenu(stockageMemoire({ [CLE_MODELE]: 'plat' }), 'riche')).toBe('riche');
+    expect(modeleRetenu(stockageMemoire({ [CLE_MODELE]: { modele: 'plat' } }), 'riche')).toBe('plat');
+    expect(modeleRetenu(stockageMemoire({ [CLE_MODELE]: { modele: 'riche' } }), 'plat')).toBe('riche');
+  });
+
   it('s ecrit en objet et se relit ; sans stockage, rien n est garde', () => {
     const s = stockageMemoire();
     expect(garderModele(s, 'riche')).toBe(true);

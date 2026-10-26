@@ -83,6 +83,13 @@ export interface OptionsSession {
    * celui d'une premiere visite (la question en tete, les trois voies dessous, dans l'ordre d'avant) : les tests d'avant y passent tels quels.
    */
   publicAccueil?: 'machine' | 'retouche' | 'integration' | 'aucun';
+  /**
+   * Le reglage du modele (ADR-0012, annexe 5 §3), pose par la page une fois chargee (elle ne le lit qu'a l'ouverture d'un dessin), pour
+   * un test qui exerce un comportement d'un modele et non le defaut de la page (`riche` depuis l'etape 14). Jamais par un script
+   * d'amorce : sous Chromium, un document dont le script d'amorce touche `localStorage` des sa creation recoit parfois une zone de
+   * stockage a lui seul, qu'un rechargement perd (annexe 8 §0, « Ce que le paquet 2-D a pose »). Demande `naviguer` (le defaut).
+   */
+  modele?: 'plat' | 'riche';
 }
 
 /**
@@ -145,6 +152,10 @@ export function pilote() {
         }, options.publicAccueil);
       }
       if (options.naviguer !== false) await page.goto(URL_PAGE);
+      if (options.modele) {
+        if (options.naviguer === false) throw new Error('l’option « modele » se pose sur la page chargée : elle demande « naviguer ».');
+        await page.evaluate(m => { localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); }, options.modele);
+      }
       return session;
     }
   };

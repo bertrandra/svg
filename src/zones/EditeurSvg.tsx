@@ -102,9 +102,14 @@ export interface ProprietesEditeur {
   /**
    * Le modele de lecture du SVG (ADR-0012, annexe 5 §3) : `plat` (le contrat d'avant : les groupes se fondent) ou `riche` (groupes,
    * degrades, effets, en beta). Donne, il est fixe : le reglage du menu Edition ne se montre pas. Absent : le reglage garde dans
-   * `stockage` (cle `svg.modele`), `plat` sans lui.
+   * `stockage` (cle `svg.modele`), `modeleParDefaut` sans lui.
    */
   modele?: Modele | undefined;
+  /**
+   * Le modele quand ni `modele` ni le stockage n'en donnent un : `plat` si absent. La page et le site passent `MODELE_PAGE`
+   * (ADR-0012, etape 14) ; un hote qui embarque ne le passe pas.
+   */
+  modeleParDefaut?: Modele | undefined;
 }
 
 /**
@@ -143,9 +148,9 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, modele: modeleHote, ...hote }: ProprietesEditeur) {
+export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, modele: modeleHote, modeleParDefaut = 'plat', ...hote }: ProprietesEditeur) {
   // Le modele de lecture : celui de l'hote, sinon le reglage garde, lu une fois a l'ouverture (le changer au menu vaut pour la suite).
-  const [modele] = useState<Modele>(() => modeleHote ?? modeleRetenu(stockage ?? null));
+  const [modele] = useState<Modele>(() => modeleHote ?? modeleRetenu(stockage ?? null, modeleParDefaut));
   // Un dessin donne (un projet rouvert) s'ouvre tel quel : sans marque lue, son contexte est le depart que l'hote donne.
   const lu = useMemo(() => {
     if (dessin) return { dessin, ignores: avant ?? [], production: undefined };
