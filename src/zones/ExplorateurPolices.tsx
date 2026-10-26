@@ -24,6 +24,7 @@ import { useTexte } from './contexteTexte.js';
 import { nomDePolice, useActionsTexte } from './actionsTexte.js';
 import { choisirApercu, type ApercuLigne } from './apercusPolices.js';
 import { COURTS_SOURCES, cleFamille } from './lignesPolices.js';
+import { t } from '../util/i18n.js';
 
 /** Les categories des fontes livrees, pour que les filtres les rangent avec les autres. */
 const CATEGORIES_LIVREES: Readonly<Record<IdPoliceLivree, CategoriePolice>> = {
@@ -134,14 +135,14 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
     if (deja) { poser(deja.id, deja); return; }
     // Le choix vaut demande (ADR-0025) : la police se telecharge tout de suite, et la ligne comme la note disent qu'elle arrive.
     poserEnCours(v.id);
-    poserNote('Téléchargement de la police ' + v.nom + '…');
-    ac.dire('Téléchargement de la police ' + v.nom + '…');
+    poserNote(t('Téléchargement de la police {nom}…', { nom: v.nom }));
+    ac.dire(t('Téléchargement de la police {nom}…', { nom: v.nom }));
     const r = await tx.telecharger(v);
     poserEnCours(null);
     poserNote('');
     if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
     poser(r.id, r.police);
-    ac.dire('Police ' + v.nom + ' téléchargée et vérifiée.');
+    ac.dire(t('Police {nom} téléchargée et vérifiée.', { nom: v.nom }));
   };
   const choisir = (e: Entree) => {
     if (e.police) { poserErreur(''); poser(e.police.id, e.police); return; }
@@ -153,27 +154,27 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
   const sources = useMemo(() => SOURCES_POLICES.filter(s => catalogue?.familles.some(f => f.source === s.id)), [catalogue]);
 
   return (
-    <div className="explorateur-polices" id={id} role="group" aria-label="Toutes les polices">
-      <input type="search" value={texte} onChange={e => poserTexte(e.target.value)} aria-label="Rechercher une police" placeholder="Rechercher une police" />
+    <div className="explorateur-polices" id={id} role="group" aria-label={t('Toutes les polices')}>
+      <input type="search" value={texte} onChange={e => poserTexte(e.target.value)} aria-label={t('Rechercher une police')} placeholder={t('Rechercher une police')} />
       <div className="grille-3">
-        <label className="champ-ligne"><span>Genre</span>
+        <label className="champ-ligne"><span>{t('Genre')}</span>
           <select value={categorie} onChange={e => poserCategorie(e.target.value as CategoriePolice | '')}>
-            <option value="">Tous</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{NOMS_CATEGORIES[c]}</option>)}
+            <option value="">{t('Tous')}</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{t(NOMS_CATEGORIES[c])}</option>)}
           </select>
         </label>
-        <label className="champ-ligne"><span>Tracé</span>
+        <label className="champ-ligne"><span>{t('Tracé')}</span>
           <select value={nature} onChange={e => poserNature(e.target.value as NaturePolice | '')}>
-            <option value="">Tous</option>
-            <option value="contour">Contour (lettres pleines)</option>
-            <option value="trait">Trait unique (stylo)</option>
+            <option value="">{t('Tous')}</option>
+            <option value="contour">{t('Contour (lettres pleines)')}</option>
+            <option value="trait">{t('Trait unique (stylo)')}</option>
           </select>
         </label>
-        <label className="champ-ligne"><span>Source</span>
+        <label className="champ-ligne"><span>{t('Source')}</span>
           <select value={source} onChange={e => poserSource(e.target.value as SourceEntree | '')}>
-            <option value="">Toutes</option>
-            <option value="livree">Livrées avec l’éditeur</option>
-            <option value="deposee">Vos polices</option>
+            <option value="">{t('Toutes')}</option>
+            <option value="livree">{t('Livrées avec l’éditeur')}</option>
+            <option value="deposee">{t('Vos polices')}</option>
             {sources.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
           </select>
         </label>
@@ -184,15 +185,15 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
 
       <Raccourcis parCle={parCle} polices={polices} choisir={choisir} poser={poser} choisirVariante={v => void choisirVariante(v)} sourceDite={sourceDite} />
 
-      <h4 className="polices-total">{tx.catalogue ? pluriel(filtrees.length, 'police') : tx.erreurCatalogue ? 'Polices livrées et déposées' : 'Chargement de l’index des polices…'}</h4>
+      <h4 className="polices-total">{tx.catalogue ? pluriel(filtrees.length, 'police') : tx.erreurCatalogue ? t('Polices livrées et déposées') : t('Chargement de l’index des polices…')}</h4>
       {tx.erreurCatalogue ? <p className="aide">{tx.erreurCatalogue}</p> : null}
-      {tx.catalogue && tx.erreurApercus ? <p className="aide">Les noms s’écrivent sans aperçu. {tx.erreurApercus}</p> : null}
+      {tx.catalogue && tx.erreurApercus ? <p className="aide">{t('Les noms s’écrivent sans aperçu.')} {tx.erreurApercus}</p> : null}
       <ListePolices entrees={filtrees} valeur={valeur} enCours={enCours} choisir={choisir} favoris={tx.favoris} basculerFavori={tx.basculerFavori}
         chargees={chargees} apercus={tx.apercus} />
-      {!filtrees.length && tx.catalogue ? <p className="aide">Aucune police ne répond à ces critères.</p> : null}
+      {!filtrees.length && tx.catalogue ? <p className="aide">{t('Aucune police ne répond à ces critères.')}</p> : null}
 
       <VosPolices poser={poser} />
-      <p className="aide pied-polices">Choisir une police qui n’est pas livrée la télécharge depuis sa source ; chaque fichier est vérifié avant d’être lu. Ni votre dessin ni votre texte ne partent.</p>
+      <p className="aide pied-polices">{t('Choisir une police qui n’est pas livrée la télécharge depuis sa source ; chaque fichier est vérifié avant d’être lu. Ni votre dessin ni votre texte ne partent.')}</p>
     </div>
   );
 }
@@ -214,8 +215,8 @@ function PolicesDuDocument({ polices, valeur, poser, occupee, telecharger, sourc
   if (!duDocument.length) return null;
   const courante = polices.find(p => p.id === valeur) ?? null;
   return (
-    <section className="polices-groupe" aria-label="Polices du document">
-      <h4>Dans ce document</h4>
+    <section className="polices-groupe" aria-label={t('Polices du document')}>
+      <h4>{t('Dans ce document')}</h4>
       <ul className="polices-courtes">
         {duDocument.map(d => {
           const chargee = polices.find(p => p.id === d.id) ?? null;
@@ -225,11 +226,11 @@ function PolicesDuDocument({ polices, valeur, poser, occupee, telecharger, sourc
           const dite = fam ? sourceDite(fam.nom, fam.source) : null;
           return (
             <li key={d.id}>
-              <span className="police-nom">{nomDePolice(d.id, polices, d.famille)}{dite ? ' (' + dite + ')' : ''}</span> <span className="aide">{pluriel(d.textes, 'texte')}{chargee ? '' : ' · absente'}</span>
-              {chargee ? (d.id !== valeur ? <button type="button" className="discret" onClick={() => poser(chargee.id, chargee)}>Choisir</button> : null)
-                : variante ? <button type="button" className="discret" disabled={occupee} onClick={() => telecharger(variante)}>Télécharger</button> : null}
+              <span className="police-nom">{nomDePolice(d.id, polices, d.famille)}{dite ? ' (' + dite + ')' : ''}</span> <span className="aide">{pluriel(d.textes, 'texte')}{chargee ? '' : ' · ' + t('absente')}</span>
+              {chargee ? (d.id !== valeur ? <button type="button" className="discret" onClick={() => poser(chargee.id, chargee)}>{t('Choisir')}</button> : null)
+                : variante ? <button type="button" className="discret" disabled={occupee} onClick={() => telecharger(variante)}>{t('Télécharger')}</button> : null}
               {courante && d.id !== courante.id ? (
-                <button type="button" className="discret" onClick={() => at.remplacerPartout(d.id, courante)}>Remplacer partout par {courante.nom}</button>
+                <button type="button" className="discret" onClick={() => at.remplacerPartout(d.id, courante)}>{t('Remplacer partout par {nom}', { nom: courante.nom })}</button>
               ) : null}
             </li>
           );
@@ -261,8 +262,8 @@ function Raccourcis({ parCle, polices, choisir, poser, choisirVariante, sourceDi
   return (
     <div className="grille-2 polices-raccourcis">
       {favoris.length ? (
-        <section className="polices-groupe" aria-label="Favoris">
-          <h4>Favoris</h4>
+        <section className="polices-groupe" aria-label={t('Favoris')}>
+          <h4>{t('Favoris')}</h4>
           <ul className="polices-courtes">{favoris.map(e => {
             const dite = e.nomFamille ? sourceDite(e.nomFamille, e.source) : null;
             return <li key={e.cle}><button type="button" className="discret" onClick={() => choisir(e)}>{e.nom}{dite ? ' (' + dite + ')' : ''}</button></li>;
@@ -270,8 +271,8 @@ function Raccourcis({ parCle, polices, choisir, poser, choisirVariante, sourceDi
         </section>
       ) : null}
       {recentes.length ? (
-        <section className="polices-groupe" aria-label="Récentes">
-          <h4>Récentes</h4>
+        <section className="polices-groupe" aria-label={t('Récentes')}>
+          <h4>{t('Récentes')}</h4>
           <ul className="polices-courtes">{recentes.map(r => <li key={r.cle}><button type="button" className="discret" onClick={r.agir}>{r.nom}</button></li>)}</ul>
         </section>
       ) : null}
@@ -300,19 +301,19 @@ function ListePolices({ entrees, valeur, enCours, choisir, favoris, basculerFavo
         <button type="button" className="police-ligne" aria-pressed={choisie} aria-busy={arrive || undefined} disabled={occupee} onClick={() => choisir(e)}>
           <NomPolice nom={e.nom} apercu={apercu} />
           <span className="police-badges">
-            {arrive ? <span className="badge-source police-arrive">Téléchargement…</span> : null}
-            <span className="badge-source">{e.source === 'livree' ? 'Livrée' : e.source === 'deposee' ? 'Déposée' : COURTS[e.source]}</span>
-            {e.nature === 'trait' ? <span className="badge-source">Trait unique</span> : null}
+            {arrive ? <span className="badge-source police-arrive">{t('Téléchargement…')}</span> : null}
+            <span className="badge-source">{e.source === 'livree' ? t('Livrée') : e.source === 'deposee' ? t('Déposée') : COURTS[e.source]}</span>
+            {e.nature === 'trait' ? <span className="badge-source">{t('Trait unique')}</span> : null}
             {e.licence?.badge ? <span className="badge-licence" title={e.licence.nom}>{e.licence.badge}</span> : null}
           </span>
         </button>
         {e.famille || estPoliceLivree(e.cle) ? (
-          <Bouton icone="etoile" className="police-favori" aide={'Favori : ' + e.nom} pressed={favori} onClick={() => basculerFavori(e.cle)} />
+          <Bouton icone="etoile" className="police-favori" aide={t('Favori : {nom}', { nom: e.nom })} pressed={favori} onClick={() => basculerFavori(e.cle)} />
         ) : null}
       </li>
     );
   });
-  return <ul className="liste-polices" ref={liste} aria-label="Polices" onFocus={montrerLigneAuClavier}>{lignes}</ul>;
+  return <ul className="liste-polices" ref={liste} aria-label={t('Polices')} onFocus={montrerLigneAuClavier}>{lignes}</ul>;
 }
 
 /**
@@ -354,29 +355,29 @@ function VosPolices({ poser }: { poser: (id: string, police?: Police) => void })
     if ('erreur' in r) { poserErreur(r.erreur); return; }
     tx.retenir(r);
     poser(r.id, r);
-    ac.dire('Police ' + r.nom + ' de cet appareil choisie : elle n’est jamais écrite dans le fichier.');
+    ac.dire(t('Police {nom} de cet appareil choisie : elle n’est jamais écrite dans le fichier.', { nom: r.nom }));
   };
   return (
-    <section className="polices-groupe" aria-label="Vos polices">
-      <h4>Vos polices</h4>
+    <section className="polices-groupe" aria-label={t('Vos polices')}>
+      <h4>{t('Vos polices')}</h4>
       <div className="boutons">
-        <button type="button" className="discret" onClick={() => entree.current?.click()}>Déposer une fonte TTF/OTF…</button>
+        <button type="button" className="discret" onClick={() => entree.current?.click()}>{t('Déposer une fonte TTF/OTF…')}</button>
         <input ref={entree} type="file" accept=".ttf,.otf,font/ttf,font/otf" hidden onChange={e => {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (f) void tx.deposer(f).then(r => { if ('erreur' in r) poserErreur(r.erreur); else { poserErreur(''); poser(r.id); } });
         }} />
-        {disponible && !liste ? <button type="button" className="discret" onClick={() => void ouvrir()}>Polices de cet appareil…</button> : null}
+        {disponible && !liste ? <button type="button" className="discret" onClick={() => void ouvrir()}>{t('Polices de cet appareil…')}</button> : null}
       </div>
       {liste ? (
         liste.length ? (
           <div className="boutons">
-            <select aria-label="Police de cet appareil" value={choix} onChange={e => poserChoix(Number(e.target.value))}>
+            <select aria-label={t('Police de cet appareil')} value={choix} onChange={e => poserChoix(Number(e.target.value))}>
               {liste.map((p, i) => <option key={p.nom + i} value={i}>{p.nom}</option>)}
             </select>
-            <button type="button" onClick={() => void employer()}>Employer</button>
+            <button type="button" onClick={() => void employer()}>{t('Employer')}</button>
           </div>
-        ) : <p className="aide">Le navigateur n’a donné aucune police de cet appareil.</p>
+        ) : <p className="aide">{t('Le navigateur n’a donné aucune police de cet appareil.')}</p>
       ) : null}
       {erreur ? <p className="aide" role="alert">{erreur}</p> : null}
     </section>

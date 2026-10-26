@@ -21,30 +21,34 @@ import { aEnregistrer, raisonRienAEnregistrer } from './enregistrement.js';
 import { OutilSelectionBarre } from './OutilsSelection.js';
 import { lentilleDe } from './lentille.js';
 import { RAISONS_LENTILLE } from './phrasesContenus.js';
+import { t } from '../util/i18n.js';
 
-const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
-  ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
+// Des fonctions : les infobulles se traduisent au rendu, une fois la langue posee (ADR-0042), jamais au chargement du module.
+const outilsFixes = (): ReadonlyArray<readonly [Outil, NomIcone, string]> => [
+  ['points', 'points', t('Points et poignées (A)')], ['main', 'main', t('Main : déplacer la vue (H, ou espace)')]
 ];
-const OUTILS_APRES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
-  ['plume', 'plume', 'Plume (P) : cliquez les points, Entrée ferme, Échap abandonne'], ['texte', 'texte', 'Texte (T)']
+const outilsApres = (): ReadonlyArray<readonly [Outil, NomIcone, string]> => [
+  ['plume', 'plume', t('Plume (P) : cliquez les points, Entrée ferme, Échap abandonne')], ['texte', 'texte', t('Texte (T)')]
 ];
 /**
  * La palette des formes (ADR-0033), en rubriques : ce qu'on trace le plus souvent d'abord, les traits ouverts a la fin. Les formes
- * d'avant gardent leur lettre (R, E, S, L) ; la palette s'ouvre par F.
+ * d'avant gardent leur lettre (R, E, S, L) ; la palette s'ouvre par F. Le titre est la cle francaise (le module se charge avant la
+ * langue, `t` y rend la cle) : l'affichage le repasse par `t`.
  */
 export const GROUPES_FORMES: ReadonlyArray<{ readonly id: string; readonly titre: string; readonly formes: readonly OutilForme[] }> = [
-  { id: 'basiques', titre: 'Basiques', formes: ['rectangle', 'carre', 'rectangle-arrondi', 'ellipse', 'cercle'] },
-  { id: 'polygones', titre: 'Polygones', formes: ['triangle', 'losange', 'parallelogramme', 'trapeze', 'polygone', 'etoile'] },
-  { id: 'symboles', titre: 'Symboles', formes: ['coeur', 'fleche', 'croix', 'anneau', 'demi-cercle', 'goutte', 'lune', 'nuage'] },
-  { id: 'etiquettes', titre: 'Étiquettes', formes: ['etiquette', 'badge', 'bulle'] },
-  { id: 'traits', titre: 'Traits', formes: ['ligne', 'arc', 'spirale', 'vague'] }
+  { id: 'basiques', titre: t('Basiques'), formes: ['rectangle', 'carre', 'rectangle-arrondi', 'ellipse', 'cercle'] },
+  { id: 'polygones', titre: t('Polygones'), formes: ['triangle', 'losange', 'parallelogramme', 'trapeze', 'polygone', 'etoile'] },
+  { id: 'symboles', titre: t('Symboles'), formes: ['coeur', 'fleche', 'croix', 'anneau', 'demi-cercle', 'goutte', 'lune', 'nuage'] },
+  { id: 'etiquettes', titre: t('Étiquettes'), formes: ['etiquette', 'badge', 'bulle'] },
+  { id: 'traits', titre: t('Traits'), formes: ['ligne', 'arc', 'spirale', 'vague'] }
 ];
 const RACCOURCIS_FORMES: Partial<Record<OutilForme, string>> = { rectangle: 'R', ellipse: 'E', etoile: 'S', ligne: 'L' };
 
 /** L'infobulle et le nom du bouton de la forme : son nom, sa lettre, et ce que fait Maj (le carre et le cercle sont deja carres). */
 function aideForme(f: OutilForme): string {
   const r = RACCOURCIS_FORMES[f];
-  return nomOutilForme(f) + (r ? ' (' + r + ')' : '') + (f === 'ligne' ? ' · Maj : droite' : f === 'carre' || f === 'cercle' ? '' : ' · Maj : proportions');
+  const nom = nomOutilForme(f) + (r ? ' (' + r + ')' : '');
+  return f === 'ligne' ? t('{nom} · Maj : droite', { nom }) : f === 'carre' || f === 'cercle' ? nom : t('{nom} · Maj : proportions', { nom });
 }
 
 /**
@@ -58,9 +62,9 @@ function OutilFormes() {
   return (
     <span className="outil-formes">
       <Bouton icone={derniere} aide={aideForme(derniere)} pressed={FORMES.has(outil)} onClick={() => ac.poserOutil(derniere)} />
-      <MenuDeroulant etiquette="Formes (F)" titreMenu="Formes" className="chevron-seul" grille demandeOuverture={demandeFormes}
+      <MenuDeroulant etiquette={t('Formes (F)')} titreMenu={t('Formes')} className="chevron-seul" grille demandeOuverture={demandeFormes}
         sections={GROUPES_FORMES.map(g => ({
-          id: g.id, titre: g.titre,
+          id: g.id, titre: t(g.titre),
           elements: g.formes.map(f => { const r = RACCOURCIS_FORMES[f]; return { id: f, libelle: nomOutilForme(f), icone: f, ...(r ? { raccourci: r } : {}), radio: true, coche: f === derniere, onClick: () => ac.poserOutil(f) }; })
         }))} />
     </span>
@@ -73,13 +77,13 @@ const GroupeOutils = memo(function GroupeOutils({ telephone = false }: { telepho
   // Dans une decoupe ou un masque (paquet 8-D), le texte ne se pose pas : son bouton est grise, la raison dans son infobulle.
   const sansTexte = lentilleDe(contexte) !== null;
   return (
-    <div className="groupe outils" role="group" aria-label="Outil">
+    <div className="groupe outils" role="group" aria-label={t('Outil')}>
       {/* La selection, le cadre et le lasso derriere un seul bouton (ADR-0035) ; sur un telephone, les points aussi. */}
       <OutilSelectionBarre avecPoints={telephone} />
-      {OUTILS_FIXES.filter(([o]) => !(telephone && o === 'points')).map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
+      {outilsFixes().filter(([o]) => !(telephone && o === 'points')).map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
       <OutilFormes />
-      {OUTILS_APRES.map(([o, icone, aide]) => (o === 'texte' && sansTexte
-        ? <Bouton key={o} icone={icone} aide={aide + ' — ' + RAISONS_LENTILLE.texte} pressed={false} disabled onClick={() => ac.poserOutil(o)} />
+      {outilsApres().map(([o, icone, aide]) => (o === 'texte' && sansTexte
+        ? <Bouton key={o} icone={icone} aide={t('{aide} — {raison}', { aide, raison: RAISONS_LENTILLE.texte })} pressed={false} disabled onClick={() => ac.poserOutil(o)} />
         : <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />))}
     </div>
   );
@@ -97,11 +101,11 @@ function StyleCourant() {
     if (premiere) ac.appliquer(d => modifier(d, sel, r), cle + ':' + sel.join(','));
     else ac.poserStyle({ ...style, ...r });
   };
-  const cible = premiere ? ' de la sélection' : ' des formes à venir';
+  const cible = premiere ? t(' de la sélection') : t(' des formes à venir');
   return (
-    <div className="groupe style-courant" role="group" aria-label="Couleurs">
-      <PastilleStyle libelle="Remplissage" cible={cible} valeur={remplissage} onChange={v => poser({ remplissage: v }, 'remplissage')} />
-      <PastilleStyle libelle="Contour" cible={cible} valeur={contour} onChange={v => poser({ contour: v }, 'contour')} />
+    <div className="groupe style-courant" role="group" aria-label={t('Couleurs')}>
+      <PastilleStyle libelle={t('Remplissage')} cible={cible} valeur={remplissage} onChange={v => poser({ remplissage: v }, 'remplissage')} />
+      <PastilleStyle libelle={t('Contour')} cible={cible} valeur={contour} onChange={v => poser({ contour: v }, 'contour')} />
     </div>
   );
 }
@@ -113,12 +117,13 @@ function StyleCourant() {
  */
 function PastilleStyle({ libelle, cible, valeur, onChange }: { libelle: string; cible: string; valeur: string | null; onChange: (v: string | null) => void }) {
   const ac = useActions(), idDescription = useId();
-  const decrit = libelle + cible + ' : ' + (valeur ?? 'aucun');
+  const decrit = t('{libelle}{cible} : {valeur}', { libelle, cible, valeur: valeur ?? t('aucun') });
+  const sansCouleur = t('{libelle} : aucun', { libelle });
   return (
     <span className="pastille-style" title={decrit}>
       <input type="color" aria-label={libelle} aria-describedby={idDescription} value={estHex(valeur) ? valeur : '#000000'} onChange={e => onChange(e.target.value)} onBlur={ac.finir} />
       <span id={idDescription} className="sr-only">{decrit}</span>
-      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={libelle + ' : aucun'} aria-label={libelle + ' : aucun'} onClick={() => { onChange(valeur === null ? '#000000' : null); ac.finir(); }}><Icone nom="aucun" taille={14} /></button>
+      <button type="button" className={'aucun' + (valeur === null ? ' actif' : '')} aria-pressed={valeur === null} title={sansCouleur} aria-label={sansCouleur} onClick={() => { onChange(valeur === null ? '#000000' : null); ac.finir(); }}><Icone nom="aucun" taille={14} /></button>
     </span>
   );
 }
@@ -126,9 +131,9 @@ function PastilleStyle({ libelle, cible, valeur, onChange }: { libelle: string; 
 function GroupeHistorique() {
   const { h } = useDessin(), ac = useActions();
   return (
-    <div className="groupe" role="group" aria-label="Historique">
-      <Bouton icone="annuler" aide="Annuler (Ctrl+Z)" disabled={!h.passe.length} onClick={ac.defaire} />
-      <Bouton icone="retablir" aide="Rétablir (Ctrl+Maj+Z)" disabled={!h.futur.length} onClick={ac.refaire} />
+    <div className="groupe" role="group" aria-label={t('Historique')}>
+      <Bouton icone="annuler" aide={t('Annuler (Ctrl+Z)')} disabled={!h.passe.length} onClick={ac.defaire} />
+      <Bouton icone="retablir" aide={t('Rétablir (Ctrl+Maj+Z)')} disabled={!h.futur.length} onClick={ac.refaire} />
     </div>
   );
 }
@@ -139,18 +144,18 @@ function GroupeHistorique() {
  */
 const BoutonNiveauZoom = memo(function BoutonNiveauZoom() {
   const { vues } = useInterface(), ac = useActions();
-  const niveau = Math.round(vues.vue.zoom * 100) + ' %';
-  return <button type="button" className="zoom" title={'Zoom à ' + niveau + ' : ajuster à l’écran (touche zéro)'} aria-label={niveau + ' : ajuster à l’écran'} onClick={ac.ajuster}>{niveau}</button>;
+  const niveau = t('{n} %', { n: Math.round(vues.vue.zoom * 100) });
+  return <button type="button" className="zoom" title={t('Zoom à {niveau} : ajuster à l’écran (touche zéro)', { niveau })} aria-label={t('{niveau} : ajuster à l’écran', { niveau })} onClick={ac.ajuster}>{niveau}</button>;
 });
 
 /** Le zoom : ne lit que la vue. */
 const GroupeZoom = memo(function GroupeZoom() {
   const { vues } = useInterface();
   return (
-    <div className="groupe" role="group" aria-label="Zoom">
-      <Bouton icone="zoom-moins" aide="Dézoomer (−)" onClick={() => vues.zoomer(0.8)} />
+    <div className="groupe" role="group" aria-label={t('Zoom')}>
+      <Bouton icone="zoom-moins" aide={t('Dézoomer (−)')} onClick={() => vues.zoomer(0.8)} />
       <BoutonNiveauZoom />
-      <Bouton icone="zoom-plus" aide="Zoomer (+)" onClick={() => vues.zoomer(1.25)} />
+      <Bouton icone="zoom-plus" aide={t('Zoomer (+)')} onClick={() => vues.zoomer(1.25)} />
     </div>
   );
 });
@@ -168,7 +173,7 @@ export function BoutonEnregistrer() {
   const change = aEnregistrer(h.passe.length > 0, productionModifiee, enregistrement);
   return (
     <BoutonRaison className="primaire bouton-fin" etiquette={fin.libelle}
-      aide={fin.fermerSansModification ? fin.libelle + ' : revenir à la page, le dessin prêt à télécharger' : fin.libelle + (fin.ctrlSEnregistre ? ' (Ctrl+S)' : '')}
+      aide={fin.fermerSansModification ? t('{libelle} : revenir à la page, le dessin prêt à télécharger', { libelle: fin.libelle }) : fin.ctrlSEnregistre ? t('{libelle} (Ctrl+S)', { libelle: fin.libelle }) : fin.libelle}
       raison={change || fin.fermerSansModification ? null : raisonRienAEnregistrer(enregistrement)} onClick={() => { if (change) signaler('recupere'); ac.terminer(); }}>
       <Icone nom={fin.fermerSansModification ? 'coche' : 'enregistrer'} />
     </BoutonRaison>
@@ -188,10 +193,10 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
     return (
       <header className="editeur-barre telephone">
         <GroupeOutils telephone />
-        <div className="groupe plus" role="group" aria-label="Plus"><MenuPlus nom={nom} /></div>
+        <div className="groupe plus" role="group" aria-label={t('Plus')}><MenuPlus nom={nom} /></div>
         <StyleCourant />
         <GroupeHistorique />
-        <div className="groupe" role="group" aria-label="Zoom"><BoutonNiveauZoom /></div>
+        <div className="groupe" role="group" aria-label={t('Zoom')}><BoutonNiveauZoom /></div>
       </header>
     );
   }
@@ -202,15 +207,15 @@ export const Barre = memo(function Barre({ titre, nom }: { titre: string; nom: s
       <StyleCourant />
       <GroupeHistorique />
       <GroupeZoom />
-      <div className="groupe menus" role="group" aria-label="Menus">
+      <div className="groupe menus" role="group" aria-label={t('Menus')}>
         <MenuVue />
         <MenuEdition />
       </div>
       <SelecteurContexte />
       <span className="espace" />
       {/* L'aide, puis le fichier d'un seul tenant (le menu Fichier et le geste de fin) : trois icones, a droite. */}
-      <div className="groupe aide" role="group" aria-label="Aide"><MenuAide /></div>
-      <div className="groupe fin" role="group" aria-label="Fichier">
+      <div className="groupe aide" role="group" aria-label={t('Aide')}><MenuAide /></div>
+      <div className="groupe fin" role="group" aria-label={t('Fichier')}>
         <MenuFichier nom={nom} />
         <BoutonEnregistrer />
       </div>

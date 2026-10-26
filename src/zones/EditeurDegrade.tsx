@@ -21,6 +21,7 @@ import { estHex } from './aidesEditeur.js';
 import {
   nomArret, nomGenre, phraseArret, phraseArretAjoute, phraseArretRetire, phraseGenre, pourCent, RAISON_ARRETS_MAX, RAISON_DEUX_ARRETS
 } from './phrasesDegrades.js';
+import { t } from '../util/i18n.js';
 
 /** Les degrades se proposent : le modele riche est regle, ou le dessin ouvert l'est deja (poser un degrade ne le change pas alors). */
 export function useDegradesPermis(): boolean {
@@ -29,7 +30,8 @@ export function useDegradesPermis(): boolean {
 }
 
 const GENRES: ReadonlyArray<GenreDegrade | 'uni'> = ['uni', 'lineaire', 'radial'];
-const ETALEMENTS: ReadonlyArray<readonly [EtalementDegrade, string]> = [['pad', 'Prolonger'], ['reflect', 'Refléter'], ['repeat', 'Répéter']];
+// Une fonction : les libelles se traduisent au rendu, une fois la langue posee (ADR-0042), jamais au chargement du module.
+const etalements = (): ReadonlyArray<readonly [EtalementDegrade, string]> => [['pad', t('Prolonger')], ['reflect', t('Refléter')], ['repeat', t('Répéter')]];
 
 /**
  * Une peinture de la selection : le choix du genre (si les degrades sont permis), puis la couleur unie (`uni`, le selecteur d'avant) ou
@@ -96,13 +98,13 @@ function EditeurDegrade({ cote, libelle, degrade }: { cote: CoteDegrade; libelle
       <ListeArrets libelle={libelle} degrade={degrade} choisi={i} choisir={poserChoisi} retirer={retirer} />
       <ArretChoisi cote={cote} degrade={degrade} i={i} regler={regler} finir={ac.finir} deplacer={j => { regler((d, s) => echangerArrets(d, s, cote, i, j)); poserChoisi(j); ac.annoncer(nomArret(j, n) + '.'); }} retirer={retirer} />
       <div className="boutons">
-        <button type="button" disabled={n >= ARRETS_MAX} title={n >= ARRETS_MAX ? RAISON_ARRETS_MAX : 'Un arrêt de plus, à mi-chemin du suivant, à la couleur du dégradé à cet endroit'} onClick={ajouter}>Ajouter un arrêt</button>
-        <button type="button" onClick={() => { regler((d, s) => inverserArrets(d, s, cote)); poserChoisi(n - 1 - i); ac.annoncer('Dégradé inversé.'); }}>Inverser</button>
+        <button type="button" disabled={n >= ARRETS_MAX} title={n >= ARRETS_MAX ? RAISON_ARRETS_MAX : t('Un arrêt de plus, à mi-chemin du suivant, à la couleur du dégradé à cet endroit')} onClick={ajouter}>{t('Ajouter un arrêt')}</button>
+        <button type="button" onClick={() => { regler((d, s) => inverserArrets(d, s, cote)); poserChoisi(n - 1 - i); ac.annoncer(t('Dégradé inversé.')); }}>{t('Inverser')}</button>
       </div>
       <label className="champ-ligne">
-        <span>Étalement</span>
-        <select value={degrade.etalement ?? 'pad'} onChange={e => { const v = ETALEMENTS.find(([k]) => k === e.target.value)?.[0] ?? 'pad'; regler((d, s) => reglerEtalement(d, s, cote, v)); }}>
-          {ETALEMENTS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+        <span>{t('Étalement')}</span>
+        <select value={degrade.etalement ?? 'pad'} onChange={e => { const v = etalements().find(([k]) => k === e.target.value)?.[0] ?? 'pad'; regler((d, s) => reglerEtalement(d, s, cote, v)); }}>
+          {etalements().map(([v, libelle]) => <option key={v} value={v}>{libelle}</option>)}
         </select>
       </label>
       {degrade.genre === 'lineaire'
@@ -131,7 +133,7 @@ function ListeArrets({ libelle, degrade, choisi, choisir, retirer }: { libelle: 
     e.preventDefault();
   };
   return (
-    <div role="listbox" tabIndex={0} className="liste-arrets" aria-label={'Arrêts du ' + libelle.toLowerCase()} aria-activedescendant={idOption(choisi)} onKeyDown={touche}>
+    <div role="listbox" tabIndex={0} className="liste-arrets" aria-label={t('Arrêts du {cote}', { cote: libelle.toLowerCase() })} aria-activedescendant={idOption(choisi)} onKeyDown={touche}>
       {degrade.arrets.map((a, k) => (
         <div key={k} id={idOption(k)} role="option" aria-selected={k === choisi} className="arret-option" onClick={() => choisir(k)}>
           {/* La pastille montre la couleur du dessin (pas un jeton) ; le damier dessous dit sa transparence. */}
@@ -149,39 +151,39 @@ function ArretChoisi({ cote, degrade, i, regler, finir, deplacer, retirer }: { c
   const a = degrade.arrets[i], n = degrade.arrets.length;
   const [code, poserCode] = useState<string | null>(null);
   if (!a) return null;
-  const nom = 'l’arrêt ' + (i + 1);
+  const nom = t('l’arrêt {n}', { n: i + 1 });
   const modifier = (r: ReglageArret, cle: string | null) => regler((d, s) => modifierArret(d, s, cote, i, r), cle === null ? null : cle + ':' + i);
   const validerCode = () => {
-    const t = (code ?? '').trim().toLowerCase(), hex = /^#?([0-9a-f]{6})$/.exec(t)?.[1];
+    const brut = (code ?? '').trim().toLowerCase(), hex = /^#?([0-9a-f]{6})$/.exec(brut)?.[1];
     if (hex) modifier({ couleur: '#' + hex }, null);
     poserCode(null);
   };
   const avant = degrade.arrets[i - 1]?.position ?? 0, apres = degrade.arrets[i + 1]?.position ?? 1;
   return (
-    <div className="arret-choisi" role="group" aria-label={'Réglages de ' + nom}>
+    <div className="arret-choisi" role="group" aria-label={t('Réglages de {nom}', { nom })}>
       <div className="champ-ligne">
-        <span>Couleur</span>
-        <input type="color" aria-label={'Couleur de ' + nom} value={estHex(a.couleur) ? a.couleur : '#000000'} onChange={e => modifier({ couleur: e.target.value }, 'couleur')} onBlur={finir} />
-        <input type="text" aria-label={'Couleur de ' + nom + ' (code)'} size={8} value={code ?? a.couleur} onChange={e => poserCode(e.target.value)} onBlur={validerCode} onKeyDown={e => { if (e.key === 'Enter') validerCode(); }} />
+        <span>{t('Couleur')}</span>
+        <input type="color" aria-label={t('Couleur de {nom}', { nom })} value={estHex(a.couleur) ? a.couleur : '#000000'} onChange={e => modifier({ couleur: e.target.value }, 'couleur')} onBlur={finir} />
+        <input type="text" aria-label={t('Couleur de {nom} (code)', { nom })} size={8} value={code ?? a.couleur} onChange={e => poserCode(e.target.value)} onBlur={validerCode} onKeyDown={e => { if (e.key === 'Enter') validerCode(); }} />
       </div>
       <label className="champ-ligne">
-        <span>Position</span>
-        <input type="range" min={0} max={100} step={1} value={Math.round(a.position * 100)} aria-valuetext={pourCent(a.position) + ' %'}
-          title={'Entre ' + pourCent(avant) + ' et ' + pourCent(apres) + ' % : un arrêt ne dépasse pas ses voisins'}
+        <span>{t('Position')}</span>
+        <input type="range" min={0} max={100} step={1} value={Math.round(a.position * 100)} aria-valuetext={t('{n} %', { n: pourCent(a.position) })}
+          title={t('Entre {a} et {b} % : un arrêt ne dépasse pas ses voisins', { a: pourCent(avant), b: pourCent(apres) })}
           onChange={e => modifier({ position: Number(e.target.value) / 100 }, 'position')} onPointerUp={finir} onBlur={finir} />
-        <span className="aide">{pourCent(a.position)} %</span>
+        <span className="aide">{t('{n} %', { n: pourCent(a.position) })}</span>
       </label>
-      <Nombre libelle="Position %" valeur={a.position * 100} min={0} max={100} poser={v => modifier({ position: v / 100 }, null)} />
+      <Nombre libelle={t('Position %')} valeur={a.position * 100} min={0} max={100} poser={v => modifier({ position: v / 100 }, null)} />
       <label className="champ-ligne">
-        <span>Opacité</span>
-        <input type="range" min={0} max={100} step={1} value={Math.round((a.opacite ?? 1) * 100)} aria-valuetext={pourCent(a.opacite ?? 1) + ' %'}
+        <span>{t('Opacité')}</span>
+        <input type="range" min={0} max={100} step={1} value={Math.round((a.opacite ?? 1) * 100)} aria-valuetext={t('{n} %', { n: pourCent(a.opacite ?? 1) })}
           onChange={e => modifier({ opacite: Number(e.target.value) / 100 }, 'opacite')} onPointerUp={finir} onBlur={finir} />
-        <span className="aide">{pourCent(a.opacite ?? 1)} %</span>
+        <span className="aide">{t('{n} %', { n: pourCent(a.opacite ?? 1) })}</span>
       </label>
       <div className="boutons">
-        <button type="button" disabled={i === 0} title={i === 0 ? 'C’est le premier arrêt.' : 'Échanger sa couleur avec l’arrêt précédent'} onClick={() => deplacer(i - 1)}>Monter</button>
-        <button type="button" disabled={i === n - 1} title={i === n - 1 ? 'C’est le dernier arrêt.' : 'Échanger sa couleur avec l’arrêt suivant'} onClick={() => deplacer(i + 1)}>Descendre</button>
-        <button type="button" className="danger" disabled={n <= ARRETS_MIN} title={n <= ARRETS_MIN ? RAISON_DEUX_ARRETS : undefined} onClick={retirer}>Retirer l’arrêt</button>
+        <button type="button" disabled={i === 0} title={i === 0 ? t('C’est le premier arrêt.') : t('Échanger sa couleur avec l’arrêt précédent')} onClick={() => deplacer(i - 1)}>{t('Monter')}</button>
+        <button type="button" disabled={i === n - 1} title={i === n - 1 ? t('C’est le dernier arrêt.') : t('Échanger sa couleur avec l’arrêt suivant')} onClick={() => deplacer(i + 1)}>{t('Descendre')}</button>
+        <button type="button" className="danger" disabled={n <= ARRETS_MIN} title={n <= ARRETS_MIN ? RAISON_DEUX_ARRETS : undefined} onClick={retirer}>{t('Retirer l’arrêt')}</button>
       </div>
     </div>
   );
@@ -193,11 +195,11 @@ function Angle({ valeur, poser, finir }: { valeur: number; poser: (v: number, co
   return (
     <>
       <label className="champ-ligne">
-        <span>Angle</span>
-        <input type="range" min={0} max={345} step={15} value={Math.round(arrondi / 15) * 15 % 360} aria-valuetext={arrondi + ' degrés'} onChange={e => poser(Number(e.target.value), true)} onPointerUp={finir} onBlur={finir} />
+        <span>{t('Angle')}</span>
+        <input type="range" min={0} max={345} step={15} value={Math.round(arrondi / 15) * 15 % 360} aria-valuetext={t('{n} degrés', { n: arrondi })} onChange={e => poser(Number(e.target.value), true)} onPointerUp={finir} onBlur={finir} />
         <span className="aide">{arrondi}°</span>
       </label>
-      <Nombre libelle="Angle °" valeur={valeur} min={-360} max={360} poser={v => poser(v, false)} />
+      <Nombre libelle={t('Angle °')} valeur={valeur} min={-360} max={360} poser={v => poser(v, false)} />
     </>
   );
 }
@@ -207,9 +209,9 @@ function CentreRayon({ degrade, cote, regler }: { degrade: Extract<Degrade, { ge
   const c = centreRayon(degrade);
   return (
     <div className="grille-2">
-      <Nombre libelle="Centre X" valeur={c.cx} poser={v => regler((d, s) => reglerCentre(d, s, cote, v, c.cy))} />
-      <Nombre libelle="Centre Y" valeur={c.cy} poser={v => regler((d, s) => reglerCentre(d, s, cote, c.cx, v))} />
-      <Nombre libelle="Rayon" valeur={c.r} min={0.001} poser={v => regler((d, s) => reglerRayon(d, s, cote, v))} />
+      <Nombre libelle={t('Centre X')} valeur={c.cx} poser={v => regler((d, s) => reglerCentre(d, s, cote, v, c.cy))} />
+      <Nombre libelle={t('Centre Y')} valeur={c.cy} poser={v => regler((d, s) => reglerCentre(d, s, cote, c.cx, v))} />
+      <Nombre libelle={t('Rayon')} valeur={c.r} min={0.001} poser={v => regler((d, s) => reglerRayon(d, s, cote, v))} />
     </div>
   );
 }

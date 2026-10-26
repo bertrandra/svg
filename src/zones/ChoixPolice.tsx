@@ -21,6 +21,7 @@ import { useActions } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { ExplorateurPolices } from './ExplorateurPolices.js';
 import { ChoixPoliceListe } from './ChoixPoliceListe.js';
+import { t } from '../util/i18n.js';
 
 /** La taille de composition de l'apercu, en unites de la fonte ramenees a 100 : la vue s'ajuste ensuite au trace. */
 const TAILLE_APERCU = 100;
@@ -99,28 +100,28 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
   return (
     <div className="choix-police">
       <div className="champ-ligne">
-        <span>Police</span>
-        {polices === null ? <span className="aide">Chargement des polices…</span> : (
+        <span>{t('Police')}</span>
+        {polices === null ? <span className="aide">{t('Chargement des polices…')}</span> : (
           <ChoixPoliceListe polices={polices} valeur={valeur} poser={poser} absente={absente} desactive={desactive} explorer={tx.enLigne ? montrerExplorateur : undefined} />
         )}
       </div>
       {styles.options.length ? (
         <label className="champ-ligne">
-          <span>Style</span>
-          <select value={valeur} disabled={desactive} onChange={e => void styles.choisir(e.target.value)} aria-label="Style de la police">
-            {styles.options.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+          <span>{t('Style')}</span>
+          <select value={valeur} disabled={desactive} onChange={e => void styles.choisir(e.target.value)} aria-label={t('Style de la police')}>
+            {styles.options.map(s => <option key={s.id} value={s.id}>{t(s.nom)}</option>)}
           </select>
         </label>
       ) : null}
-      {styles.enCours ? <p className="aide">Téléchargement de {styles.enCours}…</p> : styles.erreur ? <p className="aide" role="alert">{styles.erreur}</p> : null}
+      {styles.enCours ? <p className="aide">{t('Téléchargement de {nom}…', { nom: styles.enCours })}</p> : styles.erreur ? <p className="aide" role="alert">{styles.erreur}</p> : null}
       <div className="boutons">
         <button type="button" className="discret apercu-bascule" aria-expanded={ouvert} aria-controls={idApercu} disabled={!police} onClick={() => ouvrir(o => !o)}>
-          Aperçu forme / ligne
+          {t('Aperçu forme / ligne')}
         </button>
         {tx.enLigne && polices ? (
           <button type="button" className="discret" aria-expanded={explorer} aria-controls={idExplorateur} disabled={desactive}
             onClick={() => { if (!explorer) tx.chargerCatalogue(); poserExplorer(o => !o); }}>
-            Toutes les polices
+            {t('Toutes les polices')}
           </button>
         ) : null}
       </div>
@@ -134,18 +135,18 @@ export function ChoixPolice({ polices, valeur, poser: poserBrut, texte, absente,
 function ApercuPolice({ id, police, texte, fermer }: { id: string; police: Police; texte: string; fermer: () => void }) {
   const montre = texte.trim() ? texte : TEXTE_APERCU;
   const apercus = useMemo(() => {
-    const t = nouveauTexte(montre, { id: police.id }, TAILLE_APERCU, [1, 0, 0, 1, 0, 0]);
+    const tv = nouveauTexte(montre, { id: police.id }, TAILLE_APERCU, [1, 0, 0, 1, 0, 0]);
     // Le trait d'une police a trait unique, pour la forme de decoupe : celui d'un stylo fin a cette taille.
     // La ligne du stylo d'une police a contour est celle du trace « Médian » : le meme calcul que la toile (ADR-0027).
-    return apercusTexte(cheminDuTexte(t, police.glyphes), police.nature, TAILLE_APERCU / 20, police.nature === 'contour' ? cheminDuTexte({ ...t, trace: 'median' }, police.glyphes) : undefined);
+    return apercusTexte(cheminDuTexte(tv, police.glyphes), police.nature, TAILLE_APERCU / 20, police.nature === 'contour' ? cheminDuTexte({ ...tv, trace: 'median' }, police.glyphes) : undefined);
   }, [montre, police]);
   const b = apercus.boite, marge = TAILLE_APERCU / 10;
   const vue = b ? [b.x - marge, b.y - marge, b.l + 2 * marge, b.h + 2 * marge].map(v => Math.round(v * 100) / 100).join(' ') : '0 0 1 1';
   return (
-    <div className="apercu-police" id={id} role="group" aria-label={'Aperçu de « ' + montre + ' » en ' + police.nom}>
-      <Rendu titre="Forme (découpe)" apercu={apercus.forme} vue={vue} />
-      <Rendu titre="Ligne (stylo)" apercu={apercus.ligne} vue={vue} />
-      <button type="button" className="discret apercu-fermer" onClick={fermer}>Fermer l’aperçu</button>
+    <div className="apercu-police" id={id} role="group" aria-label={t('Aperçu de « {texte} » en {police}', { texte: montre, police: police.nom })}>
+      <Rendu titre={t('Forme (découpe)')} apercu={apercus.forme} vue={vue} />
+      <Rendu titre={t('Ligne (stylo)')} apercu={apercus.ligne} vue={vue} />
+      <button type="button" className="discret apercu-fermer" onClick={fermer}>{t('Fermer l’aperçu')}</button>
     </div>
   );
 }
@@ -153,7 +154,7 @@ function ApercuPolice({ id, police, texte, fermer }: { id: string; police: Polic
 function Rendu({ titre, apercu, vue }: { titre: string; apercu: Apercu; vue: string }) {
   return (
     <figure className="apercu-rendu">
-      <svg viewBox={vue} role="img" aria-label={titre + ' : ' + apercu.verdict} preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={vue} role="img" aria-label={t('{titre} : {verdict}', { titre, verdict: apercu.verdict })} preserveAspectRatio="xMidYMid meet">
         <path d={ecrireChemin(apercu.d, 2)} className={apercu.plein ? 'apercu-plein' : 'apercu-ligne'} />
       </svg>
       <figcaption><span className="apercu-titre">{titre}</span><span className="aide">{apercu.verdict}</span></figcaption>

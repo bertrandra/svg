@@ -14,6 +14,7 @@ import type { NomIcone } from './icones.js';
 import { LIBELLES_DISPOSITION, PHRASE_AUCUNE_CANDIDATE, phraseChoixForme, remplit, type ModeDisposition } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
 import { usePolicesSi } from './contexteTexte.js';
+import { t } from '../util/i18n.js';
 
 /** Le choix de la barre : libre, sur la forme, ou dans la forme (deforme, ou en lignes : le panneau dit lequel). */
 export type ChoixDispo = 'libre' | 'sur' | 'dans';
@@ -24,12 +25,12 @@ const modeDe = (c: Exclude<ChoixDispo, 'libre'>): ModeDisposition => (c === 'dan
 
 const CHOIX: ReadonlyArray<readonly [ChoixDispo, NomIcone]> = [['libre', 'texte-libre'], ['sur', 'texte-sur'], ['dans', 'texte-dans']];
 
-/** Ce que disent les infobulles de la barre : le libelle, puis le geste. */
-const AIDES: Readonly<Record<ChoixDispo, string>> = {
-  libre: 'Libre : le texte sur sa ligne droite',
-  sur: 'Sur la forme : le texte suit le tracé d’une forme',
-  dans: 'Dans la forme : le texte se déforme pour prendre la silhouette d’une forme fermée'
-};
+/** Ce que disent les infobulles de la barre : le libelle, puis le geste. Une fonction : traduit au rendu, la langue posee (ADR-0042). */
+const aides = (): Readonly<Record<ChoixDispo, string>> => ({
+  libre: t('Libre : le texte sur sa ligne droite'),
+  sur: t('Sur la forme : le texte suit le tracé d’une forme'),
+  dans: t('Dans la forme : le texte se déforme pour prendre la silhouette d’une forme fermée')
+});
 
 /** La disposition d'un texte, et le geste qui la change (le choix de la forme d'abord, s'il le faut). */
 export function useChoixDisposition(forme: Forme | null | undefined) {
@@ -51,7 +52,7 @@ export function useChoixDisposition(forme: Forme | null | undefined) {
   };
   const enChoix = sx.choixForme?.id === forme?.id && sx.choixForme ? choixDe(sx.choixForme.mode) : null;
   const menu: ElementMenu[] = CHOIX.map(([c, icone]) => ({
-    id: 'disposition-' + c, libelle: LIBELLES_DISPOSITION[c], icone, radio: true, coche: actuel === c, desactive: !!forme?.verrouille, onClick: () => choisir(c)
+    id: 'disposition-' + c, libelle: t(LIBELLES_DISPOSITION[c]), icone, radio: true, coche: actuel === c, desactive: !!forme?.verrouille, onClick: () => choisir(c)
   }));
   return { actuel, choisir, enChoix, menu, verrou: !!forme?.verrouille };
 }
@@ -60,9 +61,9 @@ export function useChoixDisposition(forme: Forme | null | undefined) {
 export function ChoixDispositionBarre({ forme }: { forme: Forme }) {
   const c = useChoixDisposition(forme);
   return (
-    <div className="groupe" role="group" aria-label="Disposition">
+    <div className="groupe" role="group" aria-label={t('Disposition')}>
       {CHOIX.map(([d, icone]) => (
-        <Bouton key={d} icone={icone} aide={AIDES[d]} pressed={c.actuel === d || c.enChoix === d} disabled={c.verrou} onClick={() => c.choisir(d)} />
+        <Bouton key={d} icone={icone} aide={aides()[d]} pressed={c.actuel === d || c.enChoix === d} disabled={c.verrou} onClick={() => c.choisir(d)} />
       ))}
     </div>
   );
@@ -72,9 +73,9 @@ export function ChoixDispositionBarre({ forme }: { forme: Forme }) {
 export function ChoixDispositionPanneau({ forme }: { forme: Forme }) {
   const c = useChoixDisposition(forme);
   return (
-    <div className="alignement-texte choix-disposition" role="group" aria-label="Disposition">
+    <div className="alignement-texte choix-disposition" role="group" aria-label={t('Disposition')}>
       {CHOIX.map(([d]) => (
-        <button key={d} type="button" aria-pressed={c.actuel === d || c.enChoix === d} disabled={c.verrou} title={AIDES[d]} onClick={() => c.choisir(d)}>{LIBELLES_DISPOSITION[d]}</button>
+        <button key={d} type="button" aria-pressed={c.actuel === d || c.enChoix === d} disabled={c.verrou} title={aides()[d]} onClick={() => c.choisir(d)}>{t(LIBELLES_DISPOSITION[d])}</button>
       ))}
     </div>
   );
@@ -92,9 +93,9 @@ export function useSectionDisposition(): SectionMenu | null {
   usePolicesSi(choisies.length === 2 && !!texte && !!base);
   if (choisies.length !== 2 || !texte || !base || texte.verrouille || !candidatesPour(mo.dessin, texte.id).some(f => f.id === base.id)) return null;
   return {
-    id: 'disposition', titre: 'Texte et forme', elements: [
-      { id: 'poser-sur', libelle: 'Poser le texte sur la forme', icone: 'texte-sur', onClick: () => dz.poser(texte.id, base.id, 'sur') },
-      { id: 'poser-dans', libelle: 'Poser le texte dans la forme', icone: 'texte-dans', onClick: () => dz.poser(texte.id, base.id, 'enveloppe') }
+    id: 'disposition', titre: t('Texte et forme'), elements: [
+      { id: 'poser-sur', libelle: t('Poser le texte sur la forme'), icone: 'texte-sur', onClick: () => dz.poser(texte.id, base.id, 'sur') },
+      { id: 'poser-dans', libelle: t('Poser le texte dans la forme'), icone: 'texte-dans', onClick: () => dz.poser(texte.id, base.id, 'enveloppe') }
     ]
   };
 }
@@ -103,8 +104,8 @@ export function useSectionDisposition(): SectionMenu | null {
 export function DispositionSelection() {
   const section = useSectionDisposition();
   return section ? (
-    <div className="groupe" role="group" aria-label="Texte et forme">
-      <MenuDeroulant etiquette="Texte et forme : poser le texte sur ou dans la forme" icone="texte-sur" chevron={false} sections={[section]} />
+    <div className="groupe" role="group" aria-label={t('Texte et forme')}>
+      <MenuDeroulant etiquette={t('Texte et forme : poser le texte sur ou dans la forme')} icone="texte-sur" chevron={false} sections={[section]} />
     </div>
   ) : null;
 }

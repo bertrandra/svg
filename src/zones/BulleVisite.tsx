@@ -12,6 +12,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useStockage } from './contexteStockage.js';
 import { choixCricut } from './actionsProduction.js';
 import { cadrage, cibleEtape, placerBulle, progression, texteEtape, type EtapeVisite, type Placement, type Rect } from './visite.js';
+import { t } from '../util/i18n.js';
 
 type Visite = NonNullable<ReturnType<typeof useVisite>>;
 
@@ -25,7 +26,7 @@ const avecTiroirs = (): boolean => window.matchMedia('(max-width: 900px)').match
 export function LienVisite() {
   const v = useVisite();
   if (!v?.etape) return null;
-  return <a className="saut" href="#visite-guidee" onClick={e => { e.preventDefault(); document.querySelector<HTMLElement>('.bulle-visite')?.focus(); }}>Aller à la visite guidée</a>;
+  return <a className="saut" href="#visite-guidee" onClick={e => { e.preventDefault(); document.querySelector<HTMLElement>('.bulle-visite')?.focus(); }}>{t('Aller à la visite guidée')}</a>;
 }
 
 export function BulleVisite() {
@@ -127,7 +128,7 @@ function Bulle({ v, etape }: { v: Visite; etape: EtapeVisite }) {
   const pose = usePose(bulle, cibleEtape(etape, v.contexte), etape);
   useCadrage(etape, pose);
   useFocusBulle(bulle, etape);
-  const t = texteEtape(etape, v.contexte);
+  const texte = texteEtape(etape, v.contexte);
   const p = pose?.placement;
   const style: CSSProperties = p ? { left: p.x, top: p.y } : { visibility: 'hidden' };
   const clavier = (e: KE<HTMLDivElement>) => {
@@ -140,16 +141,16 @@ function Bulle({ v, etape }: { v: Visite; etape: EtapeVisite }) {
       <div ref={bulle} id="visite-guidee" className={'bulle-visite ' + (p?.cote ?? 'dedans')} role="dialog" aria-labelledby={idTitre} aria-describedby={idCorps} tabIndex={-1} style={style} onKeyDown={clavier}>
         {p && p.fleche !== null ? <span className="bulle-fleche" aria-hidden="true" style={{ left: p.fleche }} /> : null}
         <p className="bulle-progression">{progression(etape)}</p>
-        <h2 id={idTitre} className="bulle-titre">{t.titre}</h2>
-        <p id={idCorps} className="bulle-corps">{t.corps}</p>
+        <h2 id={idTitre} className="bulle-titre">{texte.titre}</h2>
+        <p id={idCorps} className="bulle-corps">{texte.corps}</p>
         {etape === 'fin' ? <Suites v={v} /> : null}
         <div className="bulle-actions">
-          {etape === 'fin' ? null : <button type="button" className="discret" onClick={() => v.quitter(false)}>Passer la visite</button>}
+          {etape === 'fin' ? null : <button type="button" className="discret" onClick={() => v.quitter(false)}>{t('Passer la visite')}</button>}
           <span className="espace" />
-          {etape !== 'choisir' && etape !== 'fin' ? <button type="button" onClick={v.precedent}>Précédent</button> : null}
+          {etape !== 'choisir' && etape !== 'fin' ? <button type="button" onClick={v.precedent}>{t('Précédent')}</button> : null}
           {/* Une seule cle pour « Suivant » et « Terminer » : le meme bouton change de nom, le focus reste dessus. */}
           {/* « Terminer la visite » : la barre a son propre « Terminer » (le geste de fin de la page), qui ferme l'editeur. */}
-          <button key="avancer" type="button" onClick={etape === 'fin' ? () => v.quitter(true) : v.suivant}>{etape === 'fin' ? 'Terminer la visite' : 'Suivant'}</button>
+          <button key="avancer" type="button" onClick={etape === 'fin' ? () => v.quitter(true) : v.suivant}>{etape === 'fin' ? t('Terminer la visite') : t('Suivant')}</button>
         </div>
       </div>
     </>
@@ -178,14 +179,15 @@ function Suites({ v }: { v: Visite }) {
   };
   const convertir = v.convertir;
   return (
-    <ul className="bulle-suites" aria-label="Pour la suite">
+    <ul className="bulle-suites" aria-label={t('Pour la suite')}>
       {convertir ? (
-        <li><button type="button" onClick={() => { v.quitter(true); if (mo.h.passe.length) ac.enregistrerTout(); else ac.fermer(); convertir(); }}>Convertir une image en SVG</button></li>
+        <li><button type="button" onClick={() => { v.quitter(true); if (mo.h.passe.length) ac.enregistrerTout(); else ac.fermer(); convertir(); }}>{t('Convertir une image en SVG')}</button></li>
       ) : null}
+      {/* Le titre cherche est celui que la section affiche : il passe par `t` comme elle (ADR-0042). */}
       {mo.bibliotheque ? (
-        <li><button type="button" onClick={() => { v.quitter(true); ac.choisir([]); ac.poserOutil('selection'); ouvrirPanneau('Bibliothèque de formes'); }}>Prendre une forme dans la bibliothèque</button></li>
+        <li><button type="button" onClick={() => { v.quitter(true); ac.choisir([]); ac.poserOutil('selection'); ouvrirPanneau(t('Bibliothèque de formes')); }}>{t('Prendre une forme dans la bibliothèque')}</button></li>
       ) : null}
-      <li><button type="button" onClick={() => { v.quitter(true); ac.poserProduction(choixCricut(stockage)); ouvrirPanneau('Prêt pour'); }}>Préparer pour une Cricut</button></li>
+      <li><button type="button" onClick={() => { v.quitter(true); ac.poserProduction(choixCricut(stockage)); ouvrirPanneau(t('Prêt pour')); }}>{t('Préparer pour une Cricut')}</button></li>
     </ul>
   );
 }

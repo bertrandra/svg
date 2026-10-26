@@ -9,6 +9,7 @@ import { basculerDansSelection, formeAuCurseur, formeVoisine, type Sens } from '
 import { phraseBascule, PHRASE_SANS_CURSEUR } from './annonces.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
 import { niveauEdition } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 export interface ContexteSelection { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur }
 
@@ -26,7 +27,7 @@ function poserSelection({ ac }: ContexteSelection, sel: string[], curseur: strin
 export function etendreSelection(c: ContexteSelection, sens: Sens): true {
   const { m, u, ac } = c, contexte = niveauEdition(u.contexte), courant = formeAuCurseur(m.dessin, m.sel, u.focale, contexte);
   const id = formeVoisine(m.dessin, courant ? [courant] : [], sens, true, contexte);
-  if (id === null) { ac.annoncer('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.'); return true; }
+  if (id === null) { ac.annoncer(t('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.')); return true; }
   const deja = m.sel.includes(id), apres = deja ? m.sel : [...m.sel, id];
   poserSelection(c, apres, id);
   ac.annoncer(phraseBascule(id, deja ? 'deja' : 'ajoutee', apres.length));

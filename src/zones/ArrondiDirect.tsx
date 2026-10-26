@@ -8,6 +8,7 @@ import { arrondirFormes, boiteDe, type DessinSvg } from '../engine/editionSvg.js
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { arrondi } from './aidesEditeur.js';
 import { phraseArrondi } from './phrasesTrace.js';
+import { t } from '../util/i18n.js';
 
 const nombre = (t: string): number => Number(t.replace(',', '.'));
 
@@ -56,23 +57,23 @@ export function ArrondiDirect({ coin }: { coin: number | null }) {
     const r = nombre(rayon);
     // Tous les coins : le verbe de l'editeur, qui dit aussi ce qu'il arrive a un texte vivant (vectorise pour etre arrondi).
     if (coin === null) { ac.arrondirAngles(r); return; }
-    if (!(r > 0)) { ac.dire('Donnez un rayon positif.'); return; }
+    if (!(r > 0)) { ac.dire(t('Donnez un rayon positif.')); return; }
     const a = arrondirFormes(dessin, sel, r, coins);
     if (a.dessin !== dessin) ac.appliquer(() => a.dessin);
     ac.dire(phraseArrondi(a.angles, a.reduits, r, a.rayonMin));
   };
   return (
     <div className="outil-trace arrondi-direct">
-      <label className="champ-ligne nombre" title="Arrondit chaque angle d’un arc de ce rayon ; ramené au plus grand possible si les côtés sont trop courts">
-        <span>{coin === null ? 'Rayon des angles' : 'Rayon du coin'}</span>
+      <label className="champ-ligne nombre" title={t('Arrondit chaque angle d’un arc de ce rayon ; ramené au plus grand possible si les côtés sont trop courts')}>
+        <span>{coin === null ? t('Rayon des angles') : t('Rayon du coin')}</span>
         <input type="text" inputMode="decimal" data-champ-trace="rayon" value={rayon} onChange={e => poserRayon(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') appliquer(); }} />
       </label>
       <label className="champ-ligne">
-        <span>En direct</span>
+        <span>{t('En direct')}</span>
         <input type="range" min={0} max={max} step={max / 100} value={Math.min(max, Math.max(0, nombre(rayon) || 0))} disabled={desactive}
           aria-valuetext={rayon} onChange={e => enDirect(String(arrondi(Number(e.target.value))))} onPointerUp={finir} onBlur={finir} />
       </label>
-      <button type="button" className="discret" disabled={desactive} onClick={appliquer}>{coin === null ? 'Arrondir les angles' : 'Arrondir ce coin'}</button>
+      <button type="button" className="discret" disabled={desactive} onClick={appliquer}>{coin === null ? t('Arrondir les angles') : t('Arrondir ce coin')}</button>
     </div>
   );
 }
