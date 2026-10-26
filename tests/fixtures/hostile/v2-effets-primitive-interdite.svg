@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
+  <filter id="espion"><feImage xlink:href="https://pixel.invalid/espion.png" result="i"/><feBlend in="SourceGraphic" in2="i"/></filter>
+  <filter id="bruit"><feTurbulence baseFrequency="0.05" numOctaves="9"/><feDisplacementMap in="SourceGraphic" scale="50"/></filter>
+  <rect x="10" y="10" width="30" height="30" fill="#c81e28" filter="url(#espion)"/>
+  <rect x="60" y="10" width="30" height="30" fill="#1f5fb0" filter="url(#bruit)"/>
+</svg>

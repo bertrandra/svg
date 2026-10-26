@@ -66,20 +66,30 @@ function couvrir(r: Apport[], peinture: Peinture | undefined, hex: string, opaci
 /**
  * Ce qu'une forme apporte au nuancier : son remplissage (l'aire peinte) et son contour (la longueur du trace par son
  * epaisseur), chacun a son opacite effective (celle de la forme par celle de la peinture), au centieme. Une peinture invisible
- * (opacite nulle, trait d'epaisseur nulle, aire nulle) n'apporte rien : elle n'est pas employee. Sous un degrade, ses arrets.
+ * (opacite nulle, trait d'epaisseur nulle, aire nulle) n'apporte rien : elle n'est pas employee. Sous un degrade, ses arrets. Sous
+ * une ombre portee (modele v2, ADR-0012 etape 7), sa couleur aussi : l'ombre peint la silhouette de la forme (ce que couvrent son fond
+ * et son trait), a l'opacite de la forme par celle de l'ombre. Un flou ne change aucune couleur.
  */
 export function apportsDe(f: Forme): readonly Apport[] {
   const deja = memo.get(f);
   if (deja) return deja;
   const r: Apport[] = [];
   const fond = hexDe(f.remplissage), trait = hexDe(f.contour);
+  let silhouette = 0;
   if (fond) {
     const opacite = arrondi(f.opacite * opaciteDuRemplissage(f), 0.01), surface = opacite > 0 ? aireDeChemin(f.d, f.regle) : 0;
     if (surface > 0) couvrir(r, f.peintureRemplissage, fond, opacite, surface);
+    silhouette += surface;
   }
   if (trait && f.epaisseur > 0) {
     const opacite = arrondi(f.opacite * opaciteDuContour(f), 0.01), surface = opacite > 0 ? longueurDeChemin(f.d) * f.epaisseur : 0;
     if (surface > 0) couvrir(r, f.peintureContour, trait, opacite, surface);
+    silhouette += surface;
+  }
+  const ombre = f.effets?.ombre, teinteOmbre = ombre ? hexDe(ombre.couleur) : null;
+  if (ombre && teinteOmbre && silhouette > 0) {
+    const opacite = arrondi(f.opacite * ombre.opacite, 0.01);
+    if (opacite > 0) r.push({ hex: teinteOmbre, opacite, surface: silhouette });
   }
   memo.set(f, r);
   return r;

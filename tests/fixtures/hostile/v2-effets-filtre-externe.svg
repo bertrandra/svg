@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>.f { filter: url(//pixel.invalid/f.svg#b); }</style>
+  <rect x="10" y="10" width="30" height="30" fill="#c81e28" filter="url(https://pixel.invalid/filtres.svg#flou)"/>
+  <rect class="f" x="60" y="10" width="30" height="30" fill="#1f5fb0"/>
+</svg>

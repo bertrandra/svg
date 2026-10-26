@@ -76,6 +76,11 @@ export interface ContexteEcriture {
   readonly definitions: Recueil;
   /** Le corps d'un contenu (feuilles et groupes), ecrit comme le dessin : pour une decoupe, un masque, une tuile de motif. */
   contenu(c: Contenu): string;
+  /**
+   * Le contenu en cours d'ecriture (le dessin, ou la decoupe, le masque, la tuile qu'ecrit `contenu`) : de quoi mesurer la region d'un
+   * filtre ou d'un masque pose sur un groupe (ajoute a l'etape 7 : `attributsGroupe` ne recoit que le groupe).
+   */
+  courant(): Contenu;
 }
 
 export interface CrochetsEcriture {

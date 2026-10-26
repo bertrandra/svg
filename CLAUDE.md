@@ -157,6 +157,12 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
   remplissages par intersection booléenne, garde un trait entier et le dit ; une copie renumérote les contenus
   (`renumeroterContenus`) ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-decoupes-*`.
+- **Un effet est un flou et une ombre, écrits aux formes exactes** (ADR-0012, étape 7) : `edition/fonctions/effets.ts` évalue les
+  primitives et reconnaît le sous-ensemble (flou du graphique, ombre décomposée ou `feDropShadow`, les deux fusionnés), refuse toute
+  autre primitive en la nommant ; l'ombre vit dans le repère du plan, le flou suit la matrice ; l'écriture pose
+  `<filter id="ed-f-…" filterUnits="userSpaceOnUse">` sur une région mesurée sur la géométrie telle qu'elle s'écrit ; la descente
+  les abandonne et le dit ; une prise posée hors d'une feuille ou d'un groupe est refusée en disant où (`refusHorsFeuille`) ;
+  `ContexteEcriture.courant()` donne le contenu à mesurer ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-effets-*`.
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente

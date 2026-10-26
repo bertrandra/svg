@@ -111,9 +111,9 @@ describe('la lecture des decoupes', () => {
     const chaine = Array.from({ length: 9 }, (_, i) => '<clipPath id="c' + i + '"' + (i < 8 ? ' clip-path="url(#c' + (i + 1) + ')"' : '') + '><rect width="50" height="50"/></clipPath>').join('');
     expect(erreur(lire(SVG('<defs>' + chaine + '</defs><g clip-path="url(#c0)"><rect width="50" height="50"/></g>')))).toContain(REFUS_DECOUPES.profondeur);
     expect(erreur(lire(SVG('<defs>' + chaine.replace(' clip-path="url(#c8)"', '') + '</defs><g clip-path="url(#c0)"><rect width="50" height="50"/></g>')))).toBe('');
-    expect(erreur(lire(SVG(CLIP + '<defs><rect id="r" width="5" height="5"/></defs><use href="#r" clip-path="url(#c)"/>')))).toContain(REFUS_DECOUPES.porteur);
-    expect(erreur(lire(SVG(CLIP + '<defs><symbol id="s" clip-path="url(#c)"><rect width="5" height="5"/></symbol></defs><use href="#s"/>')))).toContain(REFUS_DECOUPES.porteur);
-    expect(erreur(lire('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" clip-path="url(#c)">' + CLIP + '<rect width="5" height="5"/></svg>'))).toContain(REFUS_DECOUPES.porteur);
+    expect(erreur(lire(SVG(CLIP + '<defs><rect id="r" width="5" height="5"/></defs><use href="#r" clip-path="url(#c)"/>')))).toContain('une découpe (posé sur un clone <use>)');
+    expect(erreur(lire(SVG(CLIP + '<defs><symbol id="s" clip-path="url(#c)"><rect width="5" height="5"/></symbol></defs><use href="#s"/>')))).toContain('une découpe (posé sur un symbole)');
+    expect(erreur(lire('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" clip-path="url(#c)">' + CLIP + '<rect width="5" height="5"/></svg>'))).toContain('une découpe (posé sur tout le dessin)');
     expect(erreur(lire(SVG('<defs><clipPath id="c" transform="rotate(a)"><rect width="5" height="5"/></clipPath></defs><g clip-path="url(#c)"><rect width="50" height="50"/></g>')))).toContain(REFUS_DECOUPES.transformation);
   });
 });

@@ -20,7 +20,7 @@ const CHAMPS_FORME: Readonly<Record<keyof Forme, Portage>> = {
   id: 'porte', d: 'porte', remplissage: 'porte', contour: 'porte', epaisseur: 'porte', opacite: 'porte', opaciteRemplissage: 'porte',
   opaciteContour: 'porte', pointilles: 'porte', decalagePointilles: 'porte', bout: 'porte', jonction: 'porte', limiteMitre: 'porte',
   origine: 'porte', texte: 'porte', operation: 'porte', regle: 'porte', visible: 'porte', verrouille: 'porte',
-  parent: 'porte', peintureRemplissage: 'porte', peintureContour: 'porte', effets: 'etape 7', image: 'porte'
+  parent: 'porte', peintureRemplissage: 'porte', peintureContour: 'porte', effets: 'porte', image: 'porte'
 };
 
 const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', reperes: 'porte', groupes: 'porte' };
@@ -28,7 +28,7 @@ const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte',
 /** Les champs d'un groupe (etape 1 : sa base ; puis une ligne de CHAMPS_GROUPE_V2 par etape). */
 const CHAMPS_GROUPE: Readonly<Record<keyof Groupe, Portage>> = {
   id: 'porte', parent: 'porte', nom: 'porte', visible: 'porte', verrouille: 'porte', opacite: 'porte', origine: 'porte',
-  decoupe: 'porte', masque: 'etape 6', effets: 'etape 7'
+  decoupe: 'porte', masque: 'etape 6', effets: 'porte'
 };
 
 const lire = (nom: string, modele: 'plat' | 'riche' = 'plat'): DessinSvg => {
@@ -67,7 +67,8 @@ describe('le projet porte tout le modele', () => {
     const pleine: Forme = {
       ...avecTexte, d: image.d, image: image.image, contour: '#1f4e8c', epaisseur: 2, opacite: 0.5, opaciteRemplissage: 0.4, opaciteContour: 0.3, pointilles: [4, 2], decalagePointilles: 1,
       bout: 'round', jonction: 'bevel', limiteMitre: 6, origine: ['game-icons:a'], operation: 'ecriture', regle: 'evenodd', visible: false, verrouille: true,
-      peintureRemplissage: lineaire, peintureContour: radial, parent: 'g1'
+      peintureRemplissage: lineaire, peintureContour: radial, parent: 'g1',
+      effets: { flou: { ecart: 0.1 + 0.2, ecartY: 4e-7 }, ombre: { dx: -3.25, dy: 1e-9, ecart: 2, couleur: '#1d3557', opacite: 0.45 } }
     };
     const portes = Object.entries(CHAMPS_FORME).filter(([, p]) => p === 'porte').map(([k]) => k).sort();
     expect(Object.keys(pleine).sort()).toEqual(portes);
@@ -77,9 +78,9 @@ describe('le projet porte tout le modele', () => {
 
   it('les champs du modele v2 attendent l etape qui les livre', () => {
     const attendus = Object.entries({ ...CHAMPS_FORME, ...CHAMPS_DESSIN }).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
-    expect(attendus).toEqual(['effets : etape 7']);
+    expect(attendus).toEqual([]);
     const duGroupe = Object.entries(CHAMPS_GROUPE).filter(([, p]) => p !== 'porte').map(([k, p]) => k + ' : ' + p);
-    expect(duGroupe).toEqual(['masque : etape 6', 'effets : etape 7']);
+    expect(duGroupe).toEqual(['masque : etape 6']);
   });
 
   it('un dessin plat garde son nuancier et ses reperes, au format 1', () => {
@@ -178,6 +179,41 @@ describe('les degrades dans le projet (etape 3)', () => {
   });
 });
 
+describe('les effets dans le projet (etape 7)', () => {
+  it('un dessin a effets (feuilles, groupes, image) s ecrit au format 2 et fait l aller-retour exact : modele, texte JSON et SVG ecrit', () => {
+    for (const nom of ['effets-flou', 'effets-ombre', 'effets-flou-ombre', 'effets-rotation', 'effets-echelle', 'effets-image']) {
+      const d = lire('v2/' + nom + '.svg', 'riche');
+      const tourne = transformer(d, d.formes.map(f => f.id), rotation(17, 40, 30));
+      for (const x of [d, tourne]) {
+        const { texte, rouvert } = allerRetour(etat(x));
+        expect(JSON.parse(texte).version, nom).toBe(VERSION_PROJET);
+        expect(rouvert.dessin, nom).toEqual(x);
+        expect(texteDuProjet(projetDe(rouvert)), nom).toBe(texte);
+        expect(ecrireDessin(rouvert.dessin, 3), nom).toBe(ecrireDessin(x, 3));
+      }
+    }
+  });
+
+  it('refuse en le nommant des effets vides, un flou sans ecart, une ombre mal coloree ou hors bornes ; ignores au format 1', () => {
+    const d = lire('v2/effets-flou-ombre.svg', 'riche');
+    const base = JSON.parse(texteDuProjet(projetDe(etat(d)))) as { version: number; dessin: { formes: Array<Record<string, unknown>>; groupes: Record<string, Record<string, unknown>> } };
+    const avec = (champs: Record<string, unknown>) => ({ ...base, dessin: { ...base.dessin, formes: [{ ...base.dessin.formes[0], ...champs }, ...base.dessin.formes.slice(1)] } });
+    const ombre = { dx: 1, dy: 1, ecart: 1, couleur: '#000000', opacite: 0.5 };
+    expect(erreur(avec({ effets: {} }))).toMatch(/effets vides/);
+    expect(erreur(avec({ effets: { flou: { ecart: 0 } } }))).toMatch(/flou sans écart/);
+    expect(erreur(avec({ effets: { ombre: { ...ombre, couleur: 'red' } } }))).toMatch(/#rrggbb/);
+    expect(erreur(avec({ effets: { ombre: { ...ombre, opacite: 2 } } }))).toMatch(/opacité d’une ombre/);
+    expect(erreur(avec({ effets: { flou: { ecart: 'url(x)' } } }))).toMatch(/écart d’un flou/);
+    expect(erreur(avec({ effets: { flou: { ecart: 1 } } }))).toBe('');
+    const g1 = base.dessin.groupes['g1'] ?? {};
+    expect(erreur({ ...base, dessin: { ...base.dessin, groupes: { ...base.dessin.groupes, g1: { ...g1, effets: { ombre: { ...ombre, dx: 'x' } } } } } })).toMatch(/décalage d’une ombre/);
+    const ancien = { ...base, version: VERSION_PROJET_PLAT };
+    const r = lireProjet(ancien);
+    if ('erreur' in r) throw new Error(r.erreur);
+    expect(r.projet.dessin.formes.every(f => f.effets === undefined)).toBe(true);
+  });
+});
+
 describe('les groupes dans le projet (etape 1)', () => {
   it('un dessin a groupes fait l aller-retour exact, au format 2, et reecrit le meme SVG', () => {
     for (const nom of ['v2/groupes-imbriques.svg', 'v2/groupes-nom-piegeux.svg', 'v2/groupes-use.svg', 'v2/groupes-degrade-image.svg', 'lecture-use-imbriques.svg', 'texte-vivant-lecture.svg']) {
@@ -226,7 +262,7 @@ describe('les decoupes dans le projet (etape 5)', () => {
     const d = plein();
     const avecDecoupe = Object.values(d.groupes ?? {}).find(x => x.decoupe);
     // Un parent neuf, qui n'enveloppe que ce groupe : l'arbre reste bien forme.
-    const g: Groupe = { ...(avecDecoupe as Groupe), parent: 'g99', nom: 'Fenêtre', visible: false, verrouille: true, opacite: 0.4, origine: ['game-icons:a'] };
+    const g: Groupe = { ...(avecDecoupe as Groupe), parent: 'g99', nom: 'Fenêtre', visible: false, verrouille: true, opacite: 0.4, origine: ['game-icons:a'], effets: { flou: { ecart: 1.5 } } };
     expect(Object.keys(g).sort()).toEqual(portes);
     const x: DessinSvg = { ...d, groupes: { ...d.groupes, [g.id]: g, g99: { id: 'g99', visible: true, verrouille: false } } };
     expect(allerRetour(etat(x)).rouvert.dessin.groupes?.[g.id]).toEqual(g);

@@ -1226,6 +1226,60 @@
       "famille": "v2-decoupes",
       "vecteur": "Transformation illisible sur un <clipPath> (un schema javascript: dans rotate()) : refusee, « une découpe dont la transformation est illisible »",
       "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-ecart-1e308.svg",
+      "famille": "v2-effets",
+      "vecteur": "Ecarts de flou et d'ombre demesures (modele v2, effets) : stdDeviation=\"1e308\", un flou de 9e307 sous une echelle de 10 qui deborde a l'infini ; la lecture riche les borne a ECART_MAX et le dit, le mode plat refuse le filtre",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-nan.svg",
+      "famille": "v2-effets",
+      "vecteur": "Nombres illisibles dans des filtres (modele v2, effets) : NaN, Infinity, 1e999, un ecart negatif, trois nombres ; chacun prend sa valeur par defaut, comme dans un navigateur, et c'est dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-region-infinie.svg",
+      "famille": "v2-effets",
+      "vecteur": "Regions de filtre infinies, immenses ou en millimetres (modele v2, effets) : la lecture ne s'en sert que pour dire ce qui rognait, l'ecriture pose une region calculee, finie",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-decalage-enorme.svg",
+      "famille": "v2-effets",
+      "vecteur": "Ombre portee decalee de 1e300 (modele v2, effets) : bornee au plus grand cote du plan, et dit",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-primitive-interdite.svg",
+      "famille": "v2-effets",
+      "vecteur": "Primitives hors du sous-ensemble (modele v2, effets) : feImage vers une adresse (pixel espion), feBlend, feTurbulence, feDisplacementMap ; refuse en nommant la primitive, jamais rien de charge",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-filtre-externe.svg",
+      "famille": "v2-effets",
+      "vecteur": "Filtres vers un autre fichier ou une adresse (modele v2, effets) : en attribut et dans une feuille de style ; le nettoyage les eteint (none), la lecture riche du texte brut les refuse en le nommant",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-href-cycle.svg",
+      "famille": "v2-effets",
+      "vecteur": "Filtres qui heritent l'un de l'autre en boucle (xlink:href, modele v2, effets) : l'heritage d'un filtre est refuse en le nommant, sans suivre la chaine",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-chaine-demesuree.svg",
+      "famille": "v2-effets",
+      "vecteur": "Chaine de 500 primitives (modele v2, effets) : refusee des la borne de 16, sans rien evaluer ; le cas massif est engendre par effets-hostiles.test.ts",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-fusion-demesuree.svg",
+      "famille": "v2-effets",
+      "vecteur": "feMerge de 500 noeuds (modele v2, effets) : refuse a la borne de 16 noeuds, sans construire de pile",
+      "attendu": "refus"
     }
   ]
 }

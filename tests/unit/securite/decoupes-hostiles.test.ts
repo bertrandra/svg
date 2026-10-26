@@ -31,7 +31,7 @@ const CAS: readonly Cas[] = [
   { fichier: 'v2-decoupes-bombe-references.svg', brut: { refus: REFUS_DECOUPES.trop } },
   { fichier: 'v2-decoupes-renvoi-externe.svg', brut: { refus: REFUS_DECOUPES.externe } },
   { fichier: 'v2-decoupes-forme-css.svg', brut: { refus: REFUS_DECOUPES.formeCss } },
-  { fichier: 'v2-decoupes-porteur-use.svg', brut: { refus: REFUS_DECOUPES.porteur } },
+  { fichier: 'v2-decoupes-porteur-use.svg', brut: { refus: 'une découpe (posé sur un clone <use>)' } },
   { fichier: 'v2-decoupes-transformation-illisible.svg', brut: { refus: REFUS_DECOUPES.transformation } }
 ];
 

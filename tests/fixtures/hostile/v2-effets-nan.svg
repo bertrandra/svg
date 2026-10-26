@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <filter id="a"><feGaussianBlur stdDeviation="NaN"/></filter>
+  <filter id="b"><feDropShadow dx="NaN" dy="Infinity" stdDeviation="-5" flood-opacity="NaN"/></filter>
+  <filter id="c"><feGaussianBlur stdDeviation="1e999 2"/></filter>
+  <filter id="d"><feGaussianBlur stdDeviation="1 2 3"/></filter>
+  <rect x="10" y="10" width="30" height="30" fill="#c81e28" filter="url(#a)"/>
+  <rect x="60" y="10" width="30" height="30" fill="#1f5fb0" filter="url(#b)"/>
+  <rect x="10" y="60" width="30" height="30" fill="#2a9d8f" filter="url(#c)"/>
+  <rect x="60" y="60" width="30" height="30" fill="#f2b705" filter="url(#d)"/>
+</svg>

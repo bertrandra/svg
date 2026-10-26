@@ -154,6 +154,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : le nettoyage d'une feuille de style résout ses échappements à chaque passe ; un échappement à double niveau
+  (`ur\\6c(`) ou vers un caractère de contrôle ne peut plus recomposer `url(` (trouvé par le fuzzing ; deux régressions ajoutées).
 - Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
   plus ce schéma dans `data-href-externe` (trouvé par le fuzzing sur le corpus réuni ; vecteur ajouté au corpus).
 - Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
@@ -200,6 +202,12 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle v2, étape 7 (moteur, mode riche seulement) : le flou gaussien et l'ombre portée d'une forme ou d'un groupe se lisent,
+  s'écrivent en filtres portables (`<filter id="ed-f-…">`, région calculée, `color-interpolation-filters="sRGB"`), suivent les
+  transformations, comptent dans la boîte visuelle et sont gardés par le projet. Les exports de tracés les abandonnent en le
+  disant. Toute autre primitive de filtre est refusée en la nommant (« un filtre (feTurbulence) ») ; un filtre, une découpe ou un
+  masque posés sur un clone `<use>`, un texte, un symbole ou tout le dessin sont refusés en disant où, au lieu de se perdre.
 
 - Modèle v2, étape 5 (moteur, mode riche seulement) : les découpes. Un `clip-path` vers un `<clipPath>` (unités de boîte,
   transformation, `<use>`, `clip-rule`, découpe imbriquée) se lit en découpe d'un groupe ; une forme découpée s'enveloppe dans un

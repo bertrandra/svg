@@ -9,6 +9,7 @@
 import { lirePeintureProjet, type PeintureProjet } from './peinture.js';
 import { lireImageProjet, type ImageIntegreeProjet } from './image.js';
 import { lireDecoupeProjet, type DecoupeProjet } from './decoupe.js';
+import { lireEffetsProjet, type EffetsProjet } from './effets.js';
 
 /** Ce que la validation du projet prete a un lecteur de champ : ses gardes, qui refusent en nommant (jamais une exception visible). */
 export interface OutilsProjet {
@@ -31,6 +32,7 @@ export interface ChampsFormeV2 {
   readonly parent?: string;
   readonly peintureRemplissage?: PeintureProjet;
   readonly peintureContour?: PeintureProjet;
+  readonly effets?: EffetsProjet;
   readonly image?: ImageIntegreeProjet;
 }
 
@@ -57,6 +59,8 @@ export const CHAMPS_FORME_V2: readonly ChampFormeV2[] = [
     cle: 'peintureContour', lire: (v, o) => lirePeintureProjet(v, o, 'le dégradé du contour'),
     verifier: (f, o) => { if (f.contour === null) o.refuser('un dégradé de contour n’a pas de couleur de repli'); }
   },
+  // Etape 7 : les effets (flou, ombre portee), en unites du plan.
+  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'une forme') },
   // Etape 12 : l'image integree. Sa forme est validee ici ; ses octets (nature, dimensions, pixels, 16 Mo par dessin) le sont par le
   // moteur a l'ouverture (engine/projetV2/champs.ts, `refusChampsV2`). Une image ne porte ni remplissage ni contour.
   {
@@ -82,6 +86,8 @@ export function lireChampsFormeV2(o: Record<string, unknown>, forme: { readonly 
 export interface ChampsGroupeV2 {
   /** Etape 5 : la decoupe du groupe (decoupe.ts). */
   readonly decoupe?: DecoupeProjet;
+  /** Etape 7. */
+  readonly effets?: EffetsProjet;
 }
 
 /** Une ligne d'un champ de groupe : sa cle et son lecteur. */
@@ -93,5 +99,7 @@ export interface ChampGroupeV2 {
 /** Les champs v2 d'un groupe, dans l'ordre ou ils se lisent et s'ecrivent (apres la base du groupe). Une ligne par etape. */
 export const CHAMPS_GROUPE_V2: readonly ChampGroupeV2[] = [
   // Etape 5 : la decoupe, de la geometrie seule.
-  { cle: 'decoupe', lire: (v, o) => lireDecoupeProjet(v, o) }
+  { cle: 'decoupe', lire: (v, o) => lireDecoupeProjet(v, o) },
+  // Etape 7 : les effets du groupe.
+  { cle: 'effets', lire: (v, o) => lireEffetsProjet(v, o, 'un groupe') }
 ];

@@ -78,6 +78,16 @@ export function refusDe(pr: Proprietes, prises: ReadonlySet<PriseEnCharge> = AUC
 }
 
 /**
+ * Une prise (filtre, decoupe, masque) posee sur un element qu'aucune fonctionnalite ne complete en feuille ni en groupe (un clone
+ * <use>, un texte lu en lettres, un symbole, la racine) : refusee comme en mode plat, en disant ou elle est posee. null si l'element
+ * n'en porte pas. En mode plat, `refusDe` l'a deja refusee avec la phrase d'aujourd'hui : rien ne change par ici (ADR-0012, etape 7).
+ */
+export function refusHorsFeuille(pr: Proprietes, ou: string): string | null {
+  const r = refusDe(pr);
+  return r ? r + ' (' + ou + ')' : null;
+}
+
+/**
  * Les opacites d'une forme. `opacite` est celle des groupes et de la forme (`opacity`) ; l'alpha de la
  * couleur et `fill-opacity` / `stroke-opacity` vont au remplissage et au contour. Sans contour, forme
  * entiere et remplissage ne font qu'un (rien ne se voit a travers un trait absent) : tout se range

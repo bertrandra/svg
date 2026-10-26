@@ -62,7 +62,10 @@ function resoudreCss(css: string): string {
   return css.replace(/\/\*[\s\S]*?(?:\*\/|$)/g, ' ').replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\([^\n])/g, (_, hex: string | undefined, car: string | undefined) => {
     if (hex === undefined) return car ?? '';
     const n = parseInt(hex, 16);
-    return n > 0 && n < 0x110000 && !(n >= 0xd800 && n < 0xe000) ? String.fromCodePoint(n) : '';
+    // Un caractere interdit en XML (un controle) disparaitrait a l'emission et recollerait ses voisins (`ur\6l(`) : on le retire ici,
+    // pour juger le texte tel qu'il sortira.
+    const xmlInterdit = (n < 0x20 && n !== 9 && n !== 10 && n !== 13) || n === 0xfffe || n === 0xffff;
+    return n > 0 && n < 0x110000 && !(n >= 0xd800 && n < 0xe000) && !xmlInterdit ? String.fromCodePoint(n) : '';
   });
 }
 
@@ -109,9 +112,14 @@ function passeCss(s: string): string {
 export function nettoyerCss(css: string): string {
   if (!SUSPECT.test(css)) return css;
   let s = css;
-  // Un echappement ou un commentaire peut cacher un mot (`u\72l(`) : si le texte resolu est dangereux, on travaille sur lui.
-  if (s.includes('\\') || s.includes('/*')) { const clair = resoudreCss(s); if (clair !== s && DANGER_CSS.test(clair)) s = clair; }
-  for (let i = 0; i < 8; i++) { const suite = passeCss(s); if (suite === s) return s; s = suite; }
+  for (let i = 0; i < 8; i++) {
+    // Un echappement ou un commentaire peut cacher un mot (`u\72l(`) : si le texte resolu est dangereux, on travaille sur lui. A chaque
+    // passe : resoudre un niveau peut en reveler un autre (`ur\\6c(` devient `ur\6c(`, que le navigateur lirait `url(`).
+    if (s.includes('\\') || s.includes('/*')) { const clair = resoudreCss(s); if (clair !== s && DANGER_CSS.test(clair)) s = clair; }
+    const suite = passeCss(s);
+    if (suite === s) return s;
+    s = suite;
+  }
   return '';
 }
 

@@ -10,6 +10,7 @@ import { estDegrade } from '../edition/degrades.js';
 import { peintureDuProjet, peintureProjet } from './peinture.js';
 import { imageDuProjet, imageProjet, refusImagesProjet } from './image.js';
 import { decoupeDuProjet, decoupeProjet } from './decoupe.js';
+import { effetsDuProjet, effetsProjet } from './effets.js';
 
 /** Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. */
 interface AllerRetour {
@@ -35,6 +36,11 @@ const ALLERS_RETOURS: readonly AllerRetour[] = [
       ...(f.peintureRemplissage !== undefined ? { peintureRemplissage: peintureDuProjet(f.peintureRemplissage) } : {}),
       ...(f.peintureContour !== undefined ? { peintureContour: peintureDuProjet(f.peintureContour) } : {})
     })
+  },
+  // Etape 7 : les effets, champ pour champ.
+  {
+    versProjet: f => (f.effets !== undefined ? { effets: effetsProjet(f.effets) } : {}),
+    versModele: f => (f.effets !== undefined ? { effets: effetsDuProjet(f.effets) } : {})
   },
   // Etape 12 : l'image integree. Au retour, `d` redevient exactement le rectangle de l'image ; ses octets sont verifies par `refus`
   // (comme a la lecture d'un SVG) avant que `etatDuProjet` ne rouvre le dessin.
@@ -84,6 +90,11 @@ const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
   {
     versProjet: g => (g.decoupe ? { decoupe: decoupeProjet(g.decoupe) } : {}),
     versModele: g => (g.decoupe ? { decoupe: decoupeDuProjet(g.decoupe) } : {})
+  },
+  // Etape 7 : les effets du groupe.
+  {
+    versProjet: g => (g.effets !== undefined ? { effets: effetsProjet(g.effets) } : {}),
+    versModele: g => (g.effets !== undefined ? { effets: effetsDuProjet(g.effets) } : {})
   }
 ];
 
