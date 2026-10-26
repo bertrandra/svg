@@ -26,6 +26,7 @@ import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { RegleZone } from '../engine/selection.js';
 import { cleSelection, referenceProportions, type ReferenceProportions } from '../engine/proportions.js';
+import { t } from '../util/i18n.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
 export interface EtatDuMoment extends EtatLu {
@@ -94,12 +95,12 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     // Modifier les points d'un texte vivant, c'est le vectoriser d'abord (ADR-0022) : on le fait, une entree d'historique, et on le dit.
     const seule = o === 'points' ? lire().formeSeule : null;
     // Les points d'une image ne se modifient pas (ADR-0012, etape 12) : l'outil reste ce qu'il etait, et on dit quoi faire.
-    if (seule && !dessinableEnPoints(seule)) { dire(MSG_POINTS_IMAGE); return; }
+    if (seule && !dessinableEnPoints(seule)) { dire(t(MSG_POINTS_IMAGE)); return; }
     // Le texte ne passe pas par la lentille (paquet 8-D) : une decoupe n'en garderait que les contours, un masque l'ecrit en contours.
-    if (o === 'texte' && lentilleDe(lire().contexte)) { dire(RAISONS_LENTILLE.texte); return; }
+    if (o === 'texte' && lentilleDe(lire().contexte)) { dire(t(RAISONS_LENTILLE.texte)); return; }
     if (seule?.texte && !seule.verrouille) {
       appliquer(d => ({ ...d, formes: d.formes.map(f => (f.id === seule.id ? sansTexte(f) : f)) }));
-      dire('Texte vectorisé pour modifier ses points : il n’est plus modifiable comme texte. Ctrl+Z le rend.');
+      dire(t('Texte vectorisé pour modifier ses points : il n’est plus modifiable comme texte. Ctrl+Z le rend.'));
     }
     poserOutilBrut(o); s.poserTrace([]); s.poserPoint(null);
   };
@@ -124,16 +125,16 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     // Un geste qui n'a rien produit (un rectangle sans surface) retire l'entree qu'il avait ouverte.
     annulerGeste: cle => s.poserH(x => (x.cle === cle ? clore(annuler(x)) : x)),
     defaire: () => {
-      if (!lire().modifie) { annoncer('Rien à annuler.'); return; }
+      if (!lire().modifie) { annoncer(t('Rien à annuler.')); return; }
       s.poserH(x => annuler(clore(x)));
       remettreAZero();
-      annoncer('Annulé.');
+      annoncer(t('Annulé.'));
     },
     refaire: () => {
-      if (!lire().refaisable) { annoncer('Rien à rétablir.'); return; }
+      if (!lire().refaisable) { annoncer(t('Rien à rétablir.')); return; }
       s.poserH(x => retablir(x));
       remettreAZero();
-      annoncer('Rétabli.');
+      annoncer(t('Rétabli.'));
     },
     nouvelleCle: () => 'geste-' + ++compteur,
     poserParametres: p => s.poserParametres(x => bornerParametres({ ...x, ...p })),
@@ -147,7 +148,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       // Rien n'a change : la page referme sans rien reecrire (la fiche garde le fichier tel qu'il est venu) ; ailleurs, on le dit.
       if (aEnregistrer(e.modifie, e.productionModifiee, e.enregistrement)) metier.enregistrerTout();
       else if (e.fin.fermerSansModification) e.fermer();
-      else dire(e.enregistrement?.etat === 'en-cours' ? 'Enregistrement en cours…' : 'Aucune modification à enregistrer.');
+      else dire(e.enregistrement?.etat === 'en-cours' ? t('Enregistrement en cours…') : t('Aucune modification à enregistrer.'));
     },
     enregistrerEtFermer: () => { if (metier.enregistrerTout()) lire().fermer(); },
     garderBrouillon: () => {
@@ -155,14 +156,14 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       // Chez un hote qui garde des projets (le site, ADR-0030), Ctrl+S est le geste d'enregistrer : il rend le dessin, sans fermer.
       if (e.fin.ctrlSEnregistre) {
         if (aEnregistrer(e.modifie, e.productionModifiee, e.enregistrement)) metier.enregistrerTout();
-        else dire(e.enregistrement?.etat === 'en-cours' ? 'Enregistrement en cours…' : 'Aucune modification : rien à enregistrer.');
+        else dire(e.enregistrement?.etat === 'en-cours' ? t('Enregistrement en cours…') : t('Aucune modification : rien à enregistrer.'));
         return;
       }
       // Ctrl+S ne ferme jamais : fermer est un geste a part (le bouton de fin, Echap). Sans brouillon a garder, on dit ou va le dessin.
-      if (!e.brouillon) { dire('Ctrl+S ne garde rien ici : « ' + e.fin.libelle + ' » rend votre dessin.'); return; }
-      if (!e.modifie && !e.productionModifiee) { dire('Aucune modification : rien à garder.'); return; }
+      if (!e.brouillon) { dire(t('Ctrl+S ne garde rien ici : « {libelle} » rend votre dessin.', { libelle: e.fin.libelle })); return; }
+      if (!e.modifie && !e.productionModifiee) { dire(t('Aucune modification : rien à garder.')); return; }
       // Un brouillon qui rend faux n'a pas ete garde (stockage refuse ou plein) : on ne pretend pas le contraire.
-      dire(e.brouillon(svgDocument(e.complet ?? e.dessin, e.production)) === false ? 'Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.' : 'Brouillon gardé.');
+      dire(e.brouillon(svgDocument(e.complet ?? e.dessin, e.production)) === false ? t('Le brouillon n’a pas pu être gardé : ce navigateur refuse de l’écrire.') : t('Brouillon gardé.'));
     },
     ajuster: () => { const e = lire(), cadre = cadreDeVue(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
     ajusterAuDessin: () => { const e = lire(), cadre = cadreDuDessin(e.complet ?? e.dessin, e.production); if (cadre) e.vues.cadrer(cadre); else e.vues.ajuster(); },
@@ -170,7 +171,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     garderVersion: (nom, svg) => {
       const quand = Date.now(), { versions } = lire();
       poserVersions([{ id: idVersion(quand, versions.length), nom, svg, quand }, ...versions]);
-      dire('Version « ' + nom + ' » gardée dans ce navigateur.');
+      dire(t('Version « {nom} » gardée dans ce navigateur.', { nom }));
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
     poserModele: m => {
@@ -181,14 +182,14 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     },
     poserRegleZone: r => {
       s.poserRegleZone(r);
-      dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
+      dire(r === 'touche' ? t('Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.') : t('Le cadre et le lasso ne prennent que les formes entièrement dedans.'));
     },
     poserVerrouProportions: v => {
       const e = lire();
       // Pose, la proportion du moment devient la reference : c'est celle que les frappes et les pas qui suivent gardent.
       reference = v ? referenceProportions(null, cleSelection(e.sel), e.sel.length ? boiteDe(e.dessin, e.sel) : null) : null;
       s.poserVerrouProportions(v);
-      dire(v ? 'Proportions conservées.' : 'Proportions libres.');
+      dire(v ? t('Proportions conservées.') : t('Proportions libres.'));
     },
     proportionsDe: (ids, b) => {
       if (!lire().verrouProportions) return null;

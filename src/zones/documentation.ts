@@ -3,6 +3,8 @@
 // l'editeur n'a pas ces fichiers, son menu Aide garde la visite et les raccourcis. Une documentation s'ouvre dans un nouvel onglet,
 // au seul geste de la personne ; elle ne contacte aucun serveur (polices et images sont dans le fichier).
 
+import { t } from '../util/i18n.js';
+
 /** Une documentation : son libelle dans le menu, et son adresse, relative a la page qui monte l'editeur. */
 export interface Documentation {
   id: string;
@@ -10,10 +12,13 @@ export interface Documentation {
   adresse: string;
 }
 
-/** Les deux documentations livrees, dans l'ordre du menu. */
+/**
+ * Les deux documentations livrees, dans l'ordre du menu. Le libelle se traduit a la lecture (un accesseur), pas au chargement du
+ * module : la langue n'est posee qu'ensuite. Les pages, elles, restent en francais (ADR-0042 §6) : le libelle anglais le dit.
+ */
 export const DOCUMENTATIONS_LIVREES: readonly Documentation[] = [
-  { id: 'guide', libelle: 'Guide de l’éditeur', adresse: 'aide/guide.html' },
-  { id: 'cricut', libelle: 'La Cricut, c’est simple', adresse: 'aide/cricut.html' }
+  { id: 'guide', get libelle() { return t('Guide de l’éditeur'); }, adresse: 'aide/guide.html' },
+  { id: 'cricut', get libelle() { return t('La Cricut, c’est simple'); }, adresse: 'aide/cricut.html' }
 ];
 
 let documentations: readonly Documentation[] = [];

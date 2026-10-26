@@ -12,6 +12,7 @@ import { epaisseurRegle, useAimantRepere } from './Regles.js';
 import { useTactile } from './Vue.js';
 import { Icone } from './icones.js';
 import { arrondi } from './aidesEditeur.js';
+import { t } from '../util/i18n.js';
 
 /** Les reperes en lignes, dans le repere du plan (sous la transformation de la vue). `toile` sert a savoir ou le pointeur est lache. */
 export function CoucheReperes({ toile, svgRef }: { toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null> }) {
@@ -70,7 +71,7 @@ export function CoucheReperes({ toile, svgRef }: { toile: RefObject<HTMLDivEleme
     e.stopPropagation();
     geste.current = null;
     arg.poserEtiquette(null);
-    if (!g.bouge) { ac.dire(nomRepere(g.r, rg.unite) + ' choisi : Suppr le retire, les flèches le déplacent, Entrée ouvre son champ.'); return; }
+    if (!g.bouge) { ac.dire(t('{repere} choisi : Suppr le retire, les flèches le déplacent, Entrée ouvre son champ.', { repere: nomRepere(g.r, rg.unite) })); return; }
     if (e.type === 'pointercancel') { ac.annulerGeste(g.cle); return; }
     if (dehors(e)) arg.supprimer(g.r, { base: g.base, cle: g.cle });
     else ac.dire(nomRepere({ axe: g.r.axe, valeur: Number(g.valeur.toFixed(3)) }, rg.unite) + '.');
@@ -112,22 +113,22 @@ function LigneRepere({ r, focus }: { r: RepereDesigne; focus: boolean }) {
   useEffect(() => { if (focus) { champ.current?.focus(); champ.current?.select(); } }, [focus]);
   const valider = () => {
     const v = lireValeur(texte, rg.unite);
-    if (v === null) { poserTexte(lu(r.valeur)); ac.dire('Donnez une valeur lisible, en ' + rg.unite.long + '.'); return; }
+    if (v === null) { poserTexte(lu(r.valeur)); ac.dire(t('Donnez une valeur lisible, en {unite}.', { unite: t(rg.unite.long) })); return; }
     if (Number(v.toFixed(3)) === r.valeur) return;
     arg.deplacer(r, v);
     ac.dire(nomRepere({ axe: r.axe, valeur: Number(v.toFixed(3)) }, rg.unite) + '.');
   };
-  const nom = r.axe === 'h' ? 'Horizontal' : 'Vertical';
+  const horizontal = r.axe === 'h', unite = t(rg.unite.long);
   return (
     <li className="ligne-repere">
       <label className="champ-ligne nombre">
-        <span>{nom}</span>
-        <input ref={champ} type="text" inputMode="decimal" value={texte} aria-label={'Repère ' + nom.toLowerCase() + ', en ' + rg.unite.long}
+        <span>{horizontal ? t('Horizontal') : t('Vertical')}</span>
+        <input ref={champ} type="text" inputMode="decimal" value={texte} aria-label={horizontal ? t('Repère horizontal, en {unite}', { unite }) : t('Repère vertical, en {unite}', { unite })}
           onChange={e => poserTexte(e.target.value)} onBlur={valider}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); valider(); } else if (e.key === 'Escape' && texte !== lu(r.valeur)) { e.stopPropagation(); poserTexte(lu(r.valeur)); } }} />
-        {rg.unite.nom ? <span className="unite">{rg.unite.nom}</span> : null}
+        {rg.unite.nom ? <span className="unite">{t(rg.unite.nom)}</span> : null}
       </label>
-      <button type="button" className="icone-bouton" aria-label={'Retirer le ' + nomRepere(r, rg.unite).toLowerCase()} title="Retirer ce repère" onClick={() => arg.supprimer(r)}><Icone nom="supprimer" /></button>
+      <button type="button" className="icone-bouton" aria-label={t('Retirer le {repere}', { repere: nomRepere(r, rg.unite).toLowerCase() })} title={t('Retirer ce repère')} onClick={() => arg.supprimer(r)}><Icone nom="supprimer" /></button>
     </li>
   );
 }
@@ -148,7 +149,7 @@ export function PanneauReperes({ svgRef }: { svgRef: RefObject<SVGSVGElement | n
   const fermer = () => { arg.ouvrir(null); svgRef.current?.focus(); };
   const ajouter = () => {
     const v = lireValeur(valeur, rg.unite);
-    if (v === null) { ac.dire('Donnez une valeur lisible, en ' + rg.unite.long + '.'); return; }
+    if (v === null) { ac.dire(t('Donnez une valeur lisible, en {unite}.', { unite: t(rg.unite.long) })); return; }
     arg.ajouter(axe, v);
     poserValeur('');
   };
@@ -158,31 +159,31 @@ export function PanneauReperes({ svgRef }: { svgRef: RefObject<SVGSVGElement | n
     <div className="panneau-flottant panneau-reperes" role="dialog" aria-labelledby={titre} ref={racine}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(); } }}>
       <div className="panneau-flottant-tete">
-        <h2 id={titre}>Repères</h2>
-        <button type="button" className="icone-bouton" aria-label="Fermer le panneau des repères" title="Fermer (Échap)" onClick={fermer}><Icone nom="fermer" /></button>
+        <h2 id={titre}>{t('Repères')}</h2>
+        <button type="button" className="icone-bouton" aria-label={t('Fermer le panneau des repères')} title={t('Fermer (Échap)')} onClick={fermer}><Icone nom="fermer" /></button>
       </div>
       {tous.length ? (
         <ul className="liste-reperes">
           {/* Une ligne par rang dans son axe, pas par valeur : poser une valeur ne remonte pas le champ, qui garde ainsi son focus. */}
           {tous.map((x, i) => <LigneRepere key={x.axe + (x.axe === 'h' ? i : i - (r?.h.length ?? 0))} r={x} focus={!!vise && vise.axe === x.axe && Math.abs(vise.valeur - x.valeur) < 1e-9} />)}
         </ul>
-      ) : <p className="aide">Aucun repère : tirez-en un depuis une règle, ou posez-le ici à une valeur exacte.</p>}
+      ) : <p className="aide">{t('Aucun repère : tirez-en un depuis une règle, ou posez-le ici à une valeur exacte.')}</p>}
       <div className="ajout-repere">
         <label className="champ-ligne">
-          <span>Ajouter</span>
-          <select value={axe} onChange={e => poserAxe(e.target.value === 'v' ? 'v' : 'h')} aria-label="Sens du repère à ajouter">
-            <option value="h">Horizontal</option>
-            <option value="v">Vertical</option>
+          <span>{t('Ajouter')}</span>
+          <select value={axe} onChange={e => poserAxe(e.target.value === 'v' ? 'v' : 'h')} aria-label={t('Sens du repère à ajouter')}>
+            <option value="h">{t('Horizontal')}</option>
+            <option value="v">{t('Vertical')}</option>
           </select>
         </label>
         <label className="champ-ligne nombre">
-          <span>{axe === 'h' ? 'À la hauteur' : 'À l’abscisse'}</span>
-          <input type="text" inputMode="decimal" value={valeur} placeholder={rg.unite.nom || 'unités'} onChange={e => poserValeur(e.target.value)}
+          <span>{axe === 'h' ? t('À la hauteur') : t('À l’abscisse')}</span>
+          <input type="text" inputMode="decimal" value={valeur} placeholder={rg.unite.nom ? t(rg.unite.nom) : t('unités')} onChange={e => poserValeur(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouter(); } }} />
         </label>
-        <button type="button" onClick={ajouter}>Poser le repère</button>
+        <button type="button" onClick={ajouter}>{t('Poser le repère')}</button>
       </div>
-      <p className="aide">Glisser un repère hors de la toile le retire ; Suppr retire le repère choisi.</p>
+      <p className="aide">{t('Glisser un repère hors de la toile le retire ; Suppr retire le repère choisi.')}</p>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { estIdCatalogue } from '../model/cataloguePolices.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { toutesLesPolices, type Police } from '../io/polices.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { groupesActifs } from './modele.js';
@@ -143,23 +144,25 @@ export function useActionsTexte() {
   const creer = useCallback((texte: string, police: Police, taille: number, reglages: Partial<Pick<TexteVivant, 'interlettrage' | 'interligne' | 'alignement' | 'ligatures'>>, trace: TraceTexte = 'plein') => {
     const t0 = avecTrace(nouveauTexte(texte, policeDuTexte(police), taille, [1, 0, 0, 1, 0, 0], reglages), trace === 'median');
     const b = boiteChemin(contoursDe(t0, police));
-    if (!b) { ac.dire('Ce texte ne donne aucune forme avec cette police.'); return null; }
+    if (!b) { ac.dire(t('Ce texte ne donne aucune forme avec cette police.')); return null; }
     const [vx, vy, vl, vh] = dessin.vb;
-    const t = transformerTexte(t0, translation(vx + (vl - b.l) / 2 - b.x, vy + (vh - b.h) / 2 - b.y));
-    const r = creerTexte(dessin, t, contoursDe(t, police), peintureDuTexte(natureDuTexte(t), style, largeurTrait(taille, profil)));
+    const tx0 = transformerTexte(t0, translation(vx + (vl - b.l) / 2 - b.x, vy + (vh - b.h) / 2 - b.y));
+    const r = creerTexte(dessin, tx0, contoursDe(tx0, police), peintureDuTexte(natureDuTexte(tx0), style, largeurTrait(taille, profil)));
     if (!r.id) return null;
     const id = r.id;
     ac.appliquer(() => r.dessin);
     ac.choisir([id]);
     ac.poserOutil('selection');
-    ac.dire('Texte ajouté en ' + police.nom + (natureDuTexte(t) === 'trait' ? ', en traits ouverts pour le stylo' : '') + ' : il reste modifiable, un double-clic ou Entrée le retape.');
+    ac.dire(natureDuTexte(tx0) === 'trait'
+      ? t('Texte ajouté en {police}, en traits ouverts pour le stylo : il reste modifiable, un double-clic ou Entrée le retape.', { police: police.nom })
+      : t('Texte ajouté en {police} : il reste modifiable, un double-clic ou Entrée le retape.', { police: police.nom }));
     return id;
   }, [ac, dessin.vb, profil, style]);
 
   /** Vectorise les textes choisis dans un mode : une entree d'historique, et le dit. */
   const vectoriser = useCallback(async (mode: ModeVectorisation) => {
     const textes = dessin.formes.filter(f => mo.choisies.has(f.id) && f.texte);
-    if (!textes.length) { ac.dire('Choisissez d’abord un texte à vectoriser.'); return; }
+    if (!textes.length) { ac.dire(t('Choisissez d’abord un texte à vectoriser.')); return; }
     const polices = tx.polices ?? await toutesLesPolices().catch(() => [] as Police[]);
     const lettres = new Map<string, Chemin[]>();
     for (const f of textes) {
@@ -171,14 +174,18 @@ export function useActionsTexte() {
     // l'avait, l'interface ne l'appelait pas) : le groupe est choisi, et la phrase le dit. A plat, les formes d'avant.
     const enGroupes = mode === 'lettres' && groupesActifs(dessin, ui.modele);
     const r = enGroupes ? vectoriserLettresEnGroupes(dessin, textes.map(f => f.id), options) : { ...vectoriserTextes(dessin, textes.map(f => f.id), mode, options), groupes: [] };
-    if (!r.textes) { ac.dire('Ce texte est verrouillé : déverrouillez-le pour le vectoriser.'); return; }
+    if (!r.textes) { ac.dire(t('Ce texte est verrouillé : déverrouillez-le pour le vectoriser.')); return; }
     ac.appliquer(() => r.dessin);
     // Le choix : les groupes crees, et les lettres seules d'un texte qui n'a donne qu'une forme (les autres sont dans un groupe).
     const dansUnGroupe = new Set(r.groupes.flatMap(g => r.dessin.formes.filter(f => f.parent === g).map(f => f.id)));
     ac.choisir([...r.groupes, ...r.ids.filter(id => !dansUnGroupe.has(id))]);
-    ac.dire(pluriel(r.textes, 'texte') + ' vectorisé' + (r.textes > 1 ? 's' : '') + ' (' + NOMS_MODES[mode].toLowerCase() + ') : ' + pluriel(r.ids.length, 'forme') + ' ordinaire' + (r.ids.length > 1 ? 's' : '')
-      + (r.groupes.length ? (r.groupes.length > 1 ? ', en ' + r.groupes.length + ' groupes' : ', en un groupe') : '')
-      + (r.parParties ? ', coupée' + (r.ids.length > 1 ? 's' : '') + ' par parties de lettres faute de la police' : '') + '. Ctrl+Z rend le texte modifiable.');
+    // Chaque morceau s'accorde en nombre a part, puis la phrase les assemble : le francais reste celui d'avant, mot pour mot.
+    const n = r.ids.length, plusieurs = n > 1;
+    const dits = r.textes > 1 ? t('{textes} vectorisés', { textes: pluriel(r.textes, 'texte') }) : t('{textes} vectorisé', { textes: pluriel(r.textes, 'texte') });
+    const formes = plusieurs ? t('{formes} ordinaires', { formes: pluriel(n, 'forme') }) : t('{formes} ordinaire', { formes: pluriel(n, 'forme') });
+    const groupes = r.groupes.length ? (r.groupes.length > 1 ? t(', en {n} groupes', { n: r.groupes.length }) : t(', en un groupe')) : '';
+    const parties = r.parParties ? (plusieurs ? t(', coupées par parties de lettres faute de la police') : t(', coupée par parties de lettres faute de la police')) : '';
+    ac.dire(t('{textes} ({mode}) : {formes}{groupes}{parties}. Ctrl+Z rend le texte modifiable.', { textes: dits, mode: t(NOMS_MODES[mode]).toLowerCase(), formes, groupes, parties }));
   }, [ac, dessin, lisserBooleens, mo.choisies, tx.polices, ui.modele]);
 
   /**
@@ -187,9 +194,10 @@ export function useActionsTexte() {
    */
   const remplacerPartout = useCallback((de: string, police: Police) => {
     const ids = dessin.formes.filter(f => f.texte?.police.id === de && !f.verrouille).map(f => f.id);
-    if (!ids.length) { ac.dire('Aucun texte modifiable n’emploie cette police.'); return; }
+    if (!ids.length) { ac.dire(t('Aucun texte modifiable n’emploie cette police.')); return; }
     ac.appliquer(d => ids.reduce((acc, id) => appliquerChangement(acc, id, { police }, police, profil), d));
-    ac.dire(pluriel(ids.length, 'texte') + ' recomposé' + (ids.length > 1 ? 's' : '') + ' en ' + police.nom + '. Ctrl+Z annule.');
+    const v = { textes: pluriel(ids.length, 'texte'), police: police.nom };
+    ac.dire(ids.length > 1 ? t('{textes} recomposés en {police}. Ctrl+Z annule.', v) : t('{textes} recomposé en {police}. Ctrl+Z annule.', v));
   }, [ac, dessin.formes, profil]);
 
   return { creer, vectoriser, remplacerPartout, mode: tx.mode ?? modeParDefaut(production) };

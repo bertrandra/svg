@@ -9,6 +9,7 @@ import { ajouterRepere, deplacerRepere, effacerReperes, nombreReperes, supprimer
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { texteValeur, uniteRegle, type UniteRegle } from './graduations.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { bornerLiens, LIENS_DEFAUT, type OptionsLiens } from '../engine/preparation.js';
 
 /** Un repere designe : son axe et sa valeur (au millieme, celle du dessin). */
@@ -67,19 +68,19 @@ const ContexteVerbes = createContext<ActionsRegles | null>(null);
 
 export const useRegles = (): EtatRegles => {
   const v = useContext(ContexteEtat);
-  if (!v) throw new Error('useRegles : appelé hors d’un éditeur (FournisseurRegles).');
+  if (!v) throw new Error(t('{nom} : appelé hors d’un éditeur (FournisseurRegles).', { nom: 'useRegles' }));
   return v;
 };
 export const useActionsRegles = (): ActionsRegles => {
   const v = useContext(ContexteVerbes);
-  if (!v) throw new Error('useActionsRegles : appelé hors d’un éditeur (FournisseurRegles).');
+  if (!v) throw new Error(t('{nom} : appelé hors d’un éditeur (FournisseurRegles).', { nom: 'useActionsRegles' }));
   return v;
 };
 /** Les reperes caches ou absents n'attirent pas : ce que les aimants des gestes doivent savoir (sans fournisseur : visibles). */
 export const useReperesActifs = (): boolean => useContext(ContexteEtat)?.reperesVisibles ?? true;
 
 /** Le nom d'un repere : « Repère horizontal à 40 mm ». */
-export const nomRepere = (r: RepereDesigne, u: UniteRegle): string => 'Repère ' + (r.axe === 'h' ? 'horizontal' : 'vertical') + ' à ' + texteValeur(r.valeur, u);
+export const nomRepere = (r: RepereDesigne, u: UniteRegle): string => (r.axe === 'h' ? t('Repère horizontal à {valeur}', { valeur: texteValeur(r.valeur, u) }) : t('Repère vertical à {valeur}', { valeur: texteValeur(r.valeur, u) }));
 
 /** La valeur que le dessin garde pour un repere pose a `v` : le millieme, comme reperes.ts. */
 const auMillieme = (v: number): number => { const r = Number(v.toFixed(3)); return Object.is(r, -0) ? 0 : r; };
@@ -106,21 +107,22 @@ export function FournisseurRegles({ children }: { children: ReactNode }) {
     const lu = () => moment.current;
     const changer = (f: (d: DessinSvg) => DessinSvg, phrase: string, cle: string | null = null) => { ac.appliquer(f, cle); if (phrase) ac.dire(phrase); };
     return {
-      basculerRegles: () => { const v = !lu().regles; poserRegles(v); ac.dire(v ? 'Règles affichées : tirez-en un repère.' : 'Règles masquées.'); },
-      basculerReperes: () => { const v = !lu().reperesVisibles; poserVisibles(v); if (!v) poserChoisi(null); ac.dire(v ? 'Repères affichés.' : 'Repères masqués : ils restent dans le document, et n’attirent plus.'); },
-      basculerVerrou: () => { const v = !lu().verrouilles; poserVerrouilles(v); if (v) poserChoisi(null); ac.dire(v ? 'Repères verrouillés : ils ne se déplacent plus à la souris.' : 'Repères déverrouillés.'); },
+      basculerRegles: () => { const v = !lu().regles; poserRegles(v); ac.dire(v ? t('Règles affichées : tirez-en un repère.') : t('Règles masquées.')); },
+      basculerReperes: () => { const v = !lu().reperesVisibles; poserVisibles(v); if (!v) poserChoisi(null); ac.dire(v ? t('Repères affichés.') : t('Repères masqués : ils restent dans le document, et n’attirent plus.')); },
+      basculerVerrou: () => { const v = !lu().verrouilles; poserVerrouilles(v); if (v) poserChoisi(null); ac.dire(v ? t('Repères verrouillés : ils ne se déplacent plus à la souris.') : t('Repères déverrouillés.')); },
       effacer: () => {
         const n = nombreReperes(lu().dessin);
-        if (!n) { ac.dire('Aucun repère à effacer.'); return; }
+        if (!n) { ac.dire(t('Aucun repère à effacer.')); return; }
         poserChoisi(null);
-        changer(effacerReperes, pluriel(n, 'repère') + ' ' + (n > 1 ? 'effacés' : 'effacé') + ' : Ctrl+Z les fait revenir.');
+        const reperes = pluriel(n, 'repère');
+        changer(effacerReperes, n > 1 ? t('{reperes} effacés : Ctrl+Z les fait revenir.', { reperes }) : t('{reperes} effacé : Ctrl+Z les fait revenir.', { reperes }));
       },
       ajouter: (axe, valeur) => {
         const { dessin, unite: u } = lu(), apres = ajouterRepere(dessin, axe, valeur);
-        if (apres === dessin) { ac.dire('Ce repère existe déjà, ou la valeur ne se lit pas.'); return; }
+        if (apres === dessin) { ac.dire(t('Ce repère existe déjà, ou la valeur ne se lit pas.')); return; }
         const r = { axe, valeur: auMillieme(valeur) };
         poserChoisi(r);
-        changer(() => apres, nomRepere(r, u) + ' posé.');
+        changer(() => apres, t('{repere} posé.', { repere: nomRepere(r, u) }));
       },
       deplacer: (r, valeur, geste) => {
         const base = geste?.base ?? lu().dessin;
@@ -129,7 +131,7 @@ export function FournisseurRegles({ children }: { children: ReactNode }) {
       },
       supprimer: (r, geste) => {
         poserChoisi(null);
-        changer(d => supprimerRepere(geste?.base ?? d, r.axe, r.valeur), nomRepere(r, lu().unite) + ' retiré.', geste?.cle ?? null);
+        changer(d => supprimerRepere(geste?.base ?? d, r.axe, r.valeur), t('{repere} retiré.', { repere: nomRepere(r, lu().unite) }), geste?.cle ?? null);
       },
       choisir: r => poserChoisi(r),
       poserTirage: r => poserTirage(r),

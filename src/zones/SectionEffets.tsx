@@ -15,11 +15,12 @@ import { estHex } from './aidesEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { nombreDit, phraseFlou, phraseOmbre } from './phrasesContenus.js';
 import { dessinComplet, lentilleDe } from './lentille.js';
+import { t } from '../util/i18n.js';
 
-/** La valeur ramenee a ses bornes, et la phrase qui le dit quand elle l'a ete. */
+/** La valeur ramenee a ses bornes, et la phrase qui le dit quand elle l'a ete (`quoi` : le nom du reglage, deja traduit). */
 function borne(v: number, min: number, max: number, quoi: string): { v: number; dit: string } {
-  if (v > max) return { v: max, dit: ' ' + quoi + ' au plus ' + nombreDit(max) + '.' };
-  if (v < min) return { v: min, dit: ' ' + quoi + ' au moins ' + nombreDit(min) + '.' };
+  if (v > max) return { v: max, dit: ' ' + t('{quoi} au plus {n}.', { quoi, n: nombreDit(max) }) };
+  if (v < min) return { v: min, dit: ' ' + t('{quoi} au moins {n}.', { quoi, n: nombreDit(min) }) };
   return { v, dit: '' };
 }
 
@@ -38,63 +39,63 @@ function CorpsEffets({ dessin, premier, poser, finir, annoncer }: { dessin: Dess
   const emax = Math.max(ECART_FLOU_MIN, ecartMax(vb)), dmax = decalageMax(vb);
   const flou = e?.flou, ombre = e?.ombre;
   const [code, poserCode] = useState<string | null>(null);
-  const resume = [flou ? 'flou' : '', ombre ? 'ombre' : ''].filter(Boolean).join(', ');
+  const resume = [flou ? t('flou') : '', ombre ? t('ombre') : ''].filter(Boolean).join(', ');
   const ecartFlou = (v: number) => {
-    const b = borne(v, ECART_FLOU_MIN, emax, 'Écart');
+    const b = borne(v, ECART_FLOU_MIN, emax, t('Écart'));
     poser({ flou: { ecart: b.v, ecartY: null } }, 'flou-ecart');
     annoncer(phraseFlou(b.v) + b.dit);
   };
   const ombreChamp = (r: Partial<OmbrePortee>, phrase: string, cle: string | null) => { poser({ ombre: r }, cle); annoncer(phrase); };
   const validerCode = () => {
     const hex = /^#?([0-9a-f]{6})$/i.exec((code ?? '').trim())?.[1];
-    if (hex) ombreChamp({ couleur: '#' + hex.toLowerCase() }, 'Couleur de l’ombre : #' + hex.toLowerCase() + '.', null);
+    if (hex) ombreChamp({ couleur: '#' + hex.toLowerCase() }, t('Couleur de l’ombre : {code}.', { code: '#' + hex.toLowerCase() }), null);
     poserCode(null);
   };
   return (
-    <Section titre="Effets" ouverte={!!e} note={resume || undefined}>
+    <Section titre={t('Effets')} ouverte={!!e} note={resume || undefined}>
       <label className="champ-ligne case-effet">
         <input type="checkbox" checked={!!flou} onChange={x => {
           poser({ flou: x.target.checked ? {} : null });
           annoncer(phraseFlou(x.target.checked ? flouParDefaut(vb).ecart : null));
         }} />
-        <span>Flou</span>
+        <span>{t('Flou')}</span>
       </label>
       {flou ? (
-        <div className="reglages-effet" role="group" aria-label="Réglages du flou">
+        <div className="reglages-effet" role="group" aria-label={t('Réglages du flou')}>
           <label className="champ-ligne">
-            <span>Écart</span>
+            <span>{t('Écart')}</span>
             <input type="range" min={0} max={100} step={1} value={Math.round(Math.sqrt(flou.ecart / emax) * 100)} aria-valuetext={nombreDit(flou.ecart)}
               onChange={x => { const t = Number(x.target.value) / 100; ecartFlou(Math.max(ECART_FLOU_MIN, Math.round(t * t * emax * 1000) / 1000)); }} onPointerUp={finir} onBlur={finir} />
           </label>
-          <Nombre libelle="Écart du flou" valeur={flou.ecart} poser={v => { ecartFlou(v); finir(); }} />
+          <Nombre libelle={t('Écart du flou')} valeur={flou.ecart} poser={v => { ecartFlou(v); finir(); }} />
           {flou.ecartY !== undefined
-            ? <p className="aide">Flou inégal : {nombreDit(flou.ecart)} × {nombreDit(flou.ecartY)}. Régler l’écart le rend uniforme.</p>
+            ? <p className="aide">{t('Flou inégal : {x} × {y}. Régler l’écart le rend uniforme.', { x: nombreDit(flou.ecart), y: nombreDit(flou.ecartY) })}</p>
             : null}
         </div>
       ) : null}
       <label className="champ-ligne case-effet">
         <input type="checkbox" checked={!!ombre} onChange={x => { poser({ ombre: x.target.checked ? {} : null }); annoncer(phraseOmbre(x.target.checked)); }} />
-        <span>Ombre portée</span>
+        <span>{t('Ombre portée')}</span>
       </label>
       {ombre ? (
-        <div className="reglages-effet" role="group" aria-label="Réglages de l’ombre portée">
+        <div className="reglages-effet" role="group" aria-label={t('Réglages de l’ombre portée')}>
           <div className="grille-2">
-            <Nombre libelle="Décalage X" valeur={ombre.dx} poser={v => { const b = borne(v, -dmax, dmax, 'Décalage'); ombreChamp({ dx: b.v }, 'Décalage horizontal de l’ombre : ' + nombreDit(b.v) + '.' + b.dit, null); }} />
-            <Nombre libelle="Décalage Y" valeur={ombre.dy} poser={v => { const b = borne(v, -dmax, dmax, 'Décalage'); ombreChamp({ dy: b.v }, 'Décalage vertical de l’ombre : ' + nombreDit(b.v) + '.' + b.dit, null); }} />
+            <Nombre libelle={t('Décalage X')} valeur={ombre.dx} poser={v => { const b = borne(v, -dmax, dmax, t('Décalage')); ombreChamp({ dx: b.v }, t('Décalage horizontal de l’ombre : {n}.', { n: nombreDit(b.v) }) + b.dit, null); }} />
+            <Nombre libelle={t('Décalage Y')} valeur={ombre.dy} poser={v => { const b = borne(v, -dmax, dmax, t('Décalage')); ombreChamp({ dy: b.v }, t('Décalage vertical de l’ombre : {n}.', { n: nombreDit(b.v) }) + b.dit, null); }} />
           </div>
-          <Nombre libelle="Flou de l’ombre" valeur={ombre.ecart} poser={v => { const b = borne(v, 0, ecartMax(vb), 'Flou'); ombreChamp({ ecart: b.v }, 'Flou de l’ombre : ' + nombreDit(b.v) + '.' + b.dit, null); }} />
+          <Nombre libelle={t('Flou de l’ombre')} valeur={ombre.ecart} poser={v => { const b = borne(v, 0, ecartMax(vb), t('Flou')); ombreChamp({ ecart: b.v }, t('Flou de l’ombre : {n}.', { n: nombreDit(b.v) }) + b.dit, null); }} />
           <div className="champ-ligne">
-            <span>Couleur</span>
-            <input type="color" aria-label="Couleur de l’ombre" value={estHex(ombre.couleur) ? ombre.couleur : '#000000'} onChange={x => poser({ ombre: { couleur: x.target.value } }, 'ombre-couleur')} onBlur={finir} />
-            <input type="text" aria-label="Couleur de l’ombre (code)" size={8} value={code ?? ombre.couleur} onChange={x => poserCode(x.target.value)} onBlur={validerCode} onKeyDown={x => { if (x.key === 'Enter') validerCode(); }} />
+            <span>{t('Couleur')}</span>
+            <input type="color" aria-label={t('Couleur de l’ombre')} value={estHex(ombre.couleur) ? ombre.couleur : '#000000'} onChange={x => poser({ ombre: { couleur: x.target.value } }, 'ombre-couleur')} onBlur={finir} />
+            <input type="text" aria-label={t('Couleur de l’ombre (code)')} size={8} value={code ?? ombre.couleur} onChange={x => poserCode(x.target.value)} onBlur={validerCode} onKeyDown={x => { if (x.key === 'Enter') validerCode(); }} />
           </div>
           <label className="champ-ligne">
-            <span>Opacité</span>
-            <input type="range" min={0} max={100} step={1} value={Math.round(ombre.opacite * 100)} aria-valuetext={Math.round(ombre.opacite * 100) + ' %'}
+            <span>{t('Opacité')}</span>
+            <input type="range" min={0} max={100} step={1} value={Math.round(ombre.opacite * 100)} aria-valuetext={t('{n} %', { n: Math.round(ombre.opacite * 100) })}
               onChange={x => poser({ ombre: { opacite: Number(x.target.value) / 100 } }, 'ombre-opacite')} onPointerUp={finir} onBlur={finir} />
-            <span className="aide">{Math.round(ombre.opacite * 100)} %</span>
+            <span className="aide">{t('{n} %', { n: Math.round(ombre.opacite * 100) })}</span>
           </label>
-          <p className="aide">L’ombre ne tourne pas avec la forme.</p>
+          <p className="aide">{t('L’ombre ne tourne pas avec la forme.')}</p>
         </div>
       ) : null}
     </Section>
@@ -112,6 +113,6 @@ export function useVeilleFlous(): void {
   useEffect(() => {
     const a = avant.current;
     avant.current = mo.dessin;
-    if (flousApproches(a, mo.dessin) > 0) ac.dire(MSG_EFFETS_OPERATIONS.approche);
+    if (flousApproches(a, mo.dessin) > 0) ac.dire(t(MSG_EFFETS_OPERATIONS.approche));
   }, [mo.dessin, ac]);
 }

@@ -23,6 +23,7 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie, type Saisie } from './contexteSaisie.js';
 import { usePolices } from './contexteTexte.js';
 import { dessine, frapper, PHRASE_DEBUT_SAISIE, PHRASE_POLICES_EN_CHARGEMENT, phraseFinSaisie, policeNouveauTexte, tailleNouveauTexte, texteNeuf } from './saisie.js';
+import { t } from '../util/i18n.js';
 
 export function SaisieTexte({ svgRef }: { svgRef: RefObject<SVGSVGElement | null> }) {
   const sx = useSaisie();
@@ -99,7 +100,7 @@ function useFrappe(saisie: Saisie, svgRef: RefObject<SVGSVGElement | null>) {
     }
     ac.finir();
     sx.fermer();
-    ac.dire(!p && R.valeur.trim() ? PHRASE_POLICES_EN_CHARGEMENT : phraseFinSaisie({ cree: R.cree !== null, retire, vide, avant: debut, apres: R.valeur, police: p?.nom ?? '' }));
+    ac.dire(!p && R.valeur.trim() ? t(PHRASE_POLICES_EN_CHARGEMENT) : phraseFinSaisie({ cree: R.cree !== null, retire, vide, avant: debut, apres: R.valeur, police: p?.nom ?? '' }));
     if (!vide && f) { ac.choisir([f.id]); if (ui.outil !== 'selection') ac.poserOutil('selection'); }
     if (focusToile) svgRef.current?.focus({ preventScroll: true });
   };
@@ -209,7 +210,7 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
     c.focus({ preventScroll: true });
     c.setSelectionRange(c.value.length, c.value.length);
     lirePlage();
-    ac.annoncer(PHRASE_DEBUT_SAISIE);
+    ac.annoncer(t(PHRASE_DEBUT_SAISIE));
   }, []);
   // Un clic dans un texte deja pose : le curseur y va des que la mise en page est connue (la fonte peut arriver apres).
   useEffect(() => {
@@ -256,8 +257,8 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
   const { zoom, x: vx, y: vy } = ui.vues.vue;
   const geo = ts.pose ? geometriePose(ts.pose, plage) : ts.mep && ts.t ? geometrie(ts.mep, ts.t.matrice, plage) : null;
   const position = positionChamp(geo?.cadre ?? null, saisie.point ?? ts.forme?.texte?.matrice ?? null, ui.vues.vue, svgRef.current);
-  const texteAide = ts.absente ? 'Police absente : choisissez-en une dans l’inspecteur.' : !ts.police ? 'Chargement des polices…'
-    : 'Entrée : à la ligne. Échap ou Ctrl+Entrée : terminer. Alt+F10 : la barre de texte. Ctrl+Z annule la frappe.';
+  const texteAide = ts.absente ? t('Police absente : choisissez-en une dans l’inspecteur.') : !ts.police ? t('Chargement des polices…')
+    : t('Entrée : à la ligne. Échap ou Ctrl+Entrée : terminer. Alt+F10 : la barre de texte. Ctrl+Z annule la frappe.');
   return (
     <>
       <svg className="saisie-calque" aria-hidden="true" focusable="false">
@@ -268,7 +269,7 @@ function SaisieOuverte({ saisie, svgRef }: { saisie: Saisie; svgRef: RefObject<S
         </g>
       </svg>
       <textarea ref={champ} className="saisie-champ" style={position} value={valeur} wrap="off" spellCheck={false} autoComplete="off" readOnly={ts.absente}
-        aria-label="Texte sur la toile" aria-describedby={aide} onChange={e => taper(e.target.value)} onKeyDown={touche} onSelect={lirePlage} />
+        aria-label={t('Texte sur la toile')} aria-describedby={aide} onChange={e => taper(e.target.value)} onKeyDown={touche} onSelect={lirePlage} />
       <span id={aide} className="sr-only">{texteAide}</span>
     </>
   );

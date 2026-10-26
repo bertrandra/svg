@@ -15,6 +15,7 @@ import {
 } from './phrasesContenus.js';
 import { lentilleDe, niveauEdition } from './lentille.js';
 import type { ActionsEditeur, ContexteEdition } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 export type ActionsContenus = Pick<ActionsEditeur, 'creerDecoupe' | 'libererDecoupe' | 'creerMasque' | 'inverserMasque' | 'libererMasque' | 'poserEffets' | 'insererImage' | 'modifierContenu'>;
 
@@ -53,12 +54,12 @@ export function actionsContenus(
     const e = lire(), lent = lentilleDe(e.contexte);
     if (lent) return lent.genre === champ ? { id: lent.groupe, dessin: e.complet ?? e.dessin } : { raison: RAISONS_LENTILLE.autreContenu };
     const id = porteurDe(e.dessin, e.sel, niveauEdition(e.contexte), champ);
-    return id === null ? { raison: champ === 'decoupe' ? 'Choisissez un groupe découpé.' : 'Choisissez un groupe masqué.' } : { id, dessin: e.dessin };
+    return id === null ? { raison: champ === 'decoupe' ? t('Choisissez un groupe découpé.') : t('Choisissez un groupe masqué.') } : { id, dessin: e.dessin };
   };
   /** Vrai, et la raison dite, quand on est dans une decoupe : une decoupe ne garde que la geometrie. */
   const refuseDansDecoupe = (): boolean => {
     if (lentilleDe(lire().contexte)?.genre !== 'decoupe') return false;
-    dire(RAISONS_LENTILLE.decoupe);
+    dire(t(RAISONS_LENTILLE.decoupe));
     return true;
   };
   /** Apres une liberation : le groupe devient le contexte, ce qui revient est choisi, pour le modifier aussitot. */
@@ -104,7 +105,7 @@ export function actionsContenus(
       const r = inverserMasque(v.dessin, v.id);
       if (r.erreur) { dire(r.erreur); return; }
       appliquerComplet(() => r.dessin);
-      dire(PHRASE_MASQUE_INVERSE);
+      dire(t(PHRASE_MASQUE_INVERSE));
     },
     libererMasque: () => {
       const v = viser('masque');
@@ -140,10 +141,10 @@ export function actionsContenus(
     modifierContenu: (genre, vise) => {
       // L'etat lu une fois, avant de le changer : le dessin est ici le dessin complet (on n'est dans aucune lentille).
       const { dessin, sel, contexte, outil } = lire();
-      if (lentilleDe(contexte)) { dire(RAISONS_LENTILLE.dejaDedans); return false; }
+      if (lentilleDe(contexte)) { dire(t(RAISONS_LENTILLE.dejaDedans)); return false; }
       const groupe = vise ?? porteurDe(dessin, sel, niveauEdition(contexte), genre);
       const vue = groupe === null ? null : contenuEnDessin(dessin, groupe, genre);
-      if (groupe === null || !vue) { dire(genre === 'decoupe' ? RAISONS_LENTILLE.modifierDecoupe : RAISONS_LENTILLE.modifierMasque); return false; }
+      if (groupe === null || !vue) { dire(t(genre === 'decoupe' ? RAISONS_LENTILLE.modifierDecoupe : RAISONS_LENTILLE.modifierMasque)); return false; }
       poserContexteBrut({ groupe, dans: genre });
       // Le premier element du contenu est choisi : les fleches le deplacent aussitot, Tab parcourt les autres (ADR-0011).
       const premier = formeVoisine(vue, [], 1, false, null);

@@ -7,7 +7,8 @@ import { useGestes } from './Gestes.js';
 import { cheminDe, Grille, surcouche } from './Toile.js';
 import { AlertesToile, GabaritTapis } from './Production.js';
 import { useTactile } from './Vue.js';
-import { insecables } from '../util/texte.js';
+import { insecables, pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { SaisieTexte } from './SaisieTexte.js';
 import { FondPrise, SurvolToile } from './PriseToile.js';
 import { useSaisie } from './contexteSaisie.js';
@@ -41,8 +42,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
   return (
     <div className={'editeur-toile fond-' + fond} ref={toile} {...depot}>
       {/* Ce que la toile dit en prenant le focus, dont la sortie (WCAG 2.1.2) : Tab quitte la toile apres la derniere forme, ou Echap puis Tab. */}
-      <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Entrée : modifier le texte choisi, ou les points d’une forme. Sur une forme à dégradé, Tab atteint ses poignées. Échap puis Tab : quitter la toile.</span>
-      <svg ref={svgRef} id={idToile} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={'Plan de travail de ' + titre + ' : ' + dessin.formes.length + ' forme' + (dessin.formes.length > 1 ? 's' : '')} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic} onMouseDown={gestes.sourisBas}>
+      <span id={aide} className="sr-only">{t('Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Entrée : modifier le texte choisi, ou les points d’une forme. Sur une forme à dégradé, Tab atteint ses poignées. Échap puis Tab : quitter la toile.')}</span>
+      <svg ref={svgRef} id={idToile} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={t('Plan de travail de {titre} : {formes}', { titre, formes: pluriel(dessin.formes.length, 'forme') })} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic} onMouseDown={gestes.sourisBas}>
         <FondPrise />
         <g transform={`translate(${vues.vue.x} ${vues.vue.y}) scale(${z})`}>
           <defs>
@@ -83,8 +84,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
       {/* Un plan vide (ADR-0019) : le premier geste, sur la toile meme. Les clics passent a travers ; l'inspecteur le dit aux lecteurs d'ecran. */}
       {dessin.formes.length || ui.outil !== 'selection' ? null : (
         mo.h.passe.length
-          ? <p className="toile-vide" aria-hidden="true" data-vide="vide">{insecables('Le plan est vide : Ctrl+Z fait revenir les formes, ou le rectangle (R) en trace une neuve.')}</p>
-          : <p className="toile-vide" aria-hidden="true" data-vide="premiere-fois">{insecables('Le plan est vide : le rectangle (R) y trace une première forme.')}</p>
+          ? <p className="toile-vide" aria-hidden="true" data-vide="vide">{insecables(t('Le plan est vide : Ctrl+Z fait revenir les formes, ou le rectangle (R) en trace une neuve.'))}</p>
+          : <p className="toile-vide" aria-hidden="true" data-vide="premiere-fois">{insecables(t('Le plan est vide : le rectangle (R) y trace une première forme.'))}</p>
       )}
     </div>
   );

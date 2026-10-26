@@ -11,19 +11,20 @@ import type { EtatLu, Leviers } from './actions.js';
 import { phraseArrondi, phraseCasse, phraseContourEnForme, phraseConversion, phraseDecalage, phraseInversion, phraseJonction, phraseSuppressionFidele } from './phrasesTrace.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { avecVectorisation } from './phrasesTexte.js';
+import { t } from '../util/i18n.js';
 
 export type ActionsTrace = Pick<ActionsEditeur, 'contourEnForme' | 'decalerContour' | 'hachurer' | 'arrondirAngles' | 'convertirNoeud' | 'casserNoeud' | 'joindreSelection' | 'supprimerNoeudFidele' | 'inverserSens'>;
 
-const AUCUNE = 'Choisissez d’abord une forme.';
+const aucune = (): string => t('Choisissez d’abord une forme.');
 
 export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
   const { appliquer, choisir, dire } = l;
   return {
     contourEnForme: () => {
       const { dessin, sel } = lire();
-      if (!sel.length) { dire(AUCUNE); return; }
+      if (!sel.length) { dire(aucune()); return; }
       const r = etendreTraits(dessin, sel, { lisser: true });
-      if (!r.etendus) { dire(r.erreur ?? 'Aucun contour à transformer.'); return; }
+      if (!r.etendus) { dire(r.erreur ?? t('Aucun contour à transformer.')); return; }
       appliquer(() => r.dessin);
       choisir(r.ids);
       l.poserPoint(null);
@@ -31,10 +32,10 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     },
     decalerContour: (distance, jonction) => {
       const { dessin, sel } = lire();
-      if (!sel.length) { dire(AUCUNE); return; }
-      if (!Number.isFinite(distance) || distance === 0) { dire('Donnez une distance de décalage, positive vers l’extérieur, négative vers l’intérieur.'); return; }
+      if (!sel.length) { dire(aucune()); return; }
+      if (!Number.isFinite(distance) || distance === 0) { dire(t('Donnez une distance de décalage, positive vers l’extérieur, négative vers l’intérieur.')); return; }
       const r = decalerFormes(dessin, sel, distance, jonction, { lisser: true });
-      if (r.dessin === dessin) { dire(r.erreur ?? 'Rien à décaler.'); return; }
+      if (r.dessin === dessin) { dire(r.erreur ?? t('Rien à décaler.')); return; }
       appliquer(() => r.dessin);
       choisir(sel.filter(id => !r.retirees.includes(id)));
       l.poserPoint(null);
@@ -42,19 +43,20 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     },
     hachurer: angle => {
       const { dessin, sel, production } = lire();
-      if (!sel.length) { dire(AUCUNE); return; }
+      if (!sel.length) { dire(aucune()); return; }
       // L'ecart des lignes : la largeur du stylo du contexte, sinon un deux-centieme du plan (des lignes visibles a l'ecran).
       const largeur = resoudreProfil(production)?.largeurStylo ?? Math.max(dessin.vb[2], dessin.vb[3]) / 200;
       const r = hachurerFormes(dessin, sel, largeur, Number.isFinite(angle) ? angle : 45);
-      if (!r.hachurees) { dire(r.erreur ?? 'Aucune forme pleine à hachurer : les hachures remplacent un fond.'); return; }
+      if (!r.hachurees) { dire(r.erreur ?? t('Aucune forme pleine à hachurer : les hachures remplacent un fond.')); return; }
       appliquer(() => r.dessin);
       l.poserPoint(null);
-      dire(avecVectorisation(pluriel(r.hachurees, 'forme') + ' hachurée' + (r.hachurees > 1 ? 's' : '') + ' à ' + (Number.isFinite(angle) ? angle : 45) + ' degrés : des lignes et le pourtour, sans fond.', dessin, sel));
+      const v = { formes: pluriel(r.hachurees, 'forme'), angle: Number.isFinite(angle) ? angle : 45 };
+      dire(avecVectorisation(r.hachurees > 1 ? t('{formes} hachurées à {angle} degrés : des lignes et le pourtour, sans fond.', v) : t('{formes} hachurée à {angle} degrés : des lignes et le pourtour, sans fond.', v), dessin, sel));
     },
     arrondirAngles: rayon => {
       const { dessin, sel } = lire();
-      if (!sel.length) { dire(AUCUNE); return; }
-      if (!(rayon > 0)) { dire('Donnez un rayon positif.'); return; }
+      if (!sel.length) { dire(aucune()); return; }
+      if (!(rayon > 0)) { dire(t('Donnez un rayon positif.')); return; }
       const r = arrondirFormes(dessin, sel, rayon);
       if (r.dessin === dessin) { dire(phraseArrondi(0, 0, rayon, 0)); return; }
       appliquer(() => r.dessin);
@@ -63,7 +65,7 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     },
     convertirNoeud: type => {
       const { formeSeule, point } = lire();
-      if (!formeSeule || point === null) { dire('Choisissez un point à convertir.'); return; }
+      if (!formeSeule || point === null) { dire(t('Choisissez un point à convertir.')); return; }
       const r = convertirNoeud(formeSeule.d, point, type);
       if ('erreur' in r) { dire(r.erreur); return; }
       const change = r.chemin !== formeSeule.d;
@@ -72,7 +74,7 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     },
     casserNoeud: () => {
       const { dessin, formeSeule, point } = lire();
-      if (!formeSeule || point === null) { dire('Choisissez un point où casser le tracé.'); return; }
+      if (!formeSeule || point === null) { dire(t('Choisissez un point où casser le tracé.')); return; }
       const r = casserForme(dessin, formeSeule.id, point);
       if ('erreur' in r) { dire(r.erreur); return; }
       appliquer(() => r.dessin);
@@ -84,7 +86,7 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     joindreSelection: () => {
       const { dessin, sel } = lire();
       const r = joindreExtremites(dessin, sel);
-      if (!r.id || !r.genre) { dire(r.erreur ?? 'Rien à joindre.'); return; }
+      if (!r.id || !r.genre) { dire(r.erreur ?? t('Rien à joindre.')); return; }
       appliquer(() => r.dessin);
       choisir([r.id]);
       l.poserPoint(null);
@@ -92,19 +94,19 @@ export function actionsTrace(lire: () => EtatLu, l: Leviers): ActionsTrace {
     },
     supprimerNoeudFidele: () => {
       const { dessin, formeSeule, point } = lire();
-      if (!formeSeule || point === null) { dire('Choisissez un point à retirer.'); return; }
+      if (!formeSeule || point === null) { dire(t('Choisissez un point à retirer.')); return; }
       const tolerance = Math.max(dessin.vb[2], dessin.vb[3]) / 1000;
       const r = supprimerNoeudEnGardantLaCourbe(dessin, formeSeule.id, point, tolerance);
       if ('erreur' in r) { dire(r.erreur); return; }
       appliquer(() => r);
       l.poserPoint(null);
-      dire(phraseSuppressionFidele);
+      dire(t(phraseSuppressionFidele));
     },
     inverserSens: () => {
       const { dessin, sel } = lire();
-      if (!sel.length) { dire(AUCUNE); return; }
+      if (!sel.length) { dire(aucune()); return; }
       const r = inverserSens(dessin, sel);
-      if (r === dessin) { dire('Rien à inverser : les formes sont verrouillées.'); return; }
+      if (r === dessin) { dire(t('Rien à inverser : les formes sont verrouillées.')); return; }
       appliquer(() => r);
       dire(avecVectorisation(phraseInversion(sel.length), dessin, sel));
     }

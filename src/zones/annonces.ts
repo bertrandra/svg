@@ -6,6 +6,7 @@ import { ancre, boiteDe, FICHES_FORMES, type DessinSvg, type Forme } from '../en
 import { detailsGroupe, genreDeForme, mesuresDites, nombreFr, nomDeGroupe, numeroDeForme, peintureDite } from '../engine/description.js';
 import { boiteDeDeuxCoins, indicesDePoints, type PointPlan } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import type { Outil } from './typesEditeur.js';
 
 /** Une annonce a faire : le texte, et un rang qui change a chaque fois, meme pour un texte identique. */
@@ -17,48 +18,50 @@ export interface Annonce { texte: string; rang: number }
  * « 3 éléments sélectionnés. ». Une selection de feuilles se dit comme avant.
  */
 export function phraseSelection(d: DessinSvg, sel: readonly string[], ajout = false): string {
-  if (!sel.length) return 'Sélection vidée.';
+  if (!sel.length) return t('Sélection vidée.');
   const groupe = d.groupes ? sel.find(id => Object.prototype.hasOwnProperty.call(d.groupes, id)) : undefined;
   if (groupe !== undefined && d.groupes) {
     const g = d.groupes[groupe];
-    if (sel.length > 1 || !g) return pluriel(sel.length, 'élément') + ' sélectionnés.';
-    const nom = nomDeGroupe(g);
-    return (g.nom ? 'Groupe « ' + nom + ' »' : nom) + ' sélectionné : ' + detailsGroupe(d, g) + '.';
+    if (sel.length > 1 || !g) return t('{elements} sélectionnés.', { elements: pluriel(sel.length, 'élément') });
+    const v = { nom: nomDeGroupe(g), details: detailsGroupe(d, g) };
+    return g.nom ? t('Groupe « {nom} » sélectionné : {details}.', v) : t('{nom} sélectionné : {details}.', v);
   }
   const choisies = d.formes.filter(f => sel.includes(f.id));
   const f = choisies[0];
-  if (choisies.length !== 1 || !f) return pluriel(sel.length, 'forme') + ' sélectionnée' + (sel.length > 1 ? 's' : '') + '.';
+  if (choisies.length !== 1 || !f) return sel.length > 1 ? t('{formes} sélectionnées.', { formes: pluriel(sel.length, 'forme') }) : t('{formes} sélectionnée.', { formes: pluriel(sel.length, 'forme') });
   const mesures = mesuresDites(f);
-  return 'Forme ' + numeroDeForme(f) + (ajout ? ' ajoutée et sélectionnée' : ' sélectionnée') + ' : ' + genreDeForme(f) + ', ' + peintureDite(f) + (mesures ? ', ' + mesures : '') + '.';
+  const v = { numero: numeroDeForme(f), genre: t(genreDeForme(f)), peinture: peintureDite(f), mesures: mesures ? ', ' + mesures : '' };
+  return ajout ? t('Forme {numero} ajoutée et sélectionnée : {genre}, {peinture}{mesures}.', v) : t('Forme {numero} sélectionnée : {genre}, {peinture}{mesures}.', v);
 }
 
 /** Ce que l'outil change au clavier : la phrase dite quand on le prend. */
 export function phraseOutil(outil: Outil): string {
   switch (outil) {
-    case 'selection': return 'Outil sélection : Tab passe à la forme suivante, flèches déplacent, Alt et flèches redimensionnent, Ctrl et flèches tournent.';
-    case 'points': return 'Outil points : Tab passe au point suivant, flèches déplacent le point.';
-    case 'main': return 'Outil main : déplacer la vue à la souris ou au doigt.';
-    case 'texte': return 'Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.';
-    case 'plume': return 'Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.';
-    case 'cadre': return 'Outil cadre de sélection : glissez, même sur une forme ; au clavier, flèches déplacent le réticule, Espace pose un coin, Entrée prend les formes du cadre, Maj et Entrée les ajoute.';
-    case 'lasso': return 'Outil lasso : entourez les formes à main levée ; au clavier, flèches déplacent le réticule, Espace pose un point, Entrée ferme le lasso et prend les formes.';
-    default: return 'Outil ' + FICHES_FORMES[outil].nom + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
+    case 'selection': return t('Outil sélection : Tab passe à la forme suivante, flèches déplacent, Alt et flèches redimensionnent, Ctrl et flèches tournent.');
+    case 'points': return t('Outil points : Tab passe au point suivant, flèches déplacent le point.');
+    case 'main': return t('Outil main : déplacer la vue à la souris ou au doigt.');
+    case 'texte': return t('Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.');
+    case 'plume': return t('Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.');
+    case 'cadre': return t('Outil cadre de sélection : glissez, même sur une forme ; au clavier, flèches déplacent le réticule, Espace pose un coin, Entrée prend les formes du cadre, Maj et Entrée les ajoute.');
+    case 'lasso': return t('Outil lasso : entourez les formes à main levée ; au clavier, flèches déplacent le réticule, Espace pose un point, Entrée ferme le lasso et prend les formes.');
+    default: return t('Outil {nom} : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.', { nom: t(FICHES_FORMES[outil].nom) });
   }
 }
 
-const GENRE_POINT: Record<string, string> = { M: 'départ', L: 'angle', C: 'courbe', Q: 'courbe' };
+// Dits a l'appel : la langue n'est posee qu'apres le chargement des modules.
+const GENRE_POINT: Record<string, () => string> = { M: () => t('départ'), L: () => t('angle'), C: () => t('courbe'), Q: () => t('courbe') };
 
 /** « Point 3 sur 8 : courbe, à 40, 60. » : le rang parmi les points de la forme, sa nature, sa place. */
 export function phrasePoint(f: Forme, indice: number): string {
   const c = f.d[indice], a = c ? ancre(c) : null, pts = indicesDePoints(f.d);
-  if (!c || !a) return 'Aucun point actif.';
-  return 'Point ' + (pts.indexOf(indice) + 1) + ' sur ' + pts.length + ' : ' + (GENRE_POINT[c.c] ?? 'point') + ', à ' + nombreFr(a[0]) + ', ' + nombreFr(a[1]) + '.';
+  if (!c || !a) return t('Aucun point actif.');
+  return t('Point {rang} sur {total} : {genre}, à {x}, {y}.', { rang: pts.indexOf(indice) + 1, total: pts.length, genre: GENRE_POINT[c.c]?.() ?? t('point'), x: nombreFr(a[0]), y: nombreFr(a[1]) });
 }
 
 /** Ou se trouve la selection apres un deplacement : « À 41, 60. » */
 export function phrasePosition(d: DessinSvg, ids: readonly string[]): string {
   const b = boiteDe(d, ids);
-  return b ? 'À ' + nombreFr(b.x) + ', ' + nombreFr(b.y) + '.' : '';
+  return b ? t('À {x}, {y}.', { x: nombreFr(b.x), y: nombreFr(b.y) }) : '';
 }
 
 /** La taille de la selection apres un redimensionnement : « 130 × 80. » */
@@ -68,39 +71,47 @@ export function phraseTaille(d: DessinSvg, ids: readonly string[]): string {
 }
 
 /** Une rotation : « Tournée de 15° vers la droite. » */
-export const phraseRotation = (degres: number): string => 'Tournée de ' + nombreFr(Math.abs(degres)) + '° vers la ' + (degres > 0 ? 'droite' : 'gauche') + '.';
+export const phraseRotation = (degres: number): string => (degres > 0 ? t('Tournée de {n}° vers la droite.', { n: nombreFr(Math.abs(degres)) }) : t('Tournée de {n}° vers la gauche.', { n: nombreFr(Math.abs(degres)) }));
 
 /** Le reticule du clavier, dit par sa place sur le plan. */
-export const phraseReticule = (p: PointPlan): string => 'Réticule à ' + nombreFr(p[0]) + ', ' + nombreFr(p[1]) + '.';
+export const phraseReticule = (p: PointPlan): string => t('Réticule à {x}, {y}.', { x: nombreFr(p[0]), y: nombreFr(p[1]) });
 
 /** Le zoom, en pourcentage entier. */
-export const phraseZoom = (zoom: number): string => 'Zoom ' + Math.round(zoom * 100) + ' %.';
+export const phraseZoom = (zoom: number): string => t('Zoom {n} %.', { n: Math.round(zoom * 100) });
 
 /** Le premier coin d'une forme a deux coins vient d'etre pose : de quoi continuer sans voir l'ecran. */
 export const phrasePremierCoin = (p: PointPlan): string =>
-  'Premier coin posé à ' + nombreFr(p[0]) + ', ' + nombreFr(p[1]) + '. Flèches : déplacer l’autre coin. Espace ou Entrée : le poser. Échap : annuler.';
+  t('Premier coin posé à {x}, {y}. Flèches : déplacer l’autre coin. Espace ou Entrée : le poser. Échap : annuler.', { x: nombreFr(p[0]), y: nombreFr(p[1]) });
 
 /** L'autre coin se deplace : sa place et ce que la forme mesure maintenant, « Coin opposé à 80, 90 : 40 × 30. » */
 export function phraseCoinOppose(premier: PointPlan, autre: PointPlan): string {
   const b = boiteDeDeuxCoins(premier, autre);
-  return 'Coin opposé à ' + nombreFr(autre[0]) + ', ' + nombreFr(autre[1]) + ' : ' + nombreFr(b.l) + ' × ' + nombreFr(b.h) + '.';
+  return t('Coin opposé à {x}, {y} : {l} × {h}.', { x: nombreFr(autre[0]), y: nombreFr(autre[1]), l: nombreFr(b.l), h: nombreFr(b.h) });
 }
 
-export const PHRASE_COIN_ANNULE = 'Premier coin annulé : l’outil reste pris.';
-export const PHRASE_COINS_TROP_PROCHES = 'Les deux coins sont trop proches : déplacez l’autre coin, ou Échap annule.';
+export const phraseCoinAnnule = (): string => t('Premier coin annulé : l’outil reste pris.');
+export const phraseCoinsTropProches = (): string => t('Les deux coins sont trop proches : déplacez l’autre coin, ou Échap annule.');
+// Les constantes d'avant, pour leurs appelants (ClavierToile.ts) : evaluees au chargement du module, donc toujours en francais ; un
+// appelant qui veut la langue de la session passe par les fonctions ci-dessus (ou par `t` sur la constante).
+export const PHRASE_COIN_ANNULE = phraseCoinAnnule();
+export const PHRASE_COINS_TROP_PROCHES = phraseCoinsTropProches();
 
 /** Ce que Maj et Page suivante, ou Espace, ont fait a la selection : « Forme 4 ajoutée : 3 formes sélectionnées. » */
 export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', total: number): string {
   // Un groupe d'un dessin riche (`g3`, ADR-0012, etape 2) se dit « Groupe 3 », au masculin ; une forme, comme avant.
   if (/^g\d+$/.test(id)) {
-    const dit = { ajoutee: 'ajouté', retiree: 'retiré', deja: 'déjà sélectionné' }[etat];
-    const reste = total === 0 ? 'plus rien de sélectionné' : pluriel(total, 'élément') + ' sélectionné' + (total > 1 ? 's' : '');
-    return 'Groupe ' + id.slice(1) + ' ' + dit + ' : ' + reste + '.';
+    const dit = etat === 'ajoutee' ? t('ajouté') : etat === 'retiree' ? t('retiré') : t('déjà sélectionné');
+    const elements = pluriel(total, 'élément');
+    const reste = total === 0 ? t('plus rien de sélectionné') : total > 1 ? t('{elements} sélectionnés', { elements }) : t('{elements} sélectionné', { elements });
+    return t('Groupe {n} {dit} : {reste}.', { n: id.slice(1), dit, reste });
   }
-  const dit = { ajoutee: 'ajoutée', retiree: 'retirée', deja: 'déjà sélectionnée' }[etat];
-  const reste = total === 0 ? 'plus aucune forme sélectionnée' : pluriel(total, 'forme') + ' sélectionnée' + (total > 1 ? 's' : '');
-  return 'Forme ' + id.slice(1) + ' ' + dit + ' : ' + reste + '.';
+  const dit = etat === 'ajoutee' ? t('ajoutée') : etat === 'retiree' ? t('retirée') : t('déjà sélectionnée');
+  const formes = pluriel(total, 'forme');
+  const reste = total === 0 ? t('plus aucune forme sélectionnée') : total > 1 ? t('{formes} sélectionnées', { formes }) : t('{formes} sélectionnée', { formes });
+  return t('Forme {n} {dit} : {reste}.', { n: id.slice(1), dit, reste });
 }
 
 /** Espace sans forme au curseur : dire comment en avoir une. */
-export const PHRASE_SANS_CURSEUR = 'Aucune forme au curseur : Page suivante en choisit une, Maj et Page suivante en ajoute une.';
+export const phraseSansCurseur = (): string => t('Aucune forme au curseur : Page suivante en choisit une, Maj et Page suivante en ajoute une.');
+/** La constante d'avant, pour ClavierSelection.ts : evaluee au chargement, donc en francais (voir PHRASE_COIN_ANNULE). */
+export const PHRASE_SANS_CURSEUR = phraseSansCurseur();

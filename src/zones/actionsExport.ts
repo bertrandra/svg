@@ -15,6 +15,7 @@ import { versPng } from '../io/image.js';
 import { EXTENSIONS, versRaster, type FormatRaster } from '../io/rasters.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { svgDocument } from './actionsProduction.js';
+import { t } from '../util/i18n.js';
 
 export interface ContexteExport {
   /** Le dessin lu ; null si le SVG donne ne se lit pas (les formats vectoriels sont alors indisponibles). */
@@ -46,7 +47,7 @@ export const svgFinal = (c: ContexteExport): string => (c.lu ? svgExporte(c.lu, 
 export const exporterSvg = (c: ContexteExport) => remettre(c, c.nom + '.svg', texteOctets(svgFinal(c)));
 
 export function copierSvg(c: ContexteExport): void {
-  void copier(svgFinal(c)).then(ok => c.dire(ok ? 'Code SVG copié.' : 'La page n’a pas le droit d’écrire dans le presse-papiers.'));
+  void copier(svgFinal(c)).then(ok => c.dire(ok ? t('Code SVG copié.') : t('La page n’a pas le droit d’écrire dans le presse-papiers.')));
 }
 
 export function exporterDecoupe(c: ContexteExport): void {
@@ -59,7 +60,7 @@ export function exporterPdf(c: ContexteExport): void {
   if (!c.lu) return;
   pdfDuDessin(c.lu, optionsPdf(c.options))
     .then(r => { remettre(c, c.nom + '.pdf', new Blob([r.octets as BlobPart], { type: 'application/pdf' }), phrasePertes(r.pertes, r.perdus)); })
-    .catch(() => c.dire('L’écriture du PDF a échoué.'));
+    .catch(() => c.dire(t('L’écriture du PDF a échoué.')));
 }
 
 export function exporterEps(c: ContexteExport): void {
@@ -80,7 +81,7 @@ export function exporterPng(c: ContexteExport): void {
   versPng(c.svgPropre, largeur)
     .then(async b => (dpi ? avecDpiPng(new Uint8Array(await b.arrayBuffer()), dpi) : b))
     .then(donnees => { remettre(c, c.nom + '-' + largeur + '.png', donnees); })
-    .catch(() => c.dire('Le rendu PNG a échoué.'));
+    .catch(() => c.dire(t('Le rendu PNG a échoué.')));
 }
 
 /** Un JPEG (sur le fond choisi, il n'a pas d'alpha) ou un WebP (transparent), a la qualite choisie. */
@@ -88,10 +89,10 @@ export function exporterRaster(c: ContexteExport, format: FormatRaster): void {
   const largeur = largeurRaster(c.options, c.largeurPng);
   versRaster(c.svgPropre, { format, largeur, qualite: c.options.qualite / 100, fond: format === 'image/jpeg' ? c.options.fond : null })
     .then(({ octets, type }) => {
-      if (type !== format) { c.dire('Ce navigateur ne sait pas écrire ce format d’image : essayez le PNG.'); return; }
+      if (type !== format) { c.dire(t('Ce navigateur ne sait pas écrire ce format d’image : essayez le PNG.')); return; }
       remettre(c, c.nom + '-' + largeur + '.' + EXTENSIONS[format], octets);
     })
-    .catch(() => c.dire('Le rendu de l’image a échoué.'));
+    .catch(() => c.dire(t('Le rendu de l’image a échoué.')));
 }
 
 /** Le SVG propre d'un dessin lu, ou le SVG donne. */
