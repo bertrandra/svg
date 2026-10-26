@@ -8,7 +8,7 @@
 // Ce module n'importe ni `operations.ts` ni `assemblage.ts` (ce sont eux qui l'appellent) : pas de cycle d'import.
 
 import type { Boite, Contenu, DessinSvg, Forme, Groupe, Matrice } from './types.js';
-import { ancetres, arbreDe, normaliser, prochainNumero, unites, visibleEffectif, type NoeudArbre } from './arbre.js';
+import { ancetres, arbreDe, normaliser, prochainNumero, renumeroterContenus, unites, visibleEffectif, type NoeudArbre } from './arbre.js';
 import { boiteForme, echelle, multiplier, translation, unir } from './geometrie.js';
 import { transformerFeuille, transformerGroupe } from './transformation.js';
 import { relierCopie } from './texteVivant.js';
@@ -220,13 +220,15 @@ export function dupliquerNoeuds(d: DessinSvg, ids: readonly string[], dx = 0, dy
   const m = dx || dy ? translation(dx, dy) : null;
   const copies = new Map<string, string>(), apres = new Map<number, Forme[]>(), nouveaux: string[] = [];
   const groupes: Record<string, Groupe> = { ...d.groupes };
+  // Les contenus d'une decoupe ou d'un masque copies prennent leurs numeros a la meme suite que les copies (I1).
+  const neuf = (prefixe: 'f' | 'g'): string => (prefixe === 'f' ? 'f' + nf++ : 'g' + ng++);
   for (const u of us) {
     const vers = new Map<string, string>();
     for (const g of groupesDuSousArbre(u)) {
       const id = 'g' + ng++;
       vers.set(g.id, id);
       const parent = u.genre === 'groupe' && g === u.groupe ? g.parent : g.parent === undefined ? undefined : vers.get(g.parent);
-      groupes[id] = avecParent({ ...(m ? transformerGroupe(g, m) : g), id, verrouille: false }, parent);
+      groupes[id] = avecParent({ ...renumeroterContenus(m ? transformerGroupe(g, m) : g, neuf), id, verrouille: false }, parent);
     }
     const lot = feuillesDuNoeud(d, u).map(f => {
       const id = 'f' + nf++;
@@ -306,6 +308,7 @@ function copierAuPremierPlan(
   const vers = new Map<string, string>(), copies = new Map<string, string>(), nouveaux: string[] = [];
   const groupes: Record<string, Groupe> = { ...d.groupes };
   const groupeSource = (id: string | undefined): Groupe | undefined => (id !== undefined && source && aPropre(source, id) ? source[id] : undefined);
+  const neuf = (prefixe: 'f' | 'g'): string => (prefixe === 'f' ? 'f' + nf++ : 'g' + ng++);
   // Le groupe copie d'un groupe source, et ses ancetres d'abord ; une chaine abimee (cycle, parent absent) s'arrete.
   const copierGroupe = (id: string | undefined, vus: Set<string> = new Set()): string | undefined => {
     const g = groupeSource(id);
@@ -316,7 +319,7 @@ function copierAuPremierPlan(
     const parent = copierGroupe(g.parent, vus);
     const nouveau = 'g' + ng++;
     vers.set(g.id, nouveau);
-    groupes[nouveau] = avecParent({ ...placeGroupe(g), id: nouveau, verrouille: false, ...(visible ? { visible: true } : {}) }, parent);
+    groupes[nouveau] = avecParent({ ...renumeroterContenus(placeGroupe(g), neuf), id: nouveau, verrouille: false, ...(visible ? { visible: true } : {}) }, parent);
     if (parent === undefined) nouveaux.push(nouveau);
     return nouveau;
   };

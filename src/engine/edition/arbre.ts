@@ -190,6 +190,38 @@ export function parcourirContenus(d: Contenu, f: (c: Contenu, imbrique: boolean)
 }
 
 /**
+ * Le groupe dont les contenus imbriques (decoupe, masque, et ceux de leurs groupes) prennent des identifiants neufs, tires de
+ * `neuf` : une copie de groupe (dupliquer, coller, inserer) ne doit pas reprendre les identifiants de l'original (I1, annexe 3 §2).
+ * Les parents suivent. Le meme groupe s'il ne porte aucun contenu.
+ */
+export function renumeroterContenus(g: Groupe, neuf: (prefixe: 'f' | 'g') => string): Groupe {
+  if (!g.decoupe && !g.masque) return g;
+  const contenu = (c: Contenu): Contenu => {
+    const vers = new Map<string, string>();
+    for (const id of Object.keys(c.groupes ?? {})) vers.set(id, neuf('g'));
+    const parent = (p: string | undefined): { parent?: string } => {
+      const q = p === undefined ? undefined : vers.get(p);
+      return q !== undefined ? { parent: q } : {};
+    };
+    const formes = c.formes.map((f): Forme => { const { parent: _p, ...reste } = f; void _p; return { ...reste, id: neuf('f'), ...parent(f.parent) }; });
+    if (!c.groupes) return { formes };
+    const groupes: Record<string, Groupe> = {};
+    for (const [id, x] of Object.entries(c.groupes)) {
+      const { parent: _p, ...reste } = renumeroterContenus(x, neuf);
+      void _p;
+      const nouveau = vers.get(id) ?? id;
+      groupes[nouveau] = { ...reste, id: nouveau, ...parent(x.parent) };
+    }
+    return { formes, groupes };
+  };
+  return {
+    ...g,
+    ...(g.decoupe ? { decoupe: { ...g.decoupe, contenu: contenu(g.decoupe.contenu) } } : {}),
+    ...(g.masque ? { masque: { ...g.masque, contenu: contenu(g.masque.contenu) } } : {})
+  };
+}
+
+/**
  * Le poids du dessin pour l'historique (annexe 3 §5) : ce que pese un etat en memoire. Plat : le nombre de formes, donc la limite
  * d'historique d'avant le modele v2 (ADR-0008). Sinon chaque groupe compte 4, chaque feuille d'un contenu imbrique 20, chaque image
  * 50 et ses octets / 10 000.

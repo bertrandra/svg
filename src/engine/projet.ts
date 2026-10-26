@@ -8,7 +8,8 @@ import {
   FORMAT_PROJET, VERSION_PROJET, VERSION_PROJET_PLAT, nomDeProjet,
   type FormeProjet, type ImageProjet, type PoliceProjet, type Projet, type TeinteProjet, type TexteProjet
 } from '../model/projet.js';
-import { estPlat, peintureSure, verifierDessin, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
+import { estPlat, peintureSure, verifierDessin, type DessinSvg, type DispositionTexte, type Forme, type TexteVivant } from './editionSvg.js';
+import { ecrireCheminProjet, lireCheminProjet } from './projetV2/chemin.js';
 import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, refusChampsV2, tableVers } from './projetV2/champs.js';
 import type { DispositionProjet } from '../model/projet.js';
 import { avecReperes, normaliserReperes } from './editionSvg.js';
@@ -28,27 +29,8 @@ export interface EtatProjet {
   readonly modifieLe?: string | undefined;
 }
 
-/**
- * Un nombre a sa pleine precision : le plus court texte que `Number` relit a l'identique (celui de JavaScript), et « -0 » pour le
- * zero negatif, que `String` ecrirait « 0 ».
- */
-const nombreExact = (v: number): string => (Object.is(v, -0) ? '-0' : String(v));
-
-/** Le chemin en texte de projet : « M10 20L30 40Z ». */
-export function ecrireCheminProjet(d: Chemin): string {
-  let s = '';
-  for (const c of d) s += c.c + c.p.map(nombreExact).join(' ');
-  return s;
-}
-
-/** Le chemin d'un texte de projet deja valide (`cheminProjetValide`) : les memes commandes, les memes nombres. */
-export function lireCheminProjet(d: string): Chemin {
-  if (d === '') return [];
-  return d.split(/(?=[MLCQZ])/).map((m): Commande => {
-    const reste = m.slice(1);
-    return { c: m.charAt(0) as Lettre, p: reste === '' ? [] : reste.split(' ').map(Number) };
-  });
-}
+// Le chemin en texte de projet, et retour : dans projetV2/chemin.ts (les feuilles d'une decoupe s'en servent aussi, sans cycle).
+export { ecrireCheminProjet, lireCheminProjet };
 
 /** Une disposition (ADR-0031), champ pour champ, dans l'ordre du modele : la meme copie sert dans les deux sens. */
 function disposition<D extends DispositionTexte | DispositionProjet>(d: D): D {

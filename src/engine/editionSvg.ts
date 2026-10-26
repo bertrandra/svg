@@ -139,6 +139,11 @@ export {
 export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degrades.js';
 
 // ---- etape 5 : decoupes
+export {
+  decoupes, REFUS_DECOUPES, MSG_DECOUPES, feuilleDeDecoupe, transformerDecoupe, boiteDecoupe
+} from './edition/fonctions/decoupes.js';
+export { creerDecoupe, liberer, MSG_DECOUPE } from './edition/decoupes.js';
+export { renumeroterContenus } from './edition/arbre.js';
 
 // ---- etape 6 : masques d'opacite
 

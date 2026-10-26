@@ -338,7 +338,13 @@ function lireOrigine(v: unknown): readonly string[] {
 }
 
 /** Les gardes de la validation, pretees aux lecteurs des champs du modele v2 (model/projetV2/champs.ts). */
-const OUTILS: OutilsProjet = { refuser, texte, nombre, booleen, tableau, objet, choix, identifiant: ID };
+/** Un trace de projet : un texte borne, bien forme (pour les feuilles d'une decoupe, model/projetV2/decoupe.ts). */
+function chemin(v: unknown, quoi: string): string {
+  const d = texte(v, quoi, BORNES_PROJET.trace);
+  return cheminProjetValide(d) ? d : refuser(quoi + ' est mal formé');
+}
+
+const OUTILS: OutilsProjet = { refuser, texte, nombre, booleen, tableau, objet, choix, chemin, identifiant: ID };
 
 function lireForme(v: unknown, i: number, version: number): FormeProjet {
   const o = objet(v, 'la forme ' + (i + 1));

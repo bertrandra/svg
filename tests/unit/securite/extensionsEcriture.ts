@@ -107,9 +107,39 @@ const groupes: ExtensionEcriture = {
   }
 };
 
+const ID_DECOUPE = /^ed-c-[0-9a-f]{14}(?:-\d+)?$/;
+const URL_DECOUPE = /^url\(#ed-c-[0-9a-f]{14}(?:-\d+)?\)$/;
+
+/**
+ * Etape 5 : les decoupes. Un <clipPath> dans <defs>, identifie par son empreinte et sans autre attribut (toujours en unites du plan) ;
+ * dedans, des <path> seulement, avec leur trace, au plus `clip-rule="evenodd"` et un `clip-path` vers une autre decoupe (une decoupe
+ * decoupee : un <clipPath> n'admet pas de <g>). Un groupe ne cite une decoupe que par `url(#ed-c-…)`. Avant `groupes`, qui refuse
+ * tout autre attribut d'un <g>.
+ */
+const decoupes: ExtensionEcriture = {
+  nom: 'etape 5 : decoupes',
+  element: e => {
+    if (e.nom === 'clipPath') return e.parent === 'defs' && e.profondeur === 2;
+    if (e.parent === 'clipPath') return e.nom === 'path';
+    return undefined;
+  },
+  attribut: (e, nom, valeur) => {
+    if (e.nom === 'clipPath') return nom === 'id' && ID_DECOUPE.test(valeur);
+    if (e.nom === 'path' && e.parent === 'clipPath') {
+      if (nom === 'd') return /^[MLCQZ0-9.\s-]*$/.test(valeur);
+      if (nom === 'clip-rule') return valeur === 'evenodd';
+      if (nom === 'clip-path') return URL_DECOUPE.test(valeur);
+      return false;
+    }
+    if (e.nom === 'g' && nom === 'clip-path') return URL_DECOUPE.test(valeur);
+    return undefined;
+  }
+};
+
 /** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images). */
 export const EXTENSIONS_ECRITURE: readonly ExtensionEcriture[] = [
   racine,
+  decoupes,
   groupes,
   degrades,
   images

@@ -9,6 +9,7 @@ import type { Forme, Groupe } from '../editionSvg.js';
 import { estDegrade } from '../edition/degrades.js';
 import { peintureDuProjet, peintureProjet } from './peinture.js';
 import { imageDuProjet, imageProjet, refusImagesProjet } from './image.js';
+import { decoupeDuProjet, decoupeProjet } from './decoupe.js';
 
 /** Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. */
 interface AllerRetour {
@@ -77,8 +78,14 @@ interface AllerRetourGroupe {
   readonly versModele: (g: GroupeProjet) => Partial<Groupe>;
 }
 
-/** Vide a l'etape 1 : un groupe n'a que sa base. */
-const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [];
+/** Une ligne par etape, dans l'ordre de `CHAMPS_GROUPE_V2` (model/projetV2/champs.ts). */
+const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
+  // Etape 5 : la decoupe, de la geometrie seule a pleine precision.
+  {
+    versProjet: g => (g.decoupe ? { decoupe: decoupeProjet(g.decoupe) } : {}),
+    versModele: g => (g.decoupe ? { decoupe: decoupeDuProjet(g.decoupe) } : {})
+  }
+];
 
 /** Un groupe du modele en groupe de projet : sa base dans l'ordre du format, puis ses champs v2. */
 export function groupeProjet(g: Groupe): GroupeProjet {

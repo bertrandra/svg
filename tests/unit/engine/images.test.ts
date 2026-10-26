@@ -158,8 +158,11 @@ describe('la lecture des images', () => {
     expect(d.formes.map(f => f.image?.matrice?.[4])).toEqual([10, 20]);
   });
 
-  it('refuse une image a decoupe, a masque ou a filtre comme une forme, et une unite qu on ne calcule pas', () => {
-    expect(erreur(lireDessin(SVG('<image href="' + png() + '" width="5" height="5" clip-path="url(#c)"/>'), { modele: 'riche' }))).toContain('un masque ou une découpe');
+  it('refuse une image a masque comme une forme, enveloppe une image a decoupe dans un groupe (etape 5), et refuse une unite qu on ne calcule pas', () => {
+    expect(erreur(lireDessin(SVG('<image href="' + png() + '" width="5" height="5" mask="url(#m)"/>'), { modele: 'riche' }))).toContain('un masque ou une découpe');
+    const decoupee = riche(SVG('<defs><clipPath id="c"><rect width="3" height="3"/></clipPath></defs><image href="' + png() + '" width="5" height="5" clip-path="url(#c)"/>'));
+    expect(decoupee.formes.map(f => [!!f.image, f.parent])).toEqual([[true, 'g1']]);
+    expect(decoupee.groupes?.g1?.decoupe?.contenu.formes).toHaveLength(1);
     expect(erreur(lireDessin(SVG('<image href="' + png() + '" width="5mm" height="5"/>'), { modele: 'riche' }))).toContain(MSG_IMAGE_UNITE);
   });
 
