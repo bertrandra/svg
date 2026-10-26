@@ -12,6 +12,7 @@ import { resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, attendreAnimations, choisirVue, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, permettrePressePapiers, pilote, RACINE_DEPOT, URL_INTEGRATION } from './aide.js';
+import { champPolice, choisirPolice } from './polices.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 
@@ -262,8 +263,8 @@ describe('axe-core : accessibilite automatique', () => {
 
     it('avec le menu des formes ouvert', async () => {
       const page = await editeur();
-      await page.getByRole('button', { name: 'Choisir une forme' }).click();
-      await page.getByRole('menu', { name: 'Choisir une forme' }).waitFor();
+      await page.getByRole('button', { name: 'Formes (F)' }).click();
+      await page.getByRole('menu', { name: 'Formes' }).waitFor();
       exigerSansViolationGrave(await auditer(page, 'éditeur, menu des formes ouvert'));
     });
 
@@ -300,8 +301,8 @@ describe('axe-core : accessibilite automatique', () => {
     // Le texte vivant (ADR-0022) : la section « Texte » de l'inspecteur, l'apercu « forme / ligne » ouvert, la saisie en place.
     async function texteVivant(page: Page, police = 'inter') {
       await page.keyboard.press('t');
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption(police);
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
+      await choisirPolice(page.locator('.editeur-inspecteur'), police);
       await page.getByRole('button', { name: 'Ajouter le texte' }).click();
       await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
       await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().click();
@@ -322,7 +323,7 @@ describe('axe-core : accessibilite automatique', () => {
     async function toutesLesPolices(page: Page) {
       await page.locator('.editeur-svg-toile').focus();
       await page.keyboard.press('t');
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
       await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
       await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
       // Une recherche courte (« sat » : Satisfy, Satoshi et son badge ITF…) pour que chaque ligne tienne entiere dans la liste
@@ -356,12 +357,50 @@ describe('axe-core : accessibilite automatique', () => {
       const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
       await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
       await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
       await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).tap();
       await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
       await page.locator('.explorateur-polices input[type="search"]').fill('sat');
       await attend(() => page.locator('.liste-polices .police-ligne').count()).toBe(4);
       exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, toutes les polices'));
+    });
+
+    // La liste deroulante des polices (ADR-0034), ouverte sur le vrai catalogue : ses groupes, les noms dessines, la marque
+    // « à télécharger », la ligne active et son pied. Des recherches courtes, pour que chaque ligne tienne entiere dans la liste qui
+    // defile (une ligne coupee par son bord n'a pas de fond qu'axe sache lire) : « cave » (Caveat, livree, sans marque ; Caveat Brush,
+    // du catalogue, marquee), puis « sat » (Satoshi et son badge ITF).
+    async function listeDesPolices(page: Page, zone: string, tactile = false) {
+      const z = page.locator(zone);
+      const champ = champPolice(z);
+      await champ.waitFor({ timeout: 30_000 });
+      if (tactile) await champ.tap(); else await champ.click();
+      await attend(() => page.locator('.liste-polices-pied p').first().innerText()).toMatch(/polices$/);
+      await page.mouse.move(0, 0);
+    }
+    for (const schema of ['light', 'dark'] as const) {
+      it(`avec la liste deroulante des polices ouverte, puis une recherche (${schema})`, async () => {
+        const page = await editeur({ largeur: 1200, hauteur: 900, schema });
+        await page.locator('.editeur-svg-toile').focus();
+        await page.keyboard.press('t');
+        await listeDesPolices(page, '.editeur-inspecteur');
+        await page.keyboard.type('cave');
+        await attend(() => page.locator('[role="listbox"] [role="option"]').count()).toBe(2);
+        expect(await page.locator('[role="listbox"] [role="option"][data-etat="a-telecharger"]').count()).toBe(1);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, liste des polices ouverte (' + schema + ')'));
+        await page.keyboard.press('Control+a');
+        await page.keyboard.type('sat');
+        await attend(() => page.locator('[role="listbox"] [role="option"]').count()).toBe(4);
+        exigerSansViolationGrave(await auditer(page, 'éditeur, liste des polices, recherche (' + schema + ')'));
+      });
+    }
+
+    it('sur un téléphone de 390 px, la liste des polices de la barre de texte ouverte en feuille', async () => {
+      const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
+      await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
+      await listeDesPolices(page, '.barre-texte', true);
+      await page.keyboard.type('sat');
+      await attend(() => page.locator('[role="listbox"] [role="option"]').count()).toBe(4);
+      exigerSansViolationGrave(await auditer(page, 'éditeur, 390 px, liste des polices de la barre'));
     });
 
     it('avec la saisie en place d un texte vivant', async () => {
@@ -379,7 +418,7 @@ describe('axe-core : accessibilite automatique', () => {
       it(`avec la saisie sur la toile et la barre de texte, trace Median (${schema})`, async () => {
         const page = await editeur({ largeur: 1200, hauteur: 900, schema });
         await page.keyboard.press('t');
-        await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+        await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
         const r = await page.locator('.editeur-svg-toile .plan-travail').boundingBox();
         await page.mouse.click((r?.x ?? 0) + 40, (r?.y ?? 0) + (r?.height ?? 0) / 2);
         await page.keyboard.type('Bonjour');
@@ -409,7 +448,7 @@ describe('axe-core : accessibilite automatique', () => {
       const page = await editeur({ largeur: 390, hauteur: 800, tactile: true });
       await page.locator('.editeur-barre button[title^="Texte (T)"]').tap();
       await page.locator('.editeur-etat button[aria-label="Inspecteur"]').tap();
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
       await page.getByRole('button', { name: 'Ajouter le texte' }).tap();
       await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first().tap();
       await page.locator('.apercu-police').waitFor();

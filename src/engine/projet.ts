@@ -11,6 +11,7 @@ import {
 import { peintureSure, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
 import type { DispositionProjet } from '../model/projet.js';
 import { avecReperes, normaliserReperes } from './editionSvg.js';
+import type { NuancierDessin } from '../model/nuancier.js';
 
 
 /** Ce que l'editeur et son hote savent d'un travail : de quoi ecrire un projet, et ce qu'un projet rouvert redonne. */
@@ -119,6 +120,14 @@ const choixCopie = (c: ChoixProduction): ChoixProduction => (c.contexte === 'cri
   ? { contexte: 'cricut', machine: c.machine, tapis: c.tapis, materiau: c.materiau, procede: c.procede, unite: c.unite }
   : { contexte: 'generique' });
 
+/**
+ * Le nuancier du dessin (ADR-0037), champ pour champ et dans l'ordre du format, a etaler : absent quand le dessin n'en porte pas
+ * (un projet d'avant lui reste tel quel, octet pour octet).
+ */
+const nuancierCopie = (n: NuancierDessin | undefined): { nuancier?: NuancierDessin } => (n === undefined ? {} : {
+  nuancier: { provenance: n.provenance, teintes: n.teintes.map(t => (t.opacite === undefined ? { hex: t.hex } : { hex: t.hex, opacite: t.opacite })) }
+});
+
 /** Le projet d'un etat de l'editeur : le nom assaini, les champs dans l'ordre du format, les dates seulement quand le serveur les a posees. */
 export function projetDe(e: EtatProjet): Projet {
   return {
@@ -126,7 +135,7 @@ export function projetDe(e: EtatProjet): Projet {
     ...(e.creeLe !== undefined ? { creeLe: e.creeLe } : {}),
     ...(e.modifieLe !== undefined ? { modifieLe: e.modifieLe } : {}),
     dessin: {
-      vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet),
+      vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier),
       // Les reperes (ADR-0038), seulement s'il y en a : le projet d'un dessin sans repere reste le meme texte.
       ...(e.dessin.reperes ? { reperes: { h: [...e.dessin.reperes.h], v: [...e.dessin.reperes.v] } } : {})
     },
@@ -149,7 +158,10 @@ export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
   }
   return {
     nom: p.nom,
-    dessin: avecReperes({ vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet) }, p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null),
+    dessin: avecReperes(
+      { vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet), ...nuancierCopie(p.dessin.nuancier) },
+      p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null
+    ),
     production: choixCopie(p.production),
     nuancier: p.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
     polices: p.ressources.polices, images: p.ressources.images,

@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page, Request } from 'playwright';
 import { attend, boutonTelecharger, nombreDeCalques, ouvrirCode, pilote, RACINE_DEPOT, texteDe, URL_INTEGRATION, URL_PAGE, type Session } from './aide.js';
+import { champPolice, choisirPolice, listePolices, ouvrirPolices, valeurPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
 
@@ -52,13 +53,13 @@ async function preparer(s: Session, retenir?: Promise<void>): Promise<Reseau> {
 }
 
 const inspecteur = (page: Page) => page.locator('.editeur-inspecteur');
-const selectPolice = (page: Page) => inspecteur(page).locator('select[aria-label="Police"]');
+
 
 /** Ouvre un plan, l'outil Texte, puis « Toutes les polices » ; attend la liste. */
 async function explorer(page: Page): Promise<void> {
   await ouvrirCode(page, PLAN);
   await page.keyboard.press('t');
-  await selectPolice(page).waitFor({ timeout: 30_000 });
+  await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
   await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
   await page.locator('.liste-polices .police-ligne', { hasText: 'Police Essai' }).waitFor();
 }
@@ -84,7 +85,7 @@ describe('les polices libres en ligne', () => {
 
     // Le choix vaut demande : aucun dialogue, la police arrive, verifiee.
     await ligne(page, 'Police Essai').click();
-    await attend(() => selectPolice(page).inputValue()).toBe(ID_ESSAI);
+    await attend(() => valeurPolice(inspecteur(page))).toBe(ID_ESSAI);
     expect(await page.getByRole('dialog', { name: /Télécharger la police/ }).count()).toBe(0);
     // Une seule requete, sans cookie ni page d'origine ; aucun accord ecrit dans le stockage.
     expect(reseau.requetes.map(r => r.url())).toEqual([URL_ESSAI]);
@@ -111,7 +112,7 @@ describe('les polices libres en ligne', () => {
     // Un second texte, en Inter : « Remplacer partout » recompose en Inter le texte en Police Essai, en un seul geste.
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
-    await selectPolice(page).selectOption('inter');
+    await choisirPolice(inspecteur(page), 'inter');
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await attend(() => nombreDeCalques(page)).toBe(3);
     await inspecteur(page).getByRole('button', { name: 'Toutes les polices' }).click();
@@ -136,14 +137,16 @@ describe('les polices libres en ligne', () => {
     await s.page.goto(URL_PAGE);
     const page = s.page;
     await explorer(page);
-    const avant = await selectPolice(page).inputValue();
+    const avant = await valeurPolice(inspecteur(page));
     await ligne(page, 'Essai Faux').click();
     const alerte = page.locator('.explorateur-polices [role="alert"]');
     await alerte.waitFor();
     expect(await texteDe(alerte)).toBe('Essai Faux : le fichier servi par cdn.jsdelivr.net n’a pas l’empreinte attendue : refusé ; le fichier servi par fonts.bunny.net n’a pas l’empreinte attendue : refusé.');
     expect(reseau.requetes.map(r => new URL(r.url()).hostname)).toEqual(['cdn.jsdelivr.net', 'fonts.bunny.net']);
-    expect(await selectPolice(page).inputValue()).toBe(avant);
-    expect(await selectPolice(page).locator('optgroup[label="Téléchargées"]').count()).toBe(0);
+    expect(await valeurPolice(inspecteur(page))).toBe(avant);
+    // Rien n'est lu : dans la liste des polices, elle reste a telecharger.
+    await ouvrirPolices(inspecteur(page));
+    expect(await listePolices(inspecteur(page)).locator('[role="option"][aria-label^="Essai Faux"]').getAttribute('data-etat')).toBe('a-telecharger');
   });
 
   it('ignore et efface un ancien accord reste dans le stockage ; la ligne dit le telechargement en cours', async () => {
@@ -166,7 +169,7 @@ describe('les polices libres en ligne', () => {
     expect(await enCours.getAttribute('aria-busy')).toBe('true');
     expect(await texteDe(page.locator('.explorateur-polices'))).toContain('Téléchargement de la police Police Essai…');
     liberer();
-    await attend(() => selectPolice(page).inputValue()).toBe(ID_ESSAI);
+    await attend(() => valeurPolice(inspecteur(page))).toBe(ID_ESSAI);
     await attend(() => texteDe(ligne(page, 'Police Essai'))).not.toContain('Téléchargement…');
     expect(reseau.requetes.map(r => r.url())).toEqual([URL_ESSAI]);
   });
@@ -184,18 +187,28 @@ describe('les polices libres en ligne', () => {
     await ouvrir(undefined);
     await page.locator('.editeur-svg .editeur-cadre').waitFor();
     await page.keyboard.press('t');
-    await selectPolice(page).waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
     expect(await page.getByRole('button', { name: 'Toutes les polices' }).count()).toBe(0);
     // La barre de texte (ADR-0027) suit la meme regle que le panneau : sans polices en ligne, pas de « Toutes les polices ».
     expect(await page.getByRole('toolbar', { name: 'Texte' }).count()).toBe(1);
+    // La liste deroulante (ADR-0034) n'a que les polices locales : ni catalogue, ni marque, ni lien vers les filtres.
+    await ouvrirPolices(inspecteur(page));
+    expect(await listePolices(inspecteur(page)).locator('[data-groupe="catalogue"]').count()).toBe(0);
+    expect(await listePolices(inspecteur(page)).locator('[data-etat="a-telecharger"]').count()).toBe(0);
+    expect(await inspecteur(page).getByRole('button', { name: /^Filtrer par genre/ }).count()).toBe(0);
+    await page.keyboard.press('Escape');
     await page.evaluate(() => (window as unknown as { __p: { fermer: () => void } }).__p.fermer());
     await ouvrir(true);
     await page.locator('.editeur-svg .editeur-cadre').waitFor();
     await page.keyboard.press('t');
-    await selectPolice(page).waitFor({ timeout: 30_000 });
+    await champPolice(inspecteur(page)).waitFor({ timeout: 30_000 });
     // Un dans le panneau, un dans la barre de texte (ADR-0027).
     expect(await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
     expect(await page.getByRole('toolbar', { name: 'Texte' }).getByRole('button', { name: 'Toutes les polices' }).count()).toBe(1);
+    // Avec l'option, la liste porte tout le catalogue, et la police d'essai y est marquee.
+    await ouvrirPolices(inspecteur(page));
+    await listePolices(inspecteur(page)).locator('[data-groupe="catalogue"]').waitFor();
+    expect(await listePolices(inspecteur(page)).locator('[role="option"][data-police="' + ID_ESSAI + '"]').getAttribute('data-etat')).toBe('a-telecharger');
     expect(reseau.requetes).toEqual([]);
   });
 });

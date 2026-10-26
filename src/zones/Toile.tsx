@@ -1,7 +1,7 @@
 // Ce qui se dessine sur la toile : les formes, la grille, et la surcouche (selection, poignees, trace).
 
 import { memo, type ReactNode } from 'react';
-import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { FORMES } from './aidesEditeur.js';
 import { formeTracee } from './Gestes.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
@@ -43,10 +43,11 @@ export function Grille({ vb, pas }: { vb: DessinSvg['vb']; pas: number }) {
 }
 
 /**
- * Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, cadre, trace en cours. Pendant la saisie d'un
- * texte (`saisie`), ni selection ni poignees : la saisie dessine son cadre et son curseur (SaisieTexte.tsx).
+ * Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, trace en cours. Pendant la saisie d'un texte
+ * (`saisie`), ni selection ni poignees : la saisie dessine son cadre et son curseur (SaisieTexte.tsx). Le cadre et le lasso de
+ * selection se dessinent a part (ZoneToile.tsx, ADR-0035).
  */
-export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, cadre: Boite | null, tactile: boolean, saisie = false): ReactNode[] {
+export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, tactile: boolean, saisie = false): ReactNode[] {
   const r: ReactNode[] = [];
   if (saisie) return r;
   // Au doigt, les poignees grossissent : une cible de 8 px ne se touche pas.
@@ -100,7 +101,7 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
   // Une forme a deux coins au clavier : le premier coin est pose (la trace n'a que lui), l'apercu va jusqu'au reticule.
   const [coin1] = ui.trace;
   if (FORMES.has(ui.outil) && ui.trace.length === 1 && coin1 && ui.curseur) {
-    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false);
+    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false, ui.parametres);
     r.push(<path key="apercu" className="trace-en-cours" d={ecrireChemin(d, 3)} pointerEvents="none" />);
   }
   if (ui.trace.length) {
@@ -118,6 +119,5 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
       </g>
     );
   }
-  if (cadre) r.push(<rect key="cadre" className="cadre-selection" x={cadre.x} y={cadre.y} width={cadre.l} height={cadre.h} pointerEvents="none" />);
   return r;
 }

@@ -2,9 +2,8 @@
 // forme voisine a la selection, Espace ajoute ou retire la forme au curseur. Le choix est pur
 // (engine/navigation.ts, zones/annonces.ts) ; ici, le fil des touches.
 //
-// Pas d'equivalent au cadre de selection de la souris : choisir « tout ce qui est dans un rectangle » demande
-// deux coins ET une regle (croiser ou contenir) que le clavier n'a pas de facon sobre. Ctrl+A, « Tout » et
-// « Inverser » (calques), « C » (meme couleur) et Maj+Page suivante couvrent les memes besoins.
+// Le cadre et le lasso du clavier passent par le reticule de leur outil (F, Q ; ClavierZone.ts, ADR-0035) ; Ctrl+A,
+// I (inverser), C, Alt+C et Y (meme fond, meme contour, meme type) completent Maj+Page suivante.
 
 import { basculerDansSelection, formeAuCurseur, formeVoisine, type Sens } from '../engine/navigation.js';
 import { phraseBascule, PHRASE_SANS_CURSEUR } from './annonces.js';

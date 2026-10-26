@@ -149,11 +149,41 @@ export function lireVariante(f: FamilleCatalogue, v: VarianteBrute): VariantePol
 /** Les variantes d'une famille, lues. */
 export const variantesDe = (f: FamilleCatalogue): VariantePolice[] => f.variantes.map(v => lireVariante(f, v));
 
-/** La variante par defaut d'une famille : la reguliere droite, a defaut la plus proche de 400, droite d'abord. */
+const principales = new WeakMap<FamilleCatalogue, VariantePolice | null>();
+
+/**
+ * La variante par defaut d'une famille : la reguliere droite, a defaut la plus proche de 400, droite d'abord. Lue une fois par
+ * famille (ADR-0008) : la liste des polices la demande pour chaque ligne visible, a chaque dessin.
+ */
 export function variantePrincipale(f: FamilleCatalogue): VariantePolice | null {
+  if (principales.has(f)) return principales.get(f) ?? null;
   const triees = [...f.variantes].sort((a, b) => a[1] - b[1] || Math.abs(a[0] - 400) - Math.abs(b[0] - 400) || a[0] - b[0]);
   const v = triees[0];
-  return v ? lireVariante(f, v) : null;
+  const lue = v ? lireVariante(f, v) : null;
+  principales.set(f, lue);
+  return lue;
+}
+
+type Rangee = readonly [FamilleCatalogue, VarianteBrute];
+const index = new WeakMap<CataloguePolices, ReadonlyMap<string, readonly Rangee[]>>();
+
+/**
+ * Les variantes de l'index par identifiant, dans l'ordre des familles puis des anciennes versions : calcule une fois par index.
+ * Chercher une variante parcourait les neuf mille variantes en hachant chacune ; la liste des polices en cherche plusieurs a
+ * chaque ouverture (les recentes, les polices du document).
+ */
+function indexDe(c: CataloguePolices): ReadonlyMap<string, readonly Rangee[]> {
+  const deja = index.get(c);
+  if (deja) return deja;
+  const m = new Map<string, Rangee[]>();
+  for (const f of [...c.familles, ...c.anciennes]) {
+    for (const v of f.variantes) {
+      const id = idVariante(f, v), r = m.get(id);
+      if (r) r.push([f, v]); else m.set(id, [[f, v]]);
+    }
+  }
+  index.set(c, m);
+  return m;
 }
 
 /**
@@ -163,13 +193,10 @@ export function variantePrincipale(f: FamilleCatalogue): VariantePolice | null {
 export function trouverVariante(c: CataloguePolices, id: string, version?: string): VariantePolice | null {
   if (!estIdCatalogue(id)) return null;
   let sansVersion: VariantePolice | null = null;
-  for (const f of [...c.familles, ...c.anciennes]) {
-    for (const v of f.variantes) {
-      if (idVariante(f, v) !== id) continue;
-      const lue = lireVariante(f, v);
-      if (version === undefined || lue.version === version) return lue;
-      sansVersion ??= lue;
-    }
+  for (const [f, v] of indexDe(c).get(id) ?? []) {
+    const lue = lireVariante(f, v);
+    if (version === undefined || lue.version === version) return lue;
+    sansVersion ??= lue;
   }
   return version === undefined ? sansVersion : null;
 }
@@ -255,12 +282,25 @@ export interface FiltrePolices {
 
 /** Les familles qui repondent au filtre, dans l'ordre de l'index (alphabetique) ; un mot commence le nom avant de le contenir. */
 export function filtrerFamilles(familles: readonly FamilleCatalogue[], filtre: FiltrePolices): FamilleCatalogue[] {
-  const mots = normaliser(filtre.texte ?? '').split(' ').filter(Boolean);
-  const r = familles.filter(f => (!filtre.categorie || f.categorie === filtre.categorie) && (!filtre.source || f.source === filtre.source)
-    && mots.every(m => normaliser(f.nom).includes(m)));
-  if (!mots.length) return r;
-  const debut = (f: FamilleCatalogue) => (normaliser(f.nom).startsWith(mots.join(' ')) ? 0 : 1);
-  return r.map((f, i) => [f, i] as const).sort((a, b) => debut(a[0]) - debut(b[0]) || a[1] - b[1]).map(([f]) => f);
+  const gardees = familles.filter(f => (!filtre.categorie || f.categorie === filtre.categorie) && (!filtre.source || f.source === filtre.source));
+  return filtrerParNom(gardees, f => f.nom, filtre.texte ?? '');
+}
+
+/**
+ * La recherche par nom de toutes les listes de polices (l'explorateur, la liste deroulante) : chaque mot cherche se trouve dans
+ * le nom, casse, accents et ponctuation ignores ; un nom qui commence par ce qu'on a tape vient d'abord, l'ordre d'origine est
+ * garde sinon.
+ */
+export function filtrerParNom<T>(elements: readonly T[], nom: (e: T) => string, texte: string): T[] {
+  const mots = normaliser(texte).split(' ').filter(Boolean);
+  if (!mots.length) return [...elements];
+  const tete = mots.join(' ');
+  const r: Array<readonly [T, number, number]> = [];
+  elements.forEach((e, i) => {
+    const n = normaliser(nom(e));
+    if (mots.every(m => n.includes(m))) r.push([e, n.startsWith(tete) ? 0 : 1, i]);
+  });
+  return r.sort((a, b) => a[1] - b[1] || a[2] - b[2]).map(([e]) => e);
 }
 
 // --- Une ligne par nom de famille (ADR-0026) ---

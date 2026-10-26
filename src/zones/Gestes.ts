@@ -2,26 +2,27 @@
 // tracer, pincer, et poser ou deplacer le curseur d'un texte en saisie (ADR-0027). Le calcul est dans le
 // coeur pur ; ici, le fil des evenements de pointeur.
 
-import { useEffect, useRef, useState, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
+import { useEffect, useRef, type MouseEvent as ME, type PointerEvent as PE, type RefObject } from 'react';
 import {
-  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, ellipse, etoile, polygone, rectangle, redimensionner, retourner, seCroisent,
-  type Boite, type Commande, type DessinSvg
+  ajouterForme, boiteDe, boiteForme, deplacer, deplacerAncre, deplacerPoigneeLiee, formeDeBase, PARAMETRES_FORMES_DEFAUT, polygone, redimensionner, regleDeForme, retourner, 
+  type Boite, type Commande, type DessinSvg, type ParametresFormes, type Style
 } from '../engine/editionSvg.js';
 import { aimanter as aimanterBoite, angleVers, centre, ciblesAimants, tournerAutour } from '../engine/transformations.js';
-import { FORMES } from './aidesEditeur.js';
-import { styleLigne } from './aidesEditeur.js';
+import { FORMES, styleDeForme } from './aidesEditeur.js';
+import { phraseSelection } from './annonces.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSaisie } from './contexteSaisie.js';
 import { usePrise } from './PriseToile.js';
 import { useReperesActifs } from './contexteRegles.js';
 import { effacerReperes as sansReperes } from '../engine/editionSvg.js';
-import type { Coin, OutilForme, Vue } from './typesEditeur.js';
+import { useGesteZone } from './GesteZone.js';
+import { estOutilZone } from './commandesSelection.js';
+import type { ActionsEditeur, Coin, OutilForme, Vue } from './typesEditeur.js';
 
 type Geste =
   | { type: 'pan'; x0: number; y0: number; vue: Vue }
   | { type: 'deplacer'; x0: number; y0: number; base: DessinSvg; ids: string[]; b: Boite | null; cle: string; cibles?: Boite[] }
   | { type: 'echelle'; coin: Coin; b: Boite; base: DessinSvg; ids: string[]; cle: string }
-  | { type: 'cadre'; x0: number; y0: number; ajout: boolean }
   | { type: 'ancre'; i: number; base: DessinSvg; id: string; cle: string }
   | { type: 'poignee'; i: number; k: 0 | 1; base: DessinSvg; id: string; cle: string }
   | { type: 'tracer'; outil: OutilForme; x0: number; y0: number; base: DessinSvg; cle: string }
@@ -29,8 +30,11 @@ type Geste =
   | { type: 'pincer'; d0: number; cx: number; cy: number; vue: Vue }
   | { type: 'saisie' };
 
-/** La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions. */
-export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean): Commande[] {
+/**
+ * La forme d'un outil de trace entre son point de depart et le curseur ; Maj impose les proportions (une boite carree, une ligne a
+ * 45 degres pres), que le carre et le cercle imposent toujours. Les reglages sont ceux des formes de base (ADR-0033).
+ */
+export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number, y: number, proportions: boolean, reglages: ParametresFormes = PARAMETRES_FORMES_DEFAUT): Commande[] {
   if (outil === 'ligne') {
     if (proportions) {
       const dx = x - x0, dy = y - y0, a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), r = Math.hypot(dx, dy);
@@ -39,9 +43,24 @@ export function formeTracee(outil: OutilForme, x0: number, y0: number, x: number
     return polygone([[x0, y0], [x, y]], false);
   }
   let l = Math.abs(x - x0), h = Math.abs(y - y0);
-  if (proportions) { l = h = Math.max(l, h); }
+  if (proportions || outil === 'carre' || outil === 'cercle') { l = h = Math.max(l, h); }
   const bx = x < x0 ? x0 - l : x0, by = y < y0 ? y0 - h : y0;
-  return outil === 'rectangle' ? rectangle(bx, by, l, h) : outil === 'ellipse' ? ellipse(bx, by, l, h) : etoile(bx, by, l, h);
+  return formeDeBase(outil, bx, by, l, h, reglages);
+}
+
+/** Ajoute la forme tracee par un outil, au style de l'outil (une ligne pour un trait) et a sa regle (l'anneau perce). */
+export const ajouterTracee = (base: DessinSvg, outil: OutilForme, d: Commande[], style: Style) => ajouterForme(base, d, styleDeForme(outil, style), regleDeForme(outil));
+
+/**
+ * La forme tracee au glisser entre dans l'historique, choisie, et l'outil revient a la selection. Le glisser l'a ajoutee avant de
+ * la choisir : on dit qu'elle est posee, son genre et sa taille, comme au clavier (ADR-0033).
+ */
+function poserFormeTracee(ac: ActionsEditeur, dessin: DessinSvg, id: string, cle: string): void {
+  ac.appliquer(() => dessin, cle);
+  ac.finir();
+  ac.choisir([id]);
+  ac.poserOutil('selection');
+  ac.annoncer(phraseSelection(dessin, [id], true));
 }
 
 /** Les gestes a la souris, au stylet ou au doigt sur la toile. */
@@ -51,7 +70,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
   const gt = useGestesTexte(prise), { sx, garderFocus } = gt;
   // Les pointeurs poses sur la toile : deux doigts pincent la vue, quoi que fasse l'outil.
   const pointeurs = useRef(new Map<number, { x: number; y: number }>());
-  const [cadre, poserCadre] = useState<Boite | null>(null);
+  // Le cadre et le lasso (ADR-0035) : leur geste vit a part, ici il n'est qu'appele.
+  const zone = useGesteZone();
   useEffect(() => {
     const bas = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -79,7 +99,8 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (pointeurs.current.size === 2) {
       const [a, b] = [...pointeurs.current.values()];
       if (a && b) {
-        if (geste.current && geste.current.type !== 'pan' && geste.current.type !== 'cadre' && 'cle' in geste.current) ac.annulerGeste(geste.current.cle);
+        if (geste.current && geste.current.type !== 'pan' && 'cle' in geste.current) ac.annulerGeste(geste.current.cle);
+        zone.annuler();
         geste.current = { type: 'pincer', d0: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vue };
       }
       return;
@@ -88,6 +109,7 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (e.button === 1 || ui.outil === 'main' || espace.current) { garderFocus.current = !!sx.saisie; geste.current = { type: 'pan', x0: e.clientX, y0: e.clientY, vue }; return; }
     if (sx.choixForme) { sx.viserForme.current?.(prise.toutes(e)); return; } // le choix de la forme d'un texte pose (ADR-0031) : le clic la donne
     if (sx.saisie || ui.outil === 'texte') { geste.current = gt.appuyer(x, y, t, e.shiftKey); return; }
+    if (estOutilZone(ui.outil)) { zone.commencer(ui.outil, [x, y], e); return; }
     const rot = t.getAttribute('data-rotation');
     if (rot !== null && mo.boite) { geste.current = { type: 'rotation', centre: centre(mo.boite), angle0: angleVers(centre(mo.boite), [x, y]), base: mo.dessin, ids: mo.sel, cle: ac.nouvelleCle() }; return; }
     if (ui.outil === 'plume') { ac.poserTrace([...ui.trace, versGrille(e)]); return; }
@@ -114,14 +136,13 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
       return;
     }
     if (ui.outil === 'points' && ui.point !== null) { ac.poserPoint(null); return; }
-    geste.current = { type: 'cadre', x0: x, y0: y, ajout: e.shiftKey };
-    poserCadre({ x, y, l: 0, h: 0 });
+    zone.commencer('cadre', [x, y], e);
   };
 
   const bouger = (e: PE<SVGSVGElement>) => {
     const g = geste.current;
     if (pointeurs.current.has(e.pointerId)) pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!g) return;
+    if (!g) { zone.bouger(versDoc(e)); return; }
     if (g.type === 'saisie') { sx.poignee.current?.bouger(versDoc(e)); return; }
     if (g.type === 'pincer') {
       const [a, b] = [...pointeurs.current.values()];
@@ -156,11 +177,10 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     }
     const [gx, gy] = [ui.aimant(x), ui.aimant(y)];
     if (g.type === 'echelle') ac.appliquer(() => etirer(g, gx, gy, e.shiftKey, mo.dessin.vb), g.cle);
-    else if (g.type === 'cadre') poserCadre({ x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) });
     else if (g.type === 'ancre') ac.appliquer(() => deplacerAncre(g.base, g.id, g.i, gx, gy), g.cle);
     // Une poignee d'un nœud lisse ou symetrique entraine l'autre ; Alt la rompt le temps du geste.
     else if (g.type === 'poignee') ac.appliquer(() => deplacerPoigneeLiee(g.base, g.id, g.i, g.k, gx, gy, e.altKey), g.cle);
-    else ac.appliquer(() => ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style).dessin, g.cle);
+    else ac.appliquer(() => ajouterTracee(g.base, g.outil, formeTracee(g.outil, g.x0, g.y0, gx, gy, e.shiftKey, ui.parametres), ui.style).dessin, g.cle);
   };
 
   const lacher = (e: PE<SVGSVGElement>) => {
@@ -169,31 +189,22 @@ export function useGestes(svgRef: RefObject<SVGSVGElement | null>) {
     if (g?.type === 'pincer') { if (pointeurs.current.size === 0) geste.current = null; return; }
     geste.current = null;
     if (ui.guides.length) ac.poserGuides([]);
-    if (!g) return;
+    if (!g) { zone.lacher(versDoc(e)); return; }
     if (g.type === 'saisie') { sx.poignee.current?.lacher(); return; }
     if (g.type === 'tracer') {
       const [x, y] = versGrille(e);
-      const r = ajouterForme(g.base, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey), g.outil === 'ligne' ? styleLigne(ui.style) : ui.style);
+      const r = ajouterTracee(g.base, g.outil, formeTracee(g.outil, g.x0, g.y0, x, y, e.shiftKey, ui.parametres), ui.style);
       const b = r.id ? boiteDe(r.dessin, [r.id]) : null;
       // Un trace sans surface a l'ecran n'est pas une forme : rien ne reste dans l'historique.
       if (!r.id || !b || (b.l * vue.zoom < 3 && b.h * vue.zoom < 3)) { ac.annulerGeste(g.cle); return; }
-      ac.appliquer(() => r.dessin, g.cle);
-      ac.finir();
-      ac.choisir([r.id]);
-      ac.poserOutil('selection');
+      poserFormeTracee(ac, r.dessin, r.id, g.cle);
       return;
     }
-    if (g.type !== 'cadre') { if (g.type !== 'pan') ac.finir(); return; }
-    const [x, y] = versDoc(e);
-    const c = { x: Math.min(g.x0, x), y: Math.min(g.y0, y), l: Math.abs(x - g.x0), h: Math.abs(y - g.y0) };
-    poserCadre(null);
-    if (c.l * vue.zoom < 3 && c.h * vue.zoom < 3) { if (!g.ajout) ac.choisir([]); return; }
-    const pris = mo.dessin.formes.filter(f => { const b = boiteForme(f); return f.visible && !f.verrouille && !!b && seCroisent(b, c); }).map(f => f.id);
-    ac.choisir(g.ajout ? [...new Set([...mo.sel, ...pris])] : pris);
+    if (g.type !== 'pan') ac.finir();
   };
 
   const doubleClic = (e: ME<SVGSVGElement>) => { if (ui.outil === 'plume') ac.finirTrace(true); else gt.doubleClic(e, versDoc(e)); };
-  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, cadre };
+  return { appuyer, bouger, lacher, doubleClic, sourisBas: gt.sourisBas, zone: zone.zone };
 }
 
 /**

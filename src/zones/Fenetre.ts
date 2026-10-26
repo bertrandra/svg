@@ -23,6 +23,8 @@ export interface FenetreListe {
   /** La liste dont les lignes se fenetrent : a poser sur l'`ol` ou l'`ul`. */
   liste: RefObject<HTMLOListElement | null>;
   fenetre: Fenetre;
+  /** Le pas mesure entre deux lignes, que `segmentsFenetre` emploie pour la hauteur des cales. */
+  pas: number;
   /** Faux sous le seuil : toutes les lignes sont dessinees et rien ne se mesure. */
   actif: boolean;
   /** Fait defiler le panneau jusqu'a ce que la ligne soit entierement visible. */

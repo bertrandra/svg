@@ -13,6 +13,9 @@
 // autres couches n'importent que d'ici, pour que le decoupage interne puisse bouger sans eux.
 
 export type { Lettre, Commande, Chemin, Forme, DessinSvg, Boite, Matrice, BoutNonPlat, JonctionNonRonde, TexteVivant, PoliceTexte, AlignementTexte, Operation, DispositionTexte, DispositionSurForme, DispositionDansForme, DispositionEnveloppe, CoteTexte } from './edition/types.js';
+export type {
+  Contenu, Groupe, Peinture, Degrade, DegradeLineaire, DegradeRadial, ArretDegrade, Motif, Effets, Flou, OmbrePortee, ImageIntegree, Decoupe, Masque
+} from './edition/types.js';
 export { IDENTITE } from './edition/types.js';
 
 export { lireChemin, ecrireChemin, ancre, depart } from './edition/chemins.js';
@@ -81,6 +84,11 @@ export {
   STYLE_DEFAUT, rectangle, ellipse, etoile, polygone, ajouterForme,
   type Style
 } from './edition/formes.js';
+export {
+  FORMES_DE_BASE, FICHES_FORMES, BORNES_FORMES, PARAMETRES_FORMES_DEFAUT, bornerParametres, regleDeForme, formeDeBase, rectangleArrondi, polygoneRegulier, anneau,
+  reconnaitreFormeDeBase, branchesEtoile, estEllipseChemin,
+  type FormeDeBase, type FicheForme, type ParametresFormes, type AngleTriangle, type PointeFleche, type SensFleche, type PortionCercle
+} from './edition/formesDeBase.js';
 
 export { inserer, combiner, sousChemins, separer, coller } from './edition/assemblage.js';
 
@@ -91,6 +99,39 @@ export {
   type CommandeGlyphe, type Glyphes, type SourceContours, type GlypheAPoser, type StyleGlyphes
 } from './edition/glyphes.js';
 
+// ================================================================ le modele v2 (ADR-0012, annexe 8)
+// Un bloc par fonctionnalite : chaque etape n'ajoute ses exports que dans le sien, pour que deux etapes paralleles ne se rencontrent
+// pas dans ce fichier. Les points d'extension et l'arbre (etape 0) sont communs a toutes.
+
+// ---- etape 0 : l'arbre, les points d'extension, les definitions, la transformation d'une feuille
+export {
+  estPlat, feuillePlate, arbreDe, ancetres, profondeur, visibleEffectif, verrouilleEffectif, feuillesDe, unites, promouvoir,
+  prochainNumero, parcourirContenus, poidsDessin, verifierDessin, normaliser, PROFONDEUR_GROUPES_MAX,
+  type Arbre, type NoeudArbre
+} from './edition/arbre.js';
+export {
+  RANG_GROUPE, RANG_FEUILLE, attributsTries, prisesDe, lecteurDe, resoudrePeinture, completerFeuille, completerGroupe, etendreFeuille, etendreGroupe,
+  type Fonctionnalite, type CrochetsLecture, type CrochetsEcriture, type CrochetsTransformation, type CrochetsEtendue, type PriseEnCharge, type Marche,
+  type LecteurElement, type PeintureResolue, type AttributEcrit, type ContexteEcriture
+} from './edition/fonctionnalites.js';
+export { FONCTIONNALITES } from './edition/catalogue.js';
+export { idDefinition, recueil, type GenreDefinition, type Definition, type Recueil } from './edition/definitions.js';
+export { ATTRIBUT_MODELE, VERSION_MODELE } from './edition/ecritureRiche.js';
+export { transformerFeuille, transformerGroupe } from './edition/transformation.js';
+
+// ---- etape 1 : groupes (moteur)
+
+// ---- etape 3 : definitions et degrades
+
+// ---- etape 5 : decoupes
+
+// ---- etape 6 : masques d'opacite
+
+// ---- etape 7 : effets
+
+// ---- etape 9 : motifs
+
+// ---- etape 12 : images
 // Les reperes du document et la repetition d'une selection (ADR-0038).
 export type { Reperes } from './edition/types.js';
 export {

@@ -58,7 +58,7 @@ describe('clavier et lecteur d ecran', () => {
       await attend(() => surLaToile(page)).toBe(true);
 
       await page.keyboard.press('PageDown');
-      await attend(() => dit(page)).toBe('Forme 1 sélectionnée : tracé courbe, fond blanc #e9ecef, 208 × 128 à 16, 16.');
+      await attend(() => dit(page)).toBe('Forme 1 sélectionnée : rectangle arrondi, fond blanc #e9ecef, 208 × 128 à 16, 16.');
       await page.keyboard.press('Tab');
       await attend(() => dit(page)).toBe('Forme 2 sélectionnée : cercle, fond rouge #c81e28, 80 × 80 à 40, 40.');
       await page.keyboard.press('Tab');

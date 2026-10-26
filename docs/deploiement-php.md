@@ -6,8 +6,9 @@ Le site PHP (ADR-0030) est l’éditeur SVG avec des projets enregistrés sur un
 ## Ce qu’il faut
 
 - **PHP 8.1 ou plus**, avec les extensions `session`, `json`, `mbstring` et, de préférence, `curl` (sans cURL, le serveur télécharge
-  les polices par les flux de PHP, et la vérification de `data/` sous la racine web n’est pas faite). Aucune base de données, aucune
-  dépendance à installer (pas de composer).
+  les polices par les flux de PHP, la vérification de `data/` sous la racine web n’est pas faite, et **« Ouvrir depuis une adresse »
+  est indisponible** : ses protections demandent cURL, voir plus bas). Aucune base de données, aucune dépendance à installer (pas de
+  composer).
 - Un serveur web qui exécute PHP : Apache (avec `AllowOverride` pour que les `.htaccess` s’appliquent), nginx + PHP-FPM, ou un
   hébergement mutualisé.
 - **HTTPS** en production : sans lui, le mot de passe et le cookie de session circulent en clair. La vérification des polices dans le
@@ -136,6 +137,12 @@ définie prend la valeur de `config.php` :
 | `POLICES_SOURCES` | jsDelivr, Bunny, GitLab, Fontshare | Les sources des polices du catalogue, que le serveur contacte |
 | `POLICE_OCTETS_MAX` | `8388608` | La taille maximale d’un fichier de police téléchargé |
 | `HTTPS_FORCE` | `false` | Vrai derrière un mandataire qui termine HTTPS sans le dire à PHP (cookie `Secure`, HSTS) |
+| `ADRESSE_OUVERTURE` | `true` | « Ouvrir depuis une adresse » : faux l’éteint (le champ disparaît, la route répond 404) |
+| `ADRESSE_HTTP` | `false` | Vrai permet les adresses `http://` (en clair) en plus de `https://` |
+| `ADRESSE_PORTS` | `[443]` (`[443, 80]` si `ADRESSE_HTTP`) | Les ports que le serveur accepte de contacter |
+| `ADRESSE_OCTETS_MAX` | `104857600` (100 Mo) | La taille maximale d’un fichier ouvert depuis une adresse (la borne d’un fichier ouvert dans le navigateur) |
+| `ADRESSE_DELAI` | `30` | Le temps total, en secondes, redirections comprises |
+| `ADRESSE_RESEAUX_PERMIS` | `[]` | Des réseaux privés autorisés quand même, en CIDR (`['10.20.0.0/16']`) : un serveur de fichiers de l’intranet |
 
 PHP doit accepter des requêtes de la taille d’un projet : `post_max_size` (8 Mo par défaut) au moins égal à `PROJET_OCTETS_MAX`, et
 de même `LimitRequestBody` (Apache) ou `client_max_body_size` (nginx). Les erreurs PHP ne s’affichent jamais (`display_errors` est
@@ -149,6 +156,32 @@ redirection. Chaque fichier est vérifié par l’empreinte sha256 de l’index 
 depuis là. Un serveur sans accès sortant marche : les dix fontes livrées restent, et une police du catalogue choisie dit qu’elle n’a
 pas pu être téléchargée. Vous pouvez aussi déposer vous-même les fichiers dans `data/font/catalogue/` (nommés par l’empreinte en
 hexadécimal, extension `.fonte`).
+
+### Ouvrir depuis une adresse (ADR-0036)
+
+Une personne connectée peut ouvrir un SVG, un PDF ou une image **à partir d’une adresse** : le serveur va chercher le fichier pour
+elle (`api.php?r=adresse`, sous session et jeton CSRF), ce qui contourne le refus de lecture entre origines (CORS) que beaucoup de
+sites opposent à une page. Le serveur émet donc des requêtes vers des adresses choisies par les personnes connectées ; ses protections
+(détail dans `docs/securite.md`, § 10) :
+
+- `https://` seulement (`http://` si `ADRESSE_HTTP`), sur un port de `ADRESSE_PORTS` ; ni identifiant ni mot de passe dans l’adresse ;
+- le nom est résolu par le serveur, et **toutes** ses adresses doivent être publiques : aucune adresse privée (10/8, 172.16/12,
+  192.168/16, fc00::/7), de bouclage (127/8, ::1), lien-local (169.254/16, dont les métadonnées d’un hébergeur infonuagique, fe80::/10),
+  partagée (100.64/10), multicast ou réservée, en IPv4 comme en IPv6 (une IPv4 mappée, NAT64 ou 6to4 est jugée sur l’IPv4 qu’elle
+  porte) ;
+- cURL se connecte à l’adresse vérifiée (`CURLOPT_RESOLVE`), sans mandataire : un DNS qui changerait de réponse entre-temps n’a pas
+  d’effet ;
+- trois redirections au plus, chacune revue comme la première ; temps et taille bornés pendant le transfert ; aucun cookie, un seul
+  en-tête (`Accept`) ;
+- le fichier est rendu en octets bruts (`application/octet-stream`, `attachment`, `nosniff`) ; le navigateur le lit comme un fichier
+  déposé, avec les mêmes contrôles.
+
+**cURL est requis** (`php -m | grep curl`) ; sans lui, la route répond que la fonction est indisponible. Le journal
+`data/journal/adresses.log` garde, par demande, l’hôte, la taille et le résultat, **jamais le chemin ni les paramètres** de l’adresse
+(un lien signé y porte souvent un jeton). Si votre serveur est dans un réseau où des services internes sont joignables par un nom
+public, ou si vous ne voulez pas qu’il émette ces requêtes, posez `define('ADRESSE_OUVERTURE', false);`. Un pare-feu sortant qui
+n’autorise que le port 443 est une seconde ligne de défense bienvenue. Pour qu’un serveur de fichiers de l’intranet soit joignable,
+nommez son réseau dans `ADRESSE_RESEAUX_PERMIS` (et lui seul).
 
 ## Mettre à jour
 

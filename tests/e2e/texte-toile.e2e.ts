@@ -8,6 +8,7 @@ import type { Page } from 'playwright';
 import { readFileSync } from 'node:fs';
 import type { Download } from 'playwright';
 import { aLeFocus, attend, boutonTelecharger, modifications, nombreDeCalques, NAVIGATEUR, ouvrirCode, permettrePressePapiers, pilote, texteDe } from './aide.js';
+import { champPolice, choisirPolice, valeurPolice } from './polices.js';
 
 const PLAN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect x="0" y="0" width="40" height="40" fill="#1f4e8c"/></svg>';
 
@@ -39,7 +40,7 @@ describe('le texte se tape sur la toile', () => {
     await ouvrirCode(page, PLAN, tactile);
     const bouton = page.locator('.editeur-barre button[title^="Texte (T)"]');
     if (await bouton.isVisible()) { if (tactile) await bouton.tap(); else await bouton.click(); } else await page.keyboard.press('t');
-    if (!tactile) await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor();
+    if (!tactile) await champPolice(page.locator('.editeur-inspecteur')).waitFor();
   }
 
   /** Clique la toile avec l'outil Texte, tape, et termine par Echap : rend le texte cree (f2). */
@@ -177,11 +178,11 @@ describe('le texte se tape sur la toile', () => {
     const b = barre(page);
     await attend(() => b.isVisible()).toBe(true);
     // La police : une modification, le panneau suit.
-    await b.locator('select[aria-label="Police"]').selectOption('lobster');
+    await choisirPolice(b, 'lobster');
     await attend(() => modifications(page)).toBe(2);
-    await expect(page.locator('.editeur-inspecteur select[aria-label="Police"]').inputValue()).resolves.toBe('lobster');
+    await expect(valeurPolice(page.locator('.editeur-inspecteur'))).resolves.toBe('lobster');
     // Le style « Gras » n'existe que pour une famille qui en a un (Inter).
-    await b.locator('select[aria-label="Police"]').selectOption('inter');
+    await choisirPolice(b, 'inter');
     await b.locator('select[aria-label="Style de la police"]').selectOption({ label: 'Gras' });
     await attend(() => page.locator('.editeur-inspecteur select[aria-label="Style de la police"]').inputValue()).toBe('inter-gras');
     // La taille, a la validation.
@@ -213,7 +214,7 @@ describe('le texte se tape sur la toile', () => {
     await attend(() => aLeFocus(champ(page))).toBe(true);
     await page.keyboard.type(' bien');
     await page.keyboard.press('Alt+F10');
-    await attend(() => aLeFocus(barre(page).locator('select[aria-label="Police"]'))).toBe(true);
+    await attend(() => aLeFocus(champPolice(barre(page)))).toBe(true);
     expect(await champ(page).count()).toBe(1);
     await page.keyboard.press('Escape');
     await attend(() => aLeFocus(champ(page))).toBe(true);
@@ -278,7 +279,7 @@ describe('le texte se tape sur la toile', () => {
     // Plein rend les lettres pleines ; une police a trait unique n'a que sa ligne : « Plein » dit pourquoi, il ne fait rien.
     await plein.click();
     await attend(() => chemin.getAttribute('fill')).not.toBe('none');
-    await barre(page).locator('select[aria-label="Police"]').selectOption('ems-readability');
+    await choisirPolice(barre(page), 'ems-readability');
     await attend(() => median.getAttribute('aria-pressed')).toBe('true');
     expect(await plein.getAttribute('aria-disabled')).toBe('true');
     // Playwright tient un bouton aria-disabled pour inactif : on le presse quand meme, comme le fait la souris.

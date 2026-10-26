@@ -57,14 +57,14 @@ export interface Candidate {
 }
 
 /** Un sous-chemin aplati : les points x0, y0, x1, y1… et s'il est ferme par Z. */
-interface Trace { readonly pts: Float64Array; readonly ferme: boolean }
+export interface Trace { readonly pts: Float64Array; readonly ferme: boolean }
 
 const etendues = new WeakMap<Forme, Boite | null>();
 const traces = new WeakMap<Forme, readonly Trace[]>();
 const rangees = new WeakMap<readonly Forme[], Float64Array>();
 
-/** La boite que la forme peint, trait compris (pointes et bouts carres). */
-function etendue(f: Forme): Boite | null {
+/** La boite que la forme peint, trait compris (pointes et bouts carres). La selection par zone la relit (engine/selection.ts). */
+export function etendue(f: Forme): Boite | null {
   let b = etendues.get(f);
   if (b === undefined) { b = boiteAvecTrait(f); etendues.set(f, b); }
   return b;
@@ -74,7 +74,7 @@ function etendue(f: Forme): Boite | null {
  * Les boites d'un dessin, quatre nombres par forme (x0, y0, x1, y1), NaN pour une forme qu'on ne prend pas : un tableau
  * de formes est immuable, il se range une fois ; le survol ne parcourt plus que des nombres.
  */
-function rangee(formes: readonly Forme[]): Float64Array {
+export function rangee(formes: readonly Forme[]): Float64Array {
   let r = rangees.get(formes);
   if (r) return r;
   r = new Float64Array(formes.length * 4).fill(NaN);
@@ -97,7 +97,7 @@ function morceaux(m: number, degre: number, eps: number): number {
 }
 
 /** Le chemin aplati en polylignes, a un dix-millieme de sa boite pres : de quoi tester un point a tout zoom raisonnable. */
-function aplatir(f: Forme): readonly Trace[] {
+export function aplatir(f: Forme): readonly Trace[] {
   const deja = traces.get(f);
   if (deja) return deja;
   const b = boiteChemin(f.d);
@@ -139,7 +139,7 @@ function aplatir(f: Forme): readonly Trace[] {
 }
 
 /** Le point est-il dans la surface ? Chaque sous-chemin se ferme, comme le remplissage le fait ; la regle decide. */
-function dansSurface(ts: readonly Trace[], px: number, py: number, regle: Forme['regle']): boolean {
+export function dansSurface(ts: readonly Trace[], px: number, py: number, regle: Forme['regle']): boolean {
   let enroulement = 0, croisements = 0;
   for (const { pts } of ts) {
     const n = pts.length / 2;

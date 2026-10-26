@@ -1,0 +1,16 @@
+{
+  "commentaire": "Corpus hostile propre a l'ouverture depuis une adresse (ADR-0036) : chaque fichier est ce qu'un serveur peut renvoyer, avec un nom d'adresse qui ment sur sa nature. nature = ce que la decision sur les octets doit lire (svg, pdf, png, jpeg, gif, webp, bmp, html, vide, inconnue) ; attendu = ouvre (le dessin s'ouvre sans le danger), refus (refuse en le nommant, sans lever), image (remis au convertisseur, qui le decode comme une image deposee). Le tres gros flux est engendre par tests/unit/io/adresse.test.ts et tests/php/adresse.php.",
+  "fichiers": [
+    { "fichier": "image-qui-est-un-svg-a-script.png", "vecteur": "Une « image » .png qui est un SVG a script et gestionnaire onload : lue comme un SVG d'inconnu, jamais comme une image", "nature": "svg", "attendu": "ouvre" },
+    { "fichier": "image-svg-use-externe.jpg", "vecteur": "Un .jpg qui est un SVG a <use> et <image> distants : l'adresse ne lui donne aucun droit de plus, le renvoi externe est refuse", "nature": "svg", "attendu": "refus" },
+    { "fichier": "pdf-tronque.pdf", "vecteur": "Un PDF coupe au milieu (transfert interrompu, serveur qui ment sur la longueur)", "nature": "pdf", "attendu": "refus" },
+    { "fichier": "pdf-a-javascript-nomme-svg.svg", "vecteur": "Un .svg qui est un PDF a /OpenAction JavaScript : decide PDF sur ses octets, son JavaScript jamais lu", "nature": "pdf", "attendu": "ouvre" },
+    { "fichier": "reponse-html-erreur.svg", "vecteur": "Une page d'erreur HTML servie pour un .svg, avec une icone SVG dans la page : une page, pas un dessin", "nature": "html", "attendu": "refus" },
+    { "fichier": "reponse-html-sans-doctype.pdf", "vecteur": "Une page 403 sans DOCTYPE servie pour un .pdf", "nature": "html", "attendu": "refus" },
+    { "fichier": "reponse-texte-brut.png", "vecteur": "Un texte brut (« Not Found ») servi pour un .png", "nature": "inconnue", "attendu": "refus" },
+    { "fichier": "polyglotte-gif-svg.gif", "vecteur": "Un polyglotte GIF89a suivi d'un SVG a onload : decide GIF, remis au decodeur d'images, jamais lu comme SVG", "nature": "gif", "attendu": "image" },
+    { "fichier": "svg-bom-doctype-entites.webp", "vecteur": "Un .webp qui est un SVG a marque d'ordre des octets, DOCTYPE, bombe d'entites et entite externe : aucune entite developpee", "nature": "svg", "attendu": "ouvre" },
+    { "fichier": "image-bmp-nommee-png.png", "vecteur": "Une image BMP servie pour un .png : decidee BMP sur son en-tete DIB, pas sur l'extension", "nature": "bmp", "attendu": "image" },
+    { "fichier": "svg-majuscules-racine.svg", "vecteur": "Une racine <SVG> en majuscules : SVG distingue la casse, ce n'est pas un SVG", "nature": "inconnue", "attendu": "refus" }
+  ]
+}

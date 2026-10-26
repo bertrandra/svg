@@ -13,7 +13,8 @@ import type { Police } from '../io/polices.js';
 import { appliquerChangement, policeDe, poseApres, rienNeSePose, traceDe, type ChangementTexte } from './actionsTexte.js';
 import { phraseRienNeTient, RAISON_TAILLE_AJUSTEE, RAISON_TAILLE_ENVELOPPE } from './phrasesDisposition.js';
 import { AIDES_TRACE, ChoixTrace, RAISON_PLEIN_TRAIT } from './ChoixTrace.js';
-import { familleDePolice, OptionsPolices, useStylesPolice } from './ChoixPolice.js';
+import { useStylesPolice } from './ChoixPolice.js';
+import { ChoixPoliceListe } from './ChoixPoliceListe.js';
 import { useSectionsSelection } from './BarreSelection.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu.js';
@@ -118,11 +119,7 @@ type Barre = ReturnType<typeof useBarreTexte>;
 
 function ChoixPoliceBarre({ b }: { b: Barre }) {
   if (b.polices === null) return <span className="aide">Chargement des polices…</span>;
-  return (
-    <select className="police-barre" aria-label="Police" value={familleDePolice(b.police)} disabled={b.verrou} onChange={e => b.poserPolice(e.target.value)}>
-      <OptionsPolices polices={b.polices} valeur={b.police} absente={b.absente} />
-    </select>
-  );
+  return <ChoixPoliceListe compacte polices={b.polices} valeur={b.police} absente={b.absente} desactive={b.verrou} poser={b.poserPolice} explorer={b.tx.enLigne ? () => b.versPanneau(true) : undefined} />;
 }
 
 // Dans une forme a taille ajustee (ADR-0031), ou deforme (ADR-0032), la taille se calcule : le champ la montre, inactif, et dit pourquoi.

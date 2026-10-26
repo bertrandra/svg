@@ -14,6 +14,7 @@
 //   GET  api.php?r=json&f=…                    une annexe de donnees
 //   GET  api.php?r=fonte&f=…                   une fonte livree
 //   GET  api.php?r=police&sha=…                une police du catalogue, par l'empreinte sha256 de son fichier
+//   POST api.php?r=adresse                     { adresse } : le fichier a cette adresse, que le serveur va chercher (ADR-0036)
 
 declare(strict_types=1);
 
@@ -23,6 +24,7 @@ require __DIR__ . '/inc/reponses.php';
 require __DIR__ . '/inc/session.php';
 require __DIR__ . '/inc/projets.php';
 require __DIR__ . '/inc/polices.php';
+require __DIR__ . '/inc/adresse.php';
 
 set_exception_handler(function (Throwable $e): void {
     error_log('api : ' . $e::class . ' : ' . $e->getMessage() . ' (' . $e->getFile() . ':' . $e->getLine() . ')');
@@ -134,6 +136,9 @@ switch ($route) {
         servir_fonte($_GET['f'] ?? null);
     case 'police':
         servir_police_catalogue($_GET['sha'] ?? null);
+    case 'adresse':
+        // Une requete que le serveur emet pour la personne : une ecriture (POST, jeton CSRF, meme site), jamais un simple lien.
+        servir_adresse(corps_ecriture($csrfValide, 8192));
     default:
         repondre_erreur(404, 'introuvable', 'Route inconnue.');
 }

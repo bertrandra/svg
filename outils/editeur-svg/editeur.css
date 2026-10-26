@@ -198,7 +198,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .focale-fond { fill: none; stroke: var(--panneau); stroke-width: 5; vector-effect: non-scaling-stroke; }
 .focale { fill: none; stroke: var(--encre); stroke-width: 2; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
 .trace-en-cours { fill: none; stroke: var(--cyan); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
-.outil-rectangle .editeur-svg-toile, .outil-ellipse .editeur-svg-toile, .outil-etoile .editeur-svg-toile, .outil-ligne .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
+.trace-forme .editeur-svg-toile, .outil-plume .editeur-svg-toile { cursor: crosshair; }
 .cadre-selection { fill: color-mix(in srgb, var(--cyan) 10%, transparent); stroke: var(--cyan); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .cadre-selection { fill: var(--repli-cyan-10); } }
 .editeur-toile.fond-blanc .plan-travail { fill: var(--toile-blanc); }
@@ -242,6 +242,22 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .nuancier { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
 .nuancier .echantillon { width: 24px; height: 24px; padding: 0; border: 1px solid var(--filet-fort); cursor: pointer; }
 .nuancier .echantillon[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--cyan); }
+/* La section « Nuancier » (ADR-0037) : « Appliquer au » en boutons a etat (un etat, pas une action : filet et texte cyan, jamais
+   pleins), puis deux groupes titres comme les sous-titres des calques (Aide 600, encre douce), leur nombre et leur provenance a la
+   suite, leurs menus a droite. Les pastilles sont celles des autres nuanciers : la couleur du dessin, le filet fort. */
+.nuancier-cible { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs); }
+.nuancier-cible > .aide { margin-right: var(--esp-xs); }
+.nuancier-cible button { min-height: 24px; padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
+.nuancier-cible button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.nuancier-groupe { display: grid; gap: var(--esp-xs); min-width: 0; }
+/* Le titre garde sa ligne entiere quand le panneau est etroit : les menus du groupe passent dessous, a droite, plutot que de le
+   couper en trois lignes. */
+.nuancier-tete { display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-2xs) var(--esp-xs); min-width: 0; min-height: 24px; }
+.nuancier-titre { flex: 1 1 12em; min-width: 0; margin: 0; font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.nuancier-titre .aide { font-weight: 400; font-variant-numeric: tabular-nums; }
+.nuancier-outils { display: inline-flex; align-items: center; gap: var(--esp-xs); margin-left: auto; }
+.nuancier-tete .menu-deroulant { flex: none; }
+.nuancier-tete .menu-bouton.texte { padding: var(--esp-2xs) var(--esp-m); font-size: var(--texte-petit); }
 .couleurs-dessin { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-xs); }
 .couleurs-dessin li { display: flex; gap: var(--esp-s); align-items: center; min-width: 0; }
 .couleurs-dessin.fenetree { max-height: 260px; overflow: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); }
@@ -302,6 +318,26 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* Un menu a rubriques (« Plus ») : un titre par rubrique, un filet entre elles. */
 .menu-rubrique > .menu-titre { margin: var(--esp-m) var(--esp-m) var(--esp-2xs); }
 .menu-rubrique + .menu-rubrique { margin-top: var(--esp-xs); border-top: 1px solid var(--filet); }
+/* La palette des formes (ADR-0033) : un menu en grille, une rubrique titree par groupe, des tuiles icone et nom en trois colonnes
+   (deux sur un telephone). La forme du bouton est cochee comme une voie choisie : un filet cyan et un voile a 7 %, un etat, pas une action. */
+.menu-panneau-grille { width: min(32rem, calc(100vw - 16px)); }
+.menu-groupe + .menu-groupe { margin-top: var(--esp-xs); padding-top: var(--esp-2xs); border-top: 1px solid var(--filet); }
+.menu-groupe > .menu-titre { display: block; margin: var(--esp-s) var(--esp-m) var(--esp-xs); }
+.menu-tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--esp-2xs); }
+.menu-tuile { display: flex; align-items: center; gap: var(--esp-m); min-height: 32px; margin: 0; padding: var(--esp-xs) var(--esp-m); border: 0; border-radius: var(--rayon-champ); background: transparent; color: var(--encre); font-weight: 400; font-size: var(--texte-compact); line-height: 1.2; text-align: left; }
+.menu-tuile .icone { flex: none; }
+.menu-tuile .menu-libelle { flex: 1; min-width: 0; }
+.menu-tuile:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 14%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile:hover:not(:disabled) { background: var(--repli-cyan-14); } }
+.menu-tuile[aria-checked="true"] { background: color-mix(in srgb, var(--cyan) 7%, var(--panneau)); box-shadow: inset 0 0 0 1px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile[aria-checked="true"] { background: var(--repli-cyan-7-panneau); } }
+.menu-tuile[aria-checked="true"] .icone { color: var(--cyan); }
+.menu-tuile:focus-visible { outline: none; background: color-mix(in srgb, var(--cyan) 14%, transparent); box-shadow: inset 0 0 0 2px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .menu-tuile:focus-visible { background: var(--repli-cyan-14); } }
+@media (max-width: 480px) { .menu-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* La forme a tracer, en tete de son reglage : l'icone de l'outil et son nom, comme dans la palette. */
+.forme-a-tracer { display: flex; align-items: center; gap: var(--esp-m); margin: 0 0 var(--esp-s); font-weight: 600; }
+.reglage-part .valeur-part { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
 .contenu-export { display: grid; gap: var(--esp-s); min-width: 260px; width: min(28rem, calc(100vw - 48px)); }
 .contenu-export button { font-size: var(--texte-compact); padding: var(--esp-xs) var(--esp-m); justify-self: start; }
 /* Une ligne par format, en deux colonnes alignees : le geste (le bouton et son reglage), puis a quoi il sert, a l'encre douce. */
@@ -427,12 +463,10 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .outil-texte .editeur-svg-toile { cursor: text; }
 /* La barre de texte (ADR-0027) : la rangee de la selection, ses groupes, ses filets ; des listes et un champ chiffre a la taille de ses boutons. */
 .barre-texte select { width: auto; height: 28px; padding: 0 var(--esp-xs); font-size: var(--texte-compact); }
-.barre-texte select.police-barre { max-width: 13em; }
 .barre-texte .groupe { gap: var(--esp-xs); }
 .barre-texte .champ-ligne > span:first-child { min-width: 0; }
 .barre-texte .champ-ligne input[type="text"] { width: 5em; height: 28px; }
 .barre-texte > .groupe > button:not(.icone-bouton) { display: inline-flex; align-items: center; gap: var(--esp-xs); height: 28px; padding: 0 var(--esp-m); font-size: var(--texte-compact); }
-.barre-texte.compacte select.police-barre { max-width: 9.5em; }
 .barre-texte.compacte .champ-ligne input[type="text"] { width: 3.75em; }
 /* Toutes les polices (ADR-0025) : une feuille dans le flux, comme l'apercu ; la longue liste defile seule et se fenetre (ADR-0008).
    Un nom se dessine dans sa propre fonte quand on l'a, ou par l'apercu prepare de l'annexe (ADR-0026) ; aucun apercu ne
@@ -467,11 +501,56 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 .liste-polices .police-favori { flex: none; width: 28px; height: 28px; }
 .liste-polices .police-favori[aria-pressed="true"] { color: var(--cyan); }
 .liste-polices .police-favori[aria-pressed="true"] svg path { fill: currentColor; }
+/* La liste deroulante des polices (ADR-0034) : un champ ou l'on tape, comme une liste deroulante (meme fond, meme filet, un
+   chevron), et une feuille flottante de menu qui porte toutes les polices. Des lignes de hauteur fixe (le fenetrage les compte),
+   le nom dessine dans sa police, ses badges, puis une colonne pour la marque « à télécharger ». La ligne active est celle du
+   clavier : le voile et le contour de l'element de menu atteint ; la ligne survolee, le voile seul. */
+.liste-polices-choix { display: inline-grid; gap: var(--esp-2xs); flex: 1 1 auto; min-width: 0; }
+.liste-polices-champ { position: relative; display: flex; min-width: 0; }
+.liste-polices-champ input[type="text"] { width: 100%; min-width: 0; padding-right: var(--esp-2xl); font-family: inherit; font-size: var(--texte-compact); font-weight: 400; text-overflow: ellipsis; cursor: pointer; }
+.liste-polices-champ input[type="text"][aria-expanded="true"] { cursor: text; }
+.liste-polices-chevron { position: absolute; right: var(--esp-m); top: 50%; display: flex; transform: translateY(-50%); color: var(--encre-douce); pointer-events: none; }
+.liste-polices-etat { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.liste-polices-etat.erreur { color: var(--echec); }
+.barre-texte .liste-polices-choix { display: inline-flex; align-items: center; gap: var(--esp-xs); flex: 0 1 auto; }
+.barre-texte .liste-polices-champ { width: 13em; max-width: 13em; }
+.barre-texte .liste-polices-champ input[type="text"] { height: 28px; padding-top: 0; padding-bottom: 0; padding-left: var(--esp-xs); }
+.barre-texte .liste-polices-etat { max-width: 12em; }
+.barre-texte.compacte .liste-polices-champ { width: 9.5em; max-width: 9.5em; }
+.liste-polices-flottant { position: fixed; z-index: var(--couche-menu); display: flex; flex-direction: column; min-height: 0; background: var(--panneau); border: 1px solid var(--filet); border-radius: var(--rayon-menu); box-shadow: 0 8px 24px var(--ombre-menu); overflow: hidden; animation: menu-entree 0.12s ease-out; }
+.liste-polices-flottant.feuille { border-left: 0; border-right: 0; border-radius: 0; animation-name: feuille-entree; }
+@keyframes feuille-entree { from { opacity: 0; transform: translateY(8px); } }
+.liste-polices-options { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: var(--esp-xs) 0; outline: 0; }
+.liste-polices-groupe + .liste-polices-groupe { margin-top: var(--esp-xs); padding-top: var(--esp-xs); border-top: 1px solid var(--filet); }
+.liste-polices-titre { margin: var(--esp-xs) var(--esp-l) var(--esp-2xs); font-size: var(--texte-petit); font-weight: 600; color: var(--encre-douce); }
+.police-option { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto minmax(20px, auto); align-items: center; column-gap: var(--esp-s); height: 32px; padding: 0 var(--esp-l) 0 var(--esp-m); color: var(--encre); font-size: var(--texte-compact); cursor: pointer; }
+.police-option:hover { background: color-mix(in srgb, var(--cyan) 10%, transparent); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .police-option:hover { background: var(--repli-cyan-10); } }
+.police-option.active { background: color-mix(in srgb, var(--cyan) 14%, transparent); box-shadow: inset 0 0 0 2px var(--cyan); }
+@supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .police-option.active { background: var(--repli-cyan-14); } }
+.police-option[aria-selected="true"] .police-nom { font-weight: 600; }
+.police-option[aria-disabled="true"] { cursor: default; color: var(--encre-douce); }
+.police-coche { display: flex; color: var(--cyan); }
+.police-option .police-nom { min-width: 0; }
+.police-dispo { display: flex; justify-content: flex-end; align-items: center; color: var(--encre-douce); font-size: var(--texte-petit); white-space: nowrap; }
+.police-option[data-etat="a-telecharger"] .police-dispo { color: var(--encre); }
+.liste-polices-pied { flex: none; display: grid; gap: var(--esp-xs); padding: var(--esp-s) var(--esp-l) var(--esp-m); border-top: 1px solid var(--filet); }
+.liste-polices-pied p { margin: 0; }
+/* L'icone dans sa colonne, le paragraphe dans la sienne : une grille, ni une boite flexible ni une icone au fil du texte, avec
+   lesquelles WebKit ne laissait pas axe lire le fond du texte (« partially overlaps »). */
+.liste-polices-legende { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--esp-s); align-items: start; }
+.liste-polices-legende .icone { color: var(--encre); }
+.liste-polices-pied button.discret { justify-self: start; min-height: 24px; padding-left: 0; padding-right: 0; font-size: var(--texte-petit); }
+.liste-polices-pied button.discret:hover:not(:disabled) { background: transparent; text-decoration: underline; text-underline-offset: 0.2em; }
+@media (forced-colors: active) {
+  .police-option.active { outline: 2px solid Highlight; outline-offset: -2px; }
+  .police-coche { color: Highlight; }
+}
 @media (forced-colors: active) {
   .apercu-plein { fill: CanvasText; }
   .apercu-ligne { stroke: CanvasText; }
   .apercu-rendu svg { background: Canvas; }
-  .alignement-texte button[aria-pressed="true"], .choix-trace button[aria-pressed="true"] { border-color: Highlight; }
+  .alignement-texte button[aria-pressed="true"], .choix-trace button[aria-pressed="true"], .nuancier-cible button[aria-pressed="true"] { border-color: Highlight; }
   .cadre-saisie, .curseur-saisie { stroke: Highlight; }
   .selection-saisie { fill: Highlight; }
 }
@@ -481,7 +560,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .chevron-seul .icone-bouton { width: 40px; margin-left: calc(-1 * var(--esp-2xs)); }
   button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
   .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
-  .menu-element { min-height: 44px; }
+  .menu-element, .menu-tuile { min-height: 44px; }
   .editeur-calques .calque-nom, .editeur-calques .calque-bascule { min-height: 40px; min-width: 40px; }
   .par-couleur .icone-bouton { width: 40px; height: 40px; }
   .par-couleur .couleur-choix { min-height: 40px; }
@@ -496,6 +575,7 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .pastille-style button.aucun:hover { border-color: var(--cyan); box-shadow: none; }
   .pastille-style button.aucun.actif { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
   .nuancier button.echantillon { width: 40px; height: 40px; }
+  .nuancier-cible button { min-height: 40px; }
   input[type="range"] { min-height: 40px; }
   .reglages-pretraitement input[type="range"] { min-height: 40px; }
   .reglages-pretraitement .case, .lot .actions .case { min-height: 40px; }
@@ -509,6 +589,8 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .barre-texte select, .barre-texte .champ-ligne input[type="text"], .barre-texte > .groupe > button:not(.icone-bouton) { height: 40px; }
   .police-ligne, .polices-courtes button.discret { min-height: 40px; }
   .liste-polices .police-favori { width: 40px; height: 40px; }
+  .police-option { height: 40px; }
+  .barre-texte .liste-polices-champ input[type="text"], .liste-polices-pied button.discret { min-height: 40px; height: 40px; }
 }
 /* Au doigt, un raccourci clavier n'est qu'un bruit dans les menus : il se retire (un ecran etroit a la souris le garde). */
 @media (pointer: coarse) { .menu-raccourci { display: none; } }
@@ -542,6 +624,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .menu-panneau { border: 2px solid CanvasText; }
   .menu-element:hover:not(:disabled), .menu-element:focus-visible { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid HighlightText; outline-offset: -3px; box-shadow: none; }
   .menu-element:hover:not(:disabled) .menu-coche, .menu-element:focus-visible .menu-coche, .menu-element:hover:not(:disabled) .menu-raccourci, .menu-element:focus-visible .menu-raccourci { color: HighlightText; }
+  .menu-tuile:hover:not(:disabled), .menu-tuile:focus-visible { forced-color-adjust: none; background: Highlight; color: HighlightText; outline: 2px solid HighlightText; outline-offset: -3px; box-shadow: none; }
+  .menu-tuile[aria-checked="true"] { border: 2px solid Highlight; }
+  .menu-tuile[aria-checked="true"] .icone { color: inherit; }
   .editeur-calques li.choisi, .par-couleur li.choisi { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .editeur-calques li.choisi button, .par-couleur li.choisi button, .par-couleur li.choisi code { color: HighlightText; }
   .editeur-calques li.choisi button:focus-visible, .par-couleur li.choisi button:focus-visible { outline-color: HighlightText; }
@@ -729,6 +814,32 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
   .editeur-svg-toile .poignee-depart-groupe:focus-visible .poignee-depart-halo { stroke: Highlight; }
 }
 
+/* Les outils de selection (ADR-0035). Le cadre et le lasso, sous le voile cyan a 10 % : en tirets quand ils prennent les formes
+   touchees (le defaut, le cadre d'avant), en trait plein quand ils ne prennent que les formes entierement dedans (la convention des
+   logiciels de CAO). Les formes que le relachement prendra portent le lisere de survol de l'ADR-0029 (memes classes, memes jetons,
+   meme contraste force). Les outils Cadre et Lasso gardent la croix sur la toile comme sur les formes : ils ne deplacent rien. Rien
+   ne s'anime. */
+/* Deux calques poses sur la toile, chacun dans sa couche : un mouvement de la zone ne repeint ni les formes ni l'apercu. */
+.calque-zone { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; will-change: transform; }
+.calque-zone .zone-selection .cadre-selection.dedans { stroke-dasharray: none; stroke-width: 1.5; }
+.calque-zone .zone-selection polygon.cadre-selection { stroke-linejoin: round; }
+.calque-zone .lisere-survol-fond { fill: none; stroke: var(--panneau); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.calque-zone .lisere-survol { fill: none; stroke: var(--cyan); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.calque-zone .reticule line { stroke: var(--cyan); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.calque-zone .reticule circle { fill: var(--cyan); stroke: var(--panneau); stroke-width: 1; vector-effect: non-scaling-stroke; }
+@media (pointer: coarse) {
+  .calque-zone .lisere-survol-fond { stroke-width: 5; }
+  .calque-zone .lisere-survol { stroke-width: 2; }
+}
+@media (forced-colors: active) {
+  .calque-zone { forced-color-adjust: none; }
+  .calque-zone .cadre-selection, .calque-zone .lisere-survol, .calque-zone .reticule line { stroke: Highlight; }
+  .calque-zone .lisere-survol-fond { stroke: Canvas; }
+  .calque-zone .reticule circle { fill: Highlight; stroke: Canvas; }
+}
+.outil-cadre .editeur-svg-toile, .outil-lasso .editeur-svg-toile { cursor: crosshair; }
+/* Le bouton des outils de selection et son chevron, d'un seul tenant, comme celui des formes. */
+.outil-selection-groupe { display: inline-flex; align-items: center; }
 /* Les regles et les reperes (ADR-0038). Une regle est une feuille posee au bord de la toile : fond de panneau, filet, traits au filet
    fort (3:1), libelles en chasse fixe a l'encre douce. Elle se prend pour tirer un repere : le curseur dit le sens du geste. Le coin
    porte l'unite. Un repere est un trait d'outil fin, a l'ecran quel que soit le zoom ; choisi, il s'epaissit sur un halo de panneau ;

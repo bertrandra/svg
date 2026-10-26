@@ -1,7 +1,7 @@
 // Les types que l'editeur et ses panneaux se partagent. Un module de types seuls : tout le monde
 // l'importe (ou le relit par EditeurSvg.tsx) sans jamais creer de cycle a l'execution.
 
-import type { Boite, DessinSvg, Forme, Operation, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
+import type { Boite, DessinSvg, Forme, FormeDeBase, Operation, ParametresFormes, PoliceTexte, Style, TypeNoeud } from '../engine/editionSvg.js';
 import type { Glyphes } from '../engine/texte.js';
 import type { Booleen } from '../engine/booleens.js';
 import type { Jonction } from '../engine/contours.js';
@@ -13,12 +13,16 @@ import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { Historique } from '../util/historique.js';
 import type { Annonce } from './annonces.js';
 import type { Version } from './session.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** Une couleur du nuancier propose dans l'inspecteur : un nom et un code #rrggbb en minuscules. */
 export interface Teinte { nom: string; hex: string }
 
-export type OutilForme = 'rectangle' | 'ellipse' | 'etoile' | 'ligne';
-export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme;
+/** Les outils qui tracent une forme d'un glisser ou au reticule : les formes de base de la palette (ADR-0033). */
+export type OutilForme = FormeDeBase;
+/** Les outils qui choisissent par une zone (ADR-0035) : le cadre, commence meme sur une forme, et le lasso. */
+export type OutilZone = 'cadre' | 'lasso';
+export type Outil = 'selection' | 'points' | 'main' | 'plume' | 'texte' | OutilForme | OutilZone;
 export type Coin = 'nw' | 'ne' | 'sw' | 'se';
 export type Point = readonly [number, number];
 export interface Vue { zoom: number; x: number; y: number }
@@ -89,6 +93,10 @@ export interface EtatInterface {
   outil: Outil;
   point: number | null;
   style: Style;
+  /** Les reglages des formes a tracer (cotes, branches, rayon des coins…) : une donnee de la session, jamais ecrite (ADR-0033). */
+  parametres: ParametresFormes;
+  /** Croit a chaque demande d'ouvrir la palette des formes au clavier (F) : le bouton « Formes » l'ouvre alors. */
+  demandeFormes: number;
   trace: readonly Point[];
   grille: boolean;
   aimants: boolean;
@@ -129,6 +137,8 @@ export interface EtatInterface {
   fin: OptionsFin;
   /** L'etat de l'enregistrement que l'hote annonce (le site, ADR-0030) ; absent ou null chez un hote qui ne le dit pas. */
   enregistrement?: EtatEnregistrement | null;
+  /** Ce que le cadre et le lasso prennent (ADR-0035) : les formes touchees (defaut) ou entierement dedans. Un reglage de la session. */
+  regleZone: RegleZone;
 }
 
 /**
@@ -150,6 +160,10 @@ export interface ActionsEditeur {
   poserPoint: (i: number | null) => void;
   poserOutil: (o: Outil) => void;
   poserStyle: (s: Style) => void;
+  /** Change des reglages des formes a tracer, ramenes dans leurs bornes. */
+  poserParametres: (p: Partial<ParametresFormes>) => void;
+  /** Ouvre la palette des formes de la barre (le raccourci F), le focus sur la forme courante. */
+  ouvrirFormes: () => void;
   poserTrace: (t: readonly Point[]) => void;
   poserGrille: (g: boolean) => void;
   poserAimants: (a: boolean) => void;
@@ -237,6 +251,8 @@ export interface ActionsEditeur {
   poserOperation: (operation: Operation, ids?: readonly string[]) => void;
   /** Montre ou retire l'apercu de la machine sur la toile, et le dit. */
   poserApercuMachine: (a: boolean | ((a: boolean) => boolean)) => void;
+  /** Ce que le cadre et le lasso prennent (ADR-0035), et le dit. */
+  poserRegleZone: (r: RegleZone) => void;
 }
 
 export interface Vues {

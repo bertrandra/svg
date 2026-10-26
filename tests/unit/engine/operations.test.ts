@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ecrireDessin, lireDessin, type Chemin, type DessinSvg, type Forme, type TexteVivant } from '../../../src/engine/editionSvg.js';
+import { avecReperes, ecrireDessin, lireDessin, marquerReperes, type Chemin, type DessinSvg, type Forme, type TexteVivant } from '../../../src/engine/editionSvg.js';
 import {
   compterOperations, constatsBloquants, constatsPreparation, corrigerPreparation, operationDe, operationProposee, operationsAEcrire, operationsApplicables,
   operationsMelees, partagerOperations, phraseOperation, poserOperation, resoudreProfil, sansOperation, type ProfilProduction
@@ -179,11 +179,12 @@ describe('ce que le fichier garde', () => {
       const texte = readFileSync(resolve(dossier, nom), 'utf8');
       // La reference neuve de ce chantier (cricut-operations) porte des operations : c'est son objet.
       if (texte.includes('data-ed-operation')) continue;
-      // Celle des reperes (reperes-document, ADR-0038) porte ses reperes, que le document reecrit : c'est son objet.
-      if (texte.includes('data-ed-reperes')) continue;
       const lu = lireDessin(texte);
       if ('erreur' in lu) continue;
-      expect(svgDocument(lu.dessin, CHOIX_GENERIQUE), nom).toBe(ecrireDessin(lu.dessin, 3));
+      // Les reperes (ADR-0038, la reference reperes-document) suivent la marque sur la racine et n'entrent pas dans les operations :
+      // sans eux, le document est l'ecriture ordinaire a l'octet ; avec eux, la meme, plus leur seul attribut.
+      expect(svgDocument(lu.dessin, CHOIX_GENERIQUE), nom).toBe(marquerReperes(ecrireDessin(lu.dessin, 3), lu.dessin.reperes));
+      expect(svgDocument(avecReperes(lu.dessin, null), CHOIX_GENERIQUE), nom).toBe(ecrireDessin(lu.dessin, 3));
       expect(svgDocument(lu.dessin, choix('decoupe')), nom).not.toContain('data-ed-operation');
     }
   });

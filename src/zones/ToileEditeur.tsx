@@ -13,6 +13,7 @@ import { FondPrise, SurvolToile } from './PriseToile.js';
 import { useSaisie } from './contexteSaisie.js';
 import { ApercuMachine } from './ApercuMachine.js';
 import { ChoixFormeToile, GuideDisposition } from './DispositionToile.js';
+import { ZoneToile } from './ZoneToile.js';
 import { Regles } from './Regles.js';
 import { CoucheReperes, PanneauReperes } from './Reperes.js';
 import { PanneauRepetition } from './PanneauRepetition.js';
@@ -47,7 +48,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} masquee={sx.vide && f.id === sx.saisie?.id} />)}
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />
-          <g className="surcouche">{surcouche(mo, ui, 1 / z, gestes.cadre, tactile, !!sx.saisie)}</g>
+          <g className="surcouche">{surcouche(mo, ui, 1 / z, tactile, !!sx.saisie)}</g>
           {/* Le texte pose sur ou dans une forme (ADR-0031) : le guide de sa forme, la poignee de depart, le choix de la forme. */}
           <GuideDisposition svgRef={svgRef} chemin={cheminDe} />
           <ChoixFormeToile svgRef={svgRef} chemin={cheminDe} />
@@ -55,6 +56,8 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           <CoucheReperes toile={toile} svgRef={svgRef} />
         </g>
       </svg>
+      {/* Le cadre ou le lasso en cours, et l'apercu de ce qu'il prendra (ADR-0035) : des calques par-dessus la toile. */}
+      <ZoneToile magasin={gestes.zone} chemin={cheminDe} />
       <SaisieTexte svgRef={svgRef} />
       {/* Les regles, et les panneaux flottants des reperes et de la repetition (ADR-0038). */}
       <Regles toile={toile} />

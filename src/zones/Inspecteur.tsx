@@ -16,6 +16,7 @@ import { Repere } from './Repere.js';
 import type { Teinte } from './typesEditeur.js';
 import { Nombre } from './commun/Nombre.js';
 import { SectionTexte } from './InspecteurTexte.js';
+import { SectionNuancier } from './SectionNuancier.js';
 
 // Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
 export { Nombre };
@@ -53,6 +54,7 @@ export function Inspecteur() {
           </select>
         </label>
       </Section>
+      <SectionNuancier />
       {boite ? (
         <Section titre="Position et taille" ouverte>
           <div className="grille-2">

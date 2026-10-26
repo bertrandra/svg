@@ -2,7 +2,8 @@
 // l'editeur retient vit ici, une fois ; `Atelier` n'a plus qu'a le donner aux contextes.
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { aimanter, boiteDe, pasGrille, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, pasGrille, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
+import { arrondi } from './aidesEditeur.js';
 import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { phraseProduction, svgDocument, usePreparation } from './actionsProduction.js';
@@ -10,12 +11,14 @@ import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
 import { historique, type Historique } from '../util/historique.js';
+import { avecNuancier } from '../engine/nuancier.js';
 import type { Annonce } from './annonces.js';
 import { creerActions, type EtatDuMoment } from './creerActions.js';
 import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
 import type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Fond, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
+import type { RegleZone } from '../engine/selection.js';
 
 export interface ParametresEtat {
   initial: DessinSvg; ignores: readonly string[]; nuancier: readonly Teinte[]; bibliotheque: Bibliotheque | 'a-charger' | null;
@@ -42,11 +45,15 @@ export interface EtatEditeur {
 
 export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const stockage = useStockage();
-  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(p.initial));
+  // Le nuancier du dessin (ADR-0037) se tire de ses couleurs a l'ouverture, dans l'etat initial : ce n'est pas une modification.
+  const [h, poserH] = useState<Historique<DessinSvg>>(() => historique(avecNuancier(p.initial)));
   const [selection, choisir] = useState<string[]>([]);
   const [outil, poserOutilBrut] = useState<Outil>('selection');
   const [point, poserPoint] = useState<number | null>(null);
   const [style, poserStyle] = useState<Style>(() => ({ ...STYLE_DEFAUT, remplissage: p.nuancier[0]?.hex ?? STYLE_DEFAUT.remplissage }));
+  // Les reglages des formes a tracer : de la session. Le rayon des coins part d'un quarantieme du plan, comme « Arrondir les angles ».
+  const [parametres, poserParametres] = useState<ParametresFormes>(() => ({ ...PARAMETRES_FORMES_DEFAUT, rayonCoins: arrondi(Math.max(p.initial.vb[2], p.initial.vb[3]) / 40) }));
+  const [demandeFormes, poserDemandeFormes] = useState(0);
   const [trace, poserTrace] = useState<readonly Point[]>([]);
   const [presse, poserPresse] = useState<readonly Forme[]>([]);
   const [grille, poserGrille] = useState(false);
@@ -70,6 +77,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const [suiteCricut, poserSuiteCricut] = useState<SuiteCricut>(null);
   // L'apercu de la machine (ADR-0028) : un reglage de vue de la session, actif par defaut ; il n'agit qu'en contexte Cricut.
   const [apercuMachine, poserApercuMachine] = useState(true);
+  // Ce que le cadre et le lasso prennent (ADR-0035) : un reglage de la session, qui revient aux formes touchees a chaque ouverture.
+  const [regleZone, poserRegleZone] = useState<RegleZone>('touche');
   // Le geste de fin ne change pas pendant la vie de l'editeur : un objet stable, pour que l'interface ne se redessine pas pour lui.
   const aBrouillon = !!p.brouillon;
   const { ctrlSEnregistre = false, actionsHote } = p;
@@ -105,7 +114,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   };
   const [actions] = useState(() => creerActions(
     () => { if (!moment.current) throw new Error('Un verbe de l’éditeur a été appelé avant le premier rendu.'); return moment.current; },
-    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, toile }
+    { poserH, choisir, poserOutilBrut, poserPoint, poserStyle, poserParametres, poserDemandeFormes, poserTrace, poserPresse, poserGrille, poserAimants, poserLisserBooleens, poserGuides, poserVersions, poserTiroir, poserContours, poserFond, dire, poserQuitter, poserCurseur, poserFocale, poserAnnonce, poserProduction, poserSuiteCricut, poserApercuMachine, poserRegleZone, toile }
   ));
 
   // Un fichier prepare pour un contexte que ce programme ne connait pas (une version plus recente) s'ouvre en Generique, en le disant.
@@ -146,8 +155,8 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
     [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
-    () => ({ outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement }),
-    [outil, point, style, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement]
+    () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone }),
+    [outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone]
   );
   return { modele, actions, etat, vues, modifie, toile, svgRef };
 }

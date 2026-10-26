@@ -49,5 +49,20 @@ defined('POLICES_SOURCES') || define('POLICES_SOURCES', [
 ]);
 defined('POLICE_OCTETS_MAX') || define('POLICE_OCTETS_MAX', 8 * 1024 * 1024);
 
+// Ouvrir depuis une adresse (ADR-0036, docs/securite.md § 10) : le serveur va chercher un SVG, un PDF ou une image pour la personne
+// connectee. Il refuse toute adresse qui mene a un reseau prive, de bouclage, lien-local, multicast ou reserve (IPv4 et IPv6), se
+// connecte a l'adresse IP verifiee, suit au plus 3 redirections en verifiant chacune, borne la taille et le temps. cURL est requis.
+defined('ADRESSE_OUVERTURE') || define('ADRESSE_OUVERTURE', true);
+// `http://` (en clair) refuse par defaut : seulement https.
+defined('ADRESSE_HTTP') || define('ADRESSE_HTTP', false);
+// Les ports admis : 443 ; et 80 quand http est permis.
+defined('ADRESSE_PORTS') || define('ADRESSE_PORTS', ADRESSE_HTTP ? [443, 80] : [443]);
+// La taille d'un fichier (la meme borne que l'ouverture d'un fichier dans le navigateur) et le temps total, redirections comprises.
+defined('ADRESSE_OCTETS_MAX') || define('ADRESSE_OCTETS_MAX', 100 * 1024 * 1024);
+defined('ADRESSE_DELAI') || define('ADRESSE_DELAI', 30);
+// Des reseaux prives que l'administrateur autorise quand meme (un serveur de fichiers de l'intranet), en notation CIDR :
+// `['10.20.0.0/16', 'fd12:3456::/48']`. Vide par defaut : aucun.
+defined('ADRESSE_RESEAUX_PERMIS') || define('ADRESSE_RESEAUX_PERMIS', []);
+
 // Vrai derriere un mandataire qui termine HTTPS sans le dire a PHP : le cookie de session part alors toujours en `Secure`.
 defined('HTTPS_FORCE') || define('HTTPS_FORCE', false);

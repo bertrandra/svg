@@ -19,6 +19,7 @@ import { ReglagesFinsPanneau } from './ReglagesFins.js';
 import { EpaisseurLigne, ReglagesLignePanneau } from './ReglagesLigne.js';
 import { ReglagesPretraitementPanneau } from './ReglagesPretraitement.js';
 import { Repere } from './Repere.js';
+import { NuancierImage } from './NuancierImage.js';
 
 export const NOMS_MODES: Record<ModeVectorisation, string> = {
   aplats: 'Aplats aux couleurs de l’image', trait: 'Trait noir (une couleur)', fidele: 'Fidèle (plus de nuances)', mediane: 'Ligne médiane (stylo)'
@@ -192,6 +193,7 @@ export function AtelierResultat({ nom, source, original, t, poserT, resultat, es
           </Repere>
         ) : null}
         {resultat ? <FicheResultat nom={nom} resultat={resultat} ouvrir={ouvrir} /> : <p className="aide" role="status">{message || (enCours ? 'Vectorisation…' : 'Pas encore de résultat : réglez, puis « Vectoriser ».')}</p>}
+        {resultat ? <NuancierImage resultat={resultat} /> : null}
         {essais.length > 1 ? <Essais essais={essais} cle={cle} reprendre={reprendre} /> : null}
       </div>
       <aside className="reglages-vecto" aria-label="Réglages du tracé">

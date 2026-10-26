@@ -29,7 +29,7 @@ Rien n’est refait : l’arrondi reprend `filetEntre`, la largeur variable le p
 abscisses des verticaux, en unités du plan, **au millième, triées, sans doublon, au plus 200 par axe**, et **absent** d’un dessin
 qui n’en a pas (jamais un champ vide). Les opérations sont pures (`engine/edition/reperes.ts` : `ajouterRepere`, `deplacerRepere`,
 `supprimerRepere`, `effacerReperes`, `avecReperes`), rendent le même objet quand rien ne change, et passent donc par
-l’historique : poser, déplacer, retirer, effacer un repère s’annule par Ctrl+Z, et compte comme une modification à enregistrer.
+l’historique : poser, déplacer, retirer, effacer un repère s’annule par Ctrl+Z, et compte comme une modification à enregistrer. Comme le nuancier du dessin (ADR-0037), c’est un champ du document que le modèle v2 (ADR-0012, étape 0) laisse au niveau du dessin : il ne rend pas un dessin « non plat » (`estPlat` ne lit que les groupes et les feuilles), l’écriture plate l’ignore, et `tests/unit/engine/projet-v2.test.ts` le classe « porté ».
 
 Pourquoi dans le dessin plutôt que dans l’état de l’interface (comme le contexte de production de l’ADR-0013) : un repère se pose
 et se retire comme on retouche, on veut l’annuler ; il voyage avec le dessin (versions, brouillon, projet) sans que chaque hôte

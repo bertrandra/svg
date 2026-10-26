@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
 import { attend, ouvrirCode, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { champPolice, choisirPolice, valeurPolice } from './polices.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 /** Un carre plein de 2 po (a 96 unites par pouce) et une ligne ouverte. */
@@ -34,9 +35,9 @@ describe('le dessin au stylo', () => {
   }
   async function ajouterTexte(page: Page, texte: string, police: string) {
     await page.keyboard.press('t');
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
     await page.locator('.editeur-inspecteur textarea[aria-label="Texte"]').fill(texte);
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').selectOption(police);
+    await choisirPolice(page.locator('.editeur-inspecteur'), police);
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
   }
@@ -74,7 +75,7 @@ describe('le dessin au stylo', () => {
     await attend(() => panneau(page).locator('.constat', { hasText: /^Double trait/ }).count()).toBe(1);
     await panneau(page).locator('.constat', { hasText: /^Double trait/ }).getByRole('button', { name: 'Police à trait unique' }).click();
     await attend(() => message(page)).toMatch(/^1 texte en police à trait unique/);
-    await attend(() => page.locator('.editeur-inspecteur select[aria-label="Police"]').inputValue()).toBe('ems-readability');
+    await attend(() => valeurPolice(page.locator('.editeur-inspecteur'))).toBe('ems-readability');
     await expect(page.locator('.editeur-svg-toile path[data-id="f3"]').getAttribute('fill')).resolves.toBe('none');
     // Le carre reste plein : on le garde en contour, puis plus rien n'est a corriger.
     await panneau(page).getByRole('button', { name: 'Garder le contour', exact: true }).click();

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ecrireDessin } from '../engine/editionSvg.js';
+import { avecNuancier } from '../engine/nuancier.js';
 import { nomDeProjet, type TeinteProjet } from '../model/projet.js';
 import { CHOIX_GENERIQUE } from '../model/contextes.js';
 import { stockageNavigateur } from '../io/stockage.js';
@@ -15,6 +16,7 @@ import { EditeurSvg, type ActionHote, type EtatEnregistrement, type EtatRendu } 
 import { EXEMPLE, NUANCIER_EXEMPLE, OuvrirSvg, Voies } from '../zones/Application.js';
 import { SectionBibliotheque } from '../zones/Bibliotheque.js';
 import { Vectoriser } from '../zones/Vectoriser.js';
+import { useReception } from '../zones/OuvrirAdresse.js';
 import { FournisseurStockage } from '../zones/contexteStockage.js';
 import { FournisseurReperes, type OptionsGuide } from '../zones/contexteGuide.js';
 import { DialogueCredits } from '../zones/Credits.js';
@@ -69,14 +71,16 @@ function EnregistrerSous({ nom, valider, fermer }: { nom: string; valider: (nom:
 
 /** Les trois voies de la page autonome, pour commencer un projet d'un fichier, d'une image, d'une forme. */
 function VoiesDuSite({ ouvrirSvg, image, dire }: {
-  ouvrirSvg: (nom: string, texte: string, ignores?: readonly string[]) => void; image: { current: { nom: string; fichier: File } | null }; dire: (t: string) => void;
+  ouvrirSvg: (nom: string, texte: string, ignores?: readonly string[]) => void; image: { current: { nom: string; fichier: File } | null }; dire: (t: string, ton?: TonMessage) => void;
 }) {
   const [voie, poserVoie] = useState<Voie>('svg');
+  // Ouvrir depuis une adresse (ADR-0036) : le serveur du site va chercher le fichier (io/serveur.ts), la voie suit sa nature.
+  const reception = useReception(poserVoie);
   return (
     <Voies ordre={ORDRE} voie={voie} poserVoie={poserVoie}>
       {{
-        svg: <OuvrirSvg ouvrir={(nom, texte, ignores) => { image.current = null; ouvrirSvg(nom.replace(/\.(svg|pdf)$/i, '') || 'Sans titre', texte, ignores); }} dire={dire} essayer={() => ouvrirSvg('Exemple', EXEMPLE)} invitation={false} />,
-        image: <Vectoriser ouvrir={(nom, svg) => ouvrirSvg(nom, svg)} surImage={(nom, fichier) => { image.current = { nom, fichier }; }} />,
+        svg: <OuvrirSvg ouvrir={(nom, texte, ignores) => { image.current = null; ouvrirSvg(nom.replace(/\.(svg|pdf)$/i, '') || 'Sans titre', texte, ignores); }} dire={dire} essayer={() => ouvrirSvg('Exemple', EXEMPLE)} invitation={false} reception={reception} />,
+        image: <Vectoriser ouvrir={(nom, svg) => ouvrirSvg(nom, svg)} surImage={(nom, fichier) => { image.current = { nom, fichier }; }} reception={reception} />,
         formes: <SectionBibliotheque active={voie === 'formes'} ouvrir={x => { image.current = null; ouvrirSvg(x.nom, svgDeBibliotheque(x.id, x.svg, x.source)); }} />
       }}
     </Voies>
@@ -129,7 +133,9 @@ function Hote({ serveur, csrf }: { serveur: Serveur; csrf: string }) {
     return () => window.removeEventListener('beforeunload', avant);
   }, [sale]);
 
-  const ouvrirTravail = useCallback((t: TravailOuvert) => {
+  const ouvrirTravail = useCallback((ouvert: TravailOuvert) => {
+    // Le nuancier du dessin (ADR-0037) pose ici, comme l'editeur le poserait : l'etat de reference est alors celui qu'il ouvre.
+    const t = { ...ouvert, dessin: avecNuancier(ouvert.dessin) };
     cles.current++;
     reference.current = t.id ? { dessin: t.dessin, production: t.production } : null;
     courant.current = { dessin: t.dessin, production: t.production };

@@ -17,6 +17,8 @@ import { useRangeeCompacte } from './Vue.js';
 import { OperationSelection } from './OperationSelection.js';
 import { DispositionSelection, useSectionDisposition } from './ChoixDisposition.js';
 import { useElementsRepetition } from './menusOutilsPro.js';
+import { MenuNuancierSelection } from './SectionNuancier.js';
+import { useSectionNuancier } from './actionsNuancier.js';
 
 const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
   ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
@@ -90,6 +92,9 @@ function RangeeEntiere() {
         <Bouton icone="verrouiller" aide="Verrouiller" onClick={ac.verrouillerSelection} />
         <Bouton icone="supprimer" aide="Supprimer (Suppr)" className="danger" onClick={ac.supprimerSelection} />
       </div>
+      <div className="groupe" role="group" aria-label="Nuancier">
+        <MenuNuancierSelection />
+      </div>
     </div>
   );
 }
@@ -101,6 +106,7 @@ function RangeeEntiere() {
 export function useSectionsSelection(complet: boolean): SectionMenu[] {
   const g = useGestes(), { sel, ac, surPlan } = g;
   const disposition = useSectionDisposition(), repetition = useElementsRepetition();
+  const nuancier = useSectionNuancier();
   const transformer: ElementMenu[] = [
     ...(complet ? [{ id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: 'Miroir horizontal', icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
     { id: 'miroir-v', libelle: 'Miroir vertical', icone: 'miroir-v', onClick: () => g.miroir('v') },
@@ -119,7 +125,8 @@ export function useSectionsSelection(complet: boolean): SectionMenu[] {
       { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', raccourci: 'Ctrl+Maj+G', desactive: !g.separable, onClick: ac.separerSelection },
       { id: 'masquer', libelle: 'Masquer', icone: 'masquer', onClick: ac.masquerSelection },
       { id: 'verrouiller', libelle: 'Verrouiller', icone: 'verrouiller', onClick: ac.verrouillerSelection }
-    ] }
+    ] },
+    nuancier
   ];
 }
 

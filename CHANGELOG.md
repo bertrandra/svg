@@ -56,6 +56,16 @@ empreintes.
 
 ### Modifié
 
+- La liste « Police » montre toutes les polices (ADR-0034), dans le panneau, l'inspecteur et la barre de texte : une liste
+  déroulante à recherche avec la police actuelle, celles du document, les favoris, les récentes, les livrées, le trait unique, vos
+  polices, puis tout le catalogue, une ligne par famille, chaque nom dessiné dans sa police. Une police pas encore sur l'appareil
+  porte une marque « à télécharger » (icône et mots) ; la choisir la télécharge, vérifiée, et la marque disparaît ; ouvrir,
+  parcourir et chercher ne téléchargent rien. Taper filtre, le clavier suffit ; sur un téléphone, la liste s'ouvre en feuille.
+- « Ne rien sélectionner » devient « Désélectionner », « Sélectionner la même couleur » devient « Sélectionner la même couleur de
+  fond » (C) ; sur un téléphone, « Points et poignées » se range dans le menu de l'outil de sélection.
+- Le nom d'une forme suit les formes de base (« cœur », « hexagone », « étoile à 8 branches »…) ; un losange lu dans un fichier se
+  dit « losange », un rectangle aux coins ronds « rectangle arrondi » ; une forme tracée à la souris se dit « ajoutée et
+  sélectionnée » ; le menu des formes s'appelle « Formes (F) ».
 - « Dans la forme » (barre, menu de la sélection, barre resserrée) pose le texte déformé ; le remplissage en lignes se choisit dans
   le panneau (« Remplir : En lignes ») et un texte déjà posé en lignes le garde, octet pour octet. Un champ chiffré inactif dit
   pourquoi en infobulle.
@@ -144,6 +154,8 @@ empreintes.
 
 ### Corrigé
 
+- Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
+  corpus a changé) ; rien ne peut plus le recomposer.
 - Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
   bouton, est la poignée du glisser (Firefox ne commence jamais un glisser sur un bouton).
 - Sous Safari et WebKit, un menu ouvert à la souris puis parcouru aux flèches montre de nouveau l'élément atteint, de même que
@@ -186,6 +198,43 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Les outils de sélection** (ADR-0035) : le cadre prend toute forme dont le tracé réel (surface remplie selon sa règle, ou encre
+  du trait) touche le rectangle, même en partie — plus le trou d'un anneau, ni le coin vide de la boîte d'une diagonale ; « Les
+  formes entièrement dedans » se choisit au menu de l'outil (zone en trait plein, tirets pour « touchées ») ; un bouton de la barre
+  reprend Sélection (V), **Cadre de sélection (B)**, qui commence même sur une forme et sert au doigt, et **Lasso (Q)** ; Maj
+  ajoute, Alt retire ; pendant le geste, le liseré de survol montre ce que le relâchement prendra ; au clavier, le réticule pose
+  les coins du cadre ou les points du lasso. Menu Édition : Inverser la sélection (I), même couleur de contour (Alt+C), même type
+  (Y) ; en Cricut, tout ce qui est à couper / à écrire (Alt+Maj+X, Alt+Maj+E). Aucun octet écrit ne change.
+
+- Modèle v2, étape 0 (ADR-0012) : des coutures sans effet visible. Types du modèle v2 en champs facultatifs ; arbre dérivé et
+  invariants ; points d'extension de la lecture, de l'écriture et des transformations (catalogue vide) ; écriture riche en
+  squelette et définitions nommées par empreinte ; descente vers un dessin plat (`aplatirPour`) ; garde-fous (références v1 gelées
+  par manifeste, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`). Aucun octet écrit ne change.
+  L'ADR-0012 et son plan sont révisés après les ADR-0022 à 0037.
+
+- **Le nuancier se tire du dessin, et de la sélection** (ADR-0037) : à l'ouverture d'un SVG, d'un PDF ou d'une image convertie,
+  la section « Nuancier » de l'inspecteur propose « Couleurs du dessin » : les couleurs réellement employées, rangées par surface
+  couverte, les presque identiques fondues (écart OKLab ≤ 0,02), 24 au plus, noir et blanc gardés. « Créer le nuancier depuis la
+  sélection » (menu Édition, rangée de la sélection, Maj+N pour remplacer, Alt+Maj+N pour ajouter) le remplace ou le complète, et
+  Ctrl+Z le défait ; le nuancier de la page ou de l'hôte reste à côté (« Nuancier proposé »). Un clic pose la couleur sur le
+  remplissage, Maj+clic sur le contour ; chaque pastille a un nom approché en français. L'atelier de conversion montre le nuancier
+  de l'image et celui du tracé. Export `.gpl` et `.ase` ; le projet JSON le garde (`dessin.nuancier`). Aucun octet SVG ne change.
+
+- **Ouvrir depuis une adresse** (ADR-0036) : un champ « Ouvrir depuis une adresse » dans les voies « Ouvrir un SVG ou un PDF » et
+  « Convertir une image », et « Insérer depuis une adresse… » dans le menu Fichier de l'éditeur (un SVG ou la première page d'un
+  PDF). Un lien glissé, ou une adresse collée seule dans la zone de code, l'ouvre aussi ; rien ne part avant ce geste. Le type se
+  décide sur les octets reçus, jamais sur l'extension, et la lecture reste celle d'un fichier d'inconnu. Dans la page autonome, le
+  navigateur va chercher le fichier (https seulement, sans cookie ni référent, 100 Mo et 60 s au plus, annulable) et dit
+  clairement un refus CORS ; sur le site PHP, le serveur le fait, avec des protections anti-SSRF (adresses privées refusées en
+  IPv4 et IPv6, connexion épinglée, redirections revues, taille et délai bornés, journal sans chemin ni paramètre ; cURL requis).
+
+- **Les formes de base** (ADR-0033) : une palette de 26 formes en cinq rubriques (Basiques, Polygones, Symboles, Étiquettes,
+  Traits), ouverte par le chevron « Formes » de la barre ou par F : carré, cercle, rectangle arrondi, triangle, losange,
+  parallélogramme, trapèze, polygone de 3 à 12 côtés, étoile réglable, cœur, flèche simple ou double, croix, anneau percé,
+  demi-cercle ou quart, goutte, lune, nuage, étiquette, badge festonné, bulle de dialogue, arc, spirale et vague. Chaque forme est
+  un chemin ordinaire, tracé d'un glisser ou au clavier ; ses réglages sont dans le panneau (« Forme à tracer ») ; Maj garde les
+  proportions ; le bouton de la barre reprend la dernière forme. Aucun octet écrit ne change ; référence neuve `formes-de-base`.
 
 - **Le texte déformé dans une forme** (ADR-0032) : « Dans la forme » étire et courbe tout le texte jusqu'au contour (un cœur, un
   cercle, une étoile), lettres déformées, le bloc à la silhouette de la forme. Il reste modifiable : on le retape sur la toile, la

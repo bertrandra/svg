@@ -22,6 +22,10 @@ import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
 import { aEnregistrer } from './enregistrement.js';
 import { useElementsRepetition, useElementsReperes } from './menusOutilsPro.js';
+import { BoiteInsererAdresse } from './InsererAdresse.js';
+import { adressesPermises } from './OuvrirAdresse.js';
+import { useElementsNuancier } from './actionsNuancier.js';
+import { elementsSelection } from './commandesSelection.js';
 
 const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fond-damier', 'Fond damier'], ['blanc', 'fond-blanc', 'Fond blanc'], ['sombre', 'fond-sombre', 'Fond sombre']];
 
@@ -64,6 +68,7 @@ export function MenuVue() {
 function useElementsEdition(): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
+  const nuancier = useElementsNuancier();
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
   const vectoriser: ElementMenu[] = MODES_VECTORISATION.map((m, i) => ({
     id: 'vectoriser-' + m, libelle: 'Vectoriser le texte : ' + NOMS_MODES[m].toLowerCase(), separateur: i === 0, desactive: sansTexte,
@@ -78,9 +83,10 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', desactive: rien, onClick: ac.dupliquerSelection },
     // Repeter la selection : grille, radiale, symetrie (ADR-0038).
     ...repetition,
-    { id: 'tout', libelle: 'Tout sélectionner', icone: 'tout-selectionner', raccourci: 'Ctrl+A', separateur: true, desactive: !mo.dessin.formes.length, onClick: () => ac.choisir(mo.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)) },
-    { id: 'meme-couleur', libelle: 'Sélectionner la même couleur', icone: 'palette', raccourci: 'C', desactive: rien, onClick: ac.choisirMemeCouleur },
-    { id: 'aucun', libelle: 'Ne rien sélectionner', icone: 'aucune-selection', raccourci: 'Échap', desactive: rien, onClick: () => { ac.choisir([]); ac.poserPoint(null); } },
+    // Choisir (ADR-0035) : tout, rien, inverser, meme fond, meme contour, meme type, et en Cricut ce qui est a couper ou a ecrire.
+    ...elementsSelection(mo, ui, ac),
+    // Le nuancier du dessin depuis la selection (ADR-0037) : le remplacer ou le completer.
+    ...nuancier,
     // Couper ou ecrire (ADR-0028), en contexte Cricut qui coupe ou ecrit : la selection passe d'un groupe a l'autre.
     ...(ui.profil && operationsApplicables(ui.profil.procede) ? [
       { id: 'operation-decoupe', libelle: 'Sélection à couper', icone: 'couper', raccourci: 'Maj+X', separateur: true, desactive: rien, onClick: () => ac.poserOperation('decoupe') },
@@ -108,7 +114,7 @@ export function MenuEdition() {
  * ferme jamais), les credits, fermer. Recuperer le fichier n'y est plus : il a son bouton dans la barre (au bureau), ou vient en
  * tete de cette rubrique sur un telephone (`recuperer`).
  */
-function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null): ElementMenu[] {
+function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: ElementMenu | null, poserAdresse: (ouvert: boolean) => void): ElementMenu[] {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), signaler = useSignalVisite();
   const rien = !aEnregistrer(mo.h.passe.length > 0, ui.productionModifiee, ui.enregistrement);
   // Les gestes de l'hote (« Enregistrer sous… » sur le site, ADR-0030) suivent le geste de fin ; ils recoivent l'etat du moment.
@@ -120,6 +126,8 @@ function useElementsFichier(poserCredits: (ouvert: boolean) => void, recuperer: 
     { id: 'enregistrer', libelle: ui.fin.libelle, ...(ui.fin.fermerSansModification ? {} : { icone: 'enregistrer' as const }), ...(ui.fin.ctrlSEnregistre ? { raccourci: 'Ctrl+S' } : {}), separateur: !!recuperer, desactive: rien && !ui.fin.fermerSansModification, onClick: () => { if (!rien) signaler('recupere'); ac.terminer(); } },
     ...hote,
     ...(ui.fin.brouillon ? [{ id: 'brouillon', libelle: 'Garder un brouillon', raccourci: 'Ctrl+S', onClick: ac.garderBrouillon } satisfies ElementMenu] : []),
+    // Inserer un SVG (ou la premiere page d'un PDF) depuis une adresse (ADR-0036) : seulement chez un hote qui l'a pose.
+    ...(adressesPermises() ? [{ id: 'inserer-adresse', libelle: 'Insérer depuis une adresse…', separateur: true, onClick: () => poserAdresse(true) } satisfies ElementMenu] : []),
     { id: 'credits', libelle: 'À propos et crédits', onClick: () => poserCredits(true) },
     { id: 'fermer', libelle: 'Fermer l’éditeur', icone: 'fermer', raccourci: 'Échap', separateur: true, onClick: ac.demanderFermeture }
   ];
@@ -148,11 +156,13 @@ function usePolicesDuDessin(): PoliceCreditee[] {
 /** Fichier : le geste de fin, le brouillon, les credits, fermer. */
 export function MenuFichier() {
   const [credits, poserCredits] = useState(false);
-  const elements = useElementsFichier(poserCredits, null);
+  const [adresse, poserAdresse] = useState(false);
+  const elements = useElementsFichier(poserCredits, null, poserAdresse);
   return (
     <>
       <MenuDeroulant etiquette="Fichier" libelle="Fichier" alignement="droite" elements={elements} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+      {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
     </>
   );
 }
@@ -164,8 +174,9 @@ export function MenuFichier() {
  */
 export function MenuPlus({ nom }: { nom: string }) {
   const [credits, poserCredits] = useState(false);
+  const [adresse, poserAdresse] = useState(false);
   const raccourcis = useBoiteRaccourcis();
-  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom)), production = useRubriquesProduction();
+  const vue = useElementsVue(true), edition = useElementsEdition(), fichier = useElementsFichier(poserCredits, useElementRecuperer(nom), poserAdresse), production = useRubriquesProduction();
   const aide = useElementsAide(raccourcis.ouvrir);
   const sections: SectionMenu[] = [
     // L'aide d'abord : un debutant qui ouvre « Plus » la voit sans faire defiler un menu que l'export allonge.
@@ -180,6 +191,7 @@ export function MenuPlus({ nom }: { nom: string }) {
     <>
       <MenuDeroulant etiquette="Plus d’actions : vue, édition, fichier" icone="options" chevron={false} alignement="droite" sections={sections} />
       {credits ? <BoiteCredits fermer={() => poserCredits(false)} /> : null}
+      {adresse ? <BoiteInsererAdresse fermer={() => poserAdresse(false)} /> : null}
       {raccourcis.boite}
     </>
   );

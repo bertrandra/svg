@@ -196,6 +196,13 @@ components:
     typography: "{typography.compact}"
     rounded: "{rounded.bouton}"
     padding: "12px 16px"
+  liste-polices:
+    backgroundColor: "{colors.feuille-panneau}"
+    textColor: "{colors.encre}"
+    typography: "{typography.compact}"
+    rounded: "{rounded.menu}"
+    padding: "4px 0"
+    size: "32px"
 ---
 
 # Design System: Éditeur SVG
@@ -411,6 +418,17 @@ Retenus au repos, francs à l'interaction.
 - **Style:** boutons d'icône carrés de 30 px, transparents ; survol : voile cyan à 12 % ; outil actif : plein cyan
   d'encre, icône blanche ; menu ouvert : voile à 14 %.
 
+### La palette des formes (ADR-0033)
+Vingt-six formes derrière un seul outil : le bouton reprend la dernière forme employée, le chevron « Formes (F) » ouvre la palette.
+- **Style:** un menu flottant (feuille de panneau, filet, coins de 8 px, ombre de menu) en rubriques titrées (Basiques, Polygones,
+  Symboles, Étiquettes, Traits ; titre en Aide 600, encre douce), séparées d’un filet. Une tuile par forme : l’icône de 22 px au trait,
+  le nom (Compact), la lettre en chasse fixe pour les formes d’avant ; trois colonnes au bureau, deux sous 480 px ; 32 px de haut à la
+  souris, 44 au doigt. Survol et focus comme un élément de menu (voile cyan à 14 %, anneau intérieur de 2 px au clavier).
+- **La forme du bouton est cochée** (`menuitemradio`) : filet cyan d’un pixel, voile à 7 % sur la feuille, icône cyan ; un état, pas
+  une action. Aucune action pleine dans la palette. En contraste forcé, `Highlight`.
+- **Les réglages** vivent dans le panneau du dessin, section « Forme à tracer » (ouverte) : l’icône et le nom de l’outil (600), des
+  listes pour les choix et les entiers, des curseurs pour les parts (valeur en chiffres tabulaires, alignée à droite), une aide.
+
 ### Prendre une forme sur la toile (ADR-0029)
 - **Curseur:** avec l'outil de sélection, `move` sur une forme qu'un clic prendrait (à 6 px de son trait à la souris, 12 au
   doigt) et pendant qu'on la tire ; le curseur par défaut ailleurs et sur une forme verrouillée. `move` est ce qui se déplace
@@ -419,6 +437,17 @@ Retenus au repos, francs à l'interaction.
   grossit pas avec la vue ; il suit le chemin de la forme, la boîte d'un texte ou la cible minimale d'une petite forme. Rien ne
   s'anime. Au doigt, il vient au toucher. Pas sur une forme déjà choisie à la souris (elle a son tracé de sélection). En
   contraste forcé, `Highlight` sur `Canvas`.
+
+### Outils de sélection (ADR-0035)
+- **Barre:** un seul bouton reprend le dernier outil de sélection (Sélection V, Cadre F, Lasso Q), son chevron les liste en
+  `menuitemradio` avec leur raccourci, puis la règle : « Les formes touchées, même en partie » (défaut) ou « Les formes entièrement
+  dedans ». Sur un téléphone, « Points et poignées » rejoint ce menu : la ligne des outils garde ses cibles de 40 px.
+- **La zone:** le cadre et le lasso sous un voile cyan à 10 %, filet cyan d'un pixel, **en tirets** quand ils prennent les formes
+  touchées, **en trait plein** (1,5 px) quand ils ne prennent que les formes entièrement dedans : la règle se voit sur la zone.
+- **L'aperçu:** les formes que le relâchement prendra portent le liseré de survol (filet `--cyan` sur halo `--panneau`), en un
+  seul chemin ; ce qu'on voit est ce qu'on prend. Zone et aperçu se dessinent dans deux calques posés sur la toile, sans pointeur.
+  Les outils Cadre et Lasso gardent la croix, sur la toile comme sur les formes. Rien ne s'anime. En contraste forcé, `Highlight`
+  sur `Canvas`.
 
 ### Inputs / Fields
 - **Style:** fond de table sur une feuille (le champ « creuse » le panneau), filet, coins de 5 px, 6 × 8 px.
@@ -593,7 +622,7 @@ Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d
   pointeur de l'outil Texte est une barre d'insertion (`cursor: text`). En contraste forcé, cadre, curseur et sélection en `Highlight`.
 - **La barre de texte** prend la place de la rangée de la sélection, avec l'outil Texte, pendant une saisie ou quand un texte est
   choisi seul : même fond, mêmes groupes à filet. Dans l'ordre : l'état (« Saisie · Échap pour finir », « Texte », « Prochain
-  texte », Aide), la police (liste compacte, 13 em au plus) et son style, « Toutes les polices » (secondaire), la taille (champ
+  texte », Aide), la police (la liste des polices en champ compact de 13 em, ci-dessous) et son style, « Toutes les polices » (secondaire), la taille (champ
   chiffré en chasse fixe), le tracé « Plein | Médian » et l'alignement (boutons à état : filet et texte cyan quand ils sont choisis,
   jamais pleins), « Plus d'options » (secondaire), puis, pour un texte choisi, le menu des gestes de la sélection et « Supprimer ».
   **Aucune action pleine** : ce sont des réglages. Au doigt ou sous 640 px, elle se resserre : la police (9,5 em), la taille, un
@@ -611,6 +640,27 @@ Un texte se tape sur la toile, comme dans un traitement de texte, et se règle d
   (`--toile-blanc`, filet, coins de 4 px), à l'encre `--encre-toile` (sombre dans les deux thèmes : on regarde du papier),
   plein ou en trait fin de 1,5 px qui ne grossit pas avec la vue ; dessous, son titre (Compact 600) et un verdict court et
   neutre (Aide), qui est aussi son texte alternatif. Rien n'y est obligatoire ni bloquant ; « Fermer l'aperçu » (discret).
+
+### La liste des polices (ADR-0034)
+Une seule liste, partout où l'on choisit une police (panneau Texte, inspecteur, barre de texte), comme le sélecteur de police d'un
+traitement de texte : toutes les polices y sont, et ce qui n'est pas encore sur l'appareil se voit.
+- **Le champ** a l'allure d'une liste déroulante (fond de table, filet, coins de 5 px, chevron à l'encre douce) et le nom de la
+  police écrit en Compact ; on y tape pour chercher (le nom tout entier se choisit au clic). 13 em dans la barre, 9,5 em resserrée.
+  Sous lui, en Aide, « Téléchargement de Roboto… » le temps d'un téléchargement, ou l'erreur en rouge d'échec (`role="alert"`).
+- **La liste** est une feuille flottante de menu (feuille de panneau, filet, coins de 8 px, ombre de menu flottant, couche des
+  menus, l'entrée des menus), sous le champ ou au-dessus s'il y a plus de place, au moins 340 px de large (plus large qu'un champ
+  compact, jamais hors de l'écran), 440 px de haut au plus. Des groupes titrés comme les rubriques d'un menu (Aide 600, encre douce),
+  séparés d'un filet : Police actuelle, Dans ce document, Favoris, Récentes, Livrées avec l'éditeur, Trait unique (stylo), Vos
+  polices, Toutes les polices. Sous 640 px, une **feuille de toute la largeur**, sans bords ni coins, du champ au bas de l'écran.
+- **Une ligne** fait 32 px (40 au doigt), en quatre colonnes : la coche de la police choisie (cyan d'encre, et le nom en 600), le nom
+  **dessiné dans sa police** (24 px de haut, coupé à son bord), les badges (source, « Trait unique », « ITF » en ambre), puis la
+  colonne de la marque. Survol : voile cyan à 10 % ; ligne active au clavier : voile à 14 % et contour intérieur cyan de 2 px (en
+  contraste forcé, `Highlight`). Aucune action pleine : ce sont des choix.
+- **La marque « à télécharger »** : l'icône `nuage-telecharger` (un nuage ouvert par le bas, une flèche qui en descend, au trait de
+  1,75, 16 px, à l'encre), alignée à droite, et « à télécharger » dans le nom de l'option ; « Téléchargement… » en Aide pendant le
+  téléchargement ; « absente » pour une police introuvable (ligne à l'encre douce). Jamais la seule couleur.
+- **Le pied**, sous un filet : le nombre de polices (ou « Aucune police ne répond à « … ». »), la légende de la marque (l'icône dans sa colonne, deux phrases courtes d'une ligne chacune,
+  en Aide), et « Filtrer par genre, tracé ou source… » (discret, souligné au survol) qui ouvre « Toutes les polices ».
 
 ### Texte sur et dans une forme (ADR-0031)
 Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un geste, rien ne s'ajoute au dessin.
@@ -631,6 +681,20 @@ Le texte épouse une forme ; on voit ce qui le porte, on règle son départ d'un
   forme », le choix « Remplir » : son titre à l'encre douce (Compact), sur sa ligne, puis deux boutons à état, « En déformant les
   lettres » et « En lignes » (filet et texte cyan quand il est choisi, jamais pleins, 40 px au doigt). Déformé, la taille se
   calcule : le champ est inactif et dit pourquoi en infobulle ; la marge reste réglable. Rien ne s'anime.
+
+### Nuancier (ADR-0037)
+Les couleurs du fichier ouvert, à portée d'un clic ; on les voit, on les pose, on ne les cherche pas.
+- **La section « Nuancier »** de l'inspecteur, ouverte, avec ou sans sélection : « Appliquer au » (Remplissage | Contour, boutons à
+  état : filet et texte cyan quand ils sont choisis, jamais pleins), puis deux groupes titrés comme les sous-titres des calques (Aide
+  600, encre douce), leur nombre et leur provenance à la suite en Aide 400 : « Couleurs du dessin » (« 5 · tirées du dessin », « de
+  la sélection »), avec « Depuis la sélection » (secondaire, compact, seulement quand quelque chose est choisi) et son menu d'icône
+  (reprendre, exporter) ; « Nuancier proposé », celui de la page ou de l'hôte. Une phrase d'aide en dernier dit le geste du moment.
+- **Les pastilles** sont celles de tous les nuanciers : 24 px (40 au doigt), carrées à 4 px, bordées du filet fort, le fond est la
+  couleur du dessin (une donnée, pas un jeton) ; enfoncée, un anneau cyan de 2 px. Nom accessible : le nom donné, ou un nom approché
+  en français, puis le code et l'opacité. Clic : la cible ; Maj+clic ou Maj+Entrée : l'autre ; flèches, Début et Fin dans un groupe.
+  **Aucune action pleine.**
+- **Dans l'atelier de conversion**, sous le résultat : « Nuancier de l'image » et « Couleurs du tracé », deux rangées de pastilles de
+  20 px à regarder (`role="img"`, nommées), titrées comme les groupes de l'éditeur.
 
 ### Règles, repères et répétitions (ADR-0038)
 Des gabarits d'atelier : ils se voient en filets et en encre d'outil, ils ne colorent jamais le dessin.

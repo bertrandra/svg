@@ -266,7 +266,7 @@ describe('la finition transversale', () => {
       it('nomme les calques par leur genre, pose une pastille à filet même sans fond, et détache la pastille d encre du panneau', async () => {
         const page = await editeur(schema);
         const noms = await page.locator('.editeur-calques ol > li .calque-nom').evaluateAll(l => l.map(e => (e.textContent ?? '').replace(/\s+/g, ' ').trim()));
-        expect(noms).toEqual(['Courbe 4', 'Triangle 3', 'Cercle 2', 'Tracé courbe 1']);
+        expect(noms).toEqual(['Courbe 4', 'Triangle 3', 'Cercle 2', 'Rectangle arrondi 1']);
         // Le nom accessible commence par le libelle visible (WCAG 2.5.3), puis dit la peinture.
         expect(await page.locator('.editeur-calques ol > li .calque-nom').first().getAttribute('aria-label')).toMatch(/^Courbe 4, sans fond, contour/);
         // La courbe n'a pas de fond : sa pastille est vide, bordee du filet fort, son contour (#15181d) en anneau interieur.

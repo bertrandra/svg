@@ -61,6 +61,21 @@ export function cacheNavigateur(): CachePolices | null {
   };
 }
 
+/**
+ * Les adresses des fichiers que le cache du navigateur garde deja : une lecture locale de ses cles, sans requete ni fichier lu.
+ * La liste des polices s'en sert pour ne pas marquer « à télécharger » une police que la choisir relirait du cache. Sans cache
+ * (contexte non securise, stockage refuse), un ensemble vide : la marque reste, et le choix relirait ou telechargerait comme avant.
+ */
+export async function adressesEnCache(): Promise<ReadonlySet<string>> {
+  if (typeof caches === 'undefined') return new Set();
+  try { return new Set((await (await caches.open(NOM_CACHE)).keys()).map(r => r.url)); } catch { return new Set(); }
+}
+
+/** Vrai quand chaque fichier de la variante a une adresse dans le cache (`adressesEnCache`) : la choisir ne contacterait personne. */
+export function varianteEnCache(v: VariantePolice, enCache: ReadonlySet<string>): boolean {
+  return enCache.size > 0 && v.fichiers.length > 0 && v.fichiers.every(f => adressesDe(f).some(a => enCache.has(a.url)));
+}
+
 const OUTILS: OutilsTelechargement = { chercher: (url, init) => fetch(url, init), empreinte: empreinteSha256, cache: null };
 
 /**

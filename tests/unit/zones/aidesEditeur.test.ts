@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { genreAffiche, phraseAbandon, phraseBooleen, phraseIgnores } from '../../../src/zones/aidesEditeur.js';
-import { lireDessin } from '../../../src/engine/editionSvg.js';
+import { FORMES, genreAffiche, nomOutilForme, phraseAbandon, phraseBooleen, phraseIgnores, styleDeForme } from '../../../src/zones/aidesEditeur.js';
+import { FORMES_DE_BASE, lireDessin, STYLE_DEFAUT } from '../../../src/engine/editionSvg.js';
+import { GROUPES_FORMES } from '../../../src/zones/BarreOutils.js';
 import { au } from '../../../src/util/tableaux.js';
 
 describe('phraseIgnores', () => {
@@ -49,5 +50,28 @@ describe('genreAffiche', () => {
   it('rend le meme texte pour la meme forme, calcule une fois', () => {
     const f = au(formes, 1);
     expect(genreAffiche(f)).toBe(genreAffiche(f));
+  });
+});
+
+describe('les outils de forme (ADR-0033)', () => {
+  it('traitent chaque forme de base comme un outil de trace, et la palette les range toutes, une fois chacune', () => {
+    expect([...FORMES].sort()).toEqual([...FORMES_DE_BASE].sort());
+    const rangees = GROUPES_FORMES.flatMap(g => g.formes);
+    expect([...rangees].sort()).toEqual([...FORMES_DE_BASE].sort());
+    expect(new Set(rangees).size).toBe(rangees.length);
+    expect(GROUPES_FORMES.map(g => g.titre)).toEqual(['Basiques', 'Polygones', 'Symboles', 'Étiquettes', 'Traits']);
+  });
+
+  it('donnent aux traits le style d une ligne, aux autres le style courant', () => {
+    const s = { remplissage: '#c81e28', contour: null, epaisseur: 2 };
+    for (const f of ['ligne', 'arc', 'spirale', 'vague'] as const) expect(styleDeForme(f, s)).toEqual({ remplissage: null, contour: '#c81e28', epaisseur: 2 });
+    expect(styleDeForme('coeur', s)).toBe(s);
+    expect(styleDeForme('anneau', STYLE_DEFAUT)).toBe(STYLE_DEFAUT);
+  });
+
+  it('montrent un nom avec sa majuscule', () => {
+    expect(nomOutilForme('coeur')).toBe('Cœur');
+    expect(nomOutilForme('badge')).toBe('Badge festonné');
+    expect(nomOutilForme('etoile')).toBe('Étoile');
   });
 });

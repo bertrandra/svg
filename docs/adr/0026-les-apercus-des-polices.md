@@ -3,6 +3,8 @@
 **Date :** 25 octobre 2026
 **Statut :** acceptée (prolonge l’ADR-0025 §6 ; s’appuie sur les ADR-0008, 0011, 0014, 0017 et 0022) ; **aucun octet écrit ne
 change** : l’aperçu n’est qu’un affichage de la liste, il n’entre ni dans le dessin ni dans un export
+**Prolongée par l’ADR-0034 :** les aperçus et la règle d’une ligne par famille servent aussi la liste déroulante « Police », qui
+montre désormais tout le catalogue et marque ce qui reste à télécharger (§ 2, § 6 et § 7 s’y appliquent tels quels)
 
 ## Contexte
 

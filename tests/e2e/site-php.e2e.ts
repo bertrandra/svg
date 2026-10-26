@@ -14,7 +14,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { attend, attendreAnimations, imageDeTest, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { champPolice, valeurPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
 
@@ -29,7 +30,11 @@ const ESSAI: FamilleCatalogue = { id: 'police-essai', nom: 'Police Essai', depot
 const INDEX: CataloguePolices = { format: 1, instantane: '2026-10-25', familles: [ESSAI], anciennes: [] };
 const ID_ESSAI = idVariante(ESSAI, [400, 0, SHA, null]);
 
-let racine = '', site = '', source: Server | null = null, php: ChildProcess | null = null;
+let racine = '', site = '', source: Server | null = null, php: ChildProcess | null = null, portSource = 0;
+// Les fichiers qu'on ouvre depuis une adresse (ADR-0036) : le serveur du site les demande a la source simulee, sous un nom que sa
+// resolution simulee (ADRESSE_RESOLUTION_ESSAI) mene a 127.0.0.1, seul reseau prive permis ici.
+const DESSIN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80"><rect x="10" y="10" width="40" height="30" fill="#c81e28"/><circle cx="70" cy="50" r="20" fill="#1428a0"/></svg>';
+const PHOTO = imageDeTest().buffer;
 const demandesSource: string[] = [];
 
 const portLibre = () => new Promise<number>((ok, ko) => {
@@ -49,20 +54,27 @@ beforeAll(async () => {
   racine = mkdtempSync(join(tmpdir(), 'site-php-e2e-'));
   cpSync(DIST_PHP, racine, { recursive: true });
   // La source des polices, simulee : elle sert le fichier d'essai et note chaque demande.
-  const portSource = await portLibre();
+  portSource = await portLibre();
   source = createServer((req, res) => {
     demandesSource.push(req.url ?? '');
     if ((req.url ?? '').endsWith('/police-essai-latin-400-normal.woff')) { res.writeHead(200, { 'Content-Type': 'font/woff' }); res.end(Buffer.from(WOFF)); return; }
+    // Aucun en-tete CORS : c'est le serveur du site qui lit, pas la page.
+    if ((req.url ?? '').split('?')[0] === '/dessins/carte.svg') { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(DESSIN); return; }
+    if (req.url === '/photo.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); res.end(PHOTO); return; }
     res.writeHead(404); res.end();
   }).listen(portSource, '127.0.0.1');
   const s = 'http://127.0.0.1:' + portSource;
-  writeFileSync(join(racine, 'public/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n');
+  writeFileSync(join(racine, 'public/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n'
+    + "define('ADRESSE_HTTP', true);\ndefine('ADRESSE_PORTS', [" + portSource + "]);\ndefine('ADRESSE_RESEAUX_PERMIS', ['127.0.0.1/32']);\n"
+    + "define('ADRESSE_RESOLUTION_ESSAI', ['fichiers.essai' => [['127.0.0.1']], 'interne.essai' => [['10.0.0.8']]]);\n");
   writeFileSync(join(racine, 'data/json/polices-catalogue.json'), JSON.stringify(INDEX));
   const mot = spawnSync('php', [join(racine, 'outils/mot-de-passe.php'), '--stdin'], { input: MOT + '\n' });
   if (mot.status !== 0) throw new Error('mot-de-passe.php : ' + String(mot.stderr));
   const port = await portLibre();
   site = 'http://127.0.0.1:' + port;
-  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public')], { stdio: 'ignore' });
+  // Plusieurs travailleurs : sous Firefox, une connexion gardee ouverte par la page d'un test precedent occupait le seul
+  // travailleur de `php -S`, et le chargement suivant attendait jusqu'a son delai (une fois sur deux en local, tous les tests).
+  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
   await attendrePort(site);
 });
 
@@ -82,12 +94,12 @@ async function sansViolationGrave(page: Page, ecran: string): Promise<void> {
 }
 
 /** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. */
-async function ouvrirSite(navigateur: ReturnType<typeof pilote>): Promise<{ page: Page; requetes: string[] }> {
+async function ouvrirSite(navigateur: ReturnType<typeof pilote>): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
   const s = await navigateur.ouvrir({ naviguer: false });
   const requetes: string[] = [];
   s.page.on('request', r => { if (!r.url().startsWith('data:') && !r.url().startsWith('blob:')) requetes.push(r.url()); });
   await s.page.goto(site + '/');
-  return { page: s.page, requetes };
+  return { page: s.page, requetes, erreurs: s.erreurs };
 }
 
 async function connecter(page: Page): Promise<void> {
@@ -159,7 +171,7 @@ describe('le site PHP', () => {
     // Un texte vivant, dans une fonte livree servie par le site (data/font).
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
-    await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+    await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('Control+s');
@@ -252,14 +264,14 @@ describe('le site PHP', () => {
     await page.locator('.editeur-cadre').waitFor();
     await page.locator('.editeur-svg-toile').focus();
     await page.keyboard.press('t');
-    const select = page.locator('.editeur-inspecteur select[aria-label="Police"]');
-    await select.waitFor({ timeout: 30_000 });
+    const zone = page.locator('.editeur-inspecteur');
+    await champPolice(zone).waitFor({ timeout: 30_000 });
     await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
     const ligne = page.locator('.liste-polices .police-ligne', { hasText: 'Police Essai' });
     await ligne.waitFor();
     expect(demandesSource).toEqual([]);
     await ligne.click();
-    await attend(() => select.inputValue()).toBe(ID_ESSAI);
+    await attend(() => valeurPolice(zone)).toBe(ID_ESSAI);
     expect(demandesSource).toEqual(['/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff']);
     expect(readdirSync(join(racine, 'data/font/catalogue')).length).toBe(1);
     expect(requetes.some(u => u.startsWith(site + '/api.php?r=police&sha='))).toBe(true);
@@ -269,5 +281,44 @@ describe('le site PHP', () => {
     expect(await vignette(page, await idDe(page, 'Sans titre'))).toContain('data-ed-police="' + ID_ESSAI + '"');
     expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
     await fermerEditeur(page);
+  });
+
+  it('ouvrir depuis une adresse passe par le serveur du site : un SVG ouvre l editeur, une image le convertisseur, une adresse interne est refusee', async () => {
+    const { page, requetes, erreurs } = await ouvrirSite(navigateur);
+    await connecter(page);
+    const avant = demandesSource.length;
+    const champ = page.getByRole('textbox', { name: 'Ouvrir depuis une adresse' });
+    expect(await texteDe(page.locator('.voie-panneau:not([hidden]) .adresse .aide').first())).toContain('Le site va chercher le fichier');
+    await champ.fill('http://fichiers.essai:' + portSource + '/dessins/carte.svg?jeton=secret');
+    await page.waitForTimeout(200);
+    expect(demandesSource.length, 'rien ne part avant « Ouvrir »').toBe(avant);
+    await page.locator('.voie-panneau:not([hidden]) .adresse').getByRole('button', { name: 'Ouvrir', exact: true }).click();
+    await page.locator('.editeur-cadre').waitFor();
+    expect(await page.locator('.editeur-svg-toile path[data-id]').count()).toBe(2);
+    expect(demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret']);
+    // Un projet neuf, jamais enregistre : fermer demande confirmation, on abandonne.
+    await ouvrirMenu(page, 'Fichier');
+    await page.getByRole('menuitem', { name: 'Fermer l’éditeur' }).click();
+    await page.getByRole('button', { name: 'Abandonner' }).click();
+    await page.locator('.editeur-cadre').waitFor({ state: 'detached' });
+    // Une adresse que le DNS mene a un reseau prive : refusee par le serveur, avant toute connexion, et c'est dit.
+    await champ.fill('http://interne.essai:' + portSource + '/a.svg');
+    await page.keyboard.press('Enter');
+    await attend(() => texteDe(page.locator('main > .message'))).toBe('Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.');
+    // Une « .svg » qui est une PNG : decidee sur ses octets, elle va au convertisseur.
+    await champ.fill('http://fichiers.essai:' + portSource + '/photo.svg');
+    await page.keyboard.press('Enter');
+    await attend(() => page.locator('#voie-image').getAttribute('aria-selected')).toBe('true');
+    await attend(() => texteDe(page.locator('.vectoriser .depot p'))).toBe('photo · 240 × 190 px');
+    expect(demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret', '/photo.svg']);
+    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+    expect(requetes.filter(u => u.startsWith(site + '/api.php?r=adresse')).length).toBe(3);
+    const journal = readFileSync(join(racine, 'data/journal/adresses.log'), 'utf8');
+    expect(journal).toContain('hote=fichiers.essai');
+    expect(journal).not.toContain('secret');
+    // Le refus du serveur (403) s'ecrit dans la console du navigateur de lui-meme : ce n'est pas la page.
+    const restent = erreurs.filter(e => !/Failed to load resource: the server responded with a status of 403/.test(e));
+    erreurs.length = 0;
+    erreurs.push(...restent);
   });
 });

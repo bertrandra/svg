@@ -9,20 +9,23 @@
 // L'outil Texte (ADR-0027) : les fleches deplacent le reticule, Entree y ouvre la saisie d'un texte neuf, sur la toile.
 // Entree sur un texte vivant choisi rouvre sa saisie, le curseur a la fin.
 //
+// Les outils Cadre et Lasso (ADR-0035) : le reticule pose les coins du cadre ou les points du lasso (ClavierZone.ts).
+//
 // Regle de sortie (WCAG 2.1.2) : Tab ne tourne jamais dans la toile. Il parcourt les formes tant qu'une
 // est choisie, et au-dela de la derniere (ou avant la premiere) il laisse le navigateur faire : le
 // focus quitte la toile. Sans forme choisie, Tab quitte la toile tout de suite. Echap desselectionne.
 
 import type { RefObject } from 'react';
-import { ajouterForme, type Commande } from '../engine/editionSvg.js';
+import { FICHES_FORMES, type Commande } from '../engine/editionSvg.js';
 import {
   centreVisible, coinsPosables, coteMinimal, coteParDefaut, dansLePlan, deplacerReticule, directionDe, formeVoisine, pasReticule, pointVoisin, type PointPlan, type Sens
 } from '../engine/navigation.js';
 import { au } from '../util/tableaux.js';
-import { styleLigne, FORMES } from './aidesEditeur.js';
+import { FORMES } from './aidesEditeur.js';
 import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, PHRASE_COIN_ANNULE, PHRASE_COINS_TROP_PROCHES } from './annonces.js';
 import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
-import { formeTracee } from './Gestes.js';
+import { ajouterTracee, formeTracee } from './Gestes.js';
+import { toucheZone } from './ClavierZone.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 import type { EtatSaisie } from './contexteSaisie.js';
 
@@ -66,7 +69,7 @@ function departReticule({ m, u, toile }: ContexteToile): PointPlan {
 /** Ajoute la forme tracee, la choisit et rend la main a l'outil selection : ce que les deux facons de poser au clavier ont en commun. */
 function poserTrace(c: ContexteToile, d: Commande[]): void {
   const { m, u, ac } = c, outil = u.outil as OutilForme;
-  const r = ajouterForme(m.dessin, d, outil === 'ligne' ? styleLigne(u.style) : u.style);
+  const r = ajouterTracee(m.dessin, outil, d, u.style);
   if (!r.id) return;
   ac.appliquer(() => r.dessin);
   ac.finir();
@@ -75,10 +78,14 @@ function poserTrace(c: ContexteToile, d: Commande[]): void {
   ac.annoncer(phraseSelection(r.dessin, [r.id], true) + ' Alt et flèches la redimensionnent, Ctrl et flèches la tournent.');
 }
 
-/** Une forme au reticule : un carre du quart du plan (une ligne de cette longueur), choisie, prete a redimensionner. */
+/**
+ * Une forme au reticule : une boite du quart du plan (une ligne de cette longueur), choisie, prete a redimensionner. Carree pour
+ * les formes d'avant ; une forme plus large que haute (une fleche, une vague) garde sa largeur et prend sa proportion (ADR-0033).
+ */
 function poserForme(c: ContexteToile, p: PointPlan): void {
   const { m, u } = c, outil = u.outil as OutilForme, s = coteParDefaut(m.dessin.vb), moitie = s / 2;
-  poserTrace(c, outil === 'ligne' ? formeTracee('ligne', p[0] - moitie, p[1], p[0] + moitie, p[1], false) : formeTracee(outil, p[0] - moitie, p[1] - moitie, p[0] + moitie, p[1] + moitie, false));
+  const k = FICHES_FORMES[outil].proportion, dx = k >= 1 ? moitie : moitie * k, dy = k >= 1 ? moitie / k : moitie;
+  poserTrace(c, outil === 'ligne' ? formeTracee('ligne', p[0] - moitie, p[1], p[0] + moitie, p[1], false) : formeTracee(outil, p[0] - dx, p[1] - dy, p[0] + dx, p[1] + dy, false, u.parametres));
 }
 
 /** Le premier coin pose, ou null : la trace d'un outil de forme ne porte jamais qu'un point, ce coin. */
@@ -95,7 +102,7 @@ function deuxCoins(c: ContexteToile): boolean {
   }
   if (!coinsPosables(u.outil === 'ligne', premier, p, coteMinimal(m.dessin.vb))) { ac.annoncer(PHRASE_COINS_TROP_PROCHES); return true; }
   const outil = u.outil as OutilForme;
-  poserTrace(c, formeTracee(outil, premier[0], premier[1], p[0], p[1], false));
+  poserTrace(c, formeTracee(outil, premier[0], premier[1], p[0], p[1], false, u.parametres));
   return true;
 }
 
@@ -154,6 +161,7 @@ export function toucheToile(e: KeyboardEvent, c: ContexteToile): boolean {
   if (outil === 'selection' && e.key === ' ') return basculerCurseur(c);
   if (parcourt && page) return changerForme(c, page);
   if (outil === 'texte') return texte(c, e);
+  if (outil === 'cadre' || outil === 'lasso') return toucheZone(c, e, () => departReticule(c));
   if (FORMES.has(outil) || outil === 'plume') return reticule(c, e);
   // Entree sur un texte vivant le rouvre sur la toile (ADR-0027) ; sur une autre forme, le mode points.
   if (e.key === 'Enter' && outil === 'selection' && c.m.formeSeule?.texte && !c.m.formeSeule.verrouille && c.sx) { c.sx.ouvrir(c.m.formeSeule.id); return true; }

@@ -21,12 +21,14 @@ import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BulleVisite, LienVisite } from './BulleVisite.js';
 import { FournisseurMenusOuverts } from './commun/Menu.js';
-import { FORMES, phraseAbandon } from './aidesEditeur.js';
+import { FORMES, nomOutilForme, phraseAbandon } from './aidesEditeur.js';
 import { pluriel, selonSaisie } from '../util/texte.js';
-import type { Outil, Tiroir } from './typesEditeur.js';
+import type { Outil, OutilForme, Tiroir } from './typesEditeur.js';
 import { LIBELLES_ENREGISTREMENT } from './enregistrement.js';
 import { FournisseurRegles } from './contexteRegles.js';
 import { useClavierOutilsPro } from './ClavierOutilsPro.js';
+import { estOutilZone, etatOutilZone } from './commandesSelection.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** Les raccourcis clavier : un composant sans rendu, pour que le crochet vive sous les contextes. */
 function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
@@ -106,15 +108,16 @@ function Voile() {
   return tiroir ? <div className="voile" aria-hidden="true" onClick={() => ac.poserTiroir(null)} /> : null;
 }
 
-function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
+function etatParDefaut(outil: Outil, nTrace: number, nSel: number, regle: RegleZone): string {
+  if (estOutilZone(outil)) return etatOutilZone(outil, regle, nTrace);
   if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.';
-  if (FORMES.has(outil)) return 'Glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée.';
+  if (FORMES.has(outil)) return nomOutilForme(outil as OutilForme) + ' : glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée · F : autres formes.';
   if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : proportions)' : '');
   return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.';
 }
 
 function BarreEtat() {
-  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement } = useInterface(), ac = useActions();
+  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement, regleZone } = useInterface(), ac = useActions();
   const telephone = useTelephone(), doigt = useTactile();
   return (
     <footer className="editeur-etat">
@@ -122,7 +125,7 @@ function BarreEtat() {
         <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
         <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
       </span>
-      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length), doigt)}</span>
+      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length, regleZone), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
       {/* L'etat que l'hote annonce (le site, ADR-0030) : pas une region vocale, la phrase qui l'accompagne passe par la region unique. */}
@@ -175,7 +178,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
       <FournisseurTexte>
       <FournisseurSaisie>
       <FournisseurRegles>
-      <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
+      <div className={'editeur-cadre outil-' + outil + (FORMES.has(outil) ? ' trace-forme' : '') + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
         <SuiviDispositions />
         <LienToile svgRef={svgRef} idToile={idToile} />

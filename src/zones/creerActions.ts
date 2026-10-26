@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { garderTextes, sansTexte, type DessinSvg, type Forme, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, garderTextes, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -18,6 +18,7 @@ import type { ActionsEditeur, EtatEnregistrement, Fond, OptionsFin, Outil, Point
 import { aEnregistrer, perdrait } from './enregistrement.js';
 import type { Focale } from '../engine/navigation.js';
 import type { Aimant } from '../engine/transformations.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** L'etat du moment, avec ce que seuls les verbes d'etat lisent en plus. */
 export interface EtatDuMoment extends EtatLu {
@@ -31,6 +32,7 @@ export interface EtatDuMoment extends EtatLu {
 export interface Setters {
   poserH: Dispatch<SetStateAction<Historique<DessinSvg>>>; choisir: Dispatch<SetStateAction<string[]>>;
   poserOutilBrut: Dispatch<SetStateAction<Outil>>; poserPoint: Dispatch<SetStateAction<number | null>>; poserStyle: Dispatch<SetStateAction<Style>>;
+  poserParametres: Dispatch<SetStateAction<ParametresFormes>>; poserDemandeFormes: Dispatch<SetStateAction<number>>;
   poserTrace: Dispatch<SetStateAction<readonly Point[]>>; poserPresse: Dispatch<SetStateAction<readonly Forme[]>>;
   poserGrille: Dispatch<SetStateAction<boolean>>; poserAimants: Dispatch<SetStateAction<boolean>>; poserLisserBooleens: Dispatch<SetStateAction<boolean>>;
   poserGuides: Dispatch<SetStateAction<readonly Aimant[]>>;
@@ -39,6 +41,7 @@ export interface Setters {
   poserCurseur: Dispatch<SetStateAction<Point | null>>; poserFocale: Dispatch<SetStateAction<Focale | null>>; poserAnnonce: Dispatch<SetStateAction<Annonce>>;
   poserProduction: Dispatch<SetStateAction<ChoixProduction>>; poserSuiteCricut: Dispatch<SetStateAction<SuiteCricut>>;
   poserApercuMachine: Dispatch<SetStateAction<boolean>>;
+  poserRegleZone: Dispatch<SetStateAction<RegleZone>>;
   toile: RefObject<HTMLDivElement | null>;
 }
 
@@ -53,7 +56,7 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     s.poserH(x => {
       const g = garderTextes(x.present, f(x.present)).dessin;
       const d = suivreDispositions(x.present, g, p => glyphesDe?.(p) ?? null).dessin;
-      return avancer(x, d, cle, limitePourTaille(d.formes.length));
+      return avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
     });
   };
   const finir = () => s.poserH(x => clore(x));
@@ -97,6 +100,8 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       annoncer('Rétabli.');
     },
     nouvelleCle: () => 'geste-' + ++compteur,
+    poserParametres: p => s.poserParametres(x => bornerParametres({ ...x, ...p })),
+    ouvrirFormes: () => s.poserDemandeFormes(n => n + 1),
     dire, annoncer, poserCurseur: s.poserCurseur, poserFocale: s.poserFocale, choisir: s.choisir, poserPoint: s.poserPoint, poserStyle: s.poserStyle, poserTrace: s.poserTrace,
     poserGrille: s.poserGrille, poserAimants: s.poserAimants, poserLisserBooleens: s.poserLisserBooleens, poserGuides: s.poserGuides, poserTiroir: s.poserTiroir, poserContours: s.poserContours, poserFond: s.poserFond,
     demanderFermeture: () => { const e = lire(); if (perdrait(e.modifie, e.enregistrement)) s.poserQuitter(true); else e.fermer(); },
@@ -132,6 +137,10 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
       dire('Version « ' + nom + ' » gardée dans ce navigateur.');
     },
     supprimerVersion: id => poserVersions(lire().versions.filter(v => v.id !== id)),
+    poserRegleZone: r => {
+      s.poserRegleZone(r);
+      dire(r === 'touche' ? 'Le cadre et le lasso prennent les formes qu’ils touchent, même en partie.' : 'Le cadre et le lasso ne prennent que les formes entièrement dedans.');
+    },
     ...metier, ...trace, ...production
   };
 }

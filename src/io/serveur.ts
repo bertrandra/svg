@@ -7,6 +7,7 @@
 
 import { BORNES_PROJET, lireProjet, type Projet } from '../model/projet.js';
 import type { PoliceEmbarquee } from './polices.js';
+import { DELAI_MS, lireFluxBorne, OCTETS_MAX, PHRASES_TELECHARGEMENT, type CodeTelechargement, type Telechargement } from './adresse.js';
 
 /** Ce que le serveur dit d'un projet enregistre, sans l'ouvrir : de quoi le lister. */
 export interface MetaProjet {
@@ -50,6 +51,11 @@ export interface Serveur {
   readonly adressePolice: (empreinte: string) => string;
   /** L'adresse de la vignette d'un projet (une image SVG), a sa revision pour que le cache suive. */
   readonly adresseVignette: (m: MetaProjet) => string;
+  /**
+   * Un fichier a une adresse, que le serveur va chercher a la place du navigateur (ADR-0036) : ses octets bruts, ou la phrase du
+   * refus (adresse privee, schema ou port interdit, trop gros, delai…). Une ecriture : POST, jeton CSRF.
+   */
+  readonly telechargerAdresse: (url: string, signal: AbortSignal) => Promise<Telechargement>;
 }
 
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -165,7 +171,54 @@ export function creerServeur(options: OptionsServeur): Serveur {
     return sortie;
   }
 
+  /** Le code d'un refus du serveur, ramene a ceux du telechargement ; sa phrase est celle du serveur, deja en francais. */
+  const CODES_ADRESSE: Readonly<Record<string, CodeTelechargement>> = { injoignable: 'reseau', delai: 'delai', trop_gros: 'trop_gros', statut: 'statut', session: 'session', indisponible: 'indisponible', vide: 'vide' };
+
+  async function telechargerAdresse(adresse: string, signal: AbortSignal): Promise<Telechargement> {
+    const ctl = new AbortController();
+    let annule = false, delai = false;
+    const relayer = () => { annule = true; ctl.abort(); };
+    if (signal.aborted) return { erreur: PHRASES_TELECHARGEMENT.annule, code: 'annule' };
+    signal.addEventListener('abort', relayer);
+    // Le serveur borne son propre delai (ADRESSE_DELAI) ; celui-ci ne sert que si la reponse n'arrive jamais.
+    const minuteur = setTimeout(() => { delai = true; ctl.abort(); }, DELAI_MS + 30_000);
+    const coupe = (): Telechargement => (annule ? { erreur: PHRASES_TELECHARGEMENT.annule, code: 'annule' } : { erreur: PHRASES_TELECHARGEMENT[delai ? 'delai' : 'reseau'], code: delai ? 'delai' : 'reseau' });
+    const init = (): RequestInit => ({
+      method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/octet-stream, application/json', 'X-CSRF': csrf },
+      body: JSON.stringify({ adresse })
+    });
+    try {
+      for (let essai = 0; essai < 2; essai++) {
+        let r: Response;
+        try { r = await chercher(url({ r: 'adresse' }), init()); } catch { return coupe(); }
+        if (r.ok) {
+          let octets: Uint8Array | null;
+          try { octets = await lireFluxBorne(r, OCTETS_MAX); } catch { return coupe(); }
+          if (!octets) return { erreur: PHRASES_TELECHARGEMENT.trop_gros, code: 'trop_gros' };
+          return octets.length ? { octets } : { erreur: PHRASES_TELECHARGEMENT.vide, code: 'vide' };
+        }
+        const corps = jsonOuNull((await texteBorne(r, 65536).catch(() => null)) ?? '');
+        const code = estObjet(corps) && typeof corps['erreur'] === 'string' ? corps['erreur'] : r.status === 401 ? 'session' : 'serveur';
+        // Un jeton perime (reconnexion dans un autre onglet) : on le reprend de la session, et on reessaie une fois.
+        if (code === 'csrf' && essai === 0) {
+          const j = await demander({ r: 'jeton' });
+          const neuf = j.ok && estObjet(j.valeur.corps) && typeof j.valeur.corps['csrf'] === 'string' ? j.valeur.corps['csrf'] : null;
+          if (neuf) { csrf = neuf; continue; }
+        }
+        if (code === 'session') return { erreur: PHRASES_TELECHARGEMENT.session, code: 'session' };
+        const message = estObjet(corps) && typeof corps['message'] === 'string' ? corps['message'].slice(0, 400) : MESSAGES['serveur'] ?? '';
+        return { erreur: message, code: CODES_ADRESSE[code] ?? 'refuse' };
+      }
+      return { erreur: MESSAGES['csrf'] ?? '', code: 'refuse' };
+    } finally {
+      clearTimeout(minuteur);
+      signal.removeEventListener('abort', relayer);
+    }
+  }
+
   return {
+    telechargerAdresse,
     lister: async () => {
       const r = await demander({ r: 'projets' });
       if (!r.ok) return r;

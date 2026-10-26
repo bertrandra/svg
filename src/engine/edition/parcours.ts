@@ -7,7 +7,7 @@
 import type { Noeud } from '../../util/xml.js';
 import type { Forme, Matrice } from './types.js';
 import { IDENTITE } from './types.js';
-import { facteur, lireTransformation, multiplier, transformerChemin, translation } from './geometrie.js';
+import { boiteChemin, facteur, lireTransformation, multiplier, transformerChemin, translation } from './geometrie.js';
 import { COULEUR_COURANTE, lirePeintureAlpha } from './peinture.js';
 import { lireTrait } from './trait.js';
 import { lireOpacite } from './opacites.js';
@@ -24,6 +24,7 @@ import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_M
 import {
   cibleDe, depasseDuCadre, CLONES_MAX, inverse, lireAspect, lireVue, longueurUse, matriceCadre, PROFONDEUR_USE_MAX, type Cadre
 } from './clones.js';
+import { completerFeuille, lecteurDe, prisesDe, resoudrePeinture, type Fonctionnalite, type Marche, type PeintureResolue } from './fonctionnalites.js';
 
 const IGNORES = new Set(['defs', 'title', 'desc', 'metadata', 'style', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'pattern', 'symbol', 'marker', 'filter']);
 const NON_PRIS: ReadonlyMap<string, string> = new Map([
@@ -49,21 +50,30 @@ export interface Parcours {
   readonly texte?: ContexteTexte | null;
   /** Les liens des textes poses vers leur forme (ADR-0031), resolus quand toutes les formes sont lues. */
   readonly liens?: Array<{ readonly id: string; readonly lien: LienLu }>;
+  /**
+   * Les fonctionnalites du modele v2 que la lecture consulte (fonctionnalites.ts) : le catalogue en mode riche, aucune (absente ou
+   * vide) en mode plat, qui lit alors exactement comme avant (ADR-0012, annexe 2 §1).
+   */
+  readonly fonctions?: readonly Fonctionnalite[];
 }
+
+const AUCUNE: readonly Fonctionnalite[] = [];
+const fonctionsDe = (p: Parcours): readonly Fonctionnalite[] => p.fonctions ?? AUCUNE;
 
 /** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
 export interface Contexte { readonly m: Matrice; readonly heritees: Proprietes; readonly opacite: number; readonly profondeur: number }
 
 /** Un element prepare : son contexte (matrice et opacite avec les siennes) et ses proprietes propres. */
-interface Pret extends Contexte { readonly pr: Proprietes }
+export interface Pret extends Contexte { readonly pr: Proprietes }
 
 /** Le contexte d'un element, ou null s'il ne se dessine pas (cache) ou se refuse (nomme dans `refus`). */
 function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   const pr = proprietesDe(p.analyse, n);
   if ((pr.display ?? '').trim() === 'none') return null;
-  const nonPris = n.nom === 'text' && p.texte ? undefined : NON_PRIS.get(n.nom);
-  if (nonPris) { p.refus.add(nonPris); return null; }
-  const refusNoeud = refusDe(pr);
+  // Une balise qu'une fonctionnalite sait lire (mode riche) n'est plus refusee ici : son lecteur en decide.
+  const nonPris = NON_PRIS.get(n.nom);
+  if (nonPris && !(n.nom === 'text' && p.texte) && !lecteurDe(fonctionsDe(p), n.nom)) { p.refus.add(nonPris); return null; }
+  const refusNoeud = refusDe(pr, prisesDe(fonctionsDe(p)));
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
   const t = n.attributs.transform ? lireTransformation(n.attributs.transform) : IDENTITE;
   if (!t) { p.refus.add('une transformation illisible'); return null; }
@@ -107,8 +117,17 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   const courante = heritees.color === undefined ? COULEUR_COURANTE : lirePeintureAlpha(heritees.color);
   const fond = n.nom === 'line' ? { couleur: null, alpha: 1 } : peinture(heritees.fill, '#000000', courante);
   const trait = peinture(heritees.stroke, null, courante);
-  const { couleur: remplissage } = fond, { couleur: contour } = trait;
-  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) { p.refus.add('un dégradé ou un motif'); return; }
+  let { couleur: remplissage } = fond, { couleur: contour } = trait;
+  // Une peinture url(#…) : refusee comme avant, sauf si une fonctionnalite du mode riche la resout (sa couleur de repli prend la place).
+  let peintureR: PeintureResolue | null = null, peintureC: PeintureResolue | null = null;
+  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) {
+    const fonctions = fonctionsDe(p);
+    if (remplissage && remplissage.startsWith('url(')) peintureR = fonctions.length ? resoudrePeinture(fonctions, remplissage, 'remplissage', n, b, marche(p)) : null;
+    if (contour && contour.startsWith('url(')) peintureC = fonctions.length ? resoudrePeinture(fonctions, contour, 'contour', n, b, marche(p)) : null;
+    if ((remplissage && remplissage.startsWith('url(') && !peintureR) || (contour && contour.startsWith('url(') && !peintureC)) { p.refus.add('un dégradé ou un motif'); return; }
+    if (peintureR) remplissage = peintureR.repli;
+    if (peintureC) contour = peintureC.repli;
+  }
   if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { p.refus.add('une peinture qui n’est pas une couleur lisible'); return; }
   if (b.profondeur > 0 && depasseBorne(p)) return;
   const chemin = transformerChemin(d, m);
@@ -132,7 +151,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (lu && 'texte' in lu && lu.lien) p.liens?.push({ id: 'f' + (p.formes.length + 1), lien: lu.lien });
   // L'operation de production (ADR-0028) qu'un SVG ecrit ici porte sur la forme elle-meme (jamais heritee d'un groupe).
   const operation = lireOperation(n.attributs[ATTRIBUT_OPERATION]);
-  p.formes.push({
+  const forme: Forme = {
     id: 'f' + (p.formes.length + 1),
     d: chemin,
     remplissage,
@@ -145,14 +164,18 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     ...(operation ? { operation } : {}),
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
-    verrouille: false
-  });
+    verrouille: false,
+    ...(peintureR ? { peintureRemplissage: peintureR.peinture } : {}),
+    ...(peintureC ? { peintureContour: peintureC.peinture } : {})
+  };
+  // Le mode riche : chaque fonctionnalite complete la feuille (son filtre…) ; en mode plat, il n'y en a aucune.
+  p.formes.push(fonctionsDe(p).length ? completerFeuille(fonctionsDe(p), forme, n, b, marche(p)) : forme);
 }
 
 /** Le <symbol> d'un <use> : un cadre (x, y, largeur, hauteur) dans lequel son viewBox se place, puis ses enfants comme ceux d'un groupe. */
 function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
   const pr = proprietesDe(p.analyse, s);
-  const refusS = refusDe(pr);
+  const refusS = refusDe(pr, prisesDe(fonctionsDe(p)));
   if (refusS) { p.refus.add(refusS); return; }
   // Un cadre nul ou un viewBox vide desactive le rendu, comme dans un navigateur.
   const vue = lireVue(s.attributs.viewBox);
@@ -210,8 +233,31 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (ANIMATIONS.has(n.nom)) { p.analyse.ignores.add(MSG_ANIMATIONS); return; }
   const b = preparer(p, n, ctx);
   if (!b) return;
-  if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
+  // Le mode riche : une fonctionnalite qui sait lire cette balise la lit (fonctionnalites.ts) ; en mode plat, aucune.
+  const lecteur = fonctionsDe(p).length ? lecteurDe(fonctionsDe(p), n.nom) : undefined;
+  if (lecteur) lecteur(n, b, marche(p));
+  else if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
   else if (n.nom === 'text' && p.texte) lireTexte(p.texte, n, b.heritees, b.m, b.opacite);
   else poserForme(p, n, b);
+}
+
+const marches = new WeakMap<Parcours, Marche>();
+
+/** Ce que la marche offre aux lecteurs des fonctionnalites (fonctionnalites.ts), une fois par lecture. */
+function marche(p: Parcours): Marche {
+  let m = marches.get(p);
+  if (!m) {
+    m = {
+      parcours: p,
+      enfants: (n, ctx) => parcourirEnfants(p, n, ctx),
+      visiter: (n, ctx) => visiter(p, n, ctx),
+      poserForme: (n, pret) => poserForme(p, n, pret),
+      boiteForme: (n, pret) => { const d = cheminDeForme(n); return d ? boiteChemin(transformerChemin(d, pret.m)) : null; },
+      refuser: phrase => { p.refus.add(phrase); },
+      ignorer: phrase => { p.analyse.ignores.add(phrase); }
+    };
+    marches.set(p, m);
+  }
+  return m;
 }

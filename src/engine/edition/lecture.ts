@@ -15,6 +15,8 @@ import { visiter, type Parcours } from './parcours.js';
 import { COORDONNEE_MAX, coordonneeSaine, CONFRONTATIONS_MAX } from './limites.js';
 import { lireProduction, type MarqueProduction } from './production.js';
 import { resoudreLiens } from './texteVivant.js';
+import { prisesDe, type Fonctionnalite } from './fonctionnalites.js';
+import { FONCTIONNALITES } from './catalogue.js';
 import { ATTRIBUT_REPERES, lireReperes } from './reperes.js';
 
 /** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038). */
@@ -42,12 +44,25 @@ export interface OptionsLecture {
    * d'un SVG sans texte ne change jamais, et celle d'un SVG avec texte ne change que si on lui donne de quoi le dessiner.
    */
   readonly polices?: PolicesTexte;
+  /**
+   * Le modele lu (ADR-0012, annexe 2 §1). `plat`, le defaut : le contrat de l'ADR-0001, fige (les groupes se fondent ; decoupes, masques,
+   * filtres, degrades, motifs, images refuses en les nommant). `riche` : la lecture consulte aussi les fonctionnalites du catalogue
+   * (catalogue.ts) ; tant qu'il est vide, elle lit exactement comme `plat`.
+   */
+  readonly modele?: 'plat' | 'riche';
 }
+
+const AUCUNE: readonly Fonctionnalite[] = [];
 
 /** Le dessin d'un SVG et ce qu'il a fallu laisser tomber, ou ce qui empeche de l'editer. Ne leve jamais : un texte hostile est un refus nomme. */
 export function lireDessin(svg: string, options: OptionsLecture = {}): LectureDessin {
+  return lireDessinAvec(svg, options, options.modele === 'riche' ? FONCTIONNALITES : AUCUNE);
+}
+
+/** `lireDessin` avec une liste de fonctionnalites donnee (les tests des points d'extension) ; vide, la lecture plate. */
+export function lireDessinAvec(svg: string, options: OptionsLecture, fonctions: readonly Fonctionnalite[]): LectureDessin {
   try {
-    return lireDessinSansFiltre(svg, options);
+    return lireDessinSansFiltre(svg, options, fonctions);
   } catch (e) {
     // Dernier filet : une pile de fonctions recursives qui deborde malgre les bornes se dit, elle ne fait pas planter la page.
     if (e instanceof RangeError) return { erreur: 'Ce SVG est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.' };
@@ -55,7 +70,7 @@ export function lireDessin(svg: string, options: OptionsLecture = {}): LectureDe
   }
 }
 
-function lireDessinSansFiltre(svg: string, options: OptionsLecture): LectureDessin {
+function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: readonly Fonctionnalite[]): LectureDessin {
   const doc = analyserXml(svg);
   if ('erreur' in doc) return { erreur: phraseErreurXml(doc.erreur) };
   const racine = doc.racine.enfants.find(e => e.nom === 'svg');
@@ -68,12 +83,12 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture): LectureDess
   const analyse = analyser(racine);
   const formesLues: Forme[] = [], refus = new Set<string>();
   const texte: ContexteTexte | null = options.polices ? { analyse, polices: options.polices, formes: formesLues, refus, remplacements: new Map(), caracteres: 0 } : null;
-  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte, liens: [] };
+  const p: Parcours = { analyse, plan, formes: formesLues, refus, actifs: new Set([racine]), clones: 0, trop: false, donnees: 0, texte, liens: [], fonctions };
   // La balise <svg> est un element comme un groupe : ce qu'elle pose se transmet aux formes. `opacity` s'y
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
   const prRacine = proprietesDe(analyse, racine);
-  const refusRacine = refusDe(prRacine);
+  const refusRacine = refusDe(prRacine, prisesDe(fonctions));
   if (refusRacine) p.refus.add(refusRacine);
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };
   racine.enfants.forEach(e => visiter(p, e, ctx));
