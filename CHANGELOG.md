@@ -154,6 +154,9 @@ empreintes.
 
 ### Corrigé
 
+- Modèle riche : un masque dont le contenu porte des groupes eux-mêmes masqués ou découpés garde toutes ses formes, ou est refusé
+  en le nommant s'il dépasse la borne (il en perdait en silence) ; une image dans le contenu d'un masque s'écrit dans un SVG bien
+  formé (`xmlns:xlink` déclaré), et le contrôle d'écriture refuse désormais tout préfixe non déclaré.
 - Sécurité : le nettoyage d'une feuille de style résout ses échappements à chaque passe ; un échappement à double niveau
   (`ur\\6c(`) ou vers un caractère de contrôle ne peut plus recomposer `url(` (trouvé par le fuzzing ; deux régressions ajoutées).
 - Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
