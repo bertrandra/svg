@@ -34,20 +34,21 @@ export interface DescriptionPublic {
 /**
  * Les trois publics de premier rang (PRODUCT.md), dans l'ordre de la question : d'egale dignite, la meme forme pour chacun. Des
  * donnees : le titre et la phrase se traduisent a l'affichage (`t(p.titre)`, `insecables(t(p.phrase))`, ADR-0042 §3), comme un
- * nom de machine ; la phrase porte deja sa typographie francaise.
+ * nom de machine ; la phrase est la cle, telle qu'elle est ecrite ici, et la typographie francaise (espaces insecables) se pose
+ * apres la traduction, jamais avant : une cle aux insecables ne serait plus dans le dictionnaire.
  */
 export const PUBLICS: readonly DescriptionPublic[] = [
   {
     id: 'machine', icone: 'machine', titre: 'Découper ou dessiner avec une machine',
-    phrase: insecables('Pour une Cricut : un fichier prêt pour Design Space, à la taille réelle, en découpe, au stylo ou en Print Then Cut.')
+    phrase: 'Pour une Cricut : un fichier prêt pour Design Space, à la taille réelle, en découpe, au stylo ou en Print Then Cut.'
   },
   {
     id: 'retouche', icone: 'palette', titre: 'Retoucher un dessin ou une image',
-    phrase: insecables('Ouvrir un SVG ou un PDF, convertir une image, changer les couleurs, puis récupérer un fichier propre.')
+    phrase: 'Ouvrir un SVG ou un PDF, convertir une image, changer les couleurs, puis récupérer un fichier propre.'
   },
   {
     id: 'integration', icone: 'code', titre: 'Intégrer l’éditeur à mon produit',
-    phrase: insecables('Un composant React ou une fonction ouvrir(), sans serveur : votre page reçoit le SVG retouché.')
+    phrase: 'Un composant React ou une fonction ouvrir(), sans serveur : votre page reçoit le SVG retouché.'
   }
 ];
 
@@ -167,15 +168,18 @@ export function circuitDu(p: ChoixPublic | null): Circuit {
  */
 export const DEMO_HOTE: { readonly nom: 'logo'; readonly libelleEnregistrer: string } = { nom: 'logo', get libelleEnregistrer() { return t('Mettre à jour le logo'); } };
 
-/** Les options principales de `ouvrir` (docs/integration.md) : un nom, ce qu'elle fait en une phrase. */
+/**
+ * Les options principales de `ouvrir` (docs/integration.md) : un nom, ce qu'elle fait en une phrase. Des donnees : la phrase est la
+ * cle, traduite a l'affichage (`insecables(t(phrase))`), comme celles des publics.
+ */
 export const OPTIONS_INTEGRATION: ReadonlyArray<readonly [string, string]> = [
-  ['svg', t('Le texte du SVG à retoucher, tel quel.')],
-  ['onEnregistrer', t('Reçoit le SVG retouché, déjà nettoyé, quand la personne valide.')],
-  ['libelleEnregistrer', t('Le nom du bouton de fin : « Valider », « Mettre à jour le logo »…')],
-  ['visite', t('La visite guidée de l’éditeur ; désactivée par défaut.')],
-  ['stockage', t('Où garder les versions nommées : le vôtre, celui du navigateur, ou rien.')],
-  ['baseAnnexes', t('Le dossier où trouver la bibliothèque et les fontes, chargées au premier besoin.')]
-].map(([nom, phrase]) => [nom ?? '', insecables(phrase ?? '')] as const);
+  ['svg', 'Le texte du SVG à retoucher, tel quel.'],
+  ['onEnregistrer', 'Reçoit le SVG retouché, déjà nettoyé, quand la personne valide.'],
+  ['libelleEnregistrer', 'Le nom du bouton de fin : « Valider », « Mettre à jour le logo »…'],
+  ['visite', 'La visite guidée de l’éditeur ; désactivée par défaut.'],
+  ['stockage', 'Où garder les versions nommées : le vôtre, celui du navigateur, ou rien.'],
+  ['baseAnnexes', 'Le dossier où trouver la bibliothèque et les fontes, chargées au premier besoin.']
+];
 
 /**
  * L'extrait de code montre et copie : le bundle (le plus simple, docs/integration.md), avec les options de la demonstration. Du

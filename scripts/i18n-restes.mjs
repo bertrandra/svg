@@ -21,11 +21,12 @@ export async function chargerExtracteur() {
 
 export const lireExclus = () => JSON.parse(readFileSync(depuisRacine('tests/fixtures/i18n/exclus.json'), 'utf8')).fichiers;
 export const lirePlafond = () => JSON.parse(readFileSync(depuisRacine('tests/fixtures/i18n/restes.json'), 'utf8')).restes;
+export const lirePlafondConstantes = () => JSON.parse(readFileSync(depuisRacine('tests/fixtures/i18n/constantes.json'), 'utf8')).constantes;
 
 if (estLance(import.meta.url)) {
   const { extraireDossier, restesParFichier } = await chargerExtracteur();
   const prefixe = process.argv[2];
-  const { restes } = extraireDossier(depuisRacine('src'), lireExclus());
+  const { restes, constantes } = extraireDossier(depuisRacine('src'), lireExclus());
   if (prefixe) {
     for (const r of restes.filter(r => r.fichier.startsWith(prefixe.replace(/^src\//, '')))) console.log(r.fichier + ':' + r.ligne + '  ' + r.texte);
   } else {
@@ -33,4 +34,5 @@ if (estLance(import.meta.url)) {
     for (const { fichier, nombre } of restesParFichier(restes)) console.log('  ' + fichier.padEnd(largeur) + String(nombre).padStart(6));
   }
   console.log('\n  ' + restes.length + ' restes (plafond : ' + lirePlafond() + ').');
+  console.log('  ' + constantes.length + ' constantes de module « const X = t(…) » (plafond : ' + lirePlafondConstantes() + ') ; une fonction leur est préférée.');
 }

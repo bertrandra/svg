@@ -19,9 +19,9 @@ export const TYPES_IMAGES = 'image/png,image/jpeg,image/gif,image/webp,.png,.jpg
 
 /** Un fichier choisi ou depose, insere ; trop lourd, il n'est pas lu (le refus de la lecture d'un SVG, mot pour mot). */
 export async function insererFichierImage(f: Blob, ac: Pick<ActionsEditeur, 'insererImage' | 'dire'>): Promise<boolean> {
-  if (f.size > IMAGE_OCTETS_MAX) { ac.dire(phraseImageRefusee(MSG_IMAGE_LOURDE)); return false; }
+  if (f.size > IMAGE_OCTETS_MAX) { ac.dire(phraseImageRefusee(t(MSG_IMAGE_LOURDE))); return false; }
   let donnees: string;
-  try { donnees = await donneesDuFichier(f); } catch { ac.dire(phraseImageRefusee(MSG_IMAGE_ILLISIBLE)); return false; }
+  try { donnees = await donneesDuFichier(f); } catch { ac.dire(phraseImageRefusee(t(MSG_IMAGE_ILLISIBLE))); return false; }
   return ac.insererImage(donnees);
 }
 

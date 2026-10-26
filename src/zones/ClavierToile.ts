@@ -25,7 +25,7 @@ import {
 } from '../engine/navigation.js';
 import { au } from '../util/tableaux.js';
 import { FORMES } from './aidesEditeur.js';
-import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, PHRASE_COIN_ANNULE, PHRASE_COINS_TROP_PROCHES } from './annonces.js';
+import { phraseCoinAnnule, phraseCoinOppose, phraseCoinsTropProches, phrasePremierCoin, phraseReticule, phraseSelection } from './annonces.js';
 import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { ajouterTracee, formeTracee } from './Gestes.js';
 import { toucheZone } from './ClavierZone.js';
@@ -108,7 +108,7 @@ function deuxCoins(c: ContexteToile): boolean {
     ac.dire(phrasePremierCoin(p));
     return true;
   }
-  if (!coinsPosables(u.outil === 'ligne', premier, p, coteMinimal(m.dessin.vb))) { ac.annoncer(PHRASE_COINS_TROP_PROCHES); return true; }
+  if (!coinsPosables(u.outil === 'ligne', premier, p, coteMinimal(m.dessin.vb))) { ac.annoncer(phraseCoinsTropProches()); return true; }
   const outil = u.outil as OutilForme;
   poserTrace(c, formeTracee(outil, premier[0], premier[1], p[0], p[1], false, u.parametres));
   return true;
@@ -149,7 +149,7 @@ function reticule(c: ContexteToile, e: KeyboardEvent): boolean {
     return true;
   }
   if (u.outil === 'plume') return plume(c, e);
-  if (e.key === 'Escape' && premier) { ac.poserTrace([]); ac.dire(PHRASE_COIN_ANNULE); return true; }
+  if (e.key === 'Escape' && premier) { ac.poserTrace([]); ac.dire(phraseCoinAnnule()); return true; }
   if (e.key === ' ' || (e.key === 'Enter' && (e.shiftKey || premier))) return deuxCoins(c);
   if (e.key !== 'Enter') return false;
   poserForme(c, u.curseur ?? departReticule(c));

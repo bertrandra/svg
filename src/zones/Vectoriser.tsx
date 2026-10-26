@@ -102,8 +102,7 @@ export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: stri
   const [apercu, poserApercu] = useState<ApercuPretraite | null>(null);
   const [fichiersLot, poserFichiersLot] = useState<readonly File[]>([]);
   const entree = useRef<HTMLInputElement>(null);
-  // Chaque lancement prend un numero ; un resultat qui revient apres un lancement plus recent est jete.
-  const jeton = useRef(0);
+  const jeton = useRef(0); // Chaque lancement prend un numero ; un resultat qui revient apres un lancement plus recent est jete.
 
   const lancer = useCallback(async (image: SourceImage, traitement: Traitement) => {
     // WebAssembly (le traceur) et le canvas (les pixels) se verifient avant de charger quoi que ce soit : la phrase dit quoi faire.

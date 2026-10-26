@@ -11,6 +11,7 @@ import {
 } from '../../../src/zones/publics.js';
 import { verifierOptions } from '../../../src/zones/embarque.js';
 import { NOMS_ICONES } from '../../../src/zones/icones.js';
+import { insecables } from '../../../src/util/texte.js';
 
 /** Les textes portent des espaces insecables (typographie francaise) : on les compare a espaces ordinaires. */
 const n = (t: string): string => t.replace(/\u00a0/g, ' ');
@@ -22,8 +23,10 @@ describe('les trois publics', () => {
     for (const p of PUBLICS) {
       expect(p.phrase.length, p.id).toBeGreaterThan(40);
       expect(NOMS_ICONES).toContain(p.icone);
-      // Typographie francaise : jamais une espace ordinaire avant « : ; ? ! ».
-      expect(p.phrase).not.toMatch(/ [:;?!]/);
+      // La phrase est la cle du dictionnaire, telle qu'elle est ecrite : la typographie francaise (une insecable avant « : ; ? ! »)
+      // se pose a l'affichage, apres la traduction (insecables(t(p.phrase))), jamais dans la donnee.
+      expect(p.phrase).not.toMatch(/\u00a0/);
+      expect(insecables(p.phrase)).not.toMatch(/ [:;?!]/);
     }
     expect(n(PUBLICS[0]?.phrase ?? '')).toContain('Design Space');
     expect(n(PUBLICS[0]?.phrase ?? '')).toMatch(/découpe.*stylo.*Print Then Cut/);

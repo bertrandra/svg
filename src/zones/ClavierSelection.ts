@@ -6,7 +6,7 @@
 // I (inverser), C, Alt+C et Y (meme fond, meme contour, meme type) completent Maj+Page suivante.
 
 import { basculerDansSelection, formeAuCurseur, formeVoisine, type Sens } from '../engine/navigation.js';
-import { phraseBascule, PHRASE_SANS_CURSEUR } from './annonces.js';
+import { phraseBascule, phraseSansCurseur } from './annonces.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
 import { niveauEdition } from './lentille.js';
 import { t } from '../util/i18n.js';
@@ -37,7 +37,7 @@ export function etendreSelection(c: ContexteSelection, sens: Sens): true {
 /** Espace : la forme au curseur entre dans la selection, ou en sort si elle y etait. */
 export function basculerCurseur(c: ContexteSelection): true {
   const { m, u, ac } = c, courant = formeAuCurseur(m.dessin, m.sel, u.focale, niveauEdition(u.contexte));
-  if (courant === null) { ac.annoncer(PHRASE_SANS_CURSEUR); return true; }
+  if (courant === null) { ac.annoncer(phraseSansCurseur()); return true; }
   const r = basculerDansSelection(m.sel, courant);
   poserSelection(c, r.sel, courant);
   ac.annoncer(phraseBascule(courant, r.ajoutee ? 'ajoutee' : 'retiree', r.sel.length));

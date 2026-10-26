@@ -149,7 +149,7 @@ export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: 
  */
 function booleenRiche(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance: number, options: OptionsBooleen): { dessin: DessinSvg; id: string | null; erreur?: string } {
   const feuilles = feuillesDe(dessin, ids).filter(id => visibleEffectif(dessin, id) && !verrouilleEffectif(dessin, id));
-  if (new Set(dessin.formes.filter(f => feuilles.includes(f.id)).map(f => f.parent)).size > 1) return { dessin, id: null, erreur: MSG_MEME_PARENT };
+  if (new Set(dessin.formes.filter(f => feuilles.includes(f.id)).map(f => f.parent)).size > 1) return { dessin, id: null, erreur: t(MSG_MEME_PARENT) };
   const r = booleenDeFormes(dessin, feuilles, op, tolerance, options);
   return r.dessin === dessin ? r : { ...r, dessin: normaliser(r.dessin) };
 }

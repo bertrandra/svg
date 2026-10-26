@@ -2,7 +2,8 @@
 // traduction dans le dictionnaire anglais fusionne (src/i18n/en/*.json) ; aucune cle du dictionnaire n'est orpheline ; une cle n'a
 // qu'une traduction ; une traduction garde les `{valeurs}` de sa cle. Et le cliquet : le nombre de littéraux a l'air francais hors
 // de `t` ne depasse jamais tests/fixtures/i18n/restes.json, que l'on baisse (ACTUALISER_REFERENCES=1 l'ecrit, jamais au-dessus) et
-// jamais ne remonte. A la fin du chantier, il vaut zero.
+// jamais ne remonte. A la fin du chantier, il vaut zero. Un second cliquet, de la meme mecanique, tient le nombre de constantes de
+// module `const X = t('…')` (tests/fixtures/i18n/constantes.json) : l'amorce les traduit en pratique, une fonction est plus sure.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,6 +15,7 @@ import { extraireDossier, extraireFichier, restesParFichier } from './extraire.j
 const RACINE = resolve(__dirname, '../../..');
 const SRC = resolve(RACINE, 'src');
 const FICHIER_RESTES = resolve(RACINE, 'tests/fixtures/i18n/restes.json');
+const FICHIER_CONSTANTES = resolve(RACINE, 'tests/fixtures/i18n/constantes.json');
 
 type Table = Record<string, string>;
 interface Langues {
@@ -25,7 +27,8 @@ interface Langues {
 // Les regles de fusion sont celles du build (scripts/langues.mjs) : le test et l'annexe lisent le meme dictionnaire.
 const langues = (await import(pathToFileURL(resolve(RACINE, 'scripts/langues.mjs')).href)) as Langues;
 
-const exclus = (JSON.parse(readFileSync(resolve(RACINE, 'tests/fixtures/i18n/exclus.json'), 'utf8')) as { fichiers: string[] }).fichiers;
+const exclusions = JSON.parse(readFileSync(resolve(RACINE, 'tests/fixtures/i18n/exclus.json'), 'utf8')) as { fichiers: string[]; raisons: Record<string, string> };
+const exclus = exclusions.fichiers;
 const extraction = extraireDossier(SRC, exclus);
 const tables = langues.lireDictionnaires('en');
 const dictionnaire = langues.fusionnerDictionnaires(tables);
@@ -108,8 +111,38 @@ describe('le cliquet des textes francais hors t', () => {
     expect(r.litteraux.has('../util/i18n.js')).toBe(false);
   });
 
-  it('n exclut que des fichiers qui existent, et seulement des donnees', () => {
+  it('n exclut que des fichiers qui existent, et seulement des donnees, chacun avec sa raison', () => {
     for (const f of exclus) expect(() => readFileSync(resolve(SRC, f)), f).not.toThrow();
     expect(exclus).toEqual([...exclus].sort());
+    // La raison dit en quoi le fichier est une donnee (traduite a l'affichage, ou un octet ecrit) : sans elle, une exclusion
+    // deviendrait vite une facilite.
+    expect(Object.keys(exclusions.raisons).sort()).toEqual(exclus);
+    for (const f of exclus) expect(exclusions.raisons[f]?.trim().length ?? 0, f + ' : sa raison').toBeGreaterThan(10);
+  });
+});
+
+describe('le cliquet des constantes de module', () => {
+  it('ne depasse jamais le plafond de tests/fixtures/i18n/constantes.json, qui ne fait que baisser', () => {
+    const plafond = (JSON.parse(readFileSync(FICHIER_CONSTANTES, 'utf8')) as { constantes: number }).constantes;
+    const n = extraction.constantes.length;
+    if (process.env['ACTUALISER_REFERENCES'] === '1' && n < plafond) writeFileSync(FICHIER_CONSTANTES, JSON.stringify({ constantes: n }) + '\n');
+    const detail = restesParFichier(extraction.constantes).slice(0, 8).map(r => '  ' + r.fichier + ' : ' + r.nombre).join('\n');
+    expect(n, n + ' constantes de module « const X = t(\'…\') » pour un plafond de ' + plafond + '. Une constante s’évalue au chargement du module : préférez une fonction (`export const phraseX = (): string => t(\'…\')`) ou un accesseur, qui lisent la langue au moment où on les montre. Puis baissez le plafond : ACTUALISER_REFERENCES=1 npx vitest run tests/unit/i18n. Les fichiers les plus chargés :\n' + detail)
+      .toBeLessThanOrEqual(plafond);
+  });
+
+  it('compte une declaration de premier niveau initialisee par t, rien d autre', () => {
+    const texte = [
+      "import { t } from '../util/i18n.js';",
+      "export const A = t('Annuler');",
+      "const B: string = t('Fermer'), C = t('Ouvrir');",
+      "export const f = (): string => t('Enregistrer');",
+      "export const G = { x: t('Copier') };",
+      "function h() { const D = t('Coller'); return D; }",
+      "export const E = A + t('Couper');"
+    ].join('\n');
+    const r = extraireFichier('zones/Essai.ts', texte);
+    expect(r.constantes.map(c => [c.nom, c.ligne])).toEqual([['A', 2], ['B', 3], ['C', 3]]);
+    expect(extraireFichier('zones/Autre.ts', "const t = (s: string) => s; export const A = t('Annuler');").constantes).toEqual([]);
   });
 });
