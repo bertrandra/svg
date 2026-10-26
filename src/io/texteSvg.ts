@@ -3,6 +3,7 @@
 // l'editeur recoit : il n'a jamais a connaitre les fontes.
 
 import { ecrireDessin, lireDessin, marquerProduction, type Glyphes } from '../engine/editionSvg.js';
+import { t } from '../util/i18n.js';
 import { fontesDeRemplacement } from './polices.js';
 
 /** Vrai si le SVG porte un element <text> (le seul cas ou les fontes sont utiles). */
@@ -15,7 +16,7 @@ export const contientTexte = (svg: string): boolean => /<(?:[\w-]+:)?text[\s>/]/
 export async function lettresDuSvg(svg: string, remplacantes: () => Promise<ReadonlyMap<string, Glyphes>> = fontesDeRemplacement, modele: 'plat' | 'riche' = 'plat'): Promise<{ svg: string; ignores: readonly string[] } | { erreur: string }> {
   let fontes: ReadonlyMap<string, Glyphes>;
   try { fontes = await remplacantes(); } catch (e) {
-    return { erreur: 'Ce SVG contient du texte, et les fontes qui le dessinent ne se chargent pas (' + (e instanceof Error ? e.message : String(e)) + ')' };
+    return { erreur: t('Ce SVG contient du texte, et les fontes qui le dessinent ne se chargent pas ({raison})', { raison: e instanceof Error ? e.message : String(e) }) };
   }
   const r = lireDessin(svg, { polices: { glyphes: id => fontes.get(id) ?? null }, ...(modele === 'riche' ? { modele } : {}) });
   if ('erreur' in r) return r;

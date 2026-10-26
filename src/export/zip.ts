@@ -7,6 +7,8 @@
 // Disposition : [entete local + nom + donnees] x N, puis le repertoire central (un enregistrement par
 // entree), puis la fin du repertoire central. Tous les entiers sont petit-boutistes.
 
+import { t } from '../util/i18n.js';
+
 export interface EntreeZip {
   /** Le nom dans l'archive ; voir `nomsUniques` pour des noms sans doublon. */
   nom: string;
@@ -72,18 +74,18 @@ export function nomsUniques(noms: readonly string[]): string[] {
 
 /** Ecrit l'archive. Refuse (ErreurZip) ce que le ZIP classique ne porte pas. */
 export function ecrireZip(entrees: readonly EntreeZip[]): Uint8Array {
-  if (entrees.length > LIMITE_ENTREES) throw new ErreurZip('Trop de fichiers pour une archive ZIP : ' + entrees.length + ' (au plus ' + LIMITE_ENTREES + ').');
+  if (entrees.length > LIMITE_ENTREES) throw new ErreurZip(t('Trop de fichiers pour une archive ZIP : {n} (au plus {max}).', { n: entrees.length, max: LIMITE_ENTREES }));
   const encodeur = new TextEncoder();
   const noms = entrees.map(e => encodeur.encode(e.nom));
   const doublon = noms.findIndex((n, i) => noms.slice(0, i).some(m => m.length === n.length && m.every((o, k) => o === n[k])));
-  if (doublon >= 0) throw new ErreurZip('Deux fichiers portent le nom « ' + (entrees[doublon]?.nom ?? '') + ' » : donnez-leur des noms différents.');
+  if (doublon >= 0) throw new ErreurZip(t('Deux fichiers portent le nom « {nom} » : donnez-leur des noms différents.', { nom: entrees[doublon]?.nom ?? '' }));
   let total = 22;
   entrees.forEach((e, i) => {
     const n = noms[i] ?? new Uint8Array();
-    if (n.length > 0xffff) throw new ErreurZip('Le nom « ' + e.nom.slice(0, 40) + '… » est trop long pour une archive ZIP.');
+    if (n.length > 0xffff) throw new ErreurZip(t('Le nom « {nom}… » est trop long pour une archive ZIP.', { nom: e.nom.slice(0, 40) }));
     total += 30 + n.length + e.donnees.length + 46 + n.length;
   });
-  if (total > LIMITE_OCTETS) throw new ErreurZip('Archive trop grosse : plus de 4 Go, ce que le format ZIP simple ne porte pas. Téléchargez les fichiers par lots plus petits.');
+  if (total > LIMITE_OCTETS) throw new ErreurZip(t('Archive trop grosse : plus de 4 Go, ce que le format ZIP simple ne porte pas. Téléchargez les fichiers par lots plus petits.'));
   const sortie = new Uint8Array(total), vue = new DataView(sortie.buffer);
   let pos = 0;
   const e16 = (v: number) => { vue.setUint16(pos, v, true); pos += 2; };

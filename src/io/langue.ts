@@ -7,7 +7,7 @@
 // (l'option `langue` d'`EditeurSvg.ouvrir`, ou un appel direct avant de monter le composant React) passent tous par
 // `preparerLangue`. C'est ici, et seulement ici, que `document.documentElement.lang` suit la langue.
 
-import { definirDictionnaire, definirLangue, dictionnairePose, type Dictionnaire, type Langue } from '../util/i18n.js';
+import { definirDictionnaire, definirLangue, dictionnairePose, t, type Dictionnaire, type Langue } from '../util/i18n.js';
 import { fabriquerChargeurAnnexe, navigateur, type Amenees, type Annexe, type Chargeur } from './annexes.js';
 
 export const FICHIER_LANGUE_EN = 'langue-en.js';
@@ -27,8 +27,9 @@ export function validerDictionnaire(v: unknown): Dictionnaire | undefined {
 export const ANNEXE_LANGUE_EN: Annexe<Dictionnaire> = {
   fichier: FICHIER_LANGUE_EN,
   globale: '__langueSvg_en',
-  contenu: 'le dictionnaire anglais',
-  consigne: 'lancez « npm run langues »',
+  // Par `t` comme toute annexe, bien qu'une plainte sur ce dictionnaire-ci se dise toujours en francais : il n'est pas arrive.
+  get contenu() { return t('le dictionnaire anglais'); },
+  get consigne() { return t('lancez « npm run langues »'); },
   donnees: true,
   valider: validerDictionnaire
 };
@@ -55,7 +56,7 @@ export async function preparerLangue(l: Langue, amenees: Amenees = navigateur): 
     try {
       definirDictionnaire(l, await chargeur.charger());
     } catch (e: unknown) {
-      avertissement = (e instanceof Error ? e.message : String(e)) + ' L’interface reste en français.';
+      avertissement = t('{raison} L’interface reste en français.', { raison: e instanceof Error ? e.message : String(e) });
       definirLangue('fr');
       poserLangDocument('fr');
       return;

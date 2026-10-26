@@ -29,6 +29,7 @@ export function pluriel(n: number, mot: string, plurielIrregulier?: string): str
  * Les verbes de la souris, dits au doigt : une aide qui dit « Cliquez » a quelqu'un qui touche l'ecran le fait chercher
  * un geste qu'il n'a pas. Les remplacements vont du plus long au plus court, pour que « double-cliquez » ne devienne
  * pas « double-touchez ». Glisser, maintenir et choisir valent pour les deux : ils restent. Sans doigt, la phrase est rendue telle quelle.
+ * La phrase arrive deja traduite (ADR-0042) : les paires anglaises suivent les francaises, chacune ne touche que sa langue.
  */
 const AU_DOIGT: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bDouble-cliquez\b/g, 'Touchez deux fois'],
@@ -37,7 +38,13 @@ const AU_DOIGT: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bUn clic\b/g, 'Un appui'],
   [/\bun clic\b/g, 'un appui'],
   [/\bCliquez\b/g, 'Touchez'],
-  [/\bcliquez\b/g, 'touchez']
+  [/\bcliquez\b/g, 'touchez'],
+  [/\bDouble-click\b/g, 'Double-tap'],
+  [/\bdouble-click\b/g, 'double-tap'],
+  [/\bA click\b/g, 'A tap'],
+  [/\ba click\b/g, 'a tap'],
+  [/\bClick\b/g, 'Tap'],
+  [/\bclick\b/g, 'tap']
 ];
 
 export function selonSaisie(phrase: string, doigt: boolean): string {
@@ -73,9 +80,10 @@ export function distanceEdition(a: string, b: string, plafond = 2): number {
 
 /**
  * La typographie francaise : une espace insecable avant « ; : ? ! » et le guillemet fermant, apres le guillemet ouvrant. Sans elle,
- * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne.
+ * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne. Les remplacements ne
+ * portent que l'espace insecable : ce sont des caracteres, pas un texte de l'interface (ADR-0042). Une phrase anglaise n'en a aucun.
  */
-export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/« /g, '« ');
+export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/(«) /g, '$1\u00a0');
 
 /** La longueur d'un nom de fichier propose : au-dela, un nom de forme n'est plus un nom, et certains systemes coupent. */
 const LONGUEUR_NOM_FICHIER = 80;

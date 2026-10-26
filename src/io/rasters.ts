@@ -3,6 +3,7 @@
 // rend le navigateur dependent de son encodeur : ils ne sont pas stables d'un navigateur a l'autre, et le
 // SVG, le PDF, l'EPS et le DXF le sont. Ce fichier est dans `io` parce qu'il touche au DOM.
 
+import { t } from '../util/i18n.js';
 import { chargerImage, toile } from './image.js';
 
 export type FormatRaster = 'image/jpeg' | 'image/webp';
@@ -35,10 +36,10 @@ export const qualiteDe = (q: number | undefined): number => (q === undefined || 
 export async function versRaster(svg: string, o: OptionsRaster): Promise<{ octets: Uint8Array; type: string }> {
   const img = await chargerImage(new Blob([svg], { type: 'image/svg+xml' }));
   const l = Math.max(1, Math.round(o.largeur)), h = Math.max(1, Math.round((img.naturalHeight / Math.max(1, img.naturalWidth)) * l));
-  const { t, ctx } = toile(l, h);
+  const { t: canevas, ctx } = toile(l, h);
   const fond = fondDe(o.format, o.fond);
   if (fond) { ctx.fillStyle = fond; ctx.fillRect(0, 0, l, h); }
   ctx.drawImage(img, 0, 0, l, h);
-  const blob = await new Promise<Blob>((ok, ko) => t.toBlob(b => (b ? ok(b) : ko(new Error('rendu refusé'))), o.format, qualiteDe(o.qualite)));
+  const blob = await new Promise<Blob>((ok, ko) => canevas.toBlob(b => (b ? ok(b) : ko(new Error(t('rendu refusé')))), o.format, qualiteDe(o.qualite)));
   return { octets: new Uint8Array(await blob.arrayBuffer()), type: blob.type };
 }

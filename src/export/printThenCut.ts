@@ -21,6 +21,7 @@ import {
   aUnTrait, boiteDeRegion, constatsBloquants, marqueDeProfil, regionPeinte, silhouetteDe, texteMesure, texteTaille, versUnite,
   type Constat, type ProfilProduction
 } from '../engine/preparation.js';
+import { t } from '../util/i18n.js';
 import { phraseRefus } from './cricut.js';
 import { svgExporte } from './svgs.js';
 import { ecrireZip, nomSur } from './zip.js';
@@ -73,17 +74,17 @@ function fondPerdu(dessin: DessinSvg, anneau: MultiPolygon, distance: number, to
 export function printThenCut(dessin: DessinPlat, p: ProfilProduction): ExportPrintThenCut {
   const profil: ProfilProduction = p.procede === 'imprimer-decouper' ? p : { ...p, procede: 'imprimer-decouper' };
   const ptc = profil.printThenCut;
-  if (!ptc) return { erreur: 'La ' + profil.machine.nom + ' ne fait pas Print Then Cut : choisissez une Explore ou une Maker.', constats: [] };
+  if (!ptc) return { erreur: t('La {machine} ne fait pas Print Then Cut : choisissez une Explore ou une Maker.', { machine: t(profil.machine.nom) }), constats: [] };
   const bloquants = constatsBloquants(dessin, profil);
   if (bloquants.length) return { erreur: phraseRefus(bloquants), constats: bloquants };
   const visibles = dessin.formes.filter(f => f.visible).length;
   if (visibles > FORMES_MAX_PRINT_THEN_CUT) {
-    return { erreur: 'Le fond perdu se calcule forme par forme : au-delà de ' + FORMES_MAX_PRINT_THEN_CUT + ' formes (ici ' + visibles + '), regroupez ou simplifiez le dessin, ou laissez Design Space ajouter le sien.', constats: [] };
+    return { erreur: t('Le fond perdu se calcule forme par forme : au-delà de {max} formes (ici {n}), regroupez ou simplifiez le dessin, ou laissez Design Space ajouter le sien.', { max: FORMES_MAX_PRINT_THEN_CUT, n: visibles }), constats: [] };
   }
   const tolerance = toleranceBooleen(dessin), fp = ptc.fondPerdu;
   const silhouette = silhouetteDe(dessin, tolerance);
   const boite = boiteDeRegion(silhouette);
-  if (!boite) return { erreur: 'Le dessin n’a aucune forme visible : rien à imprimer.', constats: [] };
+  if (!boite) return { erreur: t('Le dessin n’a aucune forme visible : rien à imprimer.'), constats: [] };
   const anneau = clipping.difference(grossie(silhouette, fp, tolerance), silhouette);
   const [x, y, l, h] = dessin.vb;
   const x0 = Math.min(x, boite.x - fp), y0 = Math.min(y, boite.y - fp);
@@ -95,27 +96,30 @@ export function printThenCut(dessin: DessinPlat, p: ProfilProduction): ExportPri
   return { impression: marquerProduction(impression, marque), coupe: marquerProduction(coupe, marque), vb, silhouette: { l: boite.l, h: boite.h } };
 }
 
-/** Le mode d'emploi joint a l'archive : ce qu'on y trouve, les tailles, et ce qui reste a verifier dans Design Space. */
+/**
+ * Le mode d'emploi joint a l'archive : ce qu'on y trouve, les tailles, et ce qui reste a verifier dans Design Space. Un texte pour la
+ * personne : il se traduit par `t` (ADR-0042) ; en francais, le meme a l'octet.
+ */
 export function modeDEmploi(nom: string, f: FichiersPrintThenCut, p: ProfilProduction, avecPng: boolean): string {
   const ptc = p.printThenCut, fp = ptc ? ptc.fondPerdu : 0, u = p.unite;
   return [
-    'Print Then Cut — ' + nom,
+    t('Print Then Cut — {nom}', { nom }),
     '',
-    'Fichiers :',
-    ...(avecPng ? ['- ' + nom + '-impression.png : l’image à imprimer, ' + (ptc ? ptc.resolution : 300) + ' ppp, fond perdu compris.'] : []),
-    '- ' + nom + '-impression.svg : l’image à imprimer, en vectoriel, fond perdu compris (' + texteMesure(fp, u) + ' autour de la coupe).',
-    '- ' + nom + '-coupe.svg : la ligne de coupe, la silhouette extérieure du dessin, sans couleur d’impression.',
+    t('Fichiers :'),
+    ...(avecPng ? [t('- {nom}-impression.png : l’image à imprimer, {ppp} ppp, fond perdu compris.', { nom, ppp: ptc ? ptc.resolution : 300 })] : []),
+    t('- {nom}-impression.svg : l’image à imprimer, en vectoriel, fond perdu compris ({fondPerdu} autour de la coupe).', { nom, fondPerdu: texteMesure(fp, u) }),
+    t('- {nom}-coupe.svg : la ligne de coupe, la silhouette extérieure du dessin, sans couleur d’impression.', { nom }),
     '',
-    'Tailles : les deux fichiers font ' + texteTaille(f.vb[2], f.vb[3], u) + ' (même cadre : posés au même endroit, ils se superposent).',
-    'La silhouette à découper mesure ' + texteTaille(f.silhouette.l, f.silhouette.h, u) + '.',
+    t('Tailles : les deux fichiers font {taille} (même cadre : posés au même endroit, ils se superposent).', { taille: texteTaille(f.vb[2], f.vb[3], u) }),
+    t('La silhouette à découper mesure {taille}.', { taille: texteTaille(f.silhouette.l, f.silhouette.h, u) }),
     '',
-    'Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 6) :',
-    '1. Importez l’image à imprimer et choisissez « Imprimer puis découper » ; vérifiez sa taille.',
-    '2. Importez la ligne de coupe et donnez-lui la même taille ; alignez les deux (centrés l’un sur l’autre).',
-    '3. Vérifiez sur l’aperçu du tapis que la coupe suit la silhouette et non le bord du fond perdu.',
-    'Si Design Space ajoute son propre fond perdu, laissez-le ou coupez-le : notez ce que vous observez dans le protocole.',
+    t('Dans Design Space (À VÉRIFIER, voir docs/cricut/protocole.md, témoin 6) :'),
+    t('1. Importez l’image à imprimer et choisissez « Imprimer puis découper » ; vérifiez sa taille.'),
+    t('2. Importez la ligne de coupe et donnez-lui la même taille ; alignez les deux (centrés l’un sur l’autre).'),
+    t('3. Vérifiez sur l’aperçu du tapis que la coupe suit la silhouette et non le bord du fond perdu.'),
+    t('Si Design Space ajoute son propre fond perdu, laissez-le ou coupez-le : notez ce que vous observez dans le protocole.'),
     '',
-    'Le PNG est rendu par votre navigateur : ses octets peuvent varier d’un navigateur à l’autre, pas ses dimensions.'
+    t('Le PNG est rendu par votre navigateur : ses octets peuvent varier d’un navigateur à l’autre, pas ses dimensions.')
   ].join('\n') + '\n';
 }
 

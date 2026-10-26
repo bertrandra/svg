@@ -2,7 +2,9 @@
 // logiciel de mise en page le croit a 72 ppp quelle que soit sa taille. `avecDpiPng` insere le bloc, sans
 // toucher a un seul pixel : les autres blocs sont recopies tels quels. Pur.
 
-const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+import { t } from '../util/i18n.js';
+
+const SIGNATURE =[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 let table: Uint32Array | null = null;
 
@@ -45,7 +47,7 @@ export const pointsParMetre = (dpi: number): number => Math.round(dpi / 0.0254);
  */
 export function avecDpiPng(octets: Uint8Array, dpi: number): Uint8Array {
   if (!Number.isFinite(dpi) || dpi <= 0 || dpi > 100000) throw new RangeError('avecDpiPng : resolution invalide');
-  if (octets.length < 33 || SIGNATURE.some((v, i) => octets[i] !== v) || typeDe(octets, 12) !== 'IHDR') throw new Error('avecDpiPng : ce ne sont pas les octets d’un PNG');
+  if (octets.length < 33 || SIGNATURE.some((v, i) => octets[i] !== v) || typeDe(octets, 12) !== 'IHDR') throw new Error(t('avecDpiPng : ce ne sont pas les octets d’un PNG'));
   const donnees = new Uint8Array(9), ppm = pointsParMetre(dpi);
   ecrire32(donnees, 0, ppm); ecrire32(donnees, 4, ppm); donnees[8] = 1;
   const phys = bloc('pHYs', donnees);

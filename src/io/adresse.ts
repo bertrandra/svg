@@ -13,6 +13,7 @@
 //   - ailleurs (l'embarquement chez un hote) : rien n'est pose, le champ n'existe pas.
 
 import { LIMITES_PDF } from '../engine/pdf/limites.js';
+import { t } from '../util/i18n.js';
 
 /** La borne d'un telechargement : la plus haute qu'un fichier ouvert accepte (un PDF, 100 Mo ; un SVG est ensuite borne a 64 Mo). */
 export const OCTETS_MAX = LIMITES_PDF.octets;
@@ -25,20 +26,25 @@ export type Telechargement =
   | { readonly octets: Uint8Array }
   | { readonly erreur: string; readonly code: CodeTelechargement };
 
-/** Les phrases de chaque echec : dites telles quelles, en francais, au vouvoiement. */
+/**
+ * Les phrases de chaque echec : dites telles quelles, au vouvoiement. Des accesseurs, lus au moment de l'echec et jamais au
+ * chargement du module : le dictionnaire d'une autre langue n'est pas encore la quand le module s'evalue (ADR-0042).
+ */
 export const PHRASES_TELECHARGEMENT: Readonly<Record<Exclude<CodeTelechargement, 'statut' | 'refuse'>, string>> = {
-  annule: 'Téléchargement annulé.',
-  reseau: 'Le serveur de cette adresse ne répond pas : vérifiez l’adresse et votre connexion, puis réessayez.',
-  cors: 'Ce site ne permet pas à la page de lire le fichier. Téléchargez-le, puis ouvrez-le ou déposez-le ici.',
-  trop_gros: 'Ce fichier dépasse ' + OCTETS_MAX / 1048576 + ' Mo : il est trop gros pour être ouvert ici.',
-  delai: 'Le fichier n’est pas arrivé en ' + DELAI_MS / 1000 + ' secondes : le téléchargement est arrêté. Réessayez, ou téléchargez-le puis ouvrez-le.',
-  vide: 'Le serveur a renvoyé un fichier vide.',
-  session: 'Votre session a expiré : reconnectez-vous dans un autre onglet, puis réessayez.',
-  indisponible: 'Ouvrir depuis une adresse n’est pas disponible ici.'
+  get annule() { return t('Téléchargement annulé.'); },
+  get reseau() { return t('Le serveur de cette adresse ne répond pas : vérifiez l’adresse et votre connexion, puis réessayez.'); },
+  get cors() { return t('Ce site ne permet pas à la page de lire le fichier. Téléchargez-le, puis ouvrez-le ou déposez-le ici.'); },
+  get trop_gros() { return t('Ce fichier dépasse {mo} Mo : il est trop gros pour être ouvert ici.', { mo: OCTETS_MAX / 1048576 }); },
+  get delai() { return t('Le fichier n’est pas arrivé en {secondes} secondes : le téléchargement est arrêté. Réessayez, ou téléchargez-le puis ouvrez-le.', { secondes: DELAI_MS / 1000 }); },
+  get vide() { return t('Le serveur a renvoyé un fichier vide.'); },
+  get session() { return t('Votre session a expiré : reconnectez-vous dans un autre onglet, puis réessayez.'); },
+  get indisponible() { return t('Ouvrir depuis une adresse n’est pas disponible ici.'); }
 };
 
-export const phraseStatut = (statut: number): string =>
-  'Le serveur a répondu par une erreur (statut ' + statut + ')' + (statut === 404 || statut === 410 ? ' : aucun fichier à cette adresse.' : statut === 401 || statut === 403 ? ' : ce fichier n’est pas public.' : ' : vérifiez l’adresse, puis réessayez.');
+export const phraseStatut = (statut: number): string => (
+  statut === 404 || statut === 410 ? t('Le serveur a répondu par une erreur (statut {statut}) : aucun fichier à cette adresse.', { statut })
+    : statut === 401 || statut === 403 ? t('Le serveur a répondu par une erreur (statut {statut}) : ce fichier n’est pas public.', { statut })
+      : t('Le serveur a répondu par une erreur (statut {statut}) : vérifiez l’adresse, puis réessayez.', { statut }));
 
 const echec = (code: Exclude<CodeTelechargement, 'statut' | 'refuse'>): Telechargement => ({ erreur: PHRASES_TELECHARGEMENT[code], code });
 

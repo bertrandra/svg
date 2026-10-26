@@ -9,7 +9,7 @@
 // reference inconnue reste telle quelle, ce qui rend inertes les bombes d'entites et les entites externes.
 // Les limites ci-dessous bornent le temps et la memoire, avec un refus nomme au-dela.
 
-import { nombre } from './i18n.js';
+import { nombre, t } from './i18n.js';
 
 export interface Noeud {
   nom: string;
@@ -71,23 +71,23 @@ const estBlanc = (c: number): boolean => c === 32 || c === 10 || c === 9 || c ==
 const court = (t: string): string => (t.length > 40 ? t.slice(0, 37) + '…' : t);
 
 /** Le DOCTYPE qui commence en `debut` (« <! »), jusqu'a son « > » : le sous-ensemble interne [ … ] et les chaines quotees s'enjambent. */
-function finDoctype(t: string, debut: number): { fin: number; entites: boolean } {
+function finDoctype(texte: string, debut: number): { fin: number; entites: boolean } {
   let i = debut + 2, crochet = 0, guillemet = 0, entites = false;
-  for (; i < t.length; i++) {
-    const c = t.charCodeAt(i);
+  for (; i < texte.length; i++) {
+    const c = texte.charCodeAt(i);
     if (guillemet) { if (c === guillemet) guillemet = 0; continue; }
     if (c === 34 || c === 39) guillemet = c;
     else if (c === 91) crochet++;
     else if (c === 93 && crochet > 0) crochet--;
     else if (c === 60 && crochet > 0) {
-      if (t.startsWith('<!--', i)) {
-        const f = t.indexOf('-->', i + 4);
-        if (f < 0) throw new ErreurXml('un commentaire du DOCTYPE n’est jamais fermé');
+      if (texte.startsWith('<!--', i)) {
+        const f = texte.indexOf('-->', i + 4);
+        if (f < 0) throw new ErreurXml(t('un commentaire du DOCTYPE n’est jamais fermé'));
         i = f + 2;
-      } else if (/^<!ENTITY/i.test(t.slice(i, i + 9))) entites = true;
+      } else if (/^<!ENTITY/i.test(texte.slice(i, i + 9))) entites = true;
     } else if (c === 62 && crochet === 0) return { fin: i, entites };
   }
-  throw new ErreurXml('le DOCTYPE n’est jamais fermé');
+  throw new ErreurXml(t('le DOCTYPE n’est jamais fermé'));
 }
 
 /** L'index qui suit un DOCTYPE commencant en `debut` (« <! »), ou -1 s'il n'est pas ferme. Sert a trouver la racine sans etre trompe par son sous-ensemble interne. */
@@ -96,45 +96,45 @@ export function apresDoctype(texte: string, debut: number): number {
 }
 
 /** Une balise ouvrante lue depuis `lt` (le « < ») : son nom, ses attributs, et ou elle finit. */
-function lireBalise(t: string, lt: number, lim: LimitesXml): { nom: string; attributs: AttributBrut[]; queue: string; autoFermant: boolean; fin: number } {
-  const n = t.length;
+function lireBalise(texte: string, lt: number, lim: LimitesXml): { nom: string; attributs: AttributBrut[]; queue: string; autoFermant: boolean; fin: number } {
+  const n = texte.length;
   let j = lt + 1;
-  while (j < n) { const c = t.charCodeAt(j); if (estBlanc(c) || c === 47 || c === 62) break; j++; }
-  const nom = t.slice(lt + 1, j);
-  if (nom.length > lim.nom || !MOT_NOM.test(nom)) throw new ErreurXml(nom.length > lim.nom ? 'un nom d’élément dépasse ' + lim.nom + ' caractères' : 'le nom d’élément « ' + court(nom) + ' » n’est pas valide');
+  while (j < n) { const c = texte.charCodeAt(j); if (estBlanc(c) || c === 47 || c === 62) break; j++; }
+  const nom = texte.slice(lt + 1, j);
+  if (nom.length > lim.nom || !MOT_NOM.test(nom)) throw new ErreurXml(nom.length > lim.nom ? t('un nom d’élément dépasse {max} caractères', { max: lim.nom }) : t('le nom d’élément « {nom} » n’est pas valide', { nom: court(nom) }));
   const attributs: AttributBrut[] = [];
   for (;;) {
     const debutBlancs = j;
-    while (j < n && estBlanc(t.charCodeAt(j))) j++;
-    if (j >= n) throw new ErreurXml('la balise « ' + court(nom) + ' » n’est jamais fermée');
-    const c = t.charCodeAt(j);
-    if (c === 62) return { nom, attributs, queue: t.slice(debutBlancs, j + 1), autoFermant: false, fin: j + 1 };
+    while (j < n && estBlanc(texte.charCodeAt(j))) j++;
+    if (j >= n) throw new ErreurXml(t('la balise « {nom} » n’est jamais fermée', { nom: court(nom) }));
+    const c = texte.charCodeAt(j);
+    if (c === 62) return { nom, attributs, queue: texte.slice(debutBlancs, j + 1), autoFermant: false, fin: j + 1 };
     if (c === 47) {
-      if (t.charCodeAt(j + 1) !== 62) throw new ErreurXml('une barre isolée dans la balise « ' + court(nom) + ' »');
-      return { nom, attributs, queue: t.slice(debutBlancs, j + 2), autoFermant: true, fin: j + 2 };
+      if (texte.charCodeAt(j + 1) !== 62) throw new ErreurXml(t('une barre isolée dans la balise « {nom} »', { nom: court(nom) }));
+      return { nom, attributs, queue: texte.slice(debutBlancs, j + 2), autoFermant: true, fin: j + 2 };
     }
-    if (j === debutBlancs) throw new ErreurXml('des attributs collés dans la balise « ' + court(nom) + ' »');
+    if (j === debutBlancs) throw new ErreurXml(t('des attributs collés dans la balise « {nom} »', { nom: court(nom) }));
     const d = j;
-    while (j < n) { const k = t.charCodeAt(j); if (estBlanc(k) || k === 61 || k === 47 || k === 62) break; j++; }
-    const nomAttr = t.slice(d, j);
-    if (nomAttr.length > lim.nom || !MOT_NOM.test(nomAttr)) throw new ErreurXml(nomAttr.length > lim.nom ? 'un nom d’attribut dépasse ' + lim.nom + ' caractères' : 'le nom d’attribut « ' + court(nomAttr) + ' » n’est pas valide');
-    if (attributs.length >= lim.attributs) throw new ErreurXml('l’élément « ' + court(nom) + ' » porte plus de ' + lim.attributs + ' attributs');
-    const blancs = t.slice(debutBlancs, d);
+    while (j < n) { const k = texte.charCodeAt(j); if (estBlanc(k) || k === 61 || k === 47 || k === 62) break; j++; }
+    const nomAttr = texte.slice(d, j);
+    if (nomAttr.length > lim.nom || !MOT_NOM.test(nomAttr)) throw new ErreurXml(nomAttr.length > lim.nom ? t('un nom d’attribut dépasse {max} caractères', { max: lim.nom }) : t('le nom d’attribut « {nom} » n’est pas valide', { nom: court(nomAttr) }));
+    if (attributs.length >= lim.attributs) throw new ErreurXml(t('l’élément « {nom} » porte plus de {max} attributs', { nom: court(nom), max: lim.attributs }));
+    const blancs = texte.slice(debutBlancs, d);
     let k = j;
-    while (k < n && estBlanc(t.charCodeAt(k))) k++;
-    if (t.charCodeAt(k) !== 61) { attributs.push({ blancs, corps: nomAttr, nom: nomAttr, valeur: '', guillemet: '', aValeur: false }); continue; }
+    while (k < n && estBlanc(texte.charCodeAt(k))) k++;
+    if (texte.charCodeAt(k) !== 61) { attributs.push({ blancs, corps: nomAttr, nom: nomAttr, valeur: '', guillemet: '', aValeur: false }); continue; }
     k++;
-    while (k < n && estBlanc(t.charCodeAt(k))) k++;
-    const q = t.charCodeAt(k);
+    while (k < n && estBlanc(texte.charCodeAt(k))) k++;
+    const q = texte.charCodeAt(k);
     if (q === 34 || q === 39) {
-      const f = t.indexOf(q === 34 ? '"' : "'", k + 1);
-      if (f < 0) throw new ErreurXml('une valeur d’attribut de « ' + court(nom) + ' » n’est jamais fermée');
-      attributs.push({ blancs, corps: t.slice(d, f + 1), nom: nomAttr, valeur: t.slice(k + 1, f), guillemet: q === 34 ? '"' : "'", aValeur: true });
+      const f = texte.indexOf(q === 34 ? '"' : "'", k + 1);
+      if (f < 0) throw new ErreurXml(t('une valeur d’attribut de « {nom} » n’est jamais fermée', { nom: court(nom) }));
+      attributs.push({ blancs, corps: texte.slice(d, f + 1), nom: nomAttr, valeur: texte.slice(k + 1, f), guillemet: q === 34 ? '"' : "'", aValeur: true });
       j = f + 1;
     } else {
       let f = k;
-      while (f < n && !estBlanc(t.charCodeAt(f)) && t.charCodeAt(f) !== 62) f++;
-      attributs.push({ blancs, corps: t.slice(d, f), nom: nomAttr, valeur: t.slice(k, f), guillemet: '', aValeur: true });
+      while (f < n && !estBlanc(texte.charCodeAt(f)) && texte.charCodeAt(f) !== 62) f++;
+      attributs.push({ blancs, corps: texte.slice(d, f), nom: nomAttr, valeur: texte.slice(k, f), guillemet: '', aValeur: true });
       j = f;
     }
   }
@@ -145,7 +145,7 @@ function lireBalise(t: string, lt: number, lim: LimitesXml): { nom: string; attr
  * est un refus). Leve `ErreurXml` au premier defaut ou au premier depassement d'une limite.
  */
 export function parcourirXml(texte: string, rappel: (j: Jeton) => void, lim: LimitesXml = LIMITES_XML): void {
-  if (texte.length > lim.caracteres) throw new ErreurXml('il dépasse ' + Math.round(lim.caracteres / 1048576) + ' millions de caractères');
+  if (texte.length > lim.caracteres) throw new ErreurXml(t('il dépasse {n} millions de caractères', { n: Math.round(lim.caracteres / 1048576) }));
   const pile: string[] = [];
   const n = texte.length;
   let i = 0, noeuds = 0;
@@ -158,12 +158,12 @@ export function parcourirXml(texte: string, rappel: (j: Jeton) => void, lim: Lim
     if (c === 33) { // « <! » : commentaire, CDATA, DOCTYPE
       if (texte.startsWith('<!--', lt)) {
         const f = texte.indexOf('-->', lt + 4);
-        if (f < 0) throw new ErreurXml('un commentaire n’est jamais fermé');
+        if (f < 0) throw new ErreurXml(t('un commentaire n’est jamais fermé'));
         rappel({ t: 'commentaire' });
         i = f + 3;
       } else if (texte.startsWith('<![CDATA[', lt)) {
         const f = texte.indexOf(']]>', lt + 9);
-        if (f < 0) throw new ErreurXml('une section CDATA n’est jamais fermée');
+        if (f < 0) throw new ErreurXml(t('une section CDATA n’est jamais fermée'));
         rappel({ t: 'cdata', contenu: texte.slice(lt + 9, f) });
         i = f + 3;
       } else {
@@ -173,35 +173,37 @@ export function parcourirXml(texte: string, rappel: (j: Jeton) => void, lim: Lim
       }
     } else if (c === 63) { // « <? » : instruction de traitement
       const f = texte.indexOf('?>', lt + 2);
-      if (f < 0) throw new ErreurXml('une instruction de traitement n’est jamais fermée');
+      if (f < 0) throw new ErreurXml(t('une instruction de traitement n’est jamais fermée'));
       rappel({ t: 'instruction' });
       i = f + 2;
     } else if (c === 47) { // « </ » : fermeture
       const f = texte.indexOf('>', lt + 2);
-      if (f < 0) throw new ErreurXml('une balise fermante n’est jamais terminée');
+      if (f < 0) throw new ErreurXml(t('une balise fermante n’est jamais terminée'));
       const nom = texte.slice(lt + 2, f).trim();
-      if (pile.pop() !== nom) throw new ErreurXml('la balise fermante « ' + court(nom) + ' » ne ferme rien');
+      if (pile.pop() !== nom) throw new ErreurXml(t('la balise fermante « {nom} » ne ferme rien', { nom: court(nom) }));
       rappel({ t: 'fin', nom });
       i = f + 1;
     } else {
-      if (!(c >= 0) || estBlanc(c) || c === 62 || c === 60 || c === 61) throw new ErreurXml('un « < » isolé');
-      if (++noeuds > lim.noeuds) throw new ErreurXml('il a plus de ' + nombre(lim.noeuds) + ' éléments');
+      if (!(c >= 0) || estBlanc(c) || c === 62 || c === 60 || c === 61) throw new ErreurXml(t('un « < » isolé'));
+      if (++noeuds > lim.noeuds) throw new ErreurXml(t('il a plus de {n} éléments', { n: nombre(lim.noeuds) }));
       const b = lireBalise(texte, lt, lim);
-      if (!b.autoFermant && pile.length >= lim.profondeur) throw new ErreurXml('il est trop profond (plus de ' + lim.profondeur + ' niveaux d’éléments imbriqués)');
+      if (!b.autoFermant && pile.length >= lim.profondeur) throw new ErreurXml(t('il est trop profond (plus de {n} niveaux d’éléments imbriqués)', { n: lim.profondeur }));
       rappel({ t: 'debut', nom: b.nom, attributs: b.attributs, queue: b.queue, autoFermant: b.autoFermant, profondeur: pile.length });
       if (!b.autoFermant) pile.push(b.nom);
       i = b.fin;
     }
   }
-  if (pile.length > 0) throw new ErreurXml('la balise « ' + court(pile[pile.length - 1] ?? '') + ' » n’est jamais fermée');
+  if (pile.length > 0) throw new ErreurXml(t('la balise « {nom} » n’est jamais fermée', { nom: court(pile[pile.length - 1] ?? '') }));
 }
 
 /**
- * La phrase montree pour un refus de lecture. Un message qui commence par « il » dit une limite depassee (le SVG est trop gros,
- * trop profond…) ; les autres disent un defaut de forme.
+ * La phrase montree pour un refus de lecture. Un message qui commence par « il » (« it » dans sa traduction anglaise, la meme
+ * convention) dit une limite depassee (le SVG est trop gros, trop profond…) ; les autres disent un defaut de forme.
  */
-export const phraseErreurXml = (message: string): string =>
-  message.startsWith('il ') ? 'Ce SVG ' + message.slice(3) + ' : simplifiez-le dans votre logiciel.' : 'Ce SVG ne se lit pas : ' + message + '.';
+export const phraseErreurXml = (message: string): string => (
+  message.startsWith('il ') || message.startsWith('it ')
+    ? t('Ce SVG {probleme} : simplifiez-le dans votre logiciel.', { probleme: message.slice(3) })
+    : t('Ce SVG ne se lit pas : {probleme}.', { probleme: message }));
 
 /** Le document lu en arbre, ou le refus nomme (« Ce SVG … » moins son debut). */
 export function analyserXml(texte: string, lim: LimitesXml = LIMITES_XML): { racine: Noeud } | { erreur: string } {

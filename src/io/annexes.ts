@@ -9,15 +9,20 @@
 // Chaque annexe se decrit par un `Annexe<T>` (son fichier, la globale que le script pose, ce qu'il doit
 // contenir) ; le navigateur n'entre que par `Amenees`, pour que tout se teste sans page.
 
+import { t } from '../util/i18n.js';
+
 /** Ce qu'il faut savoir d'une annexe : ou elle est, ce qu'elle pose, et comment se plaindre d'elle. */
 export interface Annexe<T> {
   /** Le nom du fichier, sans dossier : `bibliotheque.js`. */
   fichier: string;
   /** La variable de la fenetre que le script pose : `__bibliothequeSvg`. */
   globale: string;
-  /** Ce que le fichier doit contenir, pour « ne contient pas … » : `la bibliothèque`. */
+  /**
+   * Ce que le fichier doit contenir, pour « ne contient pas … » : `la bibliothèque`. Un texte d'interface : une annexe le donne par
+   * un accesseur qui appelle `t`, lu au moment de la plainte, jamais au chargement du module (ADR-0042).
+   */
   contenu: string;
-  /** Ce que la personne doit faire quand le fichier manque, apres « introuvable à côté de la page : ». */
+  /** Ce que la personne doit faire quand le fichier manque, apres « introuvable à côté de la page : ». Un accesseur, comme `contenu`. */
   consigne: string;
   /** Rend la valeur posee si elle a la bonne forme, undefined sinon (absente ou inattendue). */
   valider: (posee: unknown) => T | undefined;
@@ -77,9 +82,9 @@ export function definirBaseAnnexes(dossier: string): void { base = normaliserBas
 export const urlAnnexe = (fichier: string): string => base + fichier;
 
 export const messageIntrouvable = <T>(a: Annexe<T>): string =>
-  'Le fichier ' + a.fichier + ' est introuvable à côté de la page : ' + a.consigne + '.';
+  t('Le fichier {fichier} est introuvable à côté de la page : {consigne}.', { fichier: a.fichier, consigne: a.consigne });
 
-export const messageVide = <T>(a: Annexe<T>): string => 'Le fichier ' + a.fichier + ' ne contient pas ' + a.contenu + '.';
+export const messageVide = <T>(a: Annexe<T>): string => t('Le fichier {fichier} ne contient pas {contenu}.', { fichier: a.fichier, contenu: a.contenu });
 
 /**
  * Garde un succes, oublie un echec. La promesse en cours se partage (deux demandes de front ne lancent
@@ -109,7 +114,7 @@ export function fabriquerChargeurAnnexe<T>(a: Annexe<T>, amenees: Amenees): Char
     // Un hote qui sert ses donnees en JSON : la valeur se lit de sa source, et se valide comme la globale d'un script.
     if (a.donnees && sourceDonnees) {
       const brute = await sourceDonnees(nomDonnees(a));
-      if (brute === undefined) throw new Error('Les données « ' + nomDonnees(a) + ' » sont introuvables sur le serveur : relancez la construction du site.');
+      if (brute === undefined) throw new Error(t('Les données « {nom} » sont introuvables sur le serveur : relancez la construction du site.', { nom: nomDonnees(a) }));
       const lue = a.valider(brute);
       if (lue === undefined) throw new Error(messageVide(a));
       luesDeLaSource.add(nomDonnees(a));

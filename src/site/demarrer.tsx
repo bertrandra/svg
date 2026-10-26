@@ -9,6 +9,7 @@ import { sonderNavigateur } from '../io/capacites.js';
 import { definirServeurPolices } from '../io/policesEnLigne.js';
 import { creerServeur, lireCompte, lireSite } from '../io/serveur.js';
 import { manquantes } from '../util/capacites.js';
+import { t } from '../util/i18n.js';
 import { PageIncompatible } from '../zones/Incompatible.js';
 import { DOCUMENTATIONS_LIVREES, definirDocumentation } from '../zones/documentation.js';
 import { Site } from './Site.js';
@@ -28,18 +29,19 @@ export function demarrerSite(conteneur: HTMLElement): void {
   // rien : l'application s'ouvre sans le menu du profil, avec la deconnexion d'avant, et le dit.
   const compte = lireCompte(jsonDe(conteneur.dataset['compte']));
   const site = lireSite(jsonDe(conteneur.dataset['site']));
-  const avertissement = compte ? undefined : 'La page n’a pas pu dire qui est connecté : le menu du profil n’est pas disponible. Rechargez la page ; si cela persiste, reconnectez-vous.';
-  // La langue du compte : preparerLangue(compte.langue), pose a l'integration (ADR-0042).
+  const avertissement = compte ? undefined : t('La page n’a pas pu dire qui est connecté : le menu du profil n’est pas disponible. Rechargez la page ; si cela persiste, reconnectez-vous.');
+  // La langue du compte : preparerLangue(compte.langue), pose a l'integration (ADR-0042). Les textes poses ci-dessous chez les
+  // modules d'io sont des accesseurs : ils se lisent dans la langue du moment ou on les montre, quel que soit l'ordre d'ici.
   const serveur = creerServeur({ api: conteneur.dataset['api'] ?? 'api.php', csrf });
   // Le traceur (du code) reste un script, servi avec la page sous assets/ ; les donnees viennent de data/json par l'API.
   definirBaseAnnexes(conteneur.dataset['assets'] ?? 'assets/');
   definirSourceDonnees(serveur.donnees);
   // Une police du catalogue se demande au site, qui la sert de data/font ou la telecharge et la verifie la premiere fois.
-  definirServeurPolices({ adresse: serveur.adressePolice, nom: 'le site' });
+  definirServeurPolices({ adresse: serveur.adressePolice, get nom() { return t('le site'); } });
   // Ouvrir depuis une adresse (ADR-0036) : le serveur va chercher le fichier, avec ses protections ; le navigateur ne contacte que
   // le site. L'administrateur peut l'eteindre (`ADRESSE_OUVERTURE`) et permettre `http://` (`ADRESSE_HTTP`), que index.php annonce.
   definirOuvertureAdresse(conteneur.dataset['adresse'] === '0' ? null : {
-    serveur: serveur.telechargerAdresse, http: conteneur.dataset['adresseHttp'] === '1', qui: 'Le site va chercher le fichier quand vous choisissez « Ouvrir ».'
+    serveur: serveur.telechargerAdresse, http: conteneur.dataset['adresseHttp'] === '1', get qui() { return t('Le site va chercher le fichier quand vous choisissez « Ouvrir ».'); }
   });
   // Les documentations sont servies avec la page, dans public/aide/ : le menu Aide de l'editeur les ouvre.
   definirDocumentation(DOCUMENTATIONS_LIVREES);

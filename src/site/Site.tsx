@@ -29,6 +29,7 @@ import { MODELE_PAGE, modeleRetenu, refusAvecRepli } from '../zones/modele.js';
 import type { Modele } from '../zones/typesEditeur.js';
 import type { TonMessage } from '../zones/commun/Message.js';
 import { nomDeFichier } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import type { Voie } from '../zones/publics.js';
 import { EcranProjets, type GestesProjets } from './Projets.js';
 import { EcransCompte } from './EcransCompte.js';
@@ -48,7 +49,7 @@ const VIGNETTE_MAX = 200_000;
  * Un projet vierge : un plan au format d'ecran ordinaire (que « Ajuster le plan » ou la machine changent ensuite), aucune forme. Un
  * dessin du modele, pas un SVG : la lecture d'un SVG refuse un document sans forme, l'editeur, lui, sait en partir.
  */
-const vierge = (): TravailOuvert => ({ id: null, revision: null, nom: 'Sans titre', dessin: { vb: [0, 0, 800, 600], formes: [] }, production: CHOIX_GENERIQUE, nuancier: NUANCIER, polices: [], images: [] });
+const vierge = (): TravailOuvert => ({ id: null, revision: null, nom: t('Sans titre'), dessin: { vb: [0, 0, 800, 600], formes: [] }, production: CHOIX_GENERIQUE, nuancier: NUANCIER, polices: [], images: [] });
 
 interface Edition { travail: TravailOuvert; cle: number }
 
@@ -61,15 +62,15 @@ function EnregistrerSous({ nom, valider, fermer }: { nom: string; valider: (nom:
   return createPortal(
     <div className="credits-voile" ref={voile}>
       <form className="credits-dialogue enregistrer-sous" role="dialog" aria-modal="true" aria-labelledby={idTitre} onSubmit={envoyer}>
-        <h2 id={idTitre}>Enregistrer sous…</h2>
-        <p className="aide">Un projet neuf, sous ce nom ; celui que vous avez ouvert reste tel qu’il était enregistré.</p>
+        <h2 id={idTitre}>{t('Enregistrer sous…')}</h2>
+        <p className="aide">{t('Un projet neuf, sous ce nom ; celui que vous avez ouvert reste tel qu’il était enregistré.')}</p>
         <label className="champ" htmlFor={idChamp}>
-          <span>Nom du projet</span>
+          <span>{t('Nom du projet')}</span>
         </label>
         <input id={idChamp} ref={champ} type="text" value={valeur} maxLength={120} onChange={e => poserValeur(e.target.value)} />
         <div className="actions">
-          <button type="submit" className="primaire">Enregistrer</button>
-          <button type="button" onClick={fermer}>Annuler</button>
+          <button type="submit" className="primaire">{t('Enregistrer')}</button>
+          <button type="button" onClick={fermer}>{t('Annuler')}</button>
         </div>
       </form>
     </div>,
@@ -87,7 +88,7 @@ function VoiesDuSite({ ouvrirSvg, image, dire }: {
   return (
     <Voies ordre={ORDRE} voie={voie} poserVoie={poserVoie}>
       {{
-        svg: <OuvrirSvg ouvrir={(nom, texte, ignores) => { image.current = null; ouvrirSvg(nom.replace(/\.(svg|pdf)$/i, '') || 'Sans titre', texte, ignores); }} dire={dire} essayer={() => ouvrirSvg('Exemple', EXEMPLE)} invitation={false} reception={reception} />,
+        svg: <OuvrirSvg ouvrir={(nom, texte, ignores) => { image.current = null; ouvrirSvg(nom.replace(/\.(svg|pdf)$/i, '') || t('Sans titre'), texte, ignores); }} dire={dire} essayer={() => ouvrirSvg(t('Exemple'), EXEMPLE)} invitation={false} reception={reception} />,
         image: <Vectoriser ouvrir={(nom, svg) => ouvrirSvg(nom, svg)} surImage={(nom, fichier) => { image.current = { nom, fichier }; }} reception={reception} />,
         formes: <SectionBibliotheque active={voie === 'formes'} ouvrir={x => { image.current = null; ouvrirSvg(x.nom, svgDeBibliotheque(x.id, x.svg, x.source)); }} />
       }}
@@ -98,8 +99,8 @@ function VoiesDuSite({ ouvrirSvg, image, dire }: {
 function PiedDuSite({ montrerCredits }: { montrerCredits: () => void }) {
   return (
     <footer className="pied">
-      <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> et de ses contributeurs (licence <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>) ; la vectorisation emploie vtracer (Vision Cortex). Le dessin se calcule dans votre navigateur ; seuls vos projets, et les polices que vous choisissez, passent par ce site.</p>
-      <p className="aide"><button type="button" className="discret" onClick={montrerCredits}>À propos et crédits</button></p>
+      <p className="aide">{t('Les formes de la bibliothèque viennent de')} <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> {t('et de ses contributeurs (licence')} <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>{t(') ; la vectorisation emploie vtracer (Vision Cortex). Le dessin se calcule dans votre navigateur ; seuls vos projets, et les polices que vous choisissez, passent par ce site.')}</p>
+      <p className="aide"><button type="button" className="discret" onClick={montrerCredits}>{t('À propos et crédits')}</button></p>
     </footer>
   );
 }
@@ -180,14 +181,14 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
 
   /** Enregistre l'etat rendu par l'editeur : par-dessus le projet ouvert, ou comme projet neuf (`nomNeuf`, « Enregistrer sous… »). */
   const enregistrer = useCallback(async (etat: EtatRendu, nomNeuf: string | null = null) => {
-    const t = travail.current;
-    if (!t || enCours.current) return;
+    const ouvert = travail.current;
+    if (!ouvert || enCours.current) return;
     enCours.current = true;
     poserEnregistrement({ etat: 'en-cours' });
-    const nom = nomNeuf ?? t.nom, neuf = nomNeuf !== null || !t.id || t.revision === null;
-    const projet = projetAEnregistrer(neuf ? { ...t, creeLe: undefined, modifieLe: undefined } : t, etat, nom);
+    const nom = nomNeuf ?? ouvert.nom, neuf = nomNeuf !== null || !ouvert.id || ouvert.revision === null;
+    const projet = projetAEnregistrer(neuf ? { ...ouvert, creeLe: undefined, modifieLe: undefined } : ouvert, etat, nom);
     const svg = ecrireDessin(etat.dessin, 3);
-    const r = await serveur.enregistrer(projet, neuf || !t.id || t.revision === null ? null : { id: t.id, revision: t.revision }, svg.length <= VIGNETTE_MAX ? svg : null);
+    const r = await serveur.enregistrer(projet, neuf || !ouvert.id || ouvert.revision === null ? null : { id: ouvert.id, revision: ouvert.revision }, svg.length <= VIGNETTE_MAX ? svg : null);
     enCours.current = false;
     if (!r.ok) {
       fermerApres.current = false;
@@ -197,7 +198,7 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
     const m = r.valeur;
     reference.current = etat;
     poserEdition(e => (e ? { ...e, travail: { ...e.travail, id: m.id, revision: m.revision, nom: m.nom, creeLe: m.creeLe, modifieLe: m.modifieLe, polices: projet.ressources.polices } } : e));
-    poserEnregistrement({ etat: memeEtat(courant.current, etat) ? 'enregistre' : 'modifie', message: 'Projet « ' + m.nom + ' » enregistré.' });
+    poserEnregistrement({ etat: memeEtat(courant.current, etat) ? 'enregistre' : 'modifie', message: t('Projet « {nom} » enregistré.', { nom: m.nom }) });
     if (fermerApres.current) fermerEdition();
   }, [serveur, fermerEdition]);
 
@@ -212,18 +213,18 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   // Fermer pendant un enregistrement attend sa fin : un echec garde l'editeur ouvert, et le dit, plutot que de perdre le travail.
   const fermer = useCallback(() => { if (enCours.current) fermerApres.current = true; else fermerEdition(); }, [fermerEdition]);
 
-  const actionsHote = useMemo<readonly ActionHote[]>(() => [{ id: 'enregistrer-sous', libelle: 'Enregistrer sous…', faire: poserSous }], []);
+  const actionsHote = useMemo<readonly ActionHote[]>(() => [{ id: 'enregistrer-sous', libelle: t('Enregistrer sous…'), faire: poserSous }], []);
 
   const ouvrirProjet = useCallback(async (m: MetaProjet) => {
-    dire('Ouverture de « ' + m.nom + ' »…', 'info');
+    dire(t('Ouverture de « {nom} »…', { nom: m.nom }), 'info');
     const r = await serveur.ouvrir(m.id);
     if (!r.ok) { dire(r.message); return; }
     const lu = travailDuProjet(r.valeur.projet, m.id, r.valeur.revision);
     if ('erreur' in lu) { dire(lu.erreur); return; }
     ouvrirTravail(lu.travail);
     const notes = [
-      ...(r.valeur.migre ? ['Ce projet venait d’un format plus ancien : il a été complété, et s’enregistrera dans le format actuel.'] : []),
-      ...(lu.ecartees.length ? ['La police déposée « ' + lu.ecartees.join(', ') + ' » ne se lit plus : ses textes gardent leurs contours.'] : [])
+      ...(r.valeur.migre ? [t('Ce projet venait d’un format plus ancien : il a été complété, et s’enregistrera dans le format actuel.')] : []),
+      ...(lu.ecartees.length ? [t('La police déposée « {polices} » ne se lit plus : ses textes gardent leurs contours.', { polices: lu.ecartees.join(', ') })] : [])
     ];
     if (notes.length) dire(notes.join(' '), 'info');
   }, [serveur, dire, ouvrirTravail]);
@@ -234,17 +235,17 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
     renommer: async (m, nom) => {
       const r = await serveur.renommer(m.id, nom);
       if (!r.ok) { dire(r.message); return false; }
-      dire('Projet renommé : « ' + r.valeur.nom + ' ».', 'info'); await recharger(); return true;
+      dire(t('Projet renommé : « {nom} ».', { nom: r.valeur.nom }), 'info'); await recharger(); return true;
     },
     dupliquer: async m => {
       const r = await serveur.dupliquer(m.id);
       if (!r.ok) { dire(r.message); return false; }
-      dire('Copie créée : « ' + r.valeur.nom + ' ».', 'info'); await recharger(); return true;
+      dire(t('Copie créée : « {nom} ».', { nom: r.valeur.nom }), 'info'); await recharger(); return true;
     },
     supprimer: async m => {
       const r = await serveur.supprimer(m.id);
       if (!r.ok) { dire(r.message); return false; }
-      dire('Projet « ' + m.nom + ' » mis à la corbeille.', 'info'); await recharger(); return true;
+      dire(t('Projet « {nom} » mis à la corbeille.', { nom: m.nom }), 'info'); await recharger(); return true;
     },
     vignette: m => serveur.adresseVignette(m)
   }), [serveur, dire, recharger, ouvrirProjet, ouvrirTravail]);
@@ -252,19 +253,19 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const voies = <VoiesDuSite ouvrirSvg={ouvrirSvg} image={image} dire={dire} />;
   const pied = <PiedDuSite montrerCredits={() => poserCredits(true)} />;
 
-  const t = edition?.travail;
+  const ouvert = edition?.travail;
   return (
     <>
       <EcransCompte serveur={serveur} csrf={csrf} compte={compte} projets={menu => <EcranProjets projets={projets} message={message} gestes={gestes} csrf={csrf} menu={menu} voies={voies} pied={pied} />} />
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
-      {edition && t ? (
-        <EditeurSvg key={edition.cle} svg="" dessin={t.dessin} titre={t.nom} nom={nomDeFichier(t.nom, 'projet')} nuancier={t.nuancier} bibliotheque="a-charger" stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE}
-          guide={GUIDE} ignores={t.ignores} production={t.production} libelleEnregistrer="Enregistrer" policesEnLigne
+      {edition && ouvert ? (
+        <EditeurSvg key={edition.cle} svg="" dessin={ouvert.dessin} titre={ouvert.nom} nom={nomDeFichier(ouvert.nom, 'projet')} nuancier={ouvert.nuancier} bibliotheque="a-charger" stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE}
+          guide={GUIDE} ignores={ouvert.ignores} production={ouvert.production} libelleEnregistrer={t('Enregistrer')} policesEnLigne
           enregistrement={enregistrement} changement={changement} ctrlSEnregistre actionsHote={actionsHote}
           fermer={fermer} enregistrer={(_svg, etat) => { void enregistrer(etat); }} />
       ) : null}
-      {edition && t && sous ? (
-        <EnregistrerSous nom={t.nom + ' (copie)'} fermer={() => poserSous(null)} valider={nom => { const e = sous; poserSous(null); void enregistrer(e, nom); }} />
+      {edition && ouvert && sous ? (
+        <EnregistrerSous nom={t('{nom} (copie)', { nom: ouvert.nom })} fermer={() => poserSous(null)} valider={nom => { const e = sous; poserSous(null); void enregistrer(e, nom); }} />
       ) : null}
     </>
   );

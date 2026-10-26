@@ -6,6 +6,7 @@
 import { useRef } from 'react';
 import type { Compte } from '../io/serveur.js';
 import { MenuDeroulant, type ElementMenu } from '../zones/commun/Menu.js';
+import { t } from '../util/i18n.js';
 import { initiales } from './comptesSite.js';
 
 interface Proprietes {
@@ -22,23 +23,23 @@ export function MenuProfil({ compte, enAttente, csrf, ouvrirProfil, ouvrirCompte
   const formulaire = useRef<HTMLFormElement>(null);
   const admin = compte.role === 'admin';
   const elements: ElementMenu[] = [
-    { id: 'profil', libelle: 'Mon profil…', onClick: ouvrirProfil },
+    { id: 'profil', libelle: t('Mon profil…'), onClick: ouvrirProfil },
     ...(admin ? [
-      { id: 'comptes', libelle: enAttente ? 'Comptes (' + enAttente + ' en attente)' : 'Comptes', onClick: ouvrirComptes },
-      { id: 'reglages', libelle: 'Réglages du site…', onClick: ouvrirReglages }
+      { id: 'comptes', libelle: enAttente ? t('Comptes ({n} en attente)', { n: enAttente }) : t('Comptes'), onClick: ouvrirComptes },
+      { id: 'reglages', libelle: t('Réglages du site…'), onClick: ouvrirReglages }
     ] : []),
-    { id: 'deconnexion', libelle: 'Se déconnecter', separateur: true, onClick: () => formulaire.current?.requestSubmit() }
+    { id: 'deconnexion', libelle: t('Se déconnecter'), separateur: true, onClick: () => formulaire.current?.requestSubmit() }
   ];
   return (
     <div className="menu-profil">
-      <MenuDeroulant etiquette={'Compte : ' + compte.nom} alignement="droite" chevron={false} className="menu-profil-bouton" elements={elements}
+      <MenuDeroulant etiquette={t('Compte : {nom}', { nom: compte.nom })} alignement="droite" chevron={false} className="menu-profil-bouton" elements={elements}
         contenu={<span className="profil-initiales" aria-hidden="true">{initiales(compte.nom)}{admin && enAttente ? <span className="profil-pastille">{enAttente}</span> : null}</span>}
         entete={<><strong className="profil-nom">{compte.nom}</strong><span className="profil-email">{compte.email}</span></>} />
       {/* Le formulaire de deconnexion : un vrai POST, jamais une requete de script, soumis par l'element du menu. */}
       <form method="post" action="index.php" className="site-deconnexion" ref={formulaire} hidden>
         <input type="hidden" name="action" value="deconnexion" />
         <input type="hidden" name="csrf" value={csrf} />
-        <button type="submit" tabIndex={-1}>Se déconnecter</button>
+        <button type="submit" tabIndex={-1}>{t('Se déconnecter')}</button>
       </form>
     </div>
   );
