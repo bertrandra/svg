@@ -17,7 +17,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2, 4 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
+| 2, 4, 6 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -152,6 +153,79 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   l'en-tête côté serveur (la bombe de pixels), laissé pour plus tard. **Aucune étape ne prévoit encore l'interface d'insertion**
   (« Insérer une image… » au menu Fichier, dépôt d'une image dans l'éditeur, l'« Insérer depuis une adresse » de l'ADR-0036 qui
   accepterait une image) : à ajouter au plan, après l'étape 2.
+
+### Ce que l'étape 5 a posé (26 octobre 2026)
+
+- **Lecture** (`edition/fonctions/decoupes.ts`, une ligne de `catalogue.ts` entre les dégradés et les images ; `prises: ['decoupe']`,
+  crochets `groupe` et `feuille`) : un `clip-path` (attribut, `style`, feuille `<style>` : la cascade le lit déjà) vers un
+  `<clipPath>` devient `Groupe.decoupe`. Son contenu est de la **géométrie seule**, dans le repère du plan : `feuilleDeDecoupe` fixe la
+  peinture (noir plein, sans trait, opacité 1) et ne garde que le tracé, la règle (`clip-rule`), la visibilité, le verrou et le groupe.
+  Résolus à la lecture : `clipPathUnits="objectBoundingBox"` (boîte de la feuille, d'une image par son cadre, ou des descendants d'un
+  groupe par `boiteDescendants` — formes, groupes, `<use>` d'une forme ; texte, images et symboles n'y comptent pas), le `transform`
+  du `<clipPath>` **après** les unités de boîte (l'ordre de Chromium : `transform · boîte`), un `<use>` déplié s'il vise une forme ou du
+  texte, `clip-rule` (style en ligne, attribut, puis hérité du `<clipPath>` et de ses ancêtres ; `clip-rule` n'est pas dans la cascade
+  de `cascade.ts`, une règle de feuille `<style>` qui le poserait n'est donc pas lue), l'imbrication (le `clip-path` du `<clipPath>`
+  lui-même devient un groupe du contenu qui porte la découpe intérieure ; un enfant à `clip-path`, un groupe à lui). Une **feuille** à
+  `clip-path` (une image comprise) est enveloppée dans un groupe qui porte la découpe. Ce qu'un navigateur ignore est ignoré et dit
+  (`MSG_DECOUPES` : référence absente ou vers autre chose qu'un `<clipPath>`, `<g>`/`<image>`/`<use>` d'autre chose qu'une forme dans un
+  `<clipPath>`, boîte plate en unités de boîte : contenu vide, rien n'est dessiné) ; le reste est refusé en le nommant
+  (`REFUS_DECOUPES` : forme CSS `circle()`…, renvoi extérieur, cycle — la pile des `<clipPath>` en cours —, imbrication au-delà de
+  `PROFONDEUR_DEFS_MAX`, plus de `NOEUDS_DEFS_MAX` feuilles et groupes dans toutes les découpes lues, transformation illisible, découpe
+  posée sur un `<use>`, un `<symbol>` ou le SVG entier). **Numérotation** (I1, un seul espace de numéros) : les feuilles d'une découpe
+  sont lues par la marche, numérotées à la suite, puis quittent `formes` en y laissant une **place vide** (un tracé sans commande, que
+  `lecture.ts` retire comme toute forme vide) ; les groupes d'un contenu **réservent** leur numéro dans la table de la lecture par une
+  place sans feuille (que `normaliser` retire), en sautant celui du groupe que `lireGroupe` est en train de poser (le crochet `groupe`
+  est appelé avant qu'il le range). Aucun fichier de la lecture n'a changé.
+- **Écriture** (`ecriture.attributsGroupe`) : `clip-path="url(#ed-c-…)"` au rang `RANG_GROUPE.decoupe` (après `opacity`, avant
+  `data-ed-nom`) ; `<clipPath id="ed-c-<14 hex>">` dans `<defs>`, sans autre attribut (toujours en unités du plan), des `<path d>` avec
+  au plus `clip-rule="evenodd"` et un `clip-path` : une feuille d'un contenu sous des groupes découpés cite **l'intersection** de leurs
+  découpes, écrite comme la plus intérieure dont chaque feuille est rognée par les autres (`<clipPath>` n'admet pas `<g>`, annexe 2
+  §5) ; la relecture en fait une découpe par feuille, qui se réécrit en ce même texte (point fixe vérifié). Dédoublonnée par empreinte ;
+  mémorisée par découpe et par précision **avec ses dépendances**, reposées d'abord dans chaque recueil (sans cela, une deuxième écriture
+  du même dessin — celle du projet, par exemple — citait une découpe intérieure avant de l'écrire : trouvé par l'aller-retour du projet).
+- **Transformation** (`transformation.groupe`, règle de la fermeture) : la découpe suit son groupe ; une feuille seule déplacée bouge
+  sous une découpe immobile. **Boîte visuelle** (`etendue.groupe`) : l'intersection avec la boîte de la découpe (`boiteDecoupe`, union
+  de ses feuilles visibles) ; vide, une boîte nulle.
+- **Opérations** (`edition/decoupes.ts`, bloc « étape 5 » de la façade) : `creerDecoupe(d, ids)` (parmi les éléments visibles et
+  déverrouillés, le plus haut doit être une feuille à tracé, ni groupe ni image ; sa géométrie devient la découpe, les autres sont
+  groupés par `grouper`) ; `liberer(d, id)` (le groupe reste ; les feuilles de la découpe y reviennent au premier plan, **sans fond et
+  d'un trait noir de 1** : sans peinture, la forme rendue serait invisible et insaisissable — choix à confirmer à l'étape 8) ;
+  `MSG_DECOUPE` (phrases au vouvoiement). `renumeroterContenus` (`arbre.ts`, découpes **et masques**) branché dans `dupliquerNoeuds` et
+  la copie de `coller`/`inserer` (`groupes.ts`) : une copie de groupe découpé ne reprend aucun identifiant (annexe 3 §2).
+- **Descente** (`engine/descente/decoupes.ts`, dans `REGLES_DESCENTE` avant les groupes) : le **remplissage** est rogné exactement par
+  l'intersection booléenne de sa région avec celles des découpes de tous ses ancêtres (`polygon-clipping`, régions de `booleens.ts`,
+  courbes rebâties si l'un des deux en avait) ; une feuille déjà toute dedans (débord sous une aire de l'ordre de la tolérance) ne change
+  pas d'un octet ; un **trait** n'est pas rogné : sa boîte toute dedans, il reste ; sans rien en commun, il part ; à cheval, il est gardé
+  entier, en une feuille à part, et c'est dit (`MSG_DESCENTE_DECOUPES`) ; une découpe vide efface ce qu'elle rogne ; `natif` garde tout.
+- **Projet JSON** (format 2) : `model/projetV2/decoupe.ts` (`lireDecoupeProjet` : feuilles `id d regle visible verrouille parent?`,
+  groupes d'une découpe découpée, bornes, parents présents) et `engine/projetV2/decoupe.ts` (aller-retour, peinture refixée), une ligne de
+  `CHAMPS_GROUPE_V2` et d'`ALLERS_RETOURS_GROUPE` (le premier champ de groupe v2 : `ChampsGroupeV2` devient une interface) ;
+  `OutilsProjet.chemin` (un tracé validé par `cheminProjetValide`) ; `ecrireCheminProjet`/`lireCheminProjet` déplacés dans
+  `engine/projetV2/chemin.ts` (réexportés par `engine/projet.ts` : sans cela, un cycle d'import). Un identifiant repris dans une découpe
+  est refusé à l'ouverture (`verifierDessin`, I1). `projet-v2.test.ts` classe désormais les champs de `Groupe` (`decoupe` : « porte »).
+- **Tests** : `v2/cas-decoupes.ts` (11 lectures, 6 opérations, 3 fichiers du corpus `inkscape-decoupe`, `figma-cadre-decoupe`,
+  `illustrator-degrade-decoupe` — le reste de l'étape 3 —, 20 références relues), `decoupes.test.ts` (lecture plate refusée avec la phrase
+  d'aujourd'hui, chemin de la page, `violationsEcriture`/`violationsNettoyage` sur chaque cas, numérotation, pertes, refus, fermeture,
+  boîte, copies, créer, libérer, écriture répétée identique), `descente-decoupes.test.ts`, neuf hostiles `v2-decoupes-*` (cycles, `<use>`
+  vers son `<clipPath>`, bombe d'imbrication, bombe de références, renvoi extérieur, forme CSS, découpe sur un `<use>`, transformation
+  illisible) et `securite/decoupes-hostiles.test.ts`, l'extension d'écriture « étape 5 : decoupes » (avant celle des groupes, qui refuse
+  tout autre attribut d'un `<g>`), l'assertion d'`images.test.ts` sur une image à `clip-path` (elle s'enveloppe désormais).
+- **Écarts et reste** : aucun type ni crochet n'a manqué (`types.ts`, `fonctionnalites.ts` intacts) ; un `<text>` lu en lettres
+  (`OptionsLecture.polices`) qui porte un `clip-path` **perd sa découpe sans le dire** en mode riche (ses lettres ne passent pas par le
+  crochet `feuille`) : à régler avec 13c, ou par un crochet de plus ; `clip-rule` posé par une feuille `<style>` n'est pas lu ;
+  `boiteDescendants` ignore texte, images et symboles ; la vignette du site PHP (`vignette_sure`) refuse toujours `url(` hors des
+  dégradés : un projet à découpe n'a pas de vignette (rien ne casse) ; la descente exacte d'un **trait** attend l'outil d'expansion de
+  trait (annexe 5 §5) ; le PDF natif (`W n`) est à 13a.
+- **Pour l'étape 6 (masques)** : la lecture d'un contenu de définition (pile des actifs, table locale, réservation des numéros, places
+  vides, budget `NOEUDS_DEFS_MAX`) vit dans `fonctions/decoupes.ts` ; à la deuxième utilisation, la sortir dans un module commun
+  (`edition/contenus.ts`) plutôt que la recopier ; `renumeroterContenus`, `parcourirContenus`, `verifierDessin` et `poidsDessin` portent
+  déjà le masque ; un masque s'écrit avec sa peinture (`ContexteEcriture.contenu`), pas en géométrie seule ; la phrase « découpe posée
+  sur un `<use>` » a son pendant à écrire pour `mask`.
+- **Pour l'étape 8 (interface)** : rien à ajouter à la toile (le rendu générique de l'étape 2 passe par `attributsGroupe` et le recueil) ;
+  le contexte `decoupe` édite `{ vb, ...groupe.decoupe.contenu }` avec les outils ordinaires, mais une feuille de découpe doit rester
+  canonique (`feuilleDeDecoupe`) : refixer la peinture au retour du contexte ; commandes « Créer une découpe » / « Libérer la découpe »
+  (`creerDecoupe`, `liberer`, phrases `MSG_DECOUPE`), confirmation de `degrouper` sur un groupe découpé (`porteurs` le dit déjà), jeton
+  `contour-decoupe`.
 
 ### Caduc
 
@@ -353,7 +427,7 @@ encore les feuilles d'un groupe masqué ou verrouillé (leur fichier est à l'é
 Section Remplissage/Contour, liste d'arrêts, champs, poignées de la toile (curseur-glisseur), clavier, phrases,
 jetons, axe, e2e. Paquets : **A** panneau + liste (M) ; **B** poignées de toile + clavier (M).
 
-### Étape 5 — Découpes · taille G
+### Étape 5 — Découpes · taille G · **faite pour le moteur le 26 octobre 2026** (§0, « Ce que l'étape 5 a posé »)
 
 `Decoupe`, lecture de `<clipPath>` (unités, transformations, imbrication, `<use>`), écriture, `creerDecoupe`/`liberer`,
 fermeture à la transformation, `boiteVisuelle` (découpe) et `ajusterPlan`, rendu de la toile, **descente exacte
