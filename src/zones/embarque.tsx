@@ -18,6 +18,8 @@ import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 import { policesPosees } from '../io/polices.js';
 import { FenetreIncompatible } from './Incompatible.js';
 import { estModele, optionsModele } from './modele.js';
+import { avertissementLangue, preparerLangue } from '../io/langue.js';
+import { definirLangue, estLangue, type Langue } from '../util/i18n.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
 export const RACINE_EDITEUR = '.editeur-svg';
@@ -69,6 +71,12 @@ export interface OptionsEmbarquees {
    * les degrades, les decoupes, les masques, les effets et les images. Fixe pour la duree de l'edition : la personne ne le change pas.
    */
   modele?: 'plat' | 'riche';
+  /**
+   * La langue de l'interface (ADR-0042) : « fr » par defaut, ou « en ». Avec « en », le dictionnaire langue-en.js se charge sous
+   * `baseAnnexes` avant que l'editeur ne s'affiche, et le `lang` du document suit ; s'il manque, l'editeur reste en francais et le
+   * dit dans la console. Sans l'option, l'editeur est en francais et ne touche pas au `lang` de la page.
+   */
+  langue?: Langue;
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
   onEnregistrer: (svg: string) => void;
   /** Appelee une fois, quand l'editeur se ferme, quelle qu'en soit la cause. */
@@ -121,6 +129,7 @@ export function verifierOptions(options: unknown): string | null {
   }
   for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
   if (o.modele !== undefined && !estModele(o.modele)) return 'L’option « modele » doit être « plat » (par défaut) ou « riche ».';
+  if (o.langue !== undefined && !estLangue(o.langue)) return 'L’option « langue » doit être « fr » (par défaut) ou « en ».';
   return verifierLibelle(o.libelleEnregistrer);
 }
 
@@ -234,11 +243,19 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
           enregistrer={svgPropre => { options.onEnregistrer(svgPropre); if (apresEnregistrer) fermer(); }} />
       );
     };
-    // Du texte : ses lettres deviennent des formes avec les fontes de polices.js, chargees a la demande, quand l'hote dit ou les
-    // trouver (baseAnnexes) ou les a deja posees. Sinon, ou si le fichier manque, l'editeur recoit le SVG tel quel et dit, comme
-    // avant, que le texte ne s'edite pas : un hote qui ne sert pas polices.js n'a pas une requete en echec a chaque ouverture (ADR-0020).
-    if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg, undefined, modele).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
-    else monter(options.svg, []);
+    // La langue (ADR-0042) : celle de l'hote, preparee avant que l'editeur ne s'affiche (son dictionnaire se charge sous
+    // baseAnnexes) ; sans l'option, le francais, sans toucher au `lang` de la page de l'hote. Une annexe absente se dit a l'hote,
+    // dans sa console : c'est son installation qui manque d'un fichier.
+    const langue = options.langue === undefined ? (definirLangue('fr'), Promise.resolve()) : preparerLangue(options.langue);
+    void langue.then(() => {
+      const avertissement = avertissementLangue();
+      if (avertissement !== null) console.warn('EditeurSvg.ouvrir : ' + avertissement);
+      // Du texte : ses lettres deviennent des formes avec les fontes de polices.js, chargees a la demande, quand l'hote dit ou les
+      // trouver (baseAnnexes) ou les a deja posees. Sinon, ou si le fichier manque, l'editeur recoit le SVG tel quel et dit, comme
+      // avant, que le texte ne s'edite pas : un hote qui ne sert pas polices.js n'a pas une requete en echec a chaque ouverture (ADR-0020).
+      if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg, undefined, modele).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
+      else monter(options.svg, []);
+    });
     ouvert = { fermer };
     return ouvert;
   };

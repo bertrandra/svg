@@ -28,6 +28,8 @@ import { lireDessinMemo } from './lecture.js';
 import { estHex } from './aidesEditeur.js';
 import type { ActionHote, EtatEnregistrement, EtatRendu, Modele, Teinte } from './typesEditeur.js';
 import { modeleRetenu } from './modele.js';
+import { preparerLangue } from '../io/langue.js';
+import { definirLangue, dictionnairePose, langue, type Langue } from '../util/i18n.js';
 
 // Les types que les autres zones lisent ici : ils vivent dans typesEditeur.ts (types seuls, sans cycle).
 export type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Modele, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
@@ -110,6 +112,12 @@ export interface ProprietesEditeur {
    * (ADR-0012, etape 14) ; un hote qui embarque ne le passe pas.
    */
   modeleParDefaut?: Modele | undefined;
+  /**
+   * La langue de l'interface (ADR-0042) : `fr` ou `en`, posee avant le premier rendu. Un hote qui a deja appele `preparerLangue`
+   * (io/langue.ts) peut l'omettre ; donnee, le composant prepare la langue lui-meme (le dictionnaire anglais se charge sous la base
+   * des annexes) et ne dessine rien avant. Absente, la langue courante, `fr` tant que personne n'en a pose une autre.
+   */
+  langue?: Langue | undefined;
 }
 
 /**
@@ -148,7 +156,15 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, modele: modeleHote, modeleParDefaut = 'plat', ...hote }: ProprietesEditeur) {
+export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, modele: modeleHote, modeleParDefaut = 'plat', langue: langueHote, ...hote }: ProprietesEditeur) {
+  // La langue de l'hote (ADR-0042), avant le premier rendu : tout de suite si son dictionnaire est la (fr, ou en deja charge),
+  // sinon apres son chargement, et rien ne se dessine avant.
+  const [languePrete, poserLanguePrete] = useState(() => {
+    const prete = langueHote === undefined || dictionnairePose(langueHote);
+    if (prete && langueHote !== undefined) definirLangue(langueHote);
+    return prete;
+  });
+  useEffect(() => { if (!languePrete && langueHote !== undefined) void preparerLangue(langueHote).then(() => poserLanguePrete(true)); }, [languePrete, langueHote]);
   // Le modele de lecture : celui de l'hote, sinon le reglage garde, lu une fois a l'ouverture (le changer au menu vaut pour la suite).
   const [modele] = useState<Modele>(() => modeleHote ?? modeleRetenu(stockage ?? null, modeleParDefaut));
   // Un dessin donne (un projet rouvert) s'ouvre tel quel : sans marque lue, son contexte est le depart que l'hote donne.
@@ -165,8 +181,9 @@ export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUAN
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = avant; };
   }, []);
+  if (!languePrete) return null;
   return createPortal(
-    <div className="editeur-svg" ref={racine} role="dialog" aria-modal="true" aria-label={'Éditer : ' + titre}>
+    <div className="editeur-svg" ref={racine} role="dialog" aria-modal="true" aria-label={'Éditer : ' + titre} lang={langue()}>
       {'erreur' in lu ? (
         <div className="editeur-erreur">
           <p>{lu.erreur}</p>

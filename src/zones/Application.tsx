@@ -22,6 +22,9 @@ import { statistiques } from '../engine/editionSvg.js';
 import { insecables, nomDeFichier } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
 import { garderModele, MODELE_PAGE, modeleRetenu, refusAvecRepli, refusModele } from './modele.js';
+import { avertissementLangue } from '../io/langue.js';
+import { estLangue, LANGUES, langue, t } from '../util/i18n.js';
+import { changementLangue, NOMS_LANGUES } from './langue.js';
 import type { Modele } from './typesEditeur.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
@@ -81,7 +84,8 @@ function Accueil() {
   // Un fichier ouvert depuis une adresse (ADR-0036) va a la voie de sa nature, decidee sur ses octets.
   const reception = useReception(poserVoie);
   // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
-  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
+  // Au depart, ce que la langue n'a pas pu faire (ADR-0042 : l'annexe du dictionnaire manque), dit une fois.
+  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>(() => ({ texte: avertissementLangue() ?? '', ton: 'alerte' }));
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
   const informer = useCallback((texte: string) => poserMessage({ texte, ton: 'info' }), []);
   const [credits, poserCredits] = useState(false);
@@ -152,8 +156,8 @@ function Accueil() {
   return (
     <main className="accueil">
       <header className="tete">
-        <h1>Éditeur SVG</h1>
-        <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un fichier propre, pour l’écran ou pour une machine de découpe. Rien ne quitte votre navigateur.</p>
+        <h1>{t('Éditeur SVG')}</h1>
+        <p>{t('Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un fichier propre, pour l’écran ou pour une machine de découpe. Rien ne quitte votre navigateur.')}</p>
       </header>
 
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
@@ -188,6 +192,7 @@ function Accueil() {
       <footer className="pied">
         <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> et de ses contributeurs (licence <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
         <p className="aide"><button type="button" className="discret" onClick={() => poserCredits(true)}>À propos et crédits</button></p>
+        <ChoixLangue />
       </footer>
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
@@ -210,6 +215,22 @@ function Accueil() {
           fermer={() => poserDemo(false)} enregistrer={s => { poserRecu(phraseRecu(s)); poserDemo(false); }} />
       ) : null}
     </main>
+  );
+}
+
+/**
+ * Le selecteur de langue de l'accueil (ADR-0042) : « Français / English », discret, au pied. Choisir ecrit le reglage et recharge la
+ * page, par le geste que demarrer.tsx a pose ; sans geste pose (un hote), rien. Le nom de chaque langue est dans sa langue.
+ */
+function ChoixLangue() {
+  const changer = changementLangue();
+  if (!changer) return null;
+  return (
+    <p className="aide choix-langue">
+      <label>{t('Langue')} <select value={langue()} onChange={e => { if (estLangue(e.target.value)) changer(e.target.value); }}>
+        {LANGUES.map(l => <option key={l} value={l} lang={l}>{NOMS_LANGUES[l]}</option>)}
+      </select></label>
+    </p>
   );
 }
 

@@ -11,6 +11,8 @@ import { useDessin, useInterface } from './contexteEditeur.js';
 import { groupesActifs } from './commandesGroupes.js';
 import { dessinComplet } from './lentille.js';
 import { documentationsPosees } from './documentation.js';
+import { langue } from '../util/i18n.js';
+import { autreLangue, changementLangue, libelleChangementLangue } from './langue.js';
 
 /** Les raccourcis de l'editeur, tels qu'on les dit : la meme liste dans le panneau du dessin et dans la boite de l'aide. */
 export function ListeRaccourcis() {
@@ -67,17 +69,20 @@ function DialogueRaccourcis({ fermer }: { fermer: () => void }) {
 
 /**
  * Les elements du menu Aide : la visite (quand l'editeur l'a), les raccourcis, puis les documentations que l'hote a posees, chacune
- * dans un nouvel onglet (`noopener` : la documentation ne tient aucune poignee sur l'editeur).
+ * dans un nouvel onglet (`noopener` : la documentation ne tient aucune poignee sur l'editeur), et en dernier l'autre langue
+ * (ADR-0042), quand l'hote a pose le geste qui en change (la page, le site ; jamais l'embarquement).
  */
 export function useElementsAide(ouvrirRaccourcis: () => void): ElementMenu[] {
   const v = useVisite();
+  const changer = changementLangue();
   return [
     ...(v ? [{ id: 'visite', libelle: 'Visite guidée', icone: 'reprendre', onClick: v.demarrer } satisfies ElementMenu] : []),
     { id: 'raccourcis', libelle: 'Raccourcis clavier', onClick: ouvrirRaccourcis },
     ...documentationsPosees().map((d, i): ElementMenu => ({
       id: 'documentation-' + d.id, libelle: d.libelle, icone: 'documentation', separateur: i === 0,
       onClick: () => { window.open(d.adresse, '_blank', 'noopener'); }
-    }))
+    })),
+    ...(changer ? [{ id: 'langue', libelle: libelleChangementLangue(langue()), separateur: true, onClick: () => { changer(autreLangue(langue())); } } satisfies ElementMenu] : [])
   ];
 }
 

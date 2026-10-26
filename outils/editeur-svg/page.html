@@ -212,6 +212,8 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .tete p, .pied p, .bibliotheque > p.aide, .voie-panneau p.aide { max-width: 34em; }
 .pied p { margin: 0; }
 .pied .discret { margin-left: calc(-1 * var(--esp-l) - 1px); }
+/* Le selecteur de langue (ADR-0042) : un champ a sa taille, pas une ligne entiere. */
+.pied .choix-langue select { width: auto; display: inline-block; margin-left: var(--esp-xs); }
 /*STYLE_EDITEUR*/
 </style>
 
