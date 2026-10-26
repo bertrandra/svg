@@ -371,6 +371,22 @@ export function formesADegrade(d: DessinSvg, sur: 'tout' | CoteDegrade = 'tout')
   return d.formes.filter(f => f.visible && ((sur !== 'contour' && degradeDe(f, 'remplissage')) || (sur !== 'remplissage' && degradeDe(f, 'contour')))).map(f => f.id);
 }
 
+/**
+ * Les couleurs distinctes des arrets des degrades de ces formes (du cote voulu) : ce que la ligne « Dégradés » rappelle (etape 13d :
+ * chacune est aussi une ligne de la liste des couleurs, ou elle se remplace partout).
+ */
+export function couleursDArrets(d: DessinSvg, ids: readonly string[], sur: 'tout' | CoteDegrade = 'tout'): number {
+  const voulus = new Set(ids), vues = new Set<string>();
+  for (const f of d.formes) {
+    if (!voulus.has(f.id)) continue;
+    for (const cote of ['remplissage', 'contour'] as const) {
+      const g = sur === 'tout' || sur === cote ? degradeDe(f, cote) : null;
+      if (g) for (const a of g.arrets) vues.add(a.couleur);
+    }
+  }
+  return vues.size;
+}
+
 /** Le nombre de degrades distincts (par leurs arrets et leur genre) parmi ces formes : ce que la ligne « Dégradés » compte. */
 export function degradesDistincts(d: DessinSvg, ids: readonly string[], sur: 'tout' | CoteDegrade = 'tout'): number {
   const voulus = new Set(ids), vus = new Set<string>();

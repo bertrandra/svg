@@ -33,6 +33,8 @@ import {
 } from './anciennes/couleurs.js';
 import { couleursProchesAncien, fusionnerCouleursProchesAncien, idsDeNuancesProchesAncien } from './anciennes/couleursProches.js';
 import { apportsDeAncien } from './anciennes/nuancier.js';
+import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
+import { appliquerPaletteAncien, uneCouleurAncien } from './anciennes/palettes.js';
 import { peintureDite } from '../../../src/engine/description.js';
 import { peintureDiteAncienne } from './anciennes/etape4.js';
 
@@ -142,6 +144,15 @@ describe('la loi du dessin plat', () => {
       expect(remplacerCouleur(d, '#fedcba', '#000000'), nom).toBe(d);
       expect(memesCouleurs(d.formes, d.formes.map(f => ({ ...f }))), nom).toBe(memesCouleursAncien(d.formes, d.formes.map(f => ({ ...f }))));
       for (const f of d.formes) expect(apportsDe(f), nom + ' ' + f.id).toEqual(apportsDeAncien(f));
+    }
+  });
+
+  it('etape 13d : les palettes rendent ce que rendaient les anciennes', () => {
+    const palettes = [...PALETTES.map(p => p.couleurs), ['#c81e28'], ['#123456', '#c81e28', '#ffffff', '#000000', '#1f5fb0']];
+    for (const { nom, d } of corpus) {
+      for (const p of palettes) expect(appliquerPalette(d, p), nom).toEqual(appliquerPaletteAncien(d, p));
+      expect(appliquerPalette(d, []), nom).toBe(d);
+      for (const hex of ['#123456', '#000000']) expect(uneCouleur(d, hex), nom).toEqual(uneCouleurAncien(d, hex));
     }
   });
 

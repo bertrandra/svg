@@ -9,8 +9,8 @@
 import { lireHex, versOklab, type Oklab } from '../../util/couleur.js';
 import { au } from '../../util/tableaux.js';
 import { creerIndexVoisins, ecartOklab } from '../../util/voisinsOklab.js';
-import { fondUni, traitUni, type SurCouleur } from './couleurs.js';
-import type { DessinSvg, Forme } from './types.js';
+import { couleursDeForme, recolorerForme, type SurCouleur } from './couleurs.js';
+import type { DessinSvg, Peinture } from './types.js';
 
 /** Un groupe de nuances ramenees a `cible` : la couleur la plus employee, et celles qui s'y fondent. */
 export interface GrappeCouleurs { cible: string; membres: string[]; formes: number }
@@ -26,19 +26,13 @@ export interface FusionCouleurs {
 }
 
 /**
- * Les couleurs d'une forme lues sur le remplissage, le contour, ou les deux (une seule fois si elles sont egales). Un cote peint d'un
- * degrade n'en a pas (couleurs.ts, `fondUni`) : il ne se regroupe ni ne se fond.
+ * Le nombre de formes de chaque couleur, formes masquees et verrouillees comprises : elles portent leur couleur. Les couleurs d'une
+ * forme sont celles des listes (couleurs.ts, `couleursDeForme`) : unies, ou les arrets d'un degrade et les couleurs d'une tuile de
+ * motif (etape 13d), jamais une couleur de repli ; chacune une fois par forme.
  */
-function lues(f: Forme, sur: SurCouleur): string[] {
-  const fond = fondUni(f), trait = traitUni(f);
-  const l = sur === 'remplissage' ? [fond] : sur === 'contour' ? [trait] : fond === trait ? [fond] : [fond, trait];
-  return l.filter((c): c is string => !!c);
-}
-
-/** Le nombre de formes de chaque couleur, formes masquees et verrouillees comprises : elles portent leur couleur. */
 function usages(dessin: DessinSvg, sur: SurCouleur): Map<string, number> {
   const n = new Map<string, number>();
-  for (const f of dessin.formes) for (const c of lues(f, sur)) n.set(c, (n.get(c) ?? 0) + 1);
+  for (const f of dessin.formes) for (const c of couleursDeForme(f, sur)) n.set(c, (n.get(c) ?? 0) + 1);
   return n;
 }
 
@@ -92,20 +86,19 @@ export function couleursProches(dessin: DessinSvg, tolerance: number, sur: SurCo
  * Ramene chaque groupe de nuances proches a sa couleur la plus employee. Les formes verrouillees ne
  * changent jamais de couleur ; les formes masquees, si : elles reviendraient sinon dans l'ancienne
  * nuance a l'affichage. `sur` dit ce qu'on lit : en « Fond », seuls les remplissages se regroupent et
- * les contours ne bougent pas.
+ * les contours ne bougent pas. Un arret de degrade ou une feuille de tuile se fond comme une couleur
+ * unie, et la couleur de repli de sa peinture se recalcule (couleurs.ts, `recolorerForme`).
  */
 export function fusionnerCouleursProches(dessin: DessinSvg, tolerance: number, sur: SurCouleur = 'tout'): FusionCouleurs {
   const { cibles } = affectations(dessin, tolerance, sur);
   if (!cibles.size) return { dessin, fusionnees: 0, formes: 0, conservees: 0 };
   let recolorees = 0;
+  const memo = new Map<Peinture, Peinture>();
   const formes = dessin.formes.map(f => {
     if (f.verrouille) return f;
-    const fond = fondUni(f), trait = traitUni(f);
-    const r = sur !== 'contour' && fond ? cibles.get(fond) : undefined;
-    const c = sur !== 'remplissage' && trait ? cibles.get(trait) : undefined;
-    if (r === undefined && c === undefined) return f;
-    recolorees++;
-    return { ...f, remplissage: r ?? f.remplissage, contour: c ?? f.contour };
+    const x = recolorerForme(f, cibles, sur, memo);
+    if (x !== f) recolorees++;
+    return x;
   });
   if (!recolorees) return { dessin, fusionnees: 0, formes: 0, conservees: cibles.size };
   const apres = { ...dessin, formes };
@@ -129,5 +122,5 @@ export function idsDeNuancesProches(dessin: DessinSvg, couleur: string, toleranc
     memo.set(c, r);
     return r;
   };
-  return dessin.formes.filter(f => f.visible && !f.verrouille && lues(f, sur).some(proche)).map(f => f.id);
+  return dessin.formes.filter(f => f.visible && !f.verrouille && couleursDeForme(f, sur).some(proche)).map(f => f.id);
 }
