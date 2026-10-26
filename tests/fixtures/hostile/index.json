@@ -1340,6 +1340,42 @@
       "famille": "v2-masques",
       "vecteur": "Region de masque demesuree (x=-1e308, width=1e309, height=NaN) : refusee comme toute coordonnee hors bornes, rien ne s'ecrit en Infinity",
       "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-use-recursif.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Un <svg> imbrique qui se clone lui-meme par un <use> : refuse en mode riche, « un cycle de clones <use> » ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-use-croise.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Deux <svg> imbriques qui se clonent l'un l'autre par des <use> : refuse en mode riche, « un cycle de clones <use> »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-viewbox-nul.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbriques a viewBox nul, negatif ou illisible, a largeur nulle ou hauteur negative : en mode riche, rien n'est dessine pour un cadre nul ou un viewBox vide (comme dans un navigateur), le reste s'ouvre ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-demesure.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbriques a viewBox minuscule (echelle 1e300) et a cadre infini (1e309) : refuses comme toute coordonnee hors bornes, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-unites.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbrique dont le cadre est en cm, mm, in : refuse en le nommant en mode riche (une longueur qui n'est ni un nombre, ni des pixels, ni un pourcentage)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-profondeur.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Cent <svg> imbriques les uns dans les autres : refuse en mode riche par la borne des groupes emboites ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus"
     }
   ]
 }

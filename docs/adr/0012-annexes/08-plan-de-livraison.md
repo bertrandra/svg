@@ -21,7 +21,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
-| 4, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
+| 4, 8, 9, 13a, 13b, 13d, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -600,6 +601,67 @@ référence plat — sans sélection, avec, en contexte Cricut —, un dessin de
   de `degrouper` sur un groupe masqué (`porteurs` le dit déjà), jeton `contour-masque`, pastille « masque d'opacité » dans les calques ;
   la phrase d'une région élargie à la transformation.
 
+### Ce que l'étape 13c a posé (26 octobre 2026, moteur)
+
+Aucun octet écrit ne bouge (références v1 et v2 intactes), la lecture `plat` est inchangée : un `<svg>` imbriqué y reste refusé (« un
+SVG imbriqué »), un `<text>` lu avec des polices s'y lit en lettres à plat, l'opacité multipliée, comme avant.
+
+- **Décision : une fonctionnalité, pas le cœur.** `edition/fonctions/imbrications.ts` et une ligne de `catalogue.ts` (la dernière, après
+  les images) : deux lecteurs d'éléments, `svg` et `text`, que `preparer` laisse déjà passer quand une fonctionnalité sait lire la
+  balise (`NON_PRIS` le permettait) et que `visiter` appelle avant le refus `refusHorsFeuille` ; rien d'autre (ni écrivain, ni
+  transformateur, ni étendue : un groupe s'écrit par les groupes, une fenêtre par les découpes). `parcours.ts`, `lecture.ts`,
+  `heritage.ts`, `types.ts` et `fonctionnalites.ts` n'ont pas changé ; aucun crochet n'a manqué.
+- **`<svg>` imbriqué** (mode riche) : un groupe (`nomDuGroupe` : `data-name`, `id`…, opacité au groupe) ; son cadre `x y width height`
+  (nombres, `px`, pourcentages de la fenêtre qui l'entoure — le viewBox du `<svg>` parent, sinon son cadre, sinon le plan —, `auto` vaut
+  l'absence ; une autre unité est refusée, `REFUS_IMBRICATIONS.longueur`), son `viewBox` et son `preserveAspectRatio` composés par
+  `matriceCadre` (celle des `<symbol>`), son `transform` (SVG 2) avant ; la matrice est cuite dans les feuilles. Sa **fenêtre** :
+  `overflow` hidden par défaut (la feuille de style de tout navigateur pour un `<svg>` qui n'est pas la racine), une découpe
+  rectangulaire de la fonctionnalité des découpes (`feuilleDeDecoupe`, numérotée dans l'espace commun avec sa place vide, comptée dans
+  `NOEUDS_DEFS_MAX`), sauf `overflow` `visible` ou `auto`. Une découpe, un masque ou un filtre posés sur le `<svg>` lui-même restent à
+  son groupe (lus par leurs fonctionnalités, crochet `groupe`), la fenêtre passe à un groupe intérieur : ils s'appliquent au contenu
+  déjà rogné. Un `<use>` qui vise un `<svg>` lui donne sa largeur et sa hauteur (SVG 1.1, 5.6). Un cadre nul ou négatif, un viewBox vide
+  ne dessinent rien (sans phrase : rien n'est perdu) ; un viewBox négatif ou illisible est ignoré (`lireVue`) ; un cadre ou une échelle
+  démesurés sont refusés (« des coordonnées démesurées »). Un `<svg>` imbriqué dans un `<clipPath>` n'y est pas admis (il ne l'était pas).
+- **`<text>` en groupe de lettres** (mode riche, avec `OptionsLecture.polices`) : les lettres sont lues par `lireTexte` (ADR-0020) sans
+  l'opacité du texte, puis rangées dans un groupe nommé comme la vectorisation en lettres séparées (`nomGroupeTexte`, déplacé de
+  `engine/texte/vectoriser.ts` vers `edition/texteSvg.ts` et réexporté d'où il était ; `inkscape:label` ou `data-name` l'emportent), qui
+  porte l'opacité du texte ; sa découpe, son masque et son filtre s'y posent par leurs fonctionnalités : **le refus « posé sur un
+  texte » de l'étape 7 et la découpe perdue sans le dire de l'étape 5 disparaissent en mode riche**. Une lettre seule, sans prise et
+  opaque, reste une feuille (la règle de `vectoriserLettresEnGroupes`). Dans un `<clipPath>` (qui n'admet pas `<g>`), un texte sans prise
+  se lit en lettres comme avant. Sans polices, un `<text>` est refusé en riche avec la phrase du plat (`REFUS_IMBRICATIONS.texte`).
+- **Unités de boîte** : `contenus.ts` gagne `poserBoiteConnue(analyse, nœud, boîte)` et `boiteDescendants` la rend pour ce nœud (corps
+  changé : riche seulement, aucun dessin plat n'y passe, donc pas d'ancien corps à geler) : la boîte des lettres d'un texte (dans son
+  repère), celle du contenu d'un `<svg>` placé dans son cadre ; une découpe en `objectBoundingBox` et la région par défaut d'un masque
+  sur un texte se mesurent donc sur ses lettres (sans cela : boîte plate, rien n'était dessiné).
+- **Touché hors du fichier de la fonctionnalité, et pourquoi** : (1) `fonctions/decoupes.ts`, `porteurRefuse` : seule la racine est un
+  `<svg>` porteur refusé (sans cela, une feuille sous un `<svg>` imbriqué découpé était refusée « découpe posée sur … le SVG entier ») ;
+  (2) `fonctions/groupes.ts` : `profondeurDans` exporté (la même borne des groupes emboîtés) ; (3) `contenus.ts` (ci-dessus) ;
+  (4) `edition/texteSvg.ts` et `texte/vectoriser.ts` (`nomGroupeTexte`) ; (5) la façade, un bloc « étape 13c » ; (6) `corpus-v2.test.ts` :
+  le chemin de la page lit avec des fontes factices (sans effet sans `<text>`), et une ligne peut dire qu'elle se refuse à plat (`aPlat`).
+- **Mesuré dans les trois moteurs** (à la main, Playwright, entrée contre référence) : cadre, viewBox, les trois familles de
+  `preserveAspectRatio`, pourcentages emboîtés, `<use>` vers un `<svg>` : identiques à l'anticrénelage près. **Écarts entre navigateurs**,
+  donc dits (`MSG_IMBRICATIONS.prises`) : une découpe posée sur un `<svg>` imbriqué, Firefox la place dans le repère où il est posé, Chromium
+  et WebKit dans celui de son viewBox (et Chromium ne rogne alors plus à la fenêtre) ; un filtre, Firefox et WebKit floutent le contenu
+  rogné, Chromium rogne le flou ; la lecture suit Firefox (la lettre de CSS Masking). `overflow="scroll"` : Firefox ne rogne pas,
+  Chromium et WebKit si (la lecture rogne). `transform` sur un `<svg>` imbriqué : WebKit l'ignore (SVG 2 ; la lecture l'applique, comme
+  Chromium et Firefox). La boîte d'un texte (`objectBoundingBox`) : un navigateur la mesure sur les cellules des glyphes, la lecture sur
+  le contour des lettres de remplacement, et le dit quand une découpe ou un contenu de masque en dépendent (`MSG_IMBRICATIONS.boiteTexte`).
+- **Projet JSON** : rien à ajouter (groupes et découpes y sont déjà portés) ; aller-retour exact et même SVG vérifiés (`imbrications.test.ts`).
+  **Descente** : celles des découpes et des groupes (la fenêtre rogne les remplissages) ; un texte lu en riche puis descendu redonne les
+  lettres de la lecture plate (loi vérifiée avec polices). **Écriture** : aucune extension (`<g clip-path data-ed-nom>` et `<clipPath>`
+  étaient permis).
+- **Tests** : `imbrications.test.ts` (plat inchangé, matrices, pourcentages, fenêtre, prises, `<use>`, I1, projet, descente, texte en
+  groupe, prises du texte, texte dans un `<clipPath>`, loi de descente), `v2/cas-imbrications.ts` (6 entrées `<svg>`, 3 entrées texte lues
+  avec les fontes factices de `v2/polices.ts`, 3 opérations, le corpus `illustrator-svg-imbrique` ; 13 références relues), le corpus
+  `figma-texte-decoupe` (une ligne de `corpus-v2.test.ts`), six hostiles `v2-imbrications-*` (`<svg>` qui se clone lui-même, deux qui se
+  clonent l'un l'autre, viewBox nuls, démesures, unités physiques, cent niveaux) et `securite/imbrications-hostiles.test.ts` (plus une
+  bombe de clones d'un `<svg>` engendrée dans le test).
+- **Reste** : `boiteDescendants` ne compte toujours ni un texte ni un `<svg>` imbriqués **dans** un groupe en unités de boîte (le crochet
+  `groupe` est appelé avant que ses enfants soient lus) ; un texte peint d'un dégradé reste refusé (« un dégradé ou un motif » : `lireTexte`
+  ne consulte pas le crochet `peinture`) ; la région d'un filtre de groupe n'est pas confrontée aux lettres (elles ne passent pas par le
+  crochet `feuille`) ; un pourcentage dans une forme (`width="100%"` d'un `<rect>`) n'est toujours pas résolu, à plat comme en riche ;
+  la vignette du site PHP refuse `url(#ed-c-…)` comme pour toute découpe.
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -612,7 +674,8 @@ référence plat — sans sélection, avec, en contexte Cricut —, un dessin de
   `relierCopie(s)`) ; une forme porteuse et son texte peuvent vivre dans deux groupes différents.
 - **`util/empreinte.ts`** : il existait (ADR-0022) ; l'étape 0 n'a ajouté que `idDefinition` (`edition/definitions.ts`).
 - **13c `<text>` étranger** : l'ADR-0020 le lit déjà en lettres quand la page donne les fontes (`io/texteSvg.ts`,
-  `OptionsLecture.polices`). Reste à 13c : `<svg>` imbriqué, et en mode riche un `<text>` lu devient un groupe de lettres.
+  `OptionsLecture.polices`). Restait à 13c : `<svg>` imbriqué, et en mode riche un `<text>` lu devient un groupe de lettres — fait
+  (« Ce que l'étape 13c a posé »).
 - **Nettoyage** (annexe 2 §6, R7) : `util/assainirSvg.ts` (ADR-0014) lit le document et réémet une liste blanche qui garde déjà
   tous les éléments du modèle v2 ; plus aucune expression ne mutile une valeur d'attribut. Ce qui reste à étendre, étape par
   étape, c'est la **spécification de l'écriture** (`violationsEcriture`), par `extensionsEcriture.ts`.
@@ -854,7 +917,7 @@ ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *R
 - **13a PDF natif** : `shading` axial/radial, découpe `W n`, masque doux, motif de pavage, image XObject,
   raster des effets ; avec l'agent des exports (même fichier `export/pdf.ts`) · après 3, 5, 6, 12.
 - **13b Reconnaisseurs d'idiomes de filtres** (Figma, Sketch, Illustrator `Adobe_OpacityMaskFilter`) · après 6, 7.
-- **13c `<svg>` imbriqué**, et en mode riche un `<text>` lu en **groupe** de lettres · après 1. *Révision : le `<text>` étranger
+- **13c `<svg>` imbriqué**, et en mode riche un `<text>` lu en **groupe** de lettres · après 1 · **fait pour le moteur le 26 octobre 2026** (§0). *Révision : le `<text>` étranger
   se lit déjà en lettres, polices remplacées et dites (ADR-0020, `io/texteSvg.ts`) ; la liste `aComposer` est caduque.*
 - **13d Couleurs** : arrêts de dégradé et motifs traités par `remplacerCouleur`, palettes et listes · après 3, 9.
 

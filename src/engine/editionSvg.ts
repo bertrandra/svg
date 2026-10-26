@@ -181,3 +181,7 @@ export {
   lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
 } from './edition/fonctions/images.js';
 export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';
+
+// ---- etape 13c : <svg> imbrique, <text> lu en groupe de lettres
+export { imbrications, REFUS_IMBRICATIONS, MSG_IMBRICATIONS } from './edition/fonctions/imbrications.js';
+export { nomGroupeTexte } from './edition/texteSvg.js';

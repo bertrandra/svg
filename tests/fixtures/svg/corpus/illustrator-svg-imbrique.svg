@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 300 200">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #1d71b8;
+      }
+
+      .cls-2 {
+        fill: #e30613;
+      }
+
+      .cls-3 {
+        fill: #fff;
+        stroke: #1d1d1b;
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <rect class="cls-3" x="1" y="1" width="298" height="198"/>
+  <svg id="Logo" data-name="Logo" x="20" y="20" width="120" height="80" viewBox="0 0 60 40" preserveAspectRatio="xMidYMid meet">
+    <rect class="cls-1" width="60" height="40"/>
+    <circle class="cls-2" cx="55" cy="35" r="12"/>
+  </svg>
+  <svg id="Pictogramme" data-name="Pictogramme" x="160" y="20" width="120" height="160" overflow="visible">
+    <path class="cls-2" d="M60,0l60,160H0L60,0Z"/>
+  </svg>
+</svg>
