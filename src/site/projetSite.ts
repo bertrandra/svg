@@ -95,19 +95,20 @@ export function travailDuProjet(p: Projet, id: string, revision: number): { trav
 
 /**
  * Un SVG (fichier, code colle, bibliotheque, conversion) ouvert comme un projet neuf : nettoye, ses lettres mises en formes s'il
- * porte du texte, lu en dessin ; le contexte vient de sa marque. Ou la phrase qui dit pourquoi il ne s'ouvre pas.
+ * porte du texte, lu en dessin dans le modele donne (ADR-0012, annexe 5 §3 : `plat` par defaut, `riche` garde ses groupes) ; le
+ * contexte vient de sa marque. Ou la phrase qui dit pourquoi il ne s'ouvre pas.
  */
-export async function travailDuSvg(nom: string, texte: string, nuancier: readonly TeinteProjet[], ignoresAvant: readonly string[] = []): Promise<TravailOuvert | { erreur: string }> {
+export async function travailDuSvg(nom: string, texte: string, nuancier: readonly TeinteProjet[], ignoresAvant: readonly string[] = [], modele: 'plat' | 'riche' = 'plat'): Promise<TravailOuvert | { erreur: string }> {
   const propre = nettoyerSvgNomme(texte);
   if (propre && 'erreur' in propre) return { erreur: propre.erreur };
   if (!propre) return { erreur: 'Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.' };
   let svg = propre.svg, ignores = [...ignoresAvant];
   if (contientTexte(svg)) {
-    const r = await lettresDuSvg(svg);
+    const r = await lettresDuSvg(svg, undefined, modele);
     if ('erreur' in r) return { erreur: r.erreur };
     svg = r.svg; ignores = [...ignores, ...r.ignores];
   }
-  const lu = lireDessin(svg);
+  const lu = lireDessin(svg, modele === 'riche' ? { modele } : {});
   if ('erreur' in lu) return { erreur: lu.erreur };
   return {
     id: null, revision: null, nom, dessin: lu.dessin, production: choixDeMarque(lu.production).choix, nuancier,

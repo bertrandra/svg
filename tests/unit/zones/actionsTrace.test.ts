@@ -24,7 +24,7 @@ function monter(corps: string) {
     choisir: u => { etat.sel = typeof u === 'function' ? u(etat.sel) : u; majour(); },
     poserOutilBrut: vi.fn(), poserPoint: u => { etat.point = typeof u === 'function' ? u(etat.point) : u; }, poserStyle: vi.fn(), poserTrace: vi.fn(), poserPresse: vi.fn(), poserGrille: vi.fn(), poserAimants: vi.fn(), poserLisserBooleens: vi.fn(),
     poserGuides: vi.fn(), poserTiroir: vi.fn(), poserContours: vi.fn(), poserFond: vi.fn(), poserQuitter: vi.fn(), poserCurseur: vi.fn(), poserFocale: vi.fn(), poserAnnonce: vi.fn(),
-    poserVersions: vi.fn(), dire: u => { messages.push(typeof u === 'function' ? u('') : u); }, poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(), toile: { current: null }
+    poserVersions: vi.fn(), dire: u => { messages.push(typeof u === 'function' ? u('') : u); }, poserProduction: vi.fn(), poserSuiteCricut: vi.fn(), poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(), poserModele: vi.fn(), poserContexte: vi.fn(), poserDeplies: vi.fn(), toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
   return { actions, etat, messages, entrees: () => h.passe.length };

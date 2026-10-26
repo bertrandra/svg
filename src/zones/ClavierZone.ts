@@ -11,7 +11,7 @@
 // (engine/selection.ts) ; ici, le fil des touches.
 
 import { deplacerReticule, directionDe, pasReticule, type PointPlan } from '../engine/navigation.js';
-import { appliquerZone, formesDansZone, type EffetZone, type Zone } from '../engine/selection.js';
+import { appliquerZone, noeudsDansZone, type EffetZone, type Zone } from '../engine/selection.js';
 import { nombreFr } from '../engine/description.js';
 import { pluriel } from '../util/texte.js';
 import { phraseCoinOppose, phraseReticule } from './annonces.js';
@@ -20,7 +20,8 @@ import { zoneDe } from './GesteZone.js';
 import type { ContexteToile } from './ClavierToile.js';
 import type { OutilZone } from './typesEditeur.js';
 
-const dansLaZone = (c: ContexteToile, z: Zone): string[] => formesDansZone(c.m.dessin.formes, z, { regle: c.u.regleZone, contours: c.u.contours });
+// Au niveau du contexte d'edition (ADR-0012, annexe 6 §2) ; un dessin plat : ses formes, comme avant.
+const dansLaZone = (c: ContexteToile, z: Zone): string[] => noeudsDansZone(c.m.dessin, c.u.contexte?.groupe ?? null, z, { regle: c.u.regleZone, contours: c.u.contours });
 
 /** Ce que la zone prendrait, dit apres la position : « 3 formes à prendre. » */
 function aPrendre(c: ContexteToile, outil: OutilZone, points: readonly PointPlan[]): string {

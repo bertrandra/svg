@@ -4,7 +4,7 @@
 import { memo, useId, type RefObject } from 'react';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { useGestes } from './Gestes.js';
-import { Calque, cheminDe, Grille, surcouche } from './Toile.js';
+import { cheminDe, Grille, surcouche } from './Toile.js';
 import { AlertesToile, GabaritTapis } from './Production.js';
 import { useTactile } from './Vue.js';
 import { insecables } from '../util/texte.js';
@@ -17,6 +17,7 @@ import { ZoneToile } from './ZoneToile.js';
 import { Regles } from './Regles.js';
 import { CoucheReperes, PanneauReperes } from './Reperes.js';
 import { PanneauRepetition } from './PanneauRepetition.js';
+import { FormesToile } from './ToileNoeuds.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
@@ -45,7 +46,7 @@ export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, i
           {grille ? <Grille vb={dessin.vb} pas={pas} /> : null}
           {/* L'apercu de la machine (ADR-0028) : avant les formes, qu'il rend transparentes (editeur.css) ; elles gardent les clics. */}
           <ApercuMachine />
-          {dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} masquee={sx.vide && f.id === sx.saisie?.id} />)}
+          <FormesToile dessin={dessin} contours={contours} masquee={sx.vide ? sx.saisie?.id ?? null : null} contexte={ui.contexte?.groupe ?? null} />
           <AlertesToile chemin={cheminDe} />
           <SurvolToile svgRef={svgRef} chemin={cheminDe} />
           <g className="surcouche">{surcouche(mo, ui, 1 / z, tactile, !!sx.saisie)}</g>

@@ -22,8 +22,10 @@
 // (ADR-0008) ; les boites d'un dessin y sont rangees une fois par tableau de formes, et le calcul fin ne se fait que pour les
 // formes dont la boite croise celle de la zone sans y etre contenue.
 
-import type { Boite, DessinSvg, Forme, Operation } from './edition/types.js';
+import type { Boite, Contenu, DessinSvg, Forme, Operation } from './edition/types.js';
 import { boiteForme } from './edition/geometrie.js';
+import { estPlat } from './edition/arbre.js';
+import { unitesPrenables } from './edition/contexteEdition.js';
 import { aplatir, dansSurface, etendue, rangee, type Trace } from './prise.js';
 import { operationDe } from './preparation/operations.js';
 import type { Procede } from '../model/contextes.js';
@@ -273,6 +275,33 @@ export function formesDansZone(formes: readonly Forme[], zone: Zone, o: OptionsZ
     const f = formes[i];
     if (f && prise(f, z, o)) out.push(f.id);
   }
+  return out;
+}
+
+/**
+ * Les noeuds que la zone prend dans le contexte d'edition (ADR-0012, annexe 6 §2), dans l'ordre du dessin. Un dessin plat :
+ * exactement `formesDansZone`. Un dessin riche : seules les feuilles du contexte comptent (visibles et deverrouillees, elles et leurs
+ * ancetres), et chacune remonte a l'enfant du contexte qui la contient ; « touchee » prend une unite dont une feuille est prise,
+ * « dedans » une unite dont toutes les feuilles qui peignent quelque chose le sont.
+ */
+export function noeudsDansZone(d: Contenu, contexte: string | null, zone: Zone, o: OptionsZone): string[] {
+  if (estPlat(d)) return formesDansZone(d.formes, zone, o);
+  const z = preparer(zone);
+  if (!z) return [];
+  const unites = unitesPrenables(d, contexte), r = rangee(d.formes);
+  // Par unite, dans l'ordre de sa premiere feuille : combien de ses feuilles peignent, combien sont prises.
+  const comptes = new Map<string, { peintes: number; prises: number }>();
+  for (let i = 0; i < d.formes.length; i++) {
+    const id = unites[i], f = d.formes[i];
+    if (!id || !f || Number.isNaN(r[i * 4] ?? NaN)) continue;
+    let c = comptes.get(id);
+    if (!c) { c = { peintes: 0, prises: 0 }; comptes.set(id, c); }
+    c.peintes++;
+    const loin = !((r[i * 4 + 2] ?? NaN) >= z.x0) || !((r[i * 4] ?? NaN) <= z.x1) || !((r[i * 4 + 3] ?? NaN) >= z.y0) || !((r[i * 4 + 1] ?? NaN) <= z.y1);
+    if (!loin && prise(f, z, o)) c.prises++;
+  }
+  const out: string[] = [];
+  for (const [id, c] of comptes) if (o.regle === 'dedans' ? c.prises === c.peintes : c.prises > 0) out.push(id);
   return out;
 }
 

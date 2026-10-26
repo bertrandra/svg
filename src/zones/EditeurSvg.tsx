@@ -26,10 +26,11 @@ import { useEtatEditeur } from './etatEditeur.js';
 import { useFocusEditeur } from './focusEditeur.js';
 import { lireDessinMemo } from './lecture.js';
 import { estHex } from './aidesEditeur.js';
-import type { ActionHote, EtatEnregistrement, EtatRendu, Teinte } from './typesEditeur.js';
+import type { ActionHote, EtatEnregistrement, EtatRendu, Modele, Teinte } from './typesEditeur.js';
+import { modeleRetenu } from './modele.js';
 
 // Les types que les autres zones lisent ici : ils vivent dans typesEditeur.ts (types seuls, sans cycle).
-export type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
+export type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Modele, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
 
 export interface ProprietesEditeur {
   /** Le SVG a retoucher, tel quel (ignore quand `dessin` est donne). */
@@ -98,10 +99,19 @@ export interface ProprietesEditeur {
   ctrlSEnregistre?: boolean | undefined;
   /** Des gestes de l'hote ajoutes au menu Fichier (« Enregistrer sous… ») ; chacun recoit l'etat du moment. */
   actionsHote?: readonly ActionHote[] | undefined;
+  /**
+   * Le modele de lecture du SVG (ADR-0012, annexe 5 §3) : `plat` (le contrat d'avant : les groupes se fondent) ou `riche` (groupes,
+   * degrades, effets, en beta). Donne, il est fixe : le reglage du menu Edition ne se montre pas. Absent : le reglage garde dans
+   * `stockage` (cle `svg.modele`), `plat` sans lui.
+   */
+  modele?: Modele | undefined;
 }
 
-/** Une image enveloppee dans un SVG ne s'edite pas : il faut d'abord la vectoriser. */
-export const editable = (svg: string): boolean => !/<image\b/i.test(svg);
+/**
+ * Une image enveloppee dans un SVG ne s'edite pas a plat : il faut d'abord la vectoriser. En modele riche, une image integree est une
+ * feuille (ADR-0012, etape 12) : la lecture decide.
+ */
+export const editable = (svg: string, modele: Modele = 'plat'): boolean => modele === 'riche' || !/<image\b/i.test(svg);
 
 const SANS_NUANCIER: readonly Teinte[] = [];
 
@@ -133,13 +143,15 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   );
 }
 
-export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, ...hote }: ProprietesEditeur) {
+export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUANCIER, bibliotheque, fermer, enregistrer, brouillon, stockage, guide, ignores: avant, libelleEnregistrer, fermerSansModification, production: depart, policesEnLigne = false, modele: modeleHote, ...hote }: ProprietesEditeur) {
+  // Le modele de lecture : celui de l'hote, sinon le reglage garde, lu une fois a l'ouverture (le changer au menu vaut pour la suite).
+  const [modele] = useState<Modele>(() => modeleHote ?? modeleRetenu(stockage ?? null));
   // Un dessin donne (un projet rouvert) s'ouvre tel quel : sans marque lue, son contexte est le depart que l'hote donne.
   const lu = useMemo(() => {
     if (dessin) return { dessin, ignores: avant ?? [], production: undefined };
-    const l = lireDessinMemo(svg);
+    const l = lireDessinMemo(svg, modele);
     return 'erreur' in l || !avant?.length ? l : { ...l, ignores: [...avant, ...l.ignores] };
-  }, [svg, dessin, avant]);
+  }, [svg, dessin, avant, modele]);
   const nuancier = useMemo(() => nuancierPropre(brut), [brut]);
   const racine = useRef<HTMLDivElement>(null);
   useFocusEditeur(racine);
@@ -160,7 +172,7 @@ export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUAN
           <ContextePolicesEnLigne.Provider value={policesEnLigne}>
           <FournisseurReperes actif={!!guide}>
             <FournisseurSections><Atelier initial={lu.dessin} ignores={lu.ignores} production={lu.production} depart={depart} titre={titre} nom={nom} nuancier={nuancier} bibliotheque={bibliotheque ?? null} fermer={fermer} enregistrer={enregistrer} brouillon={brouillon} guide={guide ?? null}
-              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} {...hote} /></FournisseurSections>
+              libelleEnregistrer={libelleEnregistrer} fermerSansModification={fermerSansModification} modele={modele} modeleFixe={modeleHote !== undefined} {...hote} /></FournisseurSections>
           </FournisseurReperes>
           </ContextePolicesEnLigne.Provider>
         </FournisseurStockage>
@@ -176,6 +188,7 @@ interface ProprietesAtelier {
   libelleEnregistrer?: string | undefined; fermerSansModification?: boolean | undefined;
   enregistrement?: EtatEnregistrement | null | undefined; changement?: ((etat: EtatRendu) => void) | undefined;
   ctrlSEnregistre?: boolean | undefined; actionsHote?: readonly ActionHote[] | undefined;
+  modele?: Modele | undefined; modeleFixe?: boolean | undefined;
 }
 
 /** Garde l'etat de l'editeur et le donne aux contextes ; le dessin de l'ecran est dans `Cadre`. */

@@ -12,8 +12,8 @@
 // 1,7 fois, et un apercu de quelques centaines de formes ne se voit pas (mesures, ADR-0035).
 
 import { memo, useMemo, type ReactNode } from 'react';
-import { boiteForme, type Forme } from '../engine/editionSvg.js';
-import { formesDansZone, type PointZone, type RegleZone } from '../engine/selection.js';
+import { boiteForme, estPlat, feuillesDe, type Forme } from '../engine/editionSvg.js';
+import { noeudsDansZone, type PointZone, type RegleZone } from '../engine/selection.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { estOutilZone } from './commandesSelection.js';
 import { useZoneEnCours, zoneDe, type MagasinZone } from './GesteZone.js';
@@ -42,9 +42,10 @@ const Apercu = memo(function Apercu({ ids, vue, chemin }: { ids: readonly string
   const { dessin } = useDessin();
   const d = useMemo(() => {
     if (!ids.length) return '';
-    const voulues = new Set(ids);
+    // Un groupe pris (dessin riche, ADR-0012 etape 2) se montre par ses feuilles.
+    const voulues = new Set(estPlat(dessin) ? ids : feuillesDe(dessin, ids));
     return dessin.formes.filter(f => voulues.has(f.id)).map(f => cheminApercu(f, chemin)).join(' ');
-  }, [dessin.formes, ids, chemin]);
+  }, [dessin, ids, chemin]);
   if (!d) return null;
   return (
     <Calque classe="apercu-zone" vue={vue}>
@@ -83,12 +84,12 @@ function DessinZone({ forme, points, regle, ids, curseur, vue, chemin }: {
 
 /** Le cadre ou le lasso du clavier : le premier coin (ou les points) poses, le reticule, et l'apercu de ce qu'Entree prendra. */
 function ZoneClavier({ outil, vue, chemin }: { outil: OutilZone; vue: Vue; chemin: (f: Forme) => string }) {
-  const { dessin } = useDessin(), { trace, curseur, regleZone, contours } = useInterface();
+  const { dessin } = useDessin(), { trace, curseur, regleZone, contours, contexte } = useInterface();
   const points = useMemo<readonly PointZone[]>(() => (curseur ? [...trace, curseur] : trace), [trace, curseur]);
   const ids = useMemo(() => {
     const geo = trace.length ? zoneDe(outil, points) : null;
-    return geo ? formesDansZone(dessin.formes, geo, { regle: regleZone, contours }) : [];
-  }, [outil, trace.length, points, dessin.formes, regleZone, contours]);
+    return geo ? noeudsDansZone(dessin, contexte?.groupe ?? null, geo, { regle: regleZone, contours }) : [];
+  }, [outil, trace.length, points, dessin, contexte, regleZone, contours]);
   if (!trace.length && !curseur) return null;
   return <DessinZone forme={outil} points={trace.length ? points : []} regle={regleZone} ids={ids} curseur={curseur} vue={vue} chemin={chemin} />;
 }
