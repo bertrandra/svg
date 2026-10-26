@@ -10,6 +10,7 @@
 import { estPlat, visibleEffectif, type DessinSvg, type Forme } from './editionSvg.js';
 import { degrades } from './descente/degrades.js';
 import { images } from './descente/images.js';
+import { effets } from './descente/effets.js';
 import { descenteGroupes } from './descente/groupes.js';
 
 /** Ce qu'un exporteur fait d'une fonction du modele : il la sait, il l'approche, il la rend en image, ou il la refuse. */
@@ -45,6 +46,7 @@ export interface RegleDescente {
 export const REGLES_DESCENTE: readonly RegleDescente[] = [
   degrades,
   images,
+  effets,
   descenteGroupes
 ];
 

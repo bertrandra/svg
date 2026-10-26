@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140" width="240" height="140">
+  <!-- Sous echelle non uniforme : le flou isotrope devient anisotrope (exact), l'ombre prend l'ecart moyen (dit) ; en unites de boite ; echelle et rotation melees : ecart moyen (dit) -->
+  <defs>
+    <filter id="iso" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="ombre" color-interpolation-filters="sRGB"><feDropShadow dx="3" dy="3" stdDeviation="2" flood-color="#023047" flood-opacity="0.4"/></filter>
+    <filter id="boite" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="0.05 0.1"/></filter>
+  </defs>
+  <g transform="scale(2 1)">
+    <rect x="5" y="10" width="40" height="30" fill="#606c38" filter="url(#iso)"/>
+    <circle cx="80" cy="25" r="12" fill="#bc6c25" filter="url(#ombre)"/>
+  </g>
+  <rect x="20" y="70" width="50" height="40" fill="#dda15e" filter="url(#boite)"/>
+  <g transform="translate(160 100) rotate(20) scale(2 1)">
+    <rect x="-15" y="-12" width="30" height="24" fill="#283618" filter="url(#iso)"/>
+  </g>
+</svg>

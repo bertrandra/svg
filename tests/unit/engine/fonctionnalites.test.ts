@@ -92,9 +92,10 @@ describe('la lecture consulte les fonctionnalites en mode riche seulement', () =
   });
 
   it('une prise en charge leve le refus et la feuille se complete', () => {
-    const svg = SVG('<path d="M0 0L10 0L10 10Z" filter="url(#f)"/>');
+    // Une primitive hors du sous-ensemble des effets (etape 7) : le catalogue la refuse en la nommant.
+    const svg = SVG('<filter id="f"><feTurbulence/></filter><path d="M0 0L10 0L10 10Z" filter="url(#f)"/>');
     expect(erreur(lireDessin(svg))).toContain('un filtre');
-    expect(erreur(lireDessin(svg, { modele: 'riche' }))).toContain('un filtre');
+    expect(erreur(lireDessin(svg, { modele: 'riche' }))).toContain('un filtre (feTurbulence)');
     expect(formes(lireDessinAvec(svg, {}, FACTICES))[0]?.effets).toEqual({ flou: { ecart: 2 } });
     // Ce que personne ne prend en charge reste refuse, avec la phrase d'aujourd'hui.
     expect(erreur(lireDessinAvec(SVG('<path d="M0 0L10 0Z" clip-path="url(#c)"/>'), {}, FACTICES))).toContain('un masque ou une découpe');
@@ -187,8 +188,8 @@ describe('la transformation d une feuille', () => {
     expect(y.d).toEqual(transformerChemin(carre, m));
     expect(y.effets?.flou?.ecart).toBeCloseTo(2);
     expect(transformerFeuille(x, [2, 0, 0, 2, 0, 0], undefined, FACTICES).effets).toEqual({ flou: { ecart: 4 } });
-    // Le catalogue (vide a l'etape 0) ne touche a rien d'autre que le calcul d'avant.
-    expect(transformer({ vb: [0, 0, 1, 1], formes: [x] }, ['f1'], [2, 0, 0, 2, 0, 0]).formes[0]?.effets).toEqual({ flou: { ecart: 2 } });
+    // Le catalogue passe par le meme chemin : depuis l'etape 7, ses effets suivent la matrice.
+    expect(transformer({ vb: [0, 0, 1, 1], formes: [x] }, ['f1'], [2, 0, 0, 2, 0, 0]).formes[0]?.effets).toEqual({ flou: { ecart: 4 } });
   });
 });
 
@@ -218,7 +219,7 @@ const feuillesPlates: Forme[] = readdirSync(DOSSIER).filter(n => n.endsWith('.sv
 /** Le contrat sur une feuille plate : la meme feuille, aucun attribut, aucun element, aucune definition. */
 function violationsDuContrat(k: Fonctionnalite): string[] {
   const out: string[] = [], r = recueil();
-  const e: ContexteEcriture = { precision: 3, definitions: r, contenu: () => '' };
+  const e: ContexteEcriture = { precision: 3, definitions: r, contenu: () => '', courant: () => ({ formes: [] }) };
   for (const x of feuillesPlates) {
     if ((k.transformation?.feuille?.(x, rotation(30)) ?? x) !== x) out.push(k.nom + ' transforme une feuille plate ' + x.id);
     if ((k.ecriture?.peindreFeuille?.(x, e) ?? x) !== x) out.push(k.nom + ' repeint une feuille plate ' + x.id);

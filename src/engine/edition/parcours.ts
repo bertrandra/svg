@@ -17,7 +17,7 @@ import { lireTrait } from './trait.js';
 import { lireOpacite } from './opacites.js';
 import { ATTRIBUT_ORIGINE, lireOrigines } from './provenance.js';
 import { cheminDeForme } from './elements.js';
-import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
+import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe, refusHorsFeuille } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import { lireTexte, type ContexteTexte } from './texteSvg.js';
 import { lireTexteVivant, MSG_TEXTE_ILLISIBLE, type LienLu } from './texteVivant.js';
@@ -199,7 +199,7 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
 /** Le <symbol> d'un <use> : un cadre (x, y, largeur, hauteur) dans lequel son viewBox se place, puis ses enfants comme ceux d'un groupe. */
 function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
   const pr = proprietesDe(p.analyse, s);
-  const refusS = refusDe(pr, prisesDe(fonctionsDe(p)));
+  const refusS = refusDe(pr, prisesDe(fonctionsDe(p))) ?? refusHorsFeuille(pr, 'posé sur un symbole');
   if (refusS) { p.refus.add(refusS); return; }
   // Un cadre nul ou un viewBox vide desactive le rendu, comme dans un navigateur.
   const vue = lireVue(s.attributs.viewBox);
@@ -260,8 +260,13 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (!b) return;
   // Le mode riche : une fonctionnalite qui sait lire cette balise la lit (fonctionnalites.ts) ; en mode plat, aucune.
   const lecteur = fonctionsDe(p).length ? lecteurDe(fonctionsDe(p), n.nom) : undefined;
-  if (lecteur) lecteur(n, b, marche(p));
-  else if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
+  if (lecteur) { lecteur(n, b, marche(p)); return; }
+  // Une prise du mode riche (un filtre) n'est lue que sur une feuille ou un groupe : ailleurs, aucune fonctionnalite ne la porterait,
+  // elle reste refusee (en mode plat, `preparer` l'a deja refusee).
+  const ou = n.nom === 'use' ? 'posé sur un clone <use>' : n.nom === 'text' && p.texte ? 'posé sur un texte' : n.nom === 'g' || n.nom === 'a' ? 'posé sur un groupe' : null;
+  const refusPrise = ou ? refusHorsFeuille(b.pr, ou) : null;
+  if (refusPrise) { p.refus.add(refusPrise); return; }
+  if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
   else if (n.nom === 'text' && p.texte) lireTexteDans(p, p.texte, n, b);
   else poserForme(p, n, b);

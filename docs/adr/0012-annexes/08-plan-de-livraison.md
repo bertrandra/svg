@@ -17,7 +17,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2, 4 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; 7-B (toile, brouillon) après S2-A |
+| 2, 4 à 6, 8, 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -152,6 +153,72 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   l'en-tête côté serveur (la bombe de pixels), laissé pour plus tard. **Aucune étape ne prévoit encore l'interface d'insertion**
   (« Insérer une image… » au menu Fichier, dépôt d'une image dans l'éditeur, l'« Insérer depuis une adresse » de l'ADR-0036 qui
   accepterait une image) : à ajouter au plan, après l'étape 2.
+
+### Ce que le paquet 7-A a posé (26 octobre 2026)
+
+- **`edition/effets.ts`** (pur) : `NOEUDS_A_EFFET_MAX` (2 000), `ecartMax` (`max(l, h) / 4` du plan), `decalageMax` (`max(l, h)`),
+  `ecartsSous` (la covariance du noyau sous une matrice : exacte quand l'ellipse reste dans les axes — échelle par axe, quart de tour,
+  similitude d'un flou isotrope —, l'écart moyen `√(sx·sy·|det|)` sinon), `transformerEffets` (le flou suit la matrice, l'ombre prend le
+  facteur sans tourner ; le même objet sous une translation), `margeEffets` (3 écarts + décalage), `effetsEcrits` (les valeurs telles
+  que la relecture les rendra), `regionEcrite` (arrondie vers l'extérieur), `definitionFiltre` (les formes exactes de l'annexe 4 B §2).
+- **`edition/fonctions/effets.ts`** et une ligne de `catalogue.ts` (après les dégradés) : `prises: ['filtre']`, `lecture.feuille` et
+  `.groupe`. Le filtre se lit en **évaluant** ses primitives (`in`, `in2`, `result` comme un navigateur : entrée absente = résultat
+  précédent, nom inconnu = idem, `BackgroundImage`/`FillPaint`… refusés), puis l'image finale se **reconnaît** : flou du graphique ;
+  ombre (aplat composé `in` dans une silhouette d'alpha portant au plus un flou et un décalage, dans n'importe quel ordre) fusionnée
+  sous le graphique, ou sous le graphique flouté ; `feDropShadow` ; `feComposite operator="over"` vaut une fusion. Toute autre
+  primitive : « un filtre (feTurbulence) » ; toute autre combinaison : « un filtre qui n'est ni un flou ni une ombre portée ». Unités
+  de primitive en boîte résolues (feuille : sa boîte locale ; groupe : refusé), région d'origine confrontée à l'effet (feuille ; groupe
+  en unités du plan, à mesure que ses feuilles se lisent) et dite si elle rognait, `color-interpolation-filters` hérité (le RVB linéaire
+  d'un flou du graphique dit), écart borné à `ECART_MAX`, décalage borné au plus grand côté du plan, nombres illisibles à leur valeur
+  par défaut, 2 000 nœuds à effet : chacun dit (`MSG_EFFETS`, `msgEcartBorne`, `msgDecalageBorne`). Refus nommés (`REFUS_EFFETS`) :
+  filtre CSS (`blur()`…), chaîne de filtres, renvoi extérieur, héritage `href` d'un filtre, plus de 16 primitives ou nœuds de fusion,
+  filtre vide, région vide, unités de boîte sur un groupe. Une référence vers rien : la forme est dessinée sans, et c'est dit.
+- **Écriture** : `filter="url(#ed-f-…)"` au rang `filtre` (feuille, image, groupe), le `<filter>` au recueil. La région est la boîte
+  visuelle **telle qu'elle s'écrit** (coordonnées arrondies à la précision, épaisseur et limite de pointe au millième, cadre et matrice
+  écrits d'une image ; pour un groupe, l'union de ses enfants visibles, leurs effets compris), élargie de la marge des effets écrits,
+  arrondie vers l'extérieur : la relecture redonne la même région à l'octet (point fixe vérifié sur 300 dessins tirés au hasard, deux
+  précisions, graine imprimée). Une image qui écrit un `transform` reçoit ses effets **dans son repère** (un filtre agit dans le repère
+  de l'élément qui le cite).
+- **Transformation** (`transformation.feuille`/`.groupe`) et **étendue** (`etendue.feuille`/`.groupe`, d'où `boiteVisuelle` et
+  `ajusterPlan`).
+- **Descente** (`engine/descente/effets.ts`, une ligne de `REGLES_DESCENTE` avant les groupes) : abandonnés, feuilles et groupes, dits
+  au singulier ou au pluriel (`perteEffets`) ; ce qui ne s'exporte pas part sans phrase ; `raster` descend comme `approche` (le rendu
+  en image par `io` est à l'étape 13).
+- **Projet JSON** : `model/projetV2/effets.ts` (`lireEffetsProjet` : objet non vide, flou avec un écart positif, ombre `#rrggbb`, bornes)
+  et `engine/projetV2/effets.ts` ; une ligne de chaque cadre, **pour les formes et pour les groupes** (`CHAMPS_GROUPE_V2`,
+  `ALLERS_RETOURS_GROUPE` : les premières lignes de groupe) ; `effets` est « porte » : plus aucun champ du modèle n'attend son étape.
+- **Nuancier** (ADR-0037), décision : une ombre portée apporte sa couleur, sur la silhouette de la forme (la surface de son fond et
+  de son trait), à l'opacité de la forme par celle de l'ombre ; un flou n'apporte rien. Les effets d'un groupe n'y entrent pas (le
+  nuancier lit les feuilles).
+- **Tests** : `effets.test.ts`, `descente-effets.test.ts`, `v2/cas-effets.ts` (6 entrées `v2/effets-*`, 6 transformations, le corpus
+  `inkscape-flou`), 9 hostiles `v2-effets-*` joués en riche par `securite/effets-hostiles.test.ts` (plus cent mille primitives et
+  2 003 formes engendrées dans le test), l'extension d'écriture « étape 7 : effets » (inscrite **avant** celle des groupes, qui refuse
+  tout autre attribut sur un `<g>`), les effets dans `projet-v2.test.ts`.
+- **Mesure** (méthode de l'ADR-0008, médiane de 31 après 5 tours, machine de l'agent) : 200 formes à effets, lecture 5 à 7 ms (2 à
+  3 ms sans les filtres), écriture d'un dessin neuf 6 à 8 ms.
+- **Touché hors des crochets, et pourquoi** : (1) `fonctionnalites.ts` : `ContexteEcriture.courant()` (le contenu en cours
+  d'écriture : `attributsGroupe` ne reçoit que le groupe, or la région d'un groupe se mesure sur ses enfants ; les masques de l'étape 6
+  en auront besoin aussi) — **tout autre constructeur d'un `ContexteEcriture` (le rendu générique de la toile, étape 2) doit le
+  fournir** : `courant: () => <le contenu qu'il rend>` ; (2) `ecritureRiche.ts` : `courant` tenu le temps d'un contenu imbriqué, et
+  l'élément entier d'une feuille (une image) reçoit lui aussi les attributs v2 de la feuille avant de se fermer ; (3) `heritage.ts`
+  (`refusHorsFeuille`), `parcours.ts`, `lecture.ts` : une prise (filtre, découpe, masque) posée sur un élément qu'aucune
+  fonctionnalité ne complète (clone `<use>`, texte lu en lettres, symbole, racine, `<g>` d'une liste sans groupes) reste refusée, en
+  disant où elle est posée — sans cela, le mode riche l'aurait perdue en silence ; le mode plat garde sa phrase, à l'octet ;
+  (4) `util/assainirSvg.ts` : le fuzzing (corpus déplacé par les nouveaux hostiles) a trouvé deux trous de `nettoyerCss` — un niveau
+  d'échappement qui en révèle un autre (`ur\\6c(`), un échappement vers un caractère de contrôle que l'émission retire et qui recolle
+  `url(` — : résolution à chaque passe, contrôles retirés à la résolution ; deux entrées dans `tests/fixtures/regressions/` ;
+  (5) `model/projetV2/groupes.ts` : un transtypage (le type des champs de groupe n'est plus vide).
+- **Écarts et décisions** : un filtre `feDropShadow` suivi d'un flou du graphique fusionné (annexe 4 B §3, cas iv) n'est **pas** pris :
+  il laisse le graphique net sous le flou, ce que `Effets` ne représente pas (refusé, nommé) ; l'héritage `href` d'un filtre est refusé
+  (les navigateurs ne le suivent pas tous) ; la région d'un groupe en unités de boîte n'est pas confrontée (la boîte du groupe n'est
+  connue qu'après ses feuilles) ; une transformation qui déforme un flou anisotrope prend l'écart moyen **sans le dire** (le crochet de
+  transformation n'a pas de canal de message ; à l'interface de l'étape 8 de le dire) ; la définition du filtre d'un groupe se dépose
+  après celles de ses enfants (le groupe s'écrit après eux, pour ne jamais poser de définition orpheline) ; sur un texte vivant, le
+  `filter` s'écrit après ses `data-ed-*` (l'écriture plate les pose ; l'annexe 2 §3 voulait l'inverse, sans effet sur le rendu).
+- **Reste** : 7-B (toile : `data-brouillon`, au-delà de 20 nœuds à effet rendus au repos, mesures de l'annexe 7 §4) ; l'interface
+  (étape 8 : section Effets, `poserEffets`, la phrase d'une approximation à la transformation) ; le PDF rastérisé (13a) ; les
+  reconnaisseurs d'idiomes Figma, Sketch, Illustrator (13b) ; la vignette du site PHP refuse `url(#ed-f-…)` : un projet à effets n'a pas
+  de vignette (rien ne casse), l'admettre demanderait la liste des primitives dans `vignette_sure`.
 
 ### Caduc
 
@@ -367,7 +434,7 @@ par intersection booléenne** des remplissages (`aplatir.ts`), fixtures, hostile
 descente (ignoré et dit, ou image), corpus `figma-trait-interieur`, `sketch-masque-use`. Après 5 (contenu et
 région partagent son infrastructure).
 
-### Étape 7 — Effets · taille G · risque moyen (performance)
+### Étape 7 — Effets · taille G · risque moyen (performance) · **paquet 7-A fait le 26 octobre 2026** (§0)
 
 `Effets`, lecture du sous-ensemble (annexe 4 B §3), écriture des formes exactes, région calculée, `boiteVisuelle`
 (effets) et `ajusterPlan`, rendu de la toile avec mode brouillon pendant les gestes, plafonds, descente

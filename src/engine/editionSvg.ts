@@ -143,6 +143,13 @@ export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degr
 // ---- etape 6 : masques d'opacite
 
 // ---- etape 7 : effets
+export {
+  NOEUDS_A_EFFET_MAX, ecartMax, decalageMax, aDesEffets, ecartsSous, flouDe, transformerEffets, margeEffets, elargir, effetsEcrits, regionEcrite,
+  definitionFiltre
+} from './edition/effets.js';
+export {
+  effets, MSG_EFFETS, REFUS_EFFETS, PRIMITIVES_MAX, msgEcartBorne, msgDecalageBorne, refusPrimitive, refusEntree, boiteEcrite
+} from './edition/fonctions/effets.js';
 
 // ---- etape 9 : motifs
 

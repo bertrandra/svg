@@ -36,16 +36,33 @@ export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain
   const [x, y, l, h] = dessin.vb;
   const definitions = recueil();
   let riche = false;
+  // Le contenu en cours d'ecriture, pour `ctx.courant` : le dessin, ou le contenu imbrique qu'ecrit `ctx.contenu`, le temps de l'ecrire.
+  let courant: Contenu = dessin;
   const corps = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
+    const avant = courant;
+    courant = c;
+    try {
+      return corpsDe(c);
+    } finally {
+      courant = avant;
+    }
+  };
+  const corpsDe = (c: DessinSvg): { texte: string; ecrites: Forme[] } => {
     const ecrites = c.formes.filter(f => visibleEffectif(c, f.id));
     const ecrire = ecrivain(c, ecrites);
+    // Les attributs v2 d'une feuille, apres sa peinture (les definitions se deposent dans l'ordre ou l'element les cite).
+    const attributs = (f: Forme): string => attributsTries(fonctions.flatMap(k => k.ecriture?.attributsFeuille?.(f, ctx) ?? []));
     const feuille = (f: Forme): string => {
       for (const k of fonctions) {
         const e = k.ecriture?.elementFeuille?.(f, ctx);
-        if (e !== null && e !== undefined) { riche = true; return e; }
+        if (e === null || e === undefined) continue;
+        riche = true;
+        // Un element entier (une image) recoit aussi les attributs v2 de la feuille (son filtre), avant de se fermer.
+        const a = e.endsWith('/>') ? attributs(f) : '';
+        return a ? e.slice(0, -2) + a + '/>' : e;
       }
       const peinte = fonctions.reduce<Forme>((v, k) => k.ecriture?.peindreFeuille?.(v, ctx) ?? v, f);
-      const s = ecrire(peinte), a = attributsTries(fonctions.flatMap(k => k.ecriture?.attributsFeuille?.(f, ctx) ?? []));
+      const s = ecrire(peinte), a = attributs(f);
       if (peinte !== f || a) riche = true;
       return a ? s.slice(0, -2) + a + '/>' : s;
     };
@@ -59,7 +76,7 @@ export function ecrireDessinRiche(dessin: DessinSvg, precision: number, ecrivain
     }).join('');
     return { texte: noeuds(arbreDe(c).racine), ecrites };
   };
-  const ctx: ContexteEcriture = { precision, definitions, contenu: (c: Contenu) => corps({ ...c, vb: dessin.vb }).texte };
+  const ctx: ContexteEcriture = { precision, definitions, contenu: (c: Contenu) => corps({ ...c, vb: dessin.vb }).texte, courant: () => courant };
   const { texte, ecrites } = corps(dessin);
   const defs = definitions.ecrire();
   const marqueur = riche || defs !== '' ? ' ' + ATTRIBUT_MODELE + '="' + VERSION_MODELE + '"' : '';

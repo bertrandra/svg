@@ -9,7 +9,7 @@ import type { DessinSvg, Forme, Groupe } from './types.js';
 import { phrasesRemplacements, type ContexteTexte, type PolicesTexte } from './texteSvg.js';
 import { IDENTITE } from './types.js';
 import { lireOpacite } from './opacites.js';
-import { heriter, refusDe } from './heritage.js';
+import { heriter, refusDe, refusHorsFeuille } from './heritage.js';
 import { analyser, proprietesDe } from './cascade.js';
 import { visiter, type Parcours } from './parcours.js';
 import { COORDONNEE_MAX, coordonneeSaine, CONFRONTATIONS_MAX } from './limites.js';
@@ -106,7 +106,8 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   // applique au dessin entier, donc se multiplie a chaque forme comme celle d'un <g> (le dessin etant a plat,
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
   const prRacine = proprietesDe(analyse, racine);
-  const refusRacine = refusDe(prRacine, prisesDe(fonctions));
+  // Une prise que le mode riche lit sur une feuille ou un groupe ne se lit pas sur la racine : refusee comme en plat (etape 7).
+  const refusRacine = refusDe(prRacine, prisesDe(fonctions)) ?? refusHorsFeuille(prRacine, 'posé sur tout le dessin');
   if (refusRacine) p.refus.add(refusRacine);
   for (const msg of ignoresDeFusion(prRacine, racine)) analyse.ignores.add(msg);
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };

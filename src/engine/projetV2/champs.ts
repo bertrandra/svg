@@ -9,6 +9,7 @@ import type { Forme, Groupe } from '../editionSvg.js';
 import { estDegrade } from '../edition/degrades.js';
 import { peintureDuProjet, peintureProjet } from './peinture.js';
 import { imageDuProjet, imageProjet, refusImagesProjet } from './image.js';
+import { effetsDuProjet, effetsProjet } from './effets.js';
 
 /** Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. */
 interface AllerRetour {
@@ -34,6 +35,11 @@ const ALLERS_RETOURS: readonly AllerRetour[] = [
       ...(f.peintureRemplissage !== undefined ? { peintureRemplissage: peintureDuProjet(f.peintureRemplissage) } : {}),
       ...(f.peintureContour !== undefined ? { peintureContour: peintureDuProjet(f.peintureContour) } : {})
     })
+  },
+  // Etape 7 : les effets, champ pour champ.
+  {
+    versProjet: f => (f.effets !== undefined ? { effets: effetsProjet(f.effets) } : {}),
+    versModele: f => (f.effets !== undefined ? { effets: effetsDuProjet(f.effets) } : {})
   },
   // Etape 12 : l'image integree. Au retour, `d` redevient exactement le rectangle de l'image ; ses octets sont verifies par `refus`
   // (comme a la lecture d'un SVG) avant que `etatDuProjet` ne rouvre le dessin.
@@ -77,8 +83,14 @@ interface AllerRetourGroupe {
   readonly versModele: (g: GroupeProjet) => Partial<Groupe>;
 }
 
-/** Vide a l'etape 1 : un groupe n'a que sa base. */
-const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [];
+/** Une ligne par etape, dans l'ordre de `CHAMPS_GROUPE_V2`. */
+const ALLERS_RETOURS_GROUPE: readonly AllerRetourGroupe[] = [
+  // Etape 7 : les effets du groupe.
+  {
+    versProjet: g => (g.effets !== undefined ? { effets: effetsProjet(g.effets) } : {}),
+    versModele: g => (g.effets !== undefined ? { effets: effetsDuProjet(g.effets) } : {})
+  }
+];
 
 /** Un groupe du modele en groupe de projet : sa base dans l'ordre du format, puis ses champs v2. */
 export function groupeProjet(g: Groupe): GroupeProjet {

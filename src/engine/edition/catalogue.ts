@@ -9,10 +9,12 @@
 import type { Fonctionnalite } from './fonctionnalites.js';
 import { groupes } from './fonctions/groupes.js';
 import { degrades } from './fonctions/degrades.js';
+import { effets } from './fonctions/effets.js';
 import { images } from './fonctions/images.js';
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
   groupes,
   degrades,
+  effets,
   images
 ];

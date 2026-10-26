@@ -50,7 +50,7 @@ export function lireGroupesProjet(v: unknown, o: OutilsProjet, origines: (v: unk
       ...(g['origine'] !== undefined ? { origine: origines(g['origine']) } : {})
     };
     for (const c of CHAMPS_GROUPE_V2) if (g[c.cle] !== undefined) base[c.cle] = c.lire(g[c.cle], o);
-    out[cle] = base as GroupeProjet;
+    out[cle] = base as unknown as GroupeProjet;
   }
   for (const g of Object.values(out)) {
     if (g.parent !== undefined && !Object.prototype.hasOwnProperty.call(out, g.parent)) o.refuser('le groupe « ' + g.id + ' » a un parent absent');
