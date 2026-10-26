@@ -116,6 +116,17 @@ describe('la lecture des decoupes', () => {
     expect(erreur(lire('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" clip-path="url(#c)">' + CLIP + '<rect width="5" height="5"/></svg>'))).toContain('une découpe (posé sur tout le dessin)');
     expect(erreur(lire(SVG('<defs><clipPath id="c" transform="rotate(a)"><rect width="5" height="5"/></clipPath></defs><g clip-path="url(#c)"><rect width="50" height="50"/></g>')))).toContain(REFUS_DECOUPES.transformation);
   });
+
+  it('garde toutes les formes d une decoupe de formes elles-memes decoupees sous la borne commune, refuse au-dela en le nommant', () => {
+    // Les places vides des decoupes imbriquees sont deja comptees : le budget ne les compte pas deux fois (annexe 8, etape 9).
+    const imbriquees = (n: number, k: number) => SVG('<defs><clipPath id="i">' + '<rect width="1" height="1"/>'.repeat(k) + '</clipPath><clipPath id="c">'
+      + '<rect width="10" height="10" clip-path="url(#i)"/>'.repeat(n) + '</clipPath></defs><g clip-path="url(#c)"><rect width="100" height="100"/></g>');
+    const d = riche(imbriquees(150, 100));
+    expect(decoupees(d).reduce((s, g) => s + (g.decoupe?.contenu.formes.length ?? 0), 0)).toBe(150);
+    expect(verifierDessin(d)).toEqual([]);
+    expect(erreur(lire(imbriquees(150, 140)))).toContain(REFUS_DECOUPES.trop);
+    expect(erreur(lire(SVG('<defs><clipPath id="c">' + '<rect width="1" height="1"/>'.repeat(100_000) + '</clipPath></defs><g clip-path="url(#c)"><rect width="100" height="100"/></g>')))).toContain(REFUS_DECOUPES.trop);
+  });
 });
 
 describe('les decoupes et les operations', () => {

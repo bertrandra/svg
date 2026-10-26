@@ -109,6 +109,19 @@ describe('la lecture des masques', () => {
     expect(Object.keys(d.groupes ?? {}).every(id => masques(d).some(g => g.id === id) || d.formes.some(f => f.parent === id))).toBe(true);
   });
 
+  it('une image dans le seul contenu d un masque s ecrit bien formee : la racine declare xmlns:xlink', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const d = riche(SVG('<defs><mask id="m"><image href="' + png + '" width="40" height="40"/></mask></defs><g mask="url(#m)"><rect width="50" height="50"/></g>'));
+    expect(d.formes.some(f => f.image)).toBe(false);
+    const e = ecrireDessin(d, 3);
+    expect(e).toContain(' xmlns:xlink="http://www.w3.org/1999/xlink"');
+    expect(violationsEcriture(e)).toEqual([]);
+    expect(ecrireDessin(riche(e), 3), 'point fixe').toBe(e);
+    // Le meme dessin sans l'image : rien n'est declare de plus.
+    const sans = riche(SVG('<defs><mask id="m"><rect width="40" height="40" fill="#fff"/></mask></defs><g mask="url(#m)"><rect width="50" height="50"/></g>'));
+    expect(ecrireDessin(sans, 3)).not.toContain('xmlns:xlink');
+  });
+
   it('dit ce qu un navigateur ignore : reference absente ou vers autre chose, transformation d un <mask>, masque dans une decoupe, unite inconnue', () => {
     const r = lire(readFileSync(join(V2, 'masques-ignores.svg'), 'utf8'));
     expect(ignores(r)).toEqual(expect.arrayContaining([MSG_MASQUES.absente, MSG_MASQUES.transformation, MSG_MASQUES.dansDecoupe]));
@@ -142,6 +155,28 @@ describe('la lecture des masques', () => {
     expect(erreur(lire(SVG(MASQUE + '<defs><rect id="r" width="5" height="5"/></defs><use href="#r" mask="url(#m)"/>')))).toContain('un masque ou une découpe (posé sur un clone <use>)');
     expect(erreur(lire(SVG(MASQUE + '<defs><symbol id="s" mask="url(#m)"><rect width="5" height="5"/></symbol></defs><use href="#s"/>')))).toContain('un masque ou une découpe (posé sur un symbole)');
     expect(erreur(lire('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" mask="url(#m)">' + MASQUE + '<rect width="5" height="5"/></svg>'))).toContain('posé sur tout le dessin');
+  });
+
+  // Les places vides qu'un contenu imbrique laisse derriere lui sont deja comptees dans le budget commun : la boucle du masque ne doit
+  // pas les compter une seconde fois (elle s'arretait alors sous la borne, en silence, et perdait des formes).
+  const imbriques = (n: number, k: number, interne: 'mask' | 'clipPath') => SVG('<defs><' + interne + ' id="i">' + '<rect width="1" height="1" fill="#fff"/>'.repeat(k)
+    + '</' + interne + '><mask id="m">' + ('<g ' + (interne === 'mask' ? 'mask' : 'clip-path') + '="url(#i)"><rect width="10" height="10" fill="#fff"/></g>').repeat(n)
+    + '</mask></defs><g mask="url(#m)"><rect width="100" height="100"/></g>');
+  // Le seul groupe masque de la table du dessin est l'exterieur ; les groupes interieurs vivent dans son contenu.
+  const feuillesDuMasque = (d: DessinSvg): number => masques(d).reduce((s, g) => s + (g.masque?.contenu.formes.length ?? 0), 0);
+
+  it('garde toutes les formes d un masque de groupes eux-memes masques ou decoupes, sous la borne commune', () => {
+    for (const interne of ['mask', 'clipPath'] as const) {
+      const r = lire(imbriques(150, 100, interne));
+      expect(erreur(r), interne).toBe('');
+      if ('erreur' in r) continue;
+      expect(feuillesDuMasque(r.dessin), interne).toBe(150);
+      expect(verifierDessin(r.dessin)).toEqual([]);
+    }
+  });
+
+  it('refuse en le nommant un masque de groupes masques qui franchit la borne commune, au lieu d en perdre', () => {
+    expect(erreur(lire(imbriques(150, 140, 'mask')))).toContain(REFUS_MASQUES.trop);
   });
 });
 

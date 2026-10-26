@@ -51,6 +51,9 @@ export const CAS: readonly CasV2[] = [
   { nom: 'masques-imbriques', entree: 'masques-imbriques' },
   { nom: 'masques-ignores', entree: 'masques-ignores' },
   { nom: 'masques-partages', entree: 'masques-partages' },
+  // Une image dans le seul contenu d'un masque : la racine declare xmlns:xlink (l'ecriture le decide apres les definitions)
+  { nom: 'masques-image', entree: 'masques-image' },
+  { nom: 'masques-image-deplacer', dessin: () => riche('masques-image'), operation: d => transformer(d, tous(d), translation(-12, 6.5)) },
   // Un masque suit son groupe (regle de la fermeture), degrades du contenu compris ; une feuille seule deplacee bouge sous un masque immobile
   { nom: 'masques-deplacer', dessin: () => riche('masques-degrade'), operation: d => transformer(d, tous(d), translation(-12, 6.5)) },
   { nom: 'masques-tourner', dessin: () => riche('masques-groupe'), operation: d => transformer(d, tous(d), rotation(25, 100, 60)) },
