@@ -146,7 +146,7 @@
   "Séparer le trait du fond": "Separate stroke from background",
   "Sépia": "Sepia",
   "Tout souder": "Weld everything",
-  "Trait{mode}": "Line art",
+  "Trait{mode}": "Line art{mode}",
   "Un dessin à l’encre ou au crayon : netteté, deux couleurs (le trait et le papier), bords lissés.": "An ink or pencil drawing: sharpness, two colors (the stroke and the paper), smoothed edges.",
   "Un logo en aplats, un peu bruité : débruiter, réduire à 8 couleurs en gardant le fond, lisser les bords.": "A flat-color logo, a bit noisy: denoise, reduce to 8 colors keeping the background, smooth the edges.",
   "Un tracé ouvert n’a pas d’intérieur : décalez-le vers l’extérieur (distance positive).": "An open path has no inside: offset it outward (positive distance).",
