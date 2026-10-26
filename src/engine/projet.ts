@@ -10,6 +10,7 @@ import {
 } from '../model/projet.js';
 import { peintureSure, type Chemin, type Commande, type DessinSvg, type DispositionTexte, type Forme, type Lettre, type TexteVivant } from './editionSvg.js';
 import type { DispositionProjet } from '../model/projet.js';
+import { avecReperes, normaliserReperes } from './editionSvg.js';
 import type { NuancierDessin } from '../model/nuancier.js';
 
 
@@ -133,7 +134,11 @@ export function projetDe(e: EtatProjet): Projet {
     format: FORMAT_PROJET, version: VERSION_PROJET, nom: nomDeProjet(e.nom),
     ...(e.creeLe !== undefined ? { creeLe: e.creeLe } : {}),
     ...(e.modifieLe !== undefined ? { modifieLe: e.modifieLe } : {}),
-    dessin: { vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier) },
+    dessin: {
+      vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier),
+      // Les reperes (ADR-0038), seulement s'il y en a : le projet d'un dessin sans repere reste le meme texte.
+      ...(e.dessin.reperes ? { reperes: { h: [...e.dessin.reperes.h], v: [...e.dessin.reperes.v] } } : {})
+    },
     production: choixCopie(e.production),
     nuancier: e.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
     ressources: {
@@ -153,7 +158,10 @@ export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
   }
   return {
     nom: p.nom,
-    dessin: { vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet), ...nuancierCopie(p.dessin.nuancier) },
+    dessin: avecReperes(
+      { vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet), ...nuancierCopie(p.dessin.nuancier) },
+      p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null
+    ),
     production: choixCopie(p.production),
     nuancier: p.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
     polices: p.ressources.polices, images: p.ressources.images,

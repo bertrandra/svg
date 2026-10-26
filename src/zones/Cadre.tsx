@@ -25,12 +25,16 @@ import { FORMES, nomOutilForme, phraseAbandon } from './aidesEditeur.js';
 import { pluriel, selonSaisie } from '../util/texte.js';
 import type { Outil, OutilForme, Tiroir } from './typesEditeur.js';
 import { LIBELLES_ENREGISTREMENT } from './enregistrement.js';
+import { FournisseurRegles } from './contexteRegles.js';
+import { useClavierOutilsPro } from './ClavierOutilsPro.js';
 import { estOutilZone, etatOutilZone } from './commandesSelection.js';
 import type { RegleZone } from '../engine/selection.js';
 
 /** Les raccourcis clavier : un composant sans rendu, pour que le crochet vive sous les contextes. */
 function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
   useClavier(toile);
+  // Les regles et les reperes (ADR-0038) : a la capture, avant les raccourcis de l'editeur.
+  useClavierOutilsPro();
   return null;
 }
 
@@ -173,6 +177,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
     <FournisseurMenusOuverts value={signaler}>
       <FournisseurTexte>
       <FournisseurSaisie>
+      <FournisseurRegles>
       <div className={'editeur-cadre outil-' + outil + (FORMES.has(outil) ? ' trace-forme' : '') + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
         <SuiviDispositions />
@@ -189,6 +194,7 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
         <BarreEtat />
         <BulleVisite />
       </div>
+      </FournisseurRegles>
       </FournisseurSaisie>
       </FournisseurTexte>
     </FournisseurMenusOuverts>

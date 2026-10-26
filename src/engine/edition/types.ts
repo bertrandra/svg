@@ -291,6 +291,13 @@ export interface DispositionEnveloppe {
   readonly marge: number;
 }
 
+/**
+ * Les reperes du document (ADR-0038) : des lignes horizontales (`h`, a ces ordonnees) et verticales (`v`, a ces abscisses), en
+ * unites du plan, au millieme, triees, sans doublon (reperes.ts les tient ainsi). Un reglage du document, pas une forme : ils ne
+ * se dessinent dans aucun export.
+ */
+export interface Reperes { readonly h: readonly number[]; readonly v: readonly number[] }
+
 /** Le dessin : un plan de travail et un contenu. Sans `groupes` ni champ v2 sur ses feuilles, il est plat (ADR-0001). */
 export interface DessinSvg extends Contenu {
   readonly vb: readonly [number, number, number, number];
@@ -300,6 +307,12 @@ export interface DessinSvg extends Contenu {
    * l'ecriture du SVG ignore : aucun octet de plus, et le dessin reste plat. Absent, le nuancier se lit sur le dessin (engine/nuancier.ts).
    */
   readonly nuancier?: NuancierDessin;
+  /**
+   * Les reperes (ADR-0038) : ABSENTS d'un dessin qui n'en a pas, qui n'ecrit alors aucun octet de plus ; jamais vides. Comme le
+   * nuancier, une donnee du document que l'historique et le projet gardent, que l'ecriture plate ignore (`svgDocument` les pose sur
+   * la racine) : le dessin reste plat.
+   */
+  readonly reperes?: Reperes;
 }
 export interface Boite { x: number; y: number; l: number; h: number }
 export type Matrice = readonly [number, number, number, number, number, number];

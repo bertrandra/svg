@@ -18,7 +18,7 @@ const CHAMPS_FORME: Readonly<Record<keyof Forme, Portage>> = {
   parent: 'etape 1', peintureRemplissage: 'etape 3', peintureContour: 'etape 3', effets: 'etape 7', image: 'etape 12'
 };
 
-const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', groupes: 'etape 1' };
+const CHAMPS_DESSIN: Readonly<Record<keyof DessinSvg, Portage>> = { vb: 'porte', formes: 'porte', nuancier: 'porte', reperes: 'porte', groupes: 'etape 1' };
 
 const lire = (nom: string): DessinSvg => {
   const r = lireDessin(readFileSync(resolve(__dirname, '../../fixtures/svg', nom), 'utf8'));

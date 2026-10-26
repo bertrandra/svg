@@ -24,7 +24,9 @@ export type NomIcone =
   // Les outils de selection (ADR-0035).
   | 'cadre-selection' | 'lasso' | 'inverser-selection'
   // La marque d'une police a telecharger (ADR-0034).
-  | 'nuage-telecharger';
+  | 'nuage-telecharger'
+  // Les regles, les reperes et les repetitions (ADR-0038).
+  | 'regle' | 'repeter' | 'radiale' | 'symetrie';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -151,7 +153,15 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   'inverser-selection': [t('M4 4h16v16H4z'), t('M4 4h8v16H4z', true)],
   // Un nuage ouvert par le bas, et la fleche qui en descend : une police qui n'est pas encore sur cet appareil, et que la
   // choisir fera venir de sa source (ADR-0034). La forme dit l'etat, pas la couleur.
-  'nuage-telecharger': [t('M8 17H6.5a4 4 0 0 1 0-8h.3A5.5 5.5 0 0 1 17.4 8.6 4.25 4.25 0 0 1 17.5 17H16'), t('M12 11v10'), t('M8.5 17.5L12 21l3.5-3.5')]
+  'nuage-telecharger': [t('M8 17H6.5a4 4 0 0 1 0-8h.3A5.5 5.5 0 0 1 17.4 8.6 4.25 4.25 0 0 1 17.5 17H16'), t('M12 11v10'), t('M8.5 17.5L12 21l3.5-3.5')],
+  // Les outils de l'ADR-0038. Une regle graduee, en biais.
+  regle: [t('M3 16.5L16.5 3 21 7.5 7.5 21z'), t('M7 12.5l2 2'), t('M10 9.5l2 2'), t('M13 6.5l2 2')],
+  // Une forme et ses copies en grille, l'original plein.
+  repeter: [t('M3 3h7v7H3z', true), t('M14 3h7v7h-7z'), t('M3 14h7v7H3z'), t('M14 14h7v7h-7z')],
+  // Des copies en couronne autour d'un centre.
+  radiale: [t('M10 2.5h4v4h-4z', true), t('M17.5 10h4v4h-4z'), t('M10 17.5h4v4h-4z'), t('M2.5 10h4v4h-4z'), t('M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0', true)],
+  // Une forme et son reflet de part et d'autre d'un axe en pointilles.
+  symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

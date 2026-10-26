@@ -3,7 +3,7 @@
 // pendant un deplacement, les bords et les centres des autres formes et du plan attirent ceux de la
 // selection, a un seuil pres, et disent la ligne a montrer.
 
-import { boiteDe, boiteForme, echelle, multiplier, rotation, transformer, translation, type Boite, type DessinSvg, type Matrice } from './editionSvg.js';
+import { boiteDe, boiteForme, boitesReperes, echelle, multiplier, rotation, transformer, translation, type Boite, type DessinSvg, type Matrice } from './editionSvg.js';
 
 /** Le centre d'une boite. */
 export const centre = (b: Boite): [number, number] => [b.x + b.l / 2, b.y + b.h / 2];
@@ -65,7 +65,10 @@ export function aimanter(boite: Boite, cibles: readonly Boite[], seuil: number):
   return { dx: mx?.d ?? 0, dy: my?.d ?? 0, lignes };
 }
 
-/** Les boites qui servent d'aimants : le plan, et chaque forme visible hors de la selection. */
+/**
+ * Les boites qui servent d'aimants : le plan, chaque forme visible hors de la selection, et les reperes du document (ADR-0038),
+ * en boites sans epaisseur (`boitesReperes`) : un bord ou le centre de la selection s'y accroche dans leur axe.
+ */
 export function ciblesAimants(dessin: DessinSvg, exclus: readonly string[]): Boite[] {
   const e = new Set(exclus);
   const [x, y, l, h] = dessin.vb;
@@ -75,5 +78,6 @@ export function ciblesAimants(dessin: DessinSvg, exclus: readonly string[]): Boi
     const b = boiteForme(f);
     if (b) r.push(b);
   }
+  r.push(...boitesReperes(dessin));
   return r;
 }

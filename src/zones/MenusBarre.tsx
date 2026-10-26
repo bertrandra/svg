@@ -21,6 +21,7 @@ import { MenuDeroulant, type ElementMenu, type SectionMenu } from './commun/Menu
 import type { NomIcone } from './icones.js';
 import type { Fond } from './typesEditeur.js';
 import { aEnregistrer } from './enregistrement.js';
+import { useElementsRepetition, useElementsReperes } from './menusOutilsPro.js';
 import { BoiteInsererAdresse } from './InsererAdresse.js';
 import { adressesPermises } from './OuvrirAdresse.js';
 import { useElementsNuancier } from './actionsNuancier.js';
@@ -30,7 +31,7 @@ const FONDS: ReadonlyArray<readonly [Fond, NomIcone, string]> = [['damier', 'fon
 
 /** Les elements du menu Vue. `avecZoom` ajoute zoomer et dezoomer (en dernier), que la barre des petits ecrans ne porte plus. */
 function useElementsVue(avecZoom: boolean): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), reperes = useElementsReperes();
   const { vues } = ui;
   // En contexte de decoupe, « Ajuster » cadre le tapis entier (le dessin dedans) : un tapis de 12 po qui sortait de l'ecran ne
   // montrait pas ce que la machine verrait. « Ajuster au dessin » garde l'ancien cadrage, sous sa propre touche.
@@ -42,8 +43,10 @@ function useElementsVue(avecZoom: boolean): ElementMenu[] {
     { id: 'reel', libelle: 'Taille réelle (100 %)', icone: 'taille-reelle', raccourci: '1', onClick: vues.centrer100 },
     { id: 'selection', libelle: 'Zoomer sur la sélection', icone: 'zoom-selection', raccourci: 'Z', desactive: !mo.sel.length, onClick: ac.zoomerSelection },
     { id: 'grille', libelle: 'Grille magnétique (pas ' + ui.pas + ')', raccourci: 'G', coche: ui.grille, separateur: true, onClick: () => ac.poserGrille(!ui.grille) },
-    { id: 'aimants', libelle: 'Aimants vers les autres formes', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
+    { id: 'aimants', libelle: 'Aimants vers les formes et les repères', raccourci: 'M', coche: ui.aimants, onClick: () => ac.poserAimants(!ui.aimants) },
     { id: 'contours', libelle: 'Vue contours', raccourci: 'O', coche: ui.contours, onClick: () => ac.poserContours(c => !c) },
+    // Les regles et les reperes (ADR-0038).
+    ...reperes,
     // L'apercu de la machine (ADR-0028) : en contexte Cricut qui coupe ou ecrit, la toile montre ce que la lame detache et ce que le
     // stylo trace ; ce reglage le retire pour revenir aux couleurs du dessin. La vue contours (O) le remplace tant qu'elle est active.
     ...(ui.profil && operationsApplicables(ui.profil.procede)
@@ -63,7 +66,7 @@ export function MenuVue() {
 }
 
 function useElementsEdition(): ElementMenu[] {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), at = useActionsTexte(), repetition = useElementsRepetition();
   const rien = !mo.sel.length, sansTexte = !mo.dessin.formes.some(f => f.texte && mo.choisies.has(f.id));
   const nuancier = useElementsNuancier();
   // Vectoriser le texte (ADR-0022) : les trois modes ; le raccourci fait celui du moment (souder en decoupe Cricut).
@@ -78,6 +81,8 @@ function useElementsEdition(): ElementMenu[] {
     { id: 'couper', libelle: 'Couper', icone: 'couper', raccourci: 'Ctrl+X', desactive: rien, onClick: ac.couperSelection },
     { id: 'coller', libelle: 'Coller', icone: 'coller', raccourci: 'Ctrl+V', desactive: !mo.presse.length, onClick: ac.collerPresse },
     { id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', desactive: rien, onClick: ac.dupliquerSelection },
+    // Repeter la selection : grille, radiale, symetrie (ADR-0038).
+    ...repetition,
     // Choisir (ADR-0035) : tout, rien, inverser, meme fond, meme contour, meme type, et en Cricut ce qui est a couper ou a ecrire.
     ...elementsSelection(mo, ui, ac),
     // Le nuancier du dessin depuis la selection (ADR-0037) : le remplacer ou le completer.

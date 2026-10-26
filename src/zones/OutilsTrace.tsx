@@ -10,6 +10,8 @@ import type { Jonction } from '../engine/contours.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { arrondi } from './aidesEditeur.js';
 import { nomDeType } from './phrasesTrace.js';
+import { ArrondiDirect } from './ArrondiDirect.js';
+import { LargeurVariable } from './LargeurVariable.js';
 
 const nombre = (t: string): number => Number(t.replace(',', '.'));
 
@@ -47,14 +49,13 @@ function ChampAction({ champ, libelle, titre, valeur, poser, bouton, appliquer, 
 
 /** Contour en forme, decalage, angles arrondis, jonction et sens : ce qui s'applique aux formes choisies. */
 export function OutilsTrace() {
-  const mo = useDessin(), ac = useActions(), { profil } = useInterface();
+  const mo = useDessin(), ac = useActions(), { profil, outil, point } = useInterface();
   const { dessin, sel } = mo;
   // En contexte de production (ADR-0013), les valeurs par defaut sont celles du materiau : decaler de la moitie du detail
   // minimal (ce qu'il faut a une partie trop fine), arrondir au rayon de la lame ; sinon, un quarantieme du plan.
   const [distance, poserDistance] = useState(() => String(arrondi(profil ? profil.detailMin / 2 : Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
   const [jonction, poserJonction] = useState<Jonction>('round');
   const [angle, poserAngle] = useState('45');
-  const [rayon, poserRayon] = useState(() => String(arrondi(profil ? profil.rayonLame : Math.max(dessin.vb[2], dessin.vb[3]) / 40)));
   const choisies = dessin.formes.filter(f => mo.choisies.has(f.id));
   const sansContour = !choisies.some(f => f.contour !== null && f.epaisseur > 0);
   return (
@@ -82,10 +83,10 @@ export function OutilsTrace() {
         champ="hachures" libelle="Hachures à (degrés)" titre="Remplit la forme de lignes parallèles espacées de la largeur du stylo (ou d’un deux-centième du plan), trous respectés : ce qu’un stylo sait faire d’un fond" valeur={angle} poser={poserAngle}
         bouton="Hachurer" desactive={!choisies.some(f => f.remplissage !== null)} appliquer={() => ac.hachurer(nombre(angle))}
       />
-      <ChampAction
-        champ="rayon" libelle="Rayon des angles" titre="Arrondit chaque angle d’un arc de ce rayon ; ramené au plus grand possible si les côtés sont trop courts" valeur={rayon} poser={poserRayon}
-        bouton="Arrondir les angles" desactive={!choisies.length} appliquer={() => ac.arrondirAngles(nombre(rayon))}
-      />
+      {/* Arrondir en direct (ADR-0038) : le curseur arrondit sous les yeux ; en mode points, le seul coin du point actif. */}
+      <ArrondiDirect coin={outil === 'points' && mo.formeSeule && point !== null ? point : null} />
+      {/* La largeur variable (ADR-0038) : le trait devient une surface qui suit un profil. */}
+      <LargeurVariable />
     </div>
   );
 }
