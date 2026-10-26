@@ -14,7 +14,8 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 0 Coutures | **faite** le 25 octobre 2026 (ce qui a été posé : ci-dessous, et §1 « Étape 0 ») |
 | 10 Texte vivant, moteur | **faite** autrement (ADR-0022, 0027, 0031, 0032) ; reste un morceau, porté par l'étape 1 (voir « Caduc ») |
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
-| 1 à 9, 12, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») |
+| 1 à 9, 13, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -63,6 +64,47 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
   (`projet-v2.test.ts` : chaque champ de `Forme` et de `DessinSvg` est « porté » par le projet JSON ou attend son étape) ;
   **architecture** (`tests/unit/export/descente.test.ts` : `src/export` ne lit ni `groupes` ni un champ v2, ses points d'entrée
   prennent un `DessinPlat`).
+
+### Ce que l'étape 12 a posé (26 octobre 2026)
+
+- **`edition/fonctions/images.ts`** et une ligne de `catalogue.ts` : le lecteur `image` (mode `riche` seulement ; la lecture
+  `plat` refuse toujours « une image ») ; `href` l'emporte sur `xlink:href` ; `verifierDonneesImage` décide sur les **octets**
+  (`natureOctets.ts` de l'ADR-0036) : une « image » SVG (annoncée `svg+xml` ou dont les octets sont un SVG) refusée « une image
+  SVG imbriquée », une adresse extérieure (ou une image dont le nettoyage a retiré l'adresse) « une image qui renvoie à un fichier
+  ou une adresse extérieurs », un autre type, des données non base64 ou abîmées, un contenu qui n'est ni PNG, ni JPEG, ni GIF, ni
+  WebP, un en-tête sans dimensions, chacun refusé en le nommant ; un type annoncé qui ment sur un format admis (un JPEG annoncé
+  PNG) est **corrigé** d'après les octets, et dit. Bornes `IMAGE_OCTETS_MAX` (4 Mo), `IMAGES_OCTETS_MAX` (16 Mo, clones compris),
+  `IMAGE_PIXELS_MAX` (64 millions, lus dans l'en-tête). `x y width height` (nombres, pixels, pourcentages ; une largeur ou une
+  hauteur absente ou `auto` prend la taille de l'image ou sa proportion), `preserveAspectRatio` ramené à sa forme courte (le défaut
+  absent), `transform` et ceux des ancêtres composés en `matrice` ; une image cachée, nulle ou écrasée ne se lit pas ; opacité
+  gardée sur la feuille. `d` est le rectangle, `remplissage` et `contour` sont `null`.
+- **Écriture** (`ecriture.elementFeuille`) : `<image xlink:href x y width height [transform="matrix(…)"] [preserveAspectRatio]
+  [opacity]/>`, parties linéaires de la matrice à six décimales ; une matrice qui, **arrondie**, n'est qu'une translation et une
+  échelle positive (uniforme, ou quelconque sous `none`) se plie dans le cadre (déplacer une image change son `x`, son `y`) ; des
+  données, un aspect ou un nombre qui ne sont pas de la forme lue ne s'écrivent pas. Point fixe vérifié ; rendu identique de
+  l'entrée et de la référence dans Chromium, Firefox et WebKit (mesuré à la main, à l'anticrénelage près sur une rotation).
+- **`edition/dimensionsImage.ts`** (pur) : `decoderBase64`, `dimensionsImage` (IHDR, SOF, écran logique du GIF, VP8/VP8L/VP8X).
+- **Transformation** (`transformation.feuille`) : la matrice se compose, `d` redevient exactement le rectangle ; l'identité exacte
+  disparaît. **Poids d'historique** : celui de l'étape 0 (`poidsDessin`). **`dessinableEnPoints(f)`** et `MSG_POINTS_IMAGE`
+  exportés, que l'étape 2 branchera sur l'édition des points.
+- **Descente** (`engine/descente/images.ts`, première ligne de `REGLES_DESCENTE`) : abandonnée et dite (« une image (ce format ne
+  porte que des tracés : elle n'est pas exportée) », au pluriel « N images ») pour tout niveau sauf `natif` ; une image masquée
+  part sans phrase. Le SVG et le PNG ne descendent pas (le navigateur dessine l'image).
+- **Projet JSON** : `model/projetV2/image.ts` (`lireImageProjet`, forme et bornes, sans lever) et `engine/projetV2/image.ts`
+  (`imageProjet`, `imageDuProjet` qui revérifie les octets et redonne `d`, `refusImagesProjet` pour les 16 Mo) ; aller-retour exact
+  et même SVG ; **pas encore branchés** (le cadre des champs v2 et la règle `version: 2` sont de l'étape 1) : `image` est « prêt »
+  dans `projet-v2.test.ts`. L'image vit **dans** le projet, en `data:` (le plan ne range rien à part côté serveur).
+- **Tests** : `images.test.ts`, cas `v2/cas-images.ts` (10 références `v2/images-*`), extension d'écriture « étape 12 : images »,
+  hostiles `v2-images-*` (bombe de pixels PNG, GIF, WebP ; octets mensongers ; adresses actives ; base64 abîmé ; segments JPEG
+  piégés), le `data:` géant et les 16 Mo engendrés dans le test (rien de lourd n'est commis).
+- **Reste** : la toile (étape 2, rendu générique par `elementFeuille`) ; brancher `dessinableEnPoints` sur les points, les outils de
+  tracé et les booléens (étape 2 ; d'ici là le mode riche n'est atteignable que par l'API) ; une image sous un `<g>` prendra son
+  `parent` quand l'étape 1 posera le groupe courant de la marche (le lecteur pousse sa feuille par `parcours.formes`, sans
+  `poserForme`) ; l'image native du PDF (13a) ; l'affichage des pertes à l'export (1-C) ; la **vignette** du site PHP refuse
+  toujours `<image>` (`vignette_sure`) : un projet à image n'a pas de vignette, rien ne casse ; l'admettre demanderait de relire
+  l'en-tête côté serveur (la bombe de pixels), laissé pour plus tard. **Aucune étape ne prévoit encore l'interface d'insertion**
+  (« Insérer une image… » au menu Fichier, dépôt d'une image dans l'éditeur, l'« Insérer depuis une adresse » de l'ADR-0036 qui
+  accepterait une image) : à ajouter au plan, après l'étape 2.
 
 ### Caduc
 
@@ -228,7 +270,7 @@ motif depuis la sélection » (contexte `motif`), corpus `motif-hachures`. Aprè
 
 Panneau d'un texte vivant, « Fonte absente », « Convertir en contours », phrases, axe, e2e. Après 10 et 2.
 
-### Étape 12 — Images · taille M
+### Étape 12 — Images · taille M · **faite pour le moteur le 26 octobre 2026** (§0, « Ce que l'étape 12 a posé »)
 
 `ImageIntegree`, `dimensionsImage`, lecture/écriture (`xmlns:xlink`), toile, bornes, poids d'historique, descente,
 ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *Révision : le poids d'historique (`poidsDessin`) et

@@ -132,3 +132,8 @@ export { transformerFeuille, transformerGroupe } from './edition/transformation.
 // ---- etape 9 : motifs
 
 // ---- etape 12 : images
+export {
+  IMAGE_OCTETS_MAX, IMAGES_OCTETS_MAX, IMAGE_PIXELS_MAX, MSG_POINTS_IMAGE, DONNEES_IMAGE, ASPECT_IMAGE, verifierDonneesImage, rectangleImage,
+  lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
+} from './edition/fonctions/images.js';
+export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';
