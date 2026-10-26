@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  combiner, fusionnerCouleursProches, idsDeNuancesProches, montrerSeulement, remplacerCouleurSur, restaurerVisibilites, supprimer,
+  combiner, couleursDeForme, fusionnerCouleursProches, idsDeNuancesProches, montrerSeulement, remplacerCouleurSur, restaurerVisibilites, supprimer,
   visibilitesConformes, visibilitesDe, type DessinSvg, type GroupeCouleur, type SurCouleur, type Visibilites
 } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
@@ -127,8 +127,9 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
   // encore, sinon la premiere ligne entierement choisie, sinon la couleur de la premiere forme choisie.
   const entiere = (g: GroupeCouleur) => g.libres.length > 0 && g.libres.every(id => mo.choisies.has(id));
   const premiere = sel[0] ? dessin.formes.find(f => f.id === sel[0]) : undefined;
-  const depuisForme = premiere ? (sur === 'contour' ? premiere.contour : sur === 'remplissage' ? premiere.remplissage : premiere.remplissage ?? premiere.contour) : null;
-  const reference = (rangee ? groupes.find(g => g.couleur === rangee && entiere(g)) : undefined)?.couleur ?? groupes.find(entiere)?.couleur ?? (depuisForme && groupes.some(g => g.couleur === depuisForme) ? depuisForme : null);
+  // Sa premiere couleur lue qui a sa ligne : le fond d'abord ; sous un degrade ou un motif, un arret ou une couleur de la tuile (etape 13d).
+  const depuisForme = premiere ? couleursDeForme(premiere, sur).find(c => groupes.some(g => g.couleur === c)) ?? null : null;
+  const reference = (rangee ? groupes.find(g => g.couleur === rangee && entiere(g)) : undefined)?.couleur ?? groupes.find(entiere)?.couleur ?? depuisForme;
 
   return { actions, suivi, reference, isole: isolement !== null && isolementTient, quitterIsolement, nuancesProchesDe, fusionner };
 }

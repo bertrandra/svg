@@ -55,6 +55,11 @@ export {
   lireCouleurs, partagerGroupes, memesCouleurs, lireCouleursDuDessin, partagerCouleursDuDessin,
   type CouleurDuDessin, type SurCouleur, type GroupeCouleur, type LectureCouleurs, type LectureCouleursDuDessin
 } from './edition/couleurs.js';
+// Etape 13d : les couleurs des degrades et des motifs dans les outils de couleur.
+export {
+  remplacerCouleurs, couleursDePeinture, couleursDuCote, couleursDeForme, recolorerForme, type TableCouleurs, type CoteCouleur
+} from './edition/couleurs.js';
+export { couleursDArrets } from './edition/degradesOperations.js';
 
 export {
   couleursProches, fusionnerCouleursProches, idsDeNuancesProches,
