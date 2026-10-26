@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  basculerSegment, diviserSegment, genrePointilles, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
+  basculerSegment, diviserSegment, genrePointilles, groupeDe, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
   type Forme, type GenrePointilles, type Reglage, type ReglageTrait
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
@@ -18,6 +18,8 @@ import { Nombre } from './commun/Nombre.js';
 import { SectionTexte } from './InspecteurTexte.js';
 import { SectionNuancier } from './SectionNuancier.js';
 import { PeintureDegradable, useDegradesPermis } from './EditeurDegrade.js';
+import { SectionEffets } from './SectionEffets.js';
+import { nomDeGroupe } from './phrasesGroupes.js';
 
 // Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
 export { Nombre };
@@ -27,7 +29,8 @@ export function Inspecteur() {
   const mo = useDessin(), ac = useActions(), ui = useInterface(), degradesPermis = useDegradesPermis();
   const { dessin, sel, boite } = mo;
   const premiere = dessin.formes.find(f => f.id === sel[0]);
-  if (!premiere) return null;
+  // Un groupe choisi en premier (modele riche) : ses effets (ADR-0012, etape 8) ; ses feuilles se reglent en y entrant.
+  if (!premiere) return <InspecteurGroupe />;
   const choisies = dessin.formes.filter(f => mo.choisies.has(f.id));
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ac.appliquer(d => modifier(d, sel, r), cle === null ? ac.nouvelleCle() : cle + ':' + sel.join(','));
@@ -60,6 +63,8 @@ export function Inspecteur() {
           </select>
         </label>
       </Section>
+      {/* Flou et ombre portee (ADR-0012, etape 8), en modele riche seulement : a plat, rien. */}
+      <SectionEffets />
       <SectionNuancier />
       {boite ? (
         <Section titre="Position et taille" ouverte>
@@ -77,6 +82,20 @@ export function Inspecteur() {
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
       <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour modifier son contour point par point. ' : '') + 'Aligner, empiler, assembler des formes (les unir, découper l’une dans l’autre), miroirs : la rangée au-dessus de la toile.', doigt)}</p>
+    </>
+  );
+}
+
+/** L'inspecteur d'une selection qui commence par un groupe : son nom, puis ses effets ; rien pour ce qui n'est pas un groupe. */
+function InspecteurGroupe() {
+  const mo = useDessin();
+  const [id] = mo.sel, g = id !== undefined ? groupeDe(mo.dessin, id) : undefined;
+  if (!g) return null;
+  return (
+    <>
+      <h3>{mo.sel.length > 1 ? mo.sel.length + ' éléments' : g.nom ? 'Groupe « ' + g.nom + ' »' : nomDeGroupe(g)}</h3>
+      <SectionEffets />
+      <p className="aide">Entrée, ou un double-clic, entre dans le groupe pour régler ses formes.</p>
     </>
   );
 }

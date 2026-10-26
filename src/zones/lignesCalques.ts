@@ -6,6 +6,7 @@
 
 import { ancetres, arbreDe, unites, type DessinSvg, type Groupe, type NoeudArbre } from '../engine/editionSvg.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
+import type { NomIcone } from './icones.js';
 
 export interface LigneArbre {
   readonly id: string;
@@ -117,4 +118,22 @@ export function destinations(d: DessinSvg, ids: readonly string[]): Destination[
 export function etendue(lignes: readonly LigneArbre[], a: number, b: number): string[] {
   const [debut, fin] = a <= b ? [a, b] : [b, a];
   return lignes.slice(Math.max(0, debut), fin + 1).map(l => l.id);
+}
+
+/** Une pastille d'une ligne de groupe : une icone et un mot (jamais la couleur seule, annexe 6 §1). */
+export interface PastilleGroupe { readonly icone: NomIcone; readonly mot: string }
+
+/**
+ * Ce qu'un groupe porte, en pastilles (ADR-0012, etape 8) : « découpe », « masque », « flou », « ombre », « opacité 50 % », dans cet
+ * ordre ; des noms, pour qu'aucune pastille ne se lise comme l'etat masque (cache) de la ligne. La phrase entiere, elle, est dans le
+ * nom accessible de la ligne (`porteParGroupe` : « découpé, masque d'opacité, ombre portée »). Vide pour un groupe nu.
+ */
+export function pastillesGroupe(g: Groupe): PastilleGroupe[] {
+  const p: PastilleGroupe[] = [];
+  if (g.decoupe) p.push({ icone: 'decoupe', mot: 'découpe' });
+  if (g.masque) p.push({ icone: 'masque', mot: 'masque' });
+  if (g.effets?.flou) p.push({ icone: 'flou', mot: 'flou' });
+  if (g.effets?.ombre) p.push({ icone: 'ombre', mot: 'ombre' });
+  if (g.opacite !== undefined && g.opacite < 1) p.push({ icone: 'opacite', mot: 'opacité ' + Math.round(g.opacite * 100) + ' %' });
+  return p;
 }

@@ -18,17 +18,23 @@ import { Regles } from './Regles.js';
 import { CoucheReperes, PanneauReperes } from './Reperes.js';
 import { PanneauRepetition } from './PanneauRepetition.js';
 import { FormesToile } from './ToileNoeuds.js';
+import { useDepotImage } from './InsererImage.js';
+import { useVeilleFlous } from './SectionEffets.js';
 
 export const ToileEditeur = memo(function ToileEditeur({ titre, toile, svgRef, idToile }: { titre: string; toile: RefObject<HTMLDivElement | null>; svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   const mo = useDessin(), ui = useInterface(), sx = useSaisie();
   const gestes = useGestes(svgRef);
+  // Deposer une image sur la toile l'insere, en modele riche seulement (ADR-0012, etape 8) ; a plat, aucun gestionnaire.
+  const depot = useDepotImage();
+  // Un flou inegal qu'une rotation rend uniforme se dit (ADR-0012, etapes 7 et 8).
+  useVeilleFlous();
   const aide = useId();
   const tactile = useTactile();
   const { dessin } = mo, { vues, fond, grille, pas, contours } = ui;
   const z = vues.vue.zoom;
   const [vx, vy, vl, vh] = dessin.vb;
   return (
-    <div className={'editeur-toile fond-' + fond} ref={toile}>
+    <div className={'editeur-toile fond-' + fond} ref={toile} {...depot}>
       {/* Ce que la toile dit en prenant le focus, dont la sortie (WCAG 2.1.2) : Tab quitte la toile apres la derniere forme, ou Echap puis Tab. */}
       <span id={aide} className="sr-only">Flèches : déplacer. Tab : forme suivante. Alt et flèches : redimensionner. Ctrl et flèches : tourner. Maj et Page suivante : ajouter la forme suivante à la sélection. Espace : ajouter ou retirer la forme au curseur. Entrée : modifier le texte choisi, ou les points d’une forme. Sur une forme à dégradé, Tab atteint ses poignées. Échap puis Tab : quitter la toile.</span>
       <svg ref={svgRef} id={idToile} className="editeur-svg-toile" tabIndex={0} role="application" aria-describedby={aide} aria-label={'Plan de travail de ' + titre + ' : ' + dessin.formes.length + ' forme' + (dessin.formes.length > 1 ? 's' : '')} onPointerDown={gestes.appuyer} onPointerMove={gestes.bouger} onPointerUp={gestes.lacher} onPointerCancel={gestes.lacher} onDoubleClick={gestes.doubleClic} onMouseDown={gestes.sourisBas}>

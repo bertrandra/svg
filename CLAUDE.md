@@ -173,6 +173,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Découpes, masques et effets se commandent en riche seulement** (ADR-0012, étape 8) : menu Édition sans raccourci ni bouton,
+  commandes grisées avec leur raison (`zones/commandesContenus.ts`) ; libérer rend le contenu choisi dans le groupe devenu le
+  contexte ; section Effets sur `poserEffets` (pur, bornes de la lecture, feuilles et groupes) ; pastilles des groupes en icônes puis
+  mots ; « Insérer une image… » et le dépôt passent par `insererImage` (octets vérifiés comme à la lecture) ; le contenu d'un masque
+  s'écrit en contours ; les contextes `decoupe`/`masque` restent à faire (8-D).
 - **Les couleurs d'un dégradé ou d'un motif sont des couleurs du dessin** (ADR-0012, étape 13d) : listes, sélection, remplacements,
   nuances proches et palettes lisent les arrêts et les feuilles visibles de la tuile, jamais le repli, par `couleursDuCote`
   (`edition/couleurs.ts`) ; un remplacement passe par `remplacerCouleurs` (une table, une passe), garde partagée une peinture

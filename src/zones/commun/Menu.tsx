@@ -25,6 +25,8 @@ export interface ElementMenu {
   pastille?: string;
   /** Un filet avant cet element. */
   separateur?: boolean;
+  /** Pourquoi l'element est grise (son infobulle, annexe 6 §3) ; sans effet tant qu'il ne l'est pas. */
+  raison?: string;
 }
 
 /**
@@ -249,7 +251,7 @@ function ListeElements({ titre, elements, fermer }: { titre: string; elements: r
       <div key={el.id} className="menu-ligne">
         {el.separateur ? <hr className="menu-filet" /> : null}
         <button type="button" role={el.radio ? 'menuitemradio' : el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
-          onClick={() => { fermer(true); el.onClick?.(); }}>
+          title={el.desactive ? el.raison : undefined} onClick={() => { fermer(true); el.onClick?.(); }}>
           <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
           <span className="menu-libelle">{el.libelle}</span>
           {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}

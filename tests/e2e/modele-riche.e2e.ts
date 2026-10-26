@@ -141,7 +141,11 @@ describe('le modele riche sur la toile', () => {
     await p.mouse.click(centre.x, centre.y);
     // Sous charge, le clic peut n'etre pas encore pris quand la fleche part : on attend la selection dite.
     await attend(() => annonce(p)).toMatch(/sélectionné/);
+    // Le brouillon ne s'ecrit qu'a une modification : la fleche doit tomber sur la toile, et on attend le brouillon avant de terminer
+    // (sans modification, « Terminer » ferme sans rien garder, et la reprise n'aurait rien a montrer).
+    await p.locator('.editeur-svg-toile').focus();
     await p.keyboard.press('ArrowRight');
+    await attend(() => p.evaluate(() => localStorage.getItem('svg.brouillon') !== null)).toBe(true);
     await terminer(p);
     // Le reglage repasse a plat ; le brouillon reste.
     await p.evaluate(() => { localStorage.setItem('svg.modele', JSON.stringify({ modele: 'plat' })); });

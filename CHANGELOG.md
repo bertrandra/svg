@@ -206,6 +206,14 @@ empreintes.
 
 ### Ajouté
 
+- Découpes, masques et effets dans l'éditeur (modèle riche, bêta) : au menu Édition, « Créer une découpe », « Libérer la découpe »,
+  « Créer un masque », « Inverser le masque », « Libérer le masque », grisés avec leur raison, sans raccourci ; une section Effets
+  dans l'inspecteur (flou, ombre portée : décalage, flou, couleur, opacité), aussi pour un groupe ; les groupes des calques montrent
+  ce qu'ils portent (découpe, masque, flou, ombre, opacité), et la phrase de la ligne le dit ; « Insérer une image… » (menu
+  Fichier) et le dépôt d'une image sur la toile posent un PNG, JPEG, GIF ou WebP vérifié sur ses octets, au centre de la vue ; une
+  rotation qui approche un flou inégal le dit. Le contenu d'un masque s'écrit en contours (son texte reste vivant dans
+  l'éditeur). À plat, rien ne change.
+
 - Modèle v2, étape 13d : les outils de couleur voient les dégradés et les motifs. « Couleurs du dessin » et « Par couleur » ont une
   ligne pour chaque couleur d'arrêt et de tuile, jamais pour la couleur moyenne de repli. Remplacer une couleur (partout, sur le
   fond ou sur le trait), fusionner les nuances proches, appliquer une palette ou tout mettre d'une couleur changent les arrêts et

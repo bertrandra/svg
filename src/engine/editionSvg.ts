@@ -177,6 +177,13 @@ export {
   effets, MSG_EFFETS, REFUS_EFFETS, PRIMITIVES_MAX, msgEcartBorne, msgDecalageBorne, refusPrimitive, refusEntree, boiteEcrite
 } from './edition/fonctions/effets.js';
 
+// ---- etape 8 : decoupes, masques, effets et images (interface) : poser des effets, inserer une image
+export {
+  poserEffets, effetsDe, flouParDefaut, ombreParDefaut, flousApproches, ECART_FLOU_MIN, MSG_EFFETS_OPERATIONS, type ReglageEffets
+} from './edition/effetsOperations.js';
+export { insererImage, cadreImage, octetsImages } from './edition/imagesOperations.js';
+export { MSG_IMAGE_LOURDE, MSG_IMAGE_ILLISIBLE } from './edition/fonctions/images.js';
+
 // ---- etape 9 : motifs
 export { motifs, REFUS_MOTIFS, MSG_MOTIFS, TUILE_MIN, estMotif, couleurDeRepliMotif, transformerMotif } from './edition/fonctions/motifs.js';
 export { creerMotif, MSG_MOTIF } from './edition/motifs.js';
