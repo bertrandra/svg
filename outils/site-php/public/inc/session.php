@@ -1,7 +1,9 @@
 <?php
 // La session du site (ADR-0030) : un seul mot de passe, pas de comptes. Le cookie est `HttpOnly`, `SameSite=Strict`, `Secure` en
 // HTTPS ; l'identifiant change a la connexion (`session_regenerate_id`) ; la session expire apres SESSION_INACTIVITE sans requete.
-// Le jeton CSRF de la session accompagne toute requete qui ecrit, et se compare en temps constant.
+// Le jeton CSRF de la session accompagne toute requete qui ecrit, et se compare en temps constant. Une session connectee porte la
+// marque de l'empreinte du mot de passe de sa connexion : changer le mot de passe (data/password ou inc/mot-de-passe.php) ferme
+// toutes les sessions ouvertes, ou qu'elles soient rangees, sans avoir a les parcourir.
 
 declare(strict_types=1);
 
@@ -12,6 +14,14 @@ function chemin_cookie(): string
 {
     $d = str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/')));
     return rtrim($d, '/') . '/';
+}
+
+/** La marque de l'empreinte du mot de passe (data/pwd) : un condense, jamais l'empreinte ; vide sans mot de passe. */
+function marque_mot_de_passe(): string
+{
+    $h = @file_get_contents(donnees('pwd'));
+    $h = is_string($h) ? trim($h) : '';
+    return $h === '' ? '' : substr(hash('sha256', 'session:' . $h), 0, 32);
 }
 
 function demarrer_session(): void
@@ -37,6 +47,9 @@ function demarrer_session(): void
     $maintenant = time();
     if (!empty($_SESSION['connecte']) && $maintenant - (int) ($_SESSION['vu'] ?? 0) > SESSION_INACTIVITE) {
         $_SESSION = ['expiree' => true];
+        session_regenerate_id(true);
+    } elseif (!empty($_SESSION['connecte']) && !hash_equals(marque_mot_de_passe(), (string) ($_SESSION['marque'] ?? '-'))) {
+        $_SESSION = ['change' => true];
         session_regenerate_id(true);
     }
     if (!empty($_SESSION['connecte'])) {
@@ -68,7 +81,7 @@ function csrf_valide(mixed $jeton): bool
 function ouvrir_session_connectee(): void
 {
     session_regenerate_id(true);
-    $_SESSION = ['connecte' => true, 'vu' => time(), 'csrf' => bin2hex(random_bytes(32))];
+    $_SESSION = ['connecte' => true, 'vu' => time(), 'csrf' => bin2hex(random_bytes(32)), 'marque' => marque_mot_de_passe()];
 }
 
 /** La deconnexion : la session videe, detruite, son cookie efface. */

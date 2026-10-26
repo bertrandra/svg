@@ -4,7 +4,7 @@
 // les reglages du site sont des constantes.
 //
 //   1. la syntaxe de chaque fichier PHP livre ;
-//   2. l'outil du mot de passe (ligne de commande) ;
+//   2. l'outil du mot de passe (ligne de commande) et le dossier des donnees par defaut (public/data, sinon ../data) ;
 //   3. les fonctions du site sur un dossier de donnees temporaire (tests/php/unitaires.php) ;
 //   4. le site par HTTP, sous `php -S` (tests/php/http.php) ;
 //   5. ouvrir depuis une adresse et ses protections anti-SSRF, fonctions puis HTTP (tests/php/adresse.php).
@@ -50,24 +50,51 @@ foreach ($fichiers as $f) {
 }
 echo "  $n fichiers lus.\n";
 
-echo "L'outil du mot de passe\n";
-$t = sys_get_temp_dir() . '/site-outil-' . bin2hex(random_bytes(4));
-mkdir($t . '/public/inc', 0700, true);
-mkdir($t . '/outils', 0700, true);
-foreach (['public/config.php', 'public/inc/amorce.php', 'public/inc/connexion.php', 'outils/mot-de-passe.php'] as $f) {
-    copy($depot . '/outils/site-php/' . $f, $t . '/' . $f);
+echo "L'outil du mot de passe, et le dossier des donnees par defaut dans les deux dispositions\n";
+/** Une copie de ce que l'outil et les reglages lisent, dans `$public` ; `data/` dedans si `$dedans`. */
+function copie_outil(string $depot, string $public, bool $dedans): void
+{
+    mkdir($public . '/inc', 0700, true);
+    foreach (['config.php', 'inc/amorce.php', 'inc/connexion.php', 'inc/mot-de-passe.php'] as $f) {
+        copy($depot . '/outils/site-php/public/' . $f, $public . '/' . $f);
+    }
+    if ($dedans) {
+        mkdir($public . '/data', 0700);
+    }
 }
-[$code, $sortie] = executer([PHP_BINARY, $t . '/outils/mot-de-passe.php', '--stdin'], "court\n");
+/** Le DATA_DIR que config.php choisit, tel qu'un script du site le voit. */
+function data_dir(string $public): string
+{
+    $script = $public . '/lire-data-dir.php';
+    file_put_contents($script, "<?php define('SVG_SITE', true); require __DIR__ . '/config.php'; echo realpath(DATA_DIR) ?: DATA_DIR;");
+    [, $sortie] = executer([PHP_BINARY, $script]);
+    unlink($script);
+    return $sortie;
+}
+$t = sys_get_temp_dir() . '/site-outil-' . bin2hex(random_bytes(4));
+copie_outil($depot, $t . '/public', false);
+$outil = $t . '/public/inc/mot-de-passe.php';
+[$code, $sortie] = executer([PHP_BINARY, $outil, '--stdin'], "court\n");
 $attendus = [[$code === 1 && str_contains($sortie, 'au moins 10 caractères') && !is_file($t . '/data/pwd'), 'un mot de passe trop court est refuse, rien n est ecrit']];
-[$code, $sortie] = executer([PHP_BINARY, $t . '/outils/mot-de-passe.php', '--stdin'], "un mot de passe correct\n");
+[$code, $sortie] = executer([PHP_BINARY, $outil, '--stdin'], "un mot de passe correct\n");
 $empreinte = is_file($t . '/data/pwd') ? trim((string) file_get_contents($t . '/data/pwd')) : '';
 $attendus[] = [$code === 0 && password_verify('un mot de passe correct', $empreinte) && !str_contains($empreinte, 'correct'), 'le mot de passe est pose en empreinte dans data/pwd, jamais en clair'];
-$attendus[] = [(fileperms($t . '/data/pwd') & 0o077) === 0o040 || (fileperms($t . '/data/pwd') & 0o077) === 0, 'data/pwd n est lisible que par son proprietaire et son groupe'];
+$attendus[] = [is_file($t . '/data/pwd') && ((fileperms($t . '/data/pwd') & 0o077) === 0o040 || (fileperms($t . '/data/pwd') & 0o077) === 0), 'data/pwd n est lisible que par son proprietaire et son groupe'];
+$attendus[] = [data_dir($t . '/public') === realpath($t . '/data'), 'sans public/data, DATA_DIR est ../data (data/ hors de la racine web)'];
+// La disposition livree : data/ dans public/, un seul dossier envoye par FTP.
+$u = sys_get_temp_dir() . '/site-outil-' . bin2hex(random_bytes(4));
+copie_outil($depot, $u . '/public', true);
+$attendus[] = [data_dir($u . '/public') === realpath($u . '/public/data'), 'avec public/data, DATA_DIR est public/data (la disposition livree)'];
+[$code] = executer([PHP_BINARY, $u . '/public/inc/mot-de-passe.php', '--stdin'], "un autre mot de passe\n");
+$attendus[] = [$code === 0 && is_file($u . '/public/data/pwd') && !file_exists($u . '/data'), 'l outil ecrit data/pwd dans public/data, rien a cote'];
+file_put_contents($u . '/public/config.local.php', "<?php define('DATA_DIR', " . var_export($t . '/data', true) . ');');
+$attendus[] = [data_dir($u . '/public') === realpath($t . '/data'), 'config.local.php fixe toujours DATA_DIR'];
 foreach ($attendus as [$ok, $nom]) {
     echo ($ok ? '  ok    ' : '  ECHEC ') . $nom . "\n";
     $echecs += $ok ? 0 : 1;
 }
 effacer($t);
+effacer($u);
 
 foreach (['unitaires.php', 'http.php', 'adresse.php'] as $groupe) {
     [$code, $sortie] = executer([PHP_BINARY, __DIR__ . '/' . $groupe]);

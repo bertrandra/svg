@@ -105,12 +105,17 @@ function port_libre(): int
     return (int) substr((string) $nom, strrpos((string) $nom, ':') + 1);
 }
 
-/** Un serveur `php -S` sur `$racine`, arrete a la fin du processus. Rend son adresse. */
-function serveur_php(string $racine): string
+/**
+ * Un serveur `php -S` sur `$racine`, arrete a la fin du processus. Rend son adresse. `$routeur` : inc/serveur-local.php, qui imite
+ * les .htaccess ; plusieurs travailleurs quand le site doit se demander a lui-meme si data/ se lit par HTTP.
+ */
+function serveur_php(string $racine, ?string $routeur = null, int $travailleurs = 1): string
 {
     $port = port_libre();
     $journal = sys_get_temp_dir() . '/serveur-php-' . $port . '.log';
-    $p = proc_open([PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', $racine], [0 => ['pipe', 'r'], 1 => ['file', $journal, 'a'], 2 => ['file', $journal, 'a']], $tubes);
+    $commande = array_merge([PHP_BINARY, '-S', '127.0.0.1:' . $port, '-t', $racine], $routeur === null ? [] : [$routeur]);
+    $env = $travailleurs > 1 ? array_merge(getenv(), ['PHP_CLI_SERVER_WORKERS' => (string) $travailleurs]) : null;
+    $p = proc_open($commande, [0 => ['pipe', 'r'], 1 => ['file', $journal, 'a'], 2 => ['file', $journal, 'a']], $tubes, null, $env);
     if (!is_resource($p)) {
         throw new RuntimeException('php -S ne demarre pas');
     }

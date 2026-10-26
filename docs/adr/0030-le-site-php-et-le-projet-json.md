@@ -4,7 +4,9 @@
 **Statut :** acceptée (prolonge les ADR-0001, 0010, 0013, 0014, 0017, 0022, 0025, 0026, 0028 et 0031 ; amende la règle « un seul
 `fetch` dans `src/` » de l’ADR-0025 et précise « Rien ne s’écrit sans le geste de fin » de l’ADR-0001) ; **aucun octet écrit ne
 change** : la page autonome, le bundle d’embarquement et toutes les références d’écriture sont intacts ; **révisée le 26 octobre
-2026** : un seul format de projet, la version 1, qui porte tout le modèle (voir « Révision du 26 octobre 2026 »)
+2026** : un seul format de projet, la version 1, qui porte tout le modèle (voir « Révision du 26 octobre 2026 — un seul format de
+projet ») ; puis un seul dossier à envoyer par FTP, `data/` dedans, et le mot de passe posé dans la page ou par un fichier (voir
+« Révision du 26 octobre 2026 — un dossier par FTP »)
 
 ## Contexte
 
@@ -20,6 +22,10 @@ ne connaît aucun magasin (ADR-0010) ; le cœur pur ne touche pas au réseau ; u
 ## Décision
 
 ### 1. L’arborescence livrée : `data/` à côté de la racine web
+
+> Révisé le 26 octobre 2026 : le build livre désormais `data/` **dans** `public/`, et `outils/mot-de-passe.php` devient
+> `inc/mot-de-passe.php` ; voir « Révision du 26 octobre 2026 — un dossier par FTP ». Ce qui suit reste la disposition recommandée
+> quand on a la main sur le serveur.
 
 `npm run construire` écrit `dist/php/` (`scripts/site-php.mjs`, après la page et ses annexes ; rien n’est commis) :
 
@@ -211,11 +217,70 @@ règle « un document plus récent que le programme est refusé » reste entièr
 - Un champ v2 entre toujours au projet par une ligne de `model/projetV2/champs.ts` et de `engine/projetV2/champs.ts` (ADR-0012,
   annexe 8 §0), sans toucher à la version.
 
+## Révision du 26 octobre 2026 — un dossier par FTP, le mot de passe dans la page ou par un fichier
+
+**Contexte.** Le propriétaire installe le site sur un hébergement **sans ligne de commande** (FTP seulement). Il ne peut ni lancer
+`php outils/mot-de-passe.php`, ni toujours placer un dossier hors de la racine web, ni écrire un `config.local.php` sans risque
+d’erreur. Il demande un seul dossier à envoyer, `data/` dedans (« le fichier mot de passe est dans data/pwd sous public », sa
+demande d’origine), sans réglage ; le mot de passe posé par un fichier `data/password` qu’il crée par FTP ; et, s’il n’y a encore
+aucun mot de passe, que la page le demande.
+
+**Décision.**
+
+- **La disposition livrée** : `dist/php/public/` contient tout, `data/` compris (`.htaccess`, `json/`, `font/`, `projets/`) ; plus
+  rien hors de `public/`. L’outil en ligne de commande devient `inc/mot-de-passe.php` (refusé au Web par `inc/.htaccess`, et inerte
+  hors de la ligne de commande). `config.php` prend `DATA_DIR = __DIR__ . '/data'` si ce dossier existe, sinon `__DIR__ . '/../data'`
+  (l’ancienne disposition, toujours recommandée quand on a la main sur le serveur) ; `config.local.php` peut toujours le fixer.
+- **`data/` sous la racine ne tient que par son `.htaccess`** (« Require all denied », tous les fichiers, avec ou sans extension) :
+  le site le **réécrit s’il manque** (un client FTP qui cache les fichiers à point ne l’envoie pas toujours) ; `index.php`
+  **vérifie** par une requête vers lui-même que `data/pwd` (une fois par heure) et `data/password` (tant qu’il existe) ne se lisent
+  pas, et sinon avertit en tête de l’application et dans le journal. Pour `php -S`, qui ignore les `.htaccess`, un routeur livré
+  (`inc/serveur-local.php`, inerte ailleurs) refuse `data/`, `inc/`, les réglages et les fichiers cachés ; les tests et
+  `docs/deploiement-php.md` l’utilisent.
+- **Le premier mot de passe se choisit dans la page** : tant que `data/pwd` n’existe pas (ni `data/password`, converti avant),
+  `index.php` montre « Choisissez le mot de passe du site » (deux saisies identiques, dix caractères au moins, jeton CSRF de la
+  session) ; à l’envoi, `data/pwd` est revu **sous verrou** (`flock` sur `data/.verrou-mot-de-passe`) avant d’écrire l’empreinte
+  (la même `poser_mot_de_passe`, écriture atomique, droits 640), puis la session s’ouvre et l’application paraît. Dès que `data/pwd`
+  existe — même illisible —, la route n’existe plus : un envoi direct est refusé (403, « Un mot de passe a déjà été posé »), et un
+  `data/pwd` sans empreinte reconnue ne rouvre pas le choix (la page dit de déposer `data/password`).
+- **`data/password`** : à chaque requête de `index.php` et d’`api.php`, avant toute connexion, s’il existe, son contenu (sans BOM,
+  sans blancs ni fins de ligne aux extrémités) est jugé comme par l’outil (dix caractères au moins, UTF-8) ; refusé, rien n’est
+  écrit et la page le dit ; accepté, son empreinte **remplace** `data/pwd` (c’est la façon de changer le mot de passe sans ligne de
+  commande), puis le fichier est supprimé. S’il ne se supprime pas, l’empreinte est quand même posée, la page avertit « Supprimez le
+  fichier data/password par FTP : le mot de passe y est lisible en clair », le journal le dit, et la signature du fichier (inode,
+  taille, dates ; jamais son contenu) évite de refaire l’empreinte à chaque requête. Le mot de passe n’est jamais journalisé ni
+  affiché.
+- **Changer le mot de passe ferme les sessions ouvertes** (décision prise ici, plutôt que de les laisser vivre jusqu’à leur
+  expiration) : une session connectée porte la marque (un condensé) de l’empreinte de sa connexion ; une empreinte différente la
+  ferme à la requête suivante, page ou API (« Le mot de passe du site a changé : reconnectez-vous »). C’est simple (aucun parcours
+  de `data/sessions/`, quel que soit le rangement des sessions), vaut aussi pour l’outil en ligne de commande, et répond à la raison
+  ordinaire d’un changement : un mot de passe qui a fui. Conséquence : les sessions ouvertes avant cette version se ferment une fois
+  à la mise à jour ; une empreinte refaite au passage (bcrypt vers argon2id) ferme aussi les autres sessions, une fois.
+
+**Risques acceptés.**
+
+- **`data/` sous la racine web ne tient que par `.htaccess`.** Un hébergement qui l’ignore (nginx, `AllowOverride None`) servirait
+  l’empreinte, les projets et les sessions : d’où la réécriture du `.htaccess`, la vérification par HTTP et l’avertissement, et la
+  ligne nginx de la documentation. Sans cURL, la vérification ne se fait pas (c’est dit).
+- **Le premier visiteur d’un site fraîchement installé et déjà en ligne pourrait choisir le mot de passe.** C’est pourquoi la
+  documentation dit d’ouvrir le site soi-même juste après l’envoi par FTP, ou de déposer `data/password` avant de l’ouvrir ; et un
+  `data/password` déposé ensuite reprend la main (il remplace le mot de passe et ferme les sessions).
+- **Un mot de passe en clair passe par le disque** le temps d’une requête (ou plus si le fichier ne se supprime pas, avec
+  l’avertissement) ; `data/.htaccess` le couvre comme `data/pwd`.
+
+**Conséquences.** Aucun octet écrit par l’éditeur ne change (le site et ses tests seulement). Tests PHP : conversion, refus sans
+écriture, remplacement, suppression impossible (une fonction de suppression injectée : les tests tournent souvent en root, que les
+droits n’arrêtent pas), blancs et BOM, premier mot de passe (CSRF, saisies, verrou, route fermée), `DATA_DIR` dans les deux
+dispositions, `data/` refusé sous le routeur et l’avertissement sans lui, sessions fermées au changement. Navigateur : première
+visite par `data/password` puis par la page, `data/` illisible par HTTP. Un essai sur un hébergement réel (Apache mutualisé) reste à
+faire.
+
 ## Alternatives écartées
 
 - **Le SVG comme projet** : il porte les contours et assez de `data-ed-*` pour rouvrir un texte, mais ni le nuancier, ni une fonte
   déposée, ni l’image source, ni la pleine précision du modèle ; le propriétaire veut le JSON natif.
-- **`data/` sous `public/` par défaut**, comme la phrase le laissait lire : un `.htaccess` ignoré (nginx, `AllowOverride None`)
+- **`data/` sous `public/` par défaut** (écartée le 25 octobre, **retenue** par la révision du 26 octobre 2026 — un dossier par
+  FTP, pour un hébergeur sans ligne de commande, avec la vérification et l’avertissement), comme la phrase le laissait lire : un `.htaccess` ignoré (nginx, `AllowOverride None`)
   exposerait l’empreinte du mot de passe et tous les projets. Hors de la racine par défaut, une constante pour l’autre cas, vérifié.
 - **Laisser le navigateur télécharger les polices** comme la page autonome : l’adresse de la personne partirait chez un tiers, et la
   politique de sécurité devrait l’autoriser ; le serveur le fait une fois pour tous, vérifie, garde.

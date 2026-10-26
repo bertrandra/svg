@@ -22,6 +22,7 @@ define('SVG_SITE', true);
 require __DIR__ . '/inc/amorce.php';
 require __DIR__ . '/inc/reponses.php';
 require __DIR__ . '/inc/session.php';
+require __DIR__ . '/inc/connexion.php';
 require __DIR__ . '/inc/projets.php';
 require __DIR__ . '/inc/polices.php';
 require __DIR__ . '/inc/adresse.php';
@@ -42,6 +43,9 @@ if ($probleme !== null) {
     error_log('api : ' . $probleme);
     repondre_erreur(503, 'serveur', 'Le site n’est pas encore installé : voir la page d’accueil.');
 }
+// Un mot de passe depose dans data/password prend effet tout de suite, meme si personne ne recharge la page : les sessions ouvertes
+// sont alors fermees (inc/session.php). Un refus ou un avertissement se lit sur la page d'accueil, pas ici.
+convertir_mot_de_passe_clair();
 demarrer_session();
 if (!est_connecte()) {
     repondre_erreur(401, 'session', 'Votre session a expiré : reconnectez-vous.');

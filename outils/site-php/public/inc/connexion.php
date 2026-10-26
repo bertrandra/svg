@@ -1,6 +1,7 @@
 <?php
 // Le mot de passe du site et la limitation des essais (ADR-0030). Le mot de passe n'existe sur le serveur qu'en empreinte
-// (`password_hash` : argon2id quand PHP l'a, bcrypt sinon), dans data/pwd, posee par `php outils/mot-de-passe.php`. Apres
+// (`password_hash` : argon2id quand PHP l'a, bcrypt sinon), dans data/pwd, posee par un fichier data/password que le site convertit
+// puis supprime (un hebergement sans ligne de commande), ou par `php inc/mot-de-passe.php`. Apres
 // CONNEXION_ESSAIS_LIBRES echecs d'un meme client, chaque essai attend un delai qui double, jusqu'a CONNEXION_DELAI_MAX ; les essais
 // se comptent dans data/connexions.json et se journalisent dans data/journal/connexions.log (le client y est une empreinte de son
 // adresse, jamais l'adresse elle-meme).
@@ -12,6 +13,27 @@ defined('SVG_SITE') || exit;
 function fichier_mot_de_passe(): string
 {
     return donnees('pwd');
+}
+
+/** Le mot de passe en clair que l'administrateur depose par FTP : converti en empreinte, puis supprime, a la requete suivante. */
+function fichier_mot_de_passe_clair(): string
+{
+    return donnees('password');
+}
+
+/** Un mot de passe compte au moins ce nombre de caracteres, qu'il vienne de la ligne de commande ou de data/password. */
+const MOT_DE_PASSE_LONGUEUR_MIN = 10;
+
+/** La raison de refuser un mot de passe propose, ou null s'il convient. */
+function mot_de_passe_refuse(string $mot): ?string
+{
+    if (!mb_check_encoding($mot, 'UTF-8')) {
+        return 'Le mot de passe n’est pas en UTF-8 (enregistrez le fichier en UTF-8)';
+    }
+    if (mb_strlen($mot) < MOT_DE_PASSE_LONGUEUR_MIN) {
+        return 'Le mot de passe doit compter au moins ' . MOT_DE_PASSE_LONGUEUR_MIN . ' caractères';
+    }
+    return null;
 }
 
 /** Vrai quand data/pwd porte une empreinte que PHP reconnait. */
@@ -35,6 +57,121 @@ function algorithme_empreinte(): string|int|null
 function poser_mot_de_passe(string $mot): void
 {
     ecrire_atomique(fichier_mot_de_passe(), password_hash($mot, algorithme_empreinte()) . "\n", 0640);
+}
+
+/** Le refus du formulaire du premier mot de passe quand un mot de passe existe deja. */
+const MSG_MOT_DE_PASSE_DEJA = 'Un mot de passe a déjà été posé : connectez-vous avec lui. Pour le changer, créez le fichier data/password par FTP (ou utilisez la ligne de commande).';
+
+/**
+ * Pose le premier mot de passe, choisi dans la page a la premiere visite. Seulement tant qu'aucun n'existe : data/pwd est revu sous
+ * un verrou (data/.verrou-mot-de-passe), pour que deux envois simultanes n'en posent pas deux. Rend null quand l'empreinte est
+ * ecrite, ou la phrase du refus (MSG_MOT_DE_PASSE_DEJA si un mot de passe existe) ; rien n'est ecrit en cas de refus.
+ */
+function poser_premier_mot_de_passe(mixed $mot, mixed $confirmation): ?string
+{
+    if (file_exists(fichier_mot_de_passe())) {
+        return MSG_MOT_DE_PASSE_DEJA;
+    }
+    $mot = is_string($mot) ? $mot : '';
+    $confirmation = is_string($confirmation) ? $confirmation : '';
+    $refus = mot_de_passe_refuse($mot);
+    if ($refus !== null) {
+        return $refus . ' : rien n’est enregistré.';
+    }
+    if (!hash_equals($mot, $confirmation)) {
+        return 'Les deux saisies diffèrent : rien n’est enregistré.';
+    }
+    $verrou = fopen(donnees('.verrou-mot-de-passe'), 'c');
+    if ($verrou === false) {
+        throw new RuntimeException('data/.verrou-mot-de-passe ne s’ouvre pas');
+    }
+    try {
+        flock($verrou, LOCK_EX);
+        clearstatcache(true, fichier_mot_de_passe());
+        if (file_exists(fichier_mot_de_passe())) {
+            return MSG_MOT_DE_PASSE_DEJA;
+        }
+        poser_mot_de_passe($mot);
+    } finally {
+        flock($verrou, LOCK_UN);
+        fclose($verrou);
+    }
+    journaliser('connexions', 'mot de passe pose depuis la page de premiere visite');
+    return null;
+}
+
+/** Ce qui s'affiche tant que data/password reste sur le serveur apres sa conversion. */
+const MSG_MOT_DE_PASSE_CLAIR = 'Supprimez le fichier data/password par FTP : le mot de passe y est lisible en clair. (Le site a bien enregistré son empreinte, mais n’a pas pu supprimer le fichier.)';
+
+/** L'etat de data/password (inode, taille, dates), sans rien de son contenu : de quoi reconnaitre un fichier deja converti. */
+function signature_fichier(string $f): string
+{
+    clearstatcache(true, $f);
+    $s = @stat($f);
+    return is_array($s) ? $s['ino'] . ':' . $s['size'] . ':' . $s['mtime'] . ':' . $s['ctime'] : '';
+}
+
+/**
+ * Convertit data/password, s'il existe, en empreinte dans data/pwd, puis le supprime : c'est la facon de poser ou de changer le
+ * mot de passe sans ligne de commande. Le contenu est pris entier, sans BOM, sans blancs ni fins de ligne aux extremites. Un
+ * mot de passe refuse (trop court, pas en UTF-8) ne change rien. Si le fichier ne se supprime pas, l'empreinte est quand meme
+ * posee, l'erreur va au journal, et sa signature (jamais son contenu) est notee pour ne pas refaire l'empreinte a chaque requete.
+ * Le mot de passe n'est jamais journalise ni affiche. `$supprimer` est `unlink`, sauf dans un test.
+ *
+ * Rend null s'il n'y avait rien a faire, ['pose' => true] apres une conversion complete, ['erreur' => phrase] si le fichier est
+ * refuse (rien n'est ecrit), ['avertissement' => phrase] si l'empreinte est posee mais que le fichier reste.
+ */
+function convertir_mot_de_passe_clair(?callable $supprimer = null): ?array
+{
+    $f = fichier_mot_de_passe_clair();
+    $note = donnees('journal/password-restant.txt');
+    clearstatcache(true, $f);
+    if (!is_file($f)) {
+        if (is_file($note)) {
+            @unlink($note);
+        }
+        return null;
+    }
+    $signature = signature_fichier($f);
+    if (is_file($note) && hash_equals(trim((string) @file_get_contents($note)), $signature) && mot_de_passe_pose()) {
+        return ['avertissement' => MSG_MOT_DE_PASSE_CLAIR];
+    }
+    $texte = @file_get_contents($f, false, null, 0, 4097);
+    if ($texte === false) {
+        clearstatcache(true, $f);
+        // Une autre requete l'a converti et supprime entre-temps : rien a faire.
+        return is_file($f) ? ['erreur' => 'Le fichier data/password ne peut pas être lu par le serveur : vérifiez ses droits par FTP, puis rechargez la page.'] : null;
+    }
+    if (strlen($texte) > 4096) {
+        return ['erreur' => 'Le fichier data/password est trop long pour être un mot de passe : rien n’est changé. Corrigez-le par FTP, puis rechargez la page.'];
+    }
+    $mot = trim(str_starts_with($texte, "\xEF\xBB\xBF") ? substr($texte, 3) : $texte);
+    $refus = mot_de_passe_refuse($mot);
+    if ($refus !== null) {
+        return ['erreur' => 'Le fichier data/password est refusé. ' . $refus . ' : rien n’est changé. Corrigez-le par FTP, puis rechargez la page.'];
+    }
+    $remplace = mot_de_passe_pose();
+    try {
+        poser_mot_de_passe($mot);
+    } catch (Throwable $e) {
+        error_log('mot de passe : empreinte non ecrite depuis data/password (' . $e->getMessage() . ')');
+        return ['erreur' => 'L’empreinte du mot de passe n’a pas pu être écrite dans data/pwd : vérifiez que le serveur peut écrire dans data/, puis rechargez la page.'];
+    }
+    journaliser('connexions', 'mot de passe ' . ($remplace ? 'change' : 'pose') . ' depuis data/password');
+    $supprimer ??= 'unlink';
+    $supprime = (bool) @$supprimer($f);
+    clearstatcache(true, $f);
+    // Une requete voisine a pu le supprimer avant nous : il a disparu, c'est ce qui compte.
+    if ($supprime || !file_exists($f)) {
+        if (is_file($note)) {
+            @unlink($note);
+        }
+        return ['pose' => true];
+    }
+    @file_put_contents($note, signature_fichier($f) . "\n");
+    error_log('securite : data/password ne se supprime pas ; le mot de passe y reste lisible en clair, supprimez-le par FTP');
+    journaliser('connexions', 'data/password non supprime');
+    return ['avertissement' => MSG_MOT_DE_PASSE_CLAIR];
 }
 
 /**
