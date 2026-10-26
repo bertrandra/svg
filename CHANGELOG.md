@@ -56,6 +56,10 @@ empreintes.
 
 ### Modifié
 
+- Arbre des calques, à la souris : les boutons de visibilité et de verrou n'apparaissent que sur la ligne active, survolée, masquée
+  ou verrouillée ; le clavier les atteint toujours, au doigt toutes les lignes les gardent. La grille de 200 groupes passe de 801 à
+  339 éléments.
+
 - Le projet du site n'a plus qu'un format, la version 1, qui porte tout le modèle (groupes, dégradés, motifs, images, découpes,
   masques, effets) : les champs du modèle v2 se lisent et se valident toujours, et une autre version est refusée en la nommant. Le
   projet d'un dessin plat reste le même texte, octet pour octet ; aucun projet n'existait à conserver (ADR-0030, révision du
@@ -162,6 +166,14 @@ empreintes.
     agrandies.
 
 ### Corrigé
+
+- Modèle riche : une forme dessinée, collée ou insérée dans un groupe y entre, au premier plan, au lieu de naître hors du contexte,
+  estompée et imprenable ; « Vectoriser : lettres séparées » rend les lettres en un groupe « Texte « … » », choisi, et le dit.
+- Une image intégrée se dit « image PNG » (calques, sélection, Alt+clic), plus « rectangle, sans fond ».
+- Arbre des calques : un double-clic sur une ligne non choisie entre dans ce groupe, plus dans son voisin (la rangée de la
+  sélection décalait la liste entre les deux clics).
+- Contraste forcé : numéro et pastilles d'une ligne choisie lisibles, mini-onglet enfoncé distinct, fil d'Ariane en couleurs du
+  système ; « Déplacer vers… » tient sur une ligne.
 
 - Sécurité : le nettoyage d'une feuille de style retire aussi `@ import` écrit avec un blanc après l'arobase (trouvé par le fuzzing ;
   régression ajoutée).
