@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><defs><pattern id="a" xlink:href="#b" width="10" height="10"/><pattern id="b" href="#a" patternUnits="userSpaceOnUse"><rect width="5" height="5"/></pattern></defs><rect width="100" height="100" fill="url(#a)"/></svg>

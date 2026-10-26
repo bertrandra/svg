@@ -17,11 +17,11 @@ const ATTRIBUT_CALE = 'data-cale';
 
 interface Mesure { defile: number; visible: number; pas: number }
 
-export interface FenetreListe {
+export interface FenetreListe<L extends HTMLElement = HTMLOListElement> {
   /** Le conteneur qui defile : a poser sur le panneau. */
   racine: RefObject<HTMLElement | null>;
-  /** La liste dont les lignes se fenetrent : a poser sur l'`ol` ou l'`ul`. */
-  liste: RefObject<HTMLOListElement | null>;
+  /** La liste dont les lignes se fenetrent : a poser sur l'`ol` ou l'`ul` (ou la grille de l'arbre des calques). */
+  liste: RefObject<L | null>;
   fenetre: Fenetre;
   /** Le pas mesure entre deux lignes, que `segmentsFenetre` emploie pour la hauteur des cales. */
   pas: number;
@@ -133,8 +133,8 @@ export function montrerLigneAuClavier(e: FocusEvent<HTMLElement>): void {
  * Les lignes a dessiner d'une liste de `total` lignes de meme hauteur, dans un panneau qui defile. `panneau` : le conteneur qui
  * defile, quand il est deja tenu ailleurs (plusieurs listes dans un meme panneau) ; absent, le crochet donne le sien (`racine`).
  */
-export function useFenetre(total: number, panneau?: RefObject<HTMLElement | null>): FenetreListe {
-  return useMesureFenetre<HTMLOListElement>(total, SEUIL_FENETRE, false, panneau);
+export function useFenetre<L extends HTMLElement = HTMLOListElement>(total: number, panneau?: RefObject<HTMLElement | null>): FenetreListe<L> {
+  return useMesureFenetre<L>(total, SEUIL_FENETRE, false, panneau);
 }
 
 /**

@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { aUnGroupe, ctrlG, elementsGroupes, entrerDansGroupe, groupeSeul, groupesActifs, remonterVers, toucheGroupes } from '../../../src/zones/commandesGroupes.js';
+import { aUnGroupe, creerMotifDepuisSelection, ctrlG, elementsGroupes, entrerDansGroupe, groupeSeul, groupesActifs, remonterVers, toucheGroupes } from '../../../src/zones/commandesGroupes.js';
 import { phraseBascule, phraseSelection } from '../../../src/zones/annonces.js';
 import { cheminGroupes, elementsDits, phraseGroupeCree, phraseGroupeDefait, phraseNiveau, PHRASE_RACINE } from '../../../src/zones/phrasesGroupes.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from '../../../src/zones/typesEditeur.js';
@@ -21,7 +21,7 @@ const riche = lire(SVG, 'riche'), plat = lire('<svg xmlns="http://www.w3.org/200
 /** Des verbes espions, et ce que l'etat porterait. */
 function monter(dessin: DessinSvg, sel: string[], modele: 'plat' | 'riche', contexte: string | null = null) {
   const ac = {
-    grouper: vi.fn(), degrouper: vi.fn(), combinerSelection: vi.fn(), separerSelection: vi.fn(), choisir: vi.fn(), poserPoint: vi.fn(), annoncer: vi.fn(),
+    grouper: vi.fn(), degrouper: vi.fn(), faire: vi.fn(), dire: vi.fn(), combinerSelection: vi.fn(), separerSelection: vi.fn(), choisir: vi.fn(), poserPoint: vi.fn(), annoncer: vi.fn(),
     poserContexte: vi.fn(), entrerGroupe: vi.fn((id: string) => !!dessin.groupes?.[id]), sortirGroupe: vi.fn(() => contexte !== null)
   };
   const m = { dessin, sel } as unknown as ModeleDessin;
@@ -29,6 +29,23 @@ function monter(dessin: DessinSvg, sel: string[], modele: 'plat' | 'riche', cont
   return { ac, a: ac as unknown as ActionsEditeur, m, u };
 }
 const entree = (shiftKey = false) => ({ key: 'Enter', shiftKey, ctrlKey: false, metaKey: false, altKey: false }) as KeyboardEvent;
+
+describe('creer un motif depuis la selection (etape 9)', () => {
+  it('fait le motif d un rectangle neuf, le choisit et le dit ; dit la raison quand rien ne s y prete', () => {
+    const { ac, a, m } = monter(riche, ['f1'], 'riche');
+    creerMotifDepuisSelection(m, a);
+    expect(ac.faire).toHaveBeenCalledTimes(1);
+    const [f, phrase] = ac.faire.mock.calls[0] as [(d: DessinSvg) => DessinSvg, string];
+    const apres = f(riche);
+    const id = (ac.choisir.mock.calls[0] as [string[]])[0][0] ?? '';
+    expect(apres.formes.find(x => x.id === id)?.peintureRemplissage?.genre).toBe('motif');
+    expect(phrase).toMatch(/^Motif créé/);
+    const vide = monter(riche, [], 'riche');
+    creerMotifDepuisSelection(vide.m, vide.a);
+    expect(vide.ac.faire).not.toHaveBeenCalled();
+    expect(vide.ac.dire).toHaveBeenCalledWith(expect.stringMatching(/^Choisissez/));
+  });
+});
 
 describe('les commandes des groupes', () => {
   it('n existent qu en modele riche, ou sur un dessin deja riche', () => {
@@ -43,7 +60,8 @@ describe('les commandes des groupes', () => {
     const { m, u, a } = monter(riche, ['g1'], 'riche');
     const els = elementsGroupes(m, u, a);
     expect(els.map(e => [e.id, e.raccourci, !!e.desactive])).toEqual([
-      ['grouper', 'Ctrl+G', false], ['degrouper', 'Ctrl+Maj+G', false], ['entrer-groupe', 'Entrée', false], ['sortir-groupe', 'Maj+Entrée', true]
+      ['grouper', 'Ctrl+G', false], ['degrouper', 'Ctrl+Maj+G', false], ['entrer-groupe', 'Entrée', false], ['sortir-groupe', 'Maj+Entrée', true],
+      ['creer-motif', undefined, false]
     ]);
     expect(groupeSeul({ dessin: riche, sel: ['g1'] })).toBe('g1');
     expect(groupeSeul({ dessin: riche, sel: ['f1'] })).toBeNull();

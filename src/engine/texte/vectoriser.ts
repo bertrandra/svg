@@ -16,6 +16,7 @@ import { boiteChemin, grouper, prochainId, sansTexte, seCroisent, sousChemins, t
 import { aireSignee, aplatir, cheminDeRegion, cheminLisseDeRegion, regionDeChemin, toleranceBooleen } from '../booleens.js';
 import { aireDeRegion } from '../contour/region.js';
 import { natureDuTexte } from './vivant.js';
+import { nomGroupeTexte } from '../edition/texteSvg.js';
 
 export type ModeVectorisation = 'lettres' | 'souder-touchantes' | 'tout';
 export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['lettres', 'souder-touchantes', 'tout'];
@@ -180,12 +181,9 @@ export function vectoriserTextes(dessin: DessinSvg, ids: readonly string[], mode
   return { dessin: textes ? { ...dessin, formes } : dessin, ids: produits, textes, parParties };
 }
 
-/** Le nom du groupe des lettres d'un texte (ADR-0012, annexe 4 A §2) : « Texte « … » », sa premiere ligne, ecourtee. */
-export function nomGroupeTexte(texte: string): string {
-  const ligne = (texte.split('\n').find(l => l.trim() !== '') ?? '').trim();
-  const court = [...ligne].length > 40 ? [...ligne].slice(0, 39).join('').trimEnd() + '…' : ligne;
-  return 'Texte « ' + court + ' »';
-}
+// Le nom du groupe des lettres d'un texte vit avec la lecture du texte (edition/texteSvg.ts) : un <text> lu en riche le porte aussi
+// (etape 13c). Il reste exporte d'ici, ou on le cherchait.
+export { nomGroupeTexte };
 
 /**
  * « Lettres séparées » dans le modele riche (ADR-0012, etape 1, le reste de l'etape 10) : comme `vectoriserTextes` en mode

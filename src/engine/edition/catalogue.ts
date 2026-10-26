@@ -4,7 +4,7 @@
 // aucune feuille ne change en se transformant.
 //
 // Ordre prevu (une ligne chacune, sans toucher aux autres) : groupes (etape 1), degrades (3), decoupes (5), masques (6), effets (7),
-// motifs (9), images (12).
+// motifs (9), images (12), imbrications (13c : <svg> imbrique, <text> en groupe de lettres).
 
 import type { Fonctionnalite } from './fonctionnalites.js';
 import { groupes } from './fonctions/groupes.js';
@@ -12,7 +12,9 @@ import { degrades } from './fonctions/degrades.js';
 import { decoupes } from './fonctions/decoupes.js';
 import { masques } from './fonctions/masques.js';
 import { effets } from './fonctions/effets.js';
+import { motifs } from './fonctions/motifs.js';
 import { images } from './fonctions/images.js';
+import { imbrications } from './fonctions/imbrications.js';
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
   groupes,
@@ -20,5 +22,7 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
   decoupes,
   masques,
   effets,
-  images
+  motifs,
+  images,
+  imbrications
 ];

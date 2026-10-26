@@ -4,6 +4,7 @@ import { memo, type ReactNode } from 'react';
 import { ancre, attributsTrait, boiteDe, depart, ecrireChemin, estPlat, feuillesDe, opaciteDuContour, opaciteDuRemplissage, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { FORMES } from './aidesEditeur.js';
 import { formeTracee } from './Gestes.js';
+import { PoigneesDegrade } from './PoigneesDegrade.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
@@ -81,6 +82,8 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ta
     // La poignee de rotation, au-dessus du milieu du bord haut.
     r.push(<line key="lien-rot" className="lien-poignee" x1={b.x + b.l / 2} y1={b.y} x2={b.x + b.l / 2} y2={b.y - 22 * px} pointerEvents="none" />);
     r.push(<circle key="rot" data-rotation="1" className="poignee-rotation" cx={b.x + b.l / 2} cy={b.y - 22 * px} r={5 * px} />);
+    // Les poignees du degrade de la forme choisie seule (ADR-0012, etape 4) : par-dessus la boite, un curseur par arret et par extremite.
+    r.push(<PoigneesDegrade key="poignees-degrade" unite={unite} tactile={tactile} />);
   }
   for (const [i, g] of ui.guides.entries()) {
     r.push(g.axe === 'x'

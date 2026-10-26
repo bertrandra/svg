@@ -95,18 +95,39 @@ function dessiner(p: ProprietesNoeud): ReactNode {
 
 const Noeud = memo(function Noeud(p: ProprietesNoeud) { return <>{dessiner(p)}</>; }, memesProprietes);
 
+/** Le debut de chaque definition du recueil : seule une definition porte un identifiant, `ed-<genre>-<empreinte>` (definitions.ts). */
+const DEBUT_DEFINITION = /(?=<[A-Za-z]+ id="ed-)/;
+
+/** Les definitions une a une, avec leur identifiant (unique dans le recueil) : la cle d'un morceau qui ne change pas d'un rendu a l'autre. */
+export function morceauxDefinitions(definitions: string): Array<{ id: string; balisage: string }> {
+  return definitions.split(DEBUT_DEFINITION).filter(Boolean).map(balisage => ({ id: /^<[A-Za-z]+ id="([^"]+)"/.exec(balisage)?.[1] ?? balisage, balisage }));
+}
+
+/** Une definition : son balisage ecrit, dans un <g> de <defs> (un identifiant se resout dans tout le document). */
+const Definition = memo(function Definition({ balisage }: { balisage: string }) { return <g dangerouslySetInnerHTML={{ __html: balisage }} />; });
+
+/**
+ * Les definitions du recueil (degrades, filtres, decoupes), une par element : deplacer une forme a effet change la region de SON
+ * filtre, et seul ce morceau se reecrit. D'un seul tenant, tout le <defs> se reanalysait a chaque mouvement (mesure de l'etape 7-B,
+ * annexe 8 §0 : 200 formes a ombre, 35 ms de taches par mouvement, contre 16 sans effet).
+ */
+const Definitions = memo(function Definitions({ definitions }: { definitions: string }) {
+  return <defs>{morceauxDefinitions(definitions).map(m => <Definition key={m.id} balisage={m.balisage} />)}</defs>;
+});
+
 /**
  * Les formes d'un dessin riche sur la toile : les definitions (degrades, et ce que les etapes suivantes deposeront), puis l'arbre.
  * `masquee` : le texte en saisie vide (rien ne se dessine pour lui), comme pour les calques d'avant. `contexte` : le groupe ou l'on
  * est entre, ou null.
  */
-export const NoeudsToile = memo(function NoeudsToile({ dessin, contours, masquee, contexte }: { dessin: DessinSvg; contours: boolean; masquee: string | null; contexte: string | null }) {
+export const NoeudsToile = memo(function NoeudsToile({ dessin, contours, masquee, contexte, brouillon = false }: { dessin: DessinSvg; contours: boolean; masquee: string | null; contexte: string | null; brouillon?: boolean }) {
   const rendu = renduDe(dessin), chemin = cheminDuContexte(dessin, contexte);
   const commun = { rendu, contours, masquee, chemin, cleChemin: chemin.join(' '), contexte, niveau: (contexte === null ? 'dedans' : 'dessus') as Niveau, verrou: false };
   return (
-    <g className="noeuds-toile">
+    // Le brouillon d'un geste (etape 7-B, brouillon.ts) : la feuille de style retire les filtres sous `data-brouillon`, rien d'autre ne change.
+    <g className="noeuds-toile" data-brouillon={brouillon ? '' : undefined}>
       {/* Les definitions viennent des ecrivains du catalogue (des nombres, des couleurs, des donnees d'image verifiees) : jamais d'un texte lu tel quel. */}
-      {rendu.definitions ? <defs dangerouslySetInnerHTML={{ __html: rendu.definitions }} /> : null}
+      {rendu.definitions ? <Definitions definitions={rendu.definitions} /> : null}
       {arbreDe(dessin).racine.map(n => <Noeud key={n.genre === 'feuille' ? n.forme.id : n.groupe.id} {...commun} n={n} />)}
     </g>
   );
@@ -117,7 +138,7 @@ export const NoeudsToile = memo(function NoeudsToile({ dessin, contours, masquee
  * change rien ; tests/unit/zones/toile.test.ts le verifie). Un dessin riche : un rendu par noeud de l'arbre, par les crochets de
  * l'ecriture.
  */
-export function FormesToile({ dessin, contours, masquee, contexte }: { dessin: DessinSvg; contours: boolean; masquee: string | null; contexte: string | null }) {
+export function FormesToile({ dessin, contours, masquee, contexte, brouillon = false }: { dessin: DessinSvg; contours: boolean; masquee: string | null; contexte: string | null; brouillon?: boolean }) {
   if (estPlat(dessin)) return <>{dessin.formes.map(f => <Calque key={f.id} f={f} contours={contours} masquee={f.id === masquee} />)}</>;
-  return <NoeudsToile dessin={dessin} contours={contours} masquee={masquee} contexte={contexte} />;
+  return <NoeudsToile dessin={dessin} contours={contours} masquee={masquee} contexte={contexte} brouillon={brouillon} />;
 }

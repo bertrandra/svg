@@ -178,9 +178,15 @@ export function prochainNumero(d: Contenu, prefixe: 'f' | 'g'): number {
 /** Les contenus imbriques d'une peinture (la tuile d'un motif). */
 const contenusDePeinture = (p: Peinture | undefined): Contenu[] => (p?.genre === 'motif' ? [p.contenu] : []);
 
-/** Appelle `f` sur le contenu et sur chaque contenu imbrique (decoupes, masques, tuiles de motifs), en profondeur. */
+/**
+ * Appelle `f` sur le contenu et sur chaque contenu imbrique (decoupes, masques, tuiles de motifs), en profondeur. Un contenu partage
+ * (le meme objet : un motif repete sur mille formes, comme un degrade) n'est vu qu'une fois.
+ */
 export function parcourirContenus(d: Contenu, f: (c: Contenu, imbrique: boolean) => void, profondeurMax = 8): void {
+  const vus = new Set<Contenu>();
   const visiter = (c: Contenu, niveau: number) => {
+    if (vus.has(c)) return;
+    vus.add(c);
     f(c, niveau > 0);
     if (niveau >= profondeurMax) return;
     for (const x of c.formes) for (const s of [...contenusDePeinture(x.peintureRemplissage), ...contenusDePeinture(x.peintureContour)]) visiter(s, niveau + 1);
@@ -236,16 +242,31 @@ export function poidsDessin(d: Contenu): number {
   return poids;
 }
 
-/** Les invariants du contenu viole (annexe 1 §5), en phrases ; vide : le contenu est bien forme. Ne leve jamais. */
+/**
+ * Les invariants du contenu viole (annexe 1 §5), en phrases ; vide : le contenu est bien forme. Ne leve jamais. Les identifiants sont
+ * uniques dans le dessin, contenus de decoupes et de masques compris (I1) ; la tuile d'un motif est un espace a part (etape 9 : une
+ * peinture se partage, comme un degrade), ou ils sont uniques aussi, ses decoupes et ses masques compris.
+ */
 export function verifierDessin(d: Contenu): string[] {
-  const out: string[] = [], vus = new Set<string>();
-  parcourirContenus(d, c => {
+  const out: string[] = [], tuiles = new Set<Contenu>();
+  const visiter = (c: Contenu, vus: Set<string>, niveau: number) => {
     for (const id of [...c.formes.map(f => f.id), ...Object.keys(c.groupes ?? {})]) {
       if (vus.has(id)) out.push('I1 : identifiant en double « ' + id + ' »');
       vus.add(id);
     }
     out.push(...verifierContenu(c));
-  });
+    if (niveau >= 8) return;
+    // Une tuile partagee (le meme objet) ne se juge qu'une fois.
+    for (const x of c.formes) {
+      for (const s of [...contenusDePeinture(x.peintureRemplissage), ...contenusDePeinture(x.peintureContour)]) {
+        if (tuiles.has(s)) continue;
+        tuiles.add(s);
+        visiter(s, new Set(), niveau + 1);
+      }
+    }
+    for (const g of Object.values(c.groupes ?? {})) for (const s of [g.decoupe?.contenu, g.masque?.contenu]) if (s) visiter(s, vus, niveau + 1);
+  };
+  visiter(d, new Set(), 0);
   return out;
 }
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 140" width="300" height="140">
+  <defs>
+    <!-- Un viewBox cadre dans la tuile : etire par « none », centre par defaut, rogne par « slice ». -->
+    <pattern id="etire" patternUnits="userSpaceOnUse" width="30" height="15" viewBox="0 0 10 10" preserveAspectRatio="none">
+      <circle cx="5" cy="5" r="4" fill="#6a4c93"/>
+    </pattern>
+    <pattern id="centre" patternUnits="userSpaceOnUse" width="30" height="15" viewBox="0 0 10 10">
+      <circle cx="5" cy="5" r="4" fill="#1982c4"/>
+    </pattern>
+    <pattern id="tranche" patternUnits="userSpaceOnUse" width="30" height="15" viewBox="-5 -5 20 20" preserveAspectRatio="xMinYMax slice">
+      <rect width="10" height="10" fill="#8ac926"/>
+    </pattern>
+  </defs>
+  <rect x="5" y="20" width="90" height="100" fill="url(#etire)"/>
+  <rect x="105" y="20" width="90" height="100" fill="url(#centre)"/>
+  <rect x="205" y="20" width="90" height="100" fill="url(#tranche)"/>
+</svg>

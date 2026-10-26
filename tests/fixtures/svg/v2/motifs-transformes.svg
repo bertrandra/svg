@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 140" width="300" height="140">
+  <defs>
+    <pattern id="hachures" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(30) scale(1.5 1)">
+      <path d="M0 0V8" stroke="#264653" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect x="10" y="20" width="120" height="100" fill="url(#hachures)"/>
+  <!-- La transformation d'un groupe se compose avec celle du motif. -->
+  <g transform="translate(160 10) rotate(-15 60 60) scale(0.9)">
+    <circle cx="60" cy="60" r="55" fill="url(#hachures)" stroke="#e9c46a" stroke-width="4"/>
+  </g>
+</svg>

@@ -104,4 +104,12 @@ describe('la description d une forme', () => {
     expect(peintureDite(trait)).toBe('sans fond, contour noir #15181d');
     expect(nomDeForme({ ...f, verrouille: true, visible: false })).toBe('Rectangle 1, fond rouge #c81e28, verrouillée, masquée');
   });
+
+  it('dit un degrade (modele v2) par son genre et ses couleurs extremes, jamais par sa couleur de repli', () => {
+    const arrets = [{ position: 0, couleur: '#c81e28' }, { position: 1, couleur: '#1f5fb0' }];
+    const g = { ...f, peintureRemplissage: { genre: 'lineaire' as const, x1: 0, y1: 0, x2: 1, y2: 0, arrets }, remplissage: '#7a4a7a' };
+    expect(peintureDite(g)).toBe('fond dégradé linéaire du rouge #c81e28 au bleu #1f5fb0');
+    const t = { ...f, contour: '#000000', peintureContour: { genre: 'radial' as const, cx: 0, cy: 0, r: 1, arrets: [...arrets, { position: 1, couleur: '#000000' }] } };
+    expect(peintureDite(t)).toBe('fond rouge #c81e28, contour dégradé radial du rouge #c81e28 au noir #000000, 3 arrêts');
+  });
 });

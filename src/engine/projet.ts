@@ -84,7 +84,7 @@ export function formeProjet(f: Forme): FormeProjet {
     ...facultatifs(f),
     ...(f.texte !== undefined ? { texte: texteProjet(f.texte) } : {}),
     ...(f.operation !== undefined ? { operation: f.operation } : {}),
-    ...champsV2VersProjet(f),
+    ...champsV2VersProjet(f, CONVERSION),
     regle: f.regle, visible: f.visible, verrouille: f.verrouille
   } as FormeProjet;
 }
@@ -96,12 +96,12 @@ export function formeDuProjet(f: FormeProjet): Forme {
     ...facultatifs(f),
     ...(f.texte !== undefined ? { texte: texteVivant(f.texte) } : {}),
     ...(f.operation !== undefined ? { operation: f.operation } : {}),
-    ...champsV2VersModele(f),
+    ...champsV2VersModele(f, CONVERSION),
     regle: f.regle, visible: f.visible, verrouille: f.verrouille
   } as Forme;
 }
 
-/** La conversion d'une forme entiere, pretee aux groupes dont un contenu porte des formes (le masque, etape 6). */
+/** La conversion d'une forme entiere, pretee aux contenus qui portent des formes (le masque d'un groupe, etape 6 ; la tuile d'un motif, etape 9). */
 const CONVERSION: ConversionFormes = { versProjet: formeProjet, versModele: formeDuProjet };
 
 const choixCopie = (c: ChoixProduction): ChoixProduction => (c.contexte === 'cricut'

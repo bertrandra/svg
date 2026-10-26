@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><svg id="a" width="50" height="50"><use href="#b"/></svg><svg id="b" width="50" height="50"><rect width="10" height="10"/><use href="#a" x="10"/></svg></defs><use href="#a"/></svg>

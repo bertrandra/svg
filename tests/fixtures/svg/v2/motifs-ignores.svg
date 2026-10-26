@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <!-- Une tuile qui deborde : rognee a la tuile, et dit. -->
+    <pattern id="debord" patternUnits="userSpaceOnUse" width="20" height="20" overflow="visible">
+      <circle cx="10" cy="10" r="14" fill="#7209b7" fill-opacity="0.4"/>
+    </pattern>
+  </defs>
+  <rect x="10" y="10" width="180" height="100" fill="url(#debord)"/>
+</svg>

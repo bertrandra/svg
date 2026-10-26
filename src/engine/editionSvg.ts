@@ -142,6 +142,15 @@ export {
 } from './edition/resolution.js';
 export { degrades, MSG_DEGRADES, REFUS_DEGRADES } from './edition/fonctions/degrades.js';
 
+// ---- etape 4 : degrades (interface) : les operations sur les degrades et leurs arrets
+export { lineaireDansLePlan } from './edition/degrades.js';
+export {
+  ARRETS_MIN, degradeDe, poserDegrade, retirerDegrade, rangAjoute, ajouterArret, retirerArret, modifierArret, echangerArrets, inverserArrets,
+  reglerEtalement, axeDegrade, pointSurAxe, positionSurAxe, angleDegrade, reglerAngle, centreRayon, reglerCentre, reglerRayon, deplacerExtremite,
+  formesADegrade, degradesDistincts,
+  type CoteDegrade, type GenreDegrade, type EtalementDegrade, type ReglageArret, type PointDegrade, type ExtremiteDegrade
+} from './edition/degradesOperations.js';
+
 // ---- etape 5 : decoupes
 export {
   decoupes, REFUS_DECOUPES, MSG_DECOUPES, feuilleDeDecoupe, transformerDecoupe, boiteDecoupe
@@ -164,6 +173,8 @@ export {
 } from './edition/fonctions/effets.js';
 
 // ---- etape 9 : motifs
+export { motifs, REFUS_MOTIFS, MSG_MOTIFS, TUILE_MIN, estMotif, couleurDeRepliMotif, transformerMotif } from './edition/fonctions/motifs.js';
+export { creerMotif, MSG_MOTIF } from './edition/motifs.js';
 
 // ---- etape 12 : images
 // Les reperes du document et la repetition d'une selection (ADR-0038).
@@ -181,3 +192,7 @@ export {
   lireAspectImage, dessinableEnPoints, ecrireImage, transformerImage, type DonneesVerifiees
 } from './edition/fonctions/images.js';
 export { dimensionsImage, decoderBase64, type DimensionsImage, type NatureImageIntegree } from './edition/dimensionsImage.js';
+
+// ---- etape 13c : <svg> imbrique, <text> lu en groupe de lettres
+export { imbrications, REFUS_IMBRICATIONS, MSG_IMBRICATIONS } from './edition/fonctions/imbrications.js';
+export { nomGroupeTexte } from './edition/texteSvg.js';

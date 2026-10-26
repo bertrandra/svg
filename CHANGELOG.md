@@ -203,6 +203,33 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 9 : les motifs. En mode riche, une peinture `url(#…)` vers un `<pattern>` s'ouvre (unités de la tuile et du
+  contenu, viewBox, transformation, héritage `href`, tuile peinte avec dégradés et motifs imbriqués) et se réécrit en
+  `<pattern id="ed-p-…">` canonique et dédoublonné. Le motif suit sa forme, sa couleur de repli est la moyenne de sa tuile, le
+  nuancier lit les couleurs de la tuile, et les formats de tracés le remplacent par sa couleur moyenne en le disant. « Créer un
+  motif depuis la sélection » (menu Édition, modèle riche). Le projet JSON porte les motifs. Les cycles, les tuiles vides ou
+  minuscules et les renvois extérieurs sont refusés en les nommant.
+
+- Modèle riche (bêta) : un `<svg>` imbriqué s'ouvre en groupe, à sa place et à son échelle (viewBox, preserveAspectRatio), rogné à
+  sa fenêtre sauf `overflow` visible. Un texte lu en lettres devient un groupe « Texte « … » » qui garde sa découpe, son masque ou
+  son filtre au lieu d'être refusé. Ce que les navigateurs ne rendent pas tous pareil est dit à l'ouverture. Rien ne change en
+  modèle plat.
+
+- Dégradés dans l'éditeur (modèle riche, bêta) : le remplissage et le contour se choisissent Uni, Dégradé linéaire ou Dégradé
+  radial. La liste des arrêts permet d'ajouter, retirer, régler la couleur, la position et l'opacité, et de changer l'ordre ; on
+  règle aussi l'angle, le centre, le rayon et l'étalement, et on peut inverser le dégradé. Sur la toile, des poignées accessibles
+  au clavier (Tab y entre, flèches ±1 %, Maj ±10 %, Suppr) et au doigt. Une ligne « Dégradés » apparaît dans les couleurs du
+  dessin. Le choix n'apparaît qu'avec le modèle riche ou sur un dessin déjà riche ; poser un dégradé rend le dessin riche.
+- Effets sur la toile : au-delà de vingt formes ou groupes à effet, flous et ombres se masquent pendant un glisser, un
+  redimensionnement ou une rotation, et la page le dit. La toile ne réécrit plus que la définition qui change : 200 formes à
+  ombre passent de 71,6 à 18,9 ms par mouvement.
+
+- Calques en arbre (modèle riche, bêta) : un dessin à groupes montre ses calques en arbre accessible (treegrid), pilotable sans
+  souris : flèches pour parcourir, déplier et replier, Entrée pour entrer dans un groupe, Espace pour choisir, F2 pour renommer,
+  Ctrl+Maj+flèches pour monter, descendre, sortir d'un groupe ou entrer dans celui du dessus, « Déplacer vers… » (Maj+F10) qui
+  liste les groupes, et glisser-déposer d'une ligne dans un groupe. Fenêtré au-delà de 150 lignes. En Cricut, « À couper / À
+  écrire » restent en tête, l'arbre vient dessous. Un dessin plat garde sa liste à l'identique.
+
 - Groupes au clavier et au menu (modèle riche, bêta) : Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer dans le groupe (Entrée),
   Sortir du groupe (Maj+Entrée ou Échap), au menu Édition et dans la rangée de la sélection. Dans un groupe, Tab, Page suivante et
   Ctrl+A ne parcourent que ses éléments, et un clic sur une forme hors du groupe en fait sortir. Un fil d'Ariane (« Racine ›

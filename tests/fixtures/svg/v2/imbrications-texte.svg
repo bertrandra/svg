@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140" width="240" height="140">
+  <rect x="0" y="0" width="240" height="140" fill="#f4f1ea"/>
+  <text x="12" y="40" font-family="Inter" font-size="24" fill="#15181d">Bonjour</text>
+  <text x="12" y="80" font-size="30" fill="#c81e28" opacity="0.5">Mi <tspan fill="#1f5fb0">di</tspan></text>
+  <text x="200" y="40" font-size="24" fill="#2a8c4a">A</text>
+  <g id="legende" opacity="0.8">
+    <text x="12" y="120" font-size="16" fill="#15181d" stroke="#ffffff" stroke-width="0.5">Légende</text>
+  </g>
+</svg>

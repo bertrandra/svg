@@ -218,13 +218,47 @@ const masques: ExtensionEcriture = {
   }
 };
 
+const ID_MOTIF = /^ed-p-[0-9a-f]{14}(?:-\d+)?$/;
+const URL_MOTIF = /^url\(#ed-p-[0-9a-f]{14}(?:-\d+)?\)$/;
+
+/**
+ * Etape 9 : les motifs. Un <pattern> dans <defs>, identifie par son empreinte, toujours en unites du plan, une tuile numerique (largeur
+ * et hauteur jamais nulles), au plus une matrice ; dedans, un contenu comme le dessin en porte : des <path> et des <g> (dont les
+ * attributs relevent des autres etapes). Une forme ne cite un motif que par `url(#ed-p-…)`, au fond ou au trait. Avant `groupes`, qui
+ * refuse un <g> hors de la racine ou d'un autre <g>, et avant `degrades`, qui refuse toute autre peinture `url(…)`.
+ */
+const motifs: ExtensionEcriture = {
+  nom: 'etape 9 : motifs',
+  element: e => {
+    if (e.nom === 'pattern') return e.parent === 'defs' && e.profondeur === 2;
+    if (e.parent === 'pattern') return e.nom === 'path' || e.nom === 'g';
+    return undefined;
+  },
+  attribut: (e, nom, valeur) => {
+    if (e.nom === 'pattern') {
+      switch (nom) {
+        case 'id': return ID_MOTIF.test(valeur);
+        case 'patternUnits': return valeur === 'userSpaceOnUse';
+        case 'x': case 'y': return NOMBRE.test(valeur);
+        case 'width': case 'height': return NOMBRE.test(valeur) && Number(valeur) > 0;
+        case 'patternTransform': return MATRICE.test(valeur);
+        default: return false;
+      }
+    }
+    if (e.nom === 'path' && (nom === 'fill' || nom === 'stroke') && valeur.startsWith('url(#ed-p-')) return URL_MOTIF.test(valeur);
+    return undefined;
+  }
+};
+
 /** Une ligne par etape (groupes, degrades, decoupes, masques, effets, motifs, images). */
 export const EXTENSIONS_ECRITURE: readonly ExtensionEcriture[] = [
   racine,
-  // Les decoupes, les masques et les effets avant les groupes : `clip-path`, `mask` et `filter` sur un <g> (l'extension des groupes refuse tout autre attribut qu'elle ne connait pas).
+  // Les decoupes, les masques, les effets et les motifs avant les groupes : `clip-path`, `mask` et `filter` sur un <g>, un <g> dans un
+  // <mask> ou un <pattern> (l'extension des groupes refuse ce qu'elle ne connait pas) ; les motifs avant les degrades (une peinture url).
   decoupes,
   masques,
   effets,
+  motifs,
   groupes,
   degrades,
   images

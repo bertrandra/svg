@@ -7,16 +7,21 @@ import type { FormeProjet, GroupeProjet } from '../../model/projet.js';
 import type { ChampsFormeV2 } from '../../model/projetV2/champs.js';
 import type { Forme, Groupe } from '../editionSvg.js';
 import { estDegrade } from '../edition/degrades.js';
+import { estMotif } from '../edition/fonctions/motifs.js';
 import { peintureDuProjet, peintureProjet } from './peinture.js';
 import { imageDuProjet, imageProjet, refusImagesProjet } from './image.js';
 import { decoupeDuProjet, decoupeProjet } from './decoupe.js';
 import { effetsDuProjet, effetsProjet } from './effets.js';
 import { formesDesMasques, masqueDuProjet, masqueProjet, type ConversionContenu } from './masque.js';
+import { motifDuProjet, motifProjet } from './motif.js';
 
-/** Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. */
+/**
+ * Une ligne : de la forme du modele vers le projet, et retour ; chacune ne rend que ses champs, et seulement s'ils sont la. `c` : de quoi
+ * convertir un contenu de formes et de groupes entiers (la tuile d'un motif, etape 9), comme ceux du dessin.
+ */
 interface AllerRetour {
-  readonly versProjet: (f: Forme) => ChampsFormeV2;
-  readonly versModele: (f: FormeProjet) => Partial<Forme>;
+  readonly versProjet: (f: Forme, c: ConversionContenu) => ChampsFormeV2;
+  readonly versModele: (f: FormeProjet, c: ConversionContenu) => Partial<Forme>;
   /** Ce que la validation du format ne peut pas voir (des octets a decoder), verifie sur tout le dessin avant l'ouverture ; null s'il tient. */
   readonly refus?: (formes: readonly FormeProjet[]) => string | null;
 }
@@ -27,16 +32,28 @@ const ALLERS_RETOURS: readonly AllerRetour[] = [
     versProjet: f => (f.parent !== undefined ? { parent: f.parent } : {}),
     versModele: f => (f.parent !== undefined ? { parent: f.parent } : {})
   },
-  // Etape 3 : les degrades. Un motif (etape 9) n'a pas encore de lecteur : aucune forme n'en porte.
+  // Etape 3 : les degrades.
   {
     versProjet: f => ({
       ...(estDegrade(f.peintureRemplissage) ? { peintureRemplissage: peintureProjet(f.peintureRemplissage) } : {}),
       ...(estDegrade(f.peintureContour) ? { peintureContour: peintureProjet(f.peintureContour) } : {})
     }),
     versModele: f => ({
-      ...(f.peintureRemplissage !== undefined ? { peintureRemplissage: peintureDuProjet(f.peintureRemplissage) } : {}),
-      ...(f.peintureContour !== undefined ? { peintureContour: peintureDuProjet(f.peintureContour) } : {})
+      ...(f.peintureRemplissage !== undefined && f.peintureRemplissage.genre !== 'motif' ? { peintureRemplissage: peintureDuProjet(f.peintureRemplissage) } : {}),
+      ...(f.peintureContour !== undefined && f.peintureContour.genre !== 'motif' ? { peintureContour: peintureDuProjet(f.peintureContour) } : {})
     })
+  },
+  // Etape 9 : les motifs, leur tuile convertie comme le dessin. Un meme motif au fond et au trait redevient un seul objet.
+  {
+    versProjet: (f, c) => ({
+      ...(estMotif(f.peintureRemplissage) ? { peintureRemplissage: motifProjet(f.peintureRemplissage, c) } : {}),
+      ...(estMotif(f.peintureContour) ? { peintureContour: motifProjet(f.peintureContour, c) } : {})
+    }),
+    versModele: (f, c) => {
+      const r = f.peintureRemplissage?.genre === 'motif' ? motifDuProjet(f.peintureRemplissage, c) : undefined;
+      const k = f.peintureContour?.genre === 'motif' ? (JSON.stringify(f.peintureContour) === JSON.stringify(f.peintureRemplissage) && r ? r : motifDuProjet(f.peintureContour, c)) : undefined;
+      return { ...(r ? { peintureRemplissage: r } : {}), ...(k ? { peintureContour: k } : {}) };
+    }
   },
   // Etape 7 : les effets, champ pour champ.
   {
@@ -65,8 +82,11 @@ const ALLERS_RETOURS: readonly AllerRetour[] = [
   }
 ];
 
-/** Les champs v2 d'une forme du modele, en projet, dans l'ordre du format. */
-export const champsV2VersProjet = (f: Forme): ChampsFormeV2 => Object.assign({}, ...ALLERS_RETOURS.map(a => a.versProjet(f))) as ChampsFormeV2;
+/** Les champs v2 d'une forme du modele, en projet, dans l'ordre du format (`formes` : les conversions du dessin, pour une tuile). */
+export const champsV2VersProjet = (f: Forme, formes: ConversionFormes): ChampsFormeV2 => {
+  const c = conversionContenu(formes);
+  return Object.assign({}, ...ALLERS_RETOURS.map(a => a.versProjet(f, c))) as ChampsFormeV2;
+};
 
 /**
  * Ce qui empeche d'ouvrir les champs v2 d'un dessin de projet deja valide dans sa forme (des octets d'image), ou null. Les formes du
@@ -78,8 +98,11 @@ export function refusChampsV2(formes: readonly FormeProjet[], groupes?: Readonly
   return null;
 }
 
-/** Les champs v2 d'une forme de projet (deja validee), dans le modele. */
-export const champsV2VersModele = (f: FormeProjet): Partial<Forme> => Object.assign({}, ...ALLERS_RETOURS.map(a => a.versModele(f))) as Partial<Forme>;
+/** Les champs v2 d'une forme de projet (deja validee), dans le modele (`formes` : les conversions du dessin, pour une tuile). */
+export const champsV2VersModele = (f: FormeProjet, formes: ConversionFormes): Partial<Forme> => {
+  const c = conversionContenu(formes);
+  return Object.assign({}, ...ALLERS_RETOURS.map(a => a.versModele(f, c))) as Partial<Forme>;
+};
 
 // ---------------------------------------------------------------- les groupes (etape 1)
 

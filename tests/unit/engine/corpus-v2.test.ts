@@ -12,6 +12,7 @@ import { ecrireDessin, lireDessin, verifierDessin, type DessinSvg } from '../../
 import { nettoyerSvg } from '../../../src/util/svg.js';
 import { violationsEcriture } from '../securite/invariants.js';
 import type { CasV2 } from './v2/cas.js';
+import { policesFactices } from './v2/polices.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg/corpus');
 
@@ -30,17 +31,22 @@ interface Entree {
   readonly ignores: readonly string[];
   /** Les noms de groupes que la lecture doit garder, dans l'ordre. */
   readonly noms: readonly string[];
+  /** Faux pour un fichier que le mode plat refuse (une decoupe) ; il s'ouvre a plat par defaut. */
+  readonly aPlat?: boolean;
 }
 
 const CORPUS: readonly Entree[] = [
   { fichier: 'inkscape-calques', etape: 1, ignores: [], noms: ['Fond', 'Motif', 'g2'] },
-  { fichier: 'illustrator-calque', etape: 1, ignores: [], noms: ['Calque_1', 'Formes', 'Traits'] }
+  { fichier: 'illustrator-calque', etape: 1, ignores: [], noms: ['Calque_1', 'Formes', 'Traits'] },
+  { fichier: 'figma-texte-decoupe', etape: 13, ignores: [], noms: ['', 'Texte « Découpé »'], aPlat: false }
 ];
 
+// Le chemin de la page lit le texte d'un SVG avec les fontes de remplacement (ADR-0020, `io/texteSvg.ts`) : ici des fontes factices,
+// sans effet sur un fichier sans <text> (etape 13c).
 const lirePage = (svg: string): { dessin: DessinSvg; ignores: readonly string[] } => {
   const propre = nettoyerSvg(svg);
   if (!propre) throw new Error('le nettoyage refuse');
-  const r = lireDessin(propre.svg, { modele: 'riche' });
+  const r = lireDessin(propre.svg, { modele: 'riche', polices: policesFactices });
   if ('erreur' in r) throw new Error(r.erreur);
   return r;
 };
@@ -70,8 +76,8 @@ describe('le corpus d acceptation du modele v2', () => {
       expect(ecrit).toBe(readFileSync(reference, 'utf8').replace(/\r\n/g, '\n'));
       expect(violationsEcriture(ecrit)).toEqual([]);
       expect(ecrireEnregistre(lirePage(ecrit).dessin), 'point fixe').toBe(ecrit);
-      // En mode plat, le meme fichier s'ouvre aussi : ses groupes se fondent, comme avant.
-      expect('erreur' in lireDessin(nettoyerSvg(texte)?.svg ?? '')).toBe(false);
+      // En mode plat, le meme fichier s'ouvre aussi (ses groupes se fondent, comme avant), ou se refuse comme avant.
+      expect('erreur' in lireDessin(nettoyerSvg(texte)?.svg ?? '', { polices: policesFactices })).toBe(c.aPlat === false);
     });
   }
 });

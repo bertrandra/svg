@@ -173,6 +173,26 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Un motif est une peinture en ligne, sa tuile un contenu à part** (ADR-0012, étape 9) : `edition/fonctions/motifs.ts` lit `<pattern>`
+  par `contenus.ts`, le contenu dans le repère de la tuile, origine au coin (x, y) ; l'écriture pose
+  `<pattern id="ed-p-…" patternUnits="userSpaceOnUse">` par empreinte ; la couleur de repli est la moyenne OKLab de la tuile ; ses
+  identifiants forment un espace à part (pas de renumérotation, `verifierDessin` juge chaque tuile) ; `creerMotif` fait de la
+  sélection la tuile ; la descente rend la couleur de repli et le dit ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-motifs-*`.
+- **Un `<svg>` imbriqué et un `<text>` lu sont des groupes en riche** (ADR-0012, étape 13c) : `edition/fonctions/imbrications.ts` lit
+  `svg` (cadre, viewBox et aspect cuits dans les feuilles par `matriceCadre`, fenêtre en découpe sauf `overflow` visible ou auto) et
+  `text` (ses lettres en groupe « Texte « … » », ses prises posées par leurs fonctionnalités, la boîte des lettres par
+  `poserBoiteConnue`) ; les écarts entre navigateurs sont dits (`MSG_IMBRICATIONS`) ; en plat, rien ne change ; un vecteur nouveau
+  entre dans `tests/fixtures/hostile/v2-imbrications-*`.
+- **Un dégradé se règle à l'inspecteur, la toile n'est qu'un raccourci** (ADR-0012, étape 4) : Uni / Linéaire / Radial seulement en
+  modèle riche ou sur un dessin déjà riche ; opérations pures dans `engine/edition/degradesOperations.ts` (repli recalculé, positions
+  bornées par les voisins, valeurs au millième) ; listbox des arrêts dans `zones/EditeurDegrade.tsx` ; poignées `role="slider"` dans
+  `zones/PoigneesDegrade.tsx` (Tab y entre, flèches ±1 %, Maj ±10 %, Suppr) ; au-delà de 20 nœuds à effet, `data-brouillon` retire
+  les filtres pendant un geste (`zones/brouillon.ts`) ; la toile rend une définition par élément, à la clé de son empreinte.
+- **Les calques d'un dessin riche sont un arbre, ceux d'un dessin plat ne bougent pas** (ADR-0012, étape 2-B) : `zones/ArbreCalques.tsx`
+  (treegrid, un seul arrêt de Tab, clavier de l'annexe 6 §1, Ctrl+Maj+flèches et « Déplacer vers… » en alternative au glisser), calcul
+  pur dans `zones/lignesCalques.ts` et `zones/deplacerCalques.ts` ; fenêtré sur les lignes visibles (seuil 150, ligne active épinglée) ;
+  choisir une ligne amène le contexte au groupe commun ; en Cricut, « À couper / À écrire » d'abord, l'arbre dessous pour un dessin
+  riche ; le DOM de la liste plate est gardé par empreinte (`tests/fixtures/calques/plat.sha256.json`).
 - **Les groupes se commandent en riche seulement** (ADR-0012, étape 2-C) : `zones/commandesGroupes.ts` (`groupesActifs` : le réglage
   riche ou un dessin déjà riche) porte Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer (Entrée), Sortir (Maj+Entrée, Échap, clic hors
   du contexte) et « Télécharger le SVG à plat » (Fichier, pas un enregistrement) ; Combiner et Séparer y perdent leur raccourci ; Tab,

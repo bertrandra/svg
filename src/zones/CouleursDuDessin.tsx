@@ -15,6 +15,7 @@ import { Section } from './commun/Section.js';
 import { useDessin } from './contexteEditeur.js';
 import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
 import { LigneCouleurDessin } from './LigneCouleurDessin.js';
+import { LigneDegrades } from './LigneDegrades.js';
 import { SEUIL_COULEURS } from './ListeCouleurs.js';
 import { useActionsCouleursDessin, type ActionsCouleurDessin } from './actionsCouleursDessin.js';
 import type { SuiviCouleur } from './actionsCouleur.js';
@@ -37,6 +38,8 @@ export function CouleursDuDessin() {
         : mo.dessin.formes.length
           ? <EtatVide genre="aucun-resultat" titre="Aucune couleur à changer.">Les formes n’ont ni remplissage ni contour : donnez-leur une couleur dans l’inspecteur, elle apparaîtra ici.</EtatVide>
           : <EtatVide genre="premiere-fois" icone="palette" titre="Aucune couleur pour l’instant.">Chaque couleur du dessin aura sa ligne ici, pour la changer partout d’un coup.</EtatVide>}
+      {/* Les degrades ne sont pas des couleurs du dessin (couleurs.ts) : une ligne a part les choisit (ADR-0012, etape 4). */}
+      <LigneDegrades dessin={mo.dessin} />
     </Section>
   );
 }
