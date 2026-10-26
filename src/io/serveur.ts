@@ -245,6 +245,16 @@ export function lireReglages(x: unknown): Reglages | null {
   };
 }
 
+/**
+ * La reponse de `r=reglages` (lecture ou ecriture) : les reglages sous `reglages`, `smtpMotDePassePose` a cote (le mot de passe SMTP
+ * n'en sort jamais, ADR-0041 §7). Null si la reponse n'a pas cette forme (`{ ok: true }` seul, par exemple).
+ */
+function reglagesRecus(corps: unknown): Reglages | null {
+  if (!estObjet(corps) || !estObjet(corps['reglages'])) return null;
+  const lu = lireReglages(corps['reglages']);
+  return lu ? { ...lu, smtpMotDePassePose: corps['smtpMotDePassePose'] === true } : null;
+}
+
 /** Le texte d'une reponse, borne : un serveur qui enverrait davantage n'est pas lu. */
 async function texteBorne(r: Response, max: number): Promise<string | null> {
   if (Number(r.headers.get('content-length') ?? 0) > max) return null;
@@ -318,19 +328,21 @@ function routesComptes({ demander, ecrire, ecriture }: Outils): Pick<Serveur, 'c
     reglages: async () => {
       const r = await demander({ r: 'reglages' });
       if (!r.ok) return r;
-      const lu = lireReglages(r.valeur.corps);
+      const lu = reglagesRecus(r.valeur.corps);
       return lu ? { ok: true, valeur: lu } : echec('serveur');
     },
     poserReglages: async (reglages, smtpMotDePasse) => {
       // Le mot de passe SMTP ne part que tape : vide, le serveur garde le sien (ADR-0041 §7). `smtpMotDePassePose` est au serveur.
       const corps = {
-        site: reglages.site, inscriptions: reglages.inscriptions, sessions: reglages.sessions,
-        courrier: { ...reglages.courrier, smtp: { ...reglages.courrier.smtp, ...(smtpMotDePasse ? { motDePasse: smtpMotDePasse } : {}) } }
+        reglages: {
+          site: reglages.site, inscriptions: reglages.inscriptions, sessions: reglages.sessions,
+          courrier: { ...reglages.courrier, smtp: { ...reglages.courrier.smtp, ...(smtpMotDePasse ? { motDePasse: smtpMotDePasse } : {}) } }
+        }
       };
       const r = await ecrire({ r: 'reglages' }, ecriture(corps));
       if (!r.ok) return r;
       // Le serveur rend les reglages relus ; s'il ne rend que `{ ok: true }`, ceux qu'on a envoyes, le mot de passe pose s'il vient de l'etre.
-      const lu = estObjet(r.valeur.corps) && 'site' in r.valeur.corps ? lireReglages(r.valeur.corps) : null;
+      const lu = reglagesRecus(r.valeur.corps);
       return { ok: true, valeur: lu ?? { ...reglages, smtpMotDePassePose: reglages.smtpMotDePassePose || smtpMotDePasse !== '' } };
     },
     courrierEssai: async destinataire => rien(await ecrire({ r: 'courrier-essai' }, ecriture(destinataire ? { destinataire } : {})))

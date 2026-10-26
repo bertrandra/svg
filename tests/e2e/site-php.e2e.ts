@@ -1,150 +1,27 @@
-// Le site PHP (ADR-0030, ADR-0041), dans un vrai navigateur, contre `php -S` sur une copie de dist/php (la disposition livree : le
-// seul dossier public/, data/ dedans, sous le routeur data/inc/serveur-local.php qui imite les .htaccess) : l'administrateur cree a la
-// premiere visite, connexion par adresse et mot de passe, ecran
-// « Projets », creer, enregistrer, rouvrir a l'identique (un texte vivant, un projet Cricut a operations melees), renommer,
-// dupliquer, supprimer, deconnexion, acces refuse sans session, police du catalogue servie par le site (sa source simulee par un
-// petit serveur local, jamais le vrai reseau), axe sans violation sur la connexion et l'ecran Projets. La page ne contacte que le site.
+// Le site PHP (ADR-0030, ADR-0041), dans un vrai navigateur, contre `php -S` sur une copie de dist/php (tests/e2e/site.ts : la
+// disposition livree, le routeur data/inc/serveur-local.php qui imite les .htaccess, une source simulee, le courrier en mode
+// fichier) : l'administrateur cree a la premiere visite, connexion par adresse et mot de passe, ecran « Projets », creer, enregistrer,
+// rouvrir a l'identique (un texte vivant, un projet Cricut a operations melees), renommer, dupliquer, supprimer, deconnexion, acces
+// refuse sans session, police du catalogue servie par le site, axe sans violation sur la connexion et l'ecran Projets. La page ne
+// contacte que le site. Les ecrans des comptes (profil, administration, reglages) sont dans site-comptes.e2e.ts.
 //
 //   npm run construire   (le test ouvre dist/php, il ne construit rien ; PHP 8.1 ou plus doit etre installe)
 
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
-import { createServer as serveurTcp } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readdirSync, readFileSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, attendreAnimations, imageDeTest, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
+import { attend, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
 import { champPolice, valeurPolice } from './polices.js';
-import { enWoff } from '../unit/io/woffFactice.js';
-import { idVariante, type CataloguePolices, type FamilleCatalogue } from '../../src/model/cataloguePolices.js';
+import { ADMIN_EMAIL, ID_ESSAI, MOT, siteDesTests } from './site.js';
 
-const MOT = 'un mot de passe assez long';
-const ADMIN_EMAIL = 'admin@exemple.org';
-const DIST_PHP = resolve(RACINE_DEPOT, 'dist/php');
-/** Le dossier des donnees de la copie servie : sous la racine web, comme le build le livre. */
-const donnees = (chemin: string) => join(racine, 'public/data', chemin);
-const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
-
-// Une police du catalogue d'essai : Inter mise en WOFF, que la source simulee sert a l'adresse jsDelivr que l'index designe.
-const WOFF = enWoff(new Uint8Array(readFileSync(resolve(RACINE_DEPOT, 'node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'))));
-const SHA = createHash('sha256').update(WOFF).digest('base64');
-const ESSAI: FamilleCatalogue = { id: 'police-essai', nom: 'Police Essai', depot: 'fontsource', source: 'google', categorie: 'lineale', licence: 'OFL-1.1', version: '1.0.0', ecritures: ['latin'], variantes: [[400, 0, SHA, null]] };
-const INDEX: CataloguePolices = { format: 1, instantane: '2026-10-25', familles: [ESSAI], anciennes: [] };
-const ID_ESSAI = idVariante(ESSAI, [400, 0, SHA, null]);
-
-let racine = '', site = '', source: Server | null = null, php: ChildProcess | null = null, portSource = 0;
-// Les fichiers qu'on ouvre depuis une adresse (ADR-0036) : le serveur du site les demande a la source simulee, sous un nom que sa
-// resolution simulee (ADRESSE_RESOLUTION_ESSAI) mene a 127.0.0.1, seul reseau prive permis ici.
-const DESSIN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80"><rect x="10" y="10" width="40" height="30" fill="#c81e28"/><circle cx="70" cy="50" r="20" fill="#1428a0"/></svg>';
-const PHOTO = imageDeTest().buffer;
-const demandesSource: string[] = [];
-
-const portLibre = () => new Promise<number>((ok, ko) => {
-  const s = serveurTcp().listen(0, '127.0.0.1', () => { const a = s.address(); s.close(() => (a && typeof a === 'object' ? ok(a.port) : ko(new Error('port')))); });
-});
-
-async function attendrePort(url: string): Promise<void> {
-  for (let i = 0; i < 100; i++) {
-    try { await fetch(url + '/assets/site.css'); return; } catch { await new Promise(r => setTimeout(r, 100)); }
-  }
-  throw new Error('php -S ne repond pas sur ' + url);
-}
-
-beforeAll(async () => {
-  if (!existsSync(join(DIST_PHP, 'public/index.php'))) throw new Error('dist/php manque : lancer `npm run construire` avant `npm run e2e`.');
-  if (spawnSync('php', ['-v']).status !== 0) throw new Error('PHP est introuvable : le site se teste sous `php -S`.');
-  racine = mkdtempSync(join(tmpdir(), 'site-php-e2e-'));
-  cpSync(DIST_PHP, racine, { recursive: true });
-  // La source des polices, simulee : elle sert le fichier d'essai et note chaque demande.
-  portSource = await portLibre();
-  source = createServer((req, res) => {
-    demandesSource.push(req.url ?? '');
-    if ((req.url ?? '').endsWith('/police-essai-latin-400-normal.woff')) { res.writeHead(200, { 'Content-Type': 'font/woff' }); res.end(Buffer.from(WOFF)); return; }
-    // Aucun en-tete CORS : c'est le serveur du site qui lit, pas la page.
-    if ((req.url ?? '').split('?')[0] === '/dessins/carte.svg') { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end(DESSIN); return; }
-    if (req.url === '/photo.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml' }); res.end(PHOTO); return; }
-    res.writeHead(404); res.end();
-  }).listen(portSource, '127.0.0.1');
-  const s = 'http://127.0.0.1:' + portSource;
-  writeFileSync(join(racine, 'public/data/config/config.local.php'), '<?php\ndefine(\'POLICES_SOURCES\', ' + JSON.stringify({ jsdelivr: s + '/npm/@fontsource/', bunny: s + '/bunny/', gitlab: s + '/gitlab/', fontshare: s + '/wf/' }).replace(/^\{/, '[').replace(/\}$/, ']').replace(/":/g, '" =>') + ');\n'
-    + "define('ADRESSE_HTTP', true);\ndefine('ADRESSE_PORTS', [" + portSource + "]);\ndefine('ADRESSE_RESEAUX_PERMIS', ['127.0.0.1/32']);\n"
-    + "define('ADRESSE_RESOLUTION_ESSAI', ['fichiers.essai' => [['127.0.0.1']], 'interne.essai' => [['10.0.0.8']]]);\n");
-  writeFileSync(donnees('json/polices-catalogue.json'), JSON.stringify(INDEX));
-  // Le courrier en mode fichier : rien ne part, chaque message s'ecrit dans data/journal/courrier.
-  writeFileSync(donnees('config/config.json'), JSON.stringify({ format: 'editeur-svg/config', version: 1, site: { nom: 'Éditeur SVG', langue: 'fr', adresse: '' }, inscriptions: { ouvertes: true }, courrier: { expediteur: 'no-reply@exemple.org', nom: 'Éditeur SVG', mode: 'fichier', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '', motDePasse: '' } }, sessions: { inactivite: 7200 } }));
-  // Aucun compte : le premier test cree l'administrateur dans la page ; les autres le creent en ligne de commande s'il manque.
-  const port = await portLibre();
-  site = 'http://127.0.0.1:' + port;
-  // Plusieurs travailleurs : pendant la page de l'application, le site se demande a lui-meme si data/pwd se lit (index.php,
-  // http_lisible) ; sous un seul travailleur, `php -S` ne servirait cette requete qu'apres la page, qui attendrait les 3 s de son
-  // delai et avertirait faute de reponse (mesure). Le routeur refuse data/ et inc/ comme le feraient les .htaccess, que `php -S`
-  // ignore ; le site, qui se demande a lui-meme si data/pwd se lit, doit voir ce refus (sinon il avertit).
-  php = spawn('php', ['-S', '127.0.0.1:' + port, '-t', join(racine, 'public'), join(racine, 'public/data/inc/serveur-local.php')], { stdio: 'ignore', env: { ...process.env, PHP_CLI_SERVER_WORKERS: '4' } });
-  await attendrePort(site);
-});
-
-afterAll(() => {
-  php?.kill();
-  source?.close();
-  if (racine) rmSync(racine, { recursive: true, force: true });
-});
-
-/** Audite la page par axe (injecte par evaluate : la politique de securite du site refuse un script en ligne, a raison). */
-async function sansViolationGrave(page: Page, ecran: string): Promise<void> {
-  await attendreAnimations(page);
-  await page.evaluate(AXE);
-  const r = await page.evaluate(async () => (window as unknown as { axe: { run: (d: Document) => Promise<{ violations: Array<{ id: string; impact: string; nodes: Array<{ target: unknown }> }> }> } }).axe.run(document));
-  const graves = r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
-  expect(graves.map(v => ecran + ' : ' + v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target)))).toEqual([]);
-}
-
-/** Les fichiers de compte (data/comptes/<id>.json). */
-const comptes = () => readdirSync(donnees('comptes')).filter(f => /^[a-f0-9]{16}\.json$/.test(f));
-/** L'identifiant du compte qui porte cette adresse, ou ''. */
-const idDuCompte = (email: string) => comptes().find(f => (JSON.parse(readFileSync(donnees('comptes/' + f), 'utf8')) as { email: string }).email === email)?.replace('.json', '') ?? '';
-
-/** Cree l'administrateur en ligne de commande (data/inc/compte.php --admin --stdin : adresse, nom, mot de passe, langue), comme un
- * script d'installation ; rien si un compte existe deja. */
-function installer(): void {
-  if (comptes().length > 0) return;
-  const r = spawnSync('php', [join(racine, 'public/data/inc/compte.php'), '--admin', '--stdin'], { input: ADMIN_EMAIL + '\nAdmin\n' + MOT + '\nfr\n', encoding: 'utf8' });
-  if (r.status !== 0) throw new Error('compte.php --admin : ' + r.stdout + r.stderr);
-}
-
-/** Une session du navigateur qui note chaque requete : la page ne doit contacter que le site. Sans compte (un test lance seul),
- * l'administrateur est cree en ligne de commande. */
-async function ouvrirSite(navigateur: ReturnType<typeof pilote>, creerAdmin = true): Promise<{ page: Page; requetes: string[]; erreurs: string[] }> {
-  if (creerAdmin) installer();
-  const s = await navigateur.ouvrir({ naviguer: false });
-  const requetes: string[] = [];
-  s.page.on('request', r => { if (!r.url().startsWith('data:') && !r.url().startsWith('blob:')) requetes.push(r.url()); });
-  // La politique d'ouverture est posee, meme si Firefox l'ignore ici (voir `coopIgnoreeParFirefox`).
-  expect((await s.page.goto(site + '/'))?.headers()['cross-origin-opener-policy']).toBe('same-origin');
-  return { page: s.page, requetes, erreurs: s.erreurs };
-}
-
-async function connecter(page: Page): Promise<void> {
-  await page.locator('#email').fill(ADMIN_EMAIL);
-  await page.locator('#mot-de-passe').fill(MOT);
-  await page.getByRole('button', { name: 'Se connecter' }).click();
-  await page.getByRole('heading', { name: 'Mes projets' }).waitFor();
-  await attend(() => page.locator('.projets [role="status"]').count()).toBe(0);
-}
+const s = siteDesTests();
 
 const etat = (page: Page) => texteDe(page.locator('.editeur-etat .etat-enregistrement'));
-
-/** La deconnexion : le menu du compte (icone en haut a droite), puis « Se deconnecter » (le formulaire index.php). */
-async function seDeconnecter(page: Page): Promise<void> {
-  await page.getByRole('button', { name: /^Compte : / }).click();
-  await page.getByRole('menuitem', { name: 'Se déconnecter' }).click();
-}
 const ligneProjet = (page: Page, nom: string) => page.locator('.liste-projets .projet', { has: page.getByRole('button', { name: nom, exact: true }) });
 
 async function projets(page: Page): Promise<Array<{ id: string; nom: string; revision: number }>> {
-  const r = await page.request.get(site + '/api.php?r=projets');
+  const r = await page.request.get(s.site + '/api.php?r=projets');
   return ((await r.json()) as { projets: Array<{ id: string; nom: string; revision: number }> }).projets;
 }
 
@@ -154,8 +31,8 @@ async function idDe(page: Page, nom: string): Promise<string> {
   return p.id;
 }
 
-const vignette = async (page: Page, id: string) => (await page.request.get(site + '/api.php?r=vignette&id=' + id)).text();
-const projetJson = async (page: Page, id: string) => (await page.request.get(site + '/api.php?r=projet&id=' + id)).json() as Promise<{ dessin: unknown; production: unknown; nom: string }>;
+const vignette = async (page: Page, id: string) => (await page.request.get(s.site + '/api.php?r=vignette&id=' + id)).text();
+const projetJson = async (page: Page, id: string) => (await page.request.get(s.site + '/api.php?r=projet&id=' + id)).json() as Promise<{ dessin: unknown; production: unknown; nom: string }>;
 
 async function fermerEditeur(page: Page): Promise<void> {
   await ouvrirMenu(page, 'Fichier');
@@ -179,80 +56,79 @@ describe('le site PHP', () => {
   const navigateur = pilote({ coopIgnoreeParFirefox: true });
 
   it('sans compte, la page cree l administrateur et ouvre l application ; ensuite la route n existe plus, et data/ ne se lit pas', async () => {
-    for (const f of comptes()) rmSync(donnees('comptes/' + f));
-    const { page, requetes } = await ouvrirSite(navigateur, false);
+    for (const f of s.comptes()) rmSync(s.donnees('comptes/' + f));
+    const { page, requetes } = await s.ouvrirSite(navigateur, false);
     await page.getByRole('heading', { name: 'Créer le compte administrateur' }).waitFor();
-    await sansViolationGrave(page, 'installation');
+    await s.sansViolationGrave(page, 'installation');
     await page.getByLabel('Adresse de courrier').fill(ADMIN_EMAIL);
     await page.getByLabel('Votre nom').fill('Admin');
     await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
     await page.getByLabel('Le même, de nouveau').fill(MOT + ' autre');
     await page.getByRole('button', { name: 'Créer le compte et entrer' }).click();
     await attend(() => texteDe(page.getByRole('alert'))).toBe('Les deux saisies du mot de passe diffèrent : rien n’est enregistré.');
-    expect(comptes()).toEqual([]);
-    await sansViolationGrave(page, 'installation en erreur');
+    expect(s.comptes()).toEqual([]);
+    await s.sansViolationGrave(page, 'installation en erreur');
     await page.getByLabel('Mot de passe', { exact: true }).fill(MOT);
     await page.getByLabel('Le même, de nouveau').fill(MOT);
     await page.getByRole('button', { name: 'Créer le compte et entrer' }).click();
     // La personne vient de creer son compte : l'application s'ouvre, sans connexion de plus.
     await page.getByRole('heading', { name: 'Mes projets' }).waitFor();
-    expect(comptes()).toHaveLength(1);
+    expect(s.comptes()).toHaveLength(1);
     expect(await page.locator('.site-avertissement').count()).toBe(0);
-    await seDeconnecter(page);
-    await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Vous êtes déconnecté.');
+    await s.seDeconnecter(page);
     expect(await page.getByRole('heading', { name: 'Créer le compte administrateur' }).count()).toBe(0);
-    await connecter(page);
+    await s.connecter(page);
     // La route n'existe plus : un envoi direct est refuse, le compte reste.
-    const html = await (await page.request.get(site + '/index.php?au-revoir')).text();
+    const html = await (await page.request.get(s.site + '/index.php?au-revoir')).text();
     expect(html).not.toContain('Créer le compte administrateur');
-    const refus = await page.request.post(site + '/index.php', { form: { action: 'installer', csrf: /(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/.exec(html)?.[1] ?? '', email: 'pirate@exemple.org', nom: 'Pirate', mot_de_passe: 'le mot de passe pirate', confirmation: 'le mot de passe pirate', langue: 'fr' } });
+    const refus = await page.request.post(s.site + '/index.php', { form: { action: 'installer', csrf: /(?:name="csrf" value|data-csrf)="([a-f0-9]{64})"/.exec(html)?.[1] ?? '', email: 'pirate@exemple.org', nom: 'Pirate', mot_de_passe: 'le mot de passe pirate', confirmation: 'le mot de passe pirate', langue: 'fr' } });
     expect(refus.status()).toBe(403);
     expect(await refus.text()).toContain('Le site a déjà un administrateur');
-    expect(comptes()).toHaveLength(1);
+    expect(s.comptes()).toHaveLength(1);
     // Ni le code, ni les reglages, ni les comptes ne se lisent par HTTP (le routeur, comme data/.htaccess, refuse data/).
-    for (const f of ['data/config/config.json', 'data/comptes/' + comptes()[0], 'data/comptes/', 'data/.htaccess', 'data/sessions/', 'data/inc/amorce.php', 'data/inc/compte.php']) {
-      const r = await page.request.get(site + '/' + f);
+    for (const f of ['data/config/config.json', 'data/comptes/' + s.comptes()[0], 'data/comptes/', 'data/.htaccess', 'data/sessions/', 'data/inc/amorce.php', 'data/inc/compte.php']) {
+      const r = await page.request.get(s.site + '/' + f);
       expect([403, 404], f).toContain(r.status());
       expect(await r.text(), f).not.toMatch(/editeur-svg\/|\$argon2|\$2y\$|<\?php/);
     }
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+    expect(requetes.filter(u => !u.startsWith(s.site + '/'))).toEqual([]);
   });
 
   it('refuse l acces sans session ; la connexion dit une erreur claire ; connexion et Projets sans violation axe', async () => {
-    const { page, requetes } = await ouvrirSite(navigateur);
-    const refus = await page.request.get(site + '/api.php?r=projets');
+    const { page, requetes } = await s.ouvrirSite(navigateur);
+    const refus = await page.request.get(s.site + '/api.php?r=projets');
     expect(refus.status()).toBe(401);
     expect(((await refus.json()) as { erreur: string }).erreur).toBe('session');
     await page.getByRole('heading', { name: 'Éditeur SVG' }).waitFor();
-    await sansViolationGrave(page, 'connexion');
+    await s.sansViolationGrave(page, 'connexion');
     await page.locator('#email').fill(ADMIN_EMAIL);
     await page.locator('#mot-de-passe').fill('pas le bon');
     await page.getByRole('button', { name: 'Se connecter' }).click();
     await attend(() => texteDe(page.getByRole('alert'))).toBe('Adresse ou mot de passe incorrect.');
     expect(await page.locator('#mot-de-passe').getAttribute('aria-describedby')).toBe('erreur-connexion');
-    await sansViolationGrave(page, 'connexion en erreur');
-    await connecter(page);
-    await sansViolationGrave(page, 'projets (vide)');
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+    await s.sansViolationGrave(page, 'connexion en erreur');
+    await s.connecter(page);
+    await s.sansViolationGrave(page, 'projets (vide)');
+    expect(requetes.filter(u => !u.startsWith(s.site + '/'))).toEqual([]);
   });
 
   it('le menu Aide de l editeur ouvre les documentations servies par le site (public/aide)', async () => {
-    const { page } = await ouvrirSite(navigateur);
-    await connecter(page);
+    const { page } = await s.ouvrirSite(navigateur);
+    await s.connecter(page);
     await page.getByRole('button', { name: 'Ouvrir l’exemple' }).click();
     await page.locator('.editeur-cadre').waitFor();
     await ouvrirMenu(page, 'Aide');
     expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier', 'Guide de l’éditeur', 'La Cricut, c’est simple']);
     const [onglet] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('menuitem', { name: 'La Cricut, c’est simple' }).click()]);
     await onglet.waitForLoadState('load');
-    expect(onglet.url()).toBe(site + '/aide/cricut.html');
+    expect(onglet.url()).toBe(s.site + '/aide/cricut.html');
     expect(await onglet.title()).toBe('La Cricut, c’est simple');
     await onglet.close();
   });
 
   it('cree, enregistre (Ctrl+S), rouvre a l identique avec un texte vivant ; renomme, duplique, supprime ; se deconnecte', async () => {
-    const { page, requetes } = await ouvrirSite(navigateur);
-    await connecter(page);
+    const { page, requetes } = await s.ouvrirSite(navigateur);
+    await s.connecter(page);
     await page.getByRole('button', { name: 'Ouvrir l’exemple' }).click();
     await page.locator('.editeur-cadre').waitFor();
     await attend(() => etat(page)).toBe('Modifications non enregistrées');
@@ -298,7 +174,7 @@ describe('le site PHP', () => {
     await champ.fill('Carte renommée');
     await champ.press('Enter');
     await ligneProjet(page, 'Carte renommée').waitFor();
-    await sansViolationGrave(page, 'projets (liste)');
+    await s.sansViolationGrave(page, 'projets (liste)');
     // Dupliquer, puis supprimer la copie apres confirmation.
     await ligneProjet(page, 'Carte renommée').getByRole('button', { name: 'Dupliquer « Carte renommée »' }).click();
     await ligneProjet(page, 'Carte renommée (copie)').waitFor();
@@ -307,18 +183,17 @@ describe('le site PHP', () => {
     await confirmation.getByRole('button', { name: 'Supprimer', exact: true }).click();
     await attend(() => ligneProjet(page, 'Carte renommée (copie)').count()).toBe(0);
     expect((await projets(page)).map(p => p.nom).sort()).toEqual(['Carte renommée', 'exemple']);
-    expect(readdirSync(donnees('projets/' + idDuCompte(ADMIN_EMAIL) + '/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
+    expect(readdirSync(s.donnees('projets/' + s.idDuCompte(ADMIN_EMAIL) + '/corbeille')).some(f => f.endsWith('.meta.json'))).toBe(true);
 
     // Se deconnecter (le menu du compte) : retour a la connexion, l'API refuse.
-    await seDeconnecter(page);
-    await attend(() => texteDe(page.locator('.message.neutre'))).toBe('Vous êtes déconnecté.');
-    expect((await page.request.get(site + '/api.php?r=projets')).status()).toBe(401);
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+    await s.seDeconnecter(page);
+    expect((await page.request.get(s.site + '/api.php?r=projets')).status()).toBe(401);
+    expect(requetes.filter(u => !u.startsWith(s.site + '/'))).toEqual([]);
   });
 
   it('un projet Cricut a operations melees se rouvre a l identique : contexte, operations, octets', async () => {
-    const { page } = await ouvrirSite(navigateur);
-    await connecter(page);
+    const { page } = await s.ouvrirSite(navigateur);
+    await s.connecter(page);
     const svg = readFileSync(resolve(RACINE_DEPOT, 'tests/fixtures/svg/cricut-operations.attendu.svg'), 'utf8');
     await page.locator('section[aria-label="Ouvrir un SVG ou un PDF"] textarea').fill(svg);
     await page.getByRole('button', { name: 'Ouvrir ce code' }).click();
@@ -346,8 +221,8 @@ describe('le site PHP', () => {
   });
 
   it('une police du catalogue est servie par le site, qui la telecharge et la verifie : le navigateur ne contacte que lui', async () => {
-    const { page, requetes } = await ouvrirSite(navigateur);
-    await connecter(page);
+    const { page, requetes } = await s.ouvrirSite(navigateur);
+    await s.connecter(page);
     await page.getByRole('button', { name: 'Nouveau projet' }).click();
     await page.locator('.editeur-cadre').waitFor();
     await page.locator('.editeur-svg-toile').focus();
@@ -357,51 +232,51 @@ describe('le site PHP', () => {
     await page.locator('.editeur-inspecteur').getByRole('button', { name: 'Toutes les polices' }).click();
     const ligne = page.locator('.liste-polices .police-ligne', { hasText: 'Police Essai' });
     await ligne.waitFor();
-    expect(demandesSource).toEqual([]);
+    expect(s.demandesSource).toEqual([]);
     await ligne.click();
     await attend(() => valeurPolice(zone)).toBe(ID_ESSAI);
-    expect(demandesSource).toEqual(['/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff']);
-    expect(readdirSync(donnees('font/catalogue')).length).toBe(1);
-    expect(requetes.some(u => u.startsWith(site + '/api.php?r=police&sha='))).toBe(true);
+    expect(s.demandesSource).toEqual(['/npm/@fontsource/police-essai@1.0.0/files/police-essai-latin-400-normal.woff']);
+    expect(readdirSync(s.donnees('font/catalogue')).length).toBe(1);
+    expect(requetes.some(u => u.startsWith(s.site + '/api.php?r=police&sha='))).toBe(true);
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
     await page.locator('.editeur-barre .groupe.fin button.primaire').click();
     await attend(() => etat(page)).toBe('Enregistré');
     expect(await vignette(page, await idDe(page, 'Sans titre'))).toContain('data-ed-police="' + ID_ESSAI + '"');
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
+    expect(requetes.filter(u => !u.startsWith(s.site + '/'))).toEqual([]);
     await fermerEditeur(page);
   });
 
   it('ouvrir depuis une adresse passe par le serveur du site : un SVG ouvre l editeur, une image le convertisseur, une adresse interne est refusee', async () => {
-    const { page, requetes, erreurs } = await ouvrirSite(navigateur);
-    await connecter(page);
-    const avant = demandesSource.length;
+    const { page, requetes, erreurs } = await s.ouvrirSite(navigateur);
+    await s.connecter(page);
+    const avant = s.demandesSource.length;
     const champ = page.getByRole('textbox', { name: 'Ouvrir depuis une adresse' });
     expect(await texteDe(page.locator('.voie-panneau:not([hidden]) .adresse .aide').first())).toContain('Le site va chercher le fichier');
-    await champ.fill('http://fichiers.essai:' + portSource + '/dessins/carte.svg?jeton=secret');
+    await champ.fill('http://fichiers.essai:' + s.portSource + '/dessins/carte.svg?jeton=secret');
     await page.waitForTimeout(200);
-    expect(demandesSource.length, 'rien ne part avant « Ouvrir »').toBe(avant);
+    expect(s.demandesSource.length, 'rien ne part avant « Ouvrir »').toBe(avant);
     await page.locator('.voie-panneau:not([hidden]) .adresse').getByRole('button', { name: 'Ouvrir', exact: true }).click();
     await page.locator('.editeur-cadre').waitFor();
     expect(await page.locator('.editeur-svg-toile path[data-id]').count()).toBe(2);
-    expect(demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret']);
+    expect(s.demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret']);
     // Un projet neuf, jamais enregistre : fermer demande confirmation, on abandonne.
     await ouvrirMenu(page, 'Fichier');
     await page.getByRole('menuitem', { name: 'Fermer l’éditeur' }).click();
     await page.getByRole('button', { name: 'Abandonner' }).click();
     await page.locator('.editeur-cadre').waitFor({ state: 'detached' });
     // Une adresse que le DNS mene a un reseau prive : refusee par le serveur, avant toute connexion, et c'est dit.
-    await champ.fill('http://interne.essai:' + portSource + '/a.svg');
+    await champ.fill('http://interne.essai:' + s.portSource + '/a.svg');
     await page.keyboard.press('Enter');
     await attend(() => texteDe(page.locator('main > .message'))).toBe('Cette adresse mène à un réseau privé, local ou réservé : le site ne la demande pas.');
     // Une « .svg » qui est une PNG : decidee sur ses octets, elle va au convertisseur.
-    await champ.fill('http://fichiers.essai:' + portSource + '/photo.svg');
+    await champ.fill('http://fichiers.essai:' + s.portSource + '/photo.svg');
     await page.keyboard.press('Enter');
     await attend(() => page.locator('#voie-image').getAttribute('aria-selected')).toBe('true');
     await attend(() => texteDe(page.locator('.vectoriser .depot p'))).toBe('photo · 240 × 190 px');
-    expect(demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret', '/photo.svg']);
-    expect(requetes.filter(u => !u.startsWith(site + '/'))).toEqual([]);
-    expect(requetes.filter(u => u.startsWith(site + '/api.php?r=adresse')).length).toBe(3);
-    const journal = readFileSync(donnees('journal/adresses.log'), 'utf8');
+    expect(s.demandesSource.slice(avant)).toEqual(['/dessins/carte.svg?jeton=secret', '/photo.svg']);
+    expect(requetes.filter(u => !u.startsWith(s.site + '/'))).toEqual([]);
+    expect(requetes.filter(u => u.startsWith(s.site + '/api.php?r=adresse')).length).toBe(3);
+    const journal = readFileSync(s.donnees('journal/adresses.log'), 'utf8');
     expect(journal).toContain('hote=fichiers.essai');
     expect(journal).not.toContain('secret');
     // Le refus du serveur (403) s'ecrit dans la console du navigateur de lui-meme : ce n'est pas la page.

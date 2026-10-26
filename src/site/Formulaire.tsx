@@ -1,6 +1,8 @@
 // Les briques des formulaires du site (ADR-0041) : un champ avec son libelle et son erreur liee (aria-describedby, aria-invalid),
 // un choix de langue, et le retour d'un formulaire (succes en neutre, echec en alerte). Chaque formulaire porte son propre retour :
-// une boite qui en a deux (le profil et le mot de passe) dit lequel a abouti.
+// une boite qui en a deux (le profil et le mot de passe) dit lequel a abouti. Les formulaires qui emploient ces champs sont
+// `noValidate` : la bulle native du navigateur (un port hors bornes, une adresse mal formee) bloquerait l'envoi sans rien lier au
+// champ ni au lecteur d'ecran ; c'est la validation du formulaire qui dit l'erreur, sur le champ.
 
 import { useId, type ReactNode, type RefObject } from 'react';
 import type { Langue } from '../io/serveur.js';

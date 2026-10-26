@@ -71,7 +71,7 @@
   "Chargement des projets…": "Loading projects…",
   "Chargement des réglages…": "Loading settings…",
   "Commencez un projet vierge, ou à partir d’un fichier, d’une image ou d’une forme ci-dessous : « Enregistrer » le gardera ici.": "Start a blank project, or one from a file, an image or a shape below: “Save” will keep it here.",
-  "Compte : {nom}": "Account: {nom}",
+  "Compte : {nom}, {initiales}": "Account: {nom}, {initiales}",
   "Compte « {nom} » approuvé : la personne a reçu un mail.": "Account “{nom}” approved: the person has received an email.",
   "Compte « {nom} » créé, actif : donnez-lui son mot de passe provisoire.": "Account “{nom}” created, active: give them their temporary password.",
   "Compte « {nom} » réactivé.": "Account “{nom}” reactivated.",
