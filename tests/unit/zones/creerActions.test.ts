@@ -4,6 +4,7 @@ import { stockageMemoire, type Stockage } from '../../../src/io/stockage.js';
 import { historique, type Historique } from '../../../src/util/historique.js';
 import { creerActions, type EtatDuMoment, type Setters } from '../../../src/zones/creerActions.js';
 import { CLE_VERSIONS, type Version } from '../../../src/zones/session.js';
+import { etendueVisible } from '../../../src/engine/preparation.js';
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
   + '<path d="M0 0L10 0L10 10Z" fill="#c81e28"/><path d="M20 20L40 20L40 40Z" fill="#1428a0"/></svg>';
@@ -217,10 +218,18 @@ describe('creerActions : le geste de fin et Ctrl+S', () => {
     const m = monter();
     m.actions.ajuster();
     expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(1);
+    // Le tapis fixe, le defaut (ADR-0039, revision du 26 octobre 2026) : « Ajuster » cadre le tapis, pose au coin du plan.
     m.etat.production = { contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' };
     m.actions.ajuster();
-    // Le tapis de 12 po (1 152 unites) cale sa zone utile de 11,5 po sur le coin du dessin : 24 unites de marge.
-    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[0]?.[0]).toMatchObject({ l: 1152, h: 1152 });
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[0]?.[0]).toMatchObject({ x: m.etat.dessin.vb[0], y: m.etat.dessin.vb[1], l: 1152, h: 1152 });
+    // Le plan etant le tapis, « Ajuster au dessin » cadre les formes visibles.
+    m.actions.ajusterAuDessin();
+    expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[1]?.[0]).toEqual(etendueVisible(m.etat.dessin));
+    // Avec le recalage coche, le tapis cale sa zone utile de 11,5 po sur le coin du dessin ; « Ajuster au dessin » cadre le plan.
+    m.etat.production = { ...m.etat.production, recalage: true };
+    m.actions.ajuster();
+    expect(vi.mocked(m.etat.vues.cadrer).mock.calls[2]?.[0]).toMatchObject({ l: 1152, h: 1152 });
     m.actions.ajusterAuDessin();
     expect(m.etat.vues.ajuster).toHaveBeenCalledTimes(2);
   });

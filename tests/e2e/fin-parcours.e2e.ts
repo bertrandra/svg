@@ -182,7 +182,8 @@ describe('la fin du parcours Cricut', () => {
     await exporter.click();
     const f = await telecharger(page, () => confirmation.getByRole('button', { name: 'Exporter quand même' }).click());
     expect(f.nom).toBe('dessin-cricut.svg');
-    expect(/^<svg[^>]*>/.exec(f.texte)?.[0]).toContain('width="127mm" height="76.2mm"');
+    // Le tapis fixe, par defaut (ADR-0039, revision du 26 octobre 2026) : le fichier a la taille du tapis, cadres de reperage compris.
+    expect(/^<svg[^>]*>/.exec(f.texte)?.[0]).toContain('width="304.8mm" height="304.8mm"');
     const carte = panneau(page).locator('.carte-design-space');
     await carte.waitFor();
     expect(await texteDe(carte.getByRole('heading'))).toBe('Dans Design Space');
@@ -190,9 +191,13 @@ describe('la fin du parcours Cricut', () => {
     expect(etapes.map(t => t.replace(/\s+/g, ' '))).toEqual([
       'Dans Design Space, « Nouveau projet », puis « Importer ».',
       'Choisissez le fichier dessin-cricut.svg, importez-le, puis ajoutez-le au projet.',
-      'Vérifiez sa taille : 101,6 × 50,8 mm. Ne la changez pas. (à vérifier)',
+      'Vérifiez sa taille : 292,1 × 292,1 mm, cadre compris. Ne la changez pas. (à vérifier)',
+      'Pour chaque couleur, sélectionnez le cadre de repérage de cette couleur et les formes de la même couleur, puis « Attacher ». (à vérifier)',
+      'Passez chaque cadre en « Guide » (menu Opération) : il ne se découpe pas. (à vérifier)',
+      'Sur l’aperçu du tapis, vérifiez la place : le dessin commence à 8,35 mm du bord gauche et 8,35 mm du bord haut du tapis ; sinon, faites-y glisser le dessin, puis posez la feuille à cet endroit. (à vérifier)',
       'Pour chaque couche, choisissez couper, dessiner ou rainer : le fichier ne le dit pas.'
     ]);
+    expect(await texteDe(carte.locator('p.aide'))).toBe('Le tapis est fixe : l’export garde la place des formes. Pour que Design Space les pose dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut », puis exportez à nouveau.');
     await carte.getByRole('button', { name: 'Fermer ces étapes' }).click();
     expect(await carte.count()).toBe(0);
   });
@@ -236,9 +241,11 @@ describe('la fin du parcours Cricut', () => {
     await selecteur(page).click();
     await page.getByRole('menuitemradio', { name: 'Pouces', exact: true }).click();
     await attend(() => texteDe(panneau(page).locator('.resume-cricut dd').first())).toBe('4 × 2 po');
-    // Une autre ouverture, un autre dessin : la Cricut choisie y parle en pouces.
+    // Une autre ouverture, un autre dessin : la Cricut choisie y parle en pouces. Le choix de la machine a pose le plan du tapis (une
+    // modification, ADR-0039) : fermer demande s'il faut l'abandonner.
     await ouvrirMenu(page, 'Fichier');
     await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
+    await page.getByRole('alertdialog', { name: 'Abandonner les modifications' }).getByRole('button', { name: 'Abandonner' }).click();
     await page.locator('.editeur-cadre').waitFor({ state: 'detached' });
     await ouvrirCode(page, OUVERT);
     await choisirMaker(page);

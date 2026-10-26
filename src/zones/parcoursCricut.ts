@@ -76,6 +76,12 @@ export function etapesReperage(p: ProfilProduction, place: { readonly x: number;
   ];
 }
 
+/**
+ * Ce que la carte dit apres les etapes du tapis fixe (ADR-0039, le defaut depuis sa revision du 26 octobre 2026) : comment revenir au
+ * recalage d'avant, ou Design Space pose les formes dans son coin haut gauche.
+ */
+export const NOTE_TAPIS_FIXE = 'Le tapis est fixe : l’export garde la place des formes. Pour que Design Space les pose dans le coin haut gauche du tapis, cochez « Recalage automatique » dans « Prêt pour Cricut », puis exportez à nouveau.';
+
 export function etapesDesignSpace(p: ProfilProduction, nom: string, taille: { readonly l: number; readonly h: number } | null, melange = false, place: { readonly x: number; readonly y: number } | null = null): EtapeDesignSpace[] {
   // Sans recalage automatique (ADR-0039), le fichier porte des cadres de reperage : Design Space le lit a la taille de la zone utile.
   const fixe = !p.recalage && p.procede !== 'imprimer-decouper';

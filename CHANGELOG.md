@@ -7,6 +7,23 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Version majeure : des octets écrits changent
 
+- **Cricut : le tapis fixe par défaut** (ADR-0039, révision du 26 octobre 2026 ; décision du propriétaire : « le tapis est fixe dès
+  le départ, les objets restent là où on les pose, et l'on coche la case pour revenir au recalage sur le coin haut gauche »). La case
+  **« Recalage automatique »** du panneau « Prêt pour Cricut » est désormais **décochée par défaut**. Choisir le contexte Cricut pose
+  le plan de travail sur le tapis (une seule annulation), et un fichier ouvert directement en Cricut (sa marque, le public
+  « machine » de l'accueil, un projet du site) le reçoit dans son état initial, sans que ce soit une modification ; le tapis se pose
+  là où Design Space aurait posé les pièces, le dessin à 2 mm du coin de la zone utile, et les formes ne bougent pas d'une
+  coordonnée. Un dessin plus grand que le tapis n'est jamais déplacé : le
+  constat « hors du tapis » le dit, « Ramener dans la zone utile » le corrige. **Ce qui change dans les fichiers écrits** : l'export
+  Cricut par défaut (la lame, le stylo, l'archive « couper et écrire ») a la taille du tapis et porte un cadre de repérage par
+  couleur, les formes à leur place ; le mode d'emploi de l'archive dit « Tapis fixe » et comment cocher la case ; le SVG d'un dessin
+  préparé en Cricut a le tapis pour plan ; `data-ed-recalage="oui"` s'écrit sur la racine seulement quand la case est cochée, et un
+  fichier qui portait `data-ed-recalage="non"` se relit décoché et ne le réécrit plus (le projet JSON suit la même règle, l'ancienne
+  valeur se lit sans refus). **La case cochée redonne l'export d'avant à l'octet** pour un même plan (références `cricut-export`,
+  `cricut-export-mm`, `couper-ecrire-*`, témoins 1 à 9 inchangés) ; cocher ne rend pas l'ancien plan, Ctrl+Z ou « Ajuster le plan de
+  travail » le font. « Générique » n'écrit aucun octet de plus. « Ajuster au dessin » (D) cadre, sur le tapis fixe, les formes
+  visibles. Référence refaite et relue : `tests/fixtures/cricut-recalage/couper-ecrire-fixe-lisezmoi.attendu.txt` ; le témoin 10 du
+  protocole est désormais le cas par défaut.
 - **La bascule : le modèle riche est celui de la page** (ADR-0012, étape 14 ; l'ADR-0012 passe à « acceptée » ; le paquet passe en
   0.2.0). Dans la page autonome et sur le site PHP, un SVG à `<g>`, à dégradés, à motifs, à découpes (`clip-path`), à masques, à
   flou ou à ombre portée, à image `data:` ou à `<svg>` imbriqué s'ouvre désormais en modèle riche et **se réécrit avec ses groupes
@@ -282,8 +299,9 @@ empreintes.
 
 ### Ajouté
 
-- Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »**, cochée
-  par défaut (le comportement d'avant, export inchangé à l'octet), dans le panneau « Prêt pour Cricut » ; décochée, le plan de
+- Cricut : **le tapis fixe, la feuille et « Dupliquer sur la feuille »** (ADR-0039). Une case **« Recalage automatique »** dans le
+  panneau « Prêt pour Cricut » (décochée par défaut depuis la révision du même jour, voir « Version majeure » ; cochée, le
+  comportement et l'export d'avant à l'octet) ; décochée, le plan de
   travail devient le tapis, fixe, les formes restent où vous les posez, et l'export garde leur place grâce à un **cadre de repérage
   par couleur** de la taille de la zone utile, à attacher aux formes puis à passer en « Guide » dans Design Space (à vérifier,
   témoin 10) ; un constat dit une forme qui sort de la feuille, « Ramener dans la zone utile » la corrige. Une **feuille** se règle
@@ -291,7 +309,7 @@ empreintes.
   sur la feuille… »** (menu Édition, menu « Répéter » de la sélection) copie la sélection sur la feuille sans chevaucher ce qui y
   est déjà, en quantité ou jusqu'à la remplir, avec espacement, marge et rotation d'un quart de tour ; l'optimisation **Avancée**
   emboîte les contours réels (étoiles, lettres, cœurs) et pose toujours au moins autant que la **Simple**, par tranches qu'on peut
-  arrêter. Une seule annulation retire toutes les copies. Le document garde le recalage et la feuille (`data-ed-recalage`,
+  arrêter. Une seule annulation retire toutes les copies. Le document garde le recalage coché et la feuille (`data-ed-recalage`,
   `data-ed-feuille`, seulement hors du défaut), jamais un export.
 - Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
   menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le

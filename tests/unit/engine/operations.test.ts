@@ -23,8 +23,10 @@ const f = (id: string, d: Chemin, p: Partial<Forme> = {}): Forme => ({ id, d, re
 const trait = (id: string, p: Partial<Forme> = {}): Forme => f(id, ligne, { remplissage: null, contour: '#1f4e8c', epaisseur: 1.5, ...p });
 const dessin = (...formes: Forme[]): DessinSvg => ({ vb: [0, 0, 200, 100], formes });
 const lire = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
+// Recalage automatique coche (ADR-0039) : ces essais datent du defaut d'avant sa revision du 26 octobre 2026 et jugent autre chose
+// que la place sur le tapis ; le tapis fixe, defaut depuis, a ses tests (recalage.test.ts).
 const profil = (procede: Procede): ProfilProduction => {
-  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', procede });
+  const p = resoudreProfil({ contexte: 'cricut', ...CHOIX_CRICUT_DEFAUT, unite: 'in', recalage: true, procede });
   if (!p) throw new Error('profil');
   return p;
 };
