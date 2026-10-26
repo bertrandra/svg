@@ -983,7 +983,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .peinture-degradable, .editeur-degrade, .arret-choisi { display: grid; gap: var(--esp-s); min-width: 0; }
 .choix-genre-peinture { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--esp-2xs) var(--esp-m); min-width: 0; }
 .choix-genre-peinture > legend { padding: 0; margin-bottom: var(--esp-2xs); }
-.choix-genre { display: inline-flex; align-items: center; gap: var(--esp-xs); font-size: var(--texte-compact); }
+.choix-genre { display: inline-flex; align-items: center; gap: var(--esp-xs); min-height: 24px; font-size: var(--texte-compact); }
 .liste-arrets { display: grid; gap: 1px; max-height: 200px; overflow: auto; padding: var(--esp-2xs); border: 1px solid var(--filet); border-radius: var(--rayon-bouton); }
 .liste-arrets:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .arret-option { display: flex; align-items: center; gap: var(--esp-s); min-width: 0; padding: var(--esp-2xs) var(--esp-xs); border: 1px solid transparent; border-radius: var(--rayon-pastille); font-size: var(--texte-petit); color: var(--encre); cursor: pointer; }
@@ -1026,7 +1026,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .calque-pastilles > .pastille-icone { display: inline-flex; flex: none; align-items: center; height: 16px; }
 .pastille-mot { flex: none; white-space: nowrap; }
 /* La section Effets de l'inspecteur (ADR-0012, etape 8) : une case par effet, ses reglages dessous. */
-.case-effet { gap: var(--esp-s); }
+.case-effet { gap: var(--esp-s); min-height: 24px; }
 .case-effet > span { flex: 1; }
 .reglages-effet { display: grid; gap: var(--esp-s); min-width: 0; padding-inline-start: var(--esp-l); }
 @media (pointer: coarse), (max-width: 900px) {
