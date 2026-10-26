@@ -201,6 +201,14 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 5 (moteur, mode riche seulement) : les découpes. Un `clip-path` vers un `<clipPath>` (unités de boîte,
+  transformation, `<use>`, `clip-rule`, découpe imbriquée) se lit en découpe d'un groupe ; une forme découpée s'enveloppe dans un
+  groupe. Ce qu'un navigateur ignore est ignoré et dit ; une forme CSS, un renvoi extérieur, un cycle, une imbrication au-delà de
+  8 niveaux ou plus de 20 000 formes de définitions sont refusés en les nommant. Les découpes s'écrivent en
+  `<clipPath id="ed-c-…">` par empreinte et suivent leur groupe quand il se transforme. « Créer une découpe » et « Libérer »
+  (moteur) ; la descente vers le PDF, le DXF, l'EPS et le SVG de découpe rogne les remplissages (un trait est gardé entier et
+  c'est dit) ; le projet JSON garde les découpes au format 2. Le mode plat ne change pas.
+
 - Modèle v2, étape 1 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les `<g>` restent des groupes
   (nom, opacité ; la transformation est cuite dans les formes) et se réécrivent à l'identique ; quatre opérations pures (grouper, dégrouper, déplacer dans un
   groupe, renommer). Une image ou un dégradé sous un groupe transformé suivent le groupe ; les exports à plat multiplient l'opacité du groupe. Le projet du site garde la table des groupes au format 2 ; au format 1, un

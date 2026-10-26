@@ -152,6 +152,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   porte nom, visibilité, verrou et opacité, sans matrice vivante (la transformation est cuite dans les feuilles) ; l'arbre se vérifie (`verifierDessin`) et `normaliser` le garde contigu ; les groupes
   descendent en dernier dans `REGLES_DESCENTE` (opacité multipliée) ; au format 1 du projet, un champ de
   groupe est ignoré comme tout champ v2.
+- **Une découpe est de la géométrie, rangée sur un groupe** (ADR-0012, étape 5) : `Groupe.decoupe` garde des feuilles canoniques
+  (`feuilleDeDecoupe`) dans le repère du plan, une feuille découpée s'enveloppe dans un groupe ; l'écriture pose
+  `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
+  remplissages par intersection booléenne, garde un trait entier et le dit ; une copie renumérote les contenus
+  (`renumeroterContenus`) ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-decoupes-*`.
 - **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
   la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
   `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente
