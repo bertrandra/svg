@@ -24,6 +24,8 @@ import { ReglagesForme } from './ReglagesForme.js';
 import { phraseIgnores } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import type { OutilForme } from './typesEditeur.js';
+import { lentilleDe } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 
@@ -31,6 +33,7 @@ const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières 
 export function PanneauDessin() {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const { dessin } = mo;
+  const lentille = lentilleDe(ui.contexte) !== null;
   const [seuil, poserSeuil] = useState(0.0005);
   const stats = useMemo(() => statistiques(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
@@ -58,7 +61,8 @@ export function PanneauDessin() {
           <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ac.appliquer(() => r.dessin); ac.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
           <button type="button" onClick={() => { const r = regrouper(dessin); ac.appliquer(() => r.dessin); ac.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
           <button type="button" title={ui.profil ? 'Retire les points inutiles des segments droits, à la tolérance du matériau ; les courbes et les formes verrouillées restent' : 'Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent'} onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), ui.profil ? ui.profil.toleranceNettoyage : Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ac.appliquer(() => r.dessin); ac.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
-          <button type="button" onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
+          {/* Le plan est celui du dessin entier : il ne se regle pas depuis une decoupe ou un masque (paquet 8-D). */}
+          <button type="button" disabled={lentille} title={lentille ? RAISONS_LENTILLE.plan : undefined} onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>
       <PanneauVersions />

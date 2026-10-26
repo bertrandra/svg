@@ -148,7 +148,7 @@ const rectangle = (b: Boite): Forme['d'] => [
 ];
 
 /** Vrai si la feuille est le fond blanc d'un masque inverse : un quadrilatere blanc, plein, nu, dont la boite est la region. */
-function estFond(f: Forme | undefined, region: Boite): f is Forme {
+export function estFond(f: Forme | undefined, region: Boite): f is Forme {
   if (!f || f.parent !== undefined || !f.visible || f.remplissage !== '#ffffff' || f.contour !== null || f.opacite !== 1) return false;
   if (f.peintureRemplissage || f.effets || f.image || f.texte || f.opaciteRemplissage !== undefined) return false;
   if (f.d.length !== 5 || f.d.map(c => c.c).join('') !== 'MLLLZ') return false;

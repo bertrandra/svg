@@ -2,7 +2,7 @@
 // l'editeur retient vit ici, une fois ; `Atelier` n'a plus qu'a le donner aux contextes.
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { aimanter, boiteDe, contexteValide, pasGrille, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
+import { aimanter, boiteDe, contenuEnDessin, pasGrille, renommagesDe, PARAMETRES_FORMES_DEFAUT, STYLE_DEFAUT, type DessinSvg, type Forme, type MarqueProduction, type ParametresFormes, type Style } from '../engine/editionSvg.js';
 import { arrondi } from './aidesEditeur.js';
 import { choixDeDepart, choixDeMarque, depuisUnite, resoudreProfil } from '../engine/preparation.js';
 import type { ChoixProduction } from '../model/contextes.js';
@@ -18,6 +18,7 @@ import { useStockage } from './contexteStockage.js';
 import { lireVersions, type Version } from './session.js';
 import type { ActionHote, ActionsEditeur, ContexteEdition, EtatEnregistrement, EtatInterface, EtatRendu, Fond, Modele, ModeleDessin, OptionsFin, Outil, Point, SuiteCricut, Teinte, Tiroir, Vues } from './typesEditeur.js';
 import { useVue } from './Vue.js';
+import { contexteDuDessin, lentilleDe } from './lentille.js';
 import type { RegleZone } from '../engine/selection.js';
 
 export interface ParametresEtat {
@@ -100,19 +101,28 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const profil = useMemo(() => resoudreProfil(production), [production]);
   const productionModifiee = production !== productionInitiale;
   const toile = useRef<HTMLDivElement>(null), svgRef = useRef<SVGSVGElement>(null);
-  const dessin = h.present;
+  // Le dessin de l'historique ; dans une decoupe ou un masque (paquet 8-D), on edite le dessin de travail que la lentille en tire.
+  const complet = h.present;
+  // Un groupe defait, retire ou annule fait revenir a la racine ; une decoupe ou un masque disparus laissent dans leur groupe.
+  const contexte = useMemo(() => contexteDuDessin(complet, contexteBrut), [contexteBrut, complet]);
+  const lentille = lentilleDe(contexte);
+  const dessin = (lentille ? contenuEnDessin(complet, lentille.groupe, lentille.genre) : null) ?? complet;
   const modifie = h.passe.length > 0;
   const vues = useVue(toile, svgRef, dessin.vb);
 
   // En contexte de production, la grille suit l'unite de la machine : un quart de pouce, ou 5 mm.
   const pas = useMemo(() => (profil ? depuisUnite(profil.unite === 'in' ? 0.25 : 5, profil.unite) : pasGrille(dessin.vb)), [dessin.vb, profil]);
-  const preparation = usePreparation(dessin, profil);
+  const preparation = usePreparation(complet, profil);
   // Une selection est faite de noeuds (ADR-0012, annexe 3) : feuilles, et groupes d'un dessin riche (sans groupe, les memes feuilles qu'avant).
   const presentes = useMemo(() => new Set([...dessin.formes.map(f => f.id), ...Object.keys(dessin.groupes ?? {})]), [dessin]);
-  // Un groupe defait, retire ou annule fait revenir a la racine : le contexte est toujours un groupe du dessin du moment.
-  const contexte = useMemo(() => (contexteBrut && contexteValide(dessin, contexteBrut.groupe) ? contexteBrut : null), [contexteBrut, dessin]);
-  // Tant que toutes les formes choisies existent, la selection reste le meme tableau : rien en aval ne se recalcule pendant un geste.
-  const sel = useMemo(() => (selection.every(id => presentes.has(id)) ? selection : selection.filter(id => presentes.has(id))), [selection, presentes]);
+  // Tant que toutes les formes choisies existent, la selection reste le meme tableau : rien en aval ne se recalcule pendant un geste. Un
+  // numero neuf que la lentille a du renumeroter (I1) suit son renommage, et la selection gardee le prend aussitot.
+  const renommes = renommagesDe(complet);
+  const sel = useMemo(
+    () => (selection.every(id => presentes.has(id)) ? selection : selection.map(id => (presentes.has(id) ? id : renommes.get(id) ?? id)).filter(id => presentes.has(id))),
+    [selection, presentes, renommes]
+  );
+  useEffect(() => { if (renommes.size && sel !== selection) choisir(sel); }, [renommes, sel, selection]);
   const choisies = useMemo(() => new Set(sel), [sel]);
   const formeSeule = sel.length === 1 ? dessin.formes.find(f => f.id === sel[0]) ?? null : null;
   const boite = useMemo(() => boiteDe(dessin, sel), [dessin, sel]);
@@ -122,7 +132,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   // L'etat du dernier rendu, que les verbes lisent au moment de l'appel : c'est ce qui les rend stables.
   const moment = useRef<EtatDuMoment | null>(null);
   moment.current = {
-    dessin, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
+    dessin, complet, sel, formeSeule, outil, point, style, trace, presse, vues, lisserBooleens, enregistrer: p.enregistrer, production, modifie, refaisable: h.futur.length > 0, versions,
     fermer: p.fermer, stockage, brouillon: p.brouillon, productionModifiee, fin, suiteCricut, apercuMachine, enregistrement, modele: modeleLecture, modeleFixe, contexte
   };
   const [actions] = useState(() => creerActions(
@@ -151,7 +161,7 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   // enregistre. Le rappel est lu par une reference : un hote qui le recree a chaque rendu ne relance rien.
   const changement = useRef(p.changement);
   changement.current = p.changement;
-  useEffect(() => { changement.current?.({ dessin, production }); }, [dessin, production]);
+  useEffect(() => { changement.current?.({ dessin: complet, production }); }, [complet, production]);
   // Ce que l'hote dit de l'enregistrement (« Projet enregistré. », un conflit, une session expiree) se dit comme toute phrase de l'editeur.
   useEffect(() => { if (enregistrement?.message) actions.dire(enregistrement.message); }, [actions, enregistrement]);
 
@@ -159,13 +169,13 @@ export function useEtatEditeur(p: ParametresEtat): EtatEditeur {
   const { brouillon } = p;
   useEffect(() => {
     if (!brouillon || !modifie) return;
-    const t = setTimeout(() => brouillon(svgDocument(dessin, production)), 1000);
+    const t = setTimeout(() => brouillon(svgDocument(complet, production)), 1000);
     return () => clearTimeout(t);
-  }, [brouillon, dessin, modifie, production]);
+  }, [brouillon, complet, modifie, production]);
 
   const modele = useMemo<ModeleDessin>(
-    () => ({ h, dessin, sel, choisies, boite, formeSeule, nuancier: p.nuancier, ignores: p.ignores, bibliotheque: p.bibliotheque, versions, presse, preparation }),
-    [h, dessin, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
+    () => ({ h, dessin, ...(dessin !== complet ? { complet } : {}), sel, choisies, boite, formeSeule, nuancier: p.nuancier, ignores: p.ignores, bibliotheque: p.bibliotheque, versions, presse, preparation }),
+    [h, dessin, complet, sel, choisies, boite, formeSeule, p.nuancier, p.ignores, p.bibliotheque, versions, presse, preparation]
   );
   const etat = useMemo<EtatInterface>(
     () => ({ outil, point, style, parametres, demandeFormes, trace, grille, aimants, lisserBooleens, guides, tiroir, contours, fond, pas, aimant, vues, message, quitter, curseur, focale, annonce, production, profil, productionModifiee, suiteCricut, apercuMachine, fin, enregistrement, regleZone, modele: modeleLecture, modeleFixe, contexte, deplies }),

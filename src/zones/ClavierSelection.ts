@@ -8,6 +8,7 @@
 import { basculerDansSelection, formeAuCurseur, formeVoisine, type Sens } from '../engine/navigation.js';
 import { phraseBascule, PHRASE_SANS_CURSEUR } from './annonces.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 export interface ContexteSelection { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur }
 
@@ -23,7 +24,7 @@ function poserSelection({ ac }: ContexteSelection, sel: string[], curseur: strin
  * selection. Une forme deja choisie y reste : le curseur avance seulement, ce qui permet de la depasser.
  */
 export function etendreSelection(c: ContexteSelection, sens: Sens): true {
-  const { m, u, ac } = c, contexte = u.contexte?.groupe ?? null, courant = formeAuCurseur(m.dessin, m.sel, u.focale, contexte);
+  const { m, u, ac } = c, contexte = niveauEdition(u.contexte), courant = formeAuCurseur(m.dessin, m.sel, u.focale, contexte);
   const id = formeVoisine(m.dessin, courant ? [courant] : [], sens, true, contexte);
   if (id === null) { ac.annoncer('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.'); return true; }
   const deja = m.sel.includes(id), apres = deja ? m.sel : [...m.sel, id];
@@ -34,7 +35,7 @@ export function etendreSelection(c: ContexteSelection, sens: Sens): true {
 
 /** Espace : la forme au curseur entre dans la selection, ou en sort si elle y etait. */
 export function basculerCurseur(c: ContexteSelection): true {
-  const { m, u, ac } = c, courant = formeAuCurseur(m.dessin, m.sel, u.focale, u.contexte?.groupe ?? null);
+  const { m, u, ac } = c, courant = formeAuCurseur(m.dessin, m.sel, u.focale, niveauEdition(u.contexte));
   if (courant === null) { ac.annoncer(PHRASE_SANS_CURSEUR); return true; }
   const r = basculerDansSelection(m.sel, courant);
   poserSelection(c, r.sel, courant);

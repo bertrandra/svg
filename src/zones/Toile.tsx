@@ -6,6 +6,7 @@ import { FORMES } from './aidesEditeur.js';
 import { formeTracee } from './Gestes.js';
 import { PoigneesDegrade } from './PoigneesDegrade.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
 export function cheminDe(f: Forme): string {
@@ -58,7 +59,8 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ta
   if (mo.sel.length) for (const x of mo.dessin.formes) if (!parId.has(x.id)) parId.set(x.id, x);
   // Un dessin riche (ADR-0012, etape 2) : le groupe ou l'on est entre montre sa boite, et un groupe choisi le trace de ses feuilles.
   const riche = !estPlat(mo.dessin);
-  const boiteContexte = riche && ui.contexte ? boiteDe(mo.dessin, [ui.contexte.groupe]) : null;
+  // Dans une decoupe ou un masque (paquet 8-D), le niveau est un groupe du contenu, ou sa racine (rien a cerner : la toile le montre).
+  const niveau = niveauEdition(ui.contexte), boiteContexte = riche && niveau !== null ? boiteDe(mo.dessin, [niveau]) : null;
   if (boiteContexte) {
     const { x, y, l, h } = boiteContexte;
     r.push(<rect key="contexte-fond" className="contour-groupe-fond" x={x} y={y} width={l} height={h} pointerEvents="none" />);

@@ -20,6 +20,8 @@ import { RecupererBarre } from './Recuperer.js';
 import type { Outil, OutilForme } from './typesEditeur.js';
 import { aEnregistrer, raisonRienAEnregistrer } from './enregistrement.js';
 import { OutilSelectionBarre } from './OutilsSelection.js';
+import { lentilleDe } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 const OUTILS_FIXES: ReadonlyArray<readonly [Outil, NomIcone, string]> = [
   ['points', 'points', 'Points et poignées (A)'], ['main', 'main', 'Main : déplacer la vue (H, ou espace)']
@@ -66,16 +68,20 @@ function OutilFormes() {
   );
 }
 
-/** Les outils : ne lit que l'outil courant, jamais le dessin. */
+/** Les outils : ne lit que l'outil courant et le contexte d'edition, jamais le dessin. */
 const GroupeOutils = memo(function GroupeOutils({ telephone = false }: { telephone?: boolean }) {
-  const { outil } = useInterface(), ac = useActions();
+  const { outil, contexte } = useInterface(), ac = useActions();
+  // Dans une decoupe ou un masque (paquet 8-D), le texte ne se pose pas : son bouton est grise, la raison dans son infobulle.
+  const sansTexte = lentilleDe(contexte) !== null;
   return (
     <div className="groupe outils" role="group" aria-label="Outil">
       {/* La selection, le cadre et le lasso derriere un seul bouton (ADR-0035) ; sur un telephone, les points aussi. */}
       <OutilSelectionBarre avecPoints={telephone} />
       {OUTILS_FIXES.filter(([o]) => !(telephone && o === 'points')).map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
       <OutilFormes />
-      {OUTILS_APRES.map(([o, icone, aide]) => <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />)}
+      {OUTILS_APRES.map(([o, icone, aide]) => (o === 'texte' && sansTexte
+        ? <Bouton key={o} icone={icone} aide={aide + ' — ' + RAISONS_LENTILLE.texte} pressed={false} disabled onClick={() => ac.poserOutil(o)} />
+        : <Bouton key={o} icone={icone} aide={aide} pressed={outil === o} onClick={() => ac.poserOutil(o)} />))}
     </div>
   );
 });

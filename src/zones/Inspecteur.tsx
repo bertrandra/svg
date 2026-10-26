@@ -20,6 +20,8 @@ import { SectionNuancier } from './SectionNuancier.js';
 import { PeintureDegradable, useDegradesPermis } from './EditeurDegrade.js';
 import { SectionEffets } from './SectionEffets.js';
 import { nomDeGroupe } from './phrasesGroupes.js';
+import { lentilleDe } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 // Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
 export { Nombre };
@@ -35,6 +37,7 @@ export function Inspecteur() {
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ac.appliquer(d => modifier(d, sel, r), cle === null ? ac.nouvelleCle() : cle + ':' + sel.join(','));
   const points = ui.outil === 'points' && mo.formeSeule;
+  const decoupe = lentilleDe(ui.contexte)?.genre === 'decoupe';
   const doigt = useTactile();
   return (
     <>
@@ -42,6 +45,13 @@ export function Inspecteur() {
       <ReperesSelection points={!!points} />
       {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
       {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
+      {/* Dans une decoupe (paquet 8-D), seule la geometrie compte : la regle des trous, et une phrase pour le reste. */}
+      {decoupe ? (
+        <Section titre="Apparence" ouverte>
+          <p className="aide">{RAISONS_LENTILLE.peinture}</p>
+          <ChoixTrous valeur={premiere.regle} poser={r => regler({ regle: r }, null)} />
+        </Section>
+      ) : (
       <Section titre="Apparence" ouverte>
         {/* Uni, ou un degrade (ADR-0012, etape 4) quand le modele riche est regle ou que le dessin l'est deja ; sinon le selecteur d'avant. */}
         <PeintureDegradable cote="remplissage" libelle="Remplissage" forme={premiere}>
@@ -55,14 +65,9 @@ export function Inspecteur() {
         <Opacite libelle="Opacité" titre="La forme entière, fond et contour ensemble" valeur={premiere.opacite} poser={v => regler({ opacite: v }, 'opacite')} finir={ac.finir} />
         {premiere.remplissage && (premiere.contour || opaciteDuRemplissage(premiere) < 1) ? <Opacite libelle="Opacité du fond" titre="Le fond seul : le contour reste plein" valeur={opaciteDuRemplissage(premiere)} poser={v => regler({ opaciteRemplissage: v }, 'opacite-fond')} finir={ac.finir} /> : null}
         {premiere.contour ? <Opacite libelle="Opacité du contour" titre="Le contour seul : le fond reste plein" valeur={opaciteDuContour(premiere)} poser={v => regler({ opaciteContour: v }, 'opacite-contour')} finir={ac.finir} /> : null}
-        <label className="champ-ligne">
-          <span>Trous</span>
-          <select value={premiere.regle} onChange={e => regler({ regle: e.target.value === 'evenodd' ? 'evenodd' : 'nonzero' }, null)}>
-            <option value="nonzero">Selon le sens du tracé</option>
-            <option value="evenodd">Pair-impair (chaque boucle creuse)</option>
-          </select>
-        </label>
+        <ChoixTrous valeur={premiere.regle} poser={r => regler({ regle: r }, null)} />
       </Section>
+      )}
       {/* Flou et ombre portee (ADR-0012, etape 8), en modele riche seulement : a plat, rien. */}
       <SectionEffets />
       <SectionNuancier />
@@ -83,6 +88,19 @@ export function Inspecteur() {
       {points ? <PanneauPoint forme={points} /> : null}
       <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour modifier son contour point par point. ' : '') + 'Aligner, empiler, assembler des formes (les unir, découper l’une dans l’autre), miroirs : la rangée au-dessus de la toile.', doigt)}</p>
     </>
+  );
+}
+
+/** La regle des trous : la seule « apparence » qui compte aussi dans une decoupe (son `clip-rule`). */
+function ChoixTrous({ valeur, poser }: { valeur: Forme['regle']; poser: (r: Forme['regle']) => void }) {
+  return (
+    <label className="champ-ligne">
+      <span>Trous</span>
+      <select value={valeur} onChange={e => poser(e.target.value === 'evenodd' ? 'evenodd' : 'nonzero')}>
+        <option value="nonzero">Selon le sens du tracé</option>
+        <option value="evenodd">Pair-impair (chaque boucle creuse)</option>
+      </select>
+    </label>
   );
 }
 

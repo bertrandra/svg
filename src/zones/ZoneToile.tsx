@@ -18,6 +18,7 @@ import { useDessin, useInterface } from './contexteEditeur.js';
 import { estOutilZone } from './commandesSelection.js';
 import { useZoneEnCours, zoneDe, type MagasinZone } from './GesteZone.js';
 import type { OutilZone, Vue } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 /** Le chemin qui montre une forme prise : son trace, ou la boite d'un texte libre (il se prend par elle). */
 function cheminApercu(f: Forme, chemin: (f: Forme) => string): string {
@@ -88,7 +89,7 @@ function ZoneClavier({ outil, vue, chemin }: { outil: OutilZone; vue: Vue; chemi
   const points = useMemo<readonly PointZone[]>(() => (curseur ? [...trace, curseur] : trace), [trace, curseur]);
   const ids = useMemo(() => {
     const geo = trace.length ? zoneDe(outil, points) : null;
-    return geo ? noeudsDansZone(dessin, contexte?.groupe ?? null, geo, { regle: regleZone, contours }) : [];
+    return geo ? noeudsDansZone(dessin, niveauEdition(contexte), geo, { regle: regleZone, contours }) : [];
   }, [outil, trace.length, points, dessin, contexte, regleZone, contours]);
   if (!trace.length && !curseur) return null;
   return <DessinZone forme={outil} points={trace.length ? points : []} regle={regleZone} ids={ids} curseur={curseur} vue={vue} chemin={chemin} />;

@@ -17,6 +17,11 @@ export interface EtatLu {
   presse: readonly Forme[]; vues: Vues; lisserBooleens: boolean; enregistrer: (svg: string, etat: EtatRendu) => void; production: ChoixProduction;
   /** Le modele de lecture des SVG qu'on insere (ADR-0012, annexe 5 §3). Absent : `plat`. */
   modele?: Modele | undefined;
+  /**
+   * Le dessin complet de l'historique quand `dessin` est le dessin de travail d'une decoupe ou d'un masque (paquet 8-D) : ce qui
+   * s'enregistre, s'exporte et se juge pour une machine. Absent : `dessin`.
+   */
+  complet?: DessinSvg | undefined;
 }
 
 /** Ce que les actions posent : des fonctions stables (setters de React, ou fabriquees une fois). */

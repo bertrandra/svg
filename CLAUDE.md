@@ -177,6 +177,11 @@ npm run test:php     # les tests du site PHP (tests/php/)
   riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
   le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
   aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Le contenu d'une découpe ou d'un masque se modifie par une lentille pure** (ADR-0012, paquet 8-D) : `engine/edition/lentilles.ts`
+  (`contenuEnDessin`, `reposerContenu` : même objet sans changement, I1 renuméroté par `renommagesDe`, feuilles de découpe refixées,
+  région d'un masque qui la suivait recalculée, plan jamais changé) ; contexte `{ groupe, dans, sous? }` lu par `niveauEdition`
+  (`zones/lentille.ts`) ; dans une lentille, `dessin` est le dessin de travail et `complet` celui de l'historique (enregistrer, exporter
+  et la production lisent `complet`) ; un geste reste une entrée d'historique ; un contenu vide refuse la sortie.
 - **Le PDF écrit ce qu'il sait, par une scène native** (ADR-0012, étape 13a) : `CAPACITES_PDF` déclare natifs les dégradés, motifs,
   découpes, masques, images et groupes ; `aplatirPour` rend alors une `scene` (`engine/descente/scene.ts`) que `export/pdfNatif.ts`
   écrit (shading, pavage, `W n`, `/SMask`, groupe de transparence isolé, XObject) ; les PNG se décodent en pur, leur décompression

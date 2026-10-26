@@ -208,6 +208,12 @@ empreintes.
 
 ### Ajouté
 
+- Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
+  menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le
+  masque se dessine tel quel, cerné. Les outils ordinaires s'y appliquent, chaque geste s'annule en une fois, et l'on sort par
+  Échap, Maj+Entrée ou le fil d'Ariane « Racine › Groupe › Découpe ». Une découpe vidée refuse la sortie et dit quoi faire ; le
+  texte, et les effets dans une découpe, y sont grisés avec leur raison.
+
 - Modèle v2, étape 13b : en mode riche, les ombres portées et les flous écrits par Figma (ombre portée, flou de calque), Sketch
   (ombres en `feMerge`) et Illustrator (`AI_Shadow`) s'ouvrent comme des effets de l'éditeur ; le filtre `Adobe_OpacityMaskFilter`
   des masques d'Illustrator est reconnu comme neutre ; l'ombre portée d'Inkscape 1 s'ouvre aussi. Ce qui n'y équivaut pas (ombre
