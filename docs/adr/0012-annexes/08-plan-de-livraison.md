@@ -24,8 +24,9 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 6 Masques d'opacité | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 6 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 9 Motifs | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 9 a posé ») ; la toile vient du rendu générique de l'étape 2 ; une seule commande d'interface (menu Édition, riche), le reste à l'étape 8 |
 | 13c `<svg>` imbriqué, `<text>` en groupe | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13c a posé ») |
+| 13d Couleurs | **faite** le 26 octobre 2026 (moteur et listes ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 13d a posé ») |
 | 13a PDF natif | **fait** le 26 octobre 2026, sauf le raster des effets (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13a a posé ») |
-| 8, 13b, 13d, 14 | proposées ; vagues et consignes revues (§2, §5) |
+| 8, 13b, 14 | proposées ; vagues et consignes revues (§2, §5) |
 
 ### Ce que l'étape 0 a posé (fichiers nouveaux)
 
@@ -888,6 +889,47 @@ avant (« un dégradé ou un motif ») ; `types.ts` et `fonctionnalites.ts` n'on
   résolution de PDF dans les options et un rastériseur dans `io`, au prix d'octets propres au navigateur, comme JPEG et WebP) ; le WebP
   (décodeur pur déraisonnable ; le canevas du navigateur rendrait des pixels prémultipliés et gérés en couleur) ; la vignette PHP ; le
   CMJN des images ; `/Interpolate true` est un choix (le plus proche du navigateur, sauf chez Poppler, qui lisse décalé).
+
+### Ce que l'étape 13d a posé (26 octobre 2026)
+
+Aucun octet écrit d'avant ne bouge (références v1 gelées, références v2 existantes intactes), la lecture `plat` est inchangée, et un
+dessin plat rend les mêmes listes, les mêmes remplacements, les mêmes palettes et le même DOM qu'avant (loi du dessin plat). L'écart
+de l'étape 3 (« les listes ignorent un côté peint ») est levé.
+
+- **Les couleurs d'un côté** (`edition/couleurs.ts`, bloc « étape 13d » de la façade) : `couleursDePeinture(p)` (mémorisée par liste
+  d'arrêts et par tuile : déplacer une forme garde l'une et l'autre), `couleursDuCote(f, cote)`, `couleursDeForme(f, sur)`. **Décisions** :
+  un côté uni porte sa couleur ; un côté à dégradé, **tous** ses arrêts (un arrêt transparent ou de part nulle est dans le fichier et se
+  remplace, comme un fond uni d'opacité nulle reste dans les listes) ; un côté à motif, les couleurs des feuilles **que la tuile peint**
+  (visibles dans la tuile, comme le nuancier et `couleurDeRepliMotif`), fond et trait, un dégradé ou un motif de la tuile par leurs
+  propres couleurs ; **jamais la couleur de repli**. Le contenu d'un **masque** n'entre nulle part (de la luminance, pas une couleur
+  visible : la règle du nuancier de l'étape 6) ; celui d'une découpe n'est que de la géométrie. La couleur d'une **ombre portée** reste
+  hors des listes (un effet, réglé à l'inspecteur de l'étape 8) alors que le nuancier la compte : à revoir avec l'interface des effets.
+- **Listes et sélection** : `couleursDuDessin` (chaque côté compte une fois par couleur : un dégradé à deux arrêts rouges, une fois),
+  `groupesDeCouleur`, `idsDeCouleur`, les nuances proches. **Règle de « de cette couleur »** : une forme l'est dès qu'une couleur de ses
+  côtés lus (unie, un arrêt quelconque, une feuille peinte de sa tuile) est exactement ce code. **`idsMemeCouleur`** (sélectionner la
+  même couleur qu'un modèle) : les couleurs du remplissage du modèle (celles du contour s'il n'en a pas) ; une forme en est quand **le
+  même côté porte toutes ces couleurs** — pour un modèle uni, la règle précédente ; pour un modèle à dégradé, chacun de ses arrêts
+  (une forme unie n'est pas « de la couleur » d'un dégradé à deux teintes). La pondération reste celle des listes (un compte de formes) ;
+  les couleurs vues sont celles du nuancier, à ceci près que les listes gardent un arrêt transparent et une forme masquée du dessin.
+  `memesCouleurs` compare désormais les couleurs des peintures (pas seulement leur présence).
+- **Remplacer** : `remplacerCouleurs(d, table, sur)` (une seule passe : A→B et B→A s'échangent), `recolorerForme` ; `remplacerCouleur`,
+  `remplacerCouleurSur`, `fusionnerCouleursProches`, `appliquerPalette` et `uneCouleur` (`engine/palettes.ts`) passent par elles. Un arrêt
+  prend un `#rrggbb` en minuscules (un code illisible, ou « aucune couleur », le laisse : un arrêt n'est jamais « sans couleur », retirer
+  la peinture d'un côté se fait à l'inspecteur) ; une tuile change ses feuilles, **masquées comprises** (comme les formes masquées du
+  dessin) ; la couleur de repli est recalculée comme à la lecture (`couleurDeRepli`, `couleurDeRepliMotif`), seulement si la peinture a
+  changé ; une peinture partagée (un même dégradé au fond et au trait, mille formes à un motif) reste un seul objet. « Fond » seul change
+  aussi le contour des feuilles d'une tuile qui peint un fond (elles sont la peinture de ce fond). `appliquerPalette` ne passe plus par
+  des jetons `#jeton0` (qu'un arrêt ne sait pas porter) : ancien corps dans `anciennes/palettes.ts`, cas dans `loi-dessin-plat.test.ts`.
+- **Interface** : les lignes de « Couleurs du dessin » et de « Par couleur » montrent les couleurs des arrêts et des tuiles (aucun
+  composant de liste n'a changé : elles lisent le moteur) ; la ligne « Dégradés » (`LigneDegrades.tsx`) compte aussi les couleurs de
+  leurs arrêts (`couleursDArrets`, dans `degradesOperations.ts`) et son aide le dit ; « Sélectionner les nuances proches » part, faute
+  de ligne choisie, de la première couleur lue de la forme choisie (`actionsCouleur.ts`). Toujours absente d'un dessin sans dégradé.
+- **Tests** : `couleurs-degrades.test.ts` (réécrit : listes, règles de sélection, remplacements, partage, repli, masque, palettes,
+  `memesCouleurs`), `tests/unit/zones/couleurs-peintures.test.ts` (les deux listes rendues hors navigateur, et l'absence de la ligne en
+  plat), `v2/cas-couleurs.ts` (l'entrée `v2/couleurs-peintures` — dégradés au fond et au trait, tuile à dégradé, masque — et six
+  opérations : remplacer partout, sur le fond, sur le trait, fusionner, palette, une couleur ; 7 références relues, point fixe).
+- **Reste** : l'ombre portée dans les listes (ci-dessus) ; une ligne « Motifs » à côté de « Dégradés » si l'interface des motifs (étape 8)
+  en a besoin ; le nuancier de l'ADR-0037 n'a pas changé (il lisait déjà arrêts et tuiles).
 
 ### Caduc
 

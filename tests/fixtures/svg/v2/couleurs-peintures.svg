@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140" width="240" height="140">
+  <defs>
+    <linearGradient id="aube" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c81e28"/>
+      <stop offset="0.5" stop-color="#f2b705" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#1f5fb0"/>
+    </linearGradient>
+    <!-- Un rouge presque identique a celui du dessin (0,003 d'ecart OKLab) : la fusion des nuances proches le ramene. -->
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#c91f27"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </radialGradient>
+    <!-- Une tuile qui peint le rouge du dessin, un degrade et une feuille a fond et trait. -->
+    <pattern id="damier" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="10" height="10" fill="#c81e28"/>
+      <rect x="10" y="10" width="10" height="10" fill="url(#aube)"/>
+      <circle cx="15" cy="5" r="3" fill="#2a9d8f" stroke="#1f5fb0" stroke-width="1"/>
+    </pattern>
+    <!-- Le contenu d'un masque est de la luminance, pas une couleur du dessin : aucun outil de couleur n'y touche. -->
+    <mask id="voile">
+      <rect x="0" y="100" width="240" height="40" fill="#c81e28"/>
+    </mask>
+  </defs>
+  <rect x="10" y="10" width="60" height="40" fill="#c81e28" stroke="#1f5fb0" stroke-width="2"/>
+  <rect x="80" y="10" width="60" height="40" fill="url(#aube)" stroke="#c81e28" stroke-width="2"/>
+  <circle cx="190" cy="30" r="20" fill="url(#halo)" stroke="url(#aube)" stroke-width="3"/>
+  <rect x="10" y="60" width="130" height="40" fill="url(#damier)"/>
+  <rect x="150" y="60" width="80" height="40" fill="#2a9d8f" stroke="url(#damier)" stroke-width="6"/>
+  <g mask="url(#voile)">
+    <rect x="10" y="105" width="220" height="30" fill="#f2b705"/>
+  </g>
+</svg>

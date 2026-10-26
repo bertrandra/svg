@@ -154,6 +154,9 @@ empreintes.
 
 ### Corrigé
 
+- Modèle riche : un masque dont le contenu porte des groupes eux-mêmes masqués ou découpés garde toutes ses formes, ou est refusé
+  en le nommant s'il dépasse la borne (il en perdait en silence) ; une image dans le contenu d'un masque s'écrit dans un SVG bien
+  formé (`xmlns:xlink` déclaré), et le contrôle d'écriture refuse désormais tout préfixe non déclaré.
 - Sécurité : le nettoyage d'une feuille de style résout ses échappements à chaque passe ; un échappement à double niveau
   (`ur\\6c(`) ou vers un caractère de contrôle ne peut plus recomposer `url(` (trouvé par le fuzzing ; deux régressions ajoutées).
 - Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
@@ -202,6 +205,12 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle v2, étape 13d : les outils de couleur voient les dégradés et les motifs. « Couleurs du dessin » et « Par couleur » ont une
+  ligne pour chaque couleur d'arrêt et de tuile, jamais pour la couleur moyenne de repli. Remplacer une couleur (partout, sur le
+  fond ou sur le trait), fusionner les nuances proches, appliquer une palette ou tout mettre d'une couleur changent les arrêts et
+  les tuiles, puis recalculent la couleur de repli. La sélection par couleur prend une forme dont un arrêt ou la tuile porte la
+  couleur. Le contenu d'un masque n'est pas touché. Un dessin plat ne change pas d'un octet.
 
 - Modèle v2, étape 9 : les motifs. En mode riche, une peinture `url(#…)` vers un `<pattern>` s'ouvre (unités de la tuile et du
   contenu, viewBox, transformation, héritage `href`, tuile peinte avec dégradés et motifs imbriqués) et se réécrit en
