@@ -35,6 +35,14 @@ s'embarque aussi comme composant React dans un autre produit.
     ouvre plus de 2 000 familles libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Velvetyne, Fontshare…),
     avec recherche, filtres, favoris, récentes, polices du document et « Remplacer partout » : une police se télécharge
     seulement quand vous la choisissez, et chaque fichier est vérifié par son empreinte (ADR-0025) ;
+  - **groupes** : un fichier garde ses `<g>` à l'ouverture et les réécrit ; Ctrl+G groupe, Ctrl+Maj+G dégroupe, double-clic ou
+    Entrée entre dans un groupe (on n'y prend, n'y encadre et n'y aimante que ses voisines), Échap en sort, un fil d'Ariane dit où
+    l'on est ; les calques d'un dessin à groupes sont un arbre, au clavier comme à la souris (ADR-0012) ;
+  - **dégradés** linéaires et radiaux, réglés à l'inspecteur (arrêts en liste, poignées sur la toile en raccourci), et **motifs**
+    (« Créer un motif depuis la sélection ») ; leurs couleurs comptent parmi celles du dessin, listes et remplacements compris ;
+  - **découpes** et **masques d'opacité** (menu Édition : créer, modifier sur place, inverser, libérer), **effets** (un flou et
+    une ombre portée, section Effets de l'inspecteur), **images intégrées** (« Insérer une image… », menu Fichier, ou un dépôt sur la toile :
+    PNG, JPEG, GIF, WebP, vérifiées sur leurs octets) ; un `<svg>` imbriqué et un `<text>` se lisent en groupes ;
   - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
     menu Édition) ;
   - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
@@ -45,7 +53,8 @@ s'embarque aussi comme composant React dans un autre produit.
   - couleurs : sélecteur, code, nuancier, remplacement d'une couleur partout ; opacité du fond et du
     contour, bout, jonction et pointillés du trait ;
   - calques par couleur : choisir, masquer, verrouiller, isoler, combiner, supprimer, recolorer les
-    formes d'une couleur, choisir ou fusionner les nuances proches ;
+    formes d'une couleur, choisir ou fusionner les nuances proches ; pour un dessin à groupes, l'arbre des calques (nommer,
+    déplier, masquer, verrouiller, déplacer au clavier par Ctrl+Maj+flèches ou « Déplacer vers… ») ;
   - nettoyage du tracé : poussières sous un seuil, voisines de même couleur regroupées si le rendu
     reste identique, tracés simplifiés, plan de travail ajusté au trait réel ;
   - insertion d'une forme de la bibliothèque au centre du dessin, d'un panier en grille, ou d'une
@@ -53,7 +62,10 @@ s'embarque aussi comme composant React dans un autre produit.
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
 - **Récupérer le résultat** : « Télécharger le SVG », d'un geste, dans la barre de l'éditeur ; « Autres formats » à côté
-  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. « Terminer » ramène à la
+  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. Le SVG écrit garde les groupes et
+  les définitions (dégradés, motifs, découpes, masques, filtres, nommés par l'empreinte de leur contenu) ; « Télécharger le SVG
+  à plat » (menu Fichier) rend les octets d'avant le modèle riche, sans groupe ni définition. Le PDF écrit nativement dégradés,
+  motifs, découpes, masques et images ; les formats qui ne les connaissent pas (EPS, DXF, SVG de découpe) les approchent et le disent. « Terminer » ramène à la
   fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur d'elle-même (un test en navigateur, réseau coupé, le vérifie) ; seule une police libre que
   vous choisissez se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
@@ -82,11 +94,19 @@ s'embarque aussi comme composant React dans un autre produit.
 - **Gros dessins** : des milliers de formes et de couleurs restent fluides (listes fenêtrées,
   historique borné selon la taille).
 
-Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, un `<use>` en cycle
-ou renvoyant à un fichier extérieur. Un `<use>` ordinaire (planche d'icônes, `<symbol>`) se déplie en formes
-indépendantes, et la feuille `<style>` se lit avec ses vrais sélecteurs ; ce qui n'est pas repris
-(marqueurs, animations, `@media`…) est dit à l'ouverture.
-On n'édite pas ce qu'on ne saurait pas réécrire ; une image se vectorise d'abord.
+**Le modèle riche est celui de la page** (ADR-0012) : un SVG à groupes, à dégradés, à motifs, à découpes, à masques, à flou ou à
+ombre, ou à image `data:` s'ouvre tel qu'il est et se réécrit avec ses groupes et ses définitions. Ce que l'éditeur refuse encore,
+en le nommant : un filtre hors du flou et de l'ombre (`feTurbulence`…), une découpe par forme CSS, un masque CSS (`mask-image`),
+une image ou une découpe qui renvoie à une adresse extérieure, une « image » SVG, `<foreignObject>`, `<switch>`, le texte sur un
+tracé (`<textPath>`), un cycle de définitions, des bornes dépassées (64 niveaux de groupes, 64 arrêts, 4 Mo par image…), un
+`<use>` en cycle ou renvoyant à un fichier extérieur. Un `<use>` ordinaire (planche d'icônes, `<symbol>`) se déplie en formes
+indépendantes, et la feuille `<style>` se lit avec ses vrais sélecteurs ; ce qui n'est pas repris (marqueurs, animations,
+`@media`, mode de fusion…) est dit à l'ouverture.
+
+La case « Groupes, dégradés, effets » du menu Édition, décochée, rend le modèle **à plat** d'avant pour les fichiers ouverts
+ensuite : les groupes se fondent, et dégradé, masque, découpe, filtre et image sont refusés en le nommant. L'éditeur embarqué
+reste à plat tant que l'hôte ne demande pas `modele: 'riche'` ([`docs/integration.md`](docs/integration.md)). On n'édite pas ce
+qu'on ne saurait pas réécrire.
 
 ## Démarrer
 
@@ -165,13 +185,16 @@ se posent à côté de la page de l'hôte, ou sous une adresse donnée par `base
 React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteur seul
 (`src/engine/editionSvg.ts`, sans React ni DOM) restent utilisables tels quels.
 
+L'éditeur embarqué lit **à plat** par défaut, le contrat d'avant le modèle riche : un hôte qui stocke les SVG réécrits ne voit
+rien changer. Il passe `modele: 'riche'` pour garder groupes, dégradés, découpes, masques, effets et images.
+
 ## Organisation du dépôt
 
 | Chemin | Rôle |
 |---|---|
 | `src/util/` | Primitives pures : lecture XML sans DOM, nettoyage d'un SVG, historique immuable, couleur (OKLab), lecture indexée sûre (`au`) |
 | `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) ; le format du projet (`projet.ts`) |
-| `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
+| `src/engine/` | Le dessin (`editionSvg.ts` ; le modèle riche dans `edition/` : une fonctionnalité par fichier de `edition/fonctions/`, la descente vers les exports dans `descente/`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
 | `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |

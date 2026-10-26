@@ -79,7 +79,9 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `prefers-reduced-motion` | 74 | 63 | 10.1 | Absent : les animations jouent |
 | `prefers-color-scheme` | 76 | 67 | 12.1 | Absent : thème clair |
 | `all: revert` | 84 | 67 | 9.1 | Aucun : le bouclier de l’embarquement n’agit pas, l’hôte peut teinter les boutons. Sous le plancher technique |
-| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image |
+| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image. Les découpes du modèle riche sont des `<clipPath>` SVG en unités du plan (`userSpaceOnUse`), lus partout bien avant ces versions |
+| `<filter>` | 8 | 3 | 6 | Aucun, sous le plancher technique : le flou et l’ombre du modèle riche (ADR-0012, étape 7) s’écrivent en primitives que tous lisent (`feGaussianBlur`, `feOffset`, `feFlood`, `feComposite`, `feMerge` ; `feDropShadow` se lit, ne s’écrit jamais), sur une région explicite et en `color-interpolation-filters="sRGB"`, dont le défaut linéaire varie d’un moteur à l’autre. Au-delà de 20 nœuds à effet, la toile retire les filtres pendant un geste (`data-brouillon`) |
+| `mask-type` | 24 | 35 | 7 | Aucun, sous le plancher technique : un masque alpha du modèle riche s’écrit `style="mask-type:alpha"` ; un moteur qui l’ignorerait le peindrait en luminance |
 | `vector-effect` | 6 | 15 | 5.1 | Aucun : les traits de sélection grossiraient avec le zoom. Sous le plancher technique |
 | `<details>` | 12 | 49 | 6 | Aucun, toujours présent |
 | `type="color"` | 20 | 29 | 12.1 | Aucun, toujours présent |

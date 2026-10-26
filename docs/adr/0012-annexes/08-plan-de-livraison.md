@@ -28,7 +28,7 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 13d Couleurs | **faite** le 26 octobre 2026 (moteur et listes ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 13d a posé ») |
 | 13a PDF natif | **fait** le 26 octobre 2026, sauf le raster des effets (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 13a a posé ») |
 | 13b Idiomes de filtres | **fait pour le moteur** le 26 octobre 2026 (ce qui a été posé, les mesures et ce qui reste : ci-dessous, « Ce que l'étape 13b a posé ») |
-| 14 | proposée ; vagues et consignes revues (§2, §5) |
+| 14 Bascule | **faite** le 26 octobre 2026 (un seul commit de valeurs par défaut ; ce qui a été posé, les décisions et ce qui reste : ci-dessous, « Ce que l'étape 14 a posé ») ; restent à un humain la revue au lecteur d'écran et la comparaison Inkscape/resvg, et WebKit exigé en CI après son premier passage vert |
 
 **Révision du 26 octobre 2026 — le projet JSON n’a qu’un format** (ADR-0030, « Révision du 26 octobre 2026 »). Le site PHP n’a jamais
 été mis en ligne, aucun projet n’est à conserver : `VERSION_PROJET = 1` porte tout le modèle, `VERSION_PROJET_PLAT` n’existe plus,
@@ -1297,6 +1297,57 @@ l'annexe 6 §9 dans les trois moteurs, et corrigé à la racine ce qu'elle a tro
   sélection qui décale panneaux et toile (ci-dessus, décision de mise en page) ; le choix du genre d'un remplissage à motif montre
   « Uni » (reste de l'étape 9) ; `CI` : `interface-riche.e2e.ts` entre dans la matrice des trois moteurs comme les autres fichiers.
 
+### Ce que l'étape 14 a posé (26 octobre 2026, la bascule)
+
+Aucun octet d'une lecture `plat` ne bouge (références v1 gelées, références v2 intactes, `plat.sha256.json` vert sans régénérer). L'ADR-0012
+passe à « acceptée » ; le paquet passe en **0.2.0** (aucune version n'a été publiée ; en 0.x, la rupture fait passer le chiffre du milieu).
+
+- **Les commits, dans l'ordre** (le retour en arrière de la bascule est le revert du seul commit « Bascule ») :
+  1. *tuyauterie, sans effet* : `MODELE_PAGE` (`zones/modele.ts`, alors `plat`), `modeleRetenu(stockage, defaut)`, la propriété
+     `modeleParDefaut` d'`EditeurSvg` que la page (`Application.tsx`) et le site (`Site.tsx`) passent ; l'option `modele` des sessions de
+     test (`tests/e2e/aide.ts`), posée par la page une fois chargée, jamais par un script d'amorce (voir « Ce que le paquet 2-D a posé ») ;
+  2. *le riche n'est plus une bêta* : la case du menu Édition s'appelle « Groupes, dégradés, effets », ses phrases aussi ;
+  3. *le corpus hostile dans les deux modèles* : `passer(texte, budget, leger, modele)`, `attenduRiche` dans `index.json` (21 fichiers),
+     le test unitaire du corpus passe chaque fichier dans les deux ; aucun invariant n'est rompu en riche ;
+  4. *un refus propre au riche dit la voie à plat* (`refusAvecRepli`) : 120 niveaux de `<g>` (`structure-imbrication-modeste.svg`, qui
+     « doit s'ouvrir »), plus de 20 000 groupes, un masque CSS s'ouvraient à plat et sont refusés en riche (bornes de l'annexe 5 §2) ; la
+     page et le site ajoutent au refus que la lecture à plat l'ouvrirait, et nomment la case ;
+  5. *deux cibles trop petites*, trouvées par `cibles.e2e.ts` joué en riche : les radios Uni / Dégradé (18,8 px) et les cases d'effet
+     (19 px) prennent 24 px à la souris ;
+  6. *les tests qui valent dans les deux modèles* (formes comptées sur la toile, élément de menu nommé exactement, planche d'icônes et
+     lettres séparées jouées dans les deux) et le test de l'embarquement (à plat sans option, même si le stockage garde `riche`) ;
+  7. **la bascule** : `MODELE_PAGE = 'riche'`, et les attentes qui suivent le défaut de la page ;
+  8. les documents (README, `docs/integration.md`, `docs/navigateurs.md`, `docs/verification-manuelle.md` § 1 bis, cet ADR), le
+     CHANGELOG et la version.
+- **Décisions** :
+  - *le site PHP lit en riche*, comme la page : c'est un hôte à nous, sans projet existant à protéger ; un projet rouvert s'ouvre tel qu'il a
+    été enregistré, quel que soit le réglage, et un SVG importé suit le réglage (`svg.modele`, le même stockage que la page) ;
+  - *l'embarquement garde `plat`* (question 3) : `EditeurSvg.ouvrir`, `estEditable(svg)` et le composant React sans `modele` ni
+    `modeleParDefaut` ; `BoutonEditerSvg` ne passe pas de défaut ; la démonstration de l'hôte dans la page (`DEMO_HOTE`) fixe `plat` ;
+  - *Ctrl+G groupe dans la page* (question 1) ; le test de la région vocale suit le défaut (« Choisissez les formes à grouper. »), un test
+    à plat garde Ctrl+G qui combine et les raccourcis des boutons de la rangée ;
+  - *le corpus hostile entre par la page en riche*, l'embarquement le lit à plat : les deux lectures restent exercées dans le navigateur.
+- **Tests revus** : ceux qui suivent le défaut (`modele-riche` part du riche et décoche la case ; `menus`, `edition`, `clavier`,
+  `clavier-suite`, `securite`), ceux qui valent dans les deux (`texte-ligatures`, `texte-vivant`, `lecture-use-css`, `fin-parcours`,
+  `onboarding`), et l'embarquement (`embarquement.e2e.ts`). `prise.e2e.ts` (survol de 5 000 formes) est tombé une fois dans la suite
+  entière sous charge (rendu 28,6 ms pour 16) : rejoué seul, 5,3 à 5,8 ms en riche comme à plat (deux passes chacun) ; aucun écart
+  entre les modèles, le seuil est sensible à la charge du poste.
+- **Inkscape et resvg** : ni `inkscape`, ni `resvg`, ni `rsvg-convert` sur le poste de l'agent ; la comparaison d'un échantillon de
+  références v2 (`tests/fixtures/svg/v2/*.attendu.svg` et leurs entrées, 253 fichiers en tout) au rendu de Chromium revient à un humain : ouvrir chaque référence dans
+  Inkscape 1.x et la rendre par `resvg` (ou `rsvg-convert`), puis comparer à la capture de Chromium, en priorité les dégradés radiaux
+  à matrice, les masques alpha et luminance, les motifs et le flou et l'ombre (`color-interpolation-filters="sRGB"`).
+- **Reste** (un humain, ou après la CI de la PR) :
+  - la **revue au lecteur d'écran** (NVDA + Firefox, VoiceOver + Safari au moins) : `docs/verification-manuelle.md`, § 1 bis — l'arbre des
+    calques (un seul arrêt de Tab, niveau, rang, état déplié, F2, Ctrl+Maj+flèches, « Déplacer vers… »), entrer et sortir d'un groupe et
+    le fil d'Ariane, grouper et dégrouper, la liste des arrêts d'un dégradé et ses poignées-curseurs, les lentilles de découpe et de
+    masque, la section Effets, l'image insérée et le refus de ses points, les lettres séparées en groupe, le SVG à plat et la case du
+    modèle ; à consigner dans le CHANGELOG avant la publication ;
+  - **WebKit exigé** : retirer `continue-on-error` de la CI après son premier passage vert (ADR-0016) ;
+  - les amendements de `CLAUDE.md` proposés au chef de chantier (le dessin en feuilles, la bascule, le texte vivant, le réglage du
+    modèle) ;
+  - les restes des étapes, inchangés : la rangée de la sélection qui décale panneaux et toile (2-D), le genre d'un remplissage à
+    motif qui montre « Uni » (9), le raster des effets dans le PDF (13a).
+
 ### Caduc
 
 - **Étapes 10 et 11** : faites autrement. `TexteVivant` porte `police { id, version?, famille? }`, une `matrice` obligatoire,
@@ -1558,7 +1609,7 @@ ouverture des SVG « enveloppés tel quel ». Peut commencer dès l'étape 0. *R
   se lit déjà en lettres, polices remplacées et dites (ADR-0020, `io/texteSvg.ts`) ; la liste `aComposer` est caduque.*
 - **13d Couleurs** : arrêts de dégradé et motifs traités par `remplacerCouleur`, palettes et listes · après 3, 9.
 
-### Étape 14 — Bascule · taille P, risque : de communication
+### Étape 14 — Bascule · taille P, risque : de communication · **faite le 26 octobre 2026**, sauf la revue au lecteur d'écran et Inkscape/resvg (§0, « Ce que l'étape 14 a posé »)
 
 `modele: 'riche'` par défaut **dans la page** (le défaut de l'embarquement ne change pas : question 3), revue
 manuelle d'un lecteur d'écran, matrice multi-navigateurs bloquante, Inkscape/resvg sur un échantillon, README,

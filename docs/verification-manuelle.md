@@ -48,6 +48,34 @@ que si « Appuyer sur Tab pour mettre en évidence chaque élément » est coch�
 Avancé (ou avec Option+Tab) ; la toile, elle, a `tabindex`, elle est atteinte dans tous les cas. Sur **iOS et
 TalkBack**, la toile se parcourt par balayage et les touches de forme n’existent pas sans clavier physique :
 vérifier qu’on atteint **tous les boutons** et que les tiroirs s’ouvrent et se ferment (1.13).
+## 1 bis. Lecteurs d’écran : le modèle riche (25 min)
+
+La condition de la bascule de l’ADR-0012 (annexe 6 §9, annexe 8 §1 « Étape 14 ») : l’arbre des calques, le dégradé et les lentilles
+sont les pièces d’accessibilité les plus difficiles de l’éditeur, et aucun lecteur d’écran réel ne tourne en CI. Mêmes paires et même
+critère commun qu’au § 1 ; **NVDA + Firefox** et **VoiceOver + Safari (macOS)** au moins. La page est en modèle riche par défaut
+(la case « Groupes, dégradés, effets » du menu Édition est cochée). Fichier d’essai : collez dans « Ouvrir un SVG ou un PDF »
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><defs><linearGradient id="a"><stop offset="0" stop-color="#c81e28"/><stop offset="1" stop-color="#1428a0"/></linearGradient></defs><g id="Logo"><rect x="10" y="10" width="80" height="60" fill="url(#a)"/><circle cx="140" cy="40" r="30" fill="#1428a0"/></g><path d="M10 100 L190 100" stroke="#15181d" stroke-width="4" fill="none"/></svg>
+```
+
+| # | Geste | Ce qui doit être dit | Réussi si |
+|---|---|---|---|
+| 1b.1 | Calques : Tab jusqu’à l’arbre | « Calques », grille arborescente ; la ligne « Logo », niveau 1, 1 sur 2, réduite ; son nombre d’éléments | **un seul arrêt de Tab** pour toute la grille ; Tab suivant en sort |
+| 1b.2 | Flèche droite, flèche bas, flèche gauche | « développée » ; la ligne enfant, niveau 2, 1 sur 2 ; retour au groupe, « réduite » | niveau, rang et état dits à chaque ligne ; Début et Fin vont aux bouts |
+| 1b.3 | F2 sur « Logo », taper « Marque », Entrée | le champ « Nouveau nom du groupe … » ; la ligne dit ensuite « Marque » | Échap annule sans rien dire de faux |
+| 1b.4 | Ctrl+Maj+flèche bas sur une ligne, puis « Déplacer vers… » | la phrase du déplacement ; le menu des destinations, chaque groupe nommé | le focus reste sur la ligne déplacée |
+| 1b.5 | Toile : Entrée sur le groupe, puis Échap | « Dans le groupe Marque, 2 éléments. », puis « Retour à la racine. » | le fil d’Ariane (« Contexte d’édition ») se lit, et rend le focus à la toile |
+| 1b.6 | Choisir deux formes, Ctrl+G, puis Ctrl+Maj+G | « Groupe créé : 2 formes. », puis « Groupe défait : 2 formes. » | |
+| 1b.7 | Inspecteur, rectangle choisi : Remplissage « Dégradé linéaire » | la liste « Arrêts du remplissage » (zone de liste) ; chaque arrêt avec sa couleur nommée et sa position | flèches haut et bas parcourent les arrêts ; les réglages de l’arrêt se lisent dans le groupe « Réglages de … » |
+| 1b.8 | Toile : Tab jusqu’aux poignées du dégradé, flèches, Maj+flèches, Suppr | chaque poignée est un curseur (« slider ») avec sa valeur en pour cent et sa phrase | ±1 % puis ±10 % dits ; Suppr retire un arrêt du milieu et le dit |
+| 1b.9 | Menu Édition › « Créer une découpe », puis « Modifier la découpe », Échap | la création ; l’entrée dans la découpe, le fil « Racine › Groupe › Découpe » ; la sortie | le reste du dessin estompé n’est pas lu comme choisissable |
+| 1b.10 | « Créer un masque », « Inverser le masque », « Libérer le masque » | chaque geste dit une fois ; une commande grisée dit sa raison | |
+| 1b.11 | Section Effets : flou, puis ombre ; régler l’écart au clavier | chaque champ nommé, sa valeur dite | pas de relecture de toute la section à chaque pas |
+| 1b.12 | Fichier › « Insérer une image… », puis Entrée (points) sur l’image | l’image insérée, dite « image PNG » ; le refus des points, en clair | |
+| 1b.13 | Texte : saisir « Bonjour », Vectoriser › Lettres séparées | « … : 7 formes ordinaires, en un groupe. » | l’arbre montre le groupe « Texte « Bonjour » » |
+| 1b.14 | Fichier › « Télécharger le SVG à plat » ; Édition › case du modèle | le téléchargement dit, sans enregistrement ; « Groupes, dégradés et effets désactivés : … » | la case est dite « case à cocher de menu, cochée / non cochée » |
+
 ## 2. Contraste élevé de Windows (10 min)
 
 Windows 11 › Accessibilité › Thèmes de contraste : **Aquatique**, **Désert**, **Crépuscule**, **Contraste

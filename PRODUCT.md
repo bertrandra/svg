@@ -58,8 +58,9 @@ couvrent chacun qu'une part :
 ## Capabilities and Constraints
 
 - Interface en français, avec accents, au vouvoiement ; l'anglais n'existe pas encore (décision ouverte).
-- Modèle de dessin à plat (chemins M, L, C, Q, Z) ; le texte vivant est implémenté sur ce modèle (ADR-0022) ; groupes,
-  masques, dégradés et effets sont proposés par l'ADR-0012, non implémentés.
+- Modèle de dessin en feuilles (chemins M, L, C, Q, Z dans le repère du plan) ; le modèle riche de l'ADR-0012 (groupes,
+  dégradés, motifs, découpes, masques, flou et ombre, images intégrées) est celui de la page et du site ; l'embarquement lit à
+  plat tant que l'hôte ne demande pas le riche ; le texte vivant est une feuille (ADR-0022).
 - Une couleur d'interface est un jeton (`src/styles/jetons.ts`), contraste 4,5:1 dans les deux thèmes.
 - Une action primaire par panneau, le rare dans les menus (ADR-0006).
 - Licence du projet : propriétaire, tous droits réservés. Formes de la bibliothèque sous CC BY 3.0 (attribution

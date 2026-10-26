@@ -35,6 +35,9 @@ On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `biblio
   copie du code). Si votre page doit recevoir le SVG, prenez le bundle.
 - `vtracer.js` (traceur, 877 Ko), `bibliotheque.js` et `polices.js` doivent être servis **à côté de `editeur-svg.html`** : la page les
   cherche par leur nom nu, chacun au premier besoin (une vectorisation, la bibliothèque, l’outil Texte).
+- La page lit en **modèle riche** (ADR-0012, étape 14) : un SVG à groupes, à dégradés, à découpes… s’ouvre et se réécrit avec ses
+  groupes et ses définitions. La personne revient à plat par la case « Groupes, dégradés, effets » du menu Édition (gardée dans le
+  stockage de la page). Si vous comptez sur des SVG réécrits à plat, prenez le bundle, qui reste à plat par défaut (voir « Le modèle »).
 
 ---
 
@@ -111,20 +114,48 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S`. Rendre `false` dit que le brouillon n’a pas été gardé : l’éditeur l’annonce au lieu de « Brouillon gardé. » |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 | `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
+| `modele` | `'plat'` ou `'riche'` | `'plat'` | Le modèle de lecture (ADR-0012), fixé pour toute l’édition : la personne ne le change pas, le menu Édition n’a pas la case du modèle. `'plat'` est le contrat d’avant : les groupes se fondent, dégradé, motif, découpe, masque, filtre et image sont refusés en le nommant, et un SVG réécrit aujourd’hui l’est à l’identique demain. `'riche'` les garde et les réécrit (voir « Le modèle : plat ou riche ») |
 | `policesEnLigne` | `boolean` | `false` | Les polices libres téléchargeables (ADR-0025) : l’outil Texte propose « Toutes les polices » (plus de 2 000 familles libres, recherche, filtres, favoris, polices du document). Une police se télécharge **seulement quand la personne la choisit** (ouvrir la liste, chercher, voir les aperçus ne fait partir aucune requête) ; chaque fichier est vérifié par son empreinte sha256 avant d’être lu. Faux ou absent : aucune requête, seules les dix fontes de `polices.js` se proposent. Vrai demande de servir aussi `polices-catalogue.js` (et, facultatif, `polices-apercus.js`) sous `baseAnnexes`, et d’autoriser les serveurs de polices dans votre politique de sécurité (voir « Les serveurs de polices ») |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
 
 Une option qui ne convient pas lève un `TypeError` (en français) : `onEnregistrer` manquante, `svg` qui
-n’est pas un texte, etc. Un SVG que l’éditeur refuse (texte, image, dégradé, masque, découpe, filtre,
-un cycle de `<use>` ou un renvoi externe) ne lève rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer »
-(et `onFermer` est appelée). Pour le savoir avant, demandez `estEditable`.
+n’est pas un texte, `modele` qui n’est ni `'plat'` ni `'riche'`, etc. Un SVG que l’éditeur refuse (à plat : image, dégradé, masque,
+découpe, filtre ; dans les deux modèles : un cycle de `<use>` ou un renvoi externe, un filtre hors du flou et de l’ombre…) ne lève
+rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer » (et `onFermer` est appelée). Pour le savoir
+avant, demandez `estEditable`.
 
-#### `EditeurSvg.estEditable(svg)` → `boolean`
+#### `EditeurSvg.estEditable(svg, modele?)` → `boolean`
 
-Vrai quand l’éditeur sait ouvrir ce SVG : un texte, sans image enveloppée, que le moteur sait lire sans le
-refuser. Faux pour tout autre argument. Utile pour griser un bouton « Éditer ».
+Vrai quand l’éditeur sait ouvrir ce SVG dans ce modèle (`'plat'` par défaut, comme `ouvrir`) : un texte, sans image enveloppée à
+plat, que le moteur sait lire sans le refuser. Faux pour tout autre argument. Utile pour griser un bouton « Éditer » ; passez le
+même `modele` qu’à `ouvrir`.
+
+#### Le modèle : plat ou riche
+
+L’option `modele` choisit comment l’éditeur **lit** le SVG ; il écrit toujours ce que le dessin contient.
+
+- **`'plat'` (défaut)** : le contrat de l’ADR-0001. Les groupes se fondent dans les formes (leur transformation et leur opacité
+  cuites dans chacune), un `<use>` se déplie, et ce qui ne se ramène pas à des chemins pleins est refusé en le nommant. Le SVG rendu
+  n’a ni `<g>` ni `<defs>` ni `id`. **Ce défaut ne change pas** : la page autonome est passée au modèle riche, l’embarquement non
+  (ADR-0012, annexe 9, question 3), pour qu’un hôte qui garde les SVG réécrits ne voie rien bouger d’une version à l’autre.
+- **`'riche'`** : les groupes restent des groupes (nom, opacité, visibilité, verrou), et l’éditeur lit et écrit les dégradés
+  linéaires et radiaux, les motifs, les découpes (`clip-path`), les masques d’opacité, un flou et une ombre portée, les images
+  `data:` (PNG, JPEG, GIF, WebP, vérifiées sur leurs octets), un `<svg>` imbriqué et un `<text>` en groupes. Ce qui change pour vous :
+  - le SVG rendu peut porter des `<g>`, un `<defs>` et des `id` de la forme `ed-<genre>-<14 hex>` (l’empreinte du contenu : deux SVG
+    de l’éditeur posés dans la même page ne se marchent pas dessus), et `data-ed-modele="2"` sur la balise `<svg>` dès que le dessin
+    n’est pas plat ; un dessin sans rien de riche s’écrit à l’octet comme à plat ;
+  - un fichier à `<g>` se réécrit **avec** ses groupes, plus aplati : c’est un changement d’octets pour vos SVG d’hier ;
+  - le menu Édition propose Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G ; Combiner et Séparer y perdent ces raccourcis), les
+    découpes, les masques et les motifs, l’inspecteur ses sections Dégradé et Effets, les calques d’un dessin à groupes deviennent
+    un arbre, et le menu Fichier « Insérer une image… » et « Télécharger le SVG à plat » (les octets du contrat plat, un
+    téléchargement qui ne rend rien à `onEnregistrer`) ;
+  - un brouillon ou une version nommée écrits en riche ne se rouvrent pas dans un éditeur ouvert à plat : il le dit, sans rien effacer.
+
+Pour passer au modèle riche, relisez ce que votre page fait des SVG rendus (un `<img>` ou un `<object>` les montre tels quels ; un
+traitement maison qui suppose des `<path>` à plat ne lira pas les `<g>` ni les `url(#…)`), puis passez `modele: 'riche'` à `ouvrir`
+et à `estEditable`.
 
 #### `EditeurSvg.version` → `string`
 
@@ -140,8 +171,9 @@ La version du paquet (`package.json`) qui a construit le bundle.
   le dit (« Brouillon gardé. »). Sans `onBrouillon`, il dit que rien n’est gardé ici et nomme le bouton qui rend le dessin.
   *Changement :* jusqu’à cette version, `Ctrl+S` appelait `onEnregistrer` (et fermait l’éditeur avec
   `fermerApresEnregistrer: true`) ; l’habitude de `Ctrl+S` toutes les minutes éjectait la personne de l’éditeur.
-- Le SVG rendu est le dessin **réécrit** (ADR-0001) : à plat, en chemins absolus, coordonnées au
-  millième ; les groupes, classes et feuilles de style de l’entrée disparaissent, le rendu reste le même.
+- Le SVG rendu est le dessin **réécrit** (ADR-0001) : en chemins absolus, coordonnées au millième ; à plat (le défaut), les
+  groupes, classes et feuilles de style de l’entrée disparaissent, le rendu reste le même ; en modèle riche, les groupes et les
+  définitions se réécrivent sous une forme canonique (voir « Le modèle : plat ou riche »).
   Les formes masquées sont retirées, et le panneau le dit. Un SVG réécrit aujourd’hui l’est à l’identique
   demain : un changement de cette écriture est un événement de version majeure.
 - Le SVG passe par `nettoyerSvg` : il porte toujours `xmlns` et `viewBox`, et ne garde ni script, ni
@@ -466,6 +498,8 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `changement?` | `(etat: EtatRendu) => void` | Appelée à chaque changement du dessin ou du contexte, avec l’état du moment : de quoi en déduire « enregistré » ou « modifié » (le même objet dessin après Ctrl+Z jusqu’à l’état enregistré) |
 | `ctrlSEnregistre?` | `boolean` | Ctrl+S appelle `enregistrer` sans fermer (le site PHP) ; faux par défaut : Ctrl+S garde un brouillon |
 | `actionsHote?` | `{ id, libelle, faire(etat) }[]` | Des gestes ajoutés au menu Fichier après le geste de fin (« Enregistrer sous… » sur le site PHP) ; chacun reçoit l’état du moment |
+| `modele?` | `'plat' \| 'riche'` | Le modèle de lecture (voir « Le modèle : plat ou riche »), **fixé** : la case du menu Édition disparaît. Absent : le réglage gardé dans `stockage` (clé `svg.modele`, la case du menu Édition), et sans réglage `modeleParDefaut` |
+| `modeleParDefaut?` | `'plat' \| 'riche'` | Le modèle quand ni `modele` ni le stockage n’en donnent un. **Absent : `'plat'`** ; la page autonome et le site PHP passent `'riche'` (`MODELE_PAGE`, `src/zones/modele.ts`). `BoutonEditerSvg` ne le passe pas |
 
 À savoir, côté React :
 

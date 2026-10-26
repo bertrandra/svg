@@ -7,6 +7,24 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Version majeure : des octets écrits changent
 
+- **La bascule : le modèle riche est celui de la page** (ADR-0012, étape 14 ; l'ADR-0012 passe à « acceptée » ; le paquet passe en
+  0.2.0). Dans la page autonome et sur le site PHP, un SVG à `<g>`, à dégradés, à motifs, à découpes (`clip-path`), à masques, à
+  flou ou à ombre portée, à image `data:` ou à `<svg>` imbriqué s'ouvre désormais en modèle riche et **se réécrit avec ses groupes
+  et ses définitions** (`<defs>`, identifiants `ed-…` tirés de l'empreinte du contenu, `data-ed-modele="2"` sur la racine), au lieu
+  d'être aplati ou refusé. Un dessin sans rien de riche s'écrit à l'octet comme avant ; « Télécharger le SVG à plat » (menu
+  Fichier) rend à tout moment les octets d'avant. La case « Groupes, dégradés, effets » du menu Édition, décochée, ramène à plat
+  les fichiers ouverts ensuite (réglage gardé dans le navigateur ; un réglage illisible vaut le riche). Ce que la page montre
+  désormais sans réglage : groupes (Ctrl+G groupe, Ctrl+Maj+G dégroupe ; Combiner et Séparer gardent leur place, sans
+  raccourci), arbre des calques, entrer dans un groupe et fil d'Ariane, dégradés linéaires et radiaux, motifs, découpes et
+  masques modifiables sur place, flou et ombre portée, images intégrées, idiomes de filtres de Figma, Sketch et Illustrator, PDF
+  qui écrit nativement dégradés, motifs, découpes, masques et images. Les bornes du modèle riche refusent ce que la lecture à
+  plat ouvrait (plus de 64 niveaux de groupes, plus de 20 000 groupes, un masque CSS) : le refus dit alors que la lecture à plat
+  l'ouvrirait. **L'embarquement ne change pas** : `EditeurSvg.ouvrir`, `estEditable` et le composant React sans `modele` ni
+  `modeleParDefaut` lisent à plat, et un hôte passe `modele: 'riche'` quand il est prêt (`docs/integration.md`). Aucun octet
+  d'une lecture à plat ne bouge (références v1 gelées). Retour en arrière : défaire le seul commit qui pose `MODELE_PAGE`. La
+  revue au lecteur d'écran réel (NVDA, VoiceOver) de l'arbre, du dégradé et des lentilles reste à faire avant la publication
+  (`docs/verification-manuelle.md`, § 1 bis).
+
 Ce lot déplace délibérément des octets écrits (ADR-0009, ADR-0004) ; les références de
 `tests/fixtures/svg` ont été relues une à une, et les 4 134 formes de la bibliothèque gardent leurs
 empreintes.
@@ -55,6 +73,13 @@ empreintes.
   dans `/Subject`, le SVG de découpe dans un commentaire, et seulement s'il y a une forme créditée.
 
 ### Modifié
+
+- La case du modèle au menu Édition s'appelle « Groupes, dégradés, effets » (elle disait « bêta »), comme ses phrases ; la page et
+  le site passent à l'éditeur leur défaut (`modeleParDefaut`), que le bundle d'embarquement ne passe pas.
+
+- Le corpus hostile se lit dans les deux modèles : `index.json` porte `attenduRiche` là où la lecture riche diffère (21 fichiers),
+  le test unitaire du corpus passe chaque fichier dans les deux, et le test de navigateur fait entrer le corpus par la page en
+  riche ; l'embarquement le lit toujours à plat.
 
 - Arbre des calques, à la souris : les boutons de visibilité et de verrou n'apparaissent que sur la ligne active, survolée, masquée
   ou verrouillée ; le clavier les atteint toujours, au doigt toutes les lignes les gardent. La grille de 200 groupes passe de 801 à
@@ -166,6 +191,9 @@ empreintes.
     agrandies.
 
 ### Corrigé
+
+- Les boutons radio Uni / Dégradé linéaire / Dégradé radial de l'inspecteur et les cases Flou et Ombre portée de la section Effets
+  font 24 px de haut à la souris (18,8 et 19 px) : les tests de cibles, joués en riche, les ont trouvés.
 
 - Modèle riche : une forme dessinée, collée ou insérée dans un groupe y entre, au premier plan, au lieu de naître hors du contexte,
   estompée et imprenable ; « Vectoriser : lettres séparées » rend les lettres en un groupe « Texte « … » », choisi, et le dit.
