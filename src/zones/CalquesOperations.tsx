@@ -17,12 +17,16 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useFenetre } from './Fenetre.js';
 import { cheminDe } from './Toile.js';
 import { Icone } from './icones.js';
+import { t } from '../util/i18n.js';
 
-/** Ce que chaque groupe dit et fait : son titre, l'autre operation, le geste qui y mene et son raccourci. */
-const GROUPES: Readonly<Record<Operation, { titre: string; vers: Operation; geste: string; icone: 'couper' | 'stylo'; vide: string; aide: string }>> = {
-  decoupe: { titre: 'À couper', vers: 'ecriture', geste: 'Écrire au stylo', icone: 'stylo', vide: 'Aucune forme à couper.', aide: '« Couper » (Maj+X) y range les formes choisies.' },
-  ecriture: { titre: 'À écrire', vers: 'decoupe', geste: 'Couper à la lame', icone: 'couper', vide: 'Aucune forme à écrire.', aide: '« Écrire » (Maj+E) y range les formes choisies ; un trait seul s’y range de lui-même.' }
-};
+/**
+ * Ce que chaque groupe dit et fait : son titre, l'autre operation, le geste qui y mene et son raccourci. Une fonction : les textes se
+ * traduisent au rendu, une fois la langue posee (ADR-0042), jamais au chargement du module.
+ */
+const groupes = (): Readonly<Record<Operation, { titre: string; vers: Operation; geste: string; icone: 'couper' | 'stylo'; vide: string; aide: string }>> => ({
+  decoupe: { titre: t('À couper'), vers: 'ecriture', geste: t('Écrire au stylo'), icone: 'stylo', vide: t('Aucune forme à couper.'), aide: t('« Couper » (Maj+X) y range les formes choisies.') },
+  ecriture: { titre: t('À écrire'), vers: 'decoupe', geste: t('Couper à la lame'), icone: 'couper', vide: t('Aucune forme à écrire.'), aide: t('« Écrire » (Maj+E) y range les formes choisies ; un trait seul s’y range de lui-même.') }
+});
 
 /** Le type des donnees glissees d'une ligne : les identifiants des formes, separes par des espaces. */
 const TYPE_GLISSE = 'application/x-svg-formes';
@@ -43,7 +47,7 @@ export const GroupesOperations = memo(function GroupesOperations({ panneau }: { 
 /** Un groupe : son titre et son nombre, la liste du premier plan au fond (fenetree au-dela du seuil), ou ce qui y viendra. */
 function Groupe({ operation, formes, panneau }: { operation: Operation; formes: readonly Forme[]; panneau: RefObject<HTMLElement | null> }) {
   const { sel, choisies } = useDessin(), ac = useActions();
-  const g = GROUPES[operation], total = formes.length, idTitre = useId();
+  const g = groupes()[operation], total = formes.length, idTitre = useId();
   const { liste, fenetre, actif, montrer } = useFenetre(total, panneau);
   // Une forme choisie ailleurs (sur la toile) reste atteignable : la liste de son groupe defile jusqu'a elle.
   const unique = sel.length === 1 ? sel[0] : null;
@@ -106,11 +110,11 @@ function Vignette({ f, operation }: { f: Forme; operation: Operation }) {
  * ligne choisie parmi plusieurs fait passer toute la selection de son groupe : on agit sur ce qu'on a choisi.
  */
 function LigneOperation({ f, operation, sel, choisie, rang }: { f: Forme; operation: Operation; sel: string[]; choisie: boolean; rang: readonly [number, number] | null }) {
-  const ac = useActions(), g = GROUPES[operation];
+  const ac = useActions(), g = groupes()[operation];
   const fenetree = rang ? { contentVisibility: 'visible' as const } : undefined;
   const plusieurs = choisie && sel.length > 1;
   const cibles = plusieurs ? sel : [f.id];
-  const nom = genreAffiche(f) + ' ' + numeroDeForme(f);
+  const nom = genreAffiche(f) + ' ' + numeroDeForme(f), touche = g.vers === 'ecriture' ? 'E' : 'X';
   const glisser = (e: DragEvent) => { e.dataTransfer.setData(TYPE_GLISSE, cibles.join(' ')); e.dataTransfer.effectAllowed = 'move'; };
   return (
     <li className={choisie ? 'choisi' : undefined} style={fenetree} aria-posinset={rang?.[0]} aria-setsize={rang?.[1]} draggable={!f.verrouille} onDragStart={glisser}>
@@ -124,11 +128,11 @@ function LigneOperation({ f, operation, sel, choisie, rang }: { f: Forme; operat
         <span className="calque-genre">{genreAffiche(f)}</span> <span className="calque-numero">{numeroDeForme(f)}</span>
       </button>
       <Bouton icone={g.icone} className="calque-bascule calque-operation" disabled={f.verrouille}
-        aide={g.geste + (plusieurs ? ' : les ' + sel.length + ' formes choisies' : ' : ' + nom) + ' (Maj+' + (g.vers === 'ecriture' ? 'E' : 'X') + ')'}
+        aide={plusieurs ? t('{geste} : les {n} formes choisies (Maj+{touche})', { geste: g.geste, n: sel.length, touche }) : t('{geste} : {nom} (Maj+{touche})', { geste: g.geste, nom, touche })}
         onClick={() => ac.poserOperation(g.vers, cibles)} />
-      <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + numeroDeForme(f)}
+      <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={f.visible ? t('Masquer la forme {n}', { n: numeroDeForme(f) }) : t('Afficher la forme {n}', { n: numeroDeForme(f) })}
         onClick={() => ac.appliquer(d => modifier(d, [f.id], { visible: !f.visible }))} />
-      <Bouton icone={f.verrouille ? 'verrouiller' : 'deverrouiller'} className="calque-bascule" pressed={f.verrouille} aide={(f.verrouille ? 'Déverrouiller la forme ' : 'Verrouiller la forme ') + numeroDeForme(f)}
+      <Bouton icone={f.verrouille ? 'verrouiller' : 'deverrouiller'} className="calque-bascule" pressed={f.verrouille} aide={f.verrouille ? t('Déverrouiller la forme {n}', { n: numeroDeForme(f) }) : t('Verrouiller la forme {n}', { n: numeroDeForme(f) })}
         onClick={() => { ac.appliquer(d => modifier(d, [f.id], { verrouille: !f.verrouille })); if (!f.verrouille) ac.choisir(sel.filter(s => s !== f.id)); }} />
     </li>
   );

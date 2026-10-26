@@ -17,6 +17,7 @@ import { remonterDansLentille, remonterVers } from './commandesGroupes.js';
 import { cheminGroupes } from './phrasesGroupes.js';
 import { nomContenu } from './phrasesContenus.js';
 import { dessinComplet, lentilleDe } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 export const FilAriane = memo(function FilAriane() {
   const mo = useDessin(), ui = useInterface(), ac = useActions();
@@ -32,9 +33,9 @@ export const FilAriane = memo(function FilAriane() {
     setTimeout(() => { if (!bouton.isConnected) focusAuClavier(racine?.querySelector<HTMLElement>('.editeur-svg-toile')); }, 0);
   };
   return (
-    <nav className="fil-ariane" aria-label="Contexte d’édition">
+    <nav className="fil-ariane" aria-label={t('Contexte d’édition')}>
       <ol>
-        <li><button type="button" className="discret" onClick={e => aller(null, e.currentTarget)}>Racine</button></li>
+        <li><button type="button" className="discret" onClick={e => aller(null, e.currentTarget)}>{t('Racine')}</button></li>
         {chemin.map((n, i) => {
           if (n.genre !== 'groupe') return null;
           // Dans une lentille, le groupe qui porte le contenu se clique aussi : on sort alors dans ce groupe.

@@ -29,7 +29,7 @@ import { estHex } from './aidesEditeur.js';
 import type { ActionHote, EtatEnregistrement, EtatRendu, Modele, Teinte } from './typesEditeur.js';
 import { modeleRetenu } from './modele.js';
 import { preparerLangue } from '../io/langue.js';
-import { definirLangue, dictionnairePose, langue, type Langue } from '../util/i18n.js';
+import { definirLangue, dictionnairePose, langue, t, type Langue } from '../util/i18n.js';
 
 // Les types que les autres zones lisent ici : ils vivent dans typesEditeur.ts (types seuls, sans cycle).
 export type { ActionHote, ActionsEditeur, EtatEnregistrement, EtatInterface, EtatRendu, Modele, ModeleDessin, Outil, OutilForme, Teinte, Vues } from './typesEditeur.js';
@@ -149,8 +149,8 @@ export function BoutonEditerSvg({ svg, titre, nom, nuancier, bibliotheque, enreg
   const ok = editable(svg);
   return (
     <>
-      <button type="button" className="discret" disabled={!ok} title={ok ? 'Ouvrir l’éditeur SVG plein écran' : 'Une image enveloppée ne s’édite pas : vectorisez-la d’abord.'}
-        onClick={() => ouvrir(true)}>Éditer le SVG en plein écran</button>
+      <button type="button" className="discret" disabled={!ok} title={ok ? t('Ouvrir l’éditeur SVG plein écran') : t('Une image enveloppée ne s’édite pas : vectorisez-la d’abord.')}
+        onClick={() => ouvrir(true)}>{t('Éditer le SVG en plein écran')}</button>
       {ouvert ? <EditeurSvg svg={svg} titre={titre} nom={nom} nuancier={nuancier ?? SANS_NUANCIER} {...(bibliotheque === undefined ? {} : { bibliotheque })} {...(stockage === undefined ? {} : { stockage })} fermer={() => ouvrir(false)} enregistrer={(s, etat) => { enregistrer(s, etat); ouvrir(false); }} /> : null}
     </>
   );
@@ -183,11 +183,11 @@ export function EditeurSvg({ svg, dessin, titre, nom, nuancier: brut = SANS_NUAN
   }, []);
   if (!languePrete) return null;
   return createPortal(
-    <div className="editeur-svg" ref={racine} role="dialog" aria-modal="true" aria-label={'Éditer : ' + titre} lang={langue()}>
+    <div className="editeur-svg" ref={racine} role="dialog" aria-modal="true" aria-label={t('Éditer : {titre}', { titre })} lang={langue()}>
       {'erreur' in lu ? (
         <div className="editeur-erreur">
           <p>{lu.erreur}</p>
-          <button type="button" onClick={fermer}>Fermer</button>
+          <button type="button" onClick={fermer}>{t('Fermer')}</button>
         </div>
       ) : (
         <FournisseurStockage stockage={stockage ?? null}>

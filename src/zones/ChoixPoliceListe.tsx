@@ -28,7 +28,7 @@ import {
   badgeSource, cleFamille, estChoisie, etatLigne, groupesListe, idDeLigne, nomAccessibleLigne, nombrePolices, pasDePage, placerListe, varianteDeLigne,
   type Disponibilite, type EtatLigne, type GroupePolices, type IdGroupe, type LignePolice, type Placement, type PoliceDuDocument
 } from './lignesPolices.js';
-import { nombre as formaterNombre } from '../util/i18n.js';
+import { nombre as formaterNombre, t } from '../util/i18n.js';
 
 export interface ProprietesChoixPoliceListe {
   readonly polices: readonly Police[];
@@ -55,10 +55,10 @@ const PETIT_ECRAN = '(max-width: 640px)';
 function nomDansLeChamp(polices: readonly Police[], valeur: string, absente: string | undefined): string {
   if (!valeur) return '';
   const p = polices.find(x => x.id === (baseDeGrasse(valeur) ?? valeur));
-  return p ? p.nom : absente ?? 'Police absente';
+  return p ? p.nom : absente ?? t('Police absente');
 }
 
-const formatNombre = (n: number): string => formaterNombre(n) + ' ' + (n > 1 ? 'polices' : 'police');
+const formatNombre = (n: number): string => formaterNombre(n) + ' ' + (n > 1 ? t('polices') : t('police'));
 
 export function ChoixPoliceListe({ polices, valeur, poser, absente, desactive = false, compacte = false, explorer }: ProprietesChoixPoliceListe) {
   const tx = useTexte();
@@ -152,13 +152,13 @@ export function ChoixPoliceListe({ polices, valeur, poser, absente, desactive = 
     const vers = e.relatedTarget as Node | null;
     if (vers && !flottant.current?.contains(vers) && !champ.current?.contains(vers)) fermer();
   };
-  const etatTexte = prise.enCours ? 'Téléchargement de ' + prise.enCours.nom + '…' : prise.erreur;
+  const etatTexte = prise.enCours ? t('Téléchargement de {nom}…', { nom: prise.enCours.nom }) : prise.erreur;
   const enErreur = !prise.enCours && !!prise.erreur;
 
   return (
     <span className={'liste-polices-choix' + (compacte ? ' compacte' : '')} onBlur={quitte}>
       <span className="liste-polices-champ">
-        <input ref={champ} type="text" role="combobox" aria-label="Police" aria-expanded={ouvert} aria-controls={idListe} aria-autocomplete="list"
+        <input ref={champ} type="text" role="combobox" aria-label={t('Police')} aria-expanded={ouvert} aria-controls={idListe} aria-autocomplete="list"
           aria-activedescendant={ouvert && a >= 0 ? idOption(base, a) : undefined} aria-describedby={etatTexte ? idEtat : undefined} aria-busy={prise.enCours ? true : undefined}
           autoComplete="off" autoCapitalize="off" spellCheck={false} disabled={desactive} data-valeur={baseDeGrasse(valeur) ?? valeur}
           value={ouvert ? saisie ?? nomCourant : nomCourant} title={nomCourant}
@@ -258,12 +258,12 @@ function usePriseDePolice(polices: readonly Police[], poser: (id: string, police
     const deja = polices.find(p => p.id === v.id);
     if (deja) { poser(deja.id, deja); return; }
     poserEnCours(v);
-    ac.dire('Téléchargement de la police ' + v.nom + '…');
+    ac.dire(t('Téléchargement de la police {nom}…', { nom: v.nom }));
     const r = await tx.telecharger(v);
     poserEnCours(null);
     if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
     poser(r.id, r.police);
-    ac.dire('Police ' + v.nom + ' téléchargée et vérifiée.');
+    ac.dire(t('Police {nom} téléchargée et vérifiée.', { nom: v.nom }));
   };
   return { enCours, erreur, prendre };
 }
@@ -322,7 +322,7 @@ function ListeOuverte({ flottant, defile, base, idListe, placement: p, groupes, 
     <div ref={flottant} className={'liste-polices-flottant' + (p.feuille ? ' feuille' : '')}
       style={{ left: p.left, width: p.width, maxHeight: p.maxHeight, ...(p.top !== undefined ? { top: p.top } : { bottom: p.bottom }) }}
       onMouseDown={e => { if (!(e.target as HTMLElement).closest('button')) e.preventDefault(); }}>
-      <div ref={defile} role="listbox" id={idListe} aria-label="Polices" tabIndex={-1} className="liste-polices-options">
+      <div ref={defile} role="listbox" id={idListe} aria-label={t('Polices')} tabIndex={-1} className="liste-polices-options">
         {groupes.map(g => {
           const debut = options.findIndex(o => o.groupe === g.id);
           const ligne = (l: LignePolice, i: number) => (
@@ -335,20 +335,20 @@ function ListeOuverte({ flottant, defile, base, idListe, placement: p, groupes, 
         })}
       </div>
       <div className="liste-polices-pied">
-        <p className="aide">{cherche && !nombre ? 'Aucune police ne répond à « ' + cherche + ' ».'
-          : tx.enLigne && !catalogue ? (tx.erreurCatalogue || 'Chargement de l’index des polices…') : formatNombre(nombre)}
-          {catalogue && tx.erreurApercus ? ' Les noms s’écrivent sans aperçu.' : ''}</p>
+        <p className="aide">{cherche && !nombre ? t('Aucune police ne répond à « {texte} ».', { texte: cherche })
+          : tx.enLigne && !catalogue ? (tx.erreurCatalogue || t('Chargement de l’index des polices…')) : formatNombre(nombre)}
+          {catalogue && tx.erreurApercus ? ' ' + t('Les noms s’écrivent sans aperçu.') : ''}</p>
         {catalogue ? (
           // Deux phrases courtes, chacune sur sa ligne : sous WebKit, axe ne sait pas lire le fond d'un texte enveloppe dans ce pied.
           <>
-            <div className="liste-polices-legende"><Icone nom="nuage-telecharger" taille={16} /><p className="aide">À télécharger quand vous la choisissez.</p></div>
-            <p className="aide">Parcourir et chercher ne téléchargent rien.</p>
+            <div className="liste-polices-legende"><Icone nom="nuage-telecharger" taille={16} /><p className="aide">{t('À télécharger quand vous la choisissez.')}</p></div>
+            <p className="aide">{t('Parcourir et chercher ne téléchargent rien.')}</p>
           </>
         ) : null}
         {explorer ? (
           <button type="button" className="discret" onClick={explorer}
             onKeyDown={e => { if (e.key === 'Tab') { e.preventDefault(); quitterLien(e.shiftKey ? 'arriere' : 'avant'); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); quitterLien('echap'); } }}>
-            Filtrer par genre, tracé ou source…
+            {t('Filtrer par genre, tracé ou source…')}
           </button>
         ) : null}
       </div>
@@ -412,13 +412,13 @@ function OptionPolice({ id, ligne: l, groupe, active, etat, choisie, apercu, cho
       {/* Des blancs entre les badges : leurs mots se lisent separes (le nom accessible les reprend dans cet ordre). */}
       <span className="police-badges">{[
         source ? <span key="source" className="badge-source">{source}</span> : null,
-        l.nature === 'trait' ? <span key="trait" className="badge-source">Trait unique</span> : null,
+        l.nature === 'trait' ? <span key="trait" className="badge-source">{t('Trait unique')}</span> : null,
         l.licence?.badge ? <span key="licence" className="badge-licence" title={l.licence.nom}>{l.licence.badge}</span> : null
       ].filter(b => b !== null).flatMap((b, i) => (i ? [' ', b] : [b]))}</span>{' '}
-      <span className="police-dispo" title={etat === 'a-telecharger' ? 'À télécharger' : undefined}>
+      <span className="police-dispo" title={etat === 'a-telecharger' ? t('À télécharger') : undefined}>
         {etat === 'a-telecharger' ? <Icone nom="nuage-telecharger" taille={16} />
-          : etat === 'en-cours' ? <span className="police-arrive">Téléchargement…</span>
-          : etat === 'absente' && !/absente/i.test(l.nom) ? <span className="police-absente">absente</span> : null}
+          : etat === 'en-cours' ? <span className="police-arrive">{t('Téléchargement…')}</span>
+          : etat === 'absente' && !/absente/i.test(l.nom) ? <span className="police-absente">{t('absente')}</span> : null}
       </span>
     </div>
   );

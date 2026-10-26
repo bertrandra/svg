@@ -8,6 +8,7 @@ import { NOMS_NATURE, SOURCES_FORMES, SOURCE_PAR_DEFAUT, naturesDe, type NatureF
 import { chargerSource, type SourceChargee } from '../io/bibliotheque.js';
 import { focusAuClavier } from './commun/focusClavier.js';
 import type { Procede } from '../model/contextes.js';
+import { t } from '../util/i18n.js';
 
 interface Option { readonly id: string | null; readonly nom: string; readonly titre?: string }
 
@@ -39,22 +40,23 @@ export function PastillesFiltre({ libelle, options, valeur, poser }: { libelle: 
 
 /** L'infobulle d'une source : son nom complet, sa licence, ses natures, et ce qu'il faut charger si elle n'est pas la. */
 function titreSource(s: SourceFormes, chargee: boolean): string {
-  const natures = naturesDe(s).map(n => (n === 'plein' ? 'pleines' : 'en ligne')).join(' et ');
-  return s.nom + ' · licence ' + s.licence + ' · formes ' + natures + (chargee ? '' : ' · environ ' + s.poidsMo + ' Mo à charger');
+  const natures = naturesDe(s).map(n => (n === 'plein' ? t('pleines') : t('en ligne'))).join(t(' et '));
+  return t('{nom} · licence {licence} · formes {natures}', { nom: s.nom, licence: s.licence, natures }) + (chargee ? '' : t(' · environ {mo} Mo à charger', { mo: s.poidsMo }));
 }
 
 /** Les options du filtre de source : « Toutes », puis chaque source du registre. */
 export function optionsSources(chargees: ReadonlySet<string>): Option[] {
   const total = SOURCES_FORMES.filter(s => !chargees.has(s.id)).reduce((n, s) => n + s.poidsMo, 0);
   return [
-    { id: null, nom: 'Toutes', titre: 'Toutes les sources' + (total ? ' · environ ' + total + ' Mo à charger' : '') },
+    { id: null, nom: t('Toutes'), titre: t('Toutes les sources') + (total ? t(' · environ {mo} Mo à charger', { mo: total }) : '') },
     ...SOURCES_FORMES.map(s => ({ id: s.id, nom: s.nomCourt, titre: titreSource(s, chargees.has(s.id)) }))
   ];
 }
 
 /** Les options du filtre de nature, dans l'ordre que le procede du contexte appelle (le stylo : « En ligne » d'abord). */
 export function optionsNatures(procede: Procede | undefined): Option[] {
-  return [{ id: null, nom: 'Toutes' }, ...naturesDansLOrdre(procede).map(n => ({ id: n, nom: NOMS_NATURE[n] }))];
+  // Le nom d'une nature est une donnee du modele : il se traduit a l'affichage (ADR-0042).
+  return [{ id: null, nom: t('Toutes') }, ...naturesDansLOrdre(procede).map(n => ({ id: n, nom: t(NOMS_NATURE[n]) }))];
 }
 
 /** Ce que le chargement des sources rend : les sources arrivees, celles en route, et les echecs, chacun dit. */

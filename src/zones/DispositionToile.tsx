@@ -15,6 +15,7 @@ import { candidatesPour, depassementDe, refusDe, useDisposition } from './action
 import { policeDe } from './actionsTexte.js';
 import { PHRASE_CHOIX_ANNULE, PHRASES_REFUS_ENVELOPPE, phraseCandidate, phraseDepart, phraseDepassement, phraseFormePerdue } from './phrasesDisposition.js';
 import { useTactile } from './Vue.js';
+import { t } from '../util/i18n.js';
 
 /**
  * Le suivi du lien des textes poses : donne aux verbes de l'editeur les glyphes des polices chargees (un texte se recompose quand
@@ -211,7 +212,7 @@ function PoigneeDepart({ texte, base, depart, cote, svgRef }: { texte: Forme; ba
   };
   const r = (tactile ? 20 : 12) / z, rv = 5 / z, pourcent = Math.round(depart * 1000) / 10;
   return (
-    <g data-depart="" className="poignee-depart-groupe" role="slider" tabIndex={0} aria-label="Départ du texte sur la forme"
+    <g data-depart="" className="poignee-depart-groupe" role="slider" tabIndex={0} aria-label={t('Départ du texte sur la forme')}
       aria-valuemin={0} aria-valuemax={100} aria-valuenow={pourcent} aria-valuetext={phraseDepart(depart).replace(/\.$/, '')}
       onPointerDown={appuyer} onPointerMove={bouger} onPointerUp={lacher} onPointerCancel={lacher} onKeyDown={touche}>
       <circle className="poignee-depart-cible" cx={pt[0]} cy={pt[1]} r={r} />

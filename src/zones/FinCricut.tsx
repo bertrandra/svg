@@ -10,6 +10,7 @@ import { NOTE_TAPIS_FIXE, etapesDesignSpace, etatExport, pointsACorriger } from 
 import { operationsPeintes } from '../export/operations.js';
 import type { DessinSvg } from '../engine/editionSvg.js';
 import { cadreFixe, etendueVisible, placeSurTapis, type ProfilProduction } from '../engine/preparation.js';
+import { t } from '../util/i18n.js';
 
 /** Vrai quand le dessin juge mele des formes a couper et des formes a ecrire (ADR-0028) : l'export livre alors une archive. */
 export function estMelange(dessin: DessinSvg | undefined, profil: ProfilProduction): boolean {
@@ -38,7 +39,7 @@ export function ExportCricut({ nom }: { nom: string }) {
   return (
     <>
       <div className="boutons export-cricut">
-        <BoutonRaison className="primaire" aide={ptc ? 'L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP' : melange ? 'Une archive ZIP : un SVG à couper, un SVG à écrire au stylo, et les deux ensemble, à taille physique' : stylo ? 'Un SVG à taille physique, des traits sans remplissage, une couleur par stylo' : 'Un SVG à taille physique, fonds pleins, une couleur par tapis'}
+        <BoutonRaison className="primaire" aide={ptc ? t('L’image à imprimer, avec son fond perdu, et la ligne de coupe, dans une archive ZIP') : melange ? t('Une archive ZIP : un SVG à couper, un SVG à écrire au stylo, et les deux ensemble, à taille physique') : stylo ? t('Un SVG à taille physique, des traits sans remplissage, une couleur par stylo') : t('Un SVG à taille physique, fonds pleins, une couleur par tapis')}
           raison={e.raison} onClick={() => ac.exporterPourCricut(nom)}>{e.libelle}</BoutonRaison>
       </div>
       {suiteCricut === 'design-space' ? <CarteDesignSpace nom={nom} /> : null}
@@ -69,12 +70,12 @@ function Confirmation({ nom, aCorriger }: { nom: string; aCorriger: readonly Con
   };
   return (
     <div className="confirmation-export" role="group" aria-labelledby={idTitre}>
-      <p id={idTitre} className="titre-confirmation">Il reste {pointsACorriger(aCorriger.length)} :</p>
+      <p id={idTitre} className="titre-confirmation">{t('Il reste {points} :', { points: pointsACorriger(aCorriger.length) })}</p>
       <ul>{aCorriger.map(c => <li key={c.code}>{c.message}</li>)}</ul>
-      <p className="aide">À ces endroits, la découpe risque de mal tourner. Vous pouvez revoir ces points, ou exporter quand même.</p>
+      <p className="aide">{t('À ces endroits, la découpe risque de mal tourner. Vous pouvez revoir ces points, ou exporter quand même.')}</p>
       <div className="boutons">
-        <button type="button" onClick={() => ac.exporterPourCricut(nom, true)}>Exporter quand même</button>
-        <button ref={revoir} type="button" className="primaire" onClick={allerAuxPoints}>Revoir</button>
+        <button type="button" onClick={() => ac.exporterPourCricut(nom, true)}>{t('Exporter quand même')}</button>
+        <button ref={revoir} type="button" className="primaire" onClick={allerAuxPoints}>{t('Revoir')}</button>
       </div>
     </div>
   );
@@ -90,10 +91,10 @@ function CarteDesignSpace({ nom }: { nom: string }) {
   const etapes = etapesDesignSpace(profil, nom, preparation?.taille ?? null, estMelange(preparation?.dessin, profil), place);
   return (
     <section className="carte-design-space" aria-labelledby={id}>
-      <h3 id={id}>Dans Design Space</h3>
-      <ol>{etapes.map(e => <li key={e.texte}>{e.texte}{e.aVerifier ? <span className="a-verifier"> (à vérifier)</span> : null}</li>)}</ol>
-      {!profil.recalage && profil.procede !== 'imprimer-decouper' ? <p className="aide">{NOTE_TAPIS_FIXE}</p> : null}
-      <button type="button" className="discret" onClick={ac.fermerSuiteCricut}>Fermer ces étapes</button>
+      <h3 id={id}>{t('Dans Design Space')}</h3>
+      <ol>{etapes.map(e => <li key={e.texte}>{e.texte}{e.aVerifier ? <span className="a-verifier">{t(' (à vérifier)')}</span> : null}</li>)}</ol>
+      {!profil.recalage && profil.procede !== 'imprimer-decouper' ? <p className="aide">{t(NOTE_TAPIS_FIXE)}</p> : null}
+      <button type="button" className="discret" onClick={ac.fermerSuiteCricut}>{t('Fermer ces étapes')}</button>
     </section>
   );
 }

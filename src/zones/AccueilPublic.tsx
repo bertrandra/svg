@@ -9,6 +9,7 @@ import { useCallback, useId, useState, type ReactNode } from 'react';
 import type { Stockage } from '../io/stockage.js';
 import { copier } from '../io/fichiers.js';
 import { insecables } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { Icone } from './icones.js';
 import { depotProduit } from './produit.js';
 import {
@@ -50,18 +51,18 @@ export function QuestionPublic({ choix, ouverte, choisir, rouvrir }: ProprietesQ
   const id = useId();
   if (!ouverte) {
     return (
-      <section className="public-rappel" aria-label="Public de l’accueil">
+      <section className="public-rappel" aria-label={t('Public de l’accueil')}>
         <p>
-          {choix && choix !== 'aucun' ? <>{insecables('Accueil adapté : ')}<strong>{titrePublic(choix)}</strong></> : 'Accueil général, pour tous les usages.'}
-          {' '}<button type="button" className="discret" onClick={rouvrir}>{choix && choix !== 'aucun' ? 'Changer de public' : 'Choisir un public'}</button>
+          {choix && choix !== 'aucun' ? <>{insecables(t('Accueil adapté : '))}<strong>{titrePublic(choix)}</strong></> : t('Accueil général, pour tous les usages.')}
+          {' '}<button type="button" className="discret" onClick={rouvrir}>{choix && choix !== 'aucun' ? t('Changer de public') : t('Choisir un public')}</button>
         </p>
       </section>
     );
   }
   return (
     <section className="public-question" aria-labelledby={id + '-titre'}>
-      <h2 id={id + '-titre'}>{insecables('Pour quoi dessinez-vous ?')}</h2>
-      <p className="aide">L’accueil s’adapte à votre réponse. Elle se change à tout moment, et rien ne vous oblige à répondre.</p>
+      <h2 id={id + '-titre'}>{insecables(t('Pour quoi dessinez-vous ?'))}</h2>
+      <p className="aide">{t('L’accueil s’adapte à votre réponse. Elle se change à tout moment, et rien ne vous oblige à répondre.')}</p>
       <ul className="publics">
         {PUBLICS.map(p => (
           <li key={p.id}>
@@ -70,14 +71,14 @@ export function QuestionPublic({ choix, ouverte, choisir, rouvrir }: ProprietesQ
               {/* Toute la ligne est le bouton : son nom est le titre puis la phrase de ce qu'on obtient, tels qu'on les voit (axe,
                   label-content-name-mismatch : un nom reduit au titre ne contenait plus le texte visible). */}
               <Icone nom={p.icone} taille={20} />
-              <span className="public-titre">{p.titre}</span>
-              <span className="public-phrase">{p.phrase}</span>
+              <span className="public-titre">{t(p.titre)}</span>
+              <span className="public-phrase">{t(p.phrase)}</span>
             </button>
           </li>
         ))}
       </ul>
       <p className="public-passer">
-        <button type="button" className="discret" onClick={() => choisir('aucun')}>Passer<span className="sr-only"> la question et garder les trois voies</span></button>
+        <button type="button" className="discret" onClick={() => choisir('aucun')}>{t('Passer')}<span className="sr-only">{t(' la question et garder les trois voies')}</span></button>
       </p>
     </section>
   );
@@ -91,8 +92,8 @@ function Etapes({ circuit }: { circuit: Circuit }) {
         <li key={e.titre} className="etape">
           <span className="etape-picto"><Icone nom={e.icone} taille={20} /></span>
           <span className="etape-texte">
-            <span className="etape-titre"><span className="etape-numero" aria-hidden="true">{i + 1}</span>{e.titre}</span>
-            <span className="etape-aide">{e.aide}</span>
+            <span className="etape-titre"><span className="etape-numero" aria-hidden="true">{i + 1}</span>{t(e.titre)}</span>
+            <span className="etape-aide">{t(e.aide)}</span>
           </span>
         </li>
       ))}
@@ -104,7 +105,7 @@ function Etapes({ circuit }: { circuit: Circuit }) {
 export function CircuitPublic({ circuit, children }: { circuit: Circuit; children?: ReactNode }) {
   return (
     <section className="circuit-public" aria-labelledby={ID_TITRE_SUITE}>
-      <h2 id={ID_TITRE_SUITE} tabIndex={-1}>{circuit.titre}</h2>
+      <h2 id={ID_TITRE_SUITE} tabIndex={-1}>{t(circuit.titre)}</h2>
       <Etapes circuit={circuit} />
       {children}
     </section>
@@ -127,29 +128,29 @@ export function PanneauIntegration({ circuit, essayer, recu }: ProprietesIntegra
   const [copie, poserCopie] = useState('');
   const code = codeIntegration();
   const guide = lienGuide(depotProduit());
-  const copierCode = () => { void copier(code).then(ok => poserCopie(ok ? 'Code copié.' : insecables('Ce navigateur refuse la copie : sélectionnez le code et copiez-le à la main.'))); };
+  const copierCode = () => { void copier(code).then(ok => poserCopie(ok ? t('Code copié.') : insecables(t('Ce navigateur refuse la copie : sélectionnez le code et copiez-le à la main.')))); };
   return (
     <section className="integration" aria-labelledby={ID_TITRE_SUITE}>
-      <h2 id={ID_TITRE_SUITE} tabIndex={-1}>Intégrer l’éditeur à votre produit</h2>
-      <p className="aide">{insecables('L’éditeur s’embarque dans votre page, en plein écran par-dessus elle : une fonction ')}<code>ouvrir()</code>{insecables(' à appeler d’un script ordinaire, ou le composant React. Aucun serveur : tout se calcule dans le navigateur de vos utilisateurs.')}</p>
+      <h2 id={ID_TITRE_SUITE} tabIndex={-1}>{t('Intégrer l’éditeur à votre produit')}</h2>
+      <p className="aide">{insecables(t('L’éditeur s’embarque dans votre page, en plein écran par-dessus elle : une fonction '))}<code>ouvrir()</code>{insecables(t(' à appeler d’un script ordinaire, ou le composant React. Aucun serveur : tout se calcule dans le navigateur de vos utilisateurs.'))}</p>
       <Etapes circuit={circuit} />
-      <h3 id="options-integration">Les options principales</h3>
+      <h3 id="options-integration">{t('Les options principales')}</h3>
       <dl className="options-integration">
         {OPTIONS_INTEGRATION.map(([nom, phrase]) => (
-          <div key={nom}><dt><code>{nom}</code></dt><dd>{phrase}</dd></div>
+          <div key={nom}><dt><code>{nom}</code></dt><dd>{t(phrase)}</dd></div>
         ))}
       </dl>
-      <h3 id="code-integration">Exemple, avec le bundle</h3>
+      <h3 id="code-integration">{t('Exemple, avec le bundle')}</h3>
       {/* Focalisable : un extrait plus large que l'ecran defile au clavier (axe, scrollable-region-focusable) ; une region nommee par son
           titre, parce qu'un <pre> sans role ne peut pas porter de nom (aria-prohibited-attr). */}
       <pre className="code-integration" tabIndex={0} role="region" aria-labelledby="code-integration"><code>{code}</code></pre>
       <div className="actions">
-        <button type="button" onClick={essayer}>Essayer l’éditeur embarqué</button>
-        <button type="button" className="discret" onClick={copierCode}>Copier le code</button>
+        <button type="button" onClick={essayer}>{t('Essayer l’éditeur embarqué')}</button>
+        <button type="button" className="discret" onClick={copierCode}>{t('Copier le code')}</button>
       </div>
       <p className="aide" role="status">{copie}</p>
       {recu ? <p className="message neutre" role="status">{recu}</p> : null}
-      <p className="aide">{insecables('Le guide complet (l’iframe, le bundle, le composant React, la sécurité) : ')}<a href={guide}>{CHEMIN_GUIDE}</a>.</p>
+      <p className="aide">{insecables(t('Le guide complet (l’iframe, le bundle, le composant React, la sécurité) : '))}<a href={guide}>{CHEMIN_GUIDE}</a>.</p>
     </section>
   );
 }
