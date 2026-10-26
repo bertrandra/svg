@@ -95,6 +95,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--sur-cyan` sur `--cyan` | 5.47 | 7.04 | libellé de l’action primaire et de l’outil actif |
 | `--alerte` sur `--alerte-fond` | 5.06 | 7.54 | message d’avertissement |
 | `--echec` sur `--echec-fond` | 5.28 | 6.40 | message d’échec, survol d’un geste destructif |
+| `--cyan-survol` sur `--echec-fond` | 5.46 | 6.48 | bouton survolé d’un constat bloquant (Prêt pour Cricut) |
+| `--cyan-survol` sur `--alerte-fond` | 5.87 | 6.07 | bouton survolé d’un constat à corriger (Prêt pour Cricut) |
 | `--echec` sur `--panneau` | 6.26 | 6.95 | geste destructif au repos |
 
 ### Contrastes exigés hors texte (WCAG 2.x 1.4.11, au moins 3:1)

@@ -732,6 +732,9 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 .panneau-cricut .constat-a-corriger p, .panneau-cricut .constat-a-corriger .discret { color: var(--alerte); }
 .panneau-cricut .a-verifier { font-style: italic; }
 .panneau-cricut .constat .boutons { display: flex; flex-wrap: wrap; gap: var(--esp-xs); }
+/* Survole, un bouton d'un constat prend le cyan du survol des boutons discrets : le cyan d'outil sur le fond d'un constat bloquant ne
+   fait que 4,33:1 (axe, quand le pointeur reste sur le panneau). */
+.panneau-cricut .constat .boutons button:not(.discret):hover:not(:disabled) { color: var(--cyan-survol); }
 .panneau-cricut .export-cricut { margin: var(--esp-m) 0 var(--esp-s); }
 .panneau-cricut .titre-gravite:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 /* La confirmation d'un export avec des points a corriger : un message ambre dans le panneau, pas une fenetre ; l'action sure est pleine. */

@@ -231,6 +231,21 @@ describe('le contexte Cricut', () => {
     await axe();
   });
 
+  it('garde le contraste d un bouton de constat survole, sur le fond d un constat bloquant', async () => {
+    // Le pointeur peut rester sur le panneau apres un clic : le cyan d'outil du survol n'y faisait que 4,33:1 (axe, par intermittence).
+    const page = await editeur();
+    await choisirCricut(page);
+    await attend(() => nombreDeConstats(page)).toBe(5);
+    await page.addScriptTag({ content: AXE });
+    const boutons = panneau(page).locator('.constat .boutons button');
+    for (let i = 0; i < await boutons.count(); i++) {
+      await boutons.nth(i).hover();
+      await attendreAnimations(page);
+      const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { runOnly: ['color-contrast'], resultTypes: ['violations'] })));
+      expect(r.violations.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target))), await boutons.nth(i).innerText()).toEqual([]);
+    }
+  });
+
   it('au doigt sur 390 px : le contexte dans le menu « Plus », le panneau dans le tiroir, des cibles de 40 px', async () => {
     const page = await editeur(DESSIN, { largeur: 390, hauteur: 800, tactile: true });
     expect(await selecteur(page).count()).toBe(0);
