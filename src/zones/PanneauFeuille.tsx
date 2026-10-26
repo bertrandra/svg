@@ -16,8 +16,10 @@ import { Icone } from './icones.js';
 import { arrondi } from './aidesEditeur.js';
 import { pluriel } from '../util/texte.js';
 import { lentilleDe } from './lentille.js';
+import { t } from '../util/i18n.js';
 
-export const TITRE_FEUILLE = 'Dupliquer sur la feuille';
+// Le titre est une cle (ADR-0042) : evalue au chargement, il reste en francais, et qui l'affiche le repasse par `t`.
+export const TITRE_FEUILLE = t('Dupliquer sur la feuille');
 
 interface Saisie { mode: 'quantite' | 'remplir'; quantite: string; espacement: string; marge: string; rotation: boolean; optimisation: Optimisation }
 
@@ -51,25 +53,25 @@ function DupliquerSurFeuille({ svgRef }: { svgRef: RefObject<SVGSVGElement | nul
     if (!profil || !permis) return;
     const espacement = lireValeur(s.espacement, u), marge = lireValeur(s.marge, u);
     const quantite = s.mode === 'remplir' ? 'remplir' as const : /^\s*\d+\s*$/.test(s.quantite) ? Number(s.quantite) : Number.NaN;
-    if (espacement === null || marge === null) { poserErreur('Donnez un espacement et une marge lisibles.'); return; }
+    if (espacement === null || marge === null) { poserErreur(t('Donnez un espacement et une marge lisibles.')); return; }
     const dessin = mo.dessin, ids = mo.sel;
     const feuille = regionDeCoupe(profil, gabaritDuTapis(profil, dessin, etendueVisible(dessin)));
-    if (!feuille) { poserErreur('La feuille sort de la zone utile du tapis : replacez-la dans le panneau « Prêt pour Cricut ».'); return; }
+    if (!feuille) { poserErreur(t('La feuille sort de la zone utile du tapis : replacez-la dans le panneau « Prêt pour Cricut ».')); return; }
     const o: OptionsPlacement = { quantite, espacement, marge, rotation: s.rotation, optimisation: s.optimisation };
     const depart = preparerPlacement(dessin, ids, feuille, o);
     if (depart.erreur) { poserErreur(depart.erreur); return; }
     const tache = placerParTranches(depart, { progres: e => poserCalcul(c => (c ? { ...c, trouvees: Math.max(e.posees.length, e.simple.length) } : c)) });
     enCours.current = tache;
     poserCalcul({ tache, trouvees: depart.simple.length });
-    if (!depart.fini) ac.dire('Calcul du placement… Échap l’arrête.');
+    if (!depart.fini) ac.dire(t('Calcul du placement… Échap l’arrête.'));
     void tache.fin.then(({ etat, annule }) => {
       enCours.current = null;
       poserCalcul(null);
-      if (annule) { ac.dire('Placement arrêté : aucune copie posée.'); return; }
+      if (annule) { ac.dire(t('Placement arrêté : aucune copie posée.')); return; }
       // Le dessin a pu changer pendant le calcul : on ne pose rien sur un autre dessin que celui mesure.
-      if (dessinCourant.current !== dessin) { poserErreur('Le dessin a changé pendant le calcul : aucune copie posée. Relancez.'); ac.dire('Le dessin a changé pendant le calcul : aucune copie posée.'); return; }
+      if (dessinCourant.current !== dessin) { poserErreur(t('Le dessin a changé pendant le calcul : aucune copie posée. Relancez.')); ac.dire(t('Le dessin a changé pendant le calcul : aucune copie posée.')); return; }
       const r = finirPlacement(dessin, etat);
-      if (!r.copies) { poserErreur(r.erreur ?? 'Aucune copie ne tient sur la feuille.'); ac.dire(r.erreur ?? 'Aucune copie ne tient sur la feuille.'); return; }
+      if (!r.copies) { poserErreur(r.erreur ?? t('Aucune copie ne tient sur la feuille.')); ac.dire(r.erreur ?? t('Aucune copie ne tient sur la feuille.')); return; }
       ac.appliquer(() => r.dessin);
       ac.finir();
       ac.choisir([...r.ids]);
@@ -80,57 +82,58 @@ function DupliquerSurFeuille({ svgRef }: { svgRef: RefObject<SVGSVGElement | nul
   };
 
   let corps;
-  if (!permis) corps = <p className="aide">Choisissez d’abord une machine Cricut, en découpe ou au stylo, dans la barre : les copies se rangent sur sa feuille.</p>;
-  else if (!mo.sel.length) corps = <p className="aide">Choisissez d’abord une forme, ou plusieurs : elles seront copiées ensemble, comme une seule pièce.</p>;
+  if (!permis) corps = <p className="aide">{t('Choisissez d’abord une machine Cricut, en découpe ou au stylo, dans la barre : les copies se rangent sur sa feuille.')}</p>;
+  else if (!mo.sel.length) corps = <p className="aide">{t('Choisissez d’abord une forme, ou plusieurs : elles seront copiées ensemble, comme une seule pièce.')}</p>;
   else {
     corps = (
       <>
         <fieldset className="champ-groupe">
-          <legend>Copies</legend>
-          <label className="case"><input type="radio" name={titre + '-mode'} checked={s.mode === 'quantite'} onChange={() => regler({ mode: 'quantite' })} /> Quantité</label>
+          <legend>{t('Copies')}</legend>
+          <label className="case"><input type="radio" name={titre + '-mode'} checked={s.mode === 'quantite'} onChange={() => regler({ mode: 'quantite' })} /> {t('Quantité')}</label>
           <label className="champ-ligne nombre">
-            <span>Copies à ajouter</span>
-            <input type="text" inputMode="numeric" value={s.quantite} disabled={s.mode !== 'quantite'} title="L’original reste en plus des copies" onChange={e => regler({ quantite: e.target.value, mode: 'quantite' })} />
+            <span>{t('Copies à ajouter')}</span>
+            <input type="text" inputMode="numeric" value={s.quantite} disabled={s.mode !== 'quantite'} title={t('L’original reste en plus des copies')} onChange={e => regler({ quantite: e.target.value, mode: 'quantite' })} />
           </label>
-          <label className="case"><input type="radio" name={titre + '-mode'} checked={s.mode === 'remplir'} onChange={() => regler({ mode: 'remplir' })} /> Remplir la feuille</label>
+          <label className="case"><input type="radio" name={titre + '-mode'} checked={s.mode === 'remplir'} onChange={() => regler({ mode: 'remplir' })} /> {t('Remplir la feuille')}</label>
         </fieldset>
         <div className="grille-2">
-          <label className="champ-ligne nombre" title="L’écart entre deux pièces, pour que la lame passe entre elles">
-            <span>Espacement</span>
+          <label className="champ-ligne nombre" title={t('L’écart entre deux pièces, pour que la lame passe entre elles')}>
+            <span>{t('Espacement')}</span>
             <input type="text" inputMode="decimal" value={s.espacement} onChange={e => regler({ espacement: e.target.value })} />
-            {u.nom ? <span className="unite">{u.nom}</span> : null}
+            {u.nom ? <span className="unite">{t(u.nom)}</span> : null}
           </label>
-          <label className="champ-ligne nombre" title="L’écart au bord de la feuille">
-            <span>Marge</span>
+          <label className="champ-ligne nombre" title={t('L’écart au bord de la feuille')}>
+            <span>{t('Marge')}</span>
             <input type="text" inputMode="decimal" value={s.marge} onChange={e => regler({ marge: e.target.value })} />
-            {u.nom ? <span className="unite">{u.nom}</span> : null}
+            {u.nom ? <span className="unite">{t(u.nom)}</span> : null}
           </label>
         </div>
-        <label className="case"><input type="checkbox" checked={s.rotation} onChange={e => regler({ rotation: e.target.checked })} /> Permettre la rotation (quart de tour) pour en faire tenir davantage</label>
+        <label className="case"><input type="checkbox" checked={s.rotation} onChange={e => regler({ rotation: e.target.checked })} /> {t('Permettre la rotation (quart de tour) pour en faire tenir davantage')}</label>
         <fieldset className="champ-groupe">
-          <legend>Optimisation</legend>
-          <label className="case"><input type="radio" name={titre + '-optimisation'} checked={s.optimisation === 'simple'} onChange={() => regler({ optimisation: 'simple' })} /> Simple</label>
-          <label className="case"><input type="radio" name={titre + '-optimisation'} checked={s.optimisation === 'avancee'} onChange={() => regler({ optimisation: 'avancee' })} /> Avancée</label>
-          <p className="aide">Simple : des rangées, chaque pièce dans sa boîte. Avancée : les contours s’emboîtent (étoiles, lettres, cœurs) ; plus long, jamais moins de copies.</p>
+          <legend>{t('Optimisation')}</legend>
+          <label className="case"><input type="radio" name={titre + '-optimisation'} checked={s.optimisation === 'simple'} onChange={() => regler({ optimisation: 'simple' })} /> {t('Simple')}</label>
+          <label className="case"><input type="radio" name={titre + '-optimisation'} checked={s.optimisation === 'avancee'} onChange={() => regler({ optimisation: 'avancee' })} /> {t('Avancée')}</label>
+          <p className="aide">{t('Simple : des rangées, chaque pièce dans sa boîte. Avancée : les contours s’emboîtent (étoiles, lettres, cœurs) ; plus long, jamais moins de copies.')}</p>
         </fieldset>
       </>
     );
   }
-  const etat = calcul ? 'Calcul en cours… ' + pluriel(calcul.trouvees, 'copie') + ' trouvée' + (calcul.trouvees > 1 ? 's' : '') + ' jusqu’ici.' : erreur;
+  const etat = calcul ? (calcul.trouvees > 1 ? t('Calcul en cours… {copies} trouvées jusqu’ici.', { copies: pluriel(calcul.trouvees, 'copie') }) : t('Calcul en cours… {copies} trouvée jusqu’ici.', { copies: pluriel(calcul.trouvees, 'copie') })) : erreur;
   return (
     <div className="panneau-flottant panneau-repetition panneau-feuille" role="dialog" aria-labelledby={titre} ref={racine} aria-busy={calcul ? true : undefined}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (calcul) calcul.tache.annuler(); else fermer(); } }}>
       <div className="panneau-flottant-tete">
-        <h2 id={titre}>{TITRE_FEUILLE}</h2>
-        <button type="button" className="icone-bouton" aria-label="Fermer sans dupliquer" title="Fermer sans dupliquer (Échap)" onClick={fermer}><Icone nom="fermer" /></button>
+        <h2 id={titre}>{t(TITRE_FEUILLE)}</h2>
+        <button type="button" className="icone-bouton" aria-label={t('Fermer sans dupliquer')} title={t('Fermer sans dupliquer (Échap)')} onClick={fermer}><Icone nom="fermer" /></button>
       </div>
       <div className="panneau-flottant-corps">{corps}</div>
       {etat ? <p className={'aide' + (erreur && !calcul ? ' erreur' : '')} role={erreur && !calcul ? 'alert' : 'status'}>{etat}</p> : null}
       <div className="panneau-flottant-pied">
         {calcul
-          ? <button type="button" onClick={() => calcul.tache.annuler()}>Arrêter le calcul</button>
-          : <button type="button" className="discret" onClick={fermer}>Annuler</button>}
-        <button type="button" disabled={!permis || !mo.sel.length || !!calcul} onClick={lancer}>Dupliquer</button>
+          ? <button type="button" onClick={() => calcul.tache.annuler()}>{t('Arrêter le calcul')}</button>
+          : <button type="button" className="discret" onClick={fermer}>{t('Annuler')}</button>}
+        <button type="button" disabled={!permis || !mo.sel.length || !!calcul} onClick={lancer}>{t('Dupliquer')}</button>
+
       </div>
     </div>
   );

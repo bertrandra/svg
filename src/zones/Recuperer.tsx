@@ -16,6 +16,7 @@ import { etatExport } from './parcoursCricut.js';
 import { estMelange } from './FinCricut.js';
 import { dessinComplet } from './lentille.js';
 import { Icone } from './icones.js';
+import { t } from '../util/i18n.js';
 
 /** Le SVG du dessin au telechargement : chaque facon de recuperer le dessin acheve aussi l'etape 4 de la visite guidee. */
 export function useTelechargerSvg(nom: string): () => void {
@@ -32,14 +33,14 @@ export function useTelechargerSvg(nom: string): () => void {
 export function useElementsRecuperer(nom: string): ElementMenu[] {
   const mo = useDessin(), ui = useInterface(), ac = useActions(), signaler = useSignalVisite();
   const telecharger = useTelechargerSvg(nom);
-  const svg: ElementMenu = { id: 'recuperer', libelle: 'Télécharger le SVG', icone: 'telecharger', onClick: telecharger };
+  const svg: ElementMenu = { id: 'recuperer', libelle: t('Télécharger le SVG'), icone: 'telecharger', onClick: telecharger };
   if (!ui.profil) return [svg];
   // Un dessin qui mele couper et ecrire (ADR-0028) s'exporte « pour Cricut » meme au stylo : l'archive porte les deux.
   const melange = estMelange(mo.preparation?.dessin, ui.profil);
   const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo' && !melange;
   const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede, melange);
   const machine: ElementMenu = {
-    id: 'exporter-machine', libelle: ptc ? 'Exporter pour Print Then Cut' : stylo ? 'Exporter pour le stylo' : 'Exporter pour Cricut',
+    id: 'exporter-machine', libelle: ptc ? t('Exporter pour Print Then Cut') : stylo ? t('Exporter pour le stylo') : t('Exporter pour Cricut'),
     icone: stylo ? 'stylo' : 'machine', desactive: e.raison !== null, ...(e.raison ? { raison: e.raison } : {}),
     onClick: () => { ac.exporterPourCricut(nom); signaler('recupere'); }
   };
@@ -50,7 +51,7 @@ export function useElementsRecuperer(nom: string): ElementMenu[] {
 export function PanneauFormats({ nom }: { nom: string }) {
   const mo = useDessin(), ac = useActions(), signaler = useSignalVisite();
   // Un export dit son issue par `dire` : c'est aussi le signal qu'un fichier a ete recupere (visite guidee).
-  const dire = (t: string) => { ac.dire(t); signaler('recupere'); };
+  const dire = (m: string) => { ac.dire(m); signaler('recupere'); };
   return <ListeFormats svg="" dessin={dessinComplet(mo)} nom={nom} dire={dire} />;
 }
 
@@ -59,7 +60,8 @@ export function AutresFormatsRepliees({ nom }: { nom: string }) {
   return (
     <details className="autres-formats-repli">
       {/* Le chevron dit qu'il se deplie : sans lui, le titre en couleur d'outil se lisait comme un lien. */}
-      <summary><Icone nom="chevron-bas" taille={12} />Autres formats</summary>
+      <summary><Icone nom="chevron-bas" taille={12} />{t('Autres formats')}</summary>
+
       <PanneauFormats nom={nom} />
     </details>
   );

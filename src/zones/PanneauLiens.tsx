@@ -14,8 +14,10 @@ import { lireValeur, type UniteRegle } from './graduations.js';
 import { Icone } from './icones.js';
 import { pluriel } from '../util/texte.js';
 import { lentilleDe } from './lentille.js';
+import { t } from '../util/i18n.js';
 
-export const TITRE_LIENS = 'Ajouter des liens';
+// Le titre est une cle (ADR-0042) : evalue au chargement, il reste en francais, et qui l'affiche le repasse par `t`.
+export const TITRE_LIENS = t('Ajouter des liens');
 
 /** Une largeur dans le champ : au centieme de millimetre, au millieme de pouce (2 mm valent 0,079 po). */
 const texteLargeur = (v: number, u: UniteRegle): string => {
@@ -55,37 +57,37 @@ function AjouterLiens({ svgRef }: { svgRef: RefObject<SVGSVGElement | null> }) {
     // Un champ que l'on n'a pas touche garde la valeur exacte de la session : 2 mm restent 2 mm, meme affiches en pouces arrondis.
     const l = largeur === texteLargeur(rg.liens.largeur, u) ? rg.liens.largeur : lireValeur(largeur, u);
     const n = /^\s*\d+\s*$/.test(nombre) ? Number(nombre) : Number.NaN;
-    if (l === null || l < LARGEUR_LIEN_MIN - 1e-9 || l > LARGEUR_LIEN_MAX + 1e-9) { poserErreur('Donnez une largeur entre ' + nombreFr(u.vers(LARGEUR_LIEN_MIN)) + ' et ' + nombreFr(u.vers(LARGEUR_LIEN_MAX)) + ' ' + u.nom + '.'); return; }
-    if (!(n >= NOMBRE_LIENS_MIN && n <= NOMBRE_LIENS_MAX)) { poserErreur('Donnez un nombre de liens entre ' + NOMBRE_LIENS_MIN + ' et ' + NOMBRE_LIENS_MAX + ' par îlot.'); return; }
+    if (l === null || l < LARGEUR_LIEN_MIN - 1e-9 || l > LARGEUR_LIEN_MAX + 1e-9) { poserErreur(t('Donnez une largeur entre {min} et {max} {unite}.', { min: nombreFr(u.vers(LARGEUR_LIEN_MIN)), max: nombreFr(u.vers(LARGEUR_LIEN_MAX)), unite: t(u.nom) })); return; }
+    if (!(n >= NOMBRE_LIENS_MIN && n <= NOMBRE_LIENS_MAX)) { poserErreur(t('Donnez un nombre de liens entre {min} et {max} par îlot.', { min: NOMBRE_LIENS_MIN, max: NOMBRE_LIENS_MAX })); return; }
     const reglages = { largeur: l, nombre: n };
     arg.poserLiens(reglages);
-    if (!ac.ajouterLiens(reglages)) { poserErreur('Aucun lien posé : la barre d’état dit pourquoi.'); return; }
+    if (!ac.ajouterLiens(reglages)) { poserErreur(t('Aucun lien posé : la barre d’état dit pourquoi.')); return; }
     fermer();
   };
 
   let corps;
-  if (!permis) corps = <p className="aide">Choisissez d’abord une machine Cricut, en découpe, dans la barre : les liens retiennent ce qui tomberait à la découpe.</p>;
+  if (!permis) corps = <p className="aide">{t('Choisissez d’abord une machine Cricut, en découpe, dans la barre : les liens retiennent ce qui tomberait à la découpe.')}</p>;
   else {
-    const etat = !mo.sel.length ? 'Choisissez d’abord une forme pleine à couper, ou plusieurs.'
-      : !compte.formes ? 'Aucune forme choisie n’est pleine et à couper : une forme à écrire n’a pas d’îlot.'
-        : !compte.ilots ? (compte.formes > 1 ? 'Ces formes n’ont' : 'Cette forme n’a') + ' pas d’îlot : rien ne tombera à la découpe.'
-          : pluriel(compte.ilots, 'îlot') + ' dans ' + pluriel(compte.formes, 'forme') + ' : chaque îlot recevra ses liens.';
+    const etat = !mo.sel.length ? t('Choisissez d’abord une forme pleine à couper, ou plusieurs.')
+      : !compte.formes ? t('Aucune forme choisie n’est pleine et à couper : une forme à écrire n’a pas d’îlot.')
+        : !compte.ilots ? (compte.formes > 1 ? t('Ces formes n’ont pas d’îlot : rien ne tombera à la découpe.') : t('Cette forme n’a pas d’îlot : rien ne tombera à la découpe.'))
+          : t('{ilots} dans {formes} : chaque îlot recevra ses liens.', { ilots: pluriel(compte.ilots, 'îlot'), formes: pluriel(compte.formes, 'forme') });
     corps = (
       <>
-        <p className="aide">En pochoir, le centre d’un O, d’un A ou d’un D tombe à la découpe. Un lien est une bande de feuille laissée en travers de la forme, qui le retient.</p>
+        <p className="aide">{t('En pochoir, le centre d’un O, d’un A ou d’un D tombe à la découpe. Un lien est une bande de feuille laissée en travers de la forme, qui le retient.')}</p>
         <div className="grille-2">
-          <label className="champ-ligne nombre" title={'La largeur de chaque lien, entre ' + nombreFr(u.vers(LARGEUR_LIEN_MIN)) + ' et ' + nombreFr(u.vers(LARGEUR_LIEN_MAX)) + ' ' + u.long}>
-            <span>Largeur</span>
+          <label className="champ-ligne nombre" title={t('La largeur de chaque lien, entre {min} et {max} {unite}', { min: nombreFr(u.vers(LARGEUR_LIEN_MIN)), max: nombreFr(u.vers(LARGEUR_LIEN_MAX)), unite: t(u.long) })}>
+            <span>{t('Largeur')}</span>
             <input type="text" inputMode="decimal" value={largeur} onChange={e => { poserLargeur(e.target.value); poserErreur(null); }} onKeyDown={e => { if (e.key === 'Enter') lancer(); }} />
-            {u.nom ? <span className="unite">{u.nom}</span> : null}
+            {u.nom ? <span className="unite">{t(u.nom)}</span> : null}
           </label>
-          <label className="champ-ligne nombre" title={'Le nombre de liens autour de chaque îlot, de ' + NOMBRE_LIENS_MIN + ' à ' + NOMBRE_LIENS_MAX}>
-            <span>Liens par îlot</span>
+          <label className="champ-ligne nombre" title={t('Le nombre de liens autour de chaque îlot, de {min} à {max}', { min: NOMBRE_LIENS_MIN, max: NOMBRE_LIENS_MAX })}>
+            <span>{t('Liens par îlot')}</span>
             <input type="text" inputMode="numeric" value={nombre} onChange={e => { poserNombre(e.target.value); poserErreur(null); }} onKeyDown={e => { if (e.key === 'Enter') lancer(); }} />
           </label>
         </div>
         <p className="aide" role="status">{etat}</p>
-        <p className="aide">La largeur qui tient dépend de la matière : essayez sur une chute (à vérifier).</p>
+        <p className="aide">{t('La largeur qui tient dépend de la matière : essayez sur une chute (à vérifier).')}</p>
       </>
     );
   }
@@ -93,14 +95,15 @@ function AjouterLiens({ svgRef }: { svgRef: RefObject<SVGSVGElement | null> }) {
     <div className="panneau-flottant panneau-repetition panneau-liens" role="dialog" aria-labelledby={titre} ref={racine}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(); } }}>
       <div className="panneau-flottant-tete">
-        <h2 id={titre}>{TITRE_LIENS}</h2>
-        <button type="button" className="icone-bouton" aria-label="Fermer sans ajouter de liens" title="Fermer sans ajouter de liens (Échap)" onClick={fermer}><Icone nom="fermer" /></button>
+        <h2 id={titre}>{t(TITRE_LIENS)}</h2>
+        <button type="button" className="icone-bouton" aria-label={t('Fermer sans ajouter de liens')} title={t('Fermer sans ajouter de liens (Échap)')} onClick={fermer}><Icone nom="fermer" /></button>
       </div>
       <div className="panneau-flottant-corps">{corps}</div>
       {erreur ? <p className="aide erreur" role="alert">{erreur}</p> : null}
       <div className="panneau-flottant-pied">
-        <button type="button" className="discret" onClick={fermer}>Annuler</button>
-        <button type="button" disabled={!permis || !compte.ilots} onClick={lancer}>Ajouter les liens</button>
+        <button type="button" className="discret" onClick={fermer}>{t('Annuler')}</button>
+        <button type="button" disabled={!permis || !compte.ilots} onClick={lancer}>{t('Ajouter les liens')}</button>
+
       </div>
     </div>
   );

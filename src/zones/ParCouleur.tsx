@@ -16,9 +16,11 @@ import { useDessin, useInterface } from './contexteEditeur.js';
 import { ListeCouleurs } from './ListeCouleurs.js';
 import { LigneDegrades } from './LigneDegrades.js';
 import { useActionsCouleur } from './actionsCouleur.js';
+import { t } from '../util/i18n.js';
 
-const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
-  ['tout', 'Les deux', 'Couleurs du remplissage et du contour'], ['remplissage', 'Fond', 'Couleurs de remplissage seulement'], ['contour', 'Trait', 'Couleurs de contour seulement']
+// Une fonction, pas une constante : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const surs = (): ReadonlyArray<readonly [SurCouleur, string, string]> => [
+  ['tout', t('Les deux'), t('Couleurs du remplissage et du contour')], ['remplissage', t('Fond'), t('Couleurs de remplissage seulement')], ['contour', t('Trait'), t('Couleurs de contour seulement')]
 ];
 
 // La tolerance se regle en centiemes d'ecart OKLab (util/couleur.ts) : 2 se devine, 10 saute aux yeux.
@@ -54,36 +56,37 @@ export function ParCouleur() {
 
   const fondues = proches.reduce((n, p) => n + p.membres.length, 0);
   return (
-    <Section titre="Par couleur" ouverte={ouverteParDefaut} note={groupes.length}>
-      <div className="mini-onglets" role="group" aria-label="Couleurs lues sur">
-        {SURS.map(([id, libelle, aide]) => <button key={id} type="button" aria-pressed={sur === id} title={aide} onClick={() => poserSur(id)}>{libelle}</button>)}
+    <Section titre={t('Par couleur')} ouverte={ouverteParDefaut} note={groupes.length}>
+      <div className="mini-onglets" role="group" aria-label={t('Couleurs lues sur')}>
+        {surs().map(([id, libelle, aide]) => <button key={id} type="button" aria-pressed={sur === id} title={aide} onClick={() => poserSur(id)}>{libelle}</button>)}
       </div>
       {isole ? (
         <div className="isolement" role="status">
-          <span className="aide">Une seule couleur est affichée.</span>
-          <button type="button" className="discret" title="Rendre à chaque forme sa visibilité d’avant (Ctrl+Z annule aussi)" onClick={quitterIsolement}>Quitter l’isolement</button>
+          <span className="aide">{t('Une seule couleur est affichée.')}</span>
+          <button type="button" className="discret" title={t('Rendre à chaque forme sa visibilité d’avant (Ctrl+Z annule aussi)')} onClick={quitterIsolement}>{t('Quitter l’isolement')}</button>
         </div>
       ) : null}
       {groupes.length ? (
         <ListeCouleurs groupes={groupes} choisies={mo.choisies} sur={sur} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
       ) : sur === 'tout'
-        ? <EtatVide genre="aucun-resultat" titre="Aucune forme n’a de couleur." />
-        : <EtatVide genre="aucun-resultat" titre={'Aucune forme n’a de ' + (sur === 'contour' ? 'contour' : 'remplissage') + '.'} action={{ libelle: 'Lire le fond et le trait', onClick: () => poserSur('tout') }} />}
+        ? <EtatVide genre="aucun-resultat" titre={t('Aucune forme n’a de couleur.')} />
+        : <EtatVide genre="aucun-resultat" titre={sur === 'contour' ? t('Aucune forme n’a de contour.') : t('Aucune forme n’a de remplissage.')} action={{ libelle: t('Lire le fond et le trait'), onClick: () => poserSur('tout') }} />}
       <LigneDegrades dessin={dessin} sur={sur} />
       <div className="nuances-proches">
         <label className="champ-ligne">
-          <span>Tolérance</span>
-          <input type="range" min={TOLERANCE_MIN} max={TOLERANCE_MAX} step={1} value={tolerance} aria-valuetext={'Tolérance ' + tolerance + ' sur ' + TOLERANCE_MAX}
-            title="Écart de couleur toléré entre deux nuances : 2 se devine, 10 saute aux yeux" onChange={e => poserTolerance(Number(e.target.value))} />
+          <span>{t('Tolérance')}</span>
+          <input type="range" min={TOLERANCE_MIN} max={TOLERANCE_MAX} step={1} value={tolerance} aria-valuetext={t('Tolérance {n} sur {max}', { n: tolerance, max: TOLERANCE_MAX })}
+            title={t('Écart de couleur toléré entre deux nuances : 2 se devine, 10 saute aux yeux')} onChange={e => poserTolerance(Number(e.target.value))} />
           <output>{tolerance}</output>
         </label>
         <p className="aide" role="status">
-          {fondues ? pluriel(fondues, 'nuance') + ' se fondrai' + (fondues > 1 ? 'ent' : 't') + ' dans ' + pluriel(proches.length, 'couleur') + '.' : 'Aucune nuance proche à cette tolérance.'}
+          {fondues ? (fondues > 1 ? t('{nuances} se fondraient dans {couleurs}.', { nuances: pluriel(fondues, 'nuance'), couleurs: pluriel(proches.length, 'couleur') }) : t('{nuances} se fondrait dans {couleurs}.', { nuances: pluriel(fondues, 'nuance'), couleurs: pluriel(proches.length, 'couleur') })) : t('Aucune nuance proche à cette tolérance.')}
         </p>
         <div className="boutons">
-          <button type="button" disabled={!reference} title={reference ? 'Choisir les formes proches de ' + reference.toUpperCase() : 'Choisissez d’abord une couleur'}
-            onClick={() => { if (reference) nuancesProchesDe(reference); }}>Sélectionner les nuances proches</button>
-          <button type="button" disabled={!fondues} title="Ramener chaque groupe de nuances à sa couleur la plus employée (Ctrl+Z annule)" onClick={fusionner}>Fusionner les nuances proches</button>
+          <button type="button" disabled={!reference} title={reference ? t('Choisir les formes proches de {couleur}', { couleur: reference.toUpperCase() }) : t('Choisissez d’abord une couleur')}
+            onClick={() => { if (reference) nuancesProchesDe(reference); }}>{t('Sélectionner les nuances proches')}</button>
+          <button type="button" disabled={!fondues} title={t('Ramener chaque groupe de nuances à sa couleur la plus employée (Ctrl+Z annule)')} onClick={fusionner}>{t('Fusionner les nuances proches')}</button>
+
         </div>
       </div>
     </Section>
