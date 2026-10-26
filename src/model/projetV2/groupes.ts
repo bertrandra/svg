@@ -4,6 +4,7 @@
 // profondeur, contiguite) est verifie a l'ouverture par le moteur (`verifierDessin`, engine/projet.ts). Comme tout champ v2, elle
 // est facultative et toujours lue (model/projet.ts). Pur.
 
+import { t } from '../../util/i18n.js';
 import { CHAMPS_GROUPE_V2, type ChampsGroupeV2, type OutilsProjet } from './champs.js';
 
 /** Un groupe du projet : sa base (etape 1), puis ce que les etapes suivantes ajoutent (`ChampsGroupeV2`). */
@@ -27,25 +28,25 @@ export const NOM_GROUPE_PROJET_MAX = 200;
  * des provenances d'une forme (model/projet.ts), la meme pour un groupe.
  */
 export function lireGroupesProjet(v: unknown, o: OutilsProjet, origines: (v: unknown) => readonly string[]): Readonly<Record<string, GroupeProjet>> {
-  const t = o.objet(v, 'les groupes du dessin');
-  const cles = Object.keys(t);
-  if (!cles.length) o.refuser('la table des groupes est vide (elle doit être absente)');
-  if (cles.length > GROUPES_PROJET_MAX) o.refuser('le dessin compte plus de ' + GROUPES_PROJET_MAX + ' groupes');
+  const table = o.objet(v, t('les groupes du dessin'));
+  const cles = Object.keys(table);
+  if (!cles.length) o.refuser(t('la table des groupes est vide (elle doit être absente)'));
+  if (cles.length > GROUPES_PROJET_MAX) o.refuser(t('le dessin compte plus de {max} groupes', { max: GROUPES_PROJET_MAX }));
   const out: Record<string, GroupeProjet> = {};
   for (const cle of cles) {
-    const g = o.objet(t[cle], 'un groupe du dessin');
-    const id = o.texte(g['id'], 'l’identifiant d’un groupe', 64);
-    if (!o.identifiant.test(id) || id !== cle) o.refuser('le groupe rangé sous « ' + cle.slice(0, 20) + ' » est mal désigné');
-    const parent = g['parent'] === undefined ? undefined : o.texte(g['parent'], 'le parent d’un groupe', 64);
-    const nom = g['nom'] === undefined ? undefined : o.texte(g['nom'], 'le nom d’un groupe', NOM_GROUPE_PROJET_MAX);
-    const opacite = g['opacite'] === undefined ? undefined : o.nombre(g['opacite'], 'l’opacité d’un groupe', 0, 1);
-    if (opacite === 1) o.refuser('l’opacité pleine d’un groupe ne s’écrit pas');
+    const g = o.objet(table[cle], t('un groupe du dessin'));
+    const id = o.texte(g['id'], t('l’identifiant d’un groupe'), 64);
+    if (!o.identifiant.test(id) || id !== cle) o.refuser(t('le groupe rangé sous « {cle} » est mal désigné', { cle: cle.slice(0, 20) }));
+    const parent = g['parent'] === undefined ? undefined : o.texte(g['parent'], t('le parent d’un groupe'), 64);
+    const nom = g['nom'] === undefined ? undefined : o.texte(g['nom'], t('le nom d’un groupe'), NOM_GROUPE_PROJET_MAX);
+    const opacite = g['opacite'] === undefined ? undefined : o.nombre(g['opacite'], t('l’opacité d’un groupe'), 0, 1);
+    if (opacite === 1) o.refuser(t('l’opacité pleine d’un groupe ne s’écrit pas'));
     const base: Record<string, unknown> = {
       id,
       ...(parent !== undefined ? { parent } : {}),
       ...(nom !== undefined ? { nom } : {}),
-      visible: o.booleen(g['visible'], 'la visibilité d’un groupe'),
-      verrouille: o.booleen(g['verrouille'], 'le verrouillage d’un groupe'),
+      visible: o.booleen(g['visible'], t('la visibilité d’un groupe')),
+      verrouille: o.booleen(g['verrouille'], t('le verrouillage d’un groupe')),
       ...(opacite !== undefined ? { opacite } : {}),
       ...(g['origine'] !== undefined ? { origine: origines(g['origine']) } : {})
     };
@@ -53,7 +54,7 @@ export function lireGroupesProjet(v: unknown, o: OutilsProjet, origines: (v: unk
     out[cle] = base as unknown as GroupeProjet;
   }
   for (const g of Object.values(out)) {
-    if (g.parent !== undefined && !Object.prototype.hasOwnProperty.call(out, g.parent)) o.refuser('le groupe « ' + g.id + ' » a un parent absent');
+    if (g.parent !== undefined && !Object.prototype.hasOwnProperty.call(out, g.parent)) o.refuser(t('le groupe « {id} » a un parent absent', { id: g.id }));
   }
   return out;
 }

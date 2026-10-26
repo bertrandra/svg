@@ -4,6 +4,7 @@
 // une couleur qui n'est pas #rrggbb sont refuses en le nommant. Branche par une ligne de chaque cadre (`champs.ts`). Pur ; ne leve jamais
 // (les gardes remontent par `o.refuser`).
 
+import { t } from '../../util/i18n.js';
 import type { OutilsProjet } from './champs.js';
 
 /** Ce que le projet garde d'un flou : ses ecarts (isotrope sans `ecartY`). */
@@ -22,24 +23,24 @@ export function lireEffetsProjet(v: unknown, o: OutilsProjet, quoi: string): Eff
   const e = o.objet(v, quoi);
   let flou: FlouProjet | undefined, ombre: OmbreProjet | undefined;
   if (e['flou'] !== undefined) {
-    const f = o.objet(e['flou'], 'le flou de ' + quoi);
-    const ecart = o.nombre(f['ecart'], 'l’écart d’un flou', 0, B);
-    const ecartY = f['ecartY'] === undefined ? undefined : o.nombre(f['ecartY'], 'l’écart vertical d’un flou', 0, B);
-    if (!(ecart > 0) && !((ecartY ?? 0) > 0)) o.refuser('un flou sans écart');
+    const f = o.objet(e['flou'], t('le flou de {quoi}', { quoi }));
+    const ecart = o.nombre(f['ecart'], t('l’écart d’un flou'), 0, B);
+    const ecartY = f['ecartY'] === undefined ? undefined : o.nombre(f['ecartY'], t('l’écart vertical d’un flou'), 0, B);
+    if (!(ecart > 0) && !((ecartY ?? 0) > 0)) o.refuser(t('un flou sans écart'));
     flou = { ecart, ...(ecartY !== undefined ? { ecartY } : {}) };
   }
   if (e['ombre'] !== undefined) {
-    const s = o.objet(e['ombre'], 'l’ombre de ' + quoi);
-    const couleur = o.texte(s['couleur'], 'la couleur d’une ombre', 7);
-    if (!/^#[0-9a-f]{6}$/.test(couleur)) o.refuser('la couleur d’une ombre n’est pas #rrggbb');
+    const s = o.objet(e['ombre'], t('l’ombre de {quoi}', { quoi }));
+    const couleur = o.texte(s['couleur'], t('la couleur d’une ombre'), 7);
+    if (!/^#[0-9a-f]{6}$/.test(couleur)) o.refuser(t('la couleur d’une ombre n’est pas #rrggbb'));
     ombre = {
-      dx: o.nombre(s['dx'], 'le décalage d’une ombre', -B, B),
-      dy: o.nombre(s['dy'], 'le décalage d’une ombre', -B, B),
-      ecart: o.nombre(s['ecart'], 'l’écart d’une ombre', 0, B),
+      dx: o.nombre(s['dx'], t('le décalage d’une ombre'), -B, B),
+      dy: o.nombre(s['dy'], t('le décalage d’une ombre'), -B, B),
+      ecart: o.nombre(s['ecart'], t('l’écart d’une ombre'), 0, B),
       couleur,
-      opacite: o.nombre(s['opacite'], 'l’opacité d’une ombre', 0, 1)
+      opacite: o.nombre(s['opacite'], t('l’opacité d’une ombre'), 0, 1)
     };
   }
-  if (!flou && !ombre) o.refuser('des effets vides (ils doivent être absents)');
+  if (!flou && !ombre) o.refuser(t('des effets vides (ils doivent être absents)'));
   return { ...(flou ? { flou } : {}), ...(ombre ? { ombre } : {}) };
 }

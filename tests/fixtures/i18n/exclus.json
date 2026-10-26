@@ -6,8 +6,10 @@
     "model/credits.ts",
     "model/lexique.ts",
     "model/lexiqueSources.ts",
+    "model/scenes.ts",
     "model/sourcesFormes.ts",
     "model/sourcesPolices.ts",
+    "model/synonymes.ts",
     "styles/espaces.ts",
     "styles/jetons.ts",
     "styles/typographie.ts"

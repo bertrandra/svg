@@ -5,6 +5,7 @@
 // n'y entre pas (la lecture d'un SVG la refuse aussi). Pur ; chaque valeur est bornee, un projet valide se reconstruit dans un ordre de
 // champs fixe.
 
+import { t } from '../../util/i18n.js';
 import type { OutilsProjet } from './champs.js';
 import type { FormeProjet } from '../projet.js';
 import type { GroupeProjet } from './groupes.js';
@@ -30,31 +31,31 @@ let enCours = 0;
 
 /** Un motif de projet (une peinture dont le genre est « motif »), reconstruit champ par champ ; `quoi` le nomme dans un refus. */
 export function lireMotifProjet(p: Record<string, unknown>, o: OutilsProjet, quoi: string): MotifProjet {
-  if (enCours >= PROFONDEUR_MOTIF_PROJET_MAX) o.refuser('des motifs emboîtés sur plus de ' + PROFONDEUR_MOTIF_PROJET_MAX + ' niveaux');
+  if (enCours >= PROFONDEUR_MOTIF_PROJET_MAX) o.refuser(t('des motifs emboîtés sur plus de {max} niveaux', { max: PROFONDEUR_MOTIF_PROJET_MAX }));
   enCours++;
   try {
-    const x = o.nombre(p['x'], 'la tuile de ' + quoi), y = o.nombre(p['y'], 'la tuile de ' + quoi);
-    const l = o.nombre(p['l'], 'la largeur de la tuile de ' + quoi, TUILE_PROJET_MIN), h = o.nombre(p['h'], 'la hauteur de la tuile de ' + quoi, TUILE_PROJET_MIN);
+    const x = o.nombre(p['x'], t('la tuile de {quoi}', { quoi })), y = o.nombre(p['y'], t('la tuile de {quoi}', { quoi }));
+    const l = o.nombre(p['l'], t('la largeur de la tuile de {quoi}', { quoi }), TUILE_PROJET_MIN), h = o.nombre(p['h'], t('la hauteur de la tuile de {quoi}', { quoi }), TUILE_PROJET_MIN);
     let matrice: MotifProjet['matrice'];
     if (p['matrice'] !== undefined) {
-      const t = o.tableau(p['matrice'], 'la matrice de ' + quoi, 6);
-      if (t.length !== 6) o.refuser('la matrice de ' + quoi + ' n’a pas six valeurs');
-      matrice = t.map(v => o.nombre(v, 'la matrice de ' + quoi)) as unknown as MotifProjet['matrice'];
+      const liste = o.tableau(p['matrice'], t('la matrice de {quoi}', { quoi }), 6);
+      if (liste.length !== 6) o.refuser(t('la matrice de {quoi} n’a pas six valeurs', { quoi }));
+      matrice = liste.map(v => o.nombre(v, t('la matrice de {quoi}', { quoi }))) as unknown as MotifProjet['matrice'];
     }
     const vus = new Set<string>();
-    const formes = o.tableau(p['formes'], 'les formes de ' + quoi, NOEUDS_MOTIF_PROJET_MAX).map((brute, i) => {
+    const formes = o.tableau(p['formes'], t('les formes de {quoi}', { quoi }), NOEUDS_MOTIF_PROJET_MAX).map((brute, i) => {
       const f = o.forme(brute, i);
-      if (vus.has(f.id)) o.refuser('deux formes de ' + quoi + ' portent l’identifiant « ' + f.id + ' »');
-      if (f.image !== undefined) o.refuser('une image dans la tuile de ' + quoi);
+      if (vus.has(f.id)) o.refuser(t('deux formes de {quoi} portent l’identifiant « {id} »', { quoi, id: f.id }));
+      if (f.image !== undefined) o.refuser(t('une image dans la tuile de {quoi}', { quoi }));
       vus.add(f.id);
       return f;
     });
-    if (!formes.length) o.refuser('la tuile de ' + quoi + ' est vide');
+    if (!formes.length) o.refuser(t('la tuile de {quoi} est vide', { quoi }));
     const groupes = p['groupes'] !== undefined ? o.groupes(p['groupes']) : undefined;
-    if (groupes && Object.keys(groupes).length + formes.length > NOEUDS_MOTIF_PROJET_MAX) o.refuser(quoi + ' compte plus de ' + NOEUDS_MOTIF_PROJET_MAX + ' formes et groupes');
+    if (groupes && Object.keys(groupes).length + formes.length > NOEUDS_MOTIF_PROJET_MAX) o.refuser(t('{quoi} compte plus de {max} formes et groupes', { quoi, max: NOEUDS_MOTIF_PROJET_MAX }));
     for (const f of formes) {
-      if (f.parent !== undefined && !(groupes && Object.prototype.hasOwnProperty.call(groupes, f.parent))) o.refuser('une forme de ' + quoi + ' est dans un groupe absent');
-      if (groupes && Object.prototype.hasOwnProperty.call(groupes, f.id)) o.refuser('une forme et un groupe de ' + quoi + ' portent l’identifiant « ' + f.id + ' »');
+      if (f.parent !== undefined && !(groupes && Object.prototype.hasOwnProperty.call(groupes, f.parent))) o.refuser(t('une forme de {quoi} est dans un groupe absent', { quoi }));
+      if (groupes && Object.prototype.hasOwnProperty.call(groupes, f.id)) o.refuser(t('une forme et un groupe de {quoi} portent l’identifiant « {id} »', { quoi, id: f.id }));
     }
     return { genre: 'motif', x, y, l, h, ...(matrice ? { matrice } : {}), formes, ...(groupes ? { groupes } : {}) };
   } finally {

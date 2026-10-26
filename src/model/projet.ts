@@ -10,6 +10,7 @@
 // sans jamais lever (ADR-0014). Un projet valide se reconstruit dans un ordre de champs fixe : relu puis reecrit, il redonne le
 // meme texte JSON.
 
+import { t } from '../util/i18n.js';
 import type { ChoixProduction } from './contextes.js';
 import { normaliserOrigines } from './credits.js';
 import { PROVENANCES_NUANCIER, TEINTES_NUANCIER_MAX, type NuancierDessin, type TeinteDessin } from './nuancier.js';
@@ -164,16 +165,16 @@ const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'obj
 
 /** Le projet ramene a la version courante, ou la raison de le refuser (un autre JSON, une version plus recente, une chaine rompue). */
 export function migrer(x: unknown): { donnees: Record<string, unknown>; migre: boolean } | { erreur: string } {
-  if (!estObjet(x) || x['format'] !== FORMAT_PROJET) return { erreur: 'Ce fichier n’est pas un projet de l’Éditeur SVG.' };
+  if (!estObjet(x) || x['format'] !== FORMAT_PROJET) return { erreur: t('Ce fichier n’est pas un projet de l’Éditeur SVG.') };
   const v = x['version'];
-  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) return { erreur: 'Ce projet n’a pas de version lisible.' };
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) return { erreur: t('Ce projet n’a pas de version lisible.') };
   if (v > VERSION_PROJET) {
-    return { erreur: 'Ce projet a été enregistré par une version plus récente de l’éditeur (format ' + v + ') ; cette version lit les projets jusqu’au format ' + VERSION_PROJET + '. Mettez le site à jour pour l’ouvrir.' };
+    return { erreur: t('Ce projet a été enregistré par une version plus récente de l’éditeur (format {version}) ; cette version lit les projets jusqu’au format {courante}. Mettez le site à jour pour l’ouvrir.', { version: v, courante: VERSION_PROJET }) };
   }
   let donnees = x, version = v;
   while (version < VERSION_PROJET) {
     const etape = MIGRATIONS[version];
-    if (!etape) return { erreur: 'Ce projet est au format ' + version + ', que cette version ne sait plus convertir.' };
+    if (!etape) return { erreur: t('Ce projet est au format {version}, que cette version ne sait plus convertir.', { version }) };
     donnees = etape(donnees);
     version++;
   }
@@ -200,37 +201,37 @@ const PEINTURE_HEX = /^#[0-9a-f]{3,8}$/, PEINTURE_MOT = /^[a-z][a-z0-9-]{0,40}(?
 const TYPES_IMAGE: readonly TypeImage[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
 function texte(v: unknown, quoi: string, max: number): string {
-  if (typeof v !== 'string') return refuser(quoi + ' n’est pas un texte');
-  if (v.length > max) return refuser(quoi + ' dépasse ' + max + ' caractères');
+  if (typeof v !== 'string') return refuser(t('{quoi} n’est pas un texte', { quoi }));
+  if (v.length > max) return refuser(t('{quoi} dépasse {max} caractères', { quoi, max }));
   return v;
 }
 
 function nombre(v: unknown, quoi: string, min: number = -BORNES_PROJET.coordonnee, max: number = BORNES_PROJET.coordonnee): number {
-  if (typeof v !== 'number' || !Number.isFinite(v)) return refuser(quoi + ' n’est pas un nombre');
-  if (v < min || v > max) return refuser(quoi + ' est hors de ses bornes');
+  if (typeof v !== 'number' || !Number.isFinite(v)) return refuser(t('{quoi} n’est pas un nombre', { quoi }));
+  if (v < min || v > max) return refuser(t('{quoi} est hors de ses bornes', { quoi }));
   return v;
 }
 
 function booleen(v: unknown, quoi: string): boolean {
-  if (typeof v !== 'boolean') return refuser(quoi + ' n’est ni vrai ni faux');
+  if (typeof v !== 'boolean') return refuser(t('{quoi} n’est ni vrai ni faux', { quoi }));
   return v;
 }
 
 function tableau(v: unknown, quoi: string, max: number): readonly unknown[] {
-  if (!Array.isArray(v)) return refuser(quoi + ' n’est pas une liste');
-  if (v.length > max) return refuser(quoi + ' compte plus de ' + max + ' éléments');
+  if (!Array.isArray(v)) return refuser(t('{quoi} n’est pas une liste', { quoi }));
+  if (v.length > max) return refuser(t('{quoi} compte plus de {max} éléments', { quoi, max }));
   return v;
 }
 
 function objet(v: unknown, quoi: string): Record<string, unknown> {
-  if (!estObjet(v)) return refuser(quoi + ' n’est pas un objet');
+  if (!estObjet(v)) return refuser(t('{quoi} n’est pas un objet', { quoi }));
   return v;
 }
 
 function peinture(v: unknown, quoi: string): string | null {
   if (v === null) return null;
   const p = texte(v, quoi, 200);
-  return PEINTURE_HEX.test(p) || PEINTURE_MOT.test(p) ? p : refuser(quoi + ' n’est pas une couleur admise');
+  return PEINTURE_HEX.test(p) || PEINTURE_MOT.test(p) ? p : refuser(t('{quoi} n’est pas une couleur admise', { quoi }));
 }
 
 /** Un champ facultatif : absent (ou `undefined`) reste absent, present il est lu par `lire`. Rend un objet a etaler. */
@@ -240,12 +241,12 @@ function facultatif<K extends string, T>(o: Record<string, unknown>, cle: K, lir
 }
 
 function choix<T extends string>(v: unknown, quoi: string, permis: readonly T[]): T {
-  return typeof v === 'string' && (permis as readonly string[]).includes(v) ? v as T : refuser(quoi + ' n’est pas une valeur admise');
+  return typeof v === 'string' && (permis as readonly string[]).includes(v) ? v as T : refuser(t('{quoi} n’est pas une valeur admise', { quoi }));
 }
 
 function base64(v: unknown, quoi: string, max: number): string {
   const b = texte(v, quoi, max);
-  return b.length % 4 === 0 && BASE64.test(b) ? b : refuser(quoi + ' n’est pas du base64');
+  return b.length % 4 === 0 && BASE64.test(b) ? b : refuser(t('{quoi} n’est pas du base64', { quoi }));
 }
 
 // Le chemin : « M10 20L30 40Z », une lettre puis ses nombres separes par une espace. Le nombre de valeurs suit la lettre.
@@ -271,69 +272,69 @@ export function cheminProjetValide(d: string): boolean {
 }
 
 function lireTexte(v: unknown): TexteProjet {
-  const o = objet(v, 'un texte vivant');
-  const p = objet(o['police'], 'la police d’un texte');
-  const id = texte(p['id'], 'la police d’un texte', 40);
-  if (!ID_POLICE.test(id) && !/^c-[0-9a-f]{14}$/.test(id)) refuser('l’identifiant de police « ' + id.slice(0, 20) + ' » n’est pas admis');
+  const o = objet(v, t('un texte vivant'));
+  const p = objet(o['police'], t('la police d’un texte'));
+  const id = texte(p['id'], t('la police d’un texte'), 40);
+  if (!ID_POLICE.test(id) && !/^c-[0-9a-f]{14}$/.test(id)) refuser(t('l’identifiant de police « {id} » n’est pas admis', { id: id.slice(0, 20) }));
   const police: PoliceTexteProjet = {
     id,
-    ...facultatif(p, 'version', x => { const s = texte(x, 'la version d’une police', 14); return VERSION_FONTE.test(s) ? s : refuser('la version d’une police est mal formée'); }),
-    ...facultatif(p, 'famille', x => texte(x, 'la famille d’une police', BORNES_PROJET.famille))
+    ...facultatif(p, 'version', x => { const s = texte(x, t('la version d’une police'), 14); return VERSION_FONTE.test(s) ? s : refuser(t('la version d’une police est mal formée')); }),
+    ...facultatif(p, 'famille', x => texte(x, t('la famille d’une police'), BORNES_PROJET.famille))
   };
-  const chaine = texte(o['texte'], 'un texte vivant', BORNES_PROJET.texte);
-  if (/^\s*$/.test(chaine)) refuser('un texte vivant est vide');
-  const m = tableau(o['matrice'], 'la matrice d’un texte', 6);
-  if (m.length !== 6) refuser('la matrice d’un texte n’a pas six valeurs');
-  const matrice = m.map(x => nombre(x, 'la matrice d’un texte')) as unknown as TexteProjet['matrice'];
-  if (!(Math.abs(matrice[0] * matrice[3] - matrice[1] * matrice[2]) > 1e-12)) refuser('la matrice d’un texte est dégénérée');
-  const taille = nombre(o['taille'], 'la taille d’un texte', 0, 1e6);
-  if (!(taille > 0)) refuser('la taille d’un texte est nulle');
-  const interligne = nombre(o['interligne'], 'l’interligne d’un texte', 0, 100);
-  if (!(interligne > 0)) refuser('l’interligne d’un texte est nul');
+  const chaine = texte(o['texte'], t('un texte vivant'), BORNES_PROJET.texte);
+  if (/^\s*$/.test(chaine)) refuser(t('un texte vivant est vide'));
+  const m = tableau(o['matrice'], t('la matrice d’un texte'), 6);
+  if (m.length !== 6) refuser(t('la matrice d’un texte n’a pas six valeurs'));
+  const matrice = m.map(x => nombre(x, t('la matrice d’un texte'))) as unknown as TexteProjet['matrice'];
+  if (!(Math.abs(matrice[0] * matrice[3] - matrice[1] * matrice[2]) > 1e-12)) refuser(t('la matrice d’un texte est dégénérée'));
+  const taille = nombre(o['taille'], t('la taille d’un texte'), 0, 1e6);
+  if (!(taille > 0)) refuser(t('la taille d’un texte est nulle'));
+  const interligne = nombre(o['interligne'], t('l’interligne d’un texte'), 0, 100);
+  if (!(interligne > 0)) refuser(t('l’interligne d’un texte est nul'));
   return {
     texte: chaine, police, taille,
-    interlettrage: nombre(o['interlettrage'], 'l’interlettrage d’un texte', -100, 100),
+    interlettrage: nombre(o['interlettrage'], t('l’interlettrage d’un texte'), -100, 100),
     interligne,
-    alignement: choix(o['alignement'], 'l’alignement d’un texte', ['gauche', 'centre', 'droite'] as const),
-    ligatures: booleen(o['ligatures'], 'les ligatures d’un texte'),
-    ...facultatif(o, 'trace', x => choix(x, 'le tracé d’un texte', ['median'] as const)),
+    alignement: choix(o['alignement'], t('l’alignement d’un texte'), ['gauche', 'centre', 'droite'] as const),
+    ligatures: booleen(o['ligatures'], t('les ligatures d’un texte')),
+    ...facultatif(o, 'trace', x => choix(x, t('le tracé d’un texte'), ['median'] as const)),
     matrice,
     ...facultatif(o, 'disposition', lireDisposition)
   };
 }
 
 function lireDisposition(v: unknown): DispositionProjet {
-  const o = objet(v, 'la disposition d’un texte');
-  const forme = texte(o['forme'], 'la forme d’un texte posé', BORNES_PROJET.identifiant);
-  if (!ID.test(forme)) refuser('la forme d’un texte posé est mal désignée');
+  const o = objet(v, t('la disposition d’un texte'));
+  const forme = texte(o['forme'], t('la forme d’un texte posé'), BORNES_PROJET.identifiant);
+  if (!ID.test(forme)) refuser(t('la forme d’un texte posé est mal désignée'));
   if (o['mode'] === 'sur') {
     return {
-      mode: 'sur', forme, depart: nombre(o['depart'], 'le départ d’un texte sur une forme', 0, 1),
-      cote: choix(o['cote'], 'le côté d’un texte sur une forme', ['dessus', 'dessous'] as const), repartir: booleen(o['repartir'], 'la répartition d’un texte sur une forme')
+      mode: 'sur', forme, depart: nombre(o['depart'], t('le départ d’un texte sur une forme'), 0, 1),
+      cote: choix(o['cote'], t('le côté d’un texte sur une forme'), ['dessus', 'dessous'] as const), repartir: booleen(o['repartir'], t('la répartition d’un texte sur une forme'))
     };
   }
   if (o['mode'] === 'dans') {
     return {
-      mode: 'dans', forme, marge: nombre(o['marge'], 'la marge d’un texte dans une forme', 0, 100),
-      ajuster: booleen(o['ajuster'], 'l’ajustement d’un texte dans une forme'), justifier: booleen(o['justifier'], 'la justification d’un texte dans une forme')
+      mode: 'dans', forme, marge: nombre(o['marge'], t('la marge d’un texte dans une forme'), 0, 100),
+      ajuster: booleen(o['ajuster'], t('l’ajustement d’un texte dans une forme')), justifier: booleen(o['justifier'], t('la justification d’un texte dans une forme'))
     };
   }
-  if (o['mode'] === 'enveloppe') return { mode: 'enveloppe', forme, marge: nombre(o['marge'], 'la marge d’un texte déformé dans une forme', 0, 100) };
-  return refuser('la disposition d’un texte n’est ni « sur », ni « dans », ni « enveloppe » d’une forme');
+  if (o['mode'] === 'enveloppe') return { mode: 'enveloppe', forme, marge: nombre(o['marge'], t('la marge d’un texte déformé dans une forme'), 0, 100) };
+  return refuser(t('la disposition d’un texte n’est ni « sur », ni « dans », ni « enveloppe » d’une forme'));
 }
 
 function lirePointilles(v: unknown): readonly number[] {
-  const t = tableau(v, 'les pointillés d’une forme', BORNES_PROJET.pointilles);
-  const p = t.map(x => nombre(x, 'les pointillés d’une forme', 0));
-  if (p.length === 0 || p.length % 2 !== 0 || p.every(x => x === 0)) refuser('les pointillés d’une forme sont mal formés');
+  const liste = tableau(v, t('les pointillés d’une forme'), BORNES_PROJET.pointilles);
+  const p = liste.map(x => nombre(x, t('les pointillés d’une forme'), 0));
+  if (p.length === 0 || p.length % 2 !== 0 || p.every(x => x === 0)) refuser(t('les pointillés d’une forme sont mal formés'));
   return p;
 }
 
 function lireOrigine(v: unknown): readonly string[] {
-  const t = tableau(v, 'la provenance d’une forme', BORNES_PROJET.origines).map(x => texte(x, 'la provenance d’une forme', 200));
+  const liste = tableau(v, t('la provenance d’une forme'), BORNES_PROJET.origines).map(x => texte(x, t('la provenance d’une forme'), 200));
   // Seules les origines que le produit sait crediter se gardent, triees et sans doublon (model/credits.ts) ; une liste vide disparait.
-  const propres = normaliserOrigines(t);
-  if (!propres.length) refuser('la provenance d’une forme ne nomme aucune source connue');
+  const propres = normaliserOrigines(liste);
+  if (!propres.length) refuser(t('la provenance d’une forme ne nomme aucune source connue'));
   return propres;
 }
 
@@ -341,7 +342,7 @@ function lireOrigine(v: unknown): readonly string[] {
 /** Un trace de projet : un texte borne, bien forme (pour les feuilles d'une decoupe, model/projetV2/decoupe.ts). */
 function chemin(v: unknown, quoi: string): string {
   const d = texte(v, quoi, BORNES_PROJET.trace);
-  return cheminProjetValide(d) ? d : refuser(quoi + ' est mal formé');
+  return cheminProjetValide(d) ? d : refuser(t('{quoi} est mal formé', { quoi }));
 }
 
 const OUTILS: OutilsProjet = {
@@ -352,69 +353,69 @@ const OUTILS: OutilsProjet = {
 };
 
 function lireForme(v: unknown, i: number): FormeProjet {
-  const o = objet(v, 'la forme ' + (i + 1));
-  const id = texte(o['id'], 'l’identifiant d’une forme', BORNES_PROJET.identifiant);
-  if (!ID.test(id)) refuser('l’identifiant de la forme ' + (i + 1) + ' est mal formé');
-  const d = texte(o['d'], 'le tracé d’une forme', BORNES_PROJET.trace);
-  if (!cheminProjetValide(d)) refuser('le tracé de la forme ' + (i + 1) + ' est mal formé');
-  const remplissage = peinture(o['remplissage'], 'le remplissage d’une forme'), contour = peinture(o['contour'], 'le contour d’une forme');
+  const o = objet(v, t('la forme {n}', { n: i + 1 }));
+  const id = texte(o['id'], t('l’identifiant d’une forme'), BORNES_PROJET.identifiant);
+  if (!ID.test(id)) refuser(t('l’identifiant de la forme {n} est mal formé', { n: i + 1 }));
+  const d = texte(o['d'], t('le tracé d’une forme'), BORNES_PROJET.trace);
+  if (!cheminProjetValide(d)) refuser(t('le tracé de la forme {n} est mal formé', { n: i + 1 }));
+  const remplissage = peinture(o['remplissage'], t('le remplissage d’une forme')), contour = peinture(o['contour'], t('le contour d’une forme'));
   return {
     id, d, remplissage, contour,
-    epaisseur: nombre(o['epaisseur'], 'l’épaisseur d’une forme', 0),
-    opacite: nombre(o['opacite'], 'l’opacité d’une forme', 0, 1),
-    ...facultatif(o, 'opaciteRemplissage', x => nombre(x, 'l’opacité du remplissage', 0, 1)),
-    ...facultatif(o, 'opaciteContour', x => nombre(x, 'l’opacité du contour', 0, 1)),
+    epaisseur: nombre(o['epaisseur'], t('l’épaisseur d’une forme'), 0),
+    opacite: nombre(o['opacite'], t('l’opacité d’une forme'), 0, 1),
+    ...facultatif(o, 'opaciteRemplissage', x => nombre(x, t('l’opacité du remplissage'), 0, 1)),
+    ...facultatif(o, 'opaciteContour', x => nombre(x, t('l’opacité du contour'), 0, 1)),
     ...facultatif(o, 'pointilles', lirePointilles),
-    ...facultatif(o, 'decalagePointilles', x => nombre(x, 'le décalage des pointillés')),
-    ...facultatif(o, 'bout', x => choix(x, 'le bout d’un trait', ['round', 'square'] as const)),
-    ...facultatif(o, 'jonction', x => choix(x, 'la jonction d’un trait', ['miter', 'bevel'] as const)),
-    ...facultatif(o, 'limiteMitre', x => nombre(x, 'la limite de pointe', 0)),
+    ...facultatif(o, 'decalagePointilles', x => nombre(x, t('le décalage des pointillés'))),
+    ...facultatif(o, 'bout', x => choix(x, t('le bout d’un trait'), ['round', 'square'] as const)),
+    ...facultatif(o, 'jonction', x => choix(x, t('la jonction d’un trait'), ['miter', 'bevel'] as const)),
+    ...facultatif(o, 'limiteMitre', x => nombre(x, t('la limite de pointe'), 0)),
     ...facultatif(o, 'origine', lireOrigine),
     ...facultatif(o, 'texte', lireTexte),
-    ...facultatif(o, 'operation', x => choix(x, 'l’opération d’une forme', ['decoupe', 'ecriture'] as const)),
+    ...facultatif(o, 'operation', x => choix(x, t('l’opération d’une forme'), ['decoupe', 'ecriture'] as const)),
     ...lireChampsFormeV2(o, { remplissage, contour }, OUTILS),
-    regle: choix(o['regle'], 'la règle de remplissage', ['nonzero', 'evenodd'] as const),
-    visible: booleen(o['visible'], 'la visibilité d’une forme'),
-    verrouille: booleen(o['verrouille'], 'le verrouillage d’une forme')
+    regle: choix(o['regle'], t('la règle de remplissage'), ['nonzero', 'evenodd'] as const),
+    visible: booleen(o['visible'], t('la visibilité d’une forme')),
+    verrouille: booleen(o['verrouille'], t('le verrouillage d’une forme'))
   };
 }
 
 function lireDessinProjet(v: unknown): DessinProjet {
-  const o = objet(v, 'le dessin');
-  const vb = tableau(o['vb'], 'le plan de travail', 4);
-  if (vb.length !== 4) refuser('le plan de travail n’a pas quatre valeurs');
-  const plan = vb.map(x => nombre(x, 'le plan de travail')) as unknown as DessinProjet['vb'];
-  if (!(plan[2] >= 0.001 && plan[3] >= 0.001)) refuser('le plan de travail est trop petit');
-  const brutes = tableau(o['formes'], 'les formes', BORNES_PROJET.formes);
+  const o = objet(v, t('le dessin'));
+  const vb = tableau(o['vb'], t('le plan de travail'), 4);
+  if (vb.length !== 4) refuser(t('le plan de travail n’a pas quatre valeurs'));
+  const plan = vb.map(x => nombre(x, t('le plan de travail'))) as unknown as DessinProjet['vb'];
+  if (!(plan[2] >= 0.001 && plan[3] >= 0.001)) refuser(t('le plan de travail est trop petit'));
+  const brutes = tableau(o['formes'], t('les formes'), BORNES_PROJET.formes);
   let trace = 0;
   const vus = new Set<string>();
   const formes = brutes.map((f, i) => {
     const forme = lireForme(f, i);
     trace += forme.d.length;
-    if (trace > BORNES_PROJET.trace) refuser('le tracé du dessin dépasse ' + BORNES_PROJET.trace + ' caractères');
-    if (vus.has(forme.id)) refuser('deux formes portent l’identifiant « ' + forme.id + ' »');
+    if (trace > BORNES_PROJET.trace) refuser(t('le tracé du dessin dépasse {max} caractères', { max: BORNES_PROJET.trace }));
+    if (vus.has(forme.id)) refuser(t('deux formes portent l’identifiant « {id} »', { id: forme.id }));
     vus.add(forme.id);
     return forme;
   });
   // Les groupes (etape 1), absents d'un dessin plat ; chaque parent nomme un groupe de la table.
   const groupes = o['groupes'] !== undefined ? lireGroupesProjet(o['groupes'], OUTILS, lireOrigine) : undefined;
   for (const f of formes) {
-    if (f.parent !== undefined && !(groupes && Object.prototype.hasOwnProperty.call(groupes, f.parent))) refuser('la forme « ' + f.id + ' » est dans un groupe absent');
-    if (groupes && Object.prototype.hasOwnProperty.call(groupes, f.id)) refuser('une forme et un groupe portent l’identifiant « ' + f.id + ' »');
+    if (f.parent !== undefined && !(groupes && Object.prototype.hasOwnProperty.call(groupes, f.parent))) refuser(t('la forme « {id} » est dans un groupe absent', { id: f.id }));
+    if (groupes && Object.prototype.hasOwnProperty.call(groupes, f.id)) refuser(t('une forme et un groupe portent l’identifiant « {id} »', { id: f.id }));
   }
   return { vb: plan, formes, ...facultatif(o, 'nuancier', lireNuancierDessin), ...facultatif(o, 'reperes', lireReperesProjet), ...(groupes ? { groupes } : {}) };
 }
 
 /** Le nuancier du dessin (ADR-0037) : une provenance admise, des teintes `#rrggbb` et leur opacite si elle n'est pas pleine. */
 function lireNuancierDessin(v: unknown): NuancierDessin {
-  const o = objet(v, 'le nuancier du dessin');
-  const provenance = choix(o['provenance'], 'la provenance du nuancier', PROVENANCES_NUANCIER);
-  const teintes = tableau(o['teintes'], 'les teintes du nuancier du dessin', TEINTES_NUANCIER_MAX).map((x): TeinteDessin => {
-    const t = objet(x, 'une teinte du nuancier du dessin');
-    const hex = texte(t['hex'], 'une teinte du nuancier du dessin', 7);
-    if (!HEX.test(hex)) refuser('une teinte du nuancier du dessin n’est pas un code #rrggbb');
-    const opacite = t['opacite'] === undefined ? undefined : nombre(t['opacite'], 'l’opacité d’une teinte', 0, 1);
-    if (opacite === 1) refuser('l’opacité pleine d’une teinte ne s’écrit pas');
+  const o = objet(v, t('le nuancier du dessin'));
+  const provenance = choix(o['provenance'], t('la provenance du nuancier'), PROVENANCES_NUANCIER);
+  const teintes = tableau(o['teintes'], t('les teintes du nuancier du dessin'), TEINTES_NUANCIER_MAX).map((x): TeinteDessin => {
+    const teinte = objet(x, t('une teinte du nuancier du dessin'));
+    const hex = texte(teinte['hex'], t('une teinte du nuancier du dessin'), 7);
+    if (!HEX.test(hex)) refuser(t('une teinte du nuancier du dessin n’est pas un code #rrggbb'));
+    const opacite = teinte['opacite'] === undefined ? undefined : nombre(teinte['opacite'], t('l’opacité d’une teinte'), 0, 1);
+    if (opacite === 1) refuser(t('l’opacité pleine d’une teinte ne s’écrit pas'));
     return opacite === undefined ? { hex } : { hex, opacite };
   });
   return { provenance, teintes };
@@ -422,61 +423,61 @@ function lireNuancierDessin(v: unknown): NuancierDessin {
 
 /** Les reperes du document (ADR-0038) : deux listes de nombres bornees, dont l'une au moins porte un repere. */
 function lireReperesProjet(v: unknown): ReperesProjet {
-  const o = objet(v, 'les repères');
-  const axe = (cle: 'h' | 'v') => tableau(o[cle], 'les repères', BORNES_PROJET.reperes).map(x => nombre(x, 'un repère'));
+  const o = objet(v, t('les repères'));
+  const axe = (cle: 'h' | 'v') => tableau(o[cle], t('les repères'), BORNES_PROJET.reperes).map(x => nombre(x, t('un repère')));
   const h = axe('h'), v2 = axe('v');
-  if (!h.length && !v2.length) refuser('les repères sont vides');
+  if (!h.length && !v2.length) refuser(t('les repères sont vides'));
   return { h, v: v2 };
 }
 
 /** Le contexte de production tel que le projet le garde : Generique, ou les choix d'une Cricut en identifiants. */
 function lireProduction(v: unknown): ChoixProduction {
-  const o = objet(v, 'le contexte de production');
+  const o = objet(v, t('le contexte de production'));
   const contexte = o['contexte'];
   if (contexte === 'generique') return { contexte: 'generique' };
-  if (contexte !== 'cricut') return refuser('le contexte de production « ' + String(contexte).slice(0, 20) + ' » est inconnu de cette version');
-  const ident = (cle: string) => { const s = texte(o[cle], 'le contexte de production', 40); return IDENTIFIANT.test(s) ? s : refuser('le contexte de production est mal formé'); };
+  if (contexte !== 'cricut') return refuser(t('le contexte de production « {contexte} » est inconnu de cette version', { contexte: String(contexte).slice(0, 20) }));
+  const ident = (cle: string) => { const s = texte(o[cle], t('le contexte de production'), 40); return IDENTIFIANT.test(s) ? s : refuser(t('le contexte de production est mal formé')); };
   return {
     contexte: 'cricut', machine: ident('machine'), tapis: ident('tapis'), materiau: ident('materiau'),
-    procede: choix(o['procede'], 'le procédé', ['decoupe', 'imprimer-decouper', 'dessin-stylo'] as const),
-    unite: choix(o['unite'], 'l’unité', ['in', 'mm'] as const),
+    procede: choix(o['procede'], t('le procédé'), ['decoupe', 'imprimer-decouper', 'dessin-stylo'] as const),
+    unite: choix(o['unite'], t('l’unité'), ['in', 'mm'] as const),
     // Le recalage actif et la feuille sur le tapis (ADR-0039) : presents seulement hors du defaut. L'ancienne valeur `false` (le tapis
     // fixe, avant qu'il soit le defaut, revision du 26 octobre 2026) se lit comme le defaut, sans refus.
-    ...(o['recalage'] === undefined || o['recalage'] === false ? {} : o['recalage'] === true ? { recalage: true as const } : refuser('le recalage du contexte de production est mal formé')),
+    ...(o['recalage'] === undefined || o['recalage'] === false ? {} : o['recalage'] === true ? { recalage: true as const } : refuser(t('le recalage du contexte de production est mal formé'))),
     ...(o['feuille'] === undefined ? {} : { feuille: lireFeuilleProjet(o['feuille']) })
   };
 }
 
 /** La feuille sur le tapis : quatre nombres, des cotes positifs (le profil la ramene ensuite sur son tapis). */
 function lireFeuilleProjet(v: unknown): { x: number; y: number; l: number; h: number } {
-  const f = objet(v, 'la feuille sur le tapis');
-  const n = (cle: string) => nombre(f[cle], 'la feuille sur le tapis', 0, 100_000);
+  const f = objet(v, t('la feuille sur le tapis'));
+  const n = (cle: string) => nombre(f[cle], t('la feuille sur le tapis'), 0, 100_000);
   const r = { x: n('x'), y: n('y'), l: n('l'), h: n('h') };
-  return r.l > 0 && r.h > 0 ? r : refuser('la feuille sur le tapis est vide');
+  return r.l > 0 && r.h > 0 ? r : refuser(t('la feuille sur le tapis est vide'));
 }
 
 function lireNuancier(v: unknown): readonly TeinteProjet[] {
-  return tableau(v, 'le nuancier', BORNES_PROJET.nuancier).map(x => {
-    const o = objet(x, 'une teinte du nuancier');
-    const hex = texte(o['hex'], 'une teinte du nuancier', 7);
-    if (!HEX.test(hex)) refuser('une teinte du nuancier n’est pas un code #rrggbb');
-    return { nom: texte(o['nom'], 'le nom d’une teinte', 80), hex };
+  return tableau(v, t('le nuancier'), BORNES_PROJET.nuancier).map(x => {
+    const o = objet(x, t('une teinte du nuancier'));
+    const hex = texte(o['hex'], t('une teinte du nuancier'), 7);
+    if (!HEX.test(hex)) refuser(t('une teinte du nuancier n’est pas un code #rrggbb'));
+    return { nom: texte(o['nom'], t('le nom d’une teinte'), 80), hex };
   });
 }
 
 function lireRessources(v: unknown): RessourcesProjet {
-  const o = objet(v, 'les ressources');
-  const polices = tableau(o['polices'], 'les polices du projet', BORNES_PROJET.polices).map(x => {
-    const p = objet(x, 'une police du projet');
-    const id = texte(p['id'], 'une police du projet', 16);
-    if (!ID_DEPOSEE.test(id)) refuser('une police du projet n’est pas une fonte déposée');
-    return { id, famille: texte(p['famille'], 'le nom d’une police', BORNES_PROJET.famille), donnees: base64(p['donnees'], 'une police du projet', BORNES_PROJET.base64Police) };
+  const o = objet(v, t('les ressources'));
+  const polices = tableau(o['polices'], t('les polices du projet'), BORNES_PROJET.polices).map(x => {
+    const p = objet(x, t('une police du projet'));
+    const id = texte(p['id'], t('une police du projet'), 16);
+    if (!ID_DEPOSEE.test(id)) refuser(t('une police du projet n’est pas une fonte déposée'));
+    return { id, famille: texte(p['famille'], t('le nom d’une police'), BORNES_PROJET.famille), donnees: base64(p['donnees'], t('une police du projet'), BORNES_PROJET.base64Police) };
   });
-  const images = tableau(o['images'], 'les images du projet', BORNES_PROJET.images).map(x => {
-    const p = objet(x, 'une image du projet');
+  const images = tableau(o['images'], t('les images du projet'), BORNES_PROJET.images).map(x => {
+    const p = objet(x, t('une image du projet'));
     return {
-      role: choix(p['role'], 'le rôle d’une image', ['source'] as const), nom: texte(p['nom'], 'le nom d’une image', BORNES_PROJET.nom),
-      type: choix(p['type'], 'le type d’une image', TYPES_IMAGE), donnees: base64(p['donnees'], 'une image du projet', BORNES_PROJET.base64Image)
+      role: choix(p['role'], t('le rôle d’une image'), ['source'] as const), nom: texte(p['nom'], t('le nom d’une image'), BORNES_PROJET.nom),
+      type: choix(p['type'], t('le type d’une image'), TYPES_IMAGE), donnees: base64(p['donnees'], t('une image du projet'), BORNES_PROJET.base64Image)
     };
   });
   return { polices, images };
@@ -484,34 +485,34 @@ function lireRessources(v: unknown): RessourcesProjet {
 
 function date(v: unknown, quoi: string): string {
   const s = texte(v, quoi, 40);
-  return DATE.test(s) ? s : refuser(quoi + ' n’est pas une date ISO');
+  return DATE.test(s) ? s : refuser(t('{quoi} n’est pas une date ISO', { quoi }));
 }
 
 /** Le projet a la version courante, valide et reconstruit ; ou le refus nomme. Ne leve jamais. */
 export function validerProjet(x: Record<string, unknown>): Projet | { erreur: string } {
   try {
-    if (x['format'] !== FORMAT_PROJET || x['version'] !== VERSION_PROJET) return { erreur: 'Ce projet n’est pas au format ' + VERSION_PROJET + '.' };
+    if (x['format'] !== FORMAT_PROJET || x['version'] !== VERSION_PROJET) return { erreur: t('Ce projet n’est pas au format {version}.', { version: VERSION_PROJET }) };
     return {
       format: FORMAT_PROJET, version: VERSION_PROJET,
-      nom: texte(x['nom'], 'le nom du projet', BORNES_PROJET.nom),
-      ...facultatif(x, 'creeLe', v => date(v, 'la date de création')),
-      ...facultatif(x, 'modifieLe', v => date(v, 'la date de modification')),
+      nom: texte(x['nom'], t('le nom du projet'), BORNES_PROJET.nom),
+      ...facultatif(x, 'creeLe', v => date(v, t('la date de création'))),
+      ...facultatif(x, 'modifieLe', v => date(v, t('la date de modification'))),
       dessin: lireDessinProjet(x['dessin']),
       production: lireProduction(x['production']),
       nuancier: lireNuancier(x['nuancier']),
       ressources: lireRessources(x['ressources'])
     };
   } catch (e) {
-    if (e instanceof Refus) return { erreur: 'Ce projet est illisible : ' + e.raison + '.' };
+    if (e instanceof Refus) return { erreur: t('Ce projet est illisible : {raison}.', { raison: e.raison }) };
     // Une pile qui deborderait, une valeur exotique d'un hote : jamais une exception, toujours un refus.
-    return { erreur: 'Ce projet est illisible.' };
+    return { erreur: t('Ce projet est illisible.') };
   }
 }
 
 /** Un projet venu d'ailleurs (serveur, fichier) : migre, valide, ou refuse en le nommant. Ne leve jamais. */
 export function lireProjet(x: unknown): ResultatProjet {
   let m: ReturnType<typeof migrer>;
-  try { m = migrer(x); } catch { return { erreur: 'Ce projet est illisible.' }; }
+  try { m = migrer(x); } catch { return { erreur: t('Ce projet est illisible.') }; }
   if ('erreur' in m) return m;
   const v = validerProjet(m.donnees);
   return 'erreur' in v ? v : { projet: v, migre: m.migre };

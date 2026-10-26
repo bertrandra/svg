@@ -4,6 +4,7 @@
 // (personnage, batiment, animal...). Pur : le nom et le classement se deduisent de l'identifiant anglais de
 // l'icone, par le lexique et par des mots-cles ; la meme bibliotheque sort toujours de la meme source.
 
+import { langue } from '../util/i18n.js';
 import { EXPRESSIONS, EXPRESSIONS_LIBRES, traduireMot, traduireMotLibre } from './lexique.js';
 import { SOURCE_PAR_DEFAUT, type NatureForme, type OrdreDesMots } from './sourcesFormes.js';
 
@@ -174,6 +175,19 @@ export function nomFrancais(id: string, ordre: OrdreDesMots = 'anglais', libre =
   }
   return [...(ordre === 'anglais' ? jetons.reverse() : jetons), ...nombres].join(' ');
 }
+
+/**
+ * Le nom anglais d'un identifiant (ADR-0042 §3) : ses mots, qui sont deja de l'anglais, dans leur ordre (la tete y est derniere :
+ * « broken-heart » donne « broken heart »), les nombres a la fin comme en francais (« abstract-042 » donne « abstract 042 »).
+ * Aucun dictionnaire : le lexique traduit vers le francais, et l'identifiant est le nom d'origine de la forme.
+ */
+export function nomAnglais(id: string): string {
+  const mots = motsDe(id);
+  return [...mots.filter(m => !NUMERIQUE.test(m)), ...mots.filter(m => NUMERIQUE.test(m))].join(' ');
+}
+
+/** Le nom d'une entree tel qu'on le montre : en anglais, les mots de son identifiant ; sinon son nom francais (corrige ou non). */
+export const nomAffiche = (entree: Pick<EntreeBibliotheque, 'id' | 'nom'>): string => (langue() === 'en' ? nomAnglais(entree.id) : entree.nom);
 
 /** Les mots d'un identifiant que le lexique ne traduit pas (hors nombres et expressions). */
 export function motsInconnus(id: string, libre = false): string[] {
