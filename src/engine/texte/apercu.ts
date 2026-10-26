@@ -7,6 +7,7 @@
 import { boiteChemin, type Boite, type Chemin, type DessinSvg } from '../editionSvg.js';
 import { etendreTraits } from '../contours.js';
 import type { NaturePolice } from '../../model/polices.js';
+import { t } from '../../util/i18n.js';
 
 export interface Apercu {
   /** Le trace a dessiner, dans le repere du texte compose. */
@@ -22,8 +23,8 @@ export interface Apercus { readonly forme: Apercu; readonly ligne: Apercu; reado
 /** Les deux verdicts d'une nature de police : ce que la decoupe, puis le stylo, en feront. */
 export function verdictsApercu(nature: NaturePolice): { forme: string; ligne: string } {
   return nature === 'trait'
-    ? { forme: 'Police à trait : épaissie pour la découpe.', ligne: 'Une seule ligne : idéale au stylo.' }
-    : { forme: 'Lettres pleines : la lame suit leur pourtour.', ligne: 'Au stylo : une ligne au milieu du trait (tracé Médian).' };
+    ? { forme: t('Police à trait : épaissie pour la découpe.'), ligne: t('Une seule ligne : idéale au stylo.') }
+    : { forme: t('Lettres pleines : la lame suit leur pourtour.'), ligne: t('Au stylo : une ligne au milieu du trait (tracé Médian).') };
 }
 
 /**
@@ -34,7 +35,7 @@ export function verdictsApercu(nature: NaturePolice): { forme: string; ligne: st
  */
 export function apercusTexte(d: Chemin, nature: NaturePolice, epaisseur: number, mediane?: Chemin): Apercus {
   const v = verdictsApercu(nature), boite = boiteChemin(d);
-  if (nature === 'contour') return { forme: { d, plein: true, verdict: v.forme }, ligne: { d: mediane ?? d, plein: false, verdict: mediane ? v.ligne : 'Au stylo : lettres creuses, double trait.' }, boite };
+  if (nature === 'contour') return { forme: { d, plein: true, verdict: v.forme }, ligne: { d: mediane ?? d, plein: false, verdict: mediane ? v.ligne : t('Au stylo : lettres creuses, double trait.') }, boite };
   // La forme de decoupe d'une police a trait : ses traits epaissis, comme le ferait « Contour en forme » sur la toile.
   const vb: DessinSvg['vb'] = boite ? [boite.x, boite.y, Math.max(boite.l, 1), Math.max(boite.h, 1)] : [0, 0, 1, 1];
   const seul: DessinSvg = { vb, formes: [{ id: 'f1', d, remplissage: null, contour: '#000000', epaisseur, opacite: 1, regle: 'nonzero', visible: true, verrouille: false, bout: 'round' }] };

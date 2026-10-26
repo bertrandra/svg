@@ -3,18 +3,23 @@
 // (« Forme 3 sélectionnée : … ») sont composees dans zones/annonces.ts avec ces briques.
 
 import { lireHex, type Rgb } from '../util/couleur.js';
+import { nombre, t } from '../util/i18n.js';
 import { pluriel } from '../util/texte.js';
 import { ancre, boiteDe, boiteForme, estDegrade, estEllipseChemin, feuillesDe, reconnaitreFormeDeBase, type Chemin, type Degrade, type DessinSvg, type Forme, type Groupe } from './editionSvg.js';
 
 /**
- * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
- * sous dix, une sous mille, entier au-dela ; la virgule, et pas de zero de fin.
+ * Un nombre dit dans la langue de l'interface, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux
+ * decimales sous dix, une sous mille, entier au-dela ; le separateur decimal de la locale (la virgule en francais, ADR-0042),
+ * pas de zero de fin, et jamais de separateur de milliers.
  */
 export function nombreFr(v: number): string {
   const a = Math.abs(v), d = a < 10 ? 100 : a < 1000 ? 10 : 1;
   const r = Math.round(v * d) / d;
-  return String(Object.is(r, -0) ? 0 : r).replace('.', ',');
+  return String(Object.is(r, -0) ? 0 : r).replace('.', separateurDecimal());
 }
+
+/** Le separateur decimal de la locale courante, lu sur un nombre formate : « , » en francais, « . » en anglais. */
+const separateurDecimal = (): string => nombre(0.5).replace(/\d/g, '') || '.';
 
 const proche = (a: number, b: number, tolerance: number): boolean => Math.abs(a - b) <= tolerance;
 
@@ -61,24 +66,27 @@ const NATURES_IMAGE: Readonly<Record<string, string>> = { png: 'PNG', jpeg: 'JPE
  */
 export function genreDeForme(f: Forme): string {
   // Un texte vivant se nomme par ce qu'il dit (ADR-0022) : « texte « Joyeux Noël » », coupe a trente caracteres.
-  if (f.texte) { const t = f.texte.texte.replace(/\s+/g, ' ').trim(); return 'texte « ' + (t.length > 30 ? t.slice(0, 29) + '…' : t) + ' »'; }
+  if (f.texte) { const texte = f.texte.texte.replace(/\s+/g, ' ').trim(); return t('texte « {texte} »', { texte: texte.length > 30 ? texte.slice(0, 29) + '…' : texte }); }
   // Une image integree (ADR-0012, etape 12) se dit par sa nature, pas par le cadre de son chemin (« rectangle ») : paquet 2-D.
-  if (f.image) return 'image ' + (NATURES_IMAGE[/^data:image\/(png|jpeg|gif|webp)/.exec(f.image.donnees)?.[1] ?? ''] ?? '').trim();
+  if (f.image) {
+    const nature = NATURES_IMAGE[/^data:image\/(png|jpeg|gif|webp)/.exec(f.image.donnees)?.[1] ?? ''] ?? '';
+    return nature ? t('image {nature}', { nature }) : t('image');
+  }
   const b = boiteForme(f);
-  if (!b) return 'tracé vide';
+  if (!b) return t('tracé vide');
   const tol = Math.max(b.l, b.h) * 0.002 + 1e-9;
   const d = f.d, ferme = d.some(c => c.c === 'Z');
   const courbe = d.some(c => c.c === 'C' || c.c === 'Q');
   if (!courbe) {
     const n = points(d).length;
-    if (!ferme) return n === 2 ? 'ligne' : 'ligne brisée';
-    if (estRectangle(d, tol)) return proche(b.l, b.h, tol) ? 'carré' : 'rectangle';
-    if (estEtoile(d)) return 'étoile';
-    if (n === 3) return 'triangle';
-    return reconnaitreFormeDeBase(d) ?? 'polygone à ' + n + ' sommets';
+    if (!ferme) return n === 2 ? t('ligne') : t('ligne brisée');
+    if (estRectangle(d, tol)) return proche(b.l, b.h, tol) ? t('carré') : t('rectangle');
+    if (estEtoile(d)) return t('étoile');
+    if (n === 3) return t('triangle');
+    return reconnaitreFormeDeBase(d) ?? t('polygone à {n} sommets', { n });
   }
-  if (ferme && estEllipse(f, tol)) return proche(b.l, b.h, tol) ? 'cercle' : 'ellipse';
-  return reconnaitreFormeDeBase(d) ?? (ferme ? 'tracé courbe' : 'courbe');
+  if (ferme && estEllipse(f, tol)) return proche(b.l, b.h, tol) ? t('cercle') : t('ellipse');
+  return reconnaitreFormeDeBase(d) ?? (ferme ? t('tracé courbe') : t('courbe'));
 }
 
 // Les noms de couleur : assez pour que « rouge #c81e28 » dise quelque chose a qui n'a que l'oreille.
@@ -95,13 +103,16 @@ export function nomDeCouleur(code: string): string | null {
   const rgb = lireHex(code);
   if (!rgb) return null;
   const { h, c, l } = teinteDe(rgb);
-  if (l < 0.1) return 'noir';
-  if (l > 0.93) return 'blanc';
+  if (l < 0.1) return t('noir');
+  if (l > 0.93) return t('blanc');
   // Une couleur a peine teintee (ecart des canaux sous 8 %) est un gris, quelle que soit sa « saturation » HSL.
-  if (c < 0.08) return l > 0.88 ? 'blanc' : l < 0.3 ? 'gris foncé' : l > 0.7 ? 'gris clair' : 'gris';
-  const base = h < 15 || h >= 345 ? 'rouge' : h < 40 ? (l < 0.4 ? 'marron' : 'orange') : h < 70 ? 'jaune' : h < 165 ? 'vert' : h < 200 ? 'turquoise' : h < 255 ? 'bleu' : h < 290 ? 'violet' : 'rose';
-  const nuance = l < 0.25 ? ' foncé' : l > 0.75 ? ' clair' : '';
-  return base + (base === 'marron' ? '' : nuance);
+  if (c < 0.08) return l > 0.88 ? t('blanc') : l < 0.3 ? t('{nom} foncé', { nom: t('gris') }) : l > 0.7 ? t('{nom} clair', { nom: t('gris') }) : t('gris');
+  const marron = h >= 15 && h < 40 && l < 0.4;
+  const base = h < 15 || h >= 345 ? t('rouge') : marron ? t('marron') : h < 40 ? t('orange') : h < 70 ? t('jaune') : h < 165 ? t('vert') : h < 200 ? t('turquoise') : h < 255 ? t('bleu') : h < 290 ? t('violet') : t('rose');
+  // La nuance est un gabarit : l'anglais met l'adjectif devant (« dark blue »), le francais derriere. Les noms de couleur et ces
+  // gabarits sont ceux du modele (model.json) : nomsCouleurs.ts les emploie aussi.
+  if (marron) return base;
+  return l < 0.25 ? t('{nom} foncé', { nom: base }) : l > 0.75 ? t('{nom} clair', { nom: base }) : base;
 }
 
 /** « rouge #c81e28 » : le nom puis le code, ou le code seul si le nom manque. */
@@ -116,8 +127,9 @@ export const couleurDite = (code: string): string => {
  */
 export function degradeDit(g: Degrade): string {
   const premier = g.arrets[0], dernier = g.arrets[g.arrets.length - 1];
-  const de = premier ? ' du ' + couleurDite(premier.couleur) : '', a = dernier ? ' au ' + couleurDite(dernier.couleur) : '';
-  return 'dégradé ' + (g.genre === 'lineaire' ? 'linéaire' : 'radial') + de + a + (g.arrets.length > 2 ? ', ' + g.arrets.length + ' arrêts' : '');
+  const genre = g.genre === 'lineaire' ? t('linéaire') : t('radial');
+  const tete = premier && dernier ? t('dégradé {genre} du {de} au {a}', { genre, de: couleurDite(premier.couleur), a: couleurDite(dernier.couleur) }) : t('dégradé {genre}', { genre });
+  return tete + (g.arrets.length > 2 ? ', ' + pluriel(g.arrets.length, 'arrêt') : '');
 }
 
 /**
@@ -127,17 +139,21 @@ export function degradeDit(g: Degrade): string {
 export function peintureDite(f: Forme): string {
   const morceaux: string[] = [];
   const fond = estDegrade(f.peintureRemplissage) ? f.peintureRemplissage : null, trait = estDegrade(f.peintureContour) ? f.peintureContour : null;
-  morceaux.push(fond ? 'fond ' + degradeDit(fond) : f.remplissage ? 'fond ' + couleurDite(f.remplissage) : 'sans fond');
-  if (trait) morceaux.push('contour ' + degradeDit(trait));
-  else if (f.contour) morceaux.push('contour ' + couleurDite(f.contour));
+  morceaux.push(fond ? t('fond {peinture}', { peinture: degradeDit(fond) }) : f.remplissage ? t('fond {peinture}', { peinture: couleurDite(f.remplissage) }) : t('sans fond'));
+  if (trait) morceaux.push(t('contour {peinture}', { peinture: degradeDit(trait) }));
+  else if (f.contour) morceaux.push(t('contour {peinture}', { peinture: couleurDite(f.contour) }));
   return morceaux.join(', ');
 }
 
 /** « 120 × 80 à 40, 60 » : la taille puis le coin haut gauche de la boite ; vide pour un tracé sans etendue. */
 export function mesuresDites(f: Forme): string {
   const b = boiteForme(f);
-  return b ? nombreFr(b.l) + ' × ' + nombreFr(b.h) + ' à ' + nombreFr(b.x) + ', ' + nombreFr(b.y) : '';
+  return b ? boiteDite(b) : '';
 }
+
+/** La taille puis le coin haut gauche d'une boite, dans la langue de l'interface. */
+const boiteDite = (b: { readonly x: number; readonly y: number; readonly l: number; readonly h: number }): string =>
+  t('{l} × {h} à {x}, {y}', { l: nombreFr(b.l), h: nombreFr(b.h), x: nombreFr(b.x), y: nombreFr(b.y) });
 
 /** Le numero d'une forme, tel que l'inspecteur et les calques le disent : f12 devient 12. */
 export const numeroDeForme = (f: Forme): string => f.id.slice(1);
@@ -148,26 +164,26 @@ export const numeroDeForme = (f: Forme): string => f.id.slice(1);
  */
 export function nomDeForme(f: Forme): string {
   const genre = genreDeForme(f);
-  return genre.charAt(0).toUpperCase() + genre.slice(1) + ' ' + numeroDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', verrouillée' : '') + (f.visible ? '' : ', masquée');
+  return genre.charAt(0).toUpperCase() + genre.slice(1) + ' ' + numeroDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', ' + t('verrouillée') : '') + (f.visible ? '' : ', ' + t('masquée'));
 }
 
 // ---------------------------------------------------------------- les groupes (ADR-0012, annexe 6 §7)
 
 /** Le nom d'un groupe tel qu'on le dit : le sien, sinon « Groupe 3 » (le numero de son identifiant `g3`). */
-export const nomDeGroupe = (g: Groupe): string => g.nom ?? 'Groupe ' + (/^g(\d+)$/.exec(g.id)?.[1] ?? g.id);
+export const nomDeGroupe = (g: Groupe): string => g.nom ?? t('Groupe {n}', { n: /^g(\d+)$/.exec(g.id)?.[1] ?? g.id });
 
 /** « groupe « Nuage » », ou « groupe 3 » : un groupe nomme dans une phrase. */
-export const groupeDit = (g: Groupe): string => (g.nom ? 'groupe « ' + g.nom + ' »' : nomDeGroupe(g).toLowerCase());
+export const groupeDit = (g: Groupe): string => (g.nom ? t('groupe « {nom} »', { nom: g.nom }) : nomDeGroupe(g).toLowerCase());
 
 /** Ce que le groupe porte, dans l'ordre de l'annexe 6 §7 : « découpé, masque d’opacité, flou, ombre portée, opacité 50 % ». */
 export function porteParGroupe(g: Groupe): string[] {
-  const t: string[] = [];
-  if (g.decoupe) t.push('découpé');
-  if (g.masque) t.push('masque d’opacité');
-  if (g.effets?.flou) t.push('flou');
-  if (g.effets?.ombre) t.push('ombre portée');
-  if (g.opacite !== undefined && g.opacite < 1) t.push('opacité ' + Math.round(g.opacite * 100) + ' %');
-  return t;
+  const porte: string[] = [];
+  if (g.decoupe) porte.push(t('découpé'));
+  if (g.masque) porte.push(t('masque d’opacité'));
+  if (g.effets?.flou) porte.push(t('flou'));
+  if (g.effets?.ombre) porte.push(t('ombre portée'));
+  if (g.opacite !== undefined && g.opacite < 1) porte.push(t('opacité {p} %', { p: Math.round(g.opacite * 100) }));
+  return porte;
 }
 
 /**
@@ -176,7 +192,7 @@ export function porteParGroupe(g: Groupe): string[] {
  */
 export function detailsGroupe(d: DessinSvg, g: Groupe): string {
   const b = boiteDe(d, [g.id]);
-  return [pluriel(feuillesDe(d, [g.id]).length, 'forme'), ...porteParGroupe(g), ...(b ? [nombreFr(b.l) + ' × ' + nombreFr(b.h) + ' à ' + nombreFr(b.x) + ', ' + nombreFr(b.y)] : [])].join(', ');
+  return [pluriel(feuillesDe(d, [g.id]).length, 'forme'), ...porteParGroupe(g), ...(b ? [boiteDite(b)] : [])].join(', ');
 }
 
 /** « groupe « Nuage », 3 formes, 80 × 40 à 10, 20 » (annexe 6 §7). */

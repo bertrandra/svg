@@ -7,7 +7,7 @@
 import type { MultiPolygon } from 'polygon-clipping';
 import type { Chemin, Commande, DessinSvg, Forme } from '../editionSvg.js';
 import { regionDeForme, toleranceBooleen } from '../booleens.js';
-import { nombre } from '../../util/i18n.js';
+import { nombre, t } from '../../util/i18n.js';
 
 export interface OptionsHachures {
   /** L'ecart entre deux lignes, d'axe en axe, en unites du plan : la largeur du stylo. */
@@ -42,7 +42,7 @@ export function lignesDeHachure(region: MultiPolygon, o: OptionsHachures): Array
   if (!vs.length || !(o.ecart > 0)) return [];
   const vMin = Math.min(...vs), vMax = Math.max(...vs);
   const n = Math.floor((vMax - vMin) / o.ecart + 0.5);
-  if (n > LIGNES_MAX) return { erreur: 'Ces hachures demanderaient plus de ' + nombre(LIGNES_MAX) + ' lignes : élargissez l’écart, ou réduisez la forme.' };
+  if (n > LIGNES_MAX) return { erreur: t('Ces hachures demanderaient plus de {n} lignes : élargissez l’écart, ou réduisez la forme.', { n: nombre(LIGNES_MAX) }) };
   const lignes: Array<readonly [readonly [number, number], readonly [number, number]]> = [];
   for (let k = 0; k < n; k++) {
     const v = vMin + o.ecart / 2 + k * o.ecart;

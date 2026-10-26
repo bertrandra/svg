@@ -18,10 +18,13 @@ import { boite } from './pages.js';
 import { couleurDe, dessine, formeDe, intersecter } from './trace.js';
 import { dictPolice, lettres, policeDe, poser } from './texte.js';
 import type { PolicePdf } from './polices.js';
+import { t } from '../../util/i18n.js';
 
 type Point = readonly [number, number];
 
-const refus = (quoi: string): RefusPdf => new RefusPdf('Ce PDF ' + quoi + ' : simplifiez-le dans votre logiciel avant de l’exporter.');
+const refus = (quoi: string): RefusPdf => new RefusPdf(t('Ce PDF {quoi} : simplifiez-le dans votre logiciel avant de l’exporter.', { quoi }));
+/** Le refus d'une coordonnee hors borne, le meme pour un point et pour une forme. */
+const coordonneesDemesurees = (): RefusPdf => refus(t('a des coordonnées démesurées (au-delà de ± {n})', { n: enFrancais(LIMITES_PDF.coordonnee) }));
 
 /** Un flux de contenu en cours d'execution, avec ses ressources et son etat. Un formulaire en a un a lui. */
 export class Interprete {
@@ -52,11 +55,11 @@ export class Interprete {
         const o = lireObjet(l, false);
         if (o === undefined) break;
         if (!(o instanceof Mot)) {
-          if (this.ops.length >= LIMITES_PDF.operandes) throw new SyntaxePdf('trop d’opérandes');
+          if (this.ops.length >= LIMITES_PDF.operandes) throw new SyntaxePdf(t('trop d’opérandes'));
           this.ops.push(o);
           continue;
         }
-        if (++this.ctx.operateurs > LIMITES_PDF.operateurs) throw refus('compte plus de ' + enFrancais(LIMITES_PDF.operateurs) + ' opérations de dessin');
+        if (++this.ctx.operateurs > LIMITES_PDF.operateurs) throw refus(t('compte plus de {n} opérations de dessin', { n: enFrancais(LIMITES_PDF.operateurs) }));
         if (o.v === 'BI') this.imageEnLigne(l);
         else this.operateur(o.v);
         this.ops.length = 0;
@@ -79,7 +82,7 @@ export class Interprete {
 
   private point(x: number, y: number): Point {
     const t = this.t, px = t[0] * x + t[2] * y + t[4], py = t[1] * x + t[3] * y + t[5];
-    if (!(Math.abs(px) <= LIMITES_PDF.coordonnee && Math.abs(py) <= LIMITES_PDF.coordonnee)) throw refus('a des coordonnées démesurées (au-delà de ± ' + enFrancais(LIMITES_PDF.coordonnee) + ')');
+    if (!(Math.abs(px) <= LIMITES_PDF.coordonnee && Math.abs(py) <= LIMITES_PDF.coordonnee)) throw coordonneesDemesurees();
     return [px, py];
   }
 
@@ -154,7 +157,7 @@ export class Interprete {
   private glypheType3(t3: NonNullable<PolicePdf['type3']>, nom: string, ctm: Matrice): void {
     const proc = this.ctx.doc.valeur(t3.procs, nom);
     if (!estFlux(proc)) { this.ctx.pertes.caracteresInconnus++; return; }
-    if (this.ctx.formulairesActifs.has(proc.debut)) throw new RefusPdf('Ce PDF contient une glyphe qui se dessine elle-même : il ne se lit pas ici.');
+    if (this.ctx.formulairesActifs.has(proc.debut)) throw new RefusPdf(t('Ce PDF contient une glyphe qui se dessine elle-même : il ne se lit pas ici.'));
     if (this.profondeur + 1 > LIMITES_PDF.profondeurFormulaires) throw refus('imbrique des formulaires sur plus de ' + LIMITES_PDF.profondeurFormulaires + ' niveaux');
     if (++this.ctx.formulaires > LIMITES_PDF.formulaires) throw refus('dessine plus de ' + enFrancais(LIMITES_PDF.formulaires) + ' formulaires');
     const etat = copier(this.e);
@@ -254,8 +257,8 @@ export class Interprete {
   private ajouterForme(f: Forme): void {
     if (this.ctx.formes.length >= LIMITES_PDF.formes) throw refus('dessine plus de ' + enFrancais(LIMITES_PDF.formes) + ' formes sur cette page');
     this.ctx.segments += f.d.length;
-    if (this.ctx.segments > LIMITES_PDF.segments) throw refus('compte plus de ' + enFrancais(LIMITES_PDF.segments) + ' segments de tracé sur cette page');
-    for (const c of f.d) for (const v of c.p) if (!(Math.abs(v) <= LIMITES_PDF.coordonnee)) throw refus('a des coordonnées démesurées (au-delà de ± ' + enFrancais(LIMITES_PDF.coordonnee) + ')');
+    if (this.ctx.segments > LIMITES_PDF.segments) throw refus(t('compte plus de {n} segments de tracé sur cette page', { n: enFrancais(LIMITES_PDF.segments) }));
+    for (const c of f.d) for (const v of c.p) if (!(Math.abs(v) <= LIMITES_PDF.coordonnee)) throw coordonneesDemesurees();
     this.ctx.formes.push(f);
   }
 
@@ -263,7 +266,7 @@ export class Interprete {
     const e = this.e;
     switch (op) {
       case 'q':
-        if (this.pile.length >= LIMITES_PDF.pile) throw refus('empile plus de ' + LIMITES_PDF.pile + ' états graphiques');
+        if (this.pile.length >= LIMITES_PDF.pile) throw refus(t('empile plus de {n} états graphiques', { n: LIMITES_PDF.pile }));
         this.pile.push(copier(e));
         return true;
       case 'Q': { const avant = this.pile.pop(); if (avant) { this.e = avant; this.t = multiplier(this.ctx.page, avant.ctm); } return true; }
@@ -359,10 +362,10 @@ export class Interprete {
     const params = new Map<string, ObjetPdf>();
     for (;;) {
       const cle = lireObjet(l, false);
-      if (cle === undefined) throw new SyntaxePdf('une image en ligne coupée');
-      if (cle instanceof Mot) { if (cle.v === 'ID') break; throw new SyntaxePdf('une image en ligne mal décrite'); }
+      if (cle === undefined) throw new SyntaxePdf(t('une image en ligne coupée'));
+      if (cle instanceof Mot) { if (cle.v === 'ID') break; throw new SyntaxePdf(t('une image en ligne mal décrite')); }
       const v = lireObjet(l, false);
-      if (!estNom(cle) || v === undefined || v instanceof Mot) throw new SyntaxePdf('une image en ligne mal décrite');
+      if (!estNom(cle) || v === undefined || v instanceof Mot) throw new SyntaxePdf(t('une image en ligne mal décrite'));
       params.set(cle, v);
     }
     const o = l.octets;
@@ -372,7 +375,7 @@ export class Interprete {
     // Faute de longueur : le premier « EI » entoure de blancs, comme les lecteurs courants.
     let fin = chercher(o, 'EI', debut, l.fin);
     while (fin >= 0 && !(estBlanc(o[fin - 1] ?? 32) && (fin + 2 >= l.fin || estBlanc(o[fin + 2] ?? 32)))) fin = chercher(o, 'EI', fin + 2, l.fin);
-    if (fin < 0) throw new SyntaxePdf('une image en ligne sans fin');
+    if (fin < 0) throw new SyntaxePdf(t('une image en ligne sans fin'));
     l.pos = fin + 2;
     if (!this.cache) this.ctx.pertes.images++;
   }
@@ -386,7 +389,7 @@ export class Interprete {
     const genre = doc.valeur(x.dict, 'Subtype');
     if (genre === 'Image') { if (!this.cache) this.ctx.pertes.images++; return; }
     if (genre !== 'Form') return;
-    if (this.ctx.formulairesActifs.has(x.debut)) throw new RefusPdf('Ce PDF contient un formulaire qui se dessine lui-même : il ne se lit pas ici.');
+    if (this.ctx.formulairesActifs.has(x.debut)) throw new RefusPdf(t('Ce PDF contient un formulaire qui se dessine lui-même : il ne se lit pas ici.'));
     if (this.profondeur + 1 > LIMITES_PDF.profondeurFormulaires) throw refus('imbrique des formulaires sur plus de ' + LIMITES_PDF.profondeurFormulaires + ' niveaux');
     if (++this.ctx.formulaires > LIMITES_PDF.formulaires) throw refus('dessine plus de ' + enFrancais(LIMITES_PDF.formulaires) + ' formulaires');
     this.deplier(x.dict, donneesOuRien(this.ctx, x), x.debut);

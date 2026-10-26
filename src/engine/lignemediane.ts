@@ -26,6 +26,7 @@ import { raccorder, traverserJonctions, type Trace } from './lignemediane/raccor
 import { amincir, distances2, retirerMarches } from './lignemediane/squelette.js';
 import type { ImageRgba } from './pixels/types.js';
 import type { Finesse } from './vectorisation.js';
+import { t } from '../util/i18n.js';
 
 /** Les reglages de la ligne mediane : chacun, present, a ete touche ; absent, il suit l'image et le grain. */
 export interface ReglagesLigne {
@@ -96,12 +97,14 @@ export interface ParametreLigne {
 }
 
 /** Les curseurs, dans l'ordre ou on les propose : l'epaisseur se voit, les autres sont des reglages fins. */
+// Libelle et aide sont des accesseurs : la langue de l'interface est posee apres le chargement du module (ADR-0042), et chaque
+// lecture rend le texte dans la langue du moment ; les bornes, elles, ne changent pas.
 export const PARAMETRES_LIGNE: readonly ParametreLigne[] = [
-  { id: 'epaisseur', libelle: 'Épaisseur du trait', aide: 'L’épaisseur de la ligne écrite. Par défaut, celle du trait de l’image, mesurée au milieu du trait.', unite: ' px', min: 0.5, max: 30, pas: 0.5 },
-  { id: 'seuil', libelle: 'Séparer le trait du fond', aide: 'Plus haut : seuls les pixels nettement plus foncés (ou plus clairs) que le fond sont du trait. Par défaut, le seuil d’Otsu de l’image.', min: 1, max: 254, pas: 1 },
-  { id: 'taches', libelle: 'Ignorer les taches de moins de', aide: 'Les taches et les trous de moins de N pixels de côté sont ignorés : poussières du scan, points blancs dans un trait épais.', unite: ' px', min: 0, max: 16, pas: 1 },
-  { id: 'barbules', libelle: 'Retirer les barbules de moins de', aide: 'Les petites branches parasites, aux coins d’un trait épais, de moins de N pixels, sont retirées. Par défaut, selon l’épaisseur du trait et le grain.', unite: ' px', min: 0, max: 60, pas: 1 },
-  { id: 'coupures', libelle: 'Raccorder les coupures de moins de', aide: 'Deux bouts de trait qui se font face, à moins de N pixels, se rejoignent : le stylo ne se lève pas pour rien. 0 : aucun raccord.', unite: ' px', min: 0, max: 24, pas: 1 }
+  { id: 'epaisseur', get libelle() { return t('Épaisseur du trait'); }, get aide() { return t('L’épaisseur de la ligne écrite. Par défaut, celle du trait de l’image, mesurée au milieu du trait.'); }, unite: ' px', min: 0.5, max: 30, pas: 0.5 },
+  { id: 'seuil', get libelle() { return t('Séparer le trait du fond'); }, get aide() { return t('Plus haut : seuls les pixels nettement plus foncés (ou plus clairs) que le fond sont du trait. Par défaut, le seuil d’Otsu de l’image.'); }, min: 1, max: 254, pas: 1 },
+  { id: 'taches', get libelle() { return t('Ignorer les taches de moins de'); }, get aide() { return t('Les taches et les trous de moins de N pixels de côté sont ignorés : poussières du scan, points blancs dans un trait épais.'); }, unite: ' px', min: 0, max: 16, pas: 1 },
+  { id: 'barbules', get libelle() { return t('Retirer les barbules de moins de'); }, get aide() { return t('Les petites branches parasites, aux coins d’un trait épais, de moins de N pixels, sont retirées. Par défaut, selon l’épaisseur du trait et le grain.'); }, unite: ' px', min: 0, max: 60, pas: 1 },
+  { id: 'coupures', get libelle() { return t('Raccorder les coupures de moins de'); }, get aide() { return t('Deux bouts de trait qui se font face, à moins de N pixels, se rejoignent : le stylo ne se lève pas pour rien. 0 : aucun raccord.'); }, unite: ' px', min: 0, max: 24, pas: 1 }
 ];
 
 /** Pose un reglage ; une valeur egale a celle par defaut se retire. Rend undefined quand plus rien n'est touche. */
@@ -117,11 +120,22 @@ export function retirerLigne(r: ReglagesLigne | undefined, id: keyof ReglagesLig
   return Object.keys(sortie).length ? sortie : undefined;
 }
 
-const LIBELLES_LIGNE: Record<keyof ReglagesLigne, string> = { epaisseur: 'épaisseur', seuil: 'seuil', taches: 'taches', barbules: 'barbules', coupures: 'coupures', couleur: 'couleur' };
+const ORDRE_LIGNE: readonly (keyof ReglagesLigne)[] = ['epaisseur', 'seuil', 'taches', 'barbules', 'coupures', 'couleur'];
+/** Le mot court d'un reglage, dans la langue du moment. */
+function libelleLigne(k: keyof ReglagesLigne): string {
+  switch (k) {
+    case 'epaisseur': return t('épaisseur');
+    case 'seuil': return t('seuil');
+    case 'taches': return t('taches');
+    case 'barbules': return t('barbules');
+    case 'coupures': return t('coupures');
+    case 'couleur': return t('couleur');
+  }
+}
 
 /** Les reglages touches en mots courts : « épaisseur 4 », « barbules 6 », « noir ». */
 export function resumeLigne(r: ReglagesLigne | undefined): string[] {
-  return (Object.keys(LIBELLES_LIGNE) as (keyof ReglagesLigne)[]).filter(k => r?.[k] !== undefined).map(k => (k === 'couleur' ? (r?.couleur === 'noir' ? 'noir' : 'couleur du trait') : LIBELLES_LIGNE[k] + ' ' + String(r?.[k])));
+  return ORDRE_LIGNE.filter(k => r?.[k] !== undefined).map(k => (k === 'couleur' ? (r?.couleur === 'noir' ? t('noir') : t('couleur du trait')) : libelleLigne(k) + ' ' + String(r?.[k])));
 }
 
 /** La mediane des epaisseurs locales le long du squelette : deux fois la distance au fond, moins un demi-pixel. */
@@ -180,11 +194,11 @@ const forme = (k: number, d: Chemin, couleur: string, epaisseur: number): Forme 
 /** Le masque nettoye, ou la raison d'un refus. */
 function masqueNettoye(image: ImageRgba, ecarts: Uint8Array, seuil: number, taches: number): Masque | { erreur: string } {
   const { masque, encre } = masquer(ecarts, image.largeur, image.hauteur, seuil);
-  if (!encre) return { erreur: 'Aucun trait trouvé : baissez « Séparer le trait du fond », ou vérifiez le détourage.' };
-  if (encre > PART_TRAIT_MAX * image.largeur * image.hauteur) return { erreur: 'Plus de la moitié de l’image est du trait : ce n’est pas un dessin au trait. Montez « Séparer le trait du fond », ou choisissez un autre mode.' };
+  if (!encre) return { erreur: t('Aucun trait trouvé : baissez « Séparer le trait du fond », ou vérifiez le détourage.') };
+  if (encre > PART_TRAIT_MAX * image.largeur * image.hauteur) return { erreur: t('Plus de la moitié de l’image est du trait : ce n’est pas un dessin au trait. Montez « Séparer le trait du fond », ou choisissez un autre mode.') };
   retirerTaches(masque, taches * taches);
   boucherTrous(masque, taches * taches);
-  if (!masque.bits.some(b => b)) return { erreur: 'Aucun trait ne reste : les taches ignorées ont tout retiré. Baissez « Ignorer les taches ».' };
+  if (!masque.bits.some(b => b)) return { erreur: t('Aucun trait ne reste : les taches ignorées ont tout retiré. Baissez « Ignorer les taches ».') };
   return masque;
 }
 
@@ -196,7 +210,7 @@ function masqueNettoye(image: ImageRgba, ecarts: Uint8Array, seuil: number, tach
  */
 export function tracerLigneMediane(image: ImageRgba, fond: Rgb, finesse: Finesse, reglages?: ReglagesLigne): ResultatLigne | { erreur: string } {
   const { largeur: l, hauteur: h } = image;
-  if (l * h > PIXELS_LIGNE_MAX) return { erreur: 'Image trop grande pour la ligne médiane (' + l + ' × ' + h + ' px, quatre millions de pixels au plus) : désactivez « Agrandir ×2 ».' };
+  if (l * h > PIXELS_LIGNE_MAX) return { erreur: t('Image trop grande pour la ligne médiane ({l} × {h} px, quatre millions de pixels au plus) : désactivez « Agrandir ×2 ».', { l, h }) };
   const r = reglages ?? {}, grain = GRAINS[finesse];
   const ecarts = contrastes(image, fond), seuilMesure = seuilOtsu(ecarts);
   const masque = masqueNettoye(image, ecarts, r.seuil ?? seuilMesure, r.taches ?? grain.taches);
@@ -217,14 +231,14 @@ export function tracerLigneMediane(image: ImageRgba, fond: Rgb, finesse: Finesse
   const couleur = v.couleur === 'noir' ? '#000000' : mesure.couleur;
   const formes: Forme[] = [];
   let points = 0;
-  for (const t of traces) {
-    const d = versChemin(t.pts, t.ferme, grain.tolerance, grain.passes);
+  for (const trace of traces) {
+    const d = versChemin(trace.pts, trace.ferme, grain.tolerance, grain.passes);
     if (!d.length) continue;
     points += d.filter(c => c.c !== 'Z').length;
-    if (points > POINTS_LIGNE_MAX) return { erreur: 'Plus de cent mille points : ce n’est plus un dessin au trait. Choisissez un grain plus lisse, ou ignorez plus de taches.' };
+    if (points > POINTS_LIGNE_MAX) return { erreur: t('Plus de cent mille points : ce n’est plus un dessin au trait. Choisissez un grain plus lisse, ou ignorez plus de taches.') };
     formes.push(forme(formes.length, d, couleur, v.epaisseur));
   }
-  if (formes.length > TRACES_LIGNE_MAX) return { erreur: formes.length + ' tracés : c’est une photo plus qu’un dessin au trait. Ignorez plus de taches, ou choisissez un grain plus lisse.' };
+  if (formes.length > TRACES_LIGNE_MAX) return { erreur: t('{n} tracés : c’est une photo plus qu’un dessin au trait. Ignorez plus de taches, ou choisissez un grain plus lisse.', { n: formes.length }) };
   const dessin: DessinSvg = { vb: [0, 0, l, h], formes };
   return { svg: ecrireDessin(dessin), traces: formes.length, points, mesure };
 }

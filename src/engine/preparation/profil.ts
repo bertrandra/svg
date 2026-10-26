@@ -9,6 +9,7 @@ import {
 } from '../../model/contextes.js';
 import type { MarqueProduction } from '../edition/production.js';
 import { nombreFr } from '../description.js';
+import { t } from '../../util/i18n.js';
 
 /** Le profil d'un contexte de production, en unites du plan (1/96 po) sauf mention. */
 export interface ProfilProduction {
@@ -49,9 +50,10 @@ export const versUnite = (unites: number, unite: UniteLongueur): number => (unit
 export const depuisUnite = (valeur: number, unite: UniteLongueur): number => (unite === 'in' ? valeur * UNITES_PLAN_PAR_POUCE : (valeur / MM_PAR_POUCE) * UNITES_PLAN_PAR_POUCE);
 
 /** Une longueur du plan dite en pouces ou en millimetres : « 2,5 po », « 63,5 mm ». */
-export const texteMesure = (unites: number, unite: UniteLongueur): string => nombreFr(versUnite(unites, unite)) + ' ' + NOMS_UNITE[unite];
+// Le nom de l'unite se traduit a l'affichage (ADR-0042) : la donnee reste celle de model/contextes.ts.
+export const texteMesure = (unites: number, unite: UniteLongueur): string => nombreFr(versUnite(unites, unite)) + ' ' + t(NOMS_UNITE[unite]);
 /** Deux longueurs : « 11,5 × 11,5 po ». */
-export const texteTaille = (l: number, h: number, unite: UniteLongueur): string => nombreFr(versUnite(l, unite)) + ' × ' + nombreFr(versUnite(h, unite)) + ' ' + NOMS_UNITE[unite];
+export const texteTaille = (l: number, h: number, unite: UniteLongueur): string => nombreFr(versUnite(l, unite)) + ' × ' + nombreFr(versUnite(h, unite)) + ' ' + t(NOMS_UNITE[unite]);
 
 const centieme = (v: number): number => Math.round(v * 100) / 100 + 0;
 const memesFeuilles = (a: Feuille, b: Feuille): boolean => a.x === b.x && a.y === b.y && a.l === b.l && a.h === b.h;

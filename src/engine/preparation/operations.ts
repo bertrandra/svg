@@ -10,6 +10,7 @@ import { naturePolice } from '../../model/polices.js';
 import type { Procede } from '../../model/contextes.js';
 import type { DessinSvg, Forme, Operation } from '../editionSvg.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 
 /** Les procedes ou l'operation se choisit forme par forme : Print Then Cut imprime tout et ne decoupe que la silhouette. */
 export const operationsApplicables = (procede: Procede): boolean => procede !== 'imprimer-decouper';
@@ -90,9 +91,10 @@ export function poserOperation(dessin: DessinSvg, ids: readonly string[], operat
 
 /** « 2 formes passent à l’écriture au stylo. », « Une forme passe à la découpe. », ou ce qui n'a pas change. */
 export function phraseOperation(n: number, operation: Operation): string {
-  const vers = operation === 'decoupe' ? 'à la découpe' : 'à l’écriture au stylo';
-  if (!n) return operation === 'decoupe' ? 'Ces formes sont déjà à couper.' : 'Ces formes sont déjà à écrire.';
-  return (n > 1 ? pluriel(n, 'forme') + ' passent ' : 'Une forme passe ') + vers + '.';
+  if (!n) return operation === 'decoupe' ? t('Ces formes sont déjà à couper.') : t('Ces formes sont déjà à écrire.');
+  // Quatre phrases entieres : la destination et l'accord ne se traduisent pas par morceaux (ADR-0042).
+  if (operation === 'decoupe') return n > 1 ? t('{formes} passent à la découpe.', { formes: pluriel(n, 'forme') }) : t('Une forme passe à la découpe.');
+  return n > 1 ? t('{formes} passent à l’écriture au stylo.', { formes: pluriel(n, 'forme') }) : t('Une forme passe à l’écriture au stylo.');
 }
 
 /**
