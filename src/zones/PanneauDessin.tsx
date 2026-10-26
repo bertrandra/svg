@@ -4,7 +4,7 @@
 import { memo, useMemo, useState } from 'react';
 import { ajusterPlan, FICHES_FORMES, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
 import type { Bibliotheque } from '../io/bibliotheque.js';
-import type { EntreeBibliotheque } from '../model/bibliotheque.js';
+import { nomAffiche, type EntreeBibliotheque } from '../model/bibliotheque.js';
 import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
 import { pluriel } from '../util/texte.js';
@@ -169,7 +169,7 @@ const BibliothequeChargee = memo(function BibliothequeChargee({ bibliotheque }: 
       <RechercheFormes bibliotheque={b} choisir={choisir} ajouter={x => poserPanier(p => (p.includes(x) ? p : [...p, x]))} parPage={24} compact procede={procede} />
       {panier.length ? (
         <div className="panier">
-          <span className="aide">{t('{n} dans le panier : {noms}', { n: panier.length, noms: panier.map(x => x.nom).join(', ') })}</span>
+          <span className="aide">{t('{n} dans le panier : {noms}', { n: panier.length, noms: panier.map(x => nomAffiche(x)).join(', ') })}</span>
           <div className="boutons">
             <button type="button" className="primaire" onClick={insererPanier}>{t('Insérer en grille')}</button>
             <button type="button" className="discret" onClick={() => poserPanier([])}>{t('Vider')}</button>

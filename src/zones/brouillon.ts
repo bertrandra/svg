@@ -12,8 +12,6 @@ export const SEUIL_EFFETS_AU_REPOS = 20;
 
 /** La phrase dite une fois, au premier geste qui retire les effets. */
 export const phraseEffetsAuRepos = (): string => t('Effets affichés au repos : au-delà de {n} formes ou groupes à effet, flous et ombres se masquent pendant un geste.', { n: SEUIL_EFFETS_AU_REPOS });
-/** La constante d'avant, pour Gestes.ts : evaluee au chargement du module, donc en francais ; la fonction suit la langue de la session. */
-export const PHRASE_EFFETS_AU_REPOS = phraseEffetsAuRepos();
 
 const memo = new WeakMap<DessinSvg, number>();
 

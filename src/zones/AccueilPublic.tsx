@@ -53,7 +53,7 @@ export function QuestionPublic({ choix, ouverte, choisir, rouvrir }: ProprietesQ
     return (
       <section className="public-rappel" aria-label={t('Public de l’accueil')}>
         <p>
-          {choix && choix !== 'aucun' ? <>{insecables(t('Accueil adapté : '))}<strong>{titrePublic(choix)}</strong></> : t('Accueil général, pour tous les usages.')}
+          {choix && choix !== 'aucun' ? <>{insecables(t('Accueil adapté : '))}<strong>{t(titrePublic(choix))}</strong></> : t('Accueil général, pour tous les usages.')}
           {' '}<button type="button" className="discret" onClick={rouvrir}>{choix && choix !== 'aucun' ? t('Changer de public') : t('Choisir un public')}</button>
         </p>
       </section>
@@ -72,7 +72,7 @@ export function QuestionPublic({ choix, ouverte, choisir, rouvrir }: ProprietesQ
                   label-content-name-mismatch : un nom reduit au titre ne contenait plus le texte visible). */}
               <Icone nom={p.icone} taille={20} />
               <span className="public-titre">{t(p.titre)}</span>
-              <span className="public-phrase">{t(p.phrase)}</span>
+              <span className="public-phrase">{insecables(t(p.phrase))}</span>
             </button>
           </li>
         ))}
@@ -137,7 +137,7 @@ export function PanneauIntegration({ circuit, essayer, recu }: ProprietesIntegra
       <h3 id="options-integration">{t('Les options principales')}</h3>
       <dl className="options-integration">
         {OPTIONS_INTEGRATION.map(([nom, phrase]) => (
-          <div key={nom}><dt><code>{nom}</code></dt><dd>{t(phrase)}</dd></div>
+          <div key={nom}><dt><code>{nom}</code></dt><dd>{insecables(t(phrase))}</dd></div>
         ))}
       </dl>
       <h3 id="code-integration">{t('Exemple, avec le bundle')}</h3>

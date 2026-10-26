@@ -4,7 +4,7 @@
 // est du modele (model/recherche.ts) ; ici, le champ, les pastilles, la grille et l'etat vide.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { appliquerCorrections, cleCorrection, lireCorrections, type Correction, type Corrections, type EntreeBibliotheque, type Evenement } from '../model/bibliotheque.js';
+import { appliquerCorrections, cleCorrection, lireCorrections, nomAffiche, type Correction, type Corrections, type EntreeBibliotheque, type Evenement } from '../model/bibliotheque.js';
 import { cleEntree, filtrerEntrees, natureDeEntree, sourceDeEntree } from '../model/bibliothequeSources.js';
 import { SOURCE_PAR_DEFAUT, sourceFormes, type NatureForme } from '../model/sourcesFormes.js';
 import type { Procede } from '../model/contextes.js';
@@ -85,12 +85,12 @@ export function sourceDite(e: EntreeBibliotheque): string {
  * et son infobulle (deux formes de meme nom viennent de deux sources, la source les distingue).
  */
 function Vignette({ entree, choisir }: { entree: EntreeBibliotheque; choisir: (e: EntreeBibliotheque) => void }) {
-  // Le nom d'une forme de la bibliotheque ne passe pas par `t` (ADR-0042 §3) : en anglais, il viendra du modele (nomAffiche).
-  const nom = entree.nom + ' (' + sourceDite(entree) + ')';
+  // Le nom d'une forme de la bibliotheque ne passe pas par `t` (ADR-0042 §3) : en anglais, les mots de son identifiant (nomAffiche).
+  const nom = nomAffiche(entree) + ' (' + sourceDite(entree) + ')';
   return (
     <button type="button" className="vignette" title={nom} aria-label={nom} onClick={() => choisir(entree)}>
       <img src={enImage(entree.svg)} alt="" loading="lazy" width={64} height={64} />
-      <span>{entree.nom}</span>
+      <span>{nomAffiche(entree)}</span>
     </button>
   );
 }
@@ -165,8 +165,8 @@ export function RechercheFormes({ bibliotheque, choisir, ajouter, corriger = fal
           {montres.map(x => (
             <li key={cleEntree(x)} className={enEdition === cleEntree(x) ? 'en-edition' : undefined}>
               <Vignette entree={x} choisir={choisir} />
-              {ajouter ? <button type="button" className="icone-bouton plus" title={t('Mettre « {nom} » dans le panier', { nom: x.nom })} aria-label={t('Mettre {nom} dans le panier', { nom: x.nom })} onClick={() => ajouter(x)}><Icone nom="ajouter" taille={14} /></button> : null}
-              {corriger ? <button type="button" className="icone-bouton plus" title={t('Corriger « {nom} »', { nom: x.nom })} aria-label={t('Corriger {nom}', { nom: x.nom })} onClick={() => poserEnEdition(enEdition === cleEntree(x) ? null : cleEntree(x))}><Icone nom="texte" taille={14} /></button> : null}
+              {ajouter ? <button type="button" className="icone-bouton plus" title={t('Mettre « {nom} » dans le panier', { nom: nomAffiche(x) })} aria-label={t('Mettre {nom} dans le panier', { nom: nomAffiche(x) })} onClick={() => ajouter(x)}><Icone nom="ajouter" taille={14} /></button> : null}
+              {corriger ? <button type="button" className="icone-bouton plus" title={t('Corriger « {nom} »', { nom: nomAffiche(x) })} aria-label={t('Corriger {nom}', { nom: nomAffiche(x) })} onClick={() => poserEnEdition(enEdition === cleEntree(x) ? null : cleEntree(x))}><Icone nom="texte" taille={14} /></button> : null}
               {corriger && enEdition === cleEntree(x) ? <Correcteur entree={x} evenements={bibliotheque.evenements} poser={c => { poserCorrection(cleCorrection(x), c); poserEnEdition(null); }} fermer={() => poserEnEdition(null)} /> : null}
             </li>
           ))}

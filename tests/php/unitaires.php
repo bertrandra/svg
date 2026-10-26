@@ -840,6 +840,14 @@ test('data/.htaccess se reecrit s il manque, a l identique de celui que livre le
     contient('Require all denied', HTACCESS_DONNEES);
 });
 
+test('le script d amorce d une langue pose la langue puis la table, et ne peut pas fermer sa balise', function (): void {
+    egal('window.__langueSvgLangue="en";window.__langueSvg_en={"a":"b"};', script_langue('en', "{\"a\":\"b\"}\n"));
+    $s = script_langue('en', '{"x":"</script><script>alert(1)</script>"}');
+    egal(false, str_contains($s, '</script'), 'aucune fin de balise dans le script');
+    $prefixe = 'window.__langueSvgLangue="en";window.__langueSvg_en=';
+    egal(['x' => '</script><script>alert(1)</script>'], json_decode(substr($s, strlen($prefixe), -1), true), 'la table reste du JSON valide, au texte pres');
+});
+
 test('une police hors de l index est refusee avant toute requete ; une empreinte mal formee aussi', function (): void {
     file_put_contents(donnees('json/polices-catalogue.json'), json_encode(['format' => 1, 'familles' => [['id' => 'essai', 'nom' => 'Essai', 'depot' => 'fontsource', 'version' => '5.3.0', 'variantes' => [[400, 0, base64_encode(hash('sha256', 'connu', true)), null]]]], 'anciennes' => []]));
     egal(404, police_du_catalogue(base64_encode(hash('sha256', 'inconnu', true)))['statut'] ?? null);

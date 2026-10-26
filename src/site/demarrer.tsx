@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { definirOuvertureAdresse } from '../io/adresse.js';
 import { definirBaseAnnexes, definirSourceDonnees } from '../io/annexes.js';
 import { sonderNavigateur } from '../io/capacites.js';
+import { avertissementLangue, preparerLangue } from '../io/langue.js';
 import { definirServeurPolices } from '../io/policesEnLigne.js';
 import { creerServeur, lireCompte, lireSite } from '../io/serveur.js';
 import { manquantes } from '../util/capacites.js';
@@ -29,9 +30,8 @@ export function demarrerSite(conteneur: HTMLElement): void {
   // rien : l'application s'ouvre sans le menu du profil, avec la deconnexion d'avant, et le dit.
   const compte = lireCompte(jsonDe(conteneur.dataset['compte']));
   const site = lireSite(jsonDe(conteneur.dataset['site']));
-  const avertissement = compte ? undefined : t('La page n’a pas pu dire qui est connecté : le menu du profil n’est pas disponible. Rechargez la page ; si cela persiste, reconnectez-vous.');
-  // La langue du compte : preparerLangue(compte.langue), pose a l'integration (ADR-0042). Les textes poses ci-dessous chez les
-  // modules d'io sont des accesseurs : ils se lisent dans la langue du moment ou on les montre, quel que soit l'ordre d'ici.
+  // Les textes poses ci-dessous chez les modules d'io sont des accesseurs : ils se lisent dans la langue du moment ou on les montre,
+  // quel que soit l'ordre d'ici.
   const serveur = creerServeur({ api: conteneur.dataset['api'] ?? 'api.php', csrf });
   // Le traceur (du code) reste un script, servi avec la page sous assets/ ; les donnees viennent de data/json par l'API.
   definirBaseAnnexes(conteneur.dataset['assets'] ?? 'assets/');
@@ -45,5 +45,12 @@ export function demarrerSite(conteneur: HTMLElement): void {
   });
   // Les documentations sont servies avec la page, dans public/aide/ : le menu Aide de l'editeur les ouvre.
   definirDocumentation(DOCUMENTATIONS_LIVREES);
-  racine.render(<Site serveur={serveur} csrf={csrf} compte={compte} site={site} {...(avertissement ? { avertissement } : {})} />);
+  // La langue du compte (ADR-0042), sinon celle du site. La page a normalement deja charge le dictionnaire avant ce code
+  // (api.php?r=langue, l'amorce d'util/i18n.ts) : preparerLangue ne fait alors que poser le `lang` ; sinon, il lit l'annexe par la
+  // source de donnees posee ci-dessus. Changer de langue passe par le profil, qui recharge la page : aucun geste de menu a poser.
+  void preparerLangue(compte?.langue ?? site?.langue ?? 'fr').then(() => {
+    const avertissement = (compte ? [] : [t('La page n’a pas pu dire qui est connecté : le menu du profil n’est pas disponible. Rechargez la page ; si cela persiste, reconnectez-vous.')])
+      .concat(avertissementLangue() ?? []).join(' ');
+    racine.render(<Site serveur={serveur} csrf={csrf} compte={compte} site={site} {...(avertissement ? { avertissement } : {})} />);
+  });
 }

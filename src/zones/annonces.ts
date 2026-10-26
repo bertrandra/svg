@@ -91,10 +91,6 @@ export function phraseCoinOppose(premier: PointPlan, autre: PointPlan): string {
 
 export const phraseCoinAnnule = (): string => t('Premier coin annulé : l’outil reste pris.');
 export const phraseCoinsTropProches = (): string => t('Les deux coins sont trop proches : déplacez l’autre coin, ou Échap annule.');
-// Les constantes d'avant, pour leurs appelants (ClavierToile.ts) : evaluees au chargement du module, donc toujours en francais ; un
-// appelant qui veut la langue de la session passe par les fonctions ci-dessus (ou par `t` sur la constante).
-export const PHRASE_COIN_ANNULE = phraseCoinAnnule();
-export const PHRASE_COINS_TROP_PROCHES = phraseCoinsTropProches();
 
 /** Ce que Maj et Page suivante, ou Espace, ont fait a la selection : « Forme 4 ajoutée : 3 formes sélectionnées. » */
 export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', total: number): string {
@@ -113,5 +109,3 @@ export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', 
 
 /** Espace sans forme au curseur : dire comment en avoir une. */
 export const phraseSansCurseur = (): string => t('Aucune forme au curseur : Page suivante en choisit une, Maj et Page suivante en ajoute une.');
-/** La constante d'avant, pour ClavierSelection.ts : evaluee au chargement, donc en francais (voir PHRASE_COIN_ANNULE). */
-export const PHRASE_SANS_CURSEUR = phraseSansCurseur();

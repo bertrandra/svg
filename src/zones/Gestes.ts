@@ -21,7 +21,7 @@ import { effacerReperes as sansReperes } from '../engine/editionSvg.js';
 import { useGesteZone } from './GesteZone.js';
 import { estOutilZone } from './commandesSelection.js';
 import { poigneeDe, poigneesActives, type CiblePoignee } from './PoigneesDegrade.js';
-import { effetsAuRepos, PHRASE_EFFETS_AU_REPOS } from './brouillon.js';
+import { effetsAuRepos, phraseEffetsAuRepos } from './brouillon.js';
 import type { ActionsEditeur, Coin, OutilForme, Vue } from './typesEditeur.js';
 import { lentilleDe, niveauEdition } from './lentille.js';
 import { RAISONS_LENTILLE } from './phrasesContenus.js';
@@ -246,7 +246,7 @@ function useBrouillon(ac: ActionsEditeur) {
     if (enCours.current || !effetsAuRepos(base)) return;
     enCours.current = true;
     poserBrouillon(true);
-    if (!dit.current) { dit.current = true; ac.dire(PHRASE_EFFETS_AU_REPOS); }
+    if (!dit.current) { dit.current = true; ac.dire(phraseEffetsAuRepos()); }
   };
   return { brouillon, commencer, finir };
 }

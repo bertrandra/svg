@@ -17,6 +17,8 @@
 //   POST api.php?r=supprimer&id=…              a la corbeille du compte
 //   GET  api.php?r=vignette&id=…               le SVG de la liste, servi comme une image inerte
 //   GET  api.php?r=json&f=…                    une annexe de donnees
+//   GET  api.php?r=langue&l=en                 le dictionnaire de l'interface en script d'amorce (ETag, une heure en cache prive ; l autre qu'une
+//                                              langue traduite : 400 `invalide` ; dictionnaire non livre : 404 `introuvable`)
 //   GET  api.php?r=fonte&f=…                   une fonte livree
 //   GET  api.php?r=police&sha=…                une police du catalogue, par l'empreinte sha256 de son fichier
 //   POST api.php?r=adresse                     { adresse } : le fichier a cette adresse, que le serveur va chercher (ADR-0036)
@@ -351,6 +353,8 @@ function entree_api(): never
             ]);
         case 'json':
             servir_json($_GET['f'] ?? null);
+        case 'langue':
+            servir_langue($_GET['l'] ?? null);
         case 'fonte':
             servir_fonte($_GET['f'] ?? null);
         case 'police':

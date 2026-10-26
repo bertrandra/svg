@@ -1,7 +1,11 @@
 {
   "fichiers": [
     "engine/edition/formesDeBase.ts",
+    "engine/edition/texteSvg.ts",
+    "engine/palettes.ts",
+    "export/pdfObjets.ts",
     "model/bibliotheque.ts",
+    "model/cataloguePolices.ts",
     "model/contextes.ts",
     "model/credits.ts",
     "model/lexique.ts",
@@ -12,6 +16,29 @@
     "model/synonymes.ts",
     "styles/espaces.ts",
     "styles/jetons.ts",
-    "styles/typographie.ts"
-  ]
+    "styles/typographie.ts",
+    "zones/langue.ts",
+    "zones/publics.ts"
+  ],
+  "raisons": {
+    "engine/edition/formesDeBase.ts": "les noms des formes de base, traduits à l’affichage",
+    "engine/edition/texteSvg.ts": "le nom d’un groupe de lettres, écrit dans le SVG (data-ed-nom) : un octet du fichier",
+    "engine/palettes.ts": "les noms des palettes, traduits à l’affichage (t(p.nom) dans Palettes.tsx)",
+    "export/pdfObjets.ts": "l’en-tête binaire d’un PDF (%PDF-1.4 et ses octets de garde)",
+    "model/bibliotheque.ts": "les événements et catégories de la bibliothèque, traduits à l’affichage",
+    "model/cataloguePolices.ts": "les noms des catégories de polices, écrits dans le fichier de catalogue",
+    "model/contextes.ts": "les machines, tapis, matières et procédés, traduits à l’affichage",
+    "model/credits.ts": "les mentions de licence, recopiées telles quelles",
+    "model/lexique.ts": "le lexique anglais → français des noms de game-icons",
+    "model/lexiqueSources.ts": "le lexique des sources libres",
+    "model/scenes.ts": "les scènes prêtes, traduites à l’affichage",
+    "model/sourcesFormes.ts": "la description des sources libres",
+    "model/sourcesPolices.ts": "le registre des sources de polices",
+    "model/synonymes.ts": "les synonymes de la recherche",
+    "styles/espaces.ts": "les descriptions des espacements, pour docs/jetons.md",
+    "styles/jetons.ts": "les descriptions des jetons, pour docs/jetons.md",
+    "styles/typographie.ts": "les descriptions des tailles de texte, pour docs/jetons.md",
+    "zones/langue.ts": "les noms des langues, chacun dans sa langue, jamais traduits",
+    "zones/publics.ts": "les titres, phrases et options des publics, traduits à l’affichage"
+  }
 }

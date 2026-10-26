@@ -891,6 +891,38 @@ test('les donnees JSON se servent avec leur ETag (304 ensuite)', function () use
     egal(304, $c->get('api.php?r=json&f=bibliotheque', ['If-None-Match: ' . ($h['etag'] ?? '')])[0]);
 });
 
+test('le dictionnaire de l interface se sert en script d amorce (type, ETag, 304), pour une langue traduite et livree seulement ; la page l amorce en anglais', function () use ($url, $data): void {
+    [$c] = connecte($url);
+    [$statut, , $corps] = $c->get('api.php?r=langue&l=en');
+    egal(404, $statut, 'le build ne l a pas encore livre');
+    egal('introuvable', json_de($corps)['erreur'] ?? null);
+    file_put_contents($data . '/json/langue-en.json', '{"Annuler":"Cancel","a</b":"x"}' . "\n");
+    [$statut, $h, $corps] = $c->get('api.php?r=langue&l=en');
+    egal(200, $statut);
+    egal('text/javascript; charset=utf-8', $h['content-type'] ?? '');
+    egal('private, max-age=3600', $h['cache-control'] ?? '');
+    egal('nosniff', $h['x-content-type-options'] ?? '');
+    egal('window.__langueSvgLangue="en";window.__langueSvg_en={"Annuler":"Cancel","a<\/b":"x"};', $corps, 'la langue, puis la table, sans fin de balise possible');
+    egal(304, $c->get('api.php?r=langue&l=en', ['If-None-Match: ' . ($h['etag'] ?? '')])[0]);
+    foreach (['fr', 'de', 'EN', '../pwd', ''] as $l) {
+        [$statut, , $corps] = $c->get('api.php?r=langue&l=' . urlencode($l));
+        egal(400, $statut, 'langue ' . $l);
+        egal('invalide', json_de($corps)['erreur'] ?? null, 'langue ' . $l);
+    }
+    egal(401, (new Client($url))->get('api.php?r=langue&l=en')[0], 'sous session comme les autres');
+    // La page de l'application : rien en francais ; en anglais, l'amorce AVANT site.js.
+    [, , $app] = $c->get('index.php');
+    egal(false, str_contains($app, 'r=langue'), 'un compte en francais ne charge aucun dictionnaire');
+    creer_utilisateur($url, 'anglophone@exemple.org', 'Anglophone', 'le mot de passe de la personne', 'en');
+    [$e] = connecte($url, 'anglophone@exemple.org', 'le mot de passe de la personne');
+    [, , $app] = $e->get('index.php');
+    contient('<html lang="en">', $app);
+    $amorce = strpos($app, '<script src="api.php?r=langue&l=en"></script>');
+    egal(true, $amorce !== false, 'l amorce est dans la page');
+    egal(true, $amorce < strpos($app, '<script src="assets/site.js" defer></script>'), 'avant le script de l application');
+    unlink($data . '/json/langue-en.json');
+});
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // La disposition livree
 // ---------------------------------------------------------------------------------------------------------------------------------

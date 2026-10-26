@@ -7,6 +7,9 @@
 //   - Les RESTES : tout littéral de chaine (simple, double, gabarit) ou texte JSX qui a l'air francais (un caractere accentue, un
 //     guillemet « », une apostrophe ’) hors d'un appel a `t` ou `pluriel`, hors des imports, hors des attributs `data-ed-*`, hors des
 //     fichiers de donnees exclus (tests/fixtures/i18n/exclus.json). Les commentaires ne sont pas des noeuds : ils ne comptent jamais.
+//   - Les CONSTANTES : un `const X = t('…')` au niveau d'un module, evalue a son chargement. L'amorce (util/i18n.ts) pose le
+//     dictionnaire avant le code, donc elles sont traduites en pratique ; mais un hote sans amorce les verrait en francais, et une
+//     fonction (`() => t('…')`) ou un accesseur ne coute rien : leur nombre ne doit plus augmenter (tests/fixtures/i18n/constantes.json).
 //
 // scripts/i18n-restes.mjs l'importe (compile par esbuild) pour lister les restes par fichier.
 
@@ -29,11 +32,15 @@ export interface Cle extends Position {
 /** Un littéral francais hors de `t` : d'ou il vient et son debut, pour le retrouver. */
 export interface Reste extends Position { texte: string }
 
+/** Une constante de module dont la valeur est un appel a `t` : d'ou elle vient, et son nom. */
+export interface Constante extends Position { nom: string }
+
 export interface Extraction {
   cles: Cle[];
   restes: Reste[];
   /** Tous les littéraux de chaine du code, francais ou non, hors imports : de quoi savoir si une cle du dictionnaire est orpheline. */
   litteraux: Set<string>;
+  constantes: Constante[];
 }
 
 /** Les fichiers TypeScript d'un dossier, en profondeur, par chemin absolu. */
@@ -94,10 +101,17 @@ function estCle(n: ts.Node, noms: NomsImportes): Cle['origine'] | null {
 /** Extrait les cles et les restes d'un fichier, dont le chemin est celui qu'on veut lire dans les rapports (relatif a src/). */
 export function extraireFichier(fichier: string, texte: string): Extraction {
   const source = ts.createSourceFile(fichier, texte, ts.ScriptTarget.Latest, true, fichier.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-  const r: Extraction = { cles: [], restes: [], litteraux: new Set() };
+  const r: Extraction = { cles: [], restes: [], litteraux: new Set(), constantes: [] };
   const noms = nomsImportes(source);
   const ligneDe = (n: ts.Node): number => source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
   const reste = (n: ts.Node, t: string): void => { r.restes.push({ fichier, ligne: ligneDe(n), texte: t.trim().replace(/\s+/g, ' ').slice(0, 80) }); };
+  // Les constantes de module : une declaration de variable au premier niveau du fichier, initialisee par un appel direct a `t`.
+  for (const d of source.statements) {
+    if (!ts.isVariableStatement(d)) continue;
+    for (const decl of d.declarationList.declarations) {
+      if (decl.initializer !== undefined && estAppelDe(decl.initializer, noms.t)) r.constantes.push({ fichier, ligne: ligneDe(decl), nom: decl.name.getText(source) });
+    }
+  }
   const visiter = (n: ts.Node): void => {
     if (estChaine(n)) {
       if (!horsInterface(n)) {
@@ -120,20 +134,21 @@ export function extraireFichier(fichier: string, texte: string): Extraction {
 
 /** Extrait tout src/ (hors `exclus`, des chemins relatifs a src/, a la barre oblique), les chemins relatifs a src/. */
 export function extraireDossier(src: string, exclus: readonly string[]): Extraction {
-  const r: Extraction = { cles: [], restes: [], litteraux: new Set() };
+  const r: Extraction = { cles: [], restes: [], litteraux: new Set(), constantes: [] };
   const exclusion = new Set(exclus);
   for (const chemin of fichiersTs(src)) {
     const relatif = relative(src, chemin).split(sep).join('/');
     const e = extraireFichier(relatif, readFileSync(chemin, 'utf8'));
     r.cles.push(...e.cles);
+    r.constantes.push(...e.constantes);
     for (const l of e.litteraux) r.litteraux.add(l);
     if (!exclusion.has(relatif)) r.restes.push(...e.restes);
   }
   return r;
 }
 
-/** Les restes par fichier, du plus charge au moins charge, pour le rapport. */
-export function restesParFichier(restes: readonly Reste[]): Array<{ fichier: string; nombre: number }> {
+/** Les restes (ou les constantes) par fichier, du plus charge au moins charge, pour le rapport. */
+export function restesParFichier(restes: readonly Position[]): Array<{ fichier: string; nombre: number }> {
   const compte = new Map<string, number>();
   for (const x of restes) compte.set(x.fichier, (compte.get(x.fichier) ?? 0) + 1);
   return [...compte.entries()].map(([fichier, nombre]) => ({ fichier, nombre })).sort((a, b) => b.nombre - a.nombre || (a.fichier < b.fichier ? -1 : 1));

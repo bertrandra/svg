@@ -286,7 +286,8 @@ export async function textesDe(l: Locator): Promise<string[]> {
 
 /** Ouvre le dessin d'exemple de la page d'accueil et attend l'editeur. */
 export async function ouvrirExemple(page: Page, tactile = false): Promise<void> {
-  const bouton = page.getByRole('button', { name: 'Ouvrir l’exemple' });
+  // Le bouton dans la langue de la page (ADR-0042) : francais par defaut, anglais quand une session a pose `langue: 'en'`.
+  const bouton = page.getByRole('button', { name: /^(?:Ouvrir l’exemple|Open the example)$/ });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
 }
