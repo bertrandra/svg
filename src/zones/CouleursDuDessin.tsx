@@ -1,4 +1,4 @@
-// La section « Couleurs du dessin » de l'inspecteur (rien n'est choisi) : une ligne par couleur, pour la changer
+// La section « Recolorer le dessin » de l'inspecteur (rien n'est choisi) : une ligne par couleur, pour la changer
 // partout, choisir ses formes, ou la remplacer par une teinte du nuancier.
 //
 // Un dessin issu d'une photo compte des milliers de couleurs (ADR-0008) : au-dela de `SEUIL_COULEURS`, la liste se
@@ -33,7 +33,7 @@ export function CouleursDuDessin() {
   lecture.current = courante;
   const { actions, suivi } = useActionsCouleursDessin();
   return (
-    <Section titre="Couleurs du dessin" ouverte note={courante.couleurs.length}>
+    <Section titre="Recolorer le dessin" ouverte note={courante.couleurs.length}>
       {courante.couleurs.length ? <ListeCouleursDessin couleurs={courante.couleurs} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
         : mo.dessin.formes.length
           ? <EtatVide genre="aucun-resultat" titre="Aucune couleur à changer.">Les formes n’ont ni remplissage ni contour : donnez-leur une couleur dans l’inspecteur, elle apparaîtra ici.</EtatVide>

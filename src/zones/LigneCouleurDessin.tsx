@@ -1,4 +1,4 @@
-// Une ligne de « Couleurs du dessin » : une couleur, la changer partout, choisir ses formes, la remplacer par une
+// Une ligne de « Recolorer le dessin » : une couleur, la changer partout, choisir ses formes, la remplacer par une
 // teinte du nuancier (un menu a pastilles : un select natif, repete par couleur, est lent a parcourir et ne montre pas les teintes).
 //
 // Comme `LigneCouleur`, la ligne ne lit que ses proprietes et des verbes stables : memoisee, elle ne se redessine que

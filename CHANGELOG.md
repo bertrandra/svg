@@ -56,6 +56,10 @@ empreintes.
 
 ### Modifié
 
+- La section de l'inspecteur qui change une couleur partout s'appelle « Recolorer le dessin » (elle s'appelait « Couleurs du
+  dessin », comme le groupe du nuancier tiré du dessin) ; la section des palettes qui la suit s'appelle « Palettes » (elle
+  s'appelait « Recolorer »).
+
 - La liste « Police » montre toutes les polices (ADR-0034), dans le panneau, l'inspecteur et la barre de texte : une liste
   déroulante à recherche avec la police actuelle, celles du document, les favoris, les récentes, les livrées, le trait unique, vos
   polices, puis tout le catalogue, une ligne par famille, chaque nom dessiné dans sa police. Une police pas encore sur l'appareil

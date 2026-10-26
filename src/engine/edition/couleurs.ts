@@ -162,7 +162,7 @@ export function recolorerForme(f: Forme, table: TableCouleurs, sur: SurCouleur, 
 
 /**
  * Remplace d'un coup chaque couleur de la table, sur le cote voulu, dans toutes les formes (masquees et verrouillees comprises : c'est
- * un remplacement nomme, comme celui de « Couleurs du dessin »). Une seule passe : remplacer A par B et B par A echange les deux
+ * un remplacement nomme, comme celui de « Recolorer le dessin »). Une seule passe : remplacer A par B et B par A echange les deux
  * couleurs, sans jeton intermediaire. Le meme dessin si rien ne change.
  */
 export function remplacerCouleurs(dessin: DessinSvg, table: TableCouleurs, sur: SurCouleur = 'tout'): DessinSvg {
@@ -185,7 +185,7 @@ export function remplacerCouleur(dessin: DessinSvg, de: string, vers: string | n
  * Comme `remplacerCouleur`, mais sur le remplissage seul, le contour seul, ou les deux. C'est ce que
  * fait la ligne d'une couleur quand on la lit « Fond » ou « Trait » : changer le fond d'un rouge ne
  * doit pas toucher le contour rouge d'une autre forme. Toutes les formes sont concernees, masquees et
- * verrouillees comprises : c'est un remplacement nomme, comme celui de « Couleurs du dessin ». Un fond
+ * verrouillees comprises : c'est un remplacement nomme, comme celui de « Recolorer le dessin ». Un fond
  * peint d'un motif change toutes les couleurs de sa tuile (fond et trait des feuilles) : elles sont la peinture de ce fond.
  */
 export function remplacerCouleurSur(dessin: DessinSvg, de: string, vers: string | null, sur: SurCouleur): DessinSvg {
@@ -311,7 +311,7 @@ export function partagerCouleursDuDessin(avant: CouleurDuDessin[], apres: Couleu
   return identique ? avant : rendues;
 }
 
-/** Les couleurs du panneau « Couleurs du dessin », avec le dessin qui les a produites. */
+/** Les couleurs du panneau « Recolorer le dessin », avec le dessin qui les a produites. */
 export interface LectureCouleursDuDessin { dessin: DessinSvg; couleurs: CouleurDuDessin[] }
 
 /**

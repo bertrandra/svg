@@ -1,5 +1,5 @@
 // Les listes de couleurs d'un dessin a degrades et a motifs (ADR-0012, etape 13d), rendues hors navigateur dans un editeur de facade :
-// « Couleurs du dessin » et « Par couleur » ont une ligne par couleur d'arret et de tuile, jamais la couleur de repli ; la ligne
+// « Recolorer le dessin » et « Par couleur » ont une ligne par couleur d'arret et de tuile, jamais la couleur de repli ; la ligne
 // « Dégradés » rappelle les couleurs de leurs arrets ; un dessin plat n'a pas de ligne « Dégradés » (le DOM d'avant).
 
 import { createElement, type FunctionComponent } from 'react';
@@ -35,7 +35,7 @@ describe('les listes de couleurs d un dessin a degrades et a motifs', () => {
   const riche = lire('v2/couleurs-peintures.svg', 'riche');
   const replis = new Set(riche.formes.filter(f => f.peintureRemplissage).map(f => f.remplissage?.toUpperCase()));
 
-  it('« Couleurs du dessin » : les arrets et la tuile ont leur ligne, pas la couleur de repli', () => {
+  it('« Recolorer le dessin » : les arrets et la tuile ont leur ligne, pas la couleur de repli', () => {
     const html = rendre(CouleursDuDessin, riche);
     expect(codes(html).sort()).toEqual(['#1F5FB0', '#2A9D8F', '#C81E28', '#C91F27', '#F2B705', '#FFFFFF']);
     for (const r of replis) expect(codes(html)).not.toContain(r);

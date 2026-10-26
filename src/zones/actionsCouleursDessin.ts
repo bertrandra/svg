@@ -1,4 +1,4 @@
-// Les gestes du panneau « Couleurs du dessin » : choisir les formes d'une couleur, la changer partout, la
+// Les gestes du panneau « Recolorer le dessin » : choisir les formes d'une couleur, la changer partout, la
 // remplacer par une teinte du nuancier. Un crochet et non des fonctions du composant : les lignes recoivent des
 // verbes STABLES (un objet qui ne change jamais d'identite, ADR-0010) pour pouvoir se memoiser, et chaque verbe
 // lit l'etat au moment du geste par une reference mise a jour a chaque rendu.

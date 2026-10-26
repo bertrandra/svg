@@ -86,7 +86,7 @@ describe('outils de l\'editeur', () => {
     const page = await editeur();
     const couleurs = () => page.locator('.couleurs-dessin li button').allInnerTexts();
     const avant = await couleurs();
-    const recolorer = await ouvrirSection(page, 'Recolorer');
+    const recolorer = await ouvrirSection(page, 'Palettes');
     await recolorer.locator('select').filter({ hasText: 'Halloween' }).first().selectOption('halloween');
     await recolorer.getByRole('button', { name: 'Appliquer la palette' }).click();
     await attend(() => modifications(page)).toBe(1);

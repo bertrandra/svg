@@ -150,7 +150,8 @@ lecteur.
   distingue).
 - « Couleurs du dessin » est aussi le titre de la section qui recolore le dessin couleur par couleur (panneau du dessin) : le groupe
   du nuancier est dans la section « Nuancier », mais deux choses portent le même nom. Renommer l’ancienne section (« Recolorer par
-  couleur » ?) se décidera à part : ses tests et ses habitudes en dépendent.
+  couleur » ?) se décidera à part : ses tests et ses habitudes en dépendent. *Décidé le 26 octobre 2026 : l’ancienne section s’appelle
+  « Recolorer le dessin », et la section des palettes qui la suivait sous le titre « Recolorer » s’appelle « Palettes ».*
 - Les raccourcis Maj+N et Alt+Maj+N sont libres aujourd’hui ; un chantier parallèle qui prendrait N devra s’accorder.
 
 ## Alternatives écartées

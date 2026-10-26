@@ -24,7 +24,7 @@ describe('edition', () => {
   it('n\'affiche la rangee de selection qu\'avec une selection, et l\'inspecteur du dessin sans', async () => {
     const page = await editeur();
     expect(await page.locator('.editeur-barre-selection').count()).toBe(0);
-    expect(await sections(page)).toEqual(['Nuancier', 'Couleurs du dessin', 'Recolorer', 'Bibliothèque de formes', 'Nettoyer le tracé', 'Versions nommées', 'Raccourcis']);
+    expect(await sections(page)).toEqual(['Nuancier', 'Recolorer le dessin', 'Palettes', 'Bibliothèque de formes', 'Nettoyer le tracé', 'Versions nommées', 'Raccourcis']);
     expect(await page.locator('.editeur-cadre button.primaire:visible').count()).toBeLessThanOrEqual(1);
 
     await forme(page, 'f2').click();

@@ -1,4 +1,4 @@
-// Recolorer en masse (ADR-0004) : une palette d'evenement ou la sienne, posee sur les couleurs du
+// Les palettes, pour recolorer en masse (ADR-0004) : une palette d'evenement ou la sienne, posee sur les couleurs du
 // dessin ; une seule couleur pour tout ; et le nuancier de la page comme palette.
 
 import { useState } from 'react';
@@ -16,7 +16,7 @@ export function PanneauPalettes() {
   const nuancier = mo.nuancier.map(t => t.hex);
   const appliquer = (palette: readonly string[], texte: string) => { if (palette.length) ac.faire(d => appliquerPalette(d, palette), texte); };
   return (
-    <Section titre="Recolorer">
+    <Section titre="Palettes">
       <label className="champ-ligne">
         <span>Palette</span>
         <select value={choix} onChange={e => poserChoix(e.target.value)}>
