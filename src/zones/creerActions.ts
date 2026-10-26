@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, contexteValide, dessinableEnPoints, garderTextes, MSG_POINTS_IMAGE, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, contexteValide, dessinableEnPoints, garderTextes, MSG_POINTS_IMAGE, poidsDessin, rangerDansLeContexte, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -62,9 +62,12 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
   // La garde du texte vivant (ADR-0022) : un outil qui change le trace d'un texte sans le connaitre le vectorise ; ses contours
   // restent, il ne se retape plus. Les actions qui le peuvent le disent (phrasesTexte.ts). Puis le lien des textes poses (ADR-0031) :
   // un texte dont la forme a change se recompose sur elle, dans la meme entree d'historique ; sans forme, il redevient libre.
+  // Dans un groupe, ce qu'une operation ajoute a la racine (une forme dessinee, collee, inseree) entre dans ce groupe (annexe 6 §9) :
+  // sinon elle naitrait hors du contexte, estompee et imprenable. Un dessin plat n'a pas de contexte : rien ne change pour lui.
   const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => {
+    const groupe = lire().contexte?.groupe ?? null;
     s.poserH(x => {
-      const g = garderTextes(x.present, f(x.present)).dessin;
+      const g = garderTextes(x.present, rangerDansLeContexte(x.present, f(x.present), groupe)).dessin;
       const d = suivreDispositions(x.present, g, p => glyphesDe?.(p) ?? null).dessin;
       return avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
     });

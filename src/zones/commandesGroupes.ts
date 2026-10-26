@@ -5,21 +5,19 @@
 // d'Ariane (FilAriane.tsx) appellent les memes fonctions, sur l'etat qu'on leur donne : rien n'est capture.
 
 import { aplatirPour, CAPACITES_PLAT, phrasePertes } from '../engine/aplatir.js';
-import { creerMotif, estPlat, groupeDe, uniteDans, MSG_MOTIF, type DessinSvg } from '../engine/editionSvg.js';
+import { creerMotif, groupeDe, uniteDans, MSG_MOTIF, type DessinSvg } from '../engine/editionSvg.js';
 import { formeVoisine } from '../engine/navigation.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { proposer, texteOctets } from '../io/fichiers.js';
 import { svgDocument } from './actionsProduction.js';
 import { phraseSelection } from './annonces.js';
 import type { ElementMenu } from './commun/Menu.js';
+import { groupesActifs } from './modele.js';
 import { phraseEntreeGroupe, phraseNiveau } from './phrasesGroupes.js';
-import type { ActionsEditeur, EtatInterface, Modele, ModeleDessin } from './typesEditeur.js';
+import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
 
-/**
- * Les groupes se commandent-ils ? En modele riche, ou sur un dessin deja riche (un projet du site s'ouvre tel qu'il a ete enregistre,
- * quel que soit le reglage) : ses groupes se voient, on doit pouvoir y entrer et en sortir. Un dessin plat lu a plat : non.
- */
-export const groupesActifs = (d: DessinSvg, modele: Modele): boolean => modele === 'riche' || !estPlat(d);
+// Les groupes se commandent-ils ? (modele.ts, sans dependance : les actions du texte la lisent aussi.)
+export { groupesActifs };
 
 /** Le groupe choisi seul, ou null : ce dans quoi Entree ou « Entrer dans le groupe » font entrer. */
 export const groupeSeul = (m: Pick<ModeleDessin, 'dessin' | 'sel'>): string | null => {

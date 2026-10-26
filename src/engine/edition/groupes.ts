@@ -158,6 +158,19 @@ export function deplacerDans(d: DessinSvg, ids: readonly string[], parent: strin
   return pareil ? d : r;
 }
 
+/**
+ * Ce qu'une operation a ajoute pendant qu'on edite dans un groupe (ADR-0012, annexe 6 §9 : « créer un groupe, y entrer, y dessiner ») :
+ * les feuilles nouvelles (absentes d'`avant`) posees a la racine entrent au premier plan du groupe du contexte, dans leur ordre ; elles
+ * y sont choisies, prenables et non estompees. Une feuille deja connue, ou nouvelle mais rangee ailleurs par l'operation, ne bouge
+ * pas. Le meme dessin quand il n'y a rien a ranger ou que le groupe n'existe plus. Pur.
+ */
+export function rangerDansLeContexte(avant: DessinSvg, apres: DessinSvg, groupe: string | null): DessinSvg {
+  if (groupe === null || apres === avant || !groupeDe(apres, groupe)) return apres;
+  const connues = new Set(avant.formes.map(f => f.id));
+  const nouvelles = apres.formes.filter(f => f.parent === undefined && !connues.has(f.id)).map(f => f.id);
+  return nouvelles.length ? deplacerDans(apres, nouvelles, groupe) : apres;
+}
+
 /** Renommer un groupe ; un nom vide le retire. Le meme dessin si rien ne change ou si ce n'est pas un groupe. */
 export function renommer(d: DessinSvg, id: string, nom: string): DessinSvg {
   const g = groupeDe(d, id);

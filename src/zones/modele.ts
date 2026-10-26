@@ -6,8 +6,8 @@
 // `modele` le fixe : le reglage du menu Edition disparait, et la promesse d'« a l'identique demain » tient tant qu'il garde `plat`.
 // Tout ce qui vient du stockage se valide (ADR-0014) : une valeur qu'on n'a pas ecrite se lit comme absente.
 
-import type { OptionsLecture } from '../engine/editionSvg.js';
-import { ATTRIBUT_MODELE } from '../engine/editionSvg.js';
+import type { DessinSvg, OptionsLecture } from '../engine/editionSvg.js';
+import { ATTRIBUT_MODELE, estPlat } from '../engine/editionSvg.js';
 import type { Stockage } from '../io/stockage.js';
 import type { Modele } from './typesEditeur.js';
 
@@ -61,3 +61,10 @@ export function phraseModele(m: Modele, garde: boolean): string {
     : 'Groupes, dégradés et effets désactivés : les prochains fichiers s’ouvrent à plat.';
   return garde ? quoi : quoi + ' Ce navigateur ne garde pas ce réglage : il ne vaut que pour cette édition.';
 }
+
+/**
+ * Les groupes se commandent-ils ? En modele riche, ou sur un dessin deja riche (un projet du site s'ouvre tel qu'il a ete enregistre,
+ * quel que soit le reglage) : ses groupes se voient, on doit pouvoir y entrer et en sortir. Un dessin plat lu a plat : non. (Ici, sans
+ * dependance : les actions du texte la lisent aussi, et commandesGroupes.ts la reexporte.)
+ */
+export const groupesActifs = (d: DessinSvg, modele: Modele): boolean => modele === 'riche' || !estPlat(d);

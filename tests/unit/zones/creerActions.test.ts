@@ -426,6 +426,30 @@ describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)'
     expect(actions.sortirGroupe()).toBe(false);
   });
 
+  it('dans un groupe, ce qu une operation ajoute a la racine y entre, au premier plan ; a la racine, rien ne bouge', () => {
+    // Annexe 6 §9, « créer un groupe, y entrer, y dessiner » : une forme dessinee dans le contexte naissait a la racine, estompee et
+    // imprenable (trouve par le paquet 2-D). Elle entre au premier plan du groupe ; une forme deja connue ne bouge pas.
+    const { actions, etat } = monter(null, GROUPES, 'riche');
+    const nuage = Object.values(etat.dessin.groupes ?? {}).find(g => g.nom === 'Nuage');
+    if (!nuage) throw new Error('le nuage');
+    const carre = { d: [{ c: 'M' as const, p: [80, 80] }, { c: 'L' as const, p: [90, 80] }, { c: 'L' as const, p: [90, 90] }, { c: 'Z' as const, p: [] }] };
+    const modele = etat.dessin.formes[0];
+    if (!modele) throw new Error('une forme');
+    const ajouter = (d: DessinSvg): DessinSvg => ({ ...d, formes: [...d.formes, { ...modele, id: 'f99', ...carre }] });
+    actions.entrerGroupe(nuage.id);
+    actions.appliquer(ajouter);
+    const ajoutee = etat.dessin.formes.find(f => f.id === 'f99');
+    expect(ajoutee?.parent).toBe(nuage.id);
+    // Au premier plan du groupe : la derniere feuille de ses descendants.
+    const duNuage = etat.dessin.formes.filter(f => f.parent === nuage.id || etat.dessin.groupes?.[f.parent ?? '']?.parent === nuage.id);
+    expect(duNuage.at(-1)?.id).toBe('f99');
+    expect(etat.dessin.formes.find(f => f.id === 'f1')?.parent).toBeUndefined();
+    // A la racine, la meme operation laisse la forme a la racine.
+    const racine = monter(null, GROUPES, 'riche');
+    racine.actions.appliquer(ajouter);
+    expect(racine.etat.dessin.formes.find(f => f.id === 'f99')?.parent).toBeUndefined();
+  });
+
   it('ne pose qu un contexte qui existe, et deplie ou replie sans recreer l ensemble pour rien', () => {
     const { actions, etat, deplies } = monter(null, GROUPES, 'riche');
     actions.poserContexte({ groupe: 'g99' });

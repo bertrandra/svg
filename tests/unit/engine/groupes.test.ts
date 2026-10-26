@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   GROUPES_MAX, MSG_FUSION, MSG_GROUPES_NOMBREUX, MSG_GROUPES_PROFONDS, MSG_MEME_PARENT, MSG_ORDRE_PEINTURE, MSG_VECTOR_EFFECT, PROFONDEUR_GROUPES_MAX,
-  ajouterForme, ajusterPlan, aligner, arbreDe, boiteDe, boiteVisuelle, coller, combiner, degrouper, deplacer, deplacerDans, dupliquer, ecrireDessin, estPlat,
+  ajouterForme, ajusterPlan, aligner, arbreDe, boiteDe, boiteVisuelle, coller, combiner, degrouper, deplacer, deplacerDans, dupliquer, ecrireDessin, estPlat, rangerDansLeContexte,
   etoile, feuillesDe, grouper, inserer, lireDessin, modifier, modifierTrait, montrerSeulement, ordonner, prochainId, redimensionner, regrouper, renommer,
   restaurerVisibilites, retirerPetites, separer, supprimer, tourner, transformer, verifierDessin, visibilitesConformes, visibilitesDe, visibleEffectif, translation,
   type Chemin, type DessinSvg, type Forme, type Groupe
@@ -223,6 +223,23 @@ describe('les operations nouvelles', () => {
     for (const r of [dans, deplacerDans(d, ['f3', 'f4'], undefined)]) expect(verifierDessin(r)).toEqual([]);
     // Un groupe que le deplacement viderait part : ses formes ont toutes change de parent.
     expect(deplacerDans(d, ['f3', 'f4'], undefined).groupes?.g2).toBeUndefined();
+  });
+
+  it('rangerDansLeContexte : les feuilles nouvelles posees a la racine entrent au premier plan du groupe du contexte (paquet 2-D)', () => {
+    const d = exemple();
+    const ajoute: DessinSvg = { ...d, formes: [...d.formes, f('f7'), f('f8')] };
+    const r = rangerDansLeContexte(d, ajoute, 'g2');
+    expect(r.formes.map(x => [x.id, x.parent ?? null])).toEqual([['f1', null], ['f2', 'g1'], ['f3', 'g2'], ['f4', 'g2'], ['f7', 'g2'], ['f8', 'g2'], ['f5', 'g1'], ['f6', null]]);
+    expect(verifierDessin(r)).toEqual([]);
+    // A la racine, sans rien de nouveau, ou dans un groupe disparu : le meme dessin.
+    expect(rangerDansLeContexte(d, ajoute, null)).toBe(ajoute);
+    expect(rangerDansLeContexte(d, d, 'g2')).toBe(d);
+    expect(rangerDansLeContexte(d, ajoute, 'g9')).toBe(ajoute);
+    // Une forme connue qu'une operation a sortie a la racine ne bouge pas ; une nouvelle deja rangee non plus.
+    const sortie = deplacerDans(d, ['f3'], undefined);
+    expect(rangerDansLeContexte(d, sortie, 'g2')).toBe(sortie);
+    const rangee: DessinSvg = { ...d, formes: [f('f7', { parent: 'g1' }), ...d.formes] };
+    expect(rangerDansLeContexte(d, rangee, 'g2')).toBe(rangee);
   });
 
   it('renommer : un nom, un nom vide qui le retire, le meme dessin sans changement', () => {
