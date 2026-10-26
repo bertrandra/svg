@@ -1,10 +1,11 @@
 // Les ligatures du texte (troisieme lot de l'ADR-0009), par la vraie page : la case « Ligatures » n'existe que pour une fonte
 // qui en a, elle est cochee par defaut, et « fi » donne une forme avec elle, deux sans. Depuis le texte vivant (ADR-0022), un
-// texte ajoute est UNE forme ; on compte ses lettres en le vectorisant en lettres separees (menu Edition).
+// texte ajoute est UNE forme ; on compte ses lettres en le vectorisant en lettres separees (menu Edition), sur la toile : en modele
+// riche, le defaut de la page (ADR-0012, etape 14), elles forment un groupe, et les calques un arbre.
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { attend, nombreDeCalques, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { attend, formesVisibles, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
 import { champPolice, choisirPolice } from './polices.js';
 
 describe('ligatures du texte', () => {
@@ -20,15 +21,15 @@ describe('ligatures du texte', () => {
   }
   const case_ = (page: Page) => page.getByRole('checkbox', { name: 'Ligatures (fi, fl…)' });
   async function ajouter(page: Page, texte: string, fonte: string): Promise<number> {
-    const avant = await nombreDeCalques(page);
+    const avant = await formesVisibles(page);
     await page.locator('.editeur-inspecteur textarea[aria-label="Texte"]').fill(texte);
     await choisirPolice(page.locator('.editeur-inspecteur'), fonte);
     await page.getByRole('button', { name: 'Ajouter le texte' }).click();
-    await attend(() => nombreDeCalques(page)).toBe(avant + 1);
+    await attend(() => formesVisibles(page)).toBe(avant + 1);
     await ouvrirMenu(page, 'Édition');
     await page.getByRole('menuitem', { name: /^Vectoriser le texte : lettres séparées/ }).click();
     await attend(() => page.locator('.message-etat').innerText()).toMatch(/^1 texte vectorisé/);
-    return (await nombreDeCalques(page)) - avant;
+    return (await formesVisibles(page)) - avant;
   }
 
   it('la case est cochee par defaut pour une fonte a ligatures : « fi » ne fait qu\'une forme', async () => {
