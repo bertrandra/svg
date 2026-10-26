@@ -303,7 +303,7 @@ describe('l interface riche, parcours et ecrans (paquet 2-D)', () => {
     });
   }
 
-  it('axe en contraste force : contexte de groupe et fil d Ariane, arbre deplie et « Déplacer vers… », degrade lineaire et radial, Effets et pastilles', async () => {
+  it('axe en contraste force : contexte de groupe et fil d Ariane, arbre deplie et « Déplacer vers… », degrade lineaire et radial, Effets et pastilles, dans une decoupe', async () => {
     const p = await page({}, true);
     expect(await p.evaluate(() => matchMedia('(forced-colors: active)').matches)).toBe(true);
     await ouvrir(p, ARBRE);
@@ -332,6 +332,10 @@ describe('l interface riche, parcours et ecrans (paquet 2-D)', () => {
     await e.keyboard.press('PageDown');
     await attend(() => dit(e)).toMatch(/^Groupe « Cartes » sélectionné/);
     await attend(() => e.getByRole('checkbox', { name: 'Flou' }).isChecked()).toBe(true);
+    expect(await auditAxe(e)).toEqual([]);
+    // Dans la decoupe (paquet 8-D) : le contenu seul, le reste estompe, le fil d'Ariane jusqu'a « Découpe ».
+    await commandeAuClavier(e, 'Édition', 'Modifier la découpe');
+    await attend(() => e.getByRole('navigation', { name: 'Contexte d’édition' }).textContent()).toBe('Racine›Cartes›Découpe');
     expect(await auditAxe(e)).toEqual([]);
   });
 });
