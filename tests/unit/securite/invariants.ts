@@ -3,6 +3,8 @@
 // `src/` (ni le lecteur XML, ni la liste d'elements du nettoyage), pour que le test ne soit pas
 // d'accord avec le code par construction. Son analyseur XML est strict (XML 1.0 bien forme) et lineaire.
 
+import { EXTENSIONS_ECRITURE, type ExtensionEcriture } from './extensionsEcriture.js';
+
 /** Les elements qu'un SVG nettoye peut contenir : le vocabulaire graphique de SVG 1.1 et 2, sans script ni objet etranger. */
 export const ELEMENTS_PERMIS: ReadonlySet<string> = new Set([
   'svg', 'g', 'defs', 'symbol', 'use', 'a', 'switch', 'view', 'title', 'desc', 'metadata', 'style',
@@ -23,12 +25,17 @@ export const ATTRIBUTS_ECRITURE: ReadonlySet<string> = new Set([
   'data-ed-contexte', 'data-ed-machine', 'data-ed-tapis', 'data-ed-materiau', 'data-ed-procede', 'data-ed-unite',
   // Le texte vivant (ADR-0022) : sur un <path> seul, chacun avec sa forme exacte (VALEURS_TEXTE) ; le texte est encode.
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
-  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice',
+  // L'operation de production (ADR-0028) : sur un <path> seul, l'une des deux valeurs exactes.
+  'data-ed-operation',
+  // Le texte pose sur ou dans une forme (ADR-0031) : sur un <path> seul, chacun avec sa forme exacte ; le trace d'une forme masquee est encode.
+  'data-ed-disposition', 'data-ed-depart', 'data-ed-cote', 'data-ed-repartir', 'data-ed-marge', 'data-ed-ajuster', 'data-ed-justifier',
+  'data-ed-forme', 'data-ed-forme-d', 'data-ed-forme-regle'
 ]);
 
 const NOMBRE_TEXTE = '-?\\d+(?:\\.\\d+)?(?:e[+-]?\\d+)?';
 /**
- * La forme exacte de chaque attribut du texte vivant. Le texte et la famille sont en pourcentage de leurs octets UTF-8,
+ * La forme exacte de chaque attribut du texte vivant, et de l'operation de production (ADR-0028). Le texte et la famille sont en pourcentage de leurs octets UTF-8,
  * lettres ASCII et chiffres seuls en clair : ni espace, ni ponctuation, rien que le nettoyage ou un navigateur puisse lire
  * comme une adresse, un schema ou du CSS. Aucun texte libre n'entre ainsi dans une ecriture.
  */
@@ -42,7 +49,19 @@ const VALEURS_TEXTE: Readonly<Record<string, RegExp>> = {
   'data-ed-interligne': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
   'data-ed-alignement': /^(?:centre|droite)$/,
   'data-ed-ligatures': /^1$/,
-  'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i')
+  'data-ed-trace': /^median$/,
+  'data-ed-matrice': new RegExp('^' + NOMBRE_TEXTE + '(?: ' + NOMBRE_TEXTE + '){5}$', 'i'),
+  'data-ed-operation': /^(?:decoupe|ecriture)$/,
+  'data-ed-disposition': /^(?:sur|dans|enveloppe)$/,
+  'data-ed-depart': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-cote': /^dessous$/,
+  'data-ed-repartir': /^1$/,
+  'data-ed-marge': new RegExp('^' + NOMBRE_TEXTE + '$', 'i'),
+  'data-ed-ajuster': /^1$/,
+  'data-ed-justifier': /^1$/,
+  'data-ed-forme': /^[1-9]\d{0,6}$/,
+  'data-ed-forme-d': /^(?:[A-Za-z0-9]|%[0-9A-F]{2})+$/,
+  'data-ed-forme-regle': /^evenodd$/
 };
 
 const ESPACES_DE_NOMS_PERMIS = new Set([
@@ -245,8 +264,15 @@ export function violationsNettoyage(svg: string): string[] {
 const MENTION_ECRITE = /^Contient des formes dont la source est [A-Za-z0-9 .-]+ \(https:\/\/[a-z0-9./-]+\), sous licence [A-Za-z0-9 .]+ \(https:\/\/[a-z0-9./.-]+\)\.(?: Origines : [a-z0-9:, -]+\.)?$/;
 const NOMBRE = /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 
-/** Tous les defauts d'un SVG ecrit par `ecrireDessin` : seulement <svg> et <path>, des attributs connus, des valeurs sans texte libre. */
-export function violationsEcriture(svg: string): string[] {
+/**
+ * Tous les defauts d'un SVG ecrit par `ecrireDessin` : seulement <svg> et <path>, des attributs connus, des valeurs sans texte libre.
+ * `extensions` : ce que le modele v2 ajoute, etape par etape (extensionsEcriture.ts) ; la premiere qui tranche l'emporte sur la base.
+ */
+export function violationsEcriture(svg: string, extensions: readonly ExtensionEcriture[] = EXTENSIONS_ECRITURE): string[] {
+  const avis = (f: (x: ExtensionEcriture) => boolean | undefined): boolean | undefined => {
+    for (const x of extensions) { const r = f(x); if (r !== undefined) return r; }
+    return undefined;
+  };
   const a = analyserStrict(svg);
   if ('erreur' in a) return ['mal forme : ' + a.erreur];
   const d: string[] = [];
@@ -254,13 +280,28 @@ export function violationsEcriture(svg: string): string[] {
   // Le seul texte permis est la mention d'attribution des formes creditees (model/credits.ts), dans <metadata> : une
   // phrase fixe et des origines validees, jamais ce que l'entree contenait.
   if (a.textes.some(t => t.texte.trim() !== '' && !(t.parent === 'metadata' && MENTION_ECRITE.test(t.texte)))) d.push('texte dans une ecriture');
+  // Les prefixes declares sur chaque element et ses ancetres (xml est predefini) : un prefixe employe sans declaration rend le
+  // document mal forme pour un analyseur XML avec espaces de noms (le `xlink:href` d'une image dans une definition, etape 9).
+  const portees: Array<ReadonlySet<string>> = [];
   for (const e of a.elements) {
-    if (!ELEMENTS_ECRITURE.has(e.nom)) d.push('element ecrit inattendu <' + e.nom.slice(0, 40) + '>');
+    const heritees = portees[e.profondeur - 1] ?? new Set(['xml']);
+    const declares = e.attributs.some(([nom]) => nom.startsWith('xmlns:')) ? new Set([...heritees, ...e.attributs.filter(([nom]) => nom.startsWith('xmlns:')).map(([nom]) => nom.slice(6))]) : heritees;
+    portees.length = e.profondeur;
+    portees.push(declares);
+    const prefixeNon = (nom: string): boolean => nom.includes(':') && nom !== 'xmlns' && !nom.startsWith('xmlns:') && !declares.has(nom.slice(0, nom.indexOf(':')));
+    if (prefixeNon(e.nom)) d.push('prefixe non declare <' + e.nom.slice(0, 40) + '>');
+    for (const [nom] of e.attributs) if (prefixeNon(nom)) d.push('prefixe non declare ' + nom.slice(0, 40) + ' sur <' + e.nom.slice(0, 40) + '>');
+    const permis = avis(x => x.element?.(e));
+    if (permis === false || (permis === undefined && !ELEMENTS_ECRITURE.has(e.nom))) d.push('element ecrit inattendu <' + e.nom.slice(0, 40) + '>');
     if ((e.nom === 'svg') !== (e.profondeur === 0)) d.push('<svg> hors de la racine');
     for (const [nom, valeur] of e.attributs) {
+      const tranche = avis(x => x.attribut?.(e, nom, valeur));
+      if (tranche === true) continue;
+      if (tranche === false) { d.push(nom + ' refuse par le modele v2 : ' + valeur.slice(0, 60)); continue; }
       if (!ATTRIBUTS_ECRITURE.has(nom)) { d.push('attribut ecrit inattendu ' + nom.slice(0, 40)); continue; }
       const formeTexte = VALEURS_TEXTE[nom];
-      if (formeTexte) { if (e.nom !== 'path' || e.profondeur !== 1 || !formeTexte.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom.startsWith('data-ed-')) { if (e.profondeur !== 0 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
+      // Sur un <path> enfant de la racine, ou d'un groupe du modele v2 (ADR-0012, etape 1) : un texte vivant peut etre dans un groupe.
+      if (formeTexte) { if (e.nom !== 'path' || (e.profondeur !== 1 && e.parent !== 'g') || !formeTexte.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom.startsWith('data-ed-')) { if (e.profondeur !== 0 || !/^[a-z0-9][a-z0-9-]{0,31}$/.test(valeur)) d.push(nom + ' inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'data-origine') { if (!/^[a-z][a-z0-9-]*:[a-z0-9-]+(?: [a-z][a-z0-9-]*:[a-z0-9-]+)*$/.test(valeur)) d.push('data-origine inattendu : ' + valeur.slice(0, 60)); } else if (nom === 'xmlns') { if (valeur !== 'http://www.w3.org/2000/svg') d.push('xmlns different'); } else if (nom === 'd') {
         if (!/^[MLCQZ0-9eE.,\s+-]*$/.test(valeur)) d.push('chemin avec des caracteres inattendus');
       } else if (nom === 'fill' || nom === 'stroke') {
         // Une couleur #rrggbb, none, ou un mot-cle CSS en lettres : jamais d'adresse, de fonction ni de ponctuation.

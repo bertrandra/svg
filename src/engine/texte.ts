@@ -27,6 +27,13 @@ export interface OptionsTexte {
 export interface Lettre{ caractere: string; d: Chemin }
 
 /**
+ * Un groupe de caracteres pose d'un coup (un caractere, ou les caracteres d'une ligature) : de quoi placer un curseur de
+ * saisie entre deux caracteres sans recomposer (ADR-0027). `debut` compte en points de code dans le texte compose, `x` est
+ * l'abscisse ou sa glyphe commence (crenage compris), `avance` sa largeur sans l'interlettrage qui la suit.
+ */
+export interface GroupeCompose { debut: number; n: number; x: number; avance: number }
+
+/**
  * Combien de caracteres, a partir de `i`, se lient en une glyphe : 0 sans ligature, et 0 si la ligature enjambe un
  * blanc ou un retour a la ligne (une ligature ne traverse jamais deux mots).
  */
@@ -50,12 +57,12 @@ export function composer(texte: string, glyphes: Glyphes, options: OptionsTexte)
  * Le texte vivant (texte/bloc.ts) s'en sert pour aligner une ligne au centre ou a droite ; les lettres sont exactement
  * celles de `composer`, qui n'en est que l'enveloppe (ses references d'ecriture ne bougent pas).
  */
-export function composerEtMesurer(texte: string, glyphes: Glyphes, options: OptionsTexte): { lettres: Lettre[]; fin: number } {
+export function composerEtMesurer(texte: string, glyphes: Glyphes, options: OptionsTexte): { lettres: Lettre[]; fin: number; groupes: GroupeCompose[] } {
   const taille = options.taille, k = taille / glyphes.unitesParEm;
   const interlettrage = (options.interlettrage ?? 0) * taille, interligne = (options.interligne ?? 1.2) * taille;
   const lier = options.ligatures === true && glyphes.ligature !== undefined && interlettrage === 0;
   let x = options.x ?? 0, y = options.y ?? 0;
-  const lettres: Lettre[] = [];
+  const lettres: Lettre[] = [], groupes: GroupeCompose[] = [];
   let precedent: string | null = null;
   const cars = [...texte];
   for (let i = 0; i < cars.length;) {
@@ -68,11 +75,13 @@ export function composerEtMesurer(texte: string, glyphes: Glyphes, options: Opti
       const d = cheminDeGlyphe(glyphes.contour(groupe, x, y, taille));
       if (d.some(c => c.c !== 'M' && c.c !== 'Z')) lettres.push({ caractere: groupe, d });
     }
-    x += glyphes.avance(groupe) * k + interlettrage;
+    const avance = glyphes.avance(groupe) * k;
+    groupes.push({ debut: i, n: n || 1, x, avance });
+    x += avance + interlettrage;
     precedent = groupe;
     i += n || 1;
   }
-  return { lettres, fin: x };
+  return { lettres, fin: x, groupes };
 }
 
 /** Ajoute les lettres au dessin, au premier plan, avec le style donne ; rend les identifiants. */

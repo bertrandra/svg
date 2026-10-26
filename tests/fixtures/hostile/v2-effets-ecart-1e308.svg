@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <filter id="enorme"><feGaussianBlur stdDeviation="1e308"/></filter>
+  <filter id="ombre"><feDropShadow dx="1" dy="1" stdDeviation="1e308 5"/></filter>
+  <filter id="sous"><feGaussianBlur stdDeviation="9e307"/></filter>
+  <rect x="10" y="10" width="30" height="30" fill="#c81e28" filter="url(#enorme)"/>
+  <circle cx="70" cy="30" r="15" fill="#1f5fb0" filter="url(#ombre)"/>
+  <g transform="scale(10)"><rect x="1" y="6" width="3" height="3" fill="#2a9d8f" filter="url(#sous)"/></g>
+</svg>

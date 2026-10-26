@@ -9,8 +9,8 @@ const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
   + '<path d="M0 0L10 0L10 10Z" fill="#c81e28"/><path d="M20 20L40 20L40 40Z" fill="#1428a0"/></svg>';
 
 /** Un editeur sans React : un etat qu'on tient a la main, et des setters qui le mettent a jour. */
-function monter(stockage: Stockage | null = null, svg = SVG) {
-  const lu = lireDessin(svg);
+function monter(stockage: Stockage | null = null, svg = SVG, modele: 'plat' | 'riche' = 'plat') {
+  const lu = lireDessin(svg, modele === 'riche' ? { modele } : {});
   if ('erreur' in lu) throw new Error(lu.erreur);
   let h: Historique<DessinSvg> = historique(lu.dessin);
   const messages: string[] = [], annonces: string[] = [];
@@ -18,9 +18,10 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     dessin: lu.dessin, sel: [], formeSeule: null, outil: 'selection', point: null, style: STYLE_DEFAUT, trace: [], presse: [], lisserBooleens: true,
     vues: { vue: { zoom: 1, x: 0, y: 0 }, poserVue: vi.fn(), ajuster: vi.fn(), zoomer: vi.fn(), centrer100: vi.fn(), cadrer: vi.fn() },
     enregistrer: vi.fn(), production: { contexte: 'generique' }, modifie: false, refaisable: false, versions: [], fermer: vi.fn(), stockage,
-    productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null
+    productionModifiee: false, fin: { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false }, suiteCricut: null, apercuMachine: true
   };
   const poserQuitter = vi.fn();
+  let deplies: ReadonlySet<string> = new Set();
   const miseAJour = () => { etat.dessin = h.present; etat.modifie = h.passe.length > 0; etat.refaisable = h.futur.length > 0; };
   const setters: Setters = {
     poserH: u => { h = typeof u === 'function' ? u(h) : u; miseAJour(); },
@@ -30,11 +31,14 @@ function monter(stockage: Stockage | null = null, svg = SVG) {
     poserVersions: u => { etat.versions = typeof u === 'function' ? u(etat.versions) : u; },
     dire: u => { messages.push(typeof u === 'function' ? u('') : u); },
     poserProduction: u => { etat.production = typeof u === 'function' ? u(etat.production) : u; },
-    poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; },
+    poserSuiteCricut: u => { etat.suiteCricut = typeof u === 'function' ? u(etat.suiteCricut) : u; }, poserApercuMachine: vi.fn(), poserParametres: vi.fn(), poserDemandeFormes: vi.fn(), poserRegleZone: vi.fn(),
+    poserModele: u => { etat.modele = typeof u === 'function' ? u(etat.modele ?? 'plat') : u; },
+    poserContexte: u => { etat.contexte = typeof u === 'function' ? u(etat.contexte ?? null) : u; },
+    poserDeplies: u => { deplies = typeof u === 'function' ? u(deplies) : u; },
     toile: { current: null }
   };
   const actions = creerActions(() => etat, setters);
-  return { actions, etat, messages, annonces, poserQuitter, setters, historique: () => h };
+  return { actions, etat, messages, annonces, poserQuitter, setters, historique: () => h, deplies: () => deplies };
 }
 
 describe('creerActions : des verbes qui lisent l etat du moment', () => {
@@ -315,5 +319,197 @@ describe('creerActions : les booleens suivent le reglage « rebatir les courbes 
     const m = monter();
     m.actions.poserLisserBooleens(false);
     expect(m.setters.poserLisserBooleens).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('un hote qui garde des projets (le site, ADR-0030)', () => {
+  const changer = (m: ReturnType<typeof monter>) => m.actions.appliquer(d => modifier(d, ['f1'], { remplissage: '#1f8a3a' }));
+
+  it('rend avec le SVG l etat du modele : le dessin et le contexte', () => {
+    const m = monter();
+    changer(m);
+    m.actions.enregistrerTout();
+    const [svg, etat] = vi.mocked(m.etat.enregistrer).mock.calls[0] ?? [];
+    expect(svg).toMatch(/^<svg /);
+    expect(etat).toEqual({ dessin: m.etat.dessin, production: { contexte: 'generique' } });
+  });
+
+  it('Ctrl+S enregistre sans fermer quand l hote le demande, et dit quand il n y a rien a enregistrer', () => {
+    const m = monter();
+    m.etat.fin = { libelle: 'Enregistrer', fermerSansModification: false, brouillon: false, ctrlSEnregistre: true };
+    m.etat.enregistrement = { etat: 'enregistre' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).not.toHaveBeenCalled();
+    expect(m.messages.at(-1)).toBe('Aucune modification : rien à enregistrer.');
+    changer(m);
+    m.etat.enregistrement = { etat: 'modifie' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).toHaveBeenCalledTimes(1);
+    expect(m.etat.fermer).not.toHaveBeenCalled();
+    m.etat.enregistrement = { etat: 'en-cours' };
+    m.actions.garderBrouillon();
+    expect(m.etat.enregistrer).toHaveBeenCalledTimes(1);
+    expect(m.messages.at(-1)).toBe('Enregistrement en cours…');
+  });
+
+  it('l etat annonce par l hote decide : un projet neuf s enregistre sans modification, un projet enregistre se ferme sans confirmation', () => {
+    const neuf = monter();
+    neuf.etat.enregistrement = { etat: 'modifie' };
+    neuf.actions.terminer();
+    expect(neuf.etat.enregistrer).toHaveBeenCalledTimes(1);
+
+    const enregistre = monter();
+    changer(enregistre);
+    enregistre.etat.enregistrement = { etat: 'enregistre' };
+    enregistre.actions.terminer();
+    expect(enregistre.etat.enregistrer).not.toHaveBeenCalled();
+    expect(enregistre.messages.at(-1)).toBe('Aucune modification à enregistrer.');
+    enregistre.actions.demanderFermeture();
+    expect(enregistre.poserQuitter).not.toHaveBeenCalled();
+    expect(enregistre.etat.fermer).toHaveBeenCalledTimes(1);
+
+    const echec = monter();
+    echec.etat.enregistrement = { etat: 'echec', message: 'Le serveur ne répond pas.' };
+    echec.actions.demanderFermeture();
+    expect(echec.poserQuitter).toHaveBeenCalledWith(true);
+    echec.actions.terminer();
+    expect(echec.etat.enregistrer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('creerActions : le modele et le contexte d edition (ADR-0012, etape 2)', () => {
+  const GROUPES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M0 0h10v10h-10z" fill="#c81e28"/>'
+    + '<g data-ed-nom="Nuage"><path d="M20 0h10v10h-10z" fill="#1428a0"/><g><path d="M40 0h10v10h-10z" fill="#1428a0"/><path d="M60 0h10v10h-10z" fill="#1428a0"/></g></g></svg>';
+
+  it('change le reglage du modele, le garde dans le stockage et le dit ; sans stockage, il ne vaut que pour l edition', () => {
+    const stockage = stockageMemoire();
+    const { actions, etat, messages } = monter(stockage);
+    actions.poserModele('riche');
+    expect(etat.modele).toBe('riche');
+    expect(stockage.lire('svg.modele')).toEqual({ modele: 'riche' });
+    expect(messages.at(-1)).toBe('Groupes, dégradés et effets activés : les prochains fichiers ouverts gardent leurs groupes.');
+    const sans = monter(null);
+    sans.actions.poserModele('riche');
+    expect(sans.messages.at(-1)).toMatch(/ne garde pas ce réglage/);
+  });
+
+  it('ne change rien quand l hote a fixe le modele', () => {
+    const stockage = stockageMemoire();
+    const { actions, etat, messages } = monter(stockage);
+    etat.modeleFixe = true;
+    actions.poserModele('riche');
+    expect(etat.modele).toBeUndefined();
+    expect(stockage.lire('svg.modele')).toBeNull();
+    expect(messages).toEqual([]);
+  });
+
+  it('entre dans un groupe, en sort d un niveau a la fois, et le dit', () => {
+    const { actions, etat, annonces } = monter(null, GROUPES, 'riche');
+    const groupes = Object.values(etat.dessin.groupes ?? {});
+    const nuage = groupes.find(g => g.nom === 'Nuage'), dedans = groupes.find(g => g.parent === nuage?.id);
+    if (!nuage || !dedans) throw new Error('deux groupes');
+    etat.sel = ['f1'];
+    expect(actions.entrerGroupe('f1')).toBe(false);
+    expect(actions.entrerGroupe(nuage.id)).toBe(true);
+    expect(etat.contexte).toEqual({ groupe: nuage.id });
+    expect(etat.sel).toEqual([]);
+    expect(annonces.at(-1)).toBe('Dans le groupe « Nuage », 2 éléments.');
+    actions.entrerGroupe(dedans.id);
+    expect(annonces.at(-1)).toBe('Dans le ' + 'groupe ' + dedans.id.slice(1) + ', 2 éléments.');
+    expect(actions.sortirGroupe()).toBe(true);
+    expect(etat.contexte).toEqual({ groupe: nuage.id });
+    expect(etat.sel).toEqual([dedans.id]);
+    expect(actions.sortirGroupe()).toBe(true);
+    expect(etat.contexte).toBeNull();
+    expect(etat.sel).toEqual([nuage.id]);
+    expect(annonces.at(-1)).toBe('Retour à la racine.');
+    expect(actions.sortirGroupe()).toBe(false);
+  });
+
+  it('dans un groupe, ce qu une operation ajoute a la racine y entre, au premier plan ; a la racine, rien ne bouge', () => {
+    // Annexe 6 §9, « créer un groupe, y entrer, y dessiner » : une forme dessinee dans le contexte naissait a la racine, estompee et
+    // imprenable (trouve par le paquet 2-D). Elle entre au premier plan du groupe ; une forme deja connue ne bouge pas.
+    const { actions, etat } = monter(null, GROUPES, 'riche');
+    const nuage = Object.values(etat.dessin.groupes ?? {}).find(g => g.nom === 'Nuage');
+    if (!nuage) throw new Error('le nuage');
+    const carre = { d: [{ c: 'M' as const, p: [80, 80] }, { c: 'L' as const, p: [90, 80] }, { c: 'L' as const, p: [90, 90] }, { c: 'Z' as const, p: [] }] };
+    const modele = etat.dessin.formes[0];
+    if (!modele) throw new Error('une forme');
+    const ajouter = (d: DessinSvg): DessinSvg => ({ ...d, formes: [...d.formes, { ...modele, id: 'f99', ...carre }] });
+    actions.entrerGroupe(nuage.id);
+    actions.appliquer(ajouter);
+    const ajoutee = etat.dessin.formes.find(f => f.id === 'f99');
+    expect(ajoutee?.parent).toBe(nuage.id);
+    // Au premier plan du groupe : la derniere feuille de ses descendants.
+    const duNuage = etat.dessin.formes.filter(f => f.parent === nuage.id || etat.dessin.groupes?.[f.parent ?? '']?.parent === nuage.id);
+    expect(duNuage.at(-1)?.id).toBe('f99');
+    expect(etat.dessin.formes.find(f => f.id === 'f1')?.parent).toBeUndefined();
+    // A la racine, la meme operation laisse la forme a la racine.
+    const racine = monter(null, GROUPES, 'riche');
+    racine.actions.appliquer(ajouter);
+    expect(racine.etat.dessin.formes.find(f => f.id === 'f99')?.parent).toBeUndefined();
+  });
+
+  it('ne pose qu un contexte qui existe, et deplie ou replie sans recreer l ensemble pour rien', () => {
+    const { actions, etat, deplies } = monter(null, GROUPES, 'riche');
+    actions.poserContexte({ groupe: 'g99' });
+    expect(etat.contexte).toBeNull();
+    const avant = deplies();
+    actions.deplier(['g1'], false);
+    expect(deplies()).toBe(avant);
+    actions.deplier(['g1', 'g2'], true);
+    expect([...deplies()]).toEqual(['g1', 'g2']);
+    actions.deplier(['g1'], false);
+    expect([...deplies()]).toEqual(['g2']);
+  });
+
+  it('groupe la selection (Ctrl+G en riche) et la degroupe, choisit ce qui en resulte et le dit', () => {
+    const { actions, etat, messages, historique: h } = monter(null, SVG, 'riche');
+    actions.grouper();
+    expect(messages.at(-1)).toBe('Choisissez les formes à grouper.');
+    expect(h().passe).toHaveLength(0);
+    etat.sel = ['f1', 'f2'];
+    actions.grouper();
+    expect(Object.keys(etat.dessin.groupes ?? {})).toEqual(['g1']);
+    expect(etat.dessin.formes.map(f => f.parent)).toEqual(['g1', 'g1']);
+    expect(etat.sel).toEqual(['g1']);
+    expect(messages.at(-1)).toBe('Groupe créé : 2 formes.');
+    // Un groupe et une forme : deux elements.
+    etat.sel = ['f1'];
+    actions.degrouper();
+    expect(messages.at(-1)).toBe('Choisissez un groupe à dégrouper.');
+    etat.sel = ['g1'];
+    actions.degrouper();
+    expect(etat.dessin.groupes).toBeUndefined();
+    expect(etat.sel).toEqual(['f1', 'f2']);
+    expect(messages.at(-1)).toBe('Groupe défait : 2 formes.');
+    expect(h().passe).toHaveLength(2);
+  });
+
+  it('degroupe en disant ce que le groupe portait, et compte les elements quand un groupe remonte', () => {
+    const SVG_OPACITE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g opacity="0.5"><path d="M0 0h10v10h-10z"/><g><path d="M20 0h10v10h-10z"/><path d="M40 0h10v10h-10z"/></g></g></svg>';
+    const { actions, etat, messages } = monter(null, SVG_OPACITE, 'riche');
+    etat.sel = ['g1'];
+    actions.degrouper();
+    expect(etat.sel).toEqual(['f1', 'g2']);
+    expect(messages.at(-1)).toBe('Groupe défait : 2 éléments. L’opacité, la découpe, le masque ou les effets du groupe sont retirés ; Ctrl+Z les rend.');
+    etat.sel = ['f1', 'g2'];
+    actions.grouper();
+    expect(messages.at(-1)).toBe('Groupe créé : 2 éléments.');
+  });
+
+  it('refuse le mode points sur une image, et le dit ; une autre forme y passe', () => {
+    const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC';
+    const AVEC_IMAGE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><image x="0" y="0" width="10" height="10" href="data:image/png;base64,' + PNG + '"/><path d="M20 0h10v10h-10z"/></svg>';
+    const { actions, etat, messages, setters } = monter(null, AVEC_IMAGE, 'riche');
+    const [image, forme] = etat.dessin.formes;
+    if (!image?.image || !forme) throw new Error('une image et une forme');
+    etat.formeSeule = image;
+    actions.poserOutil('points');
+    expect(setters.poserOutilBrut).not.toHaveBeenCalled();
+    expect(messages.at(-1)).toMatch(/^Les points d’une image ne se modifient pas/);
+    etat.formeSeule = forme;
+    actions.poserOutil('points');
+    expect(setters.poserOutilBrut).toHaveBeenCalledWith('points');
   });
 });

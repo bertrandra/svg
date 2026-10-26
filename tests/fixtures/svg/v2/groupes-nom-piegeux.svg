@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 100 40">
+  <!-- Le nom que l'editeur a ecrit (encode), puis le calque d'Inkscape, le nom de Figma, l'identifiant. -->
+  <g data-ed-nom="Joyeux%20No%C3%ABl" inkscape:label="ignore" id="ignore-aussi"><path d="M5 5h10v10h-10z"/></g>
+  <!-- Un nom qui ressemble a une attaque : il s'ecrit encode en pourcentage, le nettoyage n'y trouve rien a mutiler. -->
+  <g inkscape:label="on a=1 javascript:alert(1) url(x) @import"><path d="M20 5h10v10h-10z"/></g>
+  <g data-name="&lt;b&gt; &amp; &quot;guillemets&quot; ✓ 🎄"><path d="M35 5h10v10h-10z"/></g>
+  <g id="Calque_1"><path d="M50 5h10v10h-10z"/></g>
+  <!-- Un nom encode mal forme ne se lit pas : le suivant prend sa place. -->
+  <g data-ed-nom="100%" data-name="Repli"><path d="M65 5h10v10h-10z"/></g>
+  <!-- Un nom tout blanc n'en est pas un. -->
+  <g data-name="   "><path d="M80 5h10v10h-10z"/></g>
+</svg>

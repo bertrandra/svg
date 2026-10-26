@@ -39,7 +39,7 @@ couvrent chacun qu'une part :
 
 - tout se calcule dans le navigateur : aucun serveur, aucun compte, rien ne quitte la machine, pas même l'adresse
   de la personne (la page autonome embarque ses fontes ; un test réseau coupé le prouve) ; une police libre de plus ne se
-  télécharge qu'avec l'accord donné, et rien de personnel ne part (ADR-0025) ;
+  télécharge qu'au choix de cette police, et rien de personnel ne part (ADR-0025) ;
 - un seul circuit de l'image ou de la forme jusqu'au fichier prêt pour la machine, avec un contrôle de préparation
   qui propose des corrections annulables ;
 - des fichiers reproductibles : un même dessin donne toujours les mêmes octets ;
@@ -58,8 +58,9 @@ couvrent chacun qu'une part :
 ## Capabilities and Constraints
 
 - Interface en français, avec accents, au vouvoiement ; l'anglais n'existe pas encore (décision ouverte).
-- Modèle de dessin à plat (chemins M, L, C, Q, Z) ; le texte vivant est implémenté sur ce modèle (ADR-0022) ; groupes,
-  masques, dégradés et effets sont proposés par l'ADR-0012, non implémentés.
+- Modèle de dessin en feuilles (chemins M, L, C, Q, Z dans le repère du plan) ; le modèle riche de l'ADR-0012 (groupes,
+  dégradés, motifs, découpes, masques, flou et ombre, images intégrées) est celui de la page et du site ; l'embarquement lit à
+  plat tant que l'hôte ne demande pas le riche ; le texte vivant est une feuille (ADR-0022).
 - Une couleur d'interface est un jeton (`src/styles/jetons.ts`), contraste 4,5:1 dans les deux thèmes.
 - Une action primaire par panneau, le rare dans les menus (ADR-0006).
 - Licence du projet : propriétaire, tous droits réservés. Formes de la bibliothèque sous CC BY 3.0 (attribution

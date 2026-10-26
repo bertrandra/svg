@@ -2,7 +2,7 @@
 // de quelques couleurs posee sur les couleurs du dessin, les plus presentes d'abord. Les palettes
 // d'evenements sont des propositions ; la personne garde la main.
 
-import { couleursDuDessin, remplacerCouleur, type DessinSvg } from './editionSvg.js';
+import { couleursDuDessin, remplacerCouleurs, type DessinSvg } from './editionSvg.js';
 
 export interface Palette { id: string; nom: string; evenement?: string; couleurs: readonly string[] }
 
@@ -26,22 +26,24 @@ export const PALETTES: readonly Palette[] = [
 
 export const palette = (id: string): Palette | undefined => PALETTES.find(p => p.id === id);
 
-/** Toutes les formes visibles prennent cette couleur de remplissage ; les contours la prennent aussi. */
+/**
+ * Toutes les couleurs des formes visibles deviennent celle-ci, au fond comme au trait ; les arrets des degrades et les couleurs des
+ * tuiles de motif aussi (modele v2, etape 13d : un degrade devient uni de fait, sa peinture reste).
+ */
 export function uneCouleur(dessin: DessinSvg, hex: string): DessinSvg {
-  return couleursDuDessin(dessin).reduce((d, c) => remplacerCouleur(d, c.couleur, hex), dessin);
+  return remplacerCouleurs(dessin, new Map(couleursDuDessin(dessin).map(c => [c.couleur, hex])));
 }
 
 /**
  * Pose la palette sur les couleurs du dessin : la plus presente prend la premiere couleur, la
  * suivante la deuxieme, et ainsi de suite en boucle. Deux couleurs du dessin ne fusionnent pas si la
- * palette est assez longue ; sinon elles partagent une couleur, et c'est voulu.
+ * palette est assez longue ; sinon elles partagent une couleur, et c'est voulu. Les couleurs du dessin
+ * sont celles des listes : unies, arrets des degrades, couleurs des tuiles de motif (etape 13d), dont
+ * la couleur de repli se recalcule.
  */
 export function appliquerPalette(dessin: DessinSvg, couleurs: readonly string[]): DessinSvg {
   if (!couleurs.length) return dessin;
-  const presentes = couleursDuDessin(dessin).map(c => c.couleur);
-  // Deux passes par des jetons intermediaires : remplacer A par B puis B par C ne doit pas enchainer.
-  const jetons = presentes.map((_, i) => '#jeton' + i);
-  let d = presentes.reduce((x, c, i) => remplacerCouleur(x, c, jetons[i] ?? c), dessin);
-  d = jetons.reduce((x, j, i) => remplacerCouleur(x, j, couleurs[i % couleurs.length] ?? j), d);
-  return d;
+  // Une seule passe, par une table : remplacer A par B puis B par C ne doit pas enchainer (l'ancien chemin passait par des jetons
+  // intermediaires, « #jeton0 », qu'un arret de degrade ne sait pas porter).
+  return remplacerCouleurs(dessin, new Map(couleursDuDessin(dessin).map((c, i) => [c.couleur, couleurs[i % couleurs.length] ?? c.couleur])));
 }

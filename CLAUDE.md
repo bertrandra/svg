@@ -7,7 +7,8 @@ Consignes pour travailler dans ce dépôt. Le contexte est dans `README.md` et `
 Un éditeur SVG autonome et embarquable, un convertisseur d'image en SVG, et une bibliothèque de
 formes classées par événement. **Un SVG réécrit aujourd'hui doit l'être à l'identique demain** : un
 changement qui déplace une coordonnée, un tracé ou un octet écrit est un événement de version
-majeure, jamais une correction discrète.
+majeure, jamais une correction discrète (dans le même modèle de lecture : l'embarquement garde `plat`, la page lit en `riche`
+depuis l'ADR-0012).
 
 ## Vérifier avant de pousser
 
@@ -16,6 +17,7 @@ Ce que lance la CI (`.github/workflows/ci.yml`, job `verifier`) — tout doit pa
 ```bash
 npm run verifier     # typecheck && lint && cliquet && test
 npm run construire   # la page, la bibliothèque et les fontes se construisent
+npm run test:php     # les tests du site PHP (tests/php/)
 ```
 
 - `tests/unit/architecture.test.ts` impose les couches : `util/shell` → `geometry` →
@@ -48,19 +50,35 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
 
 ## Décisions déjà prises
 
-- **Un dessin à plat, pas un DOM** (ADR-0001) : `engine/editionSvg.ts` lit un SVG (`util/xml.ts`,
-  sans DOM) en chemins absolus M, L, C, Q, Z dans les coordonnées du plan de travail. Ce qui ne s'y
-  ramène pas est refusé en le nommant ; un `<use>` se déplie en formes plates, cycles et renvois externes refusés.
+- **Un dessin en feuilles, pas un DOM** (ADR-0001, amendé par l'ADR-0012) : `engine/editionSvg.ts` lit un SVG (`util/xml.ts`,
+  sans DOM) en feuilles de chemins absolus M, L, C, Q, Z dans les coordonnées du plan de travail ; les groupes sont un index
+  (`parent`, `groupes`), les dégradés, motifs, découpes, masques et effets des valeurs en ligne. En lecture `plat`, ce qui ne s'y
+  ramène pas est refusé en le nommant ; en `riche`, ce qui sort du sous-ensemble de l'annexe 5 l'est aussi ; un `<use>` se déplie
+  (en riche, la structure de sa cible est gardée), cycles et renvois externes refusés.
 - **Chaque opération est pure** et rend un nouveau dessin ; l'historique (`util/historique.ts`) est
   une pile d'états immuables, deux cents au plus, un geste continu fondu par sa clé.
 - **L'éditeur ne connaît aucun magasin** : il reçoit un SVG, un nuancier, une bibliothèque et un `stockage`
   facultatifs (`io/stockage.ts`), rend un SVG à `enregistrer`. Ce qui est propre à la page vit dans
   `zones/Application.tsx`. Son état se partage par trois contextes (dessin, interface, actions ; ADR-0010).
+- **Une forme de base est un chemin ordinaire, fait en pur** (ADR-0033) : `engine/edition/formesDeBase.ts` construit 26 formes dans
+  la boîte du tracé à deux coins, avec des réglages bornés qui ne sont que de la session ; la forme posée ne garde pas ses réglages ;
+  le nom se lit sur la géométrie ; une forme neuve ajoute un modèle, une icône, une place dans `GROUPES_FORMES` et une ligne à la
+  référence `formes-de-base`, jamais un nouveau SVG d'entrée (il changerait le corpus du fuzzing).
 - **Les gestes vivent dans le composant React**, par les évènements de pointeur de la toile ; le
   calcul reste dans le cœur pur.
+- **Une forme se prend par le calcul, pas par le DOM** (ADR-0029) : `engine/prise.ts` (pur, mémorisé par forme) rend les
+  candidates d'un point, avec une tolérance et une cible minimale en pixels d'écran (6 et 12 px à la souris, 12 et 24 au doigt) ;
+  le clic, le double-clic et le survol l'appellent par `zones/PriseToile.tsx` ; Alt+clic passe dessous ; le curseur `move` n'est
+  jamais posé sur la toile au survol (il restylerait chaque forme) ; le liseré de survol est en `--cyan` sur `--panneau`.
+- **Choisir par une zone se calcule sur le tracé réel** (ADR-0035) : `engine/selection.ts` (pur, mémorisé par forme via
+  `prise.ts`) prend toute forme dont la surface ou l'encre touche le cadre ou le lasso (« touchée », défaut) ou y tient entière
+  (« dedans », `regleZone`) ; l'outil Cadre (B) commence même sur une forme, le Lasso (Q) ; Maj ajoute, Alt retire ; le geste vit
+  hors de l'état de React (`zones/GesteZone.ts`, `ZoneToile.tsx`) ; les commandes qui choisissent vivent dans
+  `zones/commandesSelection.ts`. F ouvre la palette des formes (ADR-0033), M les aimants.
 - **Rien ne s'écrit sans le geste de fin** (« Enregistrer », le libellé de l'hôte par `libelleEnregistrer`, « Terminer »
   dans la page) ; Ctrl+S ne garde qu'un brouillon et ne ferme jamais ; récupérer un fichier (« Télécharger le SVG »,
-  « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg`.
+  « Autres formats ») n'est pas un enregistrement ; le SVG réécrit passe par `nettoyerSvg` ; sur le site PHP, Ctrl+S est ce
+  geste et enregistre le projet sans fermer (`ctrlSEnregistre`, ADR-0030).
 - **La vectorisation est vtracer en WASM, épinglé, chargé à la demande** (ADR-0002) ; le réglage
   est pur et déterministe ; une image entièrement détourée n'est jamais tracée.
 - **Les réglages fins du traceur ne sont que ce qu'on a touché** (ADR-0005) : une valeur égale à celle
@@ -78,17 +96,159 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   tolérance ×3 puis ×9, puis refuse en le nommant ; un outil neuf ajoute des références, n'en réécrit aucune.
 - **Le texte reste vivant, le fichier porte des contours** (ADR-0022) : `Forme.texte` garde de quoi recomposer, composé en pur
   (`engine/texte.ts`) au-dessus d'une interface `Glyphes` ; le lecteur de fonte vit dans `io/polices.ts` (crénage GPOS, ligatures
-  GSUB en option). Jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes ; au stylo, rien ne se remplit.
-- **Les polices libres se téléchargent sur accord, vérifiées** (ADR-0025) : un registre en données (`model/sourcesPolices.ts`,
+  GSUB en option). Un texte vivant est une feuille ; jamais de `<text>` dans un SVG écrit ; vectoriser en trois modes, « lettres
+  séparées » donnant en riche un groupe « Texte « … » » d'une forme par lettre (à plat, des formes à la racine) ; un `<text>` lu en
+  riche devient un groupe de lettres (étape 13c) ; au stylo, rien ne se remplit.
+- **Le texte se tape sur la toile** (ADR-0027) : un `<textarea>` transparent posé sur le texte porte le focus, la sélection et
+  l'IME ; le curseur et la sélection se dessinent d'après `engine/texte/curseur.ts` (pur) ; une frappe est un geste d'historique,
+  un texte vide n'est pas créé, Échap termine ; la barre de texte (`zones/BarreTexte.tsx`) porte le fréquent, le panneau garde
+  tout ; le tracé « Médian » (`data-ed-trace`, seulement quand il vaut Médian) passe par la ligne médiane de l'ADR-0021 sur la
+  glyphe rasterisée en pur, mémorisé par glyphe et par police.
+- **Le texte épouse une forme, pur et lié par identifiant** (ADR-0031) : `TexteVivant.disposition` (sur ou dans, avec l'id de la
+  forme) est absente d'un texte libre ; le calcul est pur dans `engine/texte/` (`trace.ts`, `surTrace.ts` : chaque lettre au milieu
+  de son avance, tournée, jamais déformée ; `dansForme.ts` : largeur sur toute la bande de la ligne, dichotomie bornée), mémorisé
+  par forme ; le texte se recompose quand sa forme change (même entrée d'historique), une forme disparue le rend libre ; le
+  fichier écrit le rang de la forme, ou son tracé encodé si elle est masquée, seulement quand le lien existe.
+- **Le texte déformé prend la silhouette de sa forme** (ADR-0032) : `disposition.mode: 'enveloppe'` (`forme`, `marge` 0,05 par
+  défaut), calcul pur dans `engine/texte/enveloppe.ts` : une enveloppe verticale sur le contour extérieur (trous ignorés), exacte
+  quand chaque verticale ne croise le contour que deux fois, le morceau du milieu et des rampes de pente fixe sinon ; contours
+  rebâtis par `ajusterCubiques` ; curseurs et ligne médiane passent par la même enveloppe ; `dans` ne change pas d'un octet.
+- **Les polices libres se téléchargent au choix, vérifiées** (ADR-0025) : un registre en données (`model/sourcesPolices.ts`,
   liste blanche OFL, Apache, UFL, CC0, ITF FFL avec badge) et un index commis (`data/catalogue-polices.json`, rafraîchi à la
-  main par `scripts/catalogue-polices.mjs`, jamais au build) ; rien ne part sans accord par serveur (`svg.polices.consentement`,
-  `policesEnLigne` faux chez un hôte) ; chaque fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit
-  `c-…` avec sa version ; un seul `fetch` dans `src/`.
+  main par `scripts/catalogue-polices.mjs`, jamais au build) ; le choix d'une police non livrée vaut demande, et rien ne part
+  sans ce geste (ouvrir la liste, chercher, voir les aperçus : aucune requête ; `policesEnLigne` faux chez un hôte) ; chaque
+  fichier est vérifié par sha256 dans `io` avant d'être lu ; une variante s'écrit `c-…` avec sa version ; le réseau passe par `io/` (`policesEnLigne.ts`, `serveur.ts`, `adresse.ts`).
 - **Une police se voit avant de se télécharger, une ligne par famille** (ADR-0026) : le nom se dessine dans sa fonte, calculé
   sur place pour une police disponible (`engine/texte/apercuNom.ts`), préparé pour le catalogue dans `data/apercus-polices.json`
   (commis, refait à la main par `scripts/apercus-polices.mjs` après l'index, chaque fichier vérifié par sha256, jamais au
   build), livré dans l'annexe facultative `polices-apercus.js` validée sans lever ; l'aperçu est décoratif (`aria-hidden`,
   `currentColor`) ; une famille de plusieurs sources ne montre que la mieux placée de `PREFERENCE_SOURCES`, sauf filtre de source.
+- **Une seule liste de polices, avec tout, ce qui reste à télécharger marqué** (ADR-0034) : `zones/ChoixPoliceListe.tsx` (combobox
+  et listbox ARIA, posée par un portail à la racine de l'éditeur), le calcul pur dans `zones/lignesPolices.ts` ; une police est
+  locale si elle est livrée, déposée, lue ou gardée en cache (seules les clés se lisent) ; la marque est une icône et des mots,
+  jamais la seule couleur ; seul le choix télécharge ; les tests passent par `tests/e2e/polices.ts`.
+- **Le site PHP est un hôte, le projet est le JSON natif** (ADR-0030) : `dist/php/public/`, un seul dossier à envoyer par FTP, sans
+  réglage (`data/` dedans, tenu par son `.htaccess` réécrit s'il manque et vérifié par HTTP ; `DATA_DIR` vaut `public/data`, sinon
+  `../data`, `config.local.php` le fixe ; `inc/serveur-local.php` imite les `.htaccess` sous `php -S`) ; un seul mot de passe en
+  empreinte dans `data/pwd`, choisi dans la page tant qu'il n'existe pas (CSRF, revu sous verrou), ou déposé en clair dans
+  `data/password` (converti puis supprimé, il remplace l'ancien), ou par `php inc/mot-de-passe.php` ; le changer ferme les sessions ; `src/site/` monte l'éditeur, qui ne
+  connaît toujours aucun magasin (`dessin`, `enregistrement`, `changement` facultatifs) ; le projet (`model/projet.ts`,
+  `engine/projet.ts`) garde tout le modèle à pleine précision en un seul format (`VERSION_PROJET = 1`, migrations vides, toute autre version
+  refusée en la nommant), se valide sans lever et réécrit le même SVG à l'octet ;
+  les annexes de données passent par `definirSourceDonnees`, les polices du catalogue par le serveur, qui les vérifie ; toute
+  route sous session, toute écriture sous jeton CSRF et révision.
+- **Ouvrir depuis une adresse, le type sur les octets** (ADR-0036) : rien ne part sans « Ouvrir », un lien glissé ou une adresse
+  collée seule ; le champ n'existe que si l'hôte pose `definirOuvertureAdresse` (page, site ; jamais l'embarquement) ; https
+  seulement (`model/adresse.ts`) ; la nature se lit sur les octets (`engine/natureOctets.ts`), puis la lecture d'un fichier
+  d'inconnu ; sur le site, `api.php?r=adresse` sous session et CSRF, anti-SSRF dans `inc/adresse.php` (toutes les adresses
+  publiques, `CURLOPT_RESOLVE`, redirections à la main, journal limité à l'hôte) ; un vecteur nouveau entre dans
+  `tests/fixtures/hostile-adresse/`.
+- **Le nuancier se tire du dessin** (ADR-0037) : `DessinSvg.nuancier` (provenance, teintes, opacité à part) est posé à l'ouverture
+  dans l'état initial (ce n'est pas une modification), vit dans l'historique, est gardé par le projet JSON, jamais écrit dans le
+  SVG ; calcul pur dans `engine/nuancier.ts` (surface peinte, fusion OKLab ≤ 0,02 vers la couleur la plus large, plafond 24) ; le
+  nuancier de la page ou de l'hôte reste un groupe à part ; Maj+N et Alt+Maj+N sont pris.
+- **Le modèle v2 entre par des crochets, un dessin plat ne bouge pas** (ADR-0012, étape 0) : `estPlat` garde l'écriture d'avant,
+  sans ligne commune avec `ecritureRiche.ts` ; une fonctionnalité est un fichier `engine/edition/fonctions/<nom>.ts` et une ligne de
+  `catalogue.ts`, sa descente `engine/descente/<nom>.ts` ; la lecture `plat` (défaut de l'API et de l'embarquement) ne consulte aucune fonctionnalité ; un
+  exporteur reçoit un `DessinPlat` par `aplatirPour` ; les références v1 sont gelées par `references-v1.sha256` ; le plan et les
+  consignes des vagues sont dans `docs/adr/0012-annexes/08-plan-de-livraison.md`.
+- **Les repères sont un réglage du document, les répétitions des formes ordinaires** (ADR-0038) : `DessinSvg.reperes` (au millième,
+  triés, absent sans repère ; comme le nuancier, il ne rend pas le dessin non plat) passe par l'historique, s'écrit en
+  `data-ed-reperes` sur la racine par `svgDocument` seulement s'il y en a, se garde dans le projet, jamais dans un export ; règles,
+  visibilité et verrou sont de la session ; grille, radiale et symétrie sont pures (`engine/edition/repetition.ts`) ; la largeur
+  variable est une conversion (`engine/contour/largeur.ts`), pas un style.
+- **Les groupes sont des feuilles à `parent` et une table** (ADR-0012, étape 1) : `Forme.parent` nomme le groupe, `Dessin.groupes`
+  porte nom, visibilité, verrou et opacité, sans matrice vivante (la transformation est cuite dans les feuilles) ; l'arbre se
+  vérifie (`verifierDessin`) et `normaliser` le garde contigu ; les groupes descendent en dernier dans `REGLES_DESCENTE` (opacité
+  multipliée) ; le projet les porte comme tout champ v2.
+- **Une découpe est de la géométrie, rangée sur un groupe** (ADR-0012, étape 5) : `Groupe.decoupe` garde des feuilles canoniques
+  (`feuilleDeDecoupe`) dans le repère du plan, une feuille découpée s'enveloppe dans un groupe ; l'écriture pose
+  `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
+  remplissages par intersection booléenne, garde un trait entier et le dit ; une copie renumérote les contenus
+  (`renumeroterContenus`) ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-decoupes-*`.
+- **Les idiomes de filtres se reconnaissent par le calcul** (ADR-0012, étape 13b) : `edition/filtres.ts` (pur) évalue `feColorMatrix`,
+  `feBlend`, `out` et `arithmetic`, jamais écrits, en simplifications exactes (aplat transparent, fusion avec une image transparente,
+  identité, teinte en RVB linéaire si le filtre l'est, alpha durci), puis reconnaît flou et ombre ; l'ombre pleine de Figma exige des
+  feuilles opaques (`verifierPleines`) ; un refus nomme l'idiome (`avecIdiome`), un nom qui n'accepte jamais rien.
+- **Un masque d'opacité est un contenu peint, rangé sur un groupe** (ADR-0012, étape 6) : `Groupe.masque` garde type, région (boîte
+  du plan) et contenu entier, lu par `edition/contenus.ts` (pile, tables et budget communs aux définitions) ; une feuille masquée
+  s'enveloppe dans un groupe ; l'écriture pose `<mask id="ed-m-…" maskUnits="userSpaceOnUse">` par empreinte ; le contenu suit la
+  fermeture par les `OutilsTransformation` du crochet `groupe` ; la descente l'ignore et le dit ; un vecteur nouveau entre dans
+  `tests/fixtures/hostile/v2-masques-*`.
+- **Un effet est un flou et une ombre, écrits aux formes exactes** (ADR-0012, étape 7) : `edition/fonctions/effets.ts` évalue les
+  primitives et reconnaît le sous-ensemble (flou du graphique, ombre décomposée ou `feDropShadow`, les deux fusionnés), refuse toute
+  autre primitive en la nommant ; l'ombre vit dans le repère du plan, le flou suit la matrice ; l'écriture pose
+  `<filter id="ed-f-…" filterUnits="userSpaceOnUse">` sur une région mesurée sur la géométrie telle qu'elle s'écrit ; la descente
+  les abandonne et le dit ; une prise posée hors d'une feuille ou d'un groupe est refusée en disant où (`refusHorsFeuille`) ;
+  `ContexteEcriture.courant()` donne le contenu à mesurer ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-effets-*`.
+- **Le modèle riche se règle et se voit par les crochets** (ADR-0012, étape 2) : le réglage `modele` (`svg.modele` dans le stockage
+  injecté ; sans réglage lisible, `riche` dans la page et le site, `plat` ailleurs ; fixé, `plat` par défaut, chez un hôte qui embarque) ne décide que de la lecture ; la toile d'un dessin
+  riche se rend par `engine/edition/rendu.ts` avec les crochets de l'écriture (ce qui se voit est ce qui s'écrit, définitions dans
+  le même ordre), un dessin plat garde son DOM d'avant ; le contexte d'édition (`ui.contexte`) restreint prise, cadre, lasso et
+  aimants aux frères (`candidatesDans`, `noeudsDansZone`, `ciblesAimants`) ; double-clic entre, Échap sort.
+- **Le modèle riche est le défaut de la page, jamais celui de l'embarquement** (ADR-0012, étape 14, la bascule) : `MODELE_PAGE =
+  'riche'` (`zones/modele.ts`) est le seul défaut de la page autonome et du site PHP, qu'ils passent par `modeleParDefaut` ; un
+  stockage sans réglage lisible vaut ce défaut, la case « Groupes, dégradés, effets » du menu Édition ramène à plat (`svg.modele`) ;
+  `EditeurSvg.ouvrir`, `estEditable` et le composant sans `modele` ni `modeleParDefaut` lisent `plat`, et le défaut de
+  l'embarquement ne change pas d'une version à l'autre ; un refus propre au riche dit que la lecture à plat l'ouvrirait
+  (`refusAvecRepli`) ; le corpus hostile porte `attenduRiche` et se lit dans les deux modèles ; un test de navigateur qui exerce un
+  modèle le pose par l'option `modele` de session (après le chargement, jamais par un script d'amorce) ; le retour en arrière est le
+  revert d'un seul commit.
+- **Le contenu d'une découpe ou d'un masque se modifie par une lentille pure** (ADR-0012, paquet 8-D) : `engine/edition/lentilles.ts`
+  (`contenuEnDessin`, `reposerContenu` : même objet sans changement, I1 renuméroté par `renommagesDe`, feuilles de découpe refixées,
+  région d'un masque qui la suivait recalculée, plan jamais changé) ; contexte `{ groupe, dans, sous? }` lu par `niveauEdition`
+  (`zones/lentille.ts`) ; dans une lentille, `dessin` est le dessin de travail et `complet` celui de l'historique (enregistrer, exporter
+  et la production lisent `complet`) ; un geste reste une entrée d'historique ; un contenu vide refuse la sortie.
+- **Le PDF écrit ce qu'il sait, par une scène native** (ADR-0012, étape 13a) : `CAPACITES_PDF` déclare natifs les dégradés, motifs,
+  découpes, masques, images et groupes ; `aplatirPour` rend alors une `scene` (`engine/descente/scene.ts`) que `export/pdfNatif.ts`
+  écrit (shading, pavage, `W n`, `/SMask`, groupe de transparence isolé, XObject) ; les PNG se décodent en pur, leur décompression
+  injectée par `io/exportPdf.ts`, et se recompressent par `export/deflate.ts`, déterministe ; sans scène, le PDF d'avant à l'octet ;
+  `phrasePertes(pertes, perdus)` dit « approché » ou « perdu » ; les effets restent abandonnés tant que le PDF n'a pas de résolution
+  d'export.
+- **Découpes, masques et effets se commandent en riche seulement** (ADR-0012, étape 8) : menu Édition sans raccourci ni bouton,
+  commandes grisées avec leur raison (`zones/commandesContenus.ts`) ; libérer rend le contenu choisi dans le groupe devenu le
+  contexte ; section Effets sur `poserEffets` (pur, bornes de la lecture, feuilles et groupes) ; pastilles des groupes en icônes puis
+  mots ; « Insérer une image… » et le dépôt passent par `insererImage` (octets vérifiés comme à la lecture) ; le contenu d'un masque
+  s'écrit en contours ; les contextes `decoupe`/`masque` restent à faire (8-D).
+- **Les couleurs d'un dégradé ou d'un motif sont des couleurs du dessin** (ADR-0012, étape 13d) : listes, sélection, remplacements,
+  nuances proches et palettes lisent les arrêts et les feuilles visibles de la tuile, jamais le repli, par `couleursDuCote`
+  (`edition/couleurs.ts`) ; un remplacement passe par `remplacerCouleurs` (une table, une passe), garde partagée une peinture
+  partagée et recalcule le repli comme la lecture ; un arrêt reste `#rrggbb` ; « même couleur » demande toutes les couleurs du modèle
+  sur le même côté ; le contenu d'un masque n'y entre pas.
+- **Un motif est une peinture en ligne, sa tuile un contenu à part** (ADR-0012, étape 9) : `edition/fonctions/motifs.ts` lit `<pattern>`
+  par `contenus.ts`, le contenu dans le repère de la tuile, origine au coin (x, y) ; l'écriture pose
+  `<pattern id="ed-p-…" patternUnits="userSpaceOnUse">` par empreinte ; la couleur de repli est la moyenne OKLab de la tuile ; ses
+  identifiants forment un espace à part (pas de renumérotation, `verifierDessin` juge chaque tuile) ; `creerMotif` fait de la
+  sélection la tuile ; la descente rend la couleur de repli et le dit ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-motifs-*`.
+- **Un `<svg>` imbriqué et un `<text>` lu sont des groupes en riche** (ADR-0012, étape 13c) : `edition/fonctions/imbrications.ts` lit
+  `svg` (cadre, viewBox et aspect cuits dans les feuilles par `matriceCadre`, fenêtre en découpe sauf `overflow` visible ou auto) et
+  `text` (ses lettres en groupe « Texte « … » », ses prises posées par leurs fonctionnalités, la boîte des lettres par
+  `poserBoiteConnue`) ; les écarts entre navigateurs sont dits (`MSG_IMBRICATIONS`) ; en plat, rien ne change ; un vecteur nouveau
+  entre dans `tests/fixtures/hostile/v2-imbrications-*`.
+- **Un dégradé se règle à l'inspecteur, la toile n'est qu'un raccourci** (ADR-0012, étape 4) : Uni / Linéaire / Radial seulement en
+  modèle riche ou sur un dessin déjà riche ; opérations pures dans `engine/edition/degradesOperations.ts` (repli recalculé, positions
+  bornées par les voisins, valeurs au millième) ; listbox des arrêts dans `zones/EditeurDegrade.tsx` ; poignées `role="slider"` dans
+  `zones/PoigneesDegrade.tsx` (Tab y entre, flèches ±1 %, Maj ±10 %, Suppr) ; au-delà de 20 nœuds à effet, `data-brouillon` retire
+  les filtres pendant un geste (`zones/brouillon.ts`) ; la toile rend une définition par élément, à la clé de son empreinte.
+- **Les calques d'un dessin riche sont un arbre, ceux d'un dessin plat ne bougent pas** (ADR-0012, étape 2-B) : `zones/ArbreCalques.tsx`
+  (treegrid, un seul arrêt de Tab, clavier de l'annexe 6 §1, Ctrl+Maj+flèches et « Déplacer vers… » en alternative au glisser), calcul
+  pur dans `zones/lignesCalques.ts` et `zones/deplacerCalques.ts` ; fenêtré sur les lignes visibles (seuil 150, ligne active épinglée) ;
+  choisir une ligne amène le contexte au groupe commun ; en Cricut, « À couper / À écrire » d'abord, l'arbre dessous pour un dessin
+  riche ; le DOM de la liste plate est gardé par empreinte (`tests/fixtures/calques/plat.sha256.json`).
+- **Les groupes se commandent en riche seulement** (ADR-0012, étape 2-C) : `zones/commandesGroupes.ts` (`groupesActifs` : le réglage
+  riche ou un dessin déjà riche) porte Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer (Entrée), Sortir (Maj+Entrée, Échap, clic hors
+  du contexte) et « Télécharger le SVG à plat » (Fichier, pas un enregistrement) ; Combiner et Séparer y perdent leur raccourci ; Tab,
+  Page suivante et Ctrl+A passent par `noeudsChoisissables(d, contexte)`, la liste d'avant pour un dessin plat ; le fil d'Ariane
+  (`FilAriane.tsx`) rend le focus à la toile ; en plat, rien n'apparaît.
+- **Un dégradé est une valeur en ligne, écrite par empreinte** (ADR-0012, étape 3) : `peintureRemplissage`/`peintureContour` gardent
+  la couleur de repli (moyenne OKLab des arrêts) dans `remplissage`/`contour` ; la lecture `riche` résout `url(#…)` par
+  `edition/resolution.ts` (chaîne `href` ≤ 16, 64 arrêts) ; l'écriture est canonique, dédoublonnée en `ed-d-<14 hex>` ; la descente
+  rend la couleur de repli ; le projet le porte comme tout champ v2, ajouté par une ligne de
+  `model|engine/projetV2/champs.ts`.
+- **Une image intégrée est une feuille, vérifiée sur ses octets** (ADR-0012, étape 12) : `edition/fonctions/images.ts` ne lit qu'un
+  `data:image/(png|jpeg|gif|webp);base64` en mode `riche`, nature et dimensions prises sur les octets ; une « image » SVG ou une
+  adresse extérieure sont refusées en le nommant ; 4 Mo, 16 Mo par dessin, 64 millions de pixels ; la descente l'abandonne et le
+  dit ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-images-*`.
 - **Le stockage du navigateur ne porte que des conforts** (brouillon, versions, corrections) ; la page
   marche sans lui, et le cœur pur ne le voit jamais.
 - **Une action primaire par panneau, le rare dans les menus** (ADR-0006) : un bouton est secondaire
@@ -125,12 +285,18 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   `axe-core` échoue sur toute violation grave en test de navigateur ; aucune règle d'audit n'est désactivée.
 - **Les navigateurs promis sont un texte qu'un test relit** (ADR-0016) : `docs/navigateurs.md` liste chaque fonctionnalité
   et son repli ; une garde de démarrage nomme ce qui manque ; ni `:has()` ni lookbehind, `color-mix()` doublé d'un jeton
-  `repli-*` ; la CI joue chromium, firefox et webkit, ces deux derniers non bloquants jusqu'à leurs premiers passages verts.
+  `repli-*` ; la CI joue chromium, firefox et webkit ; chromium et firefox bloquent, webkit pas avant son premier passage vert en CI ;
+  aucun test ne saute (le contraste forcé s'émule dans les trois) ; un focus déplacé par une touche passe par `focusAuClavier`.
 - **Un contexte de production configure et juge, il n'invente pas d'outil** (ADR-0013) : un profil en données
   (`model/contextes.ts`, valeurs incertaines marquées `aVerifier`) règle les outils existants et rend des constats
   purs (`engine/preparation.ts`), chacun avec sa correction annulable ; « Générique » n'écrit aucun octet de plus,
   le contexte se garde en `data-ed-*` sur la racine ; seul l'export écrit des unités physiques. Millimètre par défaut, pouce retenu ;
   un point « à corriger » demande une confirmation, jamais un bloquant de plus.
+- **Couper ou écrire se choisit par forme** (ADR-0028) : `Forme.operation` est absente tant qu'on ne l'a pas choisie, une règle
+  pure la propose (`engine/preparation/operations.ts` : au stylo tout s'écrit, sans fond ou texte à trait unique s'écrit, plein
+  se coupe) ; le fichier ne garde `data-ed-operation` qu'en Cricut et hors de la proposition, jamais dans un export ; un dessin
+  mêlé s'exporte en archive (à couper, à écrire, combiné), son comportement dans Design Space reste `aVerifier` ; l'aperçu de la
+  machine est une vue, jamais écrite.
 - **La bibliothèque est game-icons.net, pas des emoji** (ADR-0003) : des silhouettes pleines, un
   nom traduit par le lexique (`model/lexique.ts`, un mot inconnu reste en anglais et s'ajoute là),
   un classement par règles (`model/bibliotheque.ts`, mots-clés et exclusions), jamais à la main.
@@ -140,4 +306,4 @@ npm run construire   # la page, la bibliothèque et les fontes se construisent
   chargée à la demande ; le lexique des sources libres ne change aucun nom de game-icons ; moins de 3 % d'anglais par source.
 - **La mention voyage avec la forme, les licences ne se recopient pas** (ADR-0017) : `Forme.origine`, un `<metadata>`
   CC BY 3.0 et `data-origine` n'existent que pour une forme créditée ; `THIRD-PARTY-NOTICES.md` se génère depuis
-  `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur sans un accord donné (ADR-0025).
+  `model/credits.ts` et le `package-lock.json` ; le projet est propriétaire ; la page autonome ne contacte aucun serveur sans un geste qui le demande (ADR-0025).

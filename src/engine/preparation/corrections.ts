@@ -20,6 +20,7 @@ import { boiteDeRegion, pairesTrous } from './geometrie.js';
 import { silhouetteDe } from './silhouette.js';
 import { texteMesure, texteTaille, type ProfilProduction } from './profil.js';
 import { corrigerTexte } from './stylo.js';
+import { poserOperation } from './operations.js';
 
 export type ResultatCorrection = { readonly dessin: DessinSvg; readonly phrase: string } | { readonly erreur: string };
 
@@ -138,7 +139,12 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
     // Le stylo (ADR-0022) : le pourtour en trait, ou des hachures a la largeur du stylo.
     case 'garder-contour': return corrigerTexte(dessin, 'garder-contour', formes, p.largeurStylo);
     case 'hachurer': return corrigerTexte(dessin, 'hachurer', formes, p.largeurStylo);
-    // Changer de police demande une fonte, changer de procede demande l'interface : elles le font, pas le moteur.
-    case 'police-trait': case 'procede-stylo': return { erreur: 'Cette correction se fait dans l’éditeur.' };
+    // Ecrire au stylo (ADR-0028) : ces formes passent parmi celles a ecrire, le reste du dessin garde la lame.
+    case 'ecrire': {
+      const r = poserOperation(dessin, formes, 'ecriture', p.procede);
+      return r.changees ? { dessin: r.dessin, phrase: r.phrase } : { erreur: RIEN };
+    }
+    // Changer de police demande une fonte : l'interface la compose, pas le moteur.
+    case 'police-trait': return { erreur: 'Cette correction se fait dans l’éditeur.' };
   }
 }

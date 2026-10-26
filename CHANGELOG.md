@@ -7,6 +7,24 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Version majeure : des octets écrits changent
 
+- **La bascule : le modèle riche est celui de la page** (ADR-0012, étape 14 ; l'ADR-0012 passe à « acceptée » ; le paquet passe en
+  0.2.0). Dans la page autonome et sur le site PHP, un SVG à `<g>`, à dégradés, à motifs, à découpes (`clip-path`), à masques, à
+  flou ou à ombre portée, à image `data:` ou à `<svg>` imbriqué s'ouvre désormais en modèle riche et **se réécrit avec ses groupes
+  et ses définitions** (`<defs>`, identifiants `ed-…` tirés de l'empreinte du contenu, `data-ed-modele="2"` sur la racine), au lieu
+  d'être aplati ou refusé. Un dessin sans rien de riche s'écrit à l'octet comme avant ; « Télécharger le SVG à plat » (menu
+  Fichier) rend à tout moment les octets d'avant. La case « Groupes, dégradés, effets » du menu Édition, décochée, ramène à plat
+  les fichiers ouverts ensuite (réglage gardé dans le navigateur ; un réglage illisible vaut le riche). Ce que la page montre
+  désormais sans réglage : groupes (Ctrl+G groupe, Ctrl+Maj+G dégroupe ; Combiner et Séparer gardent leur place, sans
+  raccourci), arbre des calques, entrer dans un groupe et fil d'Ariane, dégradés linéaires et radiaux, motifs, découpes et
+  masques modifiables sur place, flou et ombre portée, images intégrées, idiomes de filtres de Figma, Sketch et Illustrator, PDF
+  qui écrit nativement dégradés, motifs, découpes, masques et images. Les bornes du modèle riche refusent ce que la lecture à
+  plat ouvrait (plus de 64 niveaux de groupes, plus de 20 000 groupes, un masque CSS) : le refus dit alors que la lecture à plat
+  l'ouvrirait. **L'embarquement ne change pas** : `EditeurSvg.ouvrir`, `estEditable` et le composant React sans `modele` ni
+  `modeleParDefaut` lisent à plat, et un hôte passe `modele: 'riche'` quand il est prêt (`docs/integration.md`). Aucun octet
+  d'une lecture à plat ne bouge (références v1 gelées). Retour en arrière : défaire le seul commit qui pose `MODELE_PAGE`. La
+  revue au lecteur d'écran réel (NVDA, VoiceOver) de l'arbre, du dégradé et des lentilles reste à faire avant la publication
+  (`docs/verification-manuelle.md`, § 1 bis).
+
 Ce lot déplace délibérément des octets écrits (ADR-0009, ADR-0004) ; les références de
 `tests/fixtures/svg` ont été relues une à une, et les 4 134 formes de la bibliothèque gardent leurs
 empreintes.
@@ -56,6 +74,65 @@ empreintes.
 
 ### Modifié
 
+- Site PHP : un seul dossier à envoyer par FTP (ADR-0030, révision) : `dist/php/public/` contient tout, `data/` compris, sans
+  réglage. Le mot de passe se choisit dans la page à la première visite, ou se dépose dans `data/password` (converti en empreinte
+  puis supprimé, il remplace l'ancien). Le changer ferme les sessions ouvertes. L'outil en ligne de commande devient
+  `inc/mot-de-passe.php`.
+
+- La case du modèle au menu Édition s'appelle « Groupes, dégradés, effets » (elle disait « bêta »), comme ses phrases ; la page et
+  le site passent à l'éditeur leur défaut (`modeleParDefaut`), que le bundle d'embarquement ne passe pas.
+
+- Le corpus hostile se lit dans les deux modèles : `index.json` porte `attenduRiche` là où la lecture riche diffère (21 fichiers),
+  le test unitaire du corpus passe chaque fichier dans les deux, et le test de navigateur fait entrer le corpus par la page en
+  riche ; l'embarquement le lit toujours à plat.
+
+- La rangée de la sélection garde sa place sans sélection (une bande vide) : la première sélection ne pousse plus les panneaux et
+  la toile vers le bas, et un double-clic ne tombe plus à côté de sa cible.
+
+- Arbre des calques, à la souris : les boutons de visibilité et de verrou n'apparaissent que sur la ligne active, survolée, masquée
+  ou verrouillée ; le clavier les atteint toujours, au doigt toutes les lignes les gardent. La grille de 200 groupes passe de 801 à
+  339 éléments.
+
+- Le projet du site n'a plus qu'un format, la version 1, qui porte tout le modèle (groupes, dégradés, motifs, images, découpes,
+  masques, effets) : les champs du modèle v2 se lisent et se valident toujours, et une autre version est refusée en la nommant. Le
+  projet d'un dessin plat reste le même texte, octet pour octet ; aucun projet n'existait à conserver (ADR-0030, révision du
+  26 octobre 2026).
+
+- La section de l'inspecteur qui change une couleur partout s'appelle « Recolorer le dessin » (elle s'appelait « Couleurs du
+  dessin », comme le groupe du nuancier tiré du dessin) ; la section des palettes qui la suit s'appelle « Palettes » (elle
+  s'appelait « Recolorer »).
+
+- La liste « Police » montre toutes les polices (ADR-0034), dans le panneau, l'inspecteur et la barre de texte : une liste
+  déroulante à recherche avec la police actuelle, celles du document, les favoris, les récentes, les livrées, le trait unique, vos
+  polices, puis tout le catalogue, une ligne par famille, chaque nom dessiné dans sa police. Une police pas encore sur l'appareil
+  porte une marque « à télécharger » (icône et mots) ; la choisir la télécharge, vérifiée, et la marque disparaît ; ouvrir,
+  parcourir et chercher ne téléchargent rien. Taper filtre, le clavier suffit ; sur un téléphone, la liste s'ouvre en feuille.
+- « Ne rien sélectionner » devient « Désélectionner », « Sélectionner la même couleur » devient « Sélectionner la même couleur de
+  fond » (C) ; sur un téléphone, « Points et poignées » se range dans le menu de l'outil de sélection.
+- Le nom d'une forme suit les formes de base (« cœur », « hexagone », « étoile à 8 branches »…) ; un losange lu dans un fichier se
+  dit « losange », un rectangle aux coins ronds « rectangle arrondi » ; une forme tracée à la souris se dit « ajoutée et
+  sélectionnée » ; le menu des formes s'appelle « Formes (F) ».
+- « Dans la forme » (barre, menu de la sélection, barre resserrée) pose le texte déformé ; le remplissage en lignes se choisit dans
+  le panneau (« Remplir : En lignes ») et un texte déjà posé en lignes le garde, octet pour octet. Un champ chiffré inactif dit
+  pourquoi en infobulle.
+- Firefox est exigé en CI (ADR-0016, amendement) : la suite entière y a passé. Le contraste forcé est testé dans les trois
+  moteurs, aucun test ne saute plus.
+- L'éditeur reçoit des propriétés facultatives pour un hôte qui garde des projets (`dessin`, `enregistrement`, `changement`,
+  `ctrlSEnregistre`, `actionsHote`), et `enregistrer` reçoit l'état du modèle en second argument ; aucun effet pour la page ni
+  pour l'embarquement. « Un seul `fetch` dans `src/` » devient « le réseau passe par `io/` » (`io/policesEnLigne.ts`,
+  `io/serveur.ts`). Un plan vide sans rien à défaire (projet vierge) dit le premier geste au lieu de proposer d'annuler.
+- En découpe, une forme sans fond n'est plus un constat bloquant : elle se range « À écrire ». La correction « Passer au dessin
+  au stylo » devient « Écrire au stylo ». Le SVG enregistré en contexte Cricut porte `data-ed-operation` sur une forme dont
+  l'opération choisie diffère de la proposition ; jamais en Générique ni dans un export. Aucune référence existante ne change.
+- Échap termine la saisie d'un texte en le gardant (Ctrl+Z le rend). Entrée avec l'outil Texte ouvre la saisie sur la toile au
+  lieu du champ du panneau. L'aperçu « Ligne (stylo) » d'une police à contour montre la ligne médiane au lieu du double trait.
+  Les champs chiffrés du panneau Texte s'appliquent à la validation.
+- Plus d'accord à donner pour les polices ni pour la bibliothèque de formes (décision du 25 octobre 2026, ADR-0025 amendée) :
+  choisir une police du catalogue la télécharge aussitôt (la ligne dit « Téléchargement… »), toujours vérifiée par son
+  empreinte sha256, avec Bunny Fonts en repli ; ouvrir la liste, chercher et voir les aperçus ne font partir aucune requête.
+  Le dialogue de consentement, « Retirer l'autorisation » et la clé `svg.polices.consentement` (ignorée et effacée si elle
+  reste) disparaissent. La bibliothèque de formes se charge d'elle-même à l'ouverture de sa voie ou de sa section, sans bouton
+  « Charger la bibliothèque (environ 7 Mo) » ; les sources libres gardent leur chargement par pastille.
 - « Toutes les polices » ne montre qu'une ligne par nom de famille : la fonte livrée, sinon Google Fonts, sinon Fontshare
   (ordre défini dans le registre) ; filtrer une source montre toutes les siennes ; le total compte les lignes montrées
   (2 166). Un texte composé dans une police d'une source cachée se recompose à l'identique et reste nommé avec sa source.
@@ -123,6 +200,51 @@ empreintes.
 
 ### Corrigé
 
+- Site PHP : un projet s'ouvre derrière un hébergeur qui compresse ses réponses (nginx en gzip ou brotli). La compression
+  affaiblit l'ETag (`W/"1"`) ; la page ne lisait que la forme forte et disait « Le serveur a rencontré une erreur » alors que le
+  projet était rendu. La page et le serveur (`If-Match`) acceptent les deux formes (vu sur un site en ligne, sous Chrome).
+
+- Les tests du site PHP sous Firefox ne tombent plus une fois sur deux sur le premier chargement (`page.goto` à 10 s). Ni le site
+  ni Firefox : la page est chargée (`readyState` à `complete`, mesuré), mais quand elle pose `Cross-Origin-Opener-Policy:
+  same-origin`, Firefox change de groupe de contextes depuis l'`about:blank` d'une page neuve, et Playwright 1.56.1 perd alors
+  environ un chargement sur vingt (reproduit sur une page minimale : 0 sur 30 sans l'en-tête, 2 sur 30 et 2 sur 40 avec).
+  Firefox y ignore désormais la politique (`pilote({ coopIgnoreeParFirefox: true })`, `tests/e2e/aide.ts`) ; le test vérifie
+  que le site pose toujours l'en-tête, que Chromium et WebKit appliquent.
+
+- Les boutons radio Uni / Dégradé linéaire / Dégradé radial de l'inspecteur et les cases Flou et Ombre portée de la section Effets
+  font 24 px de haut à la souris (18,8 et 19 px) : les tests de cibles, joués en riche, les ont trouvés.
+
+- Une ligne des calques choisie et survolée garde l'encre : le cyan du survol sur la teinte de la sélection n'y faisait que 3,99:1,
+  et, la rangée de la sélection ne décalant plus la liste, le pointeur reste sur la ligne qu'il vient de choisir.
+
+- Un bouton survolé d'un constat « Prêt pour Cricut » prend le cyan du survol des boutons discrets : sur le fond d'un constat
+  bloquant, le cyan d'outil ne faisait que 4,33:1 (l'audit axe tombait quand le pointeur restait sur le panneau).
+
+- Modèle riche : une forme dessinée, collée ou insérée dans un groupe y entre, au premier plan, au lieu de naître hors du contexte,
+  estompée et imprenable ; « Vectoriser : lettres séparées » rend les lettres en un groupe « Texte « … » », choisi, et le dit.
+- Une image intégrée se dit « image PNG » (calques, sélection, Alt+clic), plus « rectangle, sans fond ».
+- Arbre des calques : un double-clic sur une ligne non choisie entre dans ce groupe, plus dans son voisin (la rangée de la
+  sélection décalait la liste entre les deux clics).
+- Contraste forcé : numéro et pastilles d'une ligne choisie lisibles, mini-onglet enfoncé distinct, fil d'Ariane en couleurs du
+  système ; « Déplacer vers… » tient sur une ligne.
+
+- Sécurité : le nettoyage d'une feuille de style retire aussi `@ import` écrit avec un blanc après l'arobase (trouvé par le fuzzing ;
+  régression ajoutée).
+- Modèle riche : un masque dont le contenu porte des groupes eux-mêmes masqués ou découpés garde toutes ses formes, ou est refusé
+  en le nommant s'il dépasse la borne (il en perdait en silence) ; une image dans le contenu d'un masque s'écrit dans un SVG bien
+  formé (`xmlns:xlink` déclaré), et le contrôle d'écriture refuse désormais tout préfixe non déclaré.
+- Sécurité : le nettoyage d'une feuille de style résout ses échappements à chaque passe ; un échappement à double niveau
+  (`ur\\6c(`) ou vers un caractère de contrôle ne peut plus recomposer `url(` (trouvé par le fuzzing ; deux régressions ajoutées).
+- Sécurité : un `<use>` qui renvoie à l'extérieur avec un schéma coupé par un blanc ou un invisible (`d<TAB>ata:`) ne laisse
+  plus ce schéma dans `data-href-externe` (trouvé par le fuzzing sur le corpus réuni ; vecteur ajouté au corpus).
+- Sécurité : le nettoyage d'une feuille de style retire aussi `-moz-binding` écrit sans « : » (trouvé par le fuzzing quand le
+  corpus a changé) ; rien ne peut plus le recomposer.
+- Sous Firefox, une forme des groupes « À couper / À écrire » se glisse de nouveau d'un groupe à l'autre : la vignette, sortie du
+  bouton, est la poignée du glisser (Firefox ne commence jamais un glisser sur un bouton).
+- Sous Safari et WebKit, un menu ouvert à la souris puis parcouru aux flèches montre de nouveau l'élément atteint, de même que
+  les pastilles de la bibliothèque et les onglets de l'accueil (`focus({ focusVisible: true })`).
+- Tests de navigateur sous WebKit : le dépôt de fichier attend l'accueil, les textes de menu sont ramenés, le texte d'exemple est
+  mesuré pour de bon, la molette avance cran par cran ; sous Firefox, le bouton « aucun » est lu après ses transitions.
 - Refermer un repère par « Compris » au clavier donne le focus à ce qui suit avant que la note ne disparaisse : il ne
   passe plus un instant par le corps de la page (un test de navigateur l'observait parfois en CI).
 - Un bouton discret survolé passait sous 4,5:1 en thème clair (4,49 sur un panneau, 4,05 sur la page) : son texte prend
@@ -159,6 +281,216 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- Modèle riche : modifier sur place le contenu d'une découpe ou d'un masque (« Modifier la découpe », « Modifier le masque » au
+  menu Édition, ou double-clic sur la pastille du calque). Le reste du dessin s'estompe, la découpe se trace en contour et le
+  masque se dessine tel quel, cerné. Les outils ordinaires s'y appliquent, chaque geste s'annule en une fois, et l'on sort par
+  Échap, Maj+Entrée ou le fil d'Ariane « Racine › Groupe › Découpe ». Une découpe vidée refuse la sortie et dit quoi faire ; le
+  texte, et les effets dans une découpe, y sont grisés avec leur raison.
+
+- Modèle v2, étape 13b : en mode riche, les ombres portées et les flous écrits par Figma (ombre portée, flou de calque), Sketch
+  (ombres en `feMerge`) et Illustrator (`AI_Shadow`) s'ouvrent comme des effets de l'éditeur ; le filtre `Adobe_OpacityMaskFilter`
+  des masques d'Illustrator est reconnu comme neutre ; l'ombre portée d'Inkscape 1 s'ouvre aussi. Ce qui n'y équivaut pas (ombre
+  intérieure, plusieurs ombres, mode de fusion autre que normal, ombre de Figma sous une forme transparente) est refusé en nommant
+  l'idiome, par exemple « une ombre intérieure (Figma) ».
+
+- Le PDF vectoriel d'un dessin riche garde ses dégradés (shading), ses motifs (pavage), ses découpes (chemin de découpe, traits
+  compris), ses masques d'opacité (masque doux), l'opacité de ses groupes (groupe de transparence) et ses images (JPEG tel quel,
+  PNG et GIF décodés, alpha compris, orientation EXIF) ; le message de l'export distingue ce qui est approché de ce qui est perdu
+  (flou et ombre, image WebP). Un dessin plat garde son PDF à l'octet.
+
+- Découpes, masques et effets dans l'éditeur (modèle riche, bêta) : au menu Édition, « Créer une découpe », « Libérer la découpe »,
+  « Créer un masque », « Inverser le masque », « Libérer le masque », grisés avec leur raison, sans raccourci ; une section Effets
+  dans l'inspecteur (flou, ombre portée : décalage, flou, couleur, opacité), aussi pour un groupe ; les groupes des calques montrent
+  ce qu'ils portent (découpe, masque, flou, ombre, opacité), et la phrase de la ligne le dit ; « Insérer une image… » (menu
+  Fichier) et le dépôt d'une image sur la toile posent un PNG, JPEG, GIF ou WebP vérifié sur ses octets, au centre de la vue ; une
+  rotation qui approche un flou inégal le dit. Le contenu d'un masque s'écrit en contours (son texte reste vivant dans
+  l'éditeur). À plat, rien ne change.
+
+- Modèle v2, étape 13d : les outils de couleur voient les dégradés et les motifs. « Couleurs du dessin » et « Par couleur » ont une
+  ligne pour chaque couleur d'arrêt et de tuile, jamais pour la couleur moyenne de repli. Remplacer une couleur (partout, sur le
+  fond ou sur le trait), fusionner les nuances proches, appliquer une palette ou tout mettre d'une couleur changent les arrêts et
+  les tuiles, puis recalculent la couleur de repli. La sélection par couleur prend une forme dont un arrêt ou la tuile porte la
+  couleur. Le contenu d'un masque n'est pas touché. Un dessin plat ne change pas d'un octet.
+
+- Modèle v2, étape 9 : les motifs. En mode riche, une peinture `url(#…)` vers un `<pattern>` s'ouvre (unités de la tuile et du
+  contenu, viewBox, transformation, héritage `href`, tuile peinte avec dégradés et motifs imbriqués) et se réécrit en
+  `<pattern id="ed-p-…">` canonique et dédoublonné. Le motif suit sa forme, sa couleur de repli est la moyenne de sa tuile, le
+  nuancier lit les couleurs de la tuile, et les formats de tracés le remplacent par sa couleur moyenne en le disant. « Créer un
+  motif depuis la sélection » (menu Édition, modèle riche). Le projet JSON porte les motifs. Les cycles, les tuiles vides ou
+  minuscules et les renvois extérieurs sont refusés en les nommant.
+
+- Modèle riche (bêta) : un `<svg>` imbriqué s'ouvre en groupe, à sa place et à son échelle (viewBox, preserveAspectRatio), rogné à
+  sa fenêtre sauf `overflow` visible. Un texte lu en lettres devient un groupe « Texte « … » » qui garde sa découpe, son masque ou
+  son filtre au lieu d'être refusé. Ce que les navigateurs ne rendent pas tous pareil est dit à l'ouverture. Rien ne change en
+  modèle plat.
+
+- Dégradés dans l'éditeur (modèle riche, bêta) : le remplissage et le contour se choisissent Uni, Dégradé linéaire ou Dégradé
+  radial. La liste des arrêts permet d'ajouter, retirer, régler la couleur, la position et l'opacité, et de changer l'ordre ; on
+  règle aussi l'angle, le centre, le rayon et l'étalement, et on peut inverser le dégradé. Sur la toile, des poignées accessibles
+  au clavier (Tab y entre, flèches ±1 %, Maj ±10 %, Suppr) et au doigt. Une ligne « Dégradés » apparaît dans les couleurs du
+  dessin. Le choix n'apparaît qu'avec le modèle riche ou sur un dessin déjà riche ; poser un dégradé rend le dessin riche.
+- Effets sur la toile : au-delà de vingt formes ou groupes à effet, flous et ombres se masquent pendant un glisser, un
+  redimensionnement ou une rotation, et la page le dit. La toile ne réécrit plus que la définition qui change : 200 formes à
+  ombre passent de 71,6 à 18,9 ms par mouvement.
+
+- Calques en arbre (modèle riche, bêta) : un dessin à groupes montre ses calques en arbre accessible (treegrid), pilotable sans
+  souris : flèches pour parcourir, déplier et replier, Entrée pour entrer dans un groupe, Espace pour choisir, F2 pour renommer,
+  Ctrl+Maj+flèches pour monter, descendre, sortir d'un groupe ou entrer dans celui du dessus, « Déplacer vers… » (Maj+F10) qui
+  liste les groupes, et glisser-déposer d'une ligne dans un groupe. Fenêtré au-delà de 150 lignes. En Cricut, « À couper / À
+  écrire » restent en tête, l'arbre vient dessous. Un dessin plat garde sa liste à l'identique.
+
+- Groupes au clavier et au menu (modèle riche, bêta) : Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G), Entrer dans le groupe (Entrée),
+  Sortir du groupe (Maj+Entrée ou Échap), au menu Édition et dans la rangée de la sélection. Dans un groupe, Tab, Page suivante et
+  Ctrl+A ne parcourent que ses éléments, et un clic sur une forme hors du groupe en fait sortir. Un fil d'Ariane (« Racine ›
+  Nuage ») dans la barre d'état remonte d'un geste. L'éditeur dit un groupe choisi, créé ou défait. « Télécharger le SVG à plat »
+  (menu Fichier) rend un SVG sans groupe ni définition. Une image se prend sur toute sa surface et ne passe pas en mode points,
+  et c'est dit. En modèle plat, rien ne change : Ctrl+G combine, Ctrl+Maj+G sépare.
+
+- « Groupes, dégradés, effets (bêta) » au menu Édition (modèle v2, étape 2, premiers paquets) : un SVG à groupes s'ouvre avec ses
+  groupes, ses dégradés, ses découpes, ses effets et ses images, et se dessine sur la toile tel qu'il s'écrit. Un double-clic entre
+  dans un groupe : le reste s'estompe, et seuls ses éléments se prennent, se choisissent au cadre ou au lasso et servent d'aimants ;
+  Échap en sort. Le réglage se garde dans le navigateur ; l'embarquement reçoit l'option `modele` (`plat` par défaut). Un brouillon
+  ou une version enregistrés avec des groupes le disent quand le réglage est à plat, sans rien effacer, et proposent « Activer le
+  modèle riche et reprendre ». Tant que le réglage reste à plat, rien ne change : un dessin sans groupe se dessine et s'écrit
+  exactement comme avant.
+
+- Modèle v2, étape 6 (moteur, mode riche seulement) : les masques d'opacité. Un `mask` vers un `<mask>` (luminance ou alpha,
+  région et unités résolues, contenu peint avec ses dégradés, images, groupes et `<use>`) se lit, s'écrit en `<mask id="ed-m-…">`
+  par empreinte et se relit à l'identique ; le masque suit son groupe et rogne sa boîte visuelle ; créer, libérer et inverser un
+  masque (moteur) ; les exports qui ne savent pas masquer l'ignorent et le disent ; le projet le garde. Un masque CSS,
+  un renvoi extérieur, un cycle ou une imbrication trop profonde sont refusés en les nommant. Le mode plat ne change pas.
+
+- Modèle v2, étape 7 (moteur, mode riche seulement) : le flou gaussien et l'ombre portée d'une forme ou d'un groupe se lisent,
+  s'écrivent en filtres portables (`<filter id="ed-f-…">`, région calculée, `color-interpolation-filters="sRGB"`), suivent les
+  transformations, comptent dans la boîte visuelle et sont gardés par le projet. Les exports de tracés les abandonnent en le
+  disant. Toute autre primitive de filtre est refusée en la nommant (« un filtre (feTurbulence) ») ; un filtre, une découpe ou un
+  masque posés sur un clone `<use>`, un texte, un symbole ou tout le dessin sont refusés en disant où, au lieu de se perdre.
+
+- Modèle v2, étape 5 (moteur, mode riche seulement) : les découpes. Un `clip-path` vers un `<clipPath>` (unités de boîte,
+  transformation, `<use>`, `clip-rule`, découpe imbriquée) se lit en découpe d'un groupe ; une forme découpée s'enveloppe dans un
+  groupe. Ce qu'un navigateur ignore est ignoré et dit ; une forme CSS, un renvoi extérieur, un cycle, une imbrication au-delà de
+  8 niveaux ou plus de 20 000 formes de définitions sont refusés en les nommant. Les découpes s'écrivent en
+  `<clipPath id="ed-c-…">` par empreinte et suivent leur groupe quand il se transforme. « Créer une découpe » et « Libérer »
+  (moteur) ; la descente vers le PDF, le DXF, l'EPS et le SVG de découpe rogne les remplissages (un trait est gardé entier et
+  c'est dit) ; le projet JSON garde les découpes. Le mode plat ne change pas.
+
+- Modèle v2, étape 1 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les `<g>` restent des groupes
+  (nom, opacité ; la transformation est cuite dans les formes) et se réécrivent à l'identique ; quatre opérations pures (grouper, dégrouper, déplacer dans un
+  groupe, renommer). Une image ou un dégradé sous un groupe transformé suivent le groupe ; les exports à plat multiplient l'opacité du groupe. Le projet du site garde la table des groupes.
+
+- Modèle v2, étape 3 (moteur, pas encore atteignable depuis l'interface) : en lecture riche, les dégradés linéaires et radiaux
+  sont lus (unités de boîte, pourcentages, transformation, chaîne `href`, 64 arrêts au plus), réécrits sous un identifiant
+  d'empreinte, une seule définition par dégradé, et suivent leur forme. Les exports qui ne savent pas peindre un dégradé (PDF, SVG
+  de découpe, DXF, EPS, fichiers Cricut) reçoivent sa couleur moyenne et le disent ; le nuancier lit les couleurs des arrêts. Le
+  projet du site garde dégradés et images ; celui d'un dessin plat ne change pas d'un octet. La vignette du site
+  montre les dégradés.
+
+- Modèle v2, étape 12 (moteur, pas encore atteignable depuis la page) : une image PNG, JPEG, GIF ou WebP intégrée en `data:` se
+  lit en mode riche, vérifiée sur ses octets (une « image » qui est un SVG ou une adresse extérieure sont refusées en le nommant ;
+  4 Mo par image, 16 Mo par dessin, 64 millions de pixels lus dans l'en-tête), s'écrit en `xlink:href` à l'identique, suit ses
+  transformations, et les exports de tracés (PDF, DXF, EPS, découpe) l'abandonnent en le disant.
+
+- **Règles et repères** (ADR-0038) : règles en haut et à gauche de la toile (unités du plan, ou mm et pouces d'un contexte de
+  production), repères qu'on tire d'une règle, qu'on déplace, verrouille, retire (glisser hors de la toile ou Suppr) et pose à
+  une valeur exacte (double-clic, ou le panneau « Repères ») ; les aimants s'y accrochent ; menu Vue : Maj+R, Ctrl+;, Ctrl+Alt+;,
+  Ctrl+Maj+;. Le document les garde en `data-ed-reperes` sur la racine, seulement s'il y en a, et le projet aussi ; aucun export.
+- **Répéter la sélection** : dupliquer en grille, répétition radiale, symétrie autour du centre ou d'un repère, en gardant ou non
+  l'original, avec aperçu en direct (menu Édition et menu « Répéter » de la sélection). Coins arrondis en direct (un curseur) et
+  « Arrondir ce coin » en mode points. Largeur variable du trait : le trait devient une surface qui suit un profil début, milieu,
+  fin. Aucune référence d'écriture ne change ; six références neuves.
+
+- **Les outils de sélection** (ADR-0035) : le cadre prend toute forme dont le tracé réel (surface remplie selon sa règle, ou encre
+  du trait) touche le rectangle, même en partie — plus le trou d'un anneau, ni le coin vide de la boîte d'une diagonale ; « Les
+  formes entièrement dedans » se choisit au menu de l'outil (zone en trait plein, tirets pour « touchées ») ; un bouton de la barre
+  reprend Sélection (V), **Cadre de sélection (B)**, qui commence même sur une forme et sert au doigt, et **Lasso (Q)** ; Maj
+  ajoute, Alt retire ; pendant le geste, le liseré de survol montre ce que le relâchement prendra ; au clavier, le réticule pose
+  les coins du cadre ou les points du lasso. Menu Édition : Inverser la sélection (I), même couleur de contour (Alt+C), même type
+  (Y) ; en Cricut, tout ce qui est à couper / à écrire (Alt+Maj+X, Alt+Maj+E). Aucun octet écrit ne change.
+
+- Modèle v2, étape 0 (ADR-0012) : des coutures sans effet visible. Types du modèle v2 en champs facultatifs ; arbre dérivé et
+  invariants ; points d'extension de la lecture, de l'écriture et des transformations (catalogue vide) ; écriture riche en
+  squelette et définitions nommées par empreinte ; descente vers un dessin plat (`aplatirPour`) ; garde-fous (références v1 gelées
+  par manifeste, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`). Aucun octet écrit ne change.
+  L'ADR-0012 et son plan sont révisés après les ADR-0022 à 0037.
+
+- **Le nuancier se tire du dessin, et de la sélection** (ADR-0037) : à l'ouverture d'un SVG, d'un PDF ou d'une image convertie,
+  la section « Nuancier » de l'inspecteur propose « Couleurs du dessin » : les couleurs réellement employées, rangées par surface
+  couverte, les presque identiques fondues (écart OKLab ≤ 0,02), 24 au plus, noir et blanc gardés. « Créer le nuancier depuis la
+  sélection » (menu Édition, rangée de la sélection, Maj+N pour remplacer, Alt+Maj+N pour ajouter) le remplace ou le complète, et
+  Ctrl+Z le défait ; le nuancier de la page ou de l'hôte reste à côté (« Nuancier proposé »). Un clic pose la couleur sur le
+  remplissage, Maj+clic sur le contour ; chaque pastille a un nom approché en français. L'atelier de conversion montre le nuancier
+  de l'image et celui du tracé. Export `.gpl` et `.ase` ; le projet JSON le garde (`dessin.nuancier`). Aucun octet SVG ne change.
+
+- **Ouvrir depuis une adresse** (ADR-0036) : un champ « Ouvrir depuis une adresse » dans les voies « Ouvrir un SVG ou un PDF » et
+  « Convertir une image », et « Insérer depuis une adresse… » dans le menu Fichier de l'éditeur (un SVG ou la première page d'un
+  PDF). Un lien glissé, ou une adresse collée seule dans la zone de code, l'ouvre aussi ; rien ne part avant ce geste. Le type se
+  décide sur les octets reçus, jamais sur l'extension, et la lecture reste celle d'un fichier d'inconnu. Dans la page autonome, le
+  navigateur va chercher le fichier (https seulement, sans cookie ni référent, 100 Mo et 60 s au plus, annulable) et dit
+  clairement un refus CORS ; sur le site PHP, le serveur le fait, avec des protections anti-SSRF (adresses privées refusées en
+  IPv4 et IPv6, connexion épinglée, redirections revues, taille et délai bornés, journal sans chemin ni paramètre ; cURL requis).
+
+- **Les formes de base** (ADR-0033) : une palette de 26 formes en cinq rubriques (Basiques, Polygones, Symboles, Étiquettes,
+  Traits), ouverte par le chevron « Formes » de la barre ou par F : carré, cercle, rectangle arrondi, triangle, losange,
+  parallélogramme, trapèze, polygone de 3 à 12 côtés, étoile réglable, cœur, flèche simple ou double, croix, anneau percé,
+  demi-cercle ou quart, goutte, lune, nuage, étiquette, badge festonné, bulle de dialogue, arc, spirale et vague. Chaque forme est
+  un chemin ordinaire, tracé d'un glisser ou au clavier ; ses réglages sont dans le panneau (« Forme à tracer ») ; Maj garde les
+  proportions ; le bouton de la barre reprend la dernière forme. Aucun octet écrit ne change ; référence neuve `formes-de-base`.
+
+- **Le texte déformé dans une forme** (ADR-0032) : « Dans la forme » étire et courbe tout le texte jusqu'au contour (un cœur, un
+  cercle, une étoile), lettres déformées, le bloc à la silhouette de la forme. Il reste modifiable : on le retape sur la toile, la
+  déformation suit, et il suit sa forme ; il marche aussi en tracé Médian et pour couper ou écrire. Le fichier ne porte que des
+  contours et `data-ed-disposition="enveloppe"` ; le projet garde `{ mode: 'enveloppe', forme, marge }`.
+
+- **Le site PHP** (ADR-0030), construit dans `dist/php/` à côté de la page autonome, qui ne change pas : connexion par un mot
+  de passe unique, en empreinte dans `data/pwd` (`php outils/mot-de-passe.php`), session sûre, jeton CSRF, délai croissant après
+  trois échecs ; écran « Mes projets » (nouveau, ouvrir, renommer, dupliquer, supprimer vers la corbeille) ; « Enregistrer »,
+  Ctrl+S et « Enregistrer sous… » écrivent le projet sur le serveur, avec l'état « Enregistré / Modifications non
+  enregistrées » et un contrôle de révision entre onglets ; bibliothèques, index et aperçus des polices servis en JSON depuis
+  `data/json`, fontes depuis `data/font` ; une police du catalogue téléchargée et vérifiée par sha256 par le serveur : le
+  navigateur ne contacte que le site. Installation : `docs/deploiement-php.md`.
+- **Le projet JSON natif** (`model/projet.ts`, `engine/projet.ts`) : versionné, migré, validé sans lever ; il contient tout le
+  modèle (textes vivants et leur disposition, opérations Cricut, contexte, nuancier, fonte déposée, image source) et, rouvert,
+  réécrit le même SVG à l'octet.
+- Tests PHP sans dépendance (`npm run test:php`) et leur étape dans la CI ; `tests/e2e/site-php.e2e.ts` contre `php -S`.
+
+- **Le texte épouse une forme** (ADR-0031). Posé sur une forme, il suit son tracé : le cercle d'un badge, un arc, une vague ;
+  ses lettres sont tournées sans être déformées ; on choisit le point de départ (poignée sur la toile, clavier ou panneau), le
+  côté (dessus ou dessous, extérieur ou intérieur), l'alignement, et on peut répartir les lettres sur tout le tracé. Posé dans une
+  forme fermée, il la remplit ligne à ligne, coupé sur ses bords, trous respectés, avec une marge, l'alignement, la justification
+  et une taille ajustée pour remplir. Un texte qui dépasse ou ne tient pas le dit. Le texte reste modifiable et suit sa forme
+  quand elle change ; supprimer la forme le rend libre ; la forme peut être masquée. Gestes : « Disposition : Libre | Sur la
+  forme | Dans la forme » dans la barre de texte, puis un clic sur la forme (ou Tab puis Entrée) ; « Texte et forme » dans le
+  menu de la sélection. Le fichier ne porte que des contours ; la disposition et le lien s'écrivent seulement quand ils existent
+  (`data-ed-disposition`, `data-ed-forme`…). Aucune référence d'écriture existante ne change ; deux références neuves.
+
+- **Couper ou écrire, forme par forme** (ADR-0028) : en contexte Cricut, chaque forme est « À couper » ou « À écrire ». Une forme
+  pleine se propose à la découpe ; un trait seul, une ligne médiane ou un texte à trait unique à l'écriture ; tout au stylo par
+  défaut. Le panneau de gauche range les formes en deux groupes (vignette, sélection Maj/Ctrl, bouton pour changer de groupe,
+  glisser). La rangée de la sélection et le menu Édition changent l'opération (Maj+X, Maj+E, Ctrl+Z annule).
+- **Aperçu de la machine sur la toile** (menu Vue, Maj+O, actif par défaut en Cricut) : la zone que la lame découpe est hachurée,
+  trous respectés, et la ligne du stylo est tracée à sa largeur. Deux jetons : `--apercu-coupe`, `--apercu-stylo`.
+- Export d'un dessin mêlé : une archive avec le fichier à couper, le fichier à écrire, les deux ensemble en deux groupes, et un
+  mode d'emploi. Témoin 9 au protocole, quatre comportements de Design Space à vérifier.
+
+- **Le texte se tape sur la toile** (ADR-0027) : un clic de l'outil Texte (ou Entrée au clavier) pose un point d'insertion et
+  l'on tape directement sur la toile ; Entrée va à la ligne, Échap ou un clic hors du texte termine la saisie, et un texte vide
+  n'est pas créé. Un double-clic ou Entrée rouvre un texte au bon endroit : sélection à la souris et au clavier, copier-coller du
+  texte brut, Ctrl+Z qui défait toute une frappe d'un geste.
+- **Une barre de texte « comme Word »**, à la place de la rangée de la sélection : police et « Toutes les polices », style,
+  taille, tracé, alignement, et « Plus d'options » qui ouvre le panneau Texte ; Alt+F10 y mène depuis le texte. Resserrée au
+  doigt et sous 640 px.
+- **Le tracé « Plein | Médian » d'un texte vivant** : en Médian, chaque lettre d'une police à contour devient une seule ligne au
+  milieu du trait, pour le stylo, calculée dans le moteur pur par la chaîne de la ligne médiane et mémorisée par glyphe ; écrite
+  `data-ed-trace="median"`, rendue à l'identique par la vectorisation, l'export et l'aperçu. Une référence neuve
+  (`texte-vivant-median`) ; aucune existante ne change.
+
+- **Une forme se prend facilement sur la toile** (ADR-0029) : tolérance de 6 px autour du tracé à la souris, 12 px au doigt,
+  à tout zoom ; un texte se prend entre ses lettres ; une petite forme a une cible minimale ; un trait fin posé sur un fond se
+  prend sans viser au pixel. Alt+clic passe à la forme du dessous, en boucle, et le dit à voix haute.
+- Avec l'outil de sélection, le curseur devient « déplacer » au survol d'une forme qu'un clic prendrait, et un liseré discret
+  (cyan sur un halo de panneau) la montre ; au doigt, le liseré vient au toucher. Une forme verrouillée ne montre ni l'un ni
+  l'autre.
 
 - **« Toutes les polices » montre l'allure de chaque police sans rien télécharger** (ADR-0026) : le nom d'une police déjà
   disponible (livrée, déposée, téléchargée dans la session) se dessine dans sa propre fonte ; celui d'une famille du catalogue

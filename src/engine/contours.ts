@@ -6,3 +6,4 @@ export { etendreTrait, etendreTraits, aireDuTrait, type OptionsEtendre, type Res
 export { decaler, decalerFormes, type OptionsDecalage, type ResultatDecalage, type ResultatDecalageFormes } from './contour/decaler.js';
 export type { Jonction, Bout } from './contour/epaissir.js';
 export { cheminDeRegionChoisie } from './contour/region.js';
+export { largeurVariable, largeurA, profilValide, regionLargeurVariable, type ProfilLargeur, type ResultatLargeur } from './contour/largeur.js';

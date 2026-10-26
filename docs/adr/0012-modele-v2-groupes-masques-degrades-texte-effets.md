@@ -1,14 +1,59 @@
 # ADR-0012 — Modèle v2 : groupes, masques, dégradés, texte vivant, effets
 
 **Date :** 24 octobre 2026
-**Statut :** proposée (remplace en partie l'ADR-0001, « un dessin à plat, pas un DOM » ; précise l'ADR-0004 §2 et
-la règle « une forme par lettre » ; prolonge l'ADR-0009) ; **événement de version majeure**
+**Statut :** **acceptée** le 26 octobre 2026, à la bascule (étape 14 : le modèle riche est le défaut de la page autonome et du
+site PHP, l'embarquement garde `plat`) ; proposée le 24 octobre 2026. Remplace en partie l'ADR-0001, « un dessin à plat, pas un
+DOM » ; précise l'ADR-0004 §2 et la règle « une forme par lettre » ; prolonge l'ADR-0009 ; **événement de version majeure** (0.2.0)
 
-**Avancement (25 octobre 2026) :** les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à
-plat d'aujourd'hui, sans attendre les groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md),
-qui précise le §4 et l'annexe 4 (texte entièrement encodé en pourcentage ; pas de `<title>` ; « Vectoriser le texte » en trois
-modes plutôt qu'un groupe d'une forme par lettre ; une matrice de composition qui suit chaque transformation ; une garde qui
-vectorise le texte quand un outil change son tracé sans le connaître). Les autres étapes restent proposées.
+**Avancement (25 octobre 2026) :**
+
+- **L'étape 14, la bascule, est faite** (26 octobre 2026) : `MODELE_PAGE = 'riche'` (`zones/modele.ts`), un seul commit de
+  valeurs par défaut, que l'on défait seul ; la page et le site PHP lisent en riche quand le stockage ne garde aucun réglage
+  lisible, la case « Groupes, dégradés, effets » du menu Édition ramène à plat ; `EditeurSvg.ouvrir`, `estEditable` et le
+  composant React sans `modele` ni `modeleParDefaut` restent à plat (annexe 9, question 3) ; aucun octet d'une lecture `plat` ne
+  bouge. Restent, faute d'outil ou d'humain : la revue au lecteur d'écran (annexe 8 §1, « Étape 14 », la liste), la comparaison
+  Inkscape/resvg d'un échantillon, et WebKit exigé en CI après son premier passage vert. Détail : annexe 8 §0.
+
+- Les étapes 10 et 11, **texte vivant (moteur et interface), sont faites** sur le modèle à plat d'aujourd'hui, sans attendre les
+  groupes : voir l'[ADR-0022](0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md), qui précise le §4 et l'annexe 4
+  (texte entièrement encodé en pourcentage ; pas de `<title>` ; « Vectoriser le texte » en trois modes plutôt qu'un groupe d'une
+  forme par lettre ; une matrice de composition qui suit chaque transformation ; une garde qui vectorise le texte quand un outil
+  change son tracé sans le connaître), puis les ADR-0027 (saisie sur la toile), 0031 (texte sur et dans une forme, le « texte sur
+  tracé » que le §4 reportait après la bascule) et 0032 (texte déformé).
+- **L'étape 0, coutures, est faite** (aucun comportement ne change, aucun octet écrit ne bouge) : toute la surface de types,
+  l'arbre dérivé et ses invariants (`edition/arbre.ts`), les points d'extension de la lecture, de l'écriture et des
+  transformations (`edition/fonctionnalites.ts`, `catalogue.ts`), l'écriture riche en squelette (`ecritureRiche.ts`), les
+  définitions par empreinte (`definitions.ts`), la descente (`engine/aplatir.ts`) et les gardes-fous (manifeste des références
+  v1, loi du dessin plat, contrat des fonctionnalités, harnais `ecriture-stable-v2`, extensions de l'écriture permise, champs du
+  projet). Le détail est à l'annexe 8 §0.
+- **L'étape 1, groupes (le moteur), est faite** (26 octobre 2026 ; aucun octet d'un dessin plat ne bouge, la lecture `plat` est
+  inchangée) : la lecture `riche` garde les `<g>` et les `<a>` en groupes (opacité au groupe, nom, bornes de 64 niveaux et de
+  20 000 groupes, structure de la cible d'un `<use>`), refuse un marqueur `data-ed-modele` plus récent dans les deux modes et dit
+  le mode de fusion, l'ordre de peinture et `vector-effect` dans les deux modes ; l'écriture riche ne pose le marqueur que si
+  quelque chose de riche s'écrit ; `grouper`, `degrouper`, `deplacerDans`, `renommer` et chaque opération de l'annexe 3 §2 ont leur
+  chemin riche derrière `estPlat` ; « Lettres séparées » donne un groupe (`vectoriserLettresEnGroupes`) ; la descente des groupes
+  (`engine/descente/groupes.ts`) et la marque de type de `DessinPlat` ; le projet JSON porte les groupes au format 2 (un dessin plat
+  reste au format 1, octet pour octet ; depuis le 26 octobre 2026, un seul format, la version 1, porte tout le modèle : ADR-0030,
+  « Révision du 26 octobre 2026 »). Le détail et les écarts : annexe 8 §0 et §1 « Étape 1 ».
+- **L'étape 3, dégradés (moteur), est faite** (26 octobre 2026 ; aucun octet d'un dessin plat ne bouge, la lecture `plat` refuse
+  comme avant) : résolution des références (`edition/resolution.ts`), dégradés linéaires et radiaux lus en `riche`
+  (`edition/fonctions/degrades.ts` : unités de boîte et pourcentages, `gradientTransform`, chaîne `href`, arrêts bornés à 64,
+  `stop-color` et `stop-opacity` par la cascade), écrits canoniques et dédoublonnés (`edition/degrades.ts` : un linéaire toujours
+  sans matrice, un radial à matrice de déterminant 1 quand ce n'est pas une similitude ; point fixe vérifié), emmenés par les
+  transformations, descendus en couleur de repli pour tout exporteur d'aujourd'hui (`engine/descente/degrades.ts`), ignorés des
+  listes et des remplacements de couleurs mais lus par leurs arrêts dans le nuancier, portés par le projet JSON (format 2 seulement
+  pour un dessin non plat ; un seul format depuis le 26 octobre 2026, ADR-0030), admis dans la vignette du site PHP. Le détail et les écarts sont à l'annexe 8 §1, « Étape 3 ».
+- **Révision du plan** (annexe 8 §0 et §3) : ce que les ADR fusionnés depuis ont rendu caduc ou déjà fait (texte vivant,
+  `util/empreinte.ts`, `<text>` étranger lu en lettres, corpus hostile, CI à trois moteurs, exports DXF/EPS/PDF CMJN), ce
+  qu'ils ont ajouté (le projet JSON de l'ADR-0030 doit porter le modèle v2 ; la prise par le calcul de l'ADR-0029 ; les deux
+  groupes « À couper / À écrire » de l'ADR-0028 dans les calques ; la vignette du site PHP), les vagues revues (vague 1 : étapes
+  1, 3, 12 ; vague 2 : 2, 4, 5, 7) et les consignes de chaque paquet d'agent (annexe 8 §5). Les autres étapes restent proposées.
+- **L'étape 12, images, est faite pour le moteur** (26 octobre 2026, annexe 8 §5.3) : `<image>` en `data:` lue en mode `riche`
+  en une feuille (son rectangle en `d`), vérifiée sur ses octets (nature, en-tête, 4 Mo, 16 Mo, 64 millions de pixels ; une
+  « image » SVG ou une adresse extérieure refusées en les nommant), écrite en `xlink:href` (mêmes entrées, mêmes octets), qui suit
+  ses transformations, abandonnée et dite par la descente des exporteurs de tracés. Restent, chacun à son étape : l'affichage sur la
+  toile et le refus des points (étape 2), le branchement dans le projet JSON (après l'étape 1, fonctions prêtes), l'image native du
+  PDF (13a), et une interface d'insertion qu'aucune étape ne prévoit encore (annexe 8 §0).
 
 Les annexes, dans [`0012-annexes/`](0012-annexes/), portent les types, les tables et le plan ; cette page porte
 les décisions et leurs raisons.
@@ -186,7 +231,9 @@ découpes, **6** masques d'opacité, **7** effets, **8** interface découpes/mas
 texte vivant (moteur), **11** texte vivant (interface), **12** images, **13** exports natifs et idiomes
 d'éditeurs (quatre lots), **14** bascule (défaut `riche` dans la page ; l'embarquement garde `plat` tant que
 l'hôte ne le demande pas). Jusqu'à quatre arbres de travail en parallèle (vague 1 : étapes 1, 3, 10, 12), carte
-des conflits en annexe 8 §3.
+des conflits en annexe 8 §3. *Révisé le 25 octobre 2026 : 10 et 11 sont faites ; vague 1 = 1, 3, 12 ; vague 2 = 2, 4, 5, 7
+(annexe 8 §0, §2, §5). Le 26 octobre 2026 : l'étape 14, la bascule, est faite ; ce qui reste de chaque étape est dit à l'annexe 8
+§0.*
 
 ## Conséquences
 

@@ -13,18 +13,21 @@ const fixture = (nom: string): string => readFileSync(resolve(RACINE_DEPOT, 'tes
 describe('lecture des <use> et des feuilles de style', () => {
   const navigateur = pilote();
 
-  async function ouvrir(svg: string): Promise<Page> {
-    const { page } = await navigateur.ouvrir();
+  async function ouvrir(svg: string, modele?: 'plat' | 'riche'): Promise<Page> {
+    const { page } = await navigateur.ouvrir(modele ? { modele } : {});
     await ouvrirCode(page, svg);
     return page;
   }
   const remplissages = (page: Page) => page.locator('.editeur-svg-toile path[data-id]').evaluateAll(l => l.map(e => e.getAttribute('fill')));
   const note = (page: Page) => texteDe(page.locator('[role="note"]').first());
 
-  it('ouvre une planche d\'icones : chaque <use> devient ses propres formes, aux couleurs du <use>', async () => {
-    const page = await ouvrir(fixture('lecture-use-sprite'));
+  // A plat, chaque clone est une forme a la racine (sept calques) ; en riche, le defaut de la page (ADR-0012, etape 14), la cible
+  // `duo` garde sa structure : un groupe de deux formes.
+  for (const modele of ['plat', 'riche'] as const) it('ouvre une planche d\'icones (' + modele + ') : chaque <use> devient ses propres formes, aux couleurs du <use>', async () => {
+    const page = await ouvrir(fixture('lecture-use-sprite'), modele);
     await attend(() => formesVisibles(page)).toBe(7);
-    expect(await nombreDeCalques(page)).toBe(7);
+    if (modele === 'plat') expect(await nombreDeCalques(page)).toBe(7);
+    expect(await page.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(modele === 'plat' ? 0 : 1);
     const ids = await page.locator('.editeur-svg-toile path[data-id]').evaluateAll(l => l.map(e => e.getAttribute('data-id')));
     expect(new Set(ids).size).toBe(7);
     // Les deux premieres etoiles sont le meme symbole, peint par chaque <use>.

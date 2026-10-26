@@ -202,6 +202,43 @@ export const CRICUT: FamilleProduction = {
 
 export const FAMILLES: readonly FamilleProduction[] = [CRICUT];
 
+/** Un comportement du logiciel de la machine sur lequel l'editeur s'appuie sans l'avoir vu : une phrase, et pourquoi on le croit. */
+export interface Comportement {
+  /** Le nom du comportement dans docs/cricut/protocole.md, qui doit le citer. */
+  readonly id: string;
+  readonly texte: string;
+  readonly aVerifier: true;
+  readonly note: string;
+}
+
+/**
+ * Ce que Design Space fait d'un dessin qui mele couper et ecrire (ADR-0028). Le SVG ne porte pas le type de ligne : l'export separe
+ * les operations avant l'import (un fichier a couper, un fichier a ecrire, et un fichier combine en deux groupes) et le mode
+ * d'emploi dit la marche. Rien de cela n'a ete essaye sur une machine : chaque point est a verifier (temoin 9).
+ */
+export const DESIGN_SPACE_OPERATIONS: readonly Comportement[] = [
+  {
+    id: 'designSpace.operations.superposition', aVerifier: true,
+    texte: 'Deux fichiers importés l’un après l’autre, au même cadre et à la même taille physique, se superposent exactement.',
+    note: 'De mémoire : Design Space garde la taille d’un SVG à unités physiques ; il pose chaque import au même coin. Témoin 9.'
+  },
+  {
+    id: 'designSpace.operations.dessiner', aVerifier: true,
+    texte: 'Le type de ligne « Dessiner » se règle sur les calques d’un fichier importé, et un trait sans remplissage y reste une ligne.',
+    note: 'De mémoire : le type de ligne se choisit calque par calque dans le panneau « Opération ». Témoins 7 et 9.'
+  },
+  {
+    id: 'designSpace.operations.attacher', aVerifier: true,
+    texte: '« Attacher » garde le trait du stylo à sa place sur la pièce découpée, sur le même tapis.',
+    note: 'De mémoire : sans « Attacher », Design Space répartit chaque calque sur le tapis à sa guise. Témoin 9.'
+  },
+  {
+    id: 'designSpace.operations.groupes', aVerifier: true,
+    texte: 'Les deux groupes du fichier combiné (« a-couper », « a-ecrire ») restent des groupes dans le panneau des calques, nommés par leur identifiant.',
+    note: 'Inconnu : Design Space pourrait dissocier les groupes à l’import, ou les nommer autrement. Le fichier combiné n’est qu’un raccourci ; les deux fichiers séparés suffisent. Témoin 9.'
+  }
+];
+
 export interface DescriptionContexte {
   readonly id: IdContexte;
   readonly nom: string;

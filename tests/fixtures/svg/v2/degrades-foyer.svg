@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" width="240" height="120">
+  <radialGradient id="bille" gradientUnits="userSpaceOnUse" cx="60" cy="60" r="50" fx="40" fy="38">
+    <stop offset="0" stop-color="#ffffff"/>
+    <stop offset="1" stop-color="#1f5f3f"/>
+  </radialGradient>
+  <radialGradient id="anneau" gradientUnits="userSpaceOnUse" cx="180" cy="60" r="50" fr="20">
+    <stop offset="0" stop-color="#d61f45"/>
+    <stop offset="1" stop-color="#fde6ec"/>
+  </radialGradient>
+  <circle cx="60" cy="60" r="50" fill="url(#bille)"/>
+  <circle cx="180" cy="60" r="50" fill="url(#anneau)"/>
+</svg>

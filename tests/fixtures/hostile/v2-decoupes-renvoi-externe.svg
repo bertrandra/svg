@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100"><g clip-path="url(autre.svg#c)"><rect width="100" height="100" fill="#c81e28"/></g><path d="M0 0L10 0L10 10Z" style="clip-path: url(https://exemple.invalid/d.svg#c)"/></svg>

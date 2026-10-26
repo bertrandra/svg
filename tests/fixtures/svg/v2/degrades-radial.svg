@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <radialGradient id="soleil" gradientUnits="userSpaceOnUse" cx="60" cy="60" r="50">
+    <stop offset="0.1" stop-color="#fff1a8"/>
+    <stop offset="0.75" stop-color="#f26b1d"/>
+    <stop offset="1" stop-color="#6a2c91"/>
+  </radialGradient>
+  <circle cx="60" cy="60" r="50" fill="url(#soleil)"/>
+</svg>

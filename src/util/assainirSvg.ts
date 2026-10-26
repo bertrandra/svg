@@ -55,14 +55,17 @@ const SCHEMAS = /(?:javascript|vbscript|livescript|data)\s*:/gi;
 const UN_SCHEMA = /(?:javascript|vbscript|livescript|data)\s*:/i;
 /** Ce qui, dans un texte de style ou une valeur, demande un nettoyage : evite de passer les remplacements sur un chemin de 7 Mo. */
 const SUSPECT = /url\s*\(|@|script\s*:|data\s*:|expression|binding|behavio|image-set|cross-fade|src\s*\(|\\|\/\*/i;
-const DANGER_CSS = /@import|url\s*\(|expression\s*\(|-moz-binding|behavior\s*:|image-set|cross-fade|\bsrc\s*\(|(?:javascript|vbscript|livescript|data)\s*:/i;
+const DANGER_CSS = /@\s*import|url\s*\(|expression\s*\(|-moz-binding|behavior\s*:|image-set|cross-fade|\bsrc\s*\(|(?:javascript|vbscript|livescript|data)\s*:/i;
 
 /** Un texte CSS dont les commentaires et les echappements (`\72` pour « r ») sont resolus : c'est ce qu'un navigateur lit. */
 function resoudreCss(css: string): string {
   return css.replace(/\/\*[\s\S]*?(?:\*\/|$)/g, ' ').replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\([^\n])/g, (_, hex: string | undefined, car: string | undefined) => {
     if (hex === undefined) return car ?? '';
     const n = parseInt(hex, 16);
-    return n > 0 && n < 0x110000 && !(n >= 0xd800 && n < 0xe000) ? String.fromCodePoint(n) : '';
+    // Un caractere interdit en XML (un controle) disparaitrait a l'emission et recollerait ses voisins (`ur\6l(`) : on le retire ici,
+    // pour juger le texte tel qu'il sortira.
+    const xmlInterdit = (n < 0x20 && n !== 9 && n !== 10 && n !== 13) || n === 0xfffe || n === 0xffff;
+    return n > 0 && n < 0x110000 && !(n >= 0xd800 && n < 0xe000) && !xmlInterdit ? String.fromCodePoint(n) : '';
   });
 }
 
@@ -92,9 +95,12 @@ function neutraliserUrl(s: string): string {
 /** Une passe de nettoyage ; rend le meme texte quand il n'y a plus rien a retirer. */
 function passeCss(s: string): string {
   return neutraliserUrl(s)
-    .replace(/@import[^;]*;?/gi, '')
+    // « @ import » n'est pas une regle pour un navigateur (le mot doit suivre @), mais rien ne doit pouvoir la recomposer.
+    .replace(/@\s*import[^;]*;?/gi, '')
     .replace(/expression\s*\(/gi, 'none(')
-    .replace(/(?:-moz-binding|behavior)\s*:[^;}]*/gi, '')
+    // -moz-binding part meme sans « : » : un nom de propriete seul est inerte, mais rien ne doit pouvoir le recomposer.
+    .replace(/-moz-binding(?:\s*:[^;}]*)?/gi, '')
+    .replace(/behavior\s*:[^;}]*/gi, '')
     .replace(/(?:-webkit-)?(?:image-set|cross-fade)\s*\(/gi, 'none(')
     .replace(/(^|[^\w-])src\s*\(/gi, '$1none(')
     .replace(SCHEMAS, '');
@@ -107,13 +113,21 @@ function passeCss(s: string): string {
 export function nettoyerCss(css: string): string {
   if (!SUSPECT.test(css)) return css;
   let s = css;
-  // Un echappement ou un commentaire peut cacher un mot (`u\72l(`) : si le texte resolu est dangereux, on travaille sur lui.
-  if (s.includes('\\') || s.includes('/*')) { const clair = resoudreCss(s); if (clair !== s && DANGER_CSS.test(clair)) s = clair; }
-  for (let i = 0; i < 8; i++) { const suite = passeCss(s); if (suite === s) return s; s = suite; }
+  for (let i = 0; i < 8; i++) {
+    // Un echappement ou un commentaire peut cacher un mot (`u\72l(`) : si le texte resolu est dangereux, on travaille sur lui. A chaque
+    // passe : resoudre un niveau peut en reveler un autre (`ur\\6c(` devient `ur\6c(`, que le navigateur lirait `url(`).
+    if (s.includes('\\') || s.includes('/*')) { const clair = resoudreCss(s); if (clair !== s && DANGER_CSS.test(clair)) s = clair; }
+    const suite = passeCss(s);
+    if (suite === s) return s;
+    s = suite;
+  }
   return '';
 }
 
 // Les caracteres interdits en XML 1.0 (controles, U+FFFE, U+FFFF) et les references numeriques qui les designent.
+/** Les blancs et les invisibles qu'un navigateur saute dans un schema d'adresse (controles, espace, trait d'union conditionnel, largeur nulle, separateurs de ligne, BOM). */
+const INVISIBLES = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(0x20) + String.fromCharCode(0x7f) + '-' + String.fromCharCode(0x9f) + String.fromCharCode(0xad)
+  + String.fromCharCode(0x200b) + '-' + String.fromCharCode(0x200f) + String.fromCharCode(0x2028) + String.fromCharCode(0x2029) + String.fromCharCode(0xfeff) + ']', 'g');
 const INTERDITS = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(8) + String.fromCharCode(11) + String.fromCharCode(12) + String.fromCharCode(14) + '-' + String.fromCharCode(31) + String.fromCharCode(0xfffe) + String.fromCharCode(0xffff) + ']', 'g');
 const REF_NUM = /&#(x[0-9a-fA-F]+|[0-9]+);/g;
 
@@ -164,7 +178,11 @@ function emettreHref(a: AttributBrut, c: ContexteBalise): string {
   if (c.nom === 'use') {
     if (c.externeGarde) return '';
     c.externeGarde = true;
-    const retire = dec.replace(SCHEMAS, '').slice(0, 300);
+    // Un navigateur ignore blancs et invisibles dans un schema (« d<TAB>ata: » se lit « data: ») : ils partent d'abord, puis les schemas,
+    // jusqu'a ce que rien ne bouge (retirer l'un peut en recomposer un autre). L'attribut est inerte, il ne sert qu'a nommer le refus.
+    let retire = dec.replace(INVISIBLES, '');
+    for (let i = 0; i < 8; i++) { const suite = retire.replace(SCHEMAS, ''); if (suite === retire) break; retire = suite; }
+    retire = UN_SCHEMA.test(retire) ? '' : retire.slice(0, 300);
     return a.blancs + ATTRIBUT_HREF_EXTERNE + '="' + rendreBienForme(echapperAttribut(retire)) + '"';
   }
   if ((c.nom === 'image' || c.nom === 'feImage') && !a.valeur.includes('&') && IMAGE_EN_LIGNE.test(dec)) return emis(a, rendreBienForme(a.valeur));

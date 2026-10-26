@@ -48,3 +48,25 @@ export async function copier(texte: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Les types d'image qu'un fichier choisi peut annoncer, d'apres ses premiers octets quand le navigateur n'en donne pas. */
+const ENTETES_IMAGES: ReadonlyArray<readonly [string, (o: Uint8Array) => boolean]> = [
+  ['image/png', o => o[0] === 0x89 && o[1] === 0x50 && o[2] === 0x4e && o[3] === 0x47],
+  ['image/jpeg', o => o[0] === 0xff && o[1] === 0xd8],
+  ['image/gif', o => o[0] === 0x47 && o[1] === 0x49 && o[2] === 0x46],
+  ['image/webp', o => o[8] === 0x57 && o[9] === 0x45 && o[10] === 0x42 && o[11] === 0x50]
+];
+
+/**
+ * Un fichier choisi ou depose, en adresse `data:<type>;base64,…` : ce que le moteur verifie ensuite sur les octets (nature,
+ * dimensions, bornes : `verifierDonneesImage`). Le type est celui que le navigateur annonce, ou celui que les premiers octets donnent ;
+ * un type faux est corrige par la verification, un contenu qui n'est pas une image y est refuse en le nommant.
+ */
+export async function donneesDuFichier(f: Blob): Promise<string> {
+  const o = new Uint8Array(await f.arrayBuffer());
+  const type = f.type || (ENTETES_IMAGES.find(([, ok]) => ok(o))?.[0] ?? 'application/octet-stream');
+  // Par tranches : String.fromCharCode d'un seul tenant depasserait la pile sur quelques megaoctets.
+  let t = '';
+  for (let i = 0; i < o.length; i += 0x8000) t += String.fromCharCode(...o.subarray(i, i + 0x8000));
+  return 'data:' + type + ';base64,' + btoa(t);
+}

@@ -50,8 +50,22 @@ export function sauteSauf(moteurs: readonly NomNavigateur[], raison: string): bo
   return !moteurs.includes(NAVIGATEUR);
 }
 
+/** Ce qu'une spec demande au lancement du navigateur, avant toute page. */
+export interface OptionsPilote {
+  /**
+   * Firefox ignore `Cross-Origin-Opener-Policy`. Le premier chargement d'une page qui la pose (le site PHP, `same-origin`)
+   * fait changer Firefox de groupe de contextes de navigation, depuis l'about:blank d'une page neuve. Pendant ce changement,
+   * Playwright 1.56.1 (Firefox 142) perd environ un chargement sur vingt : `goto` attend un `load` (parfois meme un `commit`)
+   * qu'il ne verra jamais, alors que la page est chargee (`readyState` vaut `complete`, mesure). Le defaut est dans le suivi
+   * de Playwright, pas dans la page : la meme page sans l'en-tete ne tombe jamais. Sans effet sous Chromium et WebKit, qui
+   * gardent la politique ; la presence de l'en-tete reste verifiee par le test du site.
+   */
+  coopIgnoreeParFirefox?: boolean;
+}
+
 /** Les options de lancement : `--no-sandbox` et `CHROMIUM_PATH` sont a Chromium seul, Firefox et WebKit refuseraient l'argument. */
-function optionsLancement(nom: NomNavigateur): LaunchOptions {
+function optionsLancement(nom: NomNavigateur, options: OptionsPilote = {}): LaunchOptions {
+  if (nom === 'firefox' && options.coopIgnoreeParFirefox) return { firefoxUserPrefs: { 'browser.tabs.remote.useCrossOriginOpenerPolicy': false } };
   if (nom !== 'chromium') return {};
   const chemin = process.env['CHROMIUM_PATH'];
   return { ...(chemin ? { executablePath: chemin } : {}), args: ['--no-sandbox'] };
@@ -83,6 +97,13 @@ export interface OptionsSession {
    * celui d'une premiere visite (la question en tete, les trois voies dessous, dans l'ordre d'avant) : les tests d'avant y passent tels quels.
    */
   publicAccueil?: 'machine' | 'retouche' | 'integration' | 'aucun';
+  /**
+   * Le reglage du modele (ADR-0012, annexe 5 §3), pose par la page une fois chargee (elle ne le lit qu'a l'ouverture d'un dessin), pour
+   * un test qui exerce un comportement d'un modele et non le defaut de la page (`riche` depuis l'etape 14). Jamais par un script
+   * d'amorce : sous Chromium, un document dont le script d'amorce touche `localStorage` des sa creation recoit parfois une zone de
+   * stockage a lui seul, qu'un rechargement perd (annexe 8 §0, « Ce que le paquet 2-D a pose »). Demande `naviguer` (le defaut).
+   */
+  modele?: 'plat' | 'riche';
 }
 
 /**
@@ -93,13 +114,13 @@ export interface OptionsSession {
  * Le navigateur : pour Chromium, `CHROMIUM_PATH` s'il est donne (le bac a sable n'a pas celui de Playwright),
  * sinon celui que `npx playwright install chromium` a pose ; Firefox et WebKit, ceux de `npx playwright install`.
  */
-export function pilote() {
+export function pilote(reglages: OptionsPilote = {}) {
   let navigateur: Browser | undefined;
   const ouvertes: Session[] = [];
 
   beforeAll(async () => {
     if (!existsSync(PAGE)) throw new Error('dist/editeur-svg.html manque : lancer `npm run construire` avant `npm run e2e`.');
-    navigateur = await MOTEURS[NAVIGATEUR].launch(optionsLancement(NAVIGATEUR));
+    navigateur = await MOTEURS[NAVIGATEUR].launch(optionsLancement(NAVIGATEUR, reglages));
   });
 
   afterAll(async () => {
@@ -145,6 +166,10 @@ export function pilote() {
         }, options.publicAccueil);
       }
       if (options.naviguer !== false) await page.goto(URL_PAGE);
+      if (options.modele) {
+        if (options.naviguer === false) throw new Error('l’option « modele » se pose sur la page chargée : elle demande « naviguer ».');
+        await page.evaluate(m => { localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); }, options.modele);
+      }
       return session;
     }
   };
@@ -186,6 +211,21 @@ export function attend<T>(lire: () => Promise<T>, delai = DELAI) {
  * d'une section repliee reste dans le DOM avec son animation d'entree, que Chromium fait avancer et que ces moteurs, qui ne
  * le rendent pas, laissent en suspens.
  */
+/**
+ * Agrandit la fenetre jusqu'a la hauteur de toute la page, sans toucher a sa largeur : axe laisse « a relire » le contraste d'un
+ * texte que le bord de la fenetre coupe (il ne fait pas defiler). Une hauteur fixe ne suffit pas : une page qui gagne quelques
+ * pixels (une police, une note) repousse son dernier texte sous le bord. La hauteur se reprend tant qu'elle change (une regle en
+ * `vh` peut la faire bouger), trois fois au plus.
+ */
+export async function toutAEcran(page: Page): Promise<void> {
+  for (let i = 0; i < 3; i++) {
+    const largeur = page.viewportSize()?.width ?? 1280, avant = page.viewportSize()?.height ?? 0;
+    const hauteur = await page.evaluate(() => Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)));
+    if (hauteur <= avant) return;
+    await page.setViewportSize({ width: largeur, height: hauteur });
+  }
+}
+
 export async function attendreAnimations(page: Page): Promise<void> {
   // Une animation peut repartir apres l'attente (un panneau recalcule 200 ms apres un geste remonte sa section) :
   // on sonde jusqu'a trois fois de suite sans animation en cours, dans la limite de 3 s pour les moteurs qui
@@ -224,6 +264,15 @@ export async function texteDe(l: Locator): Promise<string> {
   return (await l.innerText()).replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Le texte visible de chaque element, espaces ramenes a un seul et bords retires. `allInnerTexts` seul ne suffit pas : WebKit
+ * termine le texte d'un element de menu (un bouton en flex dont les enfants sont des boites) par une fin de ligne, que Chromium
+ * et Firefox retirent comme le veut la norme (lu sous WebKit 26 : « Visite guidée\n »).
+ */
+export async function textesDe(l: Locator): Promise<string[]> {
+  return (await l.allInnerTexts()).map(t => t.replace(/\s+/g, ' ').trim());
+}
+
 /** Ouvre le dessin d'exemple de la page d'accueil et attend l'editeur. */
 export async function ouvrirExemple(page: Page, tactile = false): Promise<void> {
   const bouton = page.getByRole('button', { name: 'Ouvrir l’exemple' });
@@ -240,6 +289,26 @@ export async function ouvrirCode(page: Page, svg: string, tactile = false): Prom
   const bouton = page.getByRole('button', { name: 'Ouvrir ce code' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
+}
+
+/**
+ * Depose un fichier sur la zone de depot de l'accueil, comme un glisser depuis le bureau (un `drop` synthetique qui porte le
+ * fichier). La zone est attendue d'abord : `goto` rend la main a l'evenement `load`, et sous WebKit React n'a pas toujours rendu
+ * l'accueil a cet instant (une fois sur quatre environ, sur trente chargements mesures ; jamais sous Chromium). Le depot partait
+ * alors dans le vide, et le test attendait 30 s une issue qui ne venait pas (onze fichiers du corpus hostile en CI). Une zone
+ * absente echoue maintenant en le disant.
+ */
+export async function deposerFichier(page: Page, octets: Buffer, nom: string, type: string): Promise<void> {
+  await page.locator('.depot').first().waitFor();
+  await page.evaluate(({ b64, nomFichier, typeFichier }) => {
+    const bin = atob(b64), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const dt = new DataTransfer();
+    dt.items.add(new File([u], nomFichier, { type: typeFichier }));
+    const zone = document.querySelector('.depot');
+    if (!zone) throw new Error('pas de zone de dépôt dans la page');
+    zone.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, { b64: octets.toString('base64'), nomFichier: nom, typeFichier: type });
 }
 
 /** Le nombre de modifications que la barre d'etat annonce (la taille de la pile d'annulation). */

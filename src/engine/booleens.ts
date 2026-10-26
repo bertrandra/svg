@@ -7,7 +7,10 @@
 // ou selon le sens du trace.
 
 import clipping, { type MultiPolygon, type Pair, type Polygon, type Ring } from 'polygon-clipping';
-import { ancre, avecOrigines, depart, originesDe, prochainId, type Chemin, type Commande, type DessinSvg, type Forme } from './editionSvg.js';
+import {
+  ancre, avecOrigines, depart, estPlat, feuillesDe, MSG_MEME_PARENT, normaliser, originesDe, prochainId, verrouilleEffectif, visibleEffectif,
+  type Chemin, type Commande, type DessinSvg, type Forme
+} from './editionSvg.js';
 import { reconstruireAnneau } from './edition/ajustement.js';
 
 export type Booleen = 'union' | 'soustraction' | 'intersection' | 'exclusion';
@@ -134,6 +137,23 @@ export const toleranceBooleen = (dessin: DessinSvg): number => Math.max(dessin.v
  * autres disparaissent. Rend le dessin inchange, avec sa raison, si l'operation ne s'applique pas.
  */
 export function appliquerBooleen(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance = toleranceBooleen(dessin), options: OptionsBooleen = {}): { dessin: DessinSvg; id: string | null; erreur?: string } {
+  if (!estPlat(dessin)) return booleenRiche(dessin, ids, op, tolerance, options);
+  return booleenDeFormes(dessin, ids, op, tolerance, options);
+}
+
+/**
+ * Le chemin riche (ADR-0012, annexe 3 §2) : un groupe choisi compte par ses feuilles visibles et deverrouillees (par heritage), qui
+ * doivent toutes etre dans le meme groupe ; le resultat prend la place et le parent de la plus basse. Un groupe que l'operation
+ * viderait part avec ses formes.
+ */
+function booleenRiche(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance: number, options: OptionsBooleen): { dessin: DessinSvg; id: string | null; erreur?: string } {
+  const feuilles = feuillesDe(dessin, ids).filter(id => visibleEffectif(dessin, id) && !verrouilleEffectif(dessin, id));
+  if (new Set(dessin.formes.filter(f => feuilles.includes(f.id)).map(f => f.parent)).size > 1) return { dessin, id: null, erreur: MSG_MEME_PARENT };
+  const r = booleenDeFormes(dessin, feuilles, op, tolerance, options);
+  return r.dessin === dessin ? r : { ...r, dessin: normaliser(r.dessin) };
+}
+
+function booleenDeFormes(dessin: DessinSvg, ids: readonly string[], op: Booleen, tolerance: number, options: OptionsBooleen): { dessin: DessinSvg; id: string | null; erreur?: string } {
   const voulus = new Set(ids);
   const choisies = dessin.formes.filter(f => voulus.has(f.id) && !f.verrouille && f.visible);
   if (choisies.length < 2) return { dessin, id: null, erreur: 'Choisissez au moins deux formes visibles et déverrouillées.' };

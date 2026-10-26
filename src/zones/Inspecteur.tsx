@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  basculerSegment, diviserSegment, genrePointilles, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
+  basculerSegment, diviserSegment, genrePointilles, groupeDe, modifier, modifierTrait, motifDeGenre, normaliserPointilles, opaciteDuContour, opaciteDuRemplissage, redimensionner,
   type Forme, type GenrePointilles, type Reglage, type ReglageTrait
 } from '../engine/editionSvg.js';
 import { Section } from './commun/Section.js';
@@ -16,20 +16,28 @@ import { Repere } from './Repere.js';
 import type { Teinte } from './typesEditeur.js';
 import { Nombre } from './commun/Nombre.js';
 import { SectionTexte } from './InspecteurTexte.js';
+import { SectionNuancier } from './SectionNuancier.js';
+import { PeintureDegradable, useDegradesPermis } from './EditeurDegrade.js';
+import { SectionEffets } from './SectionEffets.js';
+import { nomDeGroupe } from './phrasesGroupes.js';
+import { lentilleDe } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 // Le champ chiffre vit dans commun/Nombre.tsx (la section Texte s'en sert aussi) ; il se relit ici pour les autres panneaux.
 export { Nombre };
 
 /** Les reglages de la selection : apparence, position et taille, transformations chiffrees, points. Aligner, empiler, booleens et le reste vivent dans la barre de la selection. */
 export function Inspecteur() {
-  const mo = useDessin(), ac = useActions(), ui = useInterface();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), degradesPermis = useDegradesPermis();
   const { dessin, sel, boite } = mo;
   const premiere = dessin.formes.find(f => f.id === sel[0]);
-  if (!premiere) return null;
+  // Un groupe choisi en premier (modele riche) : ses effets (ADR-0012, etape 8) ; ses feuilles se reglent en y entrant.
+  if (!premiere) return <InspecteurGroupe />;
   const choisies = dessin.formes.filter(f => mo.choisies.has(f.id));
   const mixte = (k: keyof Forme) => new Set(choisies.map(f => f[k])).size > 1;
   const regler = (r: Reglage, cle: string | null) => ac.appliquer(d => modifier(d, sel, r), cle === null ? ac.nouvelleCle() : cle + ':' + sel.join(','));
   const points = ui.outil === 'points' && mo.formeSeule;
+  const decoupe = lentilleDe(ui.contexte)?.genre === 'decoupe';
   const doigt = useTactile();
   return (
     <>
@@ -37,22 +45,32 @@ export function Inspecteur() {
       <ReperesSelection points={!!points} />
       {/* Un texte vivant (ADR-0022) se retape et se restyle en tete : c'est ce qu'on vient y faire. */}
       {mo.formeSeule?.texte ? <SectionTexte forme={{ ...mo.formeSeule, texte: mo.formeSeule.texte }} /> : null}
+      {/* Dans une decoupe (paquet 8-D), seule la geometrie compte : la regle des trous, et une phrase pour le reste. */}
+      {decoupe ? (
+        <Section titre="Apparence" ouverte>
+          <p className="aide">{RAISONS_LENTILLE.peinture}</p>
+          <ChoixTrous valeur={premiere.regle} poser={r => regler({ regle: r }, null)} />
+        </Section>
+      ) : (
       <Section titre="Apparence" ouverte>
-        <Peinture libelle="Remplissage" valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
-        <Peinture libelle="Contour" valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
+        {/* Uni, ou un degrade (ADR-0012, etape 4) quand le modele riche est regle ou que le dessin l'est deja ; sinon le selecteur d'avant. */}
+        <PeintureDegradable cote="remplissage" libelle="Remplissage" forme={premiere}>
+          <Peinture libelle="Remplissage" sansTitre={degradesPermis} valeur={premiere.remplissage} mixte={mixte('remplissage')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ remplissage: v }, continu ? 'remplissage' : null)} />
+        </PeintureDegradable>
+        <PeintureDegradable cote="contour" libelle="Contour" forme={premiere}>
+          <Peinture libelle="Contour" sansTitre={degradesPermis} valeur={premiere.contour} mixte={mixte('contour')} nuancier={mo.nuancier} finir={ac.finir} poser={(v, continu) => regler({ contour: v }, continu ? 'contour' : null)} />
+        </PeintureDegradable>
         {premiere.contour ? <Nombre libelle="Épaisseur" valeur={premiere.epaisseur} min={0} poser={v => regler({ epaisseur: v }, null)} /> : null}
         {premiere.contour ? <StyleDeTrait forme={premiere} poser={r => ac.appliquer(d => modifierTrait(d, sel, r), ac.nouvelleCle())} /> : null}
         <Opacite libelle="Opacité" titre="La forme entière, fond et contour ensemble" valeur={premiere.opacite} poser={v => regler({ opacite: v }, 'opacite')} finir={ac.finir} />
         {premiere.remplissage && (premiere.contour || opaciteDuRemplissage(premiere) < 1) ? <Opacite libelle="Opacité du fond" titre="Le fond seul : le contour reste plein" valeur={opaciteDuRemplissage(premiere)} poser={v => regler({ opaciteRemplissage: v }, 'opacite-fond')} finir={ac.finir} /> : null}
         {premiere.contour ? <Opacite libelle="Opacité du contour" titre="Le contour seul : le fond reste plein" valeur={opaciteDuContour(premiere)} poser={v => regler({ opaciteContour: v }, 'opacite-contour')} finir={ac.finir} /> : null}
-        <label className="champ-ligne">
-          <span>Trous</span>
-          <select value={premiere.regle} onChange={e => regler({ regle: e.target.value === 'evenodd' ? 'evenodd' : 'nonzero' }, null)}>
-            <option value="nonzero">Selon le sens du tracé</option>
-            <option value="evenodd">Pair-impair (chaque boucle creuse)</option>
-          </select>
-        </label>
+        <ChoixTrous valeur={premiere.regle} poser={r => regler({ regle: r }, null)} />
       </Section>
+      )}
+      {/* Flou et ombre portee (ADR-0012, etape 8), en modele riche seulement : a plat, rien. */}
+      <SectionEffets />
+      <SectionNuancier />
       {boite ? (
         <Section titre="Position et taille" ouverte>
           <div className="grille-2">
@@ -69,6 +87,33 @@ export function Inspecteur() {
       </Section>
       {points ? <PanneauPoint forme={points} /> : null}
       <p className="aide">{selonSaisie((sel.length === 1 && !points ? 'Double-cliquez la forme pour modifier son contour point par point. ' : '') + 'Aligner, empiler, assembler des formes (les unir, découper l’une dans l’autre), miroirs : la rangée au-dessus de la toile.', doigt)}</p>
+    </>
+  );
+}
+
+/** La regle des trous : la seule « apparence » qui compte aussi dans une decoupe (son `clip-rule`). */
+function ChoixTrous({ valeur, poser }: { valeur: Forme['regle']; poser: (r: Forme['regle']) => void }) {
+  return (
+    <label className="champ-ligne">
+      <span>Trous</span>
+      <select value={valeur} onChange={e => poser(e.target.value === 'evenodd' ? 'evenodd' : 'nonzero')}>
+        <option value="nonzero">Selon le sens du tracé</option>
+        <option value="evenodd">Pair-impair (chaque boucle creuse)</option>
+      </select>
+    </label>
+  );
+}
+
+/** L'inspecteur d'une selection qui commence par un groupe : son nom, puis ses effets ; rien pour ce qui n'est pas un groupe. */
+function InspecteurGroupe() {
+  const mo = useDessin();
+  const [id] = mo.sel, g = id !== undefined ? groupeDe(mo.dessin, id) : undefined;
+  if (!g) return null;
+  return (
+    <>
+      <h3>{mo.sel.length > 1 ? mo.sel.length + ' éléments' : g.nom ? 'Groupe « ' + g.nom + ' »' : nomDeGroupe(g)}</h3>
+      <SectionEffets />
+      <p className="aide">Entrée, ou un double-clic, entre dans le groupe pour régler ses formes.</p>
     </>
   );
 }
@@ -150,7 +195,7 @@ function PanneauPoint({ forme }: { forme: Forme }) {
 }
 
 /** Une couleur : selecteur, code, « aucune », et le nuancier. */
-export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { libelle: string; valeur: string | null; mixte: boolean; nuancier: readonly Teinte[]; poser: (v: string | null, continu: boolean) => void; finir: () => void }) {
+export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir, sansTitre = false }: { libelle: string; valeur: string | null; mixte: boolean; nuancier: readonly Teinte[]; poser: (v: string | null, continu: boolean) => void; finir: () => void; sansTitre?: boolean }) {
   const [texte, poserTexte] = useState(valeur ?? '');
   useEffect(() => { poserTexte(valeur ?? ''); }, [valeur]);
   const valider = () => {
@@ -161,7 +206,8 @@ export function Peinture({ libelle, valeur, mixte, nuancier, poser, finir }: { l
   };
   return (
     <div className="peinture" role="group" aria-label={libelle}>
-      <span className="peinture-titre">{libelle}{mixte ? <span className="aide"> · mixte</span> : null}</span>
+      {/* Sous le choix Uni / Dégradé (EditeurDegrade.tsx), le titre est sa legende : il ne se repete pas. */}
+      {sansTitre ? (mixte ? <span className="aide">mixte</span> : null) : <span className="peinture-titre">{libelle}{mixte ? <span className="aide"> · mixte</span> : null}</span>}
       <div className="champ-ligne">
         <input type="color" aria-label={libelle} value={estHex(valeur) ? valeur : '#000000'} onChange={e => poser(e.target.value, true)} onBlur={finir} />
         <input type="text" aria-label={libelle + ' (code)'} value={texte} placeholder="aucun" size={8} onChange={e => poserTexte(e.target.value)} onBlur={valider} onKeyDown={e => { if (e.key === 'Enter') valider(); }} />

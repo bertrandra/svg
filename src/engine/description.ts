@@ -3,7 +3,8 @@
 // (« Forme 3 sélectionnée : … ») sont composees dans zones/annonces.ts avec ces briques.
 
 import { lireHex, type Rgb } from '../util/couleur.js';
-import { ancre, boiteForme, type Chemin, type Forme } from './editionSvg.js';
+import { pluriel } from '../util/texte.js';
+import { ancre, boiteDe, boiteForme, estDegrade, estEllipseChemin, feuillesDe, reconnaitreFormeDeBase, type Chemin, type Degrade, type DessinSvg, type Forme, type Groupe } from './editionSvg.js';
 
 /**
  * Un nombre en francais, lisible a l'oreille et assez fin pour qu'un pas du clavier s'entende : deux decimales
@@ -34,15 +35,7 @@ function estRectangle(d: Chemin, tol: number): boolean {
 }
 
 /** Quatre cubiques dont les extremites sont les milieux des quatre bords de la boite : ce que trace l'outil ellipse. */
-function estEllipse(f: Forme, tol: number): boolean {
-  const d = f.d, b = boiteForme(f);
-  if (!b || d.filter(c => c.c === 'C').length !== 4 || d.some(c => c.c !== 'M' && c.c !== 'C' && c.c !== 'Z')) return false;
-  const cx = b.x + b.l / 2, cy = b.y + b.h / 2;
-  const p = points(d).slice(0, 4);
-  const surAxe = p.filter(a => proche(a[0], cx, tol) || proche(a[1], cy, tol)).length;
-  const aMilieuX = p.filter(a => proche(a[0], cx, tol)).length, aMilieuY = p.filter(a => proche(a[1], cy, tol)).length;
-  return surAxe === 4 && aMilieuX === 2 && aMilieuY === 2;
-}
+const estEllipse = (f: Forme, tol: number): boolean => estEllipseChemin(f.d, tol);
 
 /** Dix sommets dont les rayons alternent : ce que trace l'outil etoile. */
 function estEtoile(d: Chemin): boolean {
@@ -58,10 +51,19 @@ function estEtoile(d: Chemin): boolean {
     && pairs.every(v => proche(v, mp, 0.1 * mp)) && impairs.every(v => proche(v, mi, 0.1 * mi));
 }
 
-/** Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace. */
+/** Les natures d'une image integree, telles qu'on les dit. */
+const NATURES_IMAGE: Readonly<Record<string, string>> = { png: 'PNG', jpeg: 'JPEG', gif: 'GIF', webp: 'WebP' };
+
+/**
+ * Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace, et les
+ * formes de base de la palette (ADR-0033 : cœur, hexagone, flèche, anneau…), reconnues sur leur geometrie comme les autres : une
+ * forme ne porte pas de nom, elle garde le sien tant qu'on ne fait que la deplacer, l'etirer ou la recolorer.
+ */
 export function genreDeForme(f: Forme): string {
   // Un texte vivant se nomme par ce qu'il dit (ADR-0022) : « texte « Joyeux Noël » », coupe a trente caracteres.
   if (f.texte) { const t = f.texte.texte.replace(/\s+/g, ' ').trim(); return 'texte « ' + (t.length > 30 ? t.slice(0, 29) + '…' : t) + ' »'; }
+  // Une image integree (ADR-0012, etape 12) se dit par sa nature, pas par le cadre de son chemin (« rectangle ») : paquet 2-D.
+  if (f.image) return 'image ' + (NATURES_IMAGE[/^data:image\/(png|jpeg|gif|webp)/.exec(f.image.donnees)?.[1] ?? ''] ?? '').trim();
   const b = boiteForme(f);
   if (!b) return 'tracé vide';
   const tol = Math.max(b.l, b.h) * 0.002 + 1e-9;
@@ -72,10 +74,11 @@ export function genreDeForme(f: Forme): string {
     if (!ferme) return n === 2 ? 'ligne' : 'ligne brisée';
     if (estRectangle(d, tol)) return proche(b.l, b.h, tol) ? 'carré' : 'rectangle';
     if (estEtoile(d)) return 'étoile';
-    return n === 3 ? 'triangle' : 'polygone à ' + n + ' sommets';
+    if (n === 3) return 'triangle';
+    return reconnaitreFormeDeBase(d) ?? 'polygone à ' + n + ' sommets';
   }
   if (ferme && estEllipse(f, tol)) return proche(b.l, b.h, tol) ? 'cercle' : 'ellipse';
-  return ferme ? 'tracé courbe' : 'courbe';
+  return reconnaitreFormeDeBase(d) ?? (ferme ? 'tracé courbe' : 'courbe');
 }
 
 // Les noms de couleur : assez pour que « rouge #c81e28 » dise quelque chose a qui n'a que l'oreille.
@@ -107,11 +110,26 @@ export const couleurDite = (code: string): string => {
   return nom ? nom + ' ' + code.toLowerCase() : code.toLowerCase();
 };
 
-/** « fond rouge #c81e28, contour noir #000000 », ou « sans fond ni contour ». */
+/**
+ * « dégradé linéaire du rouge #c81e28 au bleu #1f5fb0 » (ADR-0012, annexe 6 §7) : le genre, puis la couleur du premier et du dernier
+ * arret, nom avant code ; « , 3 arrêts » au-dela de deux.
+ */
+export function degradeDit(g: Degrade): string {
+  const premier = g.arrets[0], dernier = g.arrets[g.arrets.length - 1];
+  const de = premier ? ' du ' + couleurDite(premier.couleur) : '', a = dernier ? ' au ' + couleurDite(dernier.couleur) : '';
+  return 'dégradé ' + (g.genre === 'lineaire' ? 'linéaire' : 'radial') + de + a + (g.arrets.length > 2 ? ', ' + g.arrets.length + ' arrêts' : '');
+}
+
+/**
+ * « fond rouge #c81e28, contour noir #000000 », ou « sans fond ni contour ». Un cote peint d'un degrade (modele v2) le dit, plutot que
+ * sa couleur de repli : « fond dégradé linéaire du rouge #c81e28 au bleu #1f5fb0 ». Une forme plate n'en porte jamais.
+ */
 export function peintureDite(f: Forme): string {
   const morceaux: string[] = [];
-  morceaux.push(f.remplissage ? 'fond ' + couleurDite(f.remplissage) : 'sans fond');
-  if (f.contour) morceaux.push('contour ' + couleurDite(f.contour));
+  const fond = estDegrade(f.peintureRemplissage) ? f.peintureRemplissage : null, trait = estDegrade(f.peintureContour) ? f.peintureContour : null;
+  morceaux.push(fond ? 'fond ' + degradeDit(fond) : f.remplissage ? 'fond ' + couleurDite(f.remplissage) : 'sans fond');
+  if (trait) morceaux.push('contour ' + degradeDit(trait));
+  else if (f.contour) morceaux.push('contour ' + couleurDite(f.contour));
   return morceaux.join(', ');
 }
 
@@ -132,3 +150,34 @@ export function nomDeForme(f: Forme): string {
   const genre = genreDeForme(f);
   return genre.charAt(0).toUpperCase() + genre.slice(1) + ' ' + numeroDeForme(f) + ', ' + peintureDite(f) + (f.verrouille ? ', verrouillée' : '') + (f.visible ? '' : ', masquée');
 }
+
+// ---------------------------------------------------------------- les groupes (ADR-0012, annexe 6 §7)
+
+/** Le nom d'un groupe tel qu'on le dit : le sien, sinon « Groupe 3 » (le numero de son identifiant `g3`). */
+export const nomDeGroupe = (g: Groupe): string => g.nom ?? 'Groupe ' + (/^g(\d+)$/.exec(g.id)?.[1] ?? g.id);
+
+/** « groupe « Nuage » », ou « groupe 3 » : un groupe nomme dans une phrase. */
+export const groupeDit = (g: Groupe): string => (g.nom ? 'groupe « ' + g.nom + ' »' : nomDeGroupe(g).toLowerCase());
+
+/** Ce que le groupe porte, dans l'ordre de l'annexe 6 §7 : « découpé, masque d’opacité, flou, ombre portée, opacité 50 % ». */
+export function porteParGroupe(g: Groupe): string[] {
+  const t: string[] = [];
+  if (g.decoupe) t.push('découpé');
+  if (g.masque) t.push('masque d’opacité');
+  if (g.effets?.flou) t.push('flou');
+  if (g.effets?.ombre) t.push('ombre portée');
+  if (g.opacite !== undefined && g.opacite < 1) t.push('opacité ' + Math.round(g.opacite * 100) + ' %');
+  return t;
+}
+
+/**
+ * Le detail d'un groupe : le nombre de ses formes (ses feuilles, a toute profondeur), ce qu'il porte, puis la taille et le coin de sa
+ * boite : « 3 formes, ombre portée, 80 × 40 à 10, 20 ».
+ */
+export function detailsGroupe(d: DessinSvg, g: Groupe): string {
+  const b = boiteDe(d, [g.id]);
+  return [pluriel(feuillesDe(d, [g.id]).length, 'forme'), ...porteParGroupe(g), ...(b ? [nombreFr(b.l) + ' × ' + nombreFr(b.h) + ' à ' + nombreFr(b.x) + ', ' + nombreFr(b.y)] : [])].join(', ');
+}
+
+/** « groupe « Nuage », 3 formes, 80 × 40 à 10, 20 » (annexe 6 §7). */
+export const groupeDecrit = (d: DessinSvg, g: Groupe): string => groupeDit(g) + ', ' + detailsGroupe(d, g);

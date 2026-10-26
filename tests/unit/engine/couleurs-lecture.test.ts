@@ -135,7 +135,7 @@ describe('lireCouleurs', () => {
   });
 });
 
-// Le panneau « Couleurs du dessin » lit autrement que « Par couleur » : formes visibles seulement, une forme dont le
+// Le panneau « Recolorer le dessin » lit autrement que « Par couleur » : formes visibles seulement, une forme dont le
 // remplissage et le contour ont la meme couleur compte deux fois. Sa lecture memoisee doit rendre exactement ce que
 // `couleursDuDessin` rend, seule l'identite des objets changeant.
 describe('lireCouleursDuDessin', () => {

@@ -3,8 +3,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { couleurPdf, ecrirePdf } from '../../../src/export/pdf.js';
+import { couleurPdf } from '../../../src/export/pdf.js';
 import { chainePdf, infoPdf, miseEnPage } from '../../../src/export/pdfPage.js';
+import { ecrirePdf } from './plats.js';
 
 const MM = 72 / 25.4;
 const dessin = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };

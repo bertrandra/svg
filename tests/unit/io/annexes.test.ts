@@ -1,11 +1,12 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
-  annexePosee, definirBaseAnnexes, fabriquerChargeurAnnexe, memoiserSucces, messageVide, navigateur, normaliserBase, urlAnnexe,
+  annexePosee, definirBaseAnnexes, definirSourceDonnees, fabriquerChargeurAnnexe, memoiserSucces, messageVide, navigateur, nomDonnees, normaliserBase, urlAnnexe,
   type Amenees, type Annexe
 } from '../../../src/io/annexes.js';
 
 afterEach(() => {
   definirBaseAnnexes('');
+  definirSourceDonnees(null);
   vi.unstubAllGlobals();
 });
 
@@ -140,5 +141,37 @@ describe('le navigateur reel', () => {
     expect(await navigateur.injecter('b.js')).toBe(false);
     expect(balises.map(b => b.src)).toEqual(['a.js', 'b.js']);
     expect(balises.every(b => b.remove.mock.calls.length === 1)).toBe(true);
+  });
+});
+
+describe('les annexes de donnees servies en JSON (le site PHP, ADR-0030)', () => {
+  const donnees: Annexe<Charge> = {
+    fichier: 'essai-donnees.js', globale: '__essaiDonnees', contenu: 'l essai', consigne: 'construisez', donnees: true,
+    valider: v => (typeof v === 'object' && v !== null && typeof (v as Charge).n === 'number' ? v as Charge : undefined)
+  };
+  const sansScript: Amenees = { injecter: () => Promise.reject(new Error('aucune balise script ne doit etre posee')), lire: () => undefined };
+
+  it('se lisent de la source posee, par leur nom sans « .js », et se valident comme une globale', async () => {
+    const demandes: string[] = [];
+    definirSourceDonnees(nom => { demandes.push(nom); return Promise.resolve({ n: 7 }); });
+    expect(nomDonnees(donnees)).toBe('essai-donnees');
+    expect(await fabriquerChargeurAnnexe(donnees, sansScript).charger()).toEqual({ n: 7 });
+    expect(demandes).toEqual(['essai-donnees']);
+    expect(annexePosee(donnees, sansScript)).toBe(true);
+  });
+
+  it('refusent une valeur malformee ou absente en le disant, sans lever ailleurs que dans la promesse', async () => {
+    definirSourceDonnees(() => Promise.resolve({ n: 'pas un nombre' }));
+    await expect(fabriquerChargeurAnnexe(donnees, sansScript).charger()).rejects.toThrow(messageVide(donnees));
+    definirSourceDonnees(() => Promise.resolve(undefined));
+    await expect(fabriquerChargeurAnnexe(donnees, sansScript).charger()).rejects.toThrow(/introuvables sur le serveur/);
+  });
+
+  it('laissent le code (le traceur) et les pages sans source aux balises <script>', async () => {
+    definirSourceDonnees(() => Promise.reject(new Error('le code ne passe pas par la source de donnees')));
+    const code: Annexe<Charge> = { ...donnees, donnees: false, fichier: 'code.js', globale: '__code' };
+    const pose: Record<string, unknown> = {};
+    const amenees: Amenees = { injecter: () => { pose['__code'] = { n: 1 }; return Promise.resolve(true); }, lire: g => pose[g] };
+    expect(await fabriquerChargeurAnnexe(code, amenees).charger()).toEqual({ n: 1 });
   });
 });

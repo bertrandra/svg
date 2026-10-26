@@ -4,31 +4,36 @@
 
 import { useEffect, useRef, type RefObject } from 'react';
 import { ancre, boiteDe, deplacer, deplacerAncre, redimensionner } from '../engine/editionSvg.js';
-import { boiteRedimensionnee, coteMinimal, directionDe, pasDeplacement, type Direction } from '../engine/navigation.js';
+import { boiteRedimensionnee, coteMinimal, directionDe, noeudsChoisissables, pasDeplacement, type Direction } from '../engine/navigation.js';
 import { tournerAutour } from '../engine/transformations.js';
 import { phrasePoint, phrasePosition, phraseRotation, phraseTaille } from './annonces.js';
 import { toucheToile } from './ClavierToile.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useVisite } from './contexteGuide.js';
 import { empiler } from './empilement.js';
-import { useTexte } from './contexteTexte.js';
+import { useSaisie } from './contexteSaisie.js';
 import { useActionsTexte } from './actionsTexte.js';
+import { operationsApplicables } from '../engine/preparation.js';
+import { creerNuancierDepuisSelection } from './actionsNuancier.js';
 import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './typesEditeur.js';
+import { toucheSelection } from './commandesSelection.js';
+import { ctrlG } from './commandesGroupes.js';
+import { niveauEdition } from './lentille.js';
 
-const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte' };
+const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte', b: 'cadre', q: 'lasso' };
 
 /** Un cran de rotation au clavier : quinze degres, un seul avec Maj. */
 const CRAN_ROTATION = 15;
 
 /** Les raccourcis, ecoutes sur la fenetre tant que l'editeur est ouvert ; jamais dans un champ. */
 export function useClavier(toile: RefObject<HTMLDivElement | null>) {
-  const mo = useDessin(), ac = useActions(), ui = useInterface(), vi = useVisite(), tx = useTexte(), at = useActionsTexte();
+  const mo = useDessin(), ac = useActions(), ui = useInterface(), vi = useVisite(), sx = useSaisie(), at = useActionsTexte();
   // L'ecouteur est pose une fois ; il lit le dessin et l'interface du dernier rendu (les actions, elles, sont stables).
-  const courant = useRef({ mo, ui, vi, tx, at });
-  courant.current = { mo, ui, vi, tx, at };
+  const courant = useRef({ mo, ui, vi, sx, at });
+  courant.current = { mo, ui, vi, sx, at };
   useEffect(() => {
     const touche = (e: KeyboardEvent) => {
-      const { mo: m, ui: u, vi: v, tx: x, at: a } = courant.current;
+      const { mo: m, ui: u, vi: v, sx: x, at: a } = courant.current;
       // Une touche qu'un controle a deja prise (une fleche qui ouvre un menu) n'est plus celle de la toile.
       if (e.defaultPrevented) return;
       const cible = e.target as HTMLElement | null;
@@ -43,16 +48,18 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       if (cible?.closest('.menu-panneau') && e.key !== 'Escape') return;
       // La bulle de la visite garde ses touches (Tab, Entree, Echap) : une fleche n'y deplace pas la forme choisie derriere elle.
       if (cible?.closest('.bulle-visite')) return;
-      if (mod && t === 'a') { e.preventDefault(); ac.choisir(m.dessin.formes.filter(f => f.visible && !f.verrouille).map(f => f.id)); return; }
+      // Ctrl+A : tout ce qu'on peut choisir, au niveau du contexte d'edition sur un dessin riche (ADR-0012, annexe 6 §2).
+      if (mod && t === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, niveauEdition(u.contexte))); return; }
       if (mod && t === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
       if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }
       if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }
       if (mod && t === 'v') { e.preventDefault(); ac.collerPresse(); return; }
       // Ctrl+Maj+O : vectoriser le texte choisi, dans le mode du moment (ADR-0022 ; le raccourci des logiciels de dessin).
       if (mod && e.shiftKey && t === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
-      if (mod && t === 'g') { e.preventDefault(); if (e.shiftKey) ac.separerSelection(); else ac.combinerSelection(); return; }
+      // Ctrl+G et Ctrl+Maj+G : grouper et degrouper en modele riche, combiner et separer a plat (annexe 9, question 1).
+      if (mod && t === 'g') { e.preventDefault(); ctrlG(m, u, ac, e.shiftKey); return; }
       if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }
-      if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, tx: x })) { e.preventDefault(); return; }
+      if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, sx: x })) { e.preventDefault(); return; }
       if (u.outil === 'plume' && u.trace.length) {
         if (e.key === 'Enter') { e.preventDefault(); ac.finirTrace(true); return; }
         if (e.key === 'Backspace') { e.preventDefault(); ac.poserTrace(u.trace.slice(0, -1)); return; }
@@ -63,8 +70,21 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       const direction = directionDe(e.key);
       if (direction) { e.preventDefault(); fleche(m, u, ac, direction, e); return; }
       if (mod) return;
+      // Maj+N : le nuancier du dessin devient les couleurs de la selection ; Alt+Maj+N les y ajoute (ADR-0037). Par le code de la
+      // touche : Alt change le caractere rendu sur un Mac.
+      if (e.shiftKey && e.code === 'KeyN') { e.preventDefault(); creerNuancierDepuisSelection(ac, m.dessin, m.sel, e.altKey ? 'ajouter' : 'remplacer'); return; }
+      // Les commandes de selection (ADR-0035) : I inverse, Y le meme type, Alt+C le meme contour, Alt+Maj+X ou E ce qui est a couper ou a ecrire.
+      if (toucheSelection(e, m, u, ac)) { e.preventDefault(); return; }
+      // En contexte Cricut qui coupe ou ecrit (ADR-0028) : Maj+X range la selection a couper, Maj+E a ecrire, Maj+O montre ou retire
+      // l'apercu de la machine. Ailleurs ces touches gardent leur sens (Maj+E reste l'ellipse, Maj+O la vue contours).
+      if (e.shiftKey && !e.altKey && u.profil && operationsApplicables(u.profil.procede)) {
+        if (t === 'x' || t === 'e') { e.preventDefault(); ac.poserOperation(t === 'x' ? 'decoupe' : 'ecriture'); return; }
+        if (t === 'o') { e.preventDefault(); ac.poserApercuMachine(a => !a); return; }
+      }
       const outil = RACCOURCIS_OUTILS[t];
       if (outil) ac.poserOutil(outil);
+      // F ouvre la palette des formes de la barre (ADR-0033), le focus sur la forme courante : fleches, puis Entree.
+      else if (t === 'f' && !e.shiftKey && !e.altKey) { e.preventDefault(); ac.ouvrirFormes(); }
       else if (t === 'o') ac.poserContours(v => !v);
       else if (t === 'g') ac.poserGrille(!u.grille);
       else if (t === 'm') ac.poserAimants(!u.aimants);
@@ -90,6 +110,8 @@ function echapper(m: ModeleDessin, u: EtatInterface, ac: ActionsEditeur, v: Retu
   else if (u.tiroir) ac.poserTiroir(null);
   else if (u.point !== null) ac.poserPoint(null);
   else if (m.sel.length) ac.choisir([]);
+  // Puis un niveau de contexte d'edition (ADR-0012, annexe 6 §2) : Echap sort du groupe ou l'on est entre.
+  else if (u.contexte) ac.sortirGroupe();
   else if (u.outil !== 'selection') ac.poserOutil('selection');
   else if (v?.etape) v.quitter(false);
   else ac.demanderFermeture();

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <filter id="infinie" filterUnits="userSpaceOnUse" x="-1e309" y="-Infinity" width="1e309" height="Infinity"><feGaussianBlur stdDeviation="2"/></filter>
+  <filter id="immense" x="-1e308" y="-1e308" width="1e308" height="1e308"><feGaussianBlur stdDeviation="2"/></filter>
+  <filter id="unites" filterUnits="userSpaceOnUse" x="-10mm" y="-10mm" width="300mm" height="300mm"><feGaussianBlur stdDeviation="1"/></filter>
+  <rect x="10" y="10" width="30" height="30" fill="#c81e28" filter="url(#infinie)"/>
+  <rect x="60" y="10" width="30" height="30" fill="#1f5fb0" filter="url(#immense)"/>
+  <rect x="10" y="60" width="30" height="30" fill="#2a9d8f" filter="url(#unites)"/>
+</svg>

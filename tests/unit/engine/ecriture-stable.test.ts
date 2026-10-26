@@ -16,11 +16,9 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  type PolicesTexte, type Matrice, type TexteVivant, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg
+  type PolicesTexte, type Matrice, type TexteVivant, type Chemin, type DispositionTexte, type FormeDeBase, type ParametresFormes, ajouterForme, ellipse, formeDeBase, FORMES_DE_BASE, FICHES_FORMES, PARAMETRES_FORMES_DEFAUT, regleDeForme, dupliquer, aligner, ajusterPlan, arrondirFormes, casserForme, combiner, convertirNoeudForme, inverserSens, joindreExtremites, deplacer, ecrireDessin, fusionnerCouleursProches, lireDessin, marquerProduction, modifier, redimensionner, remplacerCouleurSur, retourner, separer, simplifier, tourner, type DessinSvg, polygone,
 } from '../../../src/engine/editionSvg.js';
-import { marqueDeChoix, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { printThenCut } from '../../../src/export/printThenCut.js';
+import { marqueDeChoix, operationsAEcrire, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { CHOIX_CRICUT_DEFAUT, type ChoixMachine } from '../../../src/model/contextes.js';
 import { appliquerBooleen, type Booleen, type OptionsBooleen } from '../../../src/engine/booleens.js';
 import { decalerFormes, etendreTraits } from '../../../src/engine/contours.js';
@@ -29,13 +27,16 @@ import { ajouterTexte, composer, type Glyphes } from '../../../src/engine/texte.
 import { cheminDuTexte, lettresDuTexte } from '../../../src/engine/texte/bloc.js';
 import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
 import { vectoriserTextes, type ModeVectorisation } from '../../../src/engine/texte/vectoriser.js';
+import { composerDispose } from '../../../src/engine/texte/disposition.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../../../src/engine/transformations.js';
-import { svgDecoupe } from '../../../src/export/svgs.js';
 import { svgStylo } from '../../../src/export/stylo.js';
 import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
 import { nettoyerSvg } from '../../../src/util/svg.js';
+import { ajouterRepere, dupliquerEnGrille, marquerReperes, repetitionRadiale, symetrie } from '../../../src/engine/editionSvg.js';
+import { largeurVariable } from '../../../src/engine/contours.js';
+import { exportParOperation, printThenCut, svgCricut, svgDecoupe } from '../export/plats.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
@@ -147,6 +148,48 @@ const vectoriser = (mode: ModeVectorisation, avecLettres: boolean) => (d: Dessin
   return vectoriserTextes(avec, [id], mode, { lisser: true, ...(avecLettres ? { lettres: new Map([[id, lettresDuTexte(MOT_SERRE, glyphesFactices).map(l => l.d)]]) } : {}) }).dessin;
 };
 
+// Le texte pose sur ou dans une forme (ADR-0031) : une forme, puis des textes poses sur elle (composes sur elle avec la fonte
+// factice), la forme masquee au besoin (le texte porte alors son trace encode).
+type DispositionSansForme = DispositionTexte extends infer D ? D extends DispositionTexte ? Omit<D, 'forme'> : never : never;
+const posesSur = (d: Chemin, textes: ReadonlyArray<readonly [TexteVivant, DispositionSansForme]>, masquer = false, peinture: Parameters<typeof creerTexte>[3] = FOND) => (dessin: DessinSvg): DessinSvg => {
+  const b = ajouterForme(dessin, d, { remplissage: '#e0b84a', contour: null, epaisseur: 1 });
+  const base = b.id ? b.dessin.formes.find(f => f.id === b.id) : undefined;
+  if (!base) throw new Error('forme de base');
+  let r = b.dessin;
+  for (const [t, p] of textes) {
+    const c = composerDispose({ ...t, disposition: { ...p, forme: base.id } as DispositionTexte }, base, glyphesFactices);
+    r = creerTexte(r, c.texte, c.d, peinture).dessin;
+  }
+  return masquer ? modifier(r, [base.id], { visible: false }) : r;
+};
+const COEUR: Chemin = [
+  { c: 'M', p: [150, 35] }, { c: 'C', p: [150, 15, 120, 5, 110, 25] }, { c: 'C', p: [100, 45, 130, 70, 150, 90] },
+  { c: 'C', p: [170, 70, 200, 45, 190, 25] }, { c: 'C', p: [180, 5, 150, 15, 150, 35] }, { c: 'Z', p: [] }
+];
+const SUR_FORME = enchainerTot(
+  posesSur(ellipse(10, 10, 80, 80), [
+    [texteFactice('Joyeux anniversaire', [1, 0, 0, 1, 0, 0], { taille: 9, alignement: 'centre' }), { mode: 'sur', depart: 0, cote: 'dessus', repartir: false }],
+    [texteFactice('Lucie 2026', [1, 0, 0, 1, 0, 0], { taille: 8, alignement: 'centre', interlettrage: 0.05 }), { mode: 'sur', depart: 0, cote: 'dessous', repartir: false }]
+  ]),
+  posesSur([{ c: 'M', p: [110, 80] }, { c: 'Q', p: [150, 40, 195, 80] }], [
+    [texteFactice('vague', [1, 0, 0, 1, 0, 0], { taille: 10, alignement: 'gauche' }), { mode: 'sur', depart: 0.125, cote: 'dessous', repartir: true }]
+  ])
+);
+const DANS_FORME = enchainerTot(
+  posesSur(COEUR, [[texteFactice('Avec tout mon amour pour toi', [1, 0, 0, 1, 0, 0], { taille: 7, alignement: 'gauche' }), { mode: 'dans', marge: 0.25, ajuster: false, justifier: true }]]),
+  posesSur(ellipse(10, 10, 80, 60), [[texteFactice('Bonne\nannée', [1, 0, 0, 1, 0, 0], { alignement: 'centre' }), { mode: 'dans', marge: 0.5, ajuster: true, justifier: false }]], true)
+);
+
+// Le texte deforme dans une forme (ADR-0032) : un cas NEUF. Un cœur portant deux lignes deformees a la marge par defaut, une ellipse
+// masquee portant un texte en trace median a une marge plus grande (sa forme voyage encodee), une etoile portant un mot.
+const ENVELOPPE = enchainerTot(
+  posesSur(COEUR, [[texteFactice('Avec tout\nmon amour', [1, 0, 0, 1, 0, 0], { taille: 7, alignement: 'centre' }), { mode: 'enveloppe', marge: 0.1 }]]),
+  posesSur(ellipse(10, 5, 80, 40), [[texteFactice('Bonne année', [1, 0, 0, 1, 0, 0], { alignement: 'centre', trace: 'median' }), { mode: 'enveloppe', marge: 0.2 }]], true,
+    peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.8)),
+  posesSur(polygone([[50, 49], [55.9, 65.9], [73.8, 66.3], [59.5, 77.1], [64.7, 94.2], [50, 84], [35.3, 94.2], [40.5, 77.1], [26.2, 66.3], [44.1, 65.9]], true),
+    [[texteFactice('ÉTOILE', [1, 0, 0, 1, 0, 0], { alignement: 'centre' }), { mode: 'enveloppe', marge: 0.1 }]])
+);
+
 const booleen = (ids: string[], op: Booleen, options: OptionsBooleen = {}) => (d: DessinSvg): DessinSvg => {
   const r = appliquerBooleen(d, ids, op, undefined, options);
   if (r.erreur) throw new Error(r.erreur);
@@ -185,7 +228,33 @@ const pourPrintThenCut = (fichier: 'impression' | 'coupe') => (t: string): strin
   return 'erreur' in r ? 'REFUSE : ' + r.erreur : r[fichier];
 };
 
+/** Le cercle a contour (f4) et le carre plein (f1) passes a l'ecriture : un dessin qui mele les deux operations. */
+const aEcrire = (d: DessinSvg): DessinSvg => poserOperation(d, ['f1', 'f4'], 'ecriture', 'decoupe').dessin;
+/** Le document d'un contexte Cricut en decoupe, tel que l'editeur l'enregistre (zones/actionsProduction.ts, svgDocument). */
+const documentCricut = (d: DessinSvg): string => marquerProduction(ecrireDessin(operationsAEcrire(d, 'decoupe'), 3, true), marqueDeChoix({ contexte: 'cricut', ...CRICUT_POUCES }));
+const couperEcrire = (t: string, fichier: 'a-couper' | 'a-ecrire' | 'combine'): string => {
+  const r = exportParOperation(aEcrire(lire(t)), profilCricut());
+  if ('erreur' in r) return 'REFUSE : ' + r.erreur;
+  if (r.genre !== 'mixte') return 'UNE SEULE OPERATION';
+  return fichier === 'a-couper' ? r.aCouper : fichier === 'a-ecrire' ? r.aEcrire : r.combine;
+};
+
 const enchainer = (...ops: Array<(d: DessinSvg) => DessinSvg>) => (d: DessinSvg): DessinSvg => ops.reduce((x, op) => op(x), d);
+
+// Les formes de base (ADR-0033) : une de chaque sorte aux reglages par defaut, puis quelques reglages, en grille de cases de
+// 100 x 80, comme l'outil les pose (un trait au style d'une ligne, l'anneau en evenodd). Un cas NEUF : les rectangle, ellipse,
+// etoile et ligne d'avant y passent par formeDeBase, qui rend les memes commandes que leurs fonctions (formesDeBase.test.ts).
+const VARIANTES_FORMES: ReadonlyArray<readonly [FormeDeBase, Partial<ParametresFormes>]> = [
+  ...FORMES_DE_BASE.map(f => [f, {}] as const),
+  ['rectangle-arrondi', { rayonCoins: 40 }], ['triangle', { triangle: 'rectangle' }], ['polygone', { cotes: 8 }], ['etoile', { branches: 8, creux: 0.6 }],
+  ['fleche', { pointe: 'double', sens: 'haut' }], ['croix', { bras: 0.2 }], ['anneau', { epaisseurAnneau: 0.6 }], ['demi-cercle', { portion: 'quart' }],
+  ['badge', { festons: 16 }], ['spirale', { tours: 5 }]
+];
+const formesDeBase = (d: DessinSvg): DessinSvg => VARIANTES_FORMES.reduce((x, [forme, reglages], i) => {
+  const cx = 10 + (i % 6) * 100, cy = 10 + Math.floor(i / 6) * 80;
+  const style = FICHES_FORMES[forme].trait ? { remplissage: null, contour: '#15181d', epaisseur: 2 } : { remplissage: ['#c81e28', '#1428a0', '#2e7d32', '#f2a900'][i % 4] ?? null, contour: null, epaisseur: 1 };
+  return ajouterForme(x, formeDeBase(forme, cx, cy, 80, 60, { ...PARAMETRES_FORMES_DEFAUT, ...reglages }), style, regleDeForme(forme)).dessin;
+}, d);
 function enchainerTot(...ops: Array<(d: DessinSvg) => DessinSvg>): (d: DessinSvg) => DessinSvg { return d => ops.reduce((x, op) => op(x), d); }
 
 interface Cas {
@@ -229,6 +298,9 @@ const CAS: readonly Cas[] = [
   { nom: 'lecture-use-symbole' },
   { nom: 'lecture-use-introuvable' },
   { nom: 'lecture-css-selecteurs' },
+  // Sans fichier d'entree a lui (un SVG de depart de plus changerait le corpus du fuzzing, tests/unit/securite) : un plan vide de
+  // 600 x 480, puis les formes.
+  { nom: 'formes-de-base', entree: 'plan-dimensions', operation: d => formesDeBase({ ...d, vb: [0, 0, 600, 480], formes: [] }) },
   { nom: 'plan-decale' },
   { nom: 'plan-dimensions' },
   // Masquer a l'enregistrement, c'est retirer ; verrouiller ne change rien a l'ecriture.
@@ -357,6 +429,16 @@ const CAS: readonly Cas[] = [
   },
   { nom: 'texte-vivant-lecture' },
   { nom: 'texte-vivant-trait', entree: 'texte-vivant', operation: vivant(texteFactice('Lune et soleil', [1, 0, 0, 1, 15, 55], { taille: 24 }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 0.6), glyphesTraitFactices) },
+  // Le trace « Median » (ADR-0027) : un cas NEUF. Une police a contour (la fonte factice courbe) se dessine en lignes au milieu
+  // du trait, sans fond, et porte `data-ed-trace="median"` ; aucun texte sans ce trace n'ecrit un octet de plus.
+  { nom: 'texte-vivant-median', entree: 'texte-vivant', operation: vivant(texteFactice('Bonjour', [1, 0, 0, 1, 15, 55], { taille: 30, trace: 'median' }), peintureDuTexte('trait', { remplissage: '#1f4e8c', contour: null, epaisseur: 1 }, 1.5)) },
+  // Le texte pose sur ou dans une forme (ADR-0031) : des cas NEUFS, un par mode. Un texte libre n'ecrit aucun attribut de plus (toutes
+  // les references ci-dessus le prouvent) ; un texte pose s'ecrit en contours, ses lettres posees, plus sa disposition et le lien a
+  // sa forme (son rang parmi les chemins ecrits, ou son trace encode quand elle est masquee), et se relit tel quel.
+  { nom: 'texte-sur-forme', entree: 'texte-vivant', operation: SUR_FORME },
+  { nom: 'texte-dans-forme', entree: 'texte-vivant', operation: DANS_FORME },
+  // Le texte deforme dans une forme (ADR-0032) : un cas NEUF ; « dans » (en lignes) ne change pas d'un octet (la reference ci-dessus).
+  { nom: 'texte-enveloppe', entree: 'texte-vivant', operation: ENVELOPPE },
   { nom: 'vectoriser-lettres', entree: 'texte-vivant', operation: vectoriser('lettres', true) },
   { nom: 'vectoriser-souder', entree: 'texte-vivant', operation: vectoriser('souder-touchantes', true) },
   { nom: 'vectoriser-tout', entree: 'texte-vivant', operation: vectoriser('tout', true) },
@@ -364,7 +446,24 @@ const CAS: readonly Cas[] = [
   // Le stylo (ADR-0022) : des hachures a la largeur d'un stylo de 0,4 mm (1,512 unite a 96 ppp), a 45 et a 0 degre, trous
   // respectes ; et l'export du procede « Dessin au stylo » : des traits, aucun fond, une taille physique. Des cas NEUFS.
   { nom: 'hachures', entree: 'stylo', operation: enchainer(d => hachurerFormes(d, ['f1', 'f4'], 1.512).dessin, d => hachurerFormes(d, ['f2'], 1.512, 0).dessin) },
-  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg }
+  { nom: 'stylo-export', entree: 'stylo', produire: t => svgStylo(lire(t), 'mm', 1.512).svg },
+  // Couper ou ecrire (ADR-0028) : des cas NEUFS. Sans choix de la personne, aucun attribut de plus (toutes les references ci-dessus
+  // le prouvent) ; en contexte Cricut, le document porte `data-ed-operation` sur une forme dont le choix differe de la regle ; et
+  // l'export d'un dessin mele livre trois fichiers aux octets figes.
+  { nom: 'cricut-operations', entree: 'stylo', produire: t => nettoyerSvg(documentCricut(aEcrire(lire(t))))?.svg ?? 'REFUSE' },
+  ...(['a-couper', 'a-ecrire', 'combine'] as const).map((fichier): Cas => ({ nom: 'couper-ecrire-' + fichier, entree: 'stylo', produire: t => couperEcrire(t, fichier) })),
+  // Les outils de l'ADR-0038 : des cas NEUFS, aucune reference reecrite. Repeter la selection (grille, radiale, symetrie) pose des
+  // formes ordinaires ; arrondir un seul coin ; la largeur variable d'un trait ; et les reperes, ecrits en `data-ed-reperes` sur la
+  // racine du document seulement quand il y en a (toutes les references ci-dessus, sans repere, le prouvent).
+  { nom: 'repetition-grille', entree: 'arrondi', operation: d => dupliquerEnGrille(d, ['f1', 'f4'], { lignes: 2, colonnes: 3, pasX: 12.5, pasY: 15 }).dessin },
+  {
+    nom: 'repetition-radiale', entree: 'arrondi',
+    operation: enchainer(d => repetitionRadiale(d, ['f4'], { exemplaires: 6, angle: 360, centre: [100, 60], orienter: true }).dessin, d => repetitionRadiale(d, ['f1'], { exemplaires: 3, angle: 90, centre: [50, 60], orienter: false }).dessin)
+  },
+  { nom: 'repetition-symetrie', entree: 'arrondi', operation: enchainer(d => symetrie(d, ['f2'], { sens: 'h', axe: 100, garder: true }).dessin, d => symetrie(d, ['f3'], { sens: 'v', axe: 60, garder: false }).dessin) },
+  { nom: 'arrondir-coin', entree: 'arrondi', operation: d => arrondirFormes(d, ['f1'], 8, new Set([2])).dessin },
+  { nom: 'largeur-variable', entree: 'arrondi', operation: d => largeurVariable(d, ['f2'], { debut: 1, milieu: 8, fin: 2 }).dessin },
+  { nom: 'reperes-document', entree: 'arrondi', produire: t => { const d = ajouterRepere(ajouterRepere(ajouterRepere(lire(t), 'h', 60), 'h', 12.3456), 'v', 100); return nettoyerSvg(marquerReperes(ecrireDessin(d, 3), d.reperes))?.svg ?? 'REFUSE'; } }
 ];
 
 const produire = (cas: Cas): string => {

@@ -15,13 +15,14 @@ describe('menus de la barre', () => {
 
   // Six menus depuis l'ADR-0019 : « Aide » (visite guidee, raccourcis) a rejoint Vue et Edition, pour qu'un debutant trouve
   // l'aide par son nom en haut de l'editeur. Sept avec la fin du parcours : « Autres formats », le chevron accole a « Télécharger le
-  // SVG », range les formats que le menu Fichier portait. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
-  it('annonce ses sept menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019) et les autres formats', async () => {
+  // SVG », range les formats que le menu Fichier portait. Huit avec les outils de selection (ADR-0035) : le chevron du bouton Selection
+  // liste Selection, Cadre et Lasso. La liste reste exacte : un menu de plus ou de moins se decide, il ne se glisse pas.
+  it('annonce ses huit menus comme des menus, dont la machine (ADR-0013), l aide (ADR-0019), les autres formats et les outils de selection', async () => {
     const page = await editeur();
     const noms = await page.locator('.editeur-barre [aria-haspopup=menu]').evaluateAll(
       l => l.map(e => (e.getAttribute('aria-label') ?? e.textContent ?? '').trim())
     );
-    expect(noms).toEqual(['Choisir une forme', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
+    expect(noms).toEqual(['Choisir un outil de sélection', 'Formes (F)', 'Vue', 'Édition', 'Aide', 'Machine : Générique', 'Autres formats', 'Fichier']);
   });
 
   it('s\'ouvre et se ferme a la souris, et rend le focus au bouton', async () => {
@@ -74,6 +75,22 @@ describe('menus de la barre', () => {
     await attend(() => vue.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('montre l element atteint aux fleches dans un menu ouvert a la souris', async () => {
+    // Le cas que WebKit manquait : le panneau prend le focus au clic (sans anneau, c'est la souris), puis la fleche, dont le geste
+    // par defaut est empeche, pose le focus par script ; sans `focusVisible`, l'element atteint n'y avait ni fond ni filet.
+    const page = await editeur();
+    await ouvrirMenu(page, 'Vue');
+    const elements = page.locator('.menu-panneau [role^=menuitem]');
+    await page.keyboard.press('ArrowDown');
+    await attend(() => aLeFocus(elements.nth(0))).toBe(true);
+    expect(await elements.nth(0).evaluate(e => e.matches(':focus-visible'))).toBe(true);
+    await page.keyboard.press('ArrowDown');
+    await attend(() => aLeFocus(elements.nth(1))).toBe(true);
+    const anneau = await elements.nth(1).evaluate(e => ({ visible: e.matches(':focus-visible'), filet: getComputedStyle(e).boxShadow }));
+    expect(anneau.visible).toBe(true);
+    expect(anneau.filet).toContain('inset');
+  });
+
   it('ouvre par Fleche haut sur le dernier element', async () => {
     const page = await editeur();
     await page.locator('.menu-bouton', { hasText: 'Vue' }).focus();
@@ -107,7 +124,7 @@ describe('menus de la barre', () => {
     const page = await editeur();
     const cadre = page.locator('.editeur-cadre');
     await page.locator('.outil-formes .chevron-seul button').click();
-    await page.getByRole('menuitemcheckbox', { name: /Étoile/ }).click();
+    await page.getByRole('menuitemradio', { name: /Étoile/ }).click();
     await attend(() => cadre.evaluate(e => e.classList.contains('outil-etoile'))).toBe(true);
 
     // Retour a la selection au clavier, puis le bouton reprend l'etoile sans rouvrir le menu.
@@ -145,7 +162,7 @@ describe('menus de la barre', () => {
     // Le menu Fichier ne porte plus ni telechargement, ni code a copier, ni formats.
     await page.keyboard.press('Escape');
     await ouvrirMenu(page, 'Fichier');
-    expect(await page.getByRole('menu', { name: 'Fichier' }).locator('.menu-libelle').allInnerTexts()).toEqual(['Terminer', 'Garder un brouillon', 'À propos et crédits', 'Fermer l’éditeur']);
+    expect(await page.getByRole('menu', { name: 'Fichier' }).locator('.menu-libelle').allInnerTexts()).toEqual(['Terminer', 'Garder un brouillon', 'Télécharger le SVG à plat', 'Insérer une image…', 'Insérer depuis une adresse…', 'À propos et crédits', 'Fermer l’éditeur']);
     expect(await page.locator('.menu-panneau .contenu-export').count()).toBe(0);
     await page.keyboard.press('Escape');
     await ouvrirMenu(page, 'Autres formats');

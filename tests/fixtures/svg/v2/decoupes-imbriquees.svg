@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <clipPath id="disque">
+      <circle cx="70" cy="60" r="50"/>
+    </clipPath>
+    <clipPath id="haut">
+      <rect x="0" y="0" width="200" height="70"/>
+    </clipPath>
+    <clipPath id="disque-haut" clip-path="url(#haut)">
+      <circle cx="70" cy="60" r="50"/>
+      <rect x="130" y="10" width="60" height="100" clip-path="url(#disque)"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#disque-haut)">
+    <rect x="0" y="0" width="200" height="120" fill="#5b3cc4"/>
+  </g>
+  <g clip-path="url(#haut)">
+    <g clip-path="url(#disque)" transform="translate(60 0)">
+      <rect x="20" y="20" width="100" height="90" fill="#f2b705"/>
+    </g>
+  </g>
+</svg>

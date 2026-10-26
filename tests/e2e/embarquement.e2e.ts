@@ -493,16 +493,52 @@ describe('embarquement : exemples/integration.html', () => {
     expect(await trace(page)).toEqual(['ferme']);
   });
 
+  it('lit a plat par defaut, meme quand la page a passe au modele riche (ADR-0012, etape 14) ; `modele: riche` garde groupes et degrades', async () => {
+    const { page } = await hote();
+    const DEGRADE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="a"><stop offset="0" stop-color="#c81e28"/>'
+      + '<stop offset="1" stop-color="#1428a0"/></linearGradient></defs><g><rect width="50" height="50" fill="url(#a)"/><rect x="50" width="50" height="50" fill="#1428a0"/></g></svg>';
+    // Un reglage `riche` garde par la page autonome dans le meme stockage ne compte pas : l'hote fixe le modele, `plat` sans option.
+    await page.evaluate(() => { localStorage.setItem('svg.modele', JSON.stringify({ modele: 'riche' })); });
+    const ouvrir = (svg: string, modele?: 'riche') => page.evaluate(([texte, m]) => {
+      const w = window as unknown as { EditeurSvg: { ouvrir(o: Record<string, unknown>): unknown; estEditable(v: unknown, m?: unknown): boolean } };
+      w.EditeurSvg.ouvrir({ svg: texte, onEnregistrer: () => undefined, ...(m ? { modele: m } : {}) });
+      return [w.EditeurSvg.estEditable(texte), w.EditeurSvg.estEditable(texte, 'riche')];
+    }, [svg, modele] as const);
+    expect(await ouvrir(DEGRADE)).toEqual([false, true]);
+    const refus = page.locator('.editeur-svg .editeur-erreur');
+    await attend(() => refus.count()).toBe(1);
+    expect(await texteDe(refus.locator('p'))).toMatch(/un dégradé ou un motif/);
+    await refus.getByRole('button', { name: 'Fermer' }).click();
+    await attend(() => racines(page)).toBe(0);
+    // A plat, un <g> se fond ; ni la case du modele ni le SVG a plat au menu.
+    await ouvrir(DEGRADE.replace('url(#a)', '#c81e28'));
+    await page.locator('.editeur-svg .editeur-cadre').waitFor();
+    expect(await page.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(0);
+    await ouvrirMenu(page, 'Édition');
+    await page.locator('.menu-panneau').first().waitFor();
+    expect(await page.getByRole('menuitemcheckbox', { name: 'Groupes, dégradés, effets' }).count()).toBe(0);
+    await page.keyboard.press('Escape');
+    await ouvrirMenu(page, 'Fichier');
+    expect(await page.getByRole('menuitem', { name: 'Télécharger le SVG à plat' }).count()).toBe(0);
+    await page.getByRole('menuitem', { name: /Fermer l’éditeur/ }).click();
+    await attend(() => racines(page)).toBe(0);
+    // `modele: 'riche'` : le groupe et le degrade s'ouvrent.
+    await ouvrir(DEGRADE, 'riche');
+    await page.locator('.editeur-svg .editeur-cadre').waitFor();
+    expect(await page.locator('.editeur-svg-toile g[data-groupe]').count()).toBe(1);
+    expect(await page.locator('.editeur-svg-toile defs linearGradient').count()).toBe(1);
+  });
+
   it('charge la bibliotheque et les polices depuis baseAnnexes, au premier besoin seulement', async () => {
     const { page, requetes } = await hote();
     await editer(page);
     const annexes = async () => (await requetes()).filter(u => /\/(bibliotheque|polices)\.js$/.test(u));
-    // Ouvrir l'editeur ne charge rien : ni les 7 Mo de formes, ni les fontes.
+    // Ouvrir l'editeur ne charge rien : ni les 7 Mo de formes (elles attendent l'ouverture de leur section), ni les fontes.
     expect(await annexes()).toEqual([]);
 
     const section = page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Bibliothèque de formes' }) });
     if (!(await section.evaluate(e => (e as HTMLDetailsElement).open))) await section.locator('summary').click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
+    // Ouvrir la section suffit : la bibliotheque se charge d'elle-meme, sans bouton « Charger ».
     await attend(() => page.locator('.editeur-inspecteur .vignette').count()).toBeGreaterThan(0);
     expect((await annexes()).map(u => u.slice(u.lastIndexOf('/dist/')))).toEqual(['/dist/bibliotheque.js']);
     expect(await page.evaluate(() => (window as unknown as { __bibliothequeSvg?: unknown }).__bibliothequeSvg !== undefined)).toBe(true);

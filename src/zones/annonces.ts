@@ -2,8 +2,8 @@
 // Pures : le dessin et ce qui a change en entree, une phrase en sortie. Courtes, parce qu'on les entend
 // a chaque Tab ; le detail est dans l'inspecteur.
 
-import { ancre, boiteDe, type DessinSvg, type Forme } from '../engine/editionSvg.js';
-import { genreDeForme, mesuresDites, nombreFr, numeroDeForme, peintureDite } from '../engine/description.js';
+import { ancre, boiteDe, FICHES_FORMES, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { detailsGroupe, genreDeForme, mesuresDites, nombreFr, nomDeGroupe, numeroDeForme, peintureDite } from '../engine/description.js';
 import { boiteDeDeuxCoins, indicesDePoints, type PointPlan } from '../engine/navigation.js';
 import { pluriel } from '../util/texte.js';
 import type { Outil } from './typesEditeur.js';
@@ -11,9 +11,20 @@ import type { Outil } from './typesEditeur.js';
 /** Une annonce a faire : le texte, et un rang qui change a chaque fois, meme pour un texte identique. */
 export interface Annonce { texte: string; rang: number }
 
-/** « Forme 3 sélectionnée : rectangle, fond rouge #c81e28, 120 × 80 à 40, 60. » ; « 4 formes sélectionnées. » */
+/**
+ * « Forme 3 sélectionnée : rectangle, fond rouge #c81e28, 120 × 80 à 40, 60. » ; « 4 formes sélectionnées. ». Un groupe d'un dessin
+ * riche (ADR-0012, annexe 6 §7) : « Groupe « Nuage » sélectionné : 3 formes, 80 × 40 à 10, 20. » ; plusieurs noeuds dont un groupe :
+ * « 3 éléments sélectionnés. ». Une selection de feuilles se dit comme avant.
+ */
 export function phraseSelection(d: DessinSvg, sel: readonly string[], ajout = false): string {
   if (!sel.length) return 'Sélection vidée.';
+  const groupe = d.groupes ? sel.find(id => Object.prototype.hasOwnProperty.call(d.groupes, id)) : undefined;
+  if (groupe !== undefined && d.groupes) {
+    const g = d.groupes[groupe];
+    if (sel.length > 1 || !g) return pluriel(sel.length, 'élément') + ' sélectionnés.';
+    const nom = nomDeGroupe(g);
+    return (g.nom ? 'Groupe « ' + nom + ' »' : nom) + ' sélectionné : ' + detailsGroupe(d, g) + '.';
+  }
   const choisies = d.formes.filter(f => sel.includes(f.id));
   const f = choisies[0];
   if (choisies.length !== 1 || !f) return pluriel(sel.length, 'forme') + ' sélectionnée' + (sel.length > 1 ? 's' : '') + '.';
@@ -27,9 +38,11 @@ export function phraseOutil(outil: Outil): string {
     case 'selection': return 'Outil sélection : Tab passe à la forme suivante, flèches déplacent, Alt et flèches redimensionnent, Ctrl et flèches tournent.';
     case 'points': return 'Outil points : Tab passe au point suivant, flèches déplacent le point.';
     case 'main': return 'Outil main : déplacer la vue à la souris ou au doigt.';
-    case 'texte': return 'Outil texte : Entrée ouvre le champ de saisie du panneau, puis Tab mène à « Ajouter le texte ».';
+    case 'texte': return 'Outil texte : flèches déplacent le point d’insertion, Entrée ouvre la saisie sur la toile ; à la souris, cliquez où écrire.';
     case 'plume': return 'Outil plume : flèches déplacent le réticule, Entrée pose un point, Maj et Entrée termine le tracé, Échap abandonne.';
-    default: return 'Outil ' + outil + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
+    case 'cadre': return 'Outil cadre de sélection : glissez, même sur une forme ; au clavier, flèches déplacent le réticule, Espace pose un coin, Entrée prend les formes du cadre, Maj et Entrée les ajoute.';
+    case 'lasso': return 'Outil lasso : entourez les formes à main levée ; au clavier, flèches déplacent le réticule, Espace pose un point, Entrée ferme le lasso et prend les formes.';
+    default: return 'Outil ' + FICHES_FORMES[outil].nom + ' : flèches déplacent le réticule, Entrée pose la forme, Espace pose un coin puis l’autre.';
   }
 }
 
@@ -78,6 +91,12 @@ export const PHRASE_COINS_TROP_PROCHES = 'Les deux coins sont trop proches : dé
 
 /** Ce que Maj et Page suivante, ou Espace, ont fait a la selection : « Forme 4 ajoutée : 3 formes sélectionnées. » */
 export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', total: number): string {
+  // Un groupe d'un dessin riche (`g3`, ADR-0012, etape 2) se dit « Groupe 3 », au masculin ; une forme, comme avant.
+  if (/^g\d+$/.test(id)) {
+    const dit = { ajoutee: 'ajouté', retiree: 'retiré', deja: 'déjà sélectionné' }[etat];
+    const reste = total === 0 ? 'plus rien de sélectionné' : pluriel(total, 'élément') + ' sélectionné' + (total > 1 ? 's' : '');
+    return 'Groupe ' + id.slice(1) + ' ' + dit + ' : ' + reste + '.';
+  }
   const dit = { ajoutee: 'ajoutée', retiree: 'retirée', deja: 'déjà sélectionnée' }[etat];
   const reste = total === 0 ? 'plus aucune forme sélectionnée' : pluriel(total, 'forme') + ' sélectionnée' + (total > 1 ? 's' : '');
   return 'Forme ' + id.slice(1) + ' ' + dit + ' : ' + reste + '.';
@@ -85,7 +104,3 @@ export function phraseBascule(id: string, etat: 'ajoutee' | 'retiree' | 'deja', 
 
 /** Espace sans forme au curseur : dire comment en avoir une. */
 export const PHRASE_SANS_CURSEUR = 'Aucune forme au curseur : Page suivante en choisit une, Maj et Page suivante en ajoute une.';
-
-/** Entree avec l'outil texte : le champ du panneau a pris le focus. */
-export const PHRASE_CHAMP_TEXTE = 'Champ Texte : saisissez le texte, puis Tab mène à « Ajouter le texte ».';
-export const PHRASE_PANNEAU_TEXTE = 'Panneau de l’inspecteur ouvert : Tab mène au champ Texte, puis à « Ajouter le texte ».';

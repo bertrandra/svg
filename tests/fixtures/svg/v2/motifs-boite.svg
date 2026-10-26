@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 140" width="300" height="140">
+  <defs>
+    <!-- Les unites par defaut : la tuile en parts de la boite de la forme (quatre tuiles sur la largeur, deux sur la hauteur). -->
+    <pattern id="damier" width="0.25" height="0.5">
+      <rect width="20" height="25" fill="#2a9d8f"/>
+      <rect x="20" y="25" width="20" height="25" fill="#2a9d8f"/>
+    </pattern>
+    <!-- Le contenu aussi en unites de boite : un losange qui remplit chaque tuile. -->
+    <pattern id="losanges" width="20%" height="25%" patternContentUnits="objectBoundingBox">
+      <path d="M0.1 0L0.2 0.125L0.1 0.25L0 0.125Z" fill="#e76f51"/>
+    </pattern>
+  </defs>
+  <rect x="10" y="20" width="160" height="100" fill="url(#damier)"/>
+  <rect x="190" y="10" width="100" height="120" fill="url(#losanges)"/>
+</svg>

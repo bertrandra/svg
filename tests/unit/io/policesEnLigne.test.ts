@@ -4,18 +4,17 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'opentype.js';
 import {
-  CLE_CONSENTEMENT, accorderConsentement, empreinteSha256, glyphesComposes, lireConsentement, retirerConsentement, serveursAAccepter, telechargerVariante,
-  variantesEmployees, type CachePolices, type OutilsTelechargement
+  ANCIENNE_CLE_CONSENTEMENT, definirServeurPolices, empreinteSha256, glyphesComposes, oublierAncienConsentement, telechargerVariante, variantesEmployees,
+  type CachePolices, type OutilsTelechargement
 } from '../../../src/io/policesEnLigne.js';
 import { enSfnt, genreFonte } from '../../../src/io/woff.js';
 import { glyphesDe } from '../../../src/io/polices.js';
 import { stockageMemoire } from '../../../src/io/stockage.js';
 import { lireVariante, validerCatalogue, type CataloguePolices, type FamilleCatalogue } from '../../../src/model/cataloguePolices.js';
-import type { IdServeur } from '../../../src/model/sourcesPolices.js';
 import { composer } from '../../../src/engine/texte.js';
 import { enWoff } from './woffFactice.js';
 
-// Le telechargement d'une police du catalogue (ADR-0025) : aucune requete sans consentement, chaque fichier verifie par son
+// Le telechargement d'une police du catalogue (ADR-0025) : au choix d'une police seulement, chaque fichier verifie par son
 // empreinte sha256 avant d'etre lu, Bunny Fonts en repli quand jsDelivr echoue ou sert un autre fichier, le WOFF remis en sfnt.
 // Pas de vrai reseau : un faux `fetch` qui compte ses appels.
 
@@ -30,7 +29,6 @@ const FAMILLE: FamilleCatalogue = {
   variantes: [[400, 0, sha(WOFF), null]]
 };
 const VARIANTE = lireVariante(FAMILLE, [400, 0, sha(WOFF), null]);
-const TOUS: ReadonlySet<IdServeur> = new Set(['jsdelivr', 'bunny']);
 
 /** Un faux reseau : une table adresse -> reponse (octets ou statut), et le journal des adresses demandees. */
 function reseau(table: Record<string, Uint8Array | number>): { outils: Partial<OutilsTelechargement>; demandes: string[]; inits: RequestInit[] } {
@@ -47,46 +45,30 @@ function reseau(table: Record<string, Uint8Array | number>): { outils: Partial<O
 const JSD = 'https://cdn.jsdelivr.net/npm/@fontsource/essai@5.3.0/files/essai-latin-400-normal.woff';
 const BUNNY = 'https://fonts.bunny.net/essai/files/essai-latin-400-normal.woff';
 
-describe('le consentement', () => {
-  it('se lit vide sans stockage, sans valeur ou avec une valeur etrangere', () => {
-    expect(lireConsentement(null).size).toBe(0);
-    expect(lireConsentement(stockageMemoire()).size).toBe(0);
-    for (const v of [true, 'oui', { serveurs: 'jsdelivr' }, { serveurs: ['evil.example', 42, null] }, [1, 2]]) {
-      expect(lireConsentement(stockageMemoire({ [CLE_CONSENTEMENT]: v })).size, JSON.stringify(v)).toBe(0);
-    }
-  });
-
-  it('se retient serveur par serveur, s ajoute, et se retire', () => {
-    const s = stockageMemoire();
-    const a = accorderConsentement(s, new Set(), ['jsdelivr', 'bunny']);
-    expect([...a]).toEqual(['jsdelivr', 'bunny']);
-    expect(s.lire(CLE_CONSENTEMENT)).toEqual({ serveurs: ['jsdelivr', 'bunny'] });
-    expect([...accorderConsentement(s, a, ['fontshare'])].sort()).toEqual(['bunny', 'fontshare', 'jsdelivr']);
-    expect([...lireConsentement(s)].sort()).toEqual(['bunny', 'fontshare', 'jsdelivr']);
-    retirerConsentement(s);
-    expect(lireConsentement(s).size).toBe(0);
-    // Sans stockage, l'accord vaut pour la session : rien ne s'ecrit, l'ensemble rendu le porte.
-    expect([...accorderConsentement(null, new Set(), ['gitlab'])]).toEqual(['gitlab']);
-  });
-
-  it('dit les serveurs qui restent a accepter pour une police', () => {
-    expect(serveursAAccepter(VARIANTE, new Set())).toEqual(['jsdelivr', 'bunny']);
-    expect(serveursAAccepter(VARIANTE, new Set(['jsdelivr']))).toEqual(['bunny']);
-    expect(serveursAAccepter(VARIANTE, TOUS)).toEqual([]);
+describe('l ancien accord par serveur', () => {
+  it('ne decide plus de rien : il s efface s il en reste un, sans lever, et rien ne se passe sans stockage', () => {
+    expect(ANCIENNE_CLE_CONSENTEMENT).toBe('svg.polices.consentement');
+    const s = stockageMemoire({ [ANCIENNE_CLE_CONSENTEMENT]: { serveurs: ['jsdelivr', 'bunny'] }, 'svg.polices.favoris': ['inter'] });
+    oublierAncienConsentement(s);
+    expect(s.lire(ANCIENNE_CLE_CONSENTEMENT)).toBeNull();
+    expect(s.lire('svg.polices.favoris')).toEqual(['inter']);
+    expect(() => oublierAncienConsentement(null)).not.toThrow();
+    expect(() => oublierAncienConsentement(stockageMemoire())).not.toThrow();
   });
 });
 
 describe('telechargerVariante', () => {
-  it('ne fait aucune requete sans consentement', async () => {
+  it('ne demande jamais une adresse qui ne part pas du prefixe de son serveur', async () => {
     const r = reseau({ [JSD]: WOFF });
-    expect(await telechargerVariante(VARIANTE, new Set(), r.outils)).toEqual({ erreur: expect.stringMatching(/pas autorisé/) as unknown });
-    expect(await telechargerVariante(VARIANTE, new Set(['gitlab']), r.outils)).toEqual({ erreur: expect.stringMatching(/pas autorisé/) as unknown });
+    const egaree = { ...VARIANTE, fichiers: VARIANTE.fichiers.map(f => ({ ...f, adresses: f.adresses.map(a => ({ ...a, url: 'https://evil.example/essai.woff' })) })) };
+    expect(await telechargerVariante(egaree, r.outils)).toEqual({ erreur: 'aucun serveur connu ne sert cette police' });
+    expect(await telechargerVariante({ ...VARIANTE, id: 'inter' }, r.outils)).toEqual({ erreur: 'identifiant de police inconnu' });
     expect(r.demandes).toEqual([]);
   });
 
   it('telecharge chez jsDelivr, sans cookie ni referent, verifie l empreinte et rend une police qui compose', async () => {
     const r = reseau({ [JSD]: WOFF });
-    const p = await telechargerVariante(VARIANTE, TOUS, r.outils);
+    const p = await telechargerVariante(VARIANTE, r.outils);
     if ('erreur' in p) throw new Error(p.erreur);
     expect(r.demandes).toEqual([JSD]);
     expect(r.inits[0]).toMatchObject({ credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors' });
@@ -98,43 +80,38 @@ describe('telechargerVariante', () => {
 
   it('se replie sur Bunny Fonts quand jsDelivr echoue, et refuse en le nommant un fichier a l empreinte fausse', async () => {
     const enPanne = reseau({ [JSD]: 503, [BUNNY]: WOFF });
-    expect('erreur' in (await telechargerVariante(VARIANTE, TOUS, enPanne.outils))).toBe(false);
+    expect('erreur' in (await telechargerVariante(VARIANTE, enPanne.outils))).toBe(false);
     expect(enPanne.demandes).toEqual([JSD, BUNNY]);
 
     // jsDelivr sert un autre fichier (une autre version, un fichier altere) : refuse, Bunny essaye ensuite.
     const altere = reseau({ [JSD]: WOFF_EXT, [BUNNY]: WOFF });
-    expect('erreur' in (await telechargerVariante(VARIANTE, TOUS, altere.outils))).toBe(false);
+    expect('erreur' in (await telechargerVariante(VARIANTE, altere.outils))).toBe(false);
     expect(altere.demandes).toEqual([JSD, BUNNY]);
 
     const faux = reseau({ [JSD]: WOFF_EXT, [BUNNY]: WOFF_EXT });
-    const r = await telechargerVariante(VARIANTE, TOUS, faux.outils);
+    const r = await telechargerVariante(VARIANTE, faux.outils);
     expect(r).toEqual({ erreur: 'Essai : le fichier servi par cdn.jsdelivr.net n’a pas l’empreinte attendue : refusé ; le fichier servi par fonts.bunny.net n’a pas l’empreinte attendue : refusé.' });
-
-    // Bunny seul accepte : jsDelivr n'est pas contacte.
-    const bunnySeul = reseau({ [JSD]: WOFF, [BUNNY]: WOFF });
-    expect('erreur' in (await telechargerVariante(VARIANTE, new Set(['bunny']), bunnySeul.outils))).toBe(false);
-    expect(bunnySeul.demandes).toEqual([BUNNY]);
   });
 
   it('dit pourquoi : un serveur qui ne repond pas, un statut, un navigateur sans crypto.subtle', async () => {
-    expect(await telechargerVariante(VARIANTE, TOUS, reseau({ [JSD]: 404 }).outils)).toEqual({ erreur: 'Essai : cdn.jsdelivr.net a répondu 404 ; fonts.bunny.net ne répond pas.' });
+    expect(await telechargerVariante(VARIANTE, reseau({ [JSD]: 404 }).outils)).toEqual({ erreur: 'Essai : cdn.jsdelivr.net a répondu 404 ; fonts.bunny.net ne répond pas.' });
     const sansCrypto = { ...reseau({ [JSD]: WOFF }).outils, empreinte: () => Promise.resolve(null) };
-    expect(await telechargerVariante(VARIANTE, TOUS, sansCrypto)).toEqual({ erreur: expect.stringMatching(/crypto\.subtle manque/) as unknown });
+    expect(await telechargerVariante(VARIANTE, sansCrypto)).toEqual({ erreur: expect.stringMatching(/crypto\.subtle manque/) as unknown });
   });
 
   it('lit le cache d abord, le verifie, et y range un fichier verifie', async () => {
     const range = new Map<string, Uint8Array>();
     const cache: CachePolices = { lire: url => Promise.resolve(range.get(url) ?? null), ecrire: (url, o) => { range.set(url, o); return Promise.resolve(); } };
     const r1 = reseau({ [JSD]: WOFF });
-    await telechargerVariante(VARIANTE, TOUS, { ...r1.outils, cache });
+    await telechargerVariante(VARIANTE, { ...r1.outils, cache });
     expect([...range.keys()]).toEqual([JSD]);
     const r2 = reseau({});
-    expect('erreur' in (await telechargerVariante(VARIANTE, TOUS, { ...r2.outils, cache }))).toBe(false);
+    expect('erreur' in (await telechargerVariante(VARIANTE, { ...r2.outils, cache }))).toBe(false);
     expect(r2.demandes).toEqual([]);
     // Un cache empoisonne n'est pas cru : l'empreinte ne correspond pas, le fichier se retelecharge.
     range.set(JSD, WOFF_EXT);
     const r3 = reseau({ [JSD]: WOFF });
-    expect('erreur' in (await telechargerVariante(VARIANTE, TOUS, { ...r3.outils, cache }))).toBe(false);
+    expect('erreur' in (await telechargerVariante(VARIANTE, { ...r3.outils, cache }))).toBe(false);
     expect(r3.demandes).toEqual([JSD]);
   });
 
@@ -142,7 +119,7 @@ describe('telechargerVariante', () => {
     const f: FamilleCatalogue = { ...FAMILLE, variantes: [[400, 0, sha(WOFF), sha(WOFF_EXT)]] };
     const v = lireVariante(f, [400, 0, sha(WOFF), sha(WOFF_EXT)]);
     const ext = 'https://cdn.jsdelivr.net/npm/@fontsource/essai@5.3.0/files/essai-latin-ext-400-normal.woff';
-    const p = await telechargerVariante(v, TOUS, reseau({ [JSD]: WOFF, [ext]: WOFF_EXT }).outils);
+    const p = await telechargerVariante(v, reseau({ [JSD]: WOFF, [ext]: WOFF_EXT }).outils);
     if ('erreur' in p) throw new Error(p.erreur);
     expect(p.version).toBe(v.version);
     expect(p.version).not.toBe(VARIANTE.version);
@@ -196,5 +173,30 @@ describe('les polices employees, pour les credits', () => {
     const l = variantesEmployees(c, [{ id: VARIANTE.id, version: VARIANTE.version }, { id: VARIANTE.id }, { id: 'inter' }]);
     expect(l.map(v => v.nom)).toEqual(['Essai']);
     expect(variantesEmployees(null, [{ id: VARIANTE.id }])).toEqual([]);
+  });
+});
+
+describe('un hote qui sert lui-meme les polices (le site PHP, ADR-0030)', () => {
+  it('ne demande que son adresse, avec la session, et verifie encore l empreinte', async () => {
+    const SITE = 'api.php?r=police&sha=' + encodeURIComponent(sha(WOFF));
+    definirServeurPolices({ adresse: e => 'api.php?r=police&sha=' + encodeURIComponent(e), nom: 'le site' });
+    try {
+      const r = reseau({ [SITE]: WOFF });
+      const p = await telechargerVariante(VARIANTE, r.outils);
+      if ('erreur' in p) throw new Error(p.erreur);
+      expect(r.demandes).toEqual([SITE]);
+      expect(r.inits[0]).toMatchObject({ credentials: 'same-origin', mode: 'same-origin' });
+      // Un site qui servirait un autre fichier est refuse comme un serveur de polices.
+      const faux = reseau({ [SITE]: WOFF_EXT });
+      expect(await telechargerVariante(VARIANTE, faux.outils)).toEqual({ erreur: 'Essai : le fichier servi par le site n’a pas l’empreinte attendue : refusé.' });
+      const absent = reseau({ [SITE]: 404 });
+      expect(await telechargerVariante(VARIANTE, absent.outils)).toEqual({ erreur: 'Essai : le site a répondu 404.' });
+    } finally {
+      definirServeurPolices(null);
+    }
+    // Sans hote, de nouveau les serveurs du registre.
+    const r = reseau({ [JSD]: WOFF });
+    expect('erreur' in (await telechargerVariante(VARIANTE, r.outils))).toBe(false);
+    expect(r.demandes).toEqual([JSD]);
   });
 });

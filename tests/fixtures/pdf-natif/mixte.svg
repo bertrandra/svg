@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+  <!-- Tout ensemble : une decoupe qui enferme un degrade, un groupe translucide (image et forme) et un masque en degrade. -->
+  <defs>
+    <clipPath id="ovale"><ellipse cx="100" cy="70" rx="85" ry="55"/></clipPath>
+    <radialGradient id="ciel" gradientUnits="userSpaceOnUse" cx="100" cy="40" r="90"><stop offset="0" stop-color="#ffe8a0"/><stop offset="1" stop-color="#3060c0"/></radialGradient>
+    <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="brume" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="140"><rect width="200" height="140" fill="url(#fond)"/></mask>
+  </defs>
+  <g clip-path="url(#ovale)">
+    <rect width="200" height="140" fill="url(#ciel)"/>
+    <g opacity="0.85"><image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAAwklEQVR42q3SKxKDMBRA0Ze2pjM1VXgWUMMWWAAGQz1TH4FtHTNdAS6mFWyBLbAFNI4tvN70g+ZTZg4vIom4ExFxckQoLovEaYwUOQqUqFCjQYuOvQNnFEYCf4F4+p1TGT83EvBfYSunRPYHUchMV9x275tWfZYG1mmICDFS5ChQokKNBi06DFDrI97dkoBjyD9EvCS/ILLAGNFAZ9Yzn9HTAGFPRMRIkaNAiQo1GrToMHBGex9Rx5eY4TEx3hlPv34Br5SFaB1O6sEAAAAASUVORK5CYII=" x="60" y="50" width="80" height="60"/><path d="M0 110Q100 70 200 110V140H0z" fill="#1f6f3f"/></g>
+    <g mask="url(#brume)"><rect x="0" y="0" width="200" height="60" fill="#ffffff" fill-opacity="0.6"/></g>
+  </g>
+  <ellipse cx="100" cy="70" rx="85" ry="55" fill="none" stroke="#202020" stroke-width="2"/>
+</svg>

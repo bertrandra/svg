@@ -21,13 +21,16 @@ describe('accueil', () => {
     expect(await page.locator('[role=tab][aria-selected=true]').count()).toBe(1);
   });
 
-  it('ne met en avant qu\'une action par voie', async () => {
+  it('ne met en avant qu\'une action par voie, au plus', async () => {
     const { page } = await navigateur.ouvrir();
-    const onglets = page.getByRole('tab');
-    for (let i = 0; i < 3; i++) {
-      await onglets.nth(i).click();
-      await attend(() => page.locator('main button.primaire:visible').count()).toBe(1);
+    // Ouvrir et Convertir ont leur action pleine ; la Bibliotheque n'en a plus : elle se charge d'elle-meme, et son geste est le
+    // choix d'une vignette (plus de bouton « Charger la bibliothèque »).
+    for (const [voie, pleines] of [[/^Ouvrir/, 1], [/^Convertir/, 1], [/^Bibliothèque/, 0]] as const) {
+      await page.getByRole('tab', { name: voie }).click();
+      await attend(() => page.locator('main button.primaire:visible').count()).toBe(pleines);
     }
+    await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: 60_000 });
+    expect(await page.locator('main button.primaire:visible').count()).toBe(0);
   });
 
   it('change de voie au clic, puis aux fleches avec le focus qui suit', async () => {

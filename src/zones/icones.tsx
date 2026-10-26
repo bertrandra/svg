@@ -6,17 +6,31 @@ import type { CSSProperties } from 'react';
 
 export type NomIcone =
   | 'selection' | 'points' | 'main' | 'rectangle' | 'ellipse' | 'etoile' | 'ligne' | 'plume'
+  | 'carre' | 'cercle' | 'rectangle-arrondi' | 'triangle' | 'losange' | 'parallelogramme' | 'trapeze' | 'polygone'
+  | 'coeur' | 'fleche' | 'croix' | 'anneau' | 'demi-cercle' | 'goutte' | 'lune' | 'nuage' | 'etiquette' | 'badge' | 'bulle'
+  | 'arc' | 'spirale' | 'vague'
   | 'annuler' | 'retablir' | 'copier' | 'couper' | 'coller'
   | 'zoom-moins' | 'zoom-plus' | 'ajuster' | 'zoom-selection' | 'taille-reelle'
   | 'grille' | 'contours' | 'fond-damier' | 'fond-blanc' | 'fond-sombre'
   | 'telecharger' | 'fermer' | 'enregistrer'
   | 'aligner-gauche' | 'aligner-centre-h' | 'aligner-droite' | 'aligner-haut' | 'aligner-centre-v' | 'aligner-bas'
+  | 'texte-gauche' | 'texte-centre' | 'texte-droite' | 'texte-justifie' | 'texte-libre' | 'texte-sur' | 'texte-dans'
   | 'miroir-h' | 'miroir-v' | 'rotation-gauche' | 'rotation-droite'
   | 'premier-plan' | 'avancer' | 'reculer' | 'arriere-plan'
   | 'combiner' | 'separer' | 'dupliquer' | 'masquer' | 'oeil' | 'options' | 'verrouiller' | 'deverrouiller' | 'supprimer'
   | 'union' | 'soustraction' | 'intersection' | 'exclusion' | 'texte' | 'aimant' | 'exporter' | 'palette' | 'versions'
   | 'panneau-gauche' | 'panneau-droit' | 'scene' | 'ajouter' | 'rotation' | 'reprendre'
-  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code';
+  | 'chevron-bas' | 'coche' | 'ouvrir' | 'image' | 'tout-selectionner' | 'aucune-selection' | 'aucun' | 'machine' | 'code' | 'stylo'
+  // Les outils de selection (ADR-0035).
+  | 'cadre-selection' | 'lasso' | 'inverser-selection'
+  // La marque d'une police a telecharger (ADR-0034).
+  | 'nuage-telecharger'
+  // Les regles, les reperes et les repetitions (ADR-0038).
+  | 'regle' | 'repeter' | 'radiale' | 'symetrie'
+  // Les groupes du modele riche (ADR-0012, etape 2).
+  | 'grouper' | 'degrouper'
+  // Les decoupes, les masques et les effets du modele riche (ADR-0012, etape 8) : commandes et pastilles des calques.
+  | 'decoupe' | 'masque' | 'flou' | 'ombre' | 'opacite';
 
 interface Trace { d: string; plein?: boolean; pointille?: boolean }
 
@@ -31,6 +45,30 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   ellipse: [t('M3 12a9 6 0 1 0 18 0a9 6 0 1 0-18 0')],
   etoile: [t('M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z')],
   ligne: [t('M6 18L18 6'), t('M4 20a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true), t('M16 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0', true)],
+  // Les formes de base de la palette (ADR-0033) : chacune trace par le moteur lui-meme dans sa case de 24, au trait comme les
+  // autres icones, pour que l'icone soit la forme qu'on obtient. L'anneau garde son trou, la spirale et la vague restent ouvertes.
+  carre: [t('M4 4h16v16H4z')],
+  cercle: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0')],
+  'rectangle-arrondi': [t('M7 6h10a4 4 0 0 1 4 4v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-4a4 4 0 0 1 4-4z')],
+  triangle: [t('M12 4l9 16H3z')],
+  losange: [t('M12 3l9 9-9 9-9-9z')],
+  parallelogramme: [t('M7 6h15l-5 12H2z')],
+  trapeze: [t('M6 6h12l4 12H2z')],
+  polygone: [t('M12 3l9 4.5v9L12 21l-9-4.5v-9z')],
+  coeur: [t('M12 7.5C12.9 5.3 14.7 4 16.7 4C19.2 4 21 5.6 21 8.3C21 12.8 16 16 12 20C8 16 3 12.8 3 8.3C3 5.6 4.8 4 7.3 4C9.3 4 11.1 5.3 12 7.5z')],
+  fleche: [t('M2 9.4h12V6l8 6-8 6v-3.4H2z')],
+  croix: [t('M9 3h6v6h6v6h-6v6H9v-6H3V9h6z')],
+  anneau: [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M7.5 12a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0-9 0')],
+  'demi-cercle': [t('M2 17a10 10 0 0 1 20 0z')],
+  goutte: [t('M12 2C15.2 6.1 19 10.8 19 15.8C19 19.2 15.9 22 12 22C8.1 22 5 19.2 5 15.8C5 10.8 8.9 6.1 12 2z')],
+  lune: [t('M19 4.4C15.2 2 10.2 2.8 7.2 6.1C4.3 9.5 4.3 14.5 7.2 17.9C10.2 21.3 15.2 22 19 19.6C16.1 19.9 13.2 18.5 11.7 16C10.1 13.6 10.1 10.4 11.7 8C13.2 5.5 16.1 4.1 19 4.4z')],
+  nuage: [t('M6.3 19C4.1 19 2.2 17.3 2 15.2C1.8 13 3.4 11.1 5.7 10.8C5.6 7.8 8.1 5.2 11.2 5C14.4 4.8 17.2 7 17.6 10C20.2 10.2 22.1 12.2 22 14.7C21.9 17.1 19.8 19 17.3 19z')],
+  etiquette: [t('M6.4 6H22v12H6.4L2 12z')],
+  badge: [t('M9.7 5.2C9.7 4 10.7 3 12 3S14.3 4 14.3 5.2C15 4.2 16.5 4 17.5 4.7S18.7 6.8 18 7.8C19.2 7.4 20.5 8.1 20.9 9.2S20.6 11.6 19.4 12C20.6 12.4 21.3 13.6 20.9 14.8S19.2 16.6 18 16.2C18.7 17.2 18.5 18.6 17.5 19.3S15 19.8 14.3 18.8C14.3 20 13.3 21 12 21S9.7 20 9.7 18.8C9 19.8 7.5 20 6.5 19.3S5.3 17.2 6 16.2C4.8 16.6 3.5 15.9 3.1 14.8S3.4 12.4 4.6 12C3.4 11.6 2.7 10.4 3.1 9.2S4.8 7.4 6 7.8C5.3 6.8 5.5 5.4 6.5 4.7S9 4.2 9.7 5.2z')],
+  bulle: [t('M5.2 4h13.6C20 4 21 5.2 21 6.6v6.8c0 1.4-1 2.6-2.2 2.6h-8.2l-4 4 1.1-4H5.2C4 16 3 14.8 3 13.4V6.6C3 5.2 4 4 5.2 4z')],
+  arc: [t('M3 17a9 10 0 0 1 18 0')],
+  spirale: [t('M12 10.7C12 9.3 11 8.1 9.8 8.1S7.5 9.3 7.5 10.7c0 2.8 2 5.2 4.5 5.2s4.5-2.3 4.5-5.2C16.5 6.5 13.5 3 9.8 3S3 6.5 3 10.7C3 16.4 7 21 12 21s9-4.6 9-10.3')],
+  vague: [t('M2 12C3.8 5.3 5.2 5.3 7 12S10.2 18.7 12 12S15.2 5.3 17 12S20.2 18.7 22 12')],
   plume: [t('M12 19l7-7 3 3-7 7-3-3z'), t('M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z'), t('M2 2l7.6 7.6'), t('M9 11a2 2 0 1 0 4 0a2 2 0 1 0-4 0')],
   annuler: [t('M3 7v6h6'), t('M3.5 13a9 9 0 1 0 2.5-6.3L3 9')],
   retablir: [t('M21 7v6h-6'), t('M20.5 13a9 9 0 1 1-2.5-6.3L21 9')],
@@ -56,6 +94,16 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   'aligner-haut': [t('M3 4h18'), t('M7 8h4v11H7z'), t('M13 8h4v7h-4z')],
   'aligner-centre-v': [t('M3 12h18'), t('M7 6h4v12H7z'), t('M13 8h4v8h-4z')],
   'aligner-bas': [t('M3 20h18'), t('M7 5h4v11H7z'), t('M13 9h4v7h-4z')],
+  // L'alignement des lignes d'un texte : des lignes de longueurs inegales, calees a gauche, au centre ou a droite.
+  'texte-gauche': [t('M4 6h16'), t('M4 10h10'), t('M4 14h16'), t('M4 18h10')],
+  'texte-centre': [t('M4 6h16'), t('M7 10h10'), t('M4 14h16'), t('M7 18h10')],
+  'texte-droite': [t('M4 6h16'), t('M10 10h10'), t('M4 14h16'), t('M10 18h10')],
+  'texte-justifie': [t('M4 6h16'), t('M4 10h16'), t('M4 14h16'), t('M4 18h10')],
+  // La disposition d'un texte (ADR-0031) : libre sur sa ligne de base, pose sur un arc (les lettres dressees le long du trace), ou
+  // dans une forme (des lignes coupees sur ses bords).
+  'texte-libre': [t('M3 19h18'), t('M5 16l3.5-9 3.5 9'), t('M6.4 13h4.2'), t('M16 7v9'), t('M14 9.5h4')],
+  'texte-sur': [t('M3 18a10 10 0 0 1 18 0'), t('M12 12.4V8.5'), t('M7 13.7l-1.9-3.3'), t('M17 13.7l1.9-3.3')],
+  'texte-dans': [t('M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'), t('M8.5 8.5h7'), t('M6.5 12h11'), t('M8.5 15.5h7')],
   'miroir-h': [t('M12 3v18'), t('M9 7L4 12l5 5z'), t('M15 7l5 5-5 5z', true)],
   'miroir-v': [t('M3 12h18'), t('M7 9l5-5 5 5z'), t('M7 15l5 5 5-5z', true)],
   'rotation-gauche': [t('M3 12a9 9 0 1 0 3.2-6.9'), t('M3 4v5h5')],
@@ -98,8 +146,39 @@ const ICONES: Record<NomIcone, readonly Trace[]> = {
   aucun: [t('M5.5 18.5L18.5 5.5')],
   // Une machine de decoupe vue de face : le corps, la fente du tapis, le chariot et sa lame.
   machine: [t('M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'), t('M3 13h18'), t('M10 7V4h4v3'), t('M12 13v4')],
+  // Un stylo de machine, pointe en bas a gauche, et la ligne qu'il ecrit (ADR-0028) : l'outil qui suit le trait sans rien remplir.
+  stylo: [t('M15.5 3.5l5 5L10 19l-5 1 1-5z'), t('M13.5 5.5l5 5'), t('M3 21c2-1 4-1 6 0')],
   // Du code : deux chevrons et la barre d'une balise fermante, ce qu'un integrateur ecrit pour embarquer l'editeur.
-  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')]
+  code: [t('M8 7l-5 5 5 5'), t('M16 7l5 5-5 5'), t('M14 4l-4 16')],
+  // Les outils de selection (ADR-0035) : le cadre en tirets et la fleche qui le tire ; le lasso, sa boucle, son noeud et sa corde ;
+  // inverser, un carre a moitie plein (ce qui etait choisi ne l'est plus, et l'inverse).
+  'cadre-selection': [{ d: 'M3 3h15v13H3z', pointille: true }, t('M13 12l8 4.5-3.6 1-1.4 3.6z', true)],
+  lasso: [t('M8 15.6C5.6 14.4 4 12.6 4 10.5 4 6.9 7.6 4 12 4s8 2.9 8 6.5S16.4 17 12 17c-1 0-1.9-.1-2.8-.4'), t('M7.2 16.8a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0'), t('M8 18.3c-.5 1.4-1.6 2.2-3 2.7')],
+  'inverser-selection': [t('M4 4h16v16H4z'), t('M4 4h8v16H4z', true)],
+  // Un nuage ouvert par le bas, et la fleche qui en descend : une police qui n'est pas encore sur cet appareil, et que la
+  // choisir fera venir de sa source (ADR-0034). La forme dit l'etat, pas la couleur.
+  'nuage-telecharger': [t('M8 17H6.5a4 4 0 0 1 0-8h.3A5.5 5.5 0 0 1 17.4 8.6 4.25 4.25 0 0 1 17.5 17H16'), t('M12 11v10'), t('M8.5 17.5L12 21l3.5-3.5')],
+  // Les outils de l'ADR-0038. Une regle graduee, en biais.
+  regle: [t('M3 16.5L16.5 3 21 7.5 7.5 21z'), t('M7 12.5l2 2'), t('M10 9.5l2 2'), t('M13 6.5l2 2')],
+  // Une forme et ses copies en grille, l'original plein.
+  repeter: [t('M3 3h7v7H3z', true), t('M14 3h7v7h-7z'), t('M3 14h7v7H3z'), t('M14 14h7v7h-7z')],
+  // Des copies en couronne autour d'un centre.
+  radiale: [t('M10 2.5h4v4h-4z', true), t('M17.5 10h4v4h-4z'), t('M10 17.5h4v4h-4z'), t('M2.5 10h4v4h-4z'), t('M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0', true)],
+  // Une forme et son reflet de part et d'autre d'un axe en pointilles.
+  symetrie: [{ d: 'M12 3v18', pointille: true }, t('M9 6L3 18h6z', true), t('M15 6l6 12h-6z')],
+  // Deux formes dans le cadre en pointilles d'un groupe ; degrouper ne garde que les coins du cadre, ouverts.
+  grouper: [{ d: 'M3 3h18v18H3z', pointille: true }, t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)],
+  degrouper: [t('M3 8V3h5'), t('M16 3h5v5'), t('M21 16v5h-5'), t('M8 21H3v-5'), t('M7 7h5v5H7z'), t('M12 12h5v5h-5z', true)],
+  // Une forme pleine qui decoupe le cadre en pointilles de ce qu'elle garde.
+  decoupe: [{ d: 'M3 3h18v18H3z', pointille: true }, t('M12 6a6 6 0 1 0 0 12a6 6 0 1 0 0-12', true)],
+  // Un rond a moitie plein dans un cadre : le clair laisse voir, le sombre cache.
+  masque: [t('M3 3h18v18H3z'), t('M12 6a6 6 0 1 0 0 12a6 6 0 1 0 0-12'), t('M12 6a6 6 0 0 1 0 12z', true)],
+  // Un rond plein dans son halo en pointilles.
+  flou: [t('M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8', true), { d: 'M12 3.5a8.5 8.5 0 1 0 0 17a8.5 8.5 0 1 0 0-17', pointille: true }],
+  // Une forme au trait devant son ombre pleine, decalee vers le bas et la droite.
+  ombre: [t('M9 9h12v12H9z', true), t('M3 3h12v12H3z')],
+  // Un carre coupe en diagonale, une moitie pleine.
+  opacite: [t('M4 4h16v16H4z'), t('M20 4L4 20h16z', true)]
 };
 
 export const NOMS_ICONES: readonly NomIcone[] = Object.keys(ICONES) as NomIcone[];

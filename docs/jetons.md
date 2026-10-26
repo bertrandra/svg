@@ -23,6 +23,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 |---|---|---|---|
 | `--filet` | `#cfd4da` | `#2f353c` | Les bordures et séparations ; décoratif, il ne porte jamais seul une information |
 | `--filet-fort` | `#7d848d` | `#69717b` | Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement |
+| `--poignee-degrade` | `#9c2a7a` | `#e07ac0` | Les poignées de dégradé sur la toile (ADR-0012, étape 4) : l’axe, le rail et le cerne des arrêts, posés sur leur halo de panneau ; une teinte à part du cyan de la sélection |
+| `--arret-selectionne` | `#15181d` | `#e6e9ec` | L’arrêt de dégradé choisi : le bord de son option dans la liste des arrêts, l’anneau de la poignée qui a le focus (sur son halo de panneau) |
 
 ### La couleur d’outil : une seule, pour l’action et l’état actif
 
@@ -50,6 +52,10 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--toile-blanc` | `#ffffff` | `#ffffff` | Le plan de travail en fond blanc |
 | `--toile-sombre` | `#1b1d20` | `#1b1d20` | Le plan de travail en fond sombre |
 | `--encre-toile` | `#15181d` | `#15181d` | L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe) |
+| `--apercu-coupe` | `#cc4a1a` | `#cc4a1a` | L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier |
+| `--apercu-stylo` | `#3d6fe0` | `#3d6fe0` | L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier |
+| `--contour-decoupe` | `#8e5bd4` | `#8e5bd4` | Le contenu d’une découpe qu’on modifie (ADR-0012, paquet 8-D) : sa géométrie tracée en contour sur la toile, le reste estompé ; lisible sur le plan blanc, sombre et en damier |
+| `--contour-masque` | `#1e8f6a` | `#1e8f6a` | Le contenu d’un masque qu’on modifie (ADR-0012, paquet 8-D) : le filet qui cerne ses formes, peintes telles quelles, et les tirets de sa région ; lisible sur le plan blanc, sombre et en damier |
 
 ### Les ombres et voiles, translucides
 
@@ -89,6 +95,8 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--sur-cyan` sur `--cyan` | 5.47 | 7.04 | libellé de l’action primaire et de l’outil actif |
 | `--alerte` sur `--alerte-fond` | 5.06 | 7.54 | message d’avertissement |
 | `--echec` sur `--echec-fond` | 5.28 | 6.40 | message d’échec, survol d’un geste destructif |
+| `--cyan-survol` sur `--echec-fond` | 5.46 | 6.48 | bouton survolé d’un constat bloquant (Prêt pour Cricut) |
+| `--cyan-survol` sur `--alerte-fond` | 5.87 | 6.07 | bouton survolé d’un constat à corriger (Prêt pour Cricut) |
 | `--echec` sur `--panneau` | 6.26 | 6.95 | geste destructif au repos |
 
 ### Contrastes exigés hors texte (WCAG 2.x 1.4.11, au moins 3:1)
@@ -98,6 +106,21 @@ Généré depuis `src/styles/jetons.ts` (ADR-0007) : ne pas modifier à la main.
 | `--filet-fort` sur `--panneau` | 3.55 | 3.39 | bord d’une pastille de couleur, poignée de défilement, sur un panneau |
 | `--filet-fort` sur `--table` | 3.19 | 3.71 | bord d’une pastille de couleur, poignée de défilement, sur la table |
 | `--encre-toile` sur `--toile-blanc` | 17.79 | 17.79 | les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc |
+| `--cyan` sur `--panneau` | 5.14 | 7.04 | le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029) |
+| `--poignee-degrade` sur `--panneau` | 6.53 | 6.16 | l’axe et les poignées d’un dégradé sur la toile, filet sur son halo de panneau (ADR-0012, étape 4) |
+| `--arret-selectionne` sur `--panneau` | 16.73 | 13.76 | le bord de l’arrêt choisi dans la liste, l’anneau de la poignée focalisée sur son halo de panneau |
+| `--apercu-coupe` sur `--toile-blanc` | 4.60 | 4.60 | hachures et contour de coupe de l’aperçu de la machine sur le plan blanc |
+| `--apercu-coupe` sur `--toile-sombre` | 3.67 | 3.67 | hachures et contour de coupe de l’aperçu de la machine sur le plan sombre |
+| `--apercu-coupe` sur `--damier-b` | 3.69 | 3.69 | hachures et contour de coupe de l’aperçu de la machine sur la case grise du damier |
+| `--apercu-stylo` sur `--toile-blanc` | 4.62 | 4.62 | ligne du stylo de l’aperçu de la machine sur le plan blanc |
+| `--apercu-stylo` sur `--toile-sombre` | 3.66 | 3.66 | ligne du stylo de l’aperçu de la machine sur le plan sombre |
+| `--apercu-stylo` sur `--damier-b` | 3.70 | 3.70 | ligne du stylo de l’aperçu de la machine sur la case grise du damier |
+| `--contour-decoupe` sur `--toile-blanc` | 4.57 | 4.57 | le contour du contenu d’une découpe qu’on modifie, sur le plan blanc |
+| `--contour-decoupe` sur `--toile-sombre` | 3.70 | 3.70 | le contour du contenu d’une découpe qu’on modifie, sur le plan sombre |
+| `--contour-decoupe` sur `--damier-b` | 3.66 | 3.66 | le contour du contenu d’une découpe qu’on modifie, sur la case grise du damier |
+| `--contour-masque` sur `--toile-blanc` | 4.04 | 4.04 | le filet et la région du contenu d’un masque qu’on modifie, sur le plan blanc |
+| `--contour-masque` sur `--toile-sombre` | 4.18 | 4.18 | le filet et la région du contenu d’un masque qu’on modifie, sur le plan sombre |
+| `--contour-masque` sur `--damier-b` | 3.24 | 3.24 | le filet et la région du contenu d’un masque qu’on modifie, sur la case grise du damier |
 
 ### La typographie : cinq tailles nommées par leur rôle
 

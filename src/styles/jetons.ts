@@ -43,6 +43,8 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('encre-douce', 'texte', '#555c66', '#9aa3ad', 'Le texte secondaire : aides, légendes, libellés de champ'),
   jeton('filet', 'trait', '#cfd4da', '#2f353c', 'Les bordures et séparations ; décoratif, il ne porte jamais seul une information'),
   jeton('filet-fort', 'trait', '#7d848d', '#69717b', 'Le bord qui doit se voir : pastille de couleur (une encre sur un panneau sombre), poignée des barres de défilement'),
+  jeton('poignee-degrade', 'trait', '#9c2a7a', '#e07ac0', 'Les poignées de dégradé sur la toile (ADR-0012, étape 4) : l’axe, le rail et le cerne des arrêts, posés sur leur halo de panneau ; une teinte à part du cyan de la sélection'),
+  jeton('arret-selectionne', 'trait', '#15181d', '#e6e9ec', 'L’arrêt de dégradé choisi : le bord de son option dans la liste des arrêts, l’anneau de la poignée qui a le focus (sur son halo de panneau)'),
   jeton('cyan', 'action', '#00719c', '#4fb3dc', 'La couleur d’outil : action primaire, état actif, focus, liens'),
   jeton('cyan-survol', 'action', '#006186', '#4fb3dc', 'Le texte d’un bouton discret survolé : le cyan s’assombrit en clair, où le voile du survol le ferait passer sous 4,5:1'),
   jeton('sur-cyan', 'action', '#ffffff', '#08202b', 'Le texte posé sur la couleur d’outil'),
@@ -55,6 +57,10 @@ const JETONS_DE_BASE: readonly Jeton[] = [
   jeton('toile-blanc', 'toile', '#ffffff', '#ffffff', 'Le plan de travail en fond blanc'),
   jeton('toile-sombre', 'toile', '#1b1d20', '#1b1d20', 'Le plan de travail en fond sombre'),
   jeton('encre-toile', 'toile', '#15181d', '#15181d', 'L’encre des aperçus de police « forme / ligne », posés sur le plan blanc dans les deux thèmes (comme le papier qu’on découpe)'),
+  jeton('apercu-coupe', 'toile', '#cc4a1a', '#cc4a1a', 'L’aperçu de la machine : les hachures de la zone que la lame découpe et le contour de coupe ; lisible sur le plan blanc, sombre et en damier'),
+  jeton('apercu-stylo', 'toile', '#3d6fe0', '#3d6fe0', 'L’aperçu de la machine : la ligne que trace le stylo, à sa largeur ; lisible sur le plan blanc, sombre et en damier'),
+  jeton('contour-decoupe', 'toile', '#8e5bd4', '#8e5bd4', 'Le contenu d’une découpe qu’on modifie (ADR-0012, paquet 8-D) : sa géométrie tracée en contour sur la toile, le reste estompé ; lisible sur le plan blanc, sombre et en damier'),
+  jeton('contour-masque', 'toile', '#1e8f6a', '#1e8f6a', 'Le contenu d’un masque qu’on modifie (ADR-0012, paquet 8-D) : le filet qui cerne ses formes, peintes telles quelles, et les tirets de sa région ; lisible sur le plan blanc, sombre et en damier'),
   jeton('ombre-menu', 'relief', 'rgba(0, 0, 0, 0.2)', 'rgba(0, 0, 0, 0.2)', 'L’ombre des menus déroulants'),
   jeton('ombre-tiroir', 'relief', 'rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.25)', 'L’ombre des tiroirs mobiles'),
   jeton('voile', 'relief', 'rgba(0, 0, 0, 0.35)', 'rgba(0, 0, 0, 0.35)', 'Le voile qui assombrit la toile derrière un tiroir ouvert')
@@ -119,6 +125,8 @@ export const PAIRES: readonly PaireContraste[] = [
   { texte: 'sur-cyan', fond: 'cyan', minimum: AA, usage: 'libellé de l’action primaire et de l’outil actif' },
   { texte: 'alerte', fond: 'alerte-fond', minimum: AA, usage: 'message d’avertissement' },
   { texte: 'echec', fond: 'echec-fond', minimum: AA, usage: 'message d’échec, survol d’un geste destructif' },
+  { texte: 'cyan-survol', fond: 'echec-fond', minimum: AA, usage: 'bouton survolé d’un constat bloquant (Prêt pour Cricut)' },
+  { texte: 'cyan-survol', fond: 'alerte-fond', minimum: AA, usage: 'bouton survolé d’un constat à corriger (Prêt pour Cricut)' },
   { texte: 'echec', fond: 'panneau', minimum: AA, usage: 'geste destructif au repos' }
 ];
 
@@ -132,7 +140,24 @@ export const AA_GRAPHIQUE = 3;
 export const PAIRES_GRAPHIQUES: readonly PaireContraste[] = [
   { texte: 'filet-fort', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur un panneau' },
   { texte: 'filet-fort', fond: 'table', minimum: AA_GRAPHIQUE, usage: 'bord d’une pastille de couleur, poignée de défilement, sur la table' },
-  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' }
+  { texte: 'encre-toile', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'les lettres d’un aperçu de police (forme pleine ou ligne de stylo) sur le plan blanc' },
+  { texte: 'cyan', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'le liseré de survol d’une forme sur la toile, filet cyan sur son halo de panneau (ADR-0029)' },
+  { texte: 'poignee-degrade', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'l’axe et les poignées d’un dégradé sur la toile, filet sur son halo de panneau (ADR-0012, étape 4)' },
+  { texte: 'arret-selectionne', fond: 'panneau', minimum: AA_GRAPHIQUE, usage: 'le bord de l’arrêt choisi dans la liste, l’anneau de la poignée focalisée sur son halo de panneau' },
+  // L'apercu de la machine (ADR-0028) se pose sur le plan, quel que soit son fond : blanc, sombre, ou les deux cases du damier.
+  { texte: 'apercu-coupe', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan blanc' },
+  { texte: 'apercu-coupe', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur le plan sombre' },
+  { texte: 'apercu-coupe', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'hachures et contour de coupe de l’aperçu de la machine sur la case grise du damier' },
+  { texte: 'apercu-stylo', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan blanc' },
+  { texte: 'apercu-stylo', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur le plan sombre' },
+  { texte: 'apercu-stylo', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'ligne du stylo de l’aperçu de la machine sur la case grise du damier' },
+  // Le contenu d'une decoupe ou d'un masque qu'on modifie (paquet 8-D) se trace sur le plan, quel que soit son fond.
+  { texte: 'contour-decoupe', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'le contour du contenu d’une découpe qu’on modifie, sur le plan blanc' },
+  { texte: 'contour-decoupe', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'le contour du contenu d’une découpe qu’on modifie, sur le plan sombre' },
+  { texte: 'contour-decoupe', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'le contour du contenu d’une découpe qu’on modifie, sur la case grise du damier' },
+  { texte: 'contour-masque', fond: 'toile-blanc', minimum: AA_GRAPHIQUE, usage: 'le filet et la région du contenu d’un masque qu’on modifie, sur le plan blanc' },
+  { texte: 'contour-masque', fond: 'toile-sombre', minimum: AA_GRAPHIQUE, usage: 'le filet et la région du contenu d’un masque qu’on modifie, sur le plan sombre' },
+  { texte: 'contour-masque', fond: 'damier-b', minimum: AA_GRAPHIQUE, usage: 'le filet et la région du contenu d’un masque qu’on modifie, sur la case grise du damier' }
 ];
 
 const parId = new Map(JETONS.map(j => [j.id, j] as const));

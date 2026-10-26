@@ -11,7 +11,7 @@
 import { useMemo, useRef, useState, type ReactElement } from 'react';
 import { CATEGORIES, NOMS_CATEGORIES, cleDeNom, estIdCatalogue, familleDe, filtrerFamilles, rangsParNom, trouverVariante, uneParNom, variantePrincipale, type CategoriePolice, type FamilleCatalogue, type VariantePolice } from '../model/cataloguePolices.js';
 import { CADRE_APERCU, cheminApercu, vueApercu, type AnnexeApercus } from '../model/apercusPolices.js';
-import { LICENCES_POLICES, SERVEURS_POLICES, SOURCES_POLICES, rangSource, type IdSourcePolices, type LicencePolice } from '../model/sourcesPolices.js';
+import { LICENCES_POLICES, SOURCES_POLICES, rangSource, type IdSourcePolices, type LicencePolice } from '../model/sourcesPolices.js';
 import { FAMILLES_LIVREES, baseDeGrasse, estPoliceLivree, type IdPoliceLivree, type NaturePolice } from '../model/polices.js';
 import { lirePoliceAppareil, policesAppareilDisponibles, policesDeLAppareil, type Police, type PoliceAppareil } from '../io/polices.js';
 import { SEUIL_FENETRE, segmentsFenetre } from '../util/fenetre.js';
@@ -23,6 +23,7 @@ import { useActions, useDessin } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
 import { nomDePolice, useActionsTexte } from './actionsTexte.js';
 import { choisirApercu, type ApercuLigne } from './apercusPolices.js';
+import { COURTS_SOURCES, cleFamille } from './lignesPolices.js';
 
 /** Les categories des fontes livrees, pour que les filtres les rangent avec les autres. */
 const CATEGORIES_LIVREES: Readonly<Record<IdPoliceLivree, CategoriePolice>> = {
@@ -30,10 +31,8 @@ const CATEGORIES_LIVREES: Readonly<Record<IdPoliceLivree, CategoriePolice>> = {
   pacifico: 'manuscrite', caveat: 'manuscrite', fredoka: 'lineale', 'ems-readability': 'autre'
 };
 
-/** Le nom court d'une source, pour le badge d'une ligne. */
-const COURTS: Readonly<Record<IdSourcePolices, string>> = {
-  google: 'Google Fonts', fontsource: 'Fontsource', league: 'League', sil: 'SIL', collletttivo: 'Collletttivo', velvetyne: 'Velvetyne', fontshare: 'Fontshare'
-};
+/** Le nom court d'une source, pour le badge d'une ligne : le meme que celui de la liste deroulante. */
+const COURTS = COURTS_SOURCES;
 
 type SourceEntree = IdSourcePolices | 'livree' | 'deposee';
 
@@ -57,8 +56,6 @@ type SourceDite = (nomFamille: string, source: string) => string | null;
 /** Un nom en minuscules sans accents, pour chercher « fete » dans « Fête ». */
 const sansAccents = (t: string): string => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-/** La cle d'une famille de l'index, celle que retiennent les favoris. */
-export const cleFamille = (f: Pick<FamilleCatalogue, 'depot' | 'id'>): string => f.depot + ':' + f.id;
 
 export interface ProprietesExplorateur {
   readonly id: string;
@@ -135,11 +132,13 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
     poserErreur(''); poserNote('');
     const deja = polices.find(p => p.id === v.id);
     if (deja) { poser(deja.id, deja); return; }
+    // Le choix vaut demande (ADR-0025) : la police se telecharge tout de suite, et la ligne comme la note disent qu'elle arrive.
     poserEnCours(v.id);
+    poserNote('Téléchargement de la police ' + v.nom + '…');
     ac.dire('Téléchargement de la police ' + v.nom + '…');
     const r = await tx.telecharger(v);
     poserEnCours(null);
-    if (r === null) { poserNote('Rien n’a été téléchargé.'); ac.dire('Rien n’a été téléchargé.'); return; }
+    poserNote('');
     if ('erreur' in r) { poserErreur(r.erreur); ac.dire(r.erreur); return; }
     poser(r.id, r.police);
     ac.dire('Police ' + v.nom + ' téléchargée et vérifiée.');
@@ -193,7 +192,7 @@ export function ExplorateurPolices({ id, polices, valeur, poser }: ProprietesExp
       {!filtrees.length && tx.catalogue ? <p className="aide">Aucune police ne répond à ces critères.</p> : null}
 
       <VosPolices poser={poser} />
-      <PiedConsentement />
+      <p className="aide pied-polices">Choisir une police qui n’est pas livrée la télécharge depuis sa source ; chaque fichier est vérifié avant d’être lu. Ni votre dessin ni votre texte ne partent.</p>
     </div>
   );
 }
@@ -292,13 +291,16 @@ function ListePolices({ entrees, valeur, enCours, choisir, favoris, basculerFavo
     const e = au(entrees, sg.index);
     const choisie = e.police ? e.police.id === (baseDeGrasse(valeur) ?? valeur) : false, favori = favoris.includes(e.cle);
     const occupee = enCours !== null;
+    // La ligne d'une famille dont la variante se telecharge le dit, le temps du telechargement.
+    const arrive = occupee && e.famille ? variantePrincipale(e.famille)?.id === enCours : false;
     // Seules les lignes visibles passent ici : un apercu ne se calcule (ou ne se decode) que pour elles, une fois.
     const apercu = choisirApercu(e.nom, e.police ?? chargees.get(e.cle) ?? null, e.famille ? e.cle : null, apercus);
     return (
       <li key={e.cle} aria-posinset={actif ? sg.index + 1 : undefined} aria-setsize={actif ? total : undefined}>
-        <button type="button" className="police-ligne" aria-pressed={choisie} disabled={occupee} onClick={() => choisir(e)}>
+        <button type="button" className="police-ligne" aria-pressed={choisie} aria-busy={arrive || undefined} disabled={occupee} onClick={() => choisir(e)}>
           <NomPolice nom={e.nom} apercu={apercu} />
           <span className="police-badges">
+            {arrive ? <span className="badge-source police-arrive">Téléchargement…</span> : null}
             <span className="badge-source">{e.source === 'livree' ? 'Livrée' : e.source === 'deposee' ? 'Déposée' : COURTS[e.source]}</span>
             {e.nature === 'trait' ? <span className="badge-source">Trait unique</span> : null}
             {e.licence?.badge ? <span className="badge-licence" title={e.licence.nom}>{e.licence.badge}</span> : null}
@@ -378,18 +380,5 @@ function VosPolices({ poser }: { poser: (id: string, police?: Police) => void })
       ) : null}
       {erreur ? <p className="aide" role="alert">{erreur}</p> : null}
     </section>
-  );
-}
-
-/** L'etat du consentement et de quoi le retirer, dans le meme panneau (ADR-0025). */
-function PiedConsentement() {
-  const tx = useTexte(), ac = useActions();
-  const serveurs = [...tx.acceptes].map(s => SERVEURS_POLICES[s].nom);
-  return (
-    <p className="aide pied-consentement">
-      {serveurs.length ? <>Téléchargement autorisé auprès de {serveurs.join(', ')}.{' '}
-        <button type="button" className="discret" onClick={() => { tx.revoquer(); ac.dire('Autorisation retirée : plus aucune police ne sera téléchargée sans vous le demander.'); }}>Retirer l’autorisation</button></>
-        : 'Aucun téléchargement n’est autorisé : choisir une police non livrée vous le demandera d’abord.'}
-    </p>
   );
 }

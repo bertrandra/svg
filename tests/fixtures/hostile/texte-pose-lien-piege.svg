@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <path d="M10 10L60 10L60 40Z" fill="#c81e28"/>
+  <path d="M10 50L20 50L20 60Z" fill="#15181d" data-ed-texte="A" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="sur" data-ed-forme="2"/>
+  <path d="M30 50L40 50L40 60Z" fill="#15181d" data-ed-texte="B" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="sur" data-ed-forme="4"/>
+  <path d="M50 50L60 50L60 60Z" fill="#15181d" data-ed-texte="C" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="sur" data-ed-forme="3"/>
+  <path d="M70 50L80 50L80 60Z" fill="#15181d" data-ed-texte="D" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="dans" data-ed-forme="9999999"/>
+  <path d="M90 50L100 50L100 60Z" fill="#15181d" data-ed-texte="E" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="dans" data-ed-forme-d="javascript%3Aalert%281%29"/>
+  <path d="M110 50L120 50L120 60Z" fill="#15181d" data-ed-texte="F" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="dans" data-ed-forme-d="M0 0L1e999 0Z"/>
+  <path d="M130 50L140 50L140 60Z" fill="#15181d" data-ed-texte="G" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="dans" data-ed-forme-d="M0%200L10%200L10%2010Z" data-ed-forme-regle="url(x)"/>
+  <path d="M150 50L160 50L160 60Z" fill="#15181d" data-ed-texte="H" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="sur" data-ed-forme="1" data-ed-forme-d="M0%200L10%200Z"/>
+  <path d="M170 50L180 50L180 60Z" fill="#15181d" data-ed-texte="I" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="sur&quot; onload=&quot;alert(1)" data-ed-forme="1"/>
+  <g transform="translate(5 5)"><path d="M10 80L20 80L20 90Z" fill="#15181d" data-ed-texte="J" data-ed-police="inter" data-ed-taille="10" data-ed-disposition="dans" data-ed-marge="-1" data-ed-forme="1"/></g>
+  <path d="M30 80L40 80L40 90Z" fill="#15181d" data-ed-texte="K" data-ed-police="inter" data-ed-taille="10" data-ed-depart="0.5" data-ed-forme="1"/>
+</svg>

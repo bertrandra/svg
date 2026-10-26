@@ -3,26 +3,33 @@
 // <use> se deplie en autant de formes independantes (ids neufs) que sa cible en porte, avec l'heritage DU <use>
 // (un clone voit les valeurs heritees du <use>, pas celles du parent d'origine de sa cible, comme en CSS).
 // Ce qui ne se ramene pas a des chemins pleins est refuse en le nommant. Pur.
+//
+// En mode riche (ADR-0012, etape 1), le lecteur des groupes (fonctions/groupes.ts) garde chaque <g> comme un groupe : il le range
+// dans `Parcours.groupes` et lit ses enfants avec `Contexte.parent`, que chaque feuille posee recopie. La matrice et l'heritage se
+// resolvent toujours sur les feuilles ; seule l'opacite du groupe reste au groupe.
 
 import type { Noeud } from '../../util/xml.js';
-import type { Forme, Matrice } from './types.js';
+import type { Forme, Groupe, Matrice } from './types.js';
 import { IDENTITE } from './types.js';
-import { facteur, lireTransformation, multiplier, transformerChemin, translation } from './geometrie.js';
+import { boiteChemin, facteur, lireTransformation, multiplier, transformerChemin, translation } from './geometrie.js';
 import { COULEUR_COURANTE, lirePeintureAlpha } from './peinture.js';
 import { lireTrait } from './trait.js';
 import { lireOpacite } from './opacites.js';
 import { ATTRIBUT_ORIGINE, lireOrigines } from './provenance.js';
 import { cheminDeForme } from './elements.js';
-import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe } from './heritage.js';
+import { heriter, lireEpaisseur, lireOpacites, peinture, refusDe, refusHorsFeuille } from './heritage.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import { lireTexte, type ContexteTexte } from './texteSvg.js';
-import { lireTexteVivant, MSG_TEXTE_ILLISIBLE } from './texteVivant.js';
+import { lireTexteVivant, MSG_TEXTE_ILLISIBLE, type LienLu } from './texteVivant.js';
+import { ATTRIBUT_OPERATION, lireOperation } from './operation.js';
 import { ANIMATIONS, MSG_ANIMATIONS, MSG_SYMBOLE_ROGNE, MSG_USE_ABSENT, ignoresDeMarqueurs, type Proprietes } from './ignores.js';
 import { peintureSure } from './peinture.js';
 import { COORDONNEE_MAX, coordonneeSaine, DONNEES_TRACE_MAX, PROFONDEUR_MARCHE_MAX } from './limites.js';
 import {
   cibleDe, depasseDuCadre, CLONES_MAX, inverse, lireAspect, lireVue, longueurUse, matriceCadre, PROFONDEUR_USE_MAX, type Cadre
 } from './clones.js';
+import { completerFeuille, lecteurDe, prisesDe, resoudrePeinture, type Fonctionnalite, type Marche, type PeintureResolue } from './fonctionnalites.js';
+import { ignoresDeFusion } from './fusion.js';
 
 const IGNORES = new Set(['defs', 'title', 'desc', 'metadata', 'style', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'pattern', 'symbol', 'marker', 'filter']);
 const NON_PRIS: ReadonlyMap<string, string> = new Map([
@@ -46,30 +53,59 @@ export interface Parcours {
   donnees: number;
   /** De quoi lire le texte en lettres ; absent (null), un <text> est refuse en le nommant, comme avant. */
   readonly texte?: ContexteTexte | null;
+  /** Les liens des textes poses vers leur forme (ADR-0031), resolus quand toutes les formes sont lues. */
+  readonly liens?: Array<{ readonly id: string; readonly lien: LienLu }>;
+  /**
+   * Les fonctionnalites du modele v2 que la lecture consulte (fonctionnalites.ts) : le catalogue en mode riche, aucune (absente ou
+   * vide) en mode plat, qui lit alors exactement comme avant (ADR-0012, annexe 2 §1).
+   */
+  readonly fonctions?: readonly Fonctionnalite[];
+  /**
+   * Les groupes lus en mode riche, par identifiant, dans l'ordre de lecture (le lecteur des groupes les y range) ; absente en mode
+   * plat, ou les groupes se fondent dans leurs feuilles.
+   */
+  readonly groupes?: Map<string, Groupe>;
 }
 
-/** Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. */
-export interface Contexte { readonly m: Matrice; readonly heritees: Proprietes; readonly opacite: number; readonly profondeur: number }
+const AUCUNE: readonly Fonctionnalite[] = [];
+const fonctionsDe = (p: Parcours): readonly Fonctionnalite[] => p.fonctions ?? AUCUNE;
 
-/** Un element prepare : son contexte (matrice et opacite avec les siennes) et ses proprietes propres. */
-interface Pret extends Contexte { readonly pr: Proprietes }
+/**
+ * Ce que les enfants d'un element recoivent. `profondeur` compte les <use> emboites. `parent` : le groupe que lit le mode riche
+ * (absent a la racine, et toujours en mode plat).
+ */
+export interface Contexte { readonly m: Matrice; readonly heritees: Proprietes; readonly opacite: number; readonly profondeur: number; readonly parent?: string }
+
+/**
+ * Un element prepare : son contexte (matrice et opacite avec les siennes) et ses proprietes propres. `opaciteDuParent` est l'opacite
+ * recue, avant la sienne : un groupe du mode riche garde la sienne pour lui et ne la transmet pas a ses feuilles.
+ */
+export interface Pret extends Contexte { readonly pr: Proprietes; readonly opaciteDuParent: number }
+
+/** Le groupe du contexte, a etaler dans un contexte ou une forme : rien hors d'un groupe. */
+const parentDe = (ctx: Contexte): { parent?: string } => (ctx.parent !== undefined ? { parent: ctx.parent } : {});
 
 /** Le contexte d'un element, ou null s'il ne se dessine pas (cache) ou se refuse (nomme dans `refus`). */
 function preparer(p: Parcours, n: Noeud, ctx: Contexte): Pret | null {
   const pr = proprietesDe(p.analyse, n);
   if ((pr.display ?? '').trim() === 'none') return null;
-  const nonPris = n.nom === 'text' && p.texte ? undefined : NON_PRIS.get(n.nom);
-  if (nonPris) { p.refus.add(nonPris); return null; }
-  const refusNoeud = refusDe(pr);
+  // Une balise qu'une fonctionnalite sait lire (mode riche) n'est plus refusee ici : son lecteur en decide.
+  const nonPris = NON_PRIS.get(n.nom);
+  if (nonPris && !(n.nom === 'text' && p.texte) && !lecteurDe(fonctionsDe(p), n.nom)) { p.refus.add(nonPris); return null; }
+  const refusNoeud = refusDe(pr, prisesDe(fonctionsDe(p)));
   if (refusNoeud) { p.refus.add(refusNoeud); return null; }
   const t = n.attributs.transform ? lireTransformation(n.attributs.transform) : IDENTITE;
   if (!t) { p.refus.add('une transformation illisible'); return null; }
+  // Ce qui se perdait sans etre dit (fusion, ordre de peinture, vector-effect) : dit, dans les deux modes (fusion.ts).
+  for (const msg of ignoresDeFusion(pr, n)) p.analyse.ignores.add(msg);
   return {
     pr,
     heritees: heriter(ctx.heritees, pr),
     opacite: ctx.opacite * (pr.opacity !== undefined ? lireOpacite(pr.opacity) : 1),
+    opaciteDuParent: ctx.opacite,
     m: multiplier(ctx.m, t),
-    profondeur: ctx.profondeur
+    profondeur: ctx.profondeur,
+    ...parentDe(ctx)
   };
 }
 
@@ -104,8 +140,17 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   const courante = heritees.color === undefined ? COULEUR_COURANTE : lirePeintureAlpha(heritees.color);
   const fond = n.nom === 'line' ? { couleur: null, alpha: 1 } : peinture(heritees.fill, '#000000', courante);
   const trait = peinture(heritees.stroke, null, courante);
-  const { couleur: remplissage } = fond, { couleur: contour } = trait;
-  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) { p.refus.add('un dégradé ou un motif'); return; }
+  let { couleur: remplissage } = fond, { couleur: contour } = trait;
+  // Une peinture url(#…) : refusee comme avant, sauf si une fonctionnalite du mode riche la resout (sa couleur de repli prend la place).
+  let peintureR: PeintureResolue | null = null, peintureC: PeintureResolue | null = null;
+  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) {
+    const fonctions = fonctionsDe(p);
+    if (remplissage && remplissage.startsWith('url(')) peintureR = fonctions.length ? resoudrePeinture(fonctions, remplissage, 'remplissage', n, b, marche(p)) : null;
+    if (contour && contour.startsWith('url(')) peintureC = fonctions.length ? resoudrePeinture(fonctions, contour, 'contour', n, b, marche(p)) : null;
+    if ((remplissage && remplissage.startsWith('url(') && !peintureR) || (contour && contour.startsWith('url(') && !peintureC)) { p.refus.add('un dégradé ou un motif'); return; }
+    if (peintureR) remplissage = peintureR.repli;
+    if (peintureC) contour = peintureC.repli;
+  }
   if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { p.refus.add('une peinture qui n’est pas une couleur lisible'); return; }
   if (b.profondeur > 0 && depasseBorne(p)) return;
   const chemin = transformerChemin(d, m);
@@ -126,7 +171,10 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
   if (lu && 'illisible' in lu) p.analyse.ignores.add(MSG_TEXTE_ILLISIBLE);
   else if (lu?.remplacement) p.analyse.ignores.add(lu.remplacement);
   const texte = lu && 'texte' in lu ? lu.texte : undefined;
-  p.formes.push({
+  if (lu && 'texte' in lu && lu.lien) p.liens?.push({ id: 'f' + (p.formes.length + 1), lien: lu.lien });
+  // L'operation de production (ADR-0028) qu'un SVG ecrit ici porte sur la forme elle-meme (jamais heritee d'un groupe).
+  const operation = lireOperation(n.attributs[ATTRIBUT_OPERATION]);
+  const forme: Forme = {
     id: 'f' + (p.formes.length + 1),
     d: chemin,
     remplissage,
@@ -136,16 +184,22 @@ function poserForme(p: Parcours, n: Noeud, b: Pret): void {
     ...lireOpacites(b.opacite, heritees, fond, trait),
     ...(origine ? { origine } : {}),
     ...(texte ? { texte } : {}),
+    ...(operation ? { operation } : {}),
     regle: (heritees['fill-rule'] ?? '').trim() === 'evenodd' ? 'evenodd' : 'nonzero',
     visible: true,
-    verrouille: false
-  });
+    verrouille: false,
+    ...parentDe(b),
+    ...(peintureR ? { peintureRemplissage: peintureR.peinture } : {}),
+    ...(peintureC ? { peintureContour: peintureC.peinture } : {})
+  };
+  // Le mode riche : chaque fonctionnalite complete la feuille (son filtre…) ; en mode plat, il n'y en a aucune.
+  p.formes.push(fonctionsDe(p).length ? completerFeuille(fonctionsDe(p), forme, n, b, marche(p)) : forme);
 }
 
 /** Le <symbol> d'un <use> : un cadre (x, y, largeur, hauteur) dans lequel son viewBox se place, puis ses enfants comme ceux d'un groupe. */
 function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
   const pr = proprietesDe(p.analyse, s);
-  const refusS = refusDe(pr);
+  const refusS = refusDe(pr, prisesDe(fonctionsDe(p))) ?? refusHorsFeuille(pr, 'posé sur un symbole');
   if (refusS) { p.refus.add(refusS); return; }
   // Un cadre nul ou un viewBox vide desactive le rendu, comme dans un navigateur.
   const vue = lireVue(s.attributs.viewBox);
@@ -154,7 +208,8 @@ function visiterSymbole(p: Parcours, s: Noeud, b: Pret, cadre: Cadre): void {
     m: multiplier(b.m, matriceCadre(vue, cadre, lireAspect(s.attributs.preserveAspectRatio))),
     heritees: heriter(b.heritees, pr),
     opacite: b.opacite * (pr.opacity !== undefined ? lireOpacite(pr.opacity) : 1),
-    profondeur: b.profondeur
+    profondeur: b.profondeur,
+    ...parentDe(b)
   };
   const avant = p.formes.length;
   parcourirEnfants(p, s, ctx);
@@ -203,8 +258,44 @@ export function visiter(p: Parcours, n: Noeud, ctx: Contexte): void {
   if (ANIMATIONS.has(n.nom)) { p.analyse.ignores.add(MSG_ANIMATIONS); return; }
   const b = preparer(p, n, ctx);
   if (!b) return;
+  // Le mode riche : une fonctionnalite qui sait lire cette balise la lit (fonctionnalites.ts) ; en mode plat, aucune.
+  const lecteur = fonctionsDe(p).length ? lecteurDe(fonctionsDe(p), n.nom) : undefined;
+  if (lecteur) { lecteur(n, b, marche(p)); return; }
+  // Une prise du mode riche (un filtre) n'est lue que sur une feuille ou un groupe : ailleurs, aucune fonctionnalite ne la porterait,
+  // elle reste refusee (en mode plat, `preparer` l'a deja refusee).
+  const ou = n.nom === 'use' ? 'posé sur un clone <use>' : n.nom === 'text' && p.texte ? 'posé sur un texte' : n.nom === 'g' || n.nom === 'a' ? 'posé sur un groupe' : null;
+  const refusPrise = ou ? refusHorsFeuille(b.pr, ou) : null;
+  if (refusPrise) { p.refus.add(refusPrise); return; }
   if (n.nom === 'g' || n.nom === 'a') parcourirEnfants(p, n, b);
   else if (n.nom === 'use') visiterUse(p, n, b);
-  else if (n.nom === 'text' && p.texte) lireTexte(p.texte, n, b.heritees, b.m, b.opacite);
+  else if (n.nom === 'text' && p.texte) lireTexteDans(p, p.texte, n, b);
   else poserForme(p, n, b);
+}
+
+/** Un <text> lu en lettres ; dans un groupe du mode riche, ses lettres en sont des feuilles. */
+function lireTexteDans(p: Parcours, texte: ContexteTexte, n: Noeud, b: Pret): void {
+  const avant = p.formes.length;
+  lireTexte(texte, n, b.heritees, b.m, b.opacite);
+  if (b.parent === undefined) return;
+  for (let i = avant; i < p.formes.length; i++) { const f = p.formes[i]; if (f) p.formes[i] = { ...f, parent: b.parent }; }
+}
+
+const marches = new WeakMap<Parcours, Marche>();
+
+/** Ce que la marche offre aux lecteurs des fonctionnalites (fonctionnalites.ts), une fois par lecture. */
+function marche(p: Parcours): Marche {
+  let m = marches.get(p);
+  if (!m) {
+    m = {
+      parcours: p,
+      enfants: (n, ctx) => parcourirEnfants(p, n, ctx),
+      visiter: (n, ctx) => visiter(p, n, ctx),
+      poserForme: (n, pret) => poserForme(p, n, pret),
+      boiteForme: (n, pret) => { const d = cheminDeForme(n); return d ? boiteChemin(transformerChemin(d, pret.m)) : null; },
+      refuser: phrase => { p.refus.add(phrase); },
+      ignorer: phrase => { p.analyse.ignores.add(phrase); }
+    };
+    marches.set(p, m);
+  }
+  return m;
 }

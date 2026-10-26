@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 60">
+  <!-- Un <use> d'un <g> se deplie comme avant, mais la structure de sa cible reste : un groupe par clone, avec son opacite et son nom. -->
+  <defs>
+    <g id="motif" opacity="0.6">
+      <rect width="20" height="20" fill="#c81e28"/>
+      <g id="oeil"><circle id="pupille" cx="10" cy="10" r="4" fill="#f4efe6"/></g>
+    </g>
+  </defs>
+  <use href="#motif" x="10" y="10"/>
+  <use xlink:href="#motif" x="60" y="10" transform="rotate(10 70 20)" opacity="0.5"/>
+  <!-- Un <use> d'une forme seule ne cree aucun groupe. -->
+  <use href="#pupille" x="90" y="30"/>
+</svg>

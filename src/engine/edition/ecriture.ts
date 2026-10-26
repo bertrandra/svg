@@ -7,7 +7,10 @@ import { ecrireChemin, nb } from './chemins.js';
 import { attributsTrait } from './trait.js';
 import { opaciteDuContour, opaciteDuRemplissage } from './opacites.js';
 import { attributOrigine, metadonnees } from './provenance.js';
-import { attributsTexte } from './texteVivant.js';
+import { attributsLien, attributsTexte } from './texteVivant.js';
+import { attributOperation } from './operation.js';
+import { estPlat } from './arbre.js';
+import { ecrireDessinRiche, type EcrivainFeuilles } from './ecritureRiche.js';
 
 // L'ecriture d'une forme ne depend que d'elle et de la precision, et une forme ne change jamais (chaque
 // operation en rend une nouvelle) : on garde son texte, par precision. Sans cela, mesurer le poids du
@@ -42,16 +45,45 @@ function composerForme(f: Forme, precision: number): string {
 }
 
 /**
+ * L'ecriture d'une forme, avec le lien d'un texte pose vers sa forme (ADR-0031) ajoute a la fin : il depend de la place de la forme
+ * parmi les chemins ecrits, il ne se garde donc pas avec le texte de la forme. Sans texte pose, l'ecriture de toujours.
+ */
+function lienDesTextes(dessin: DessinSvg, visibles: readonly Forme[], precision: number): (f: Forme) => string {
+  if (!visibles.some(f => f.texte?.disposition)) return f => ecrireForme(f, precision);
+  const formes = new Map(dessin.formes.map(f => [f.id, f])), rangs = new Map(visibles.map((f, i) => [f.id, i + 1]));
+  return f => {
+    const e = ecrireForme(f, precision), l = f.texte?.disposition ? attributsLien(f, formes, rangs, precision) : '';
+    return l ? e.slice(0, -2) + l + '/>' : e;
+  };
+}
+
+/** Une forme ecrite, et son operation en dernier attribut quand elle en porte une (ADR-0028). */
+const avecOperation = (f: Forme, ecrite: string): string => (f.operation ? ecrite.slice(0, -2) + attributOperation(f) + '/>' : ecrite);
+
+/**
  * Le SVG du dessin. Les formes masquees ne s'ecrivent pas : masquer, a l'enregistrement, c'est retirer. Quand une forme
  * ecrite vient d'une source creditee (CC BY 3.0), un <metadata> d'attribution ouvre le SVG : sans forme creditee,
  * rien de plus n'est ecrit.
+ *
+ * `operations` (ADR-0028) n'est vrai que pour le document d'un contexte de production : l'operation qu'une forme porte s'y ecrit
+ * (`data-ed-operation`). Partout ailleurs (exports, telechargements, Generique), elle ne s'ecrit jamais, meme presente dans le
+ * modele : c'est l'appelant qui decide, apres avoir retire ce qui vaut le defaut (`operationsAEcrire`).
  */
-export function ecrireDessin(dessin: DessinSvg, precision = 2): string {
+export function ecrireDessin(dessin: DessinSvg, precision = 2, operations = false): string {
+  // Le modele v2 (ADR-0012, annexe 2 §3) : un dessin qui n'est pas plat s'ecrit a part, sans une ligne commune avec ce qui suit.
+  if (!estPlat(dessin)) return ecrireDessinRiche(dessin, precision, ecrivainRiche(precision, operations));
   const [x, y, l, h] = dessin.vb;
   const visibles = dessin.formes.filter(f => f.visible);
-  const corps = visibles.map(f => ecrireForme(f, precision)).join('');
+  const lien = lienDesTextes(dessin, visibles, precision);
+  const corps = visibles.map(f => { const e = lien(f); return operations ? avecOperation(f, e) : e; }).join('');
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + [x, y, l, h].map(v => nb(v, 3)).join(' ') + '" width="' + nb(l, 3) + '" height="' + nb(h, 3) + '">' + metadonnees(visibles) + corps + '</svg>';
 }
+
+/** Ce que l'ecriture riche emprunte a celle-ci : une feuille ecrite comme ici (cache, lien des textes poses, operation). */
+const ecrivainRiche = (precision: number, operations: boolean): EcrivainFeuilles => (dessin, ecrites) => {
+  const lien = lienDesTextes(dessin, ecrites, precision);
+  return f => { const e = lien(f); return operations ? avecOperation(f, e) : e; };
+};
 
 export interface Statistiques { formes: number; points: number; octets: number }
 

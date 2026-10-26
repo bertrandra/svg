@@ -13,7 +13,9 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useSignalVisite } from './contexteGuide.js';
 import { LigneSvg, ListeFormats, optionsDeSession } from './Exporter.js';
 import { etatExport } from './parcoursCricut.js';
+import { estMelange } from './FinCricut.js';
 import { Icone } from './icones.js';
+import { dessinComplet } from './lentille.js';
 
 /** Le geste recommande dans ce contexte : son libelle, pourquoi il est refuse (un constat bloquant), et ce qu'il fait. */
 interface Recuperation { readonly libelle: string; readonly raison: string | null; readonly aide: string; readonly faire: () => void }
@@ -21,7 +23,7 @@ interface Recuperation { readonly libelle: string; readonly raison: string | nul
 /** Le SVG du dessin au telechargement : chaque facon de recuperer le dessin acheve aussi l'etape 4 de la visite guidee. */
 export function useTelechargerSvg(nom: string): () => void {
   const mo = useDessin(), ui = useInterface(), ac = useActions(), signaler = useSignalVisite();
-  return () => { void proposer(nom + '.svg', texteOctets(svgATelecharger(mo.dessin, ui.production, optionsDeSession()))).then(m => { ac.dire(m); signaler('recupere'); }); };
+  return () => { void proposer(nom + '.svg', texteOctets(svgATelecharger(dessinComplet(mo), ui.production, optionsDeSession()))).then(m => { ac.dire(m); signaler('recupere'); }); };
 }
 
 /** Le format recommande : le SVG en Generique, l'export pour la machine en Cricut (le SVG de decoupe, ou l'archive Print Then Cut). */
@@ -29,12 +31,14 @@ export function useRecuperation(nom: string): Recuperation {
   const mo = useDessin(), ui = useInterface(), ac = useActions(), signaler = useSignalVisite();
   const telecharger = useTelechargerSvg(nom);
   if (!ui.profil) return { libelle: 'Télécharger le SVG', raison: null, aide: 'Le dessin en SVG, dans vos téléchargements', faire: telecharger };
-  const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo';
-  const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede);
+  // Un dessin qui mele couper et ecrire (ADR-0028) s'exporte « pour Cricut » meme au stylo : l'archive porte les deux.
+  const melange = estMelange(mo.preparation?.dessin, ui.profil);
+  const ptc = ui.profil.procede === 'imprimer-decouper', stylo = ui.profil.procede === 'dessin-stylo' && !melange;
+  const e = etatExport(mo.preparation?.constats ?? null, ui.profil.procede, melange);
   return {
     libelle: ptc ? 'Exporter pour Print Then Cut' : stylo ? 'Exporter pour le stylo' : 'Exporter pour Cricut',
     raison: e.raison,
-    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : stylo ? 'Des traits sans remplissage, à taille physique, une couleur par stylo' : 'Le fichier à importer dans Design Space',
+    aide: ptc ? 'L’image à imprimer et sa ligne de coupe, dans une archive ZIP' : melange ? 'Le fichier à couper et le fichier à écrire, dans une archive ZIP' : stylo ? 'Des traits sans remplissage, à taille physique, une couleur par stylo' : 'Le fichier à importer dans Design Space',
     faire: () => { ac.exporterPourCricut(nom); signaler('recupere'); }
   };
 }
@@ -45,7 +49,7 @@ export function PanneauFormats({ nom }: { nom: string }) {
   const telecharger = useTelechargerSvg(nom);
   // Un export dit son issue par `dire` : c'est aussi le signal qu'un fichier a ete recupere (visite guidee).
   const dire = (t: string) => { ac.dire(t); signaler('recupere'); };
-  return <ListeFormats svg="" dessin={mo.dessin} nom={nom} dire={dire} {...(ui.profil ? { enTete: <LigneSvg faire={telecharger} /> } : {})} />;
+  return <ListeFormats svg="" dessin={dessinComplet(mo)} nom={nom} dire={dire} {...(ui.profil ? { enTete: <LigneSvg faire={telecharger} /> } : {})} />;
 }
 
 /** Au bureau : le geste recommande, puis « Autres formats ». */

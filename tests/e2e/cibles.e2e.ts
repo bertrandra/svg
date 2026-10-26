@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, attendreAnimations, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote } from './aide.js';
+import { champPolice } from './polices.js';
 
 const MIN = 24;
 
@@ -104,7 +105,6 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
     it('voie « bibliotheque » chargee', async () => {
       const page = await ouvrirPage();
       await cliquer(page.getByRole('tab', { name: /^Bibliothèque/ }));
-      await cliquer(page.getByRole('button', { name: /Charger la bibliothèque/ }));
       await page.locator('.bibliotheque .vignette').first().waitFor({ timeout: 60_000 });
       await exiger(page);
     });
@@ -164,7 +164,6 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       const page = await editeur();
       await tiroir(page, 'Inspecteur');
       await cliquer(page.locator('.editeur-inspecteur details.section', { hasText: 'Bibliothèque de formes' }).locator('> summary'));
-      await cliquer(page.getByRole('button', { name: /Charger la bibliothèque/ }));
       await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: 60_000 });
       await exiger(page);
     });
@@ -174,7 +173,7 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
       const outil = page.locator('.editeur-barre button[title^="Texte (T)"]');
       await cliquer(outil);
       await tiroir(page, 'Inspecteur');
-      await page.locator('.editeur-inspecteur select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+      await champPolice(page.locator('.editeur-inspecteur')).waitFor({ timeout: 30_000 });
       await cliquer(page.getByRole('button', { name: 'Ajouter le texte' }));
       await page.locator('.editeur-inspecteur details.section', { has: page.locator('summary', { hasText: 'Texte' }) }).waitFor();
       await cliquer(page.locator('.editeur-inspecteur').getByRole('button', { name: 'Aperçu forme / ligne' }).first());
@@ -280,8 +279,8 @@ describe.each(APPAREILS)('cibles de 24 px au moins : $nom', ({ options }) => {
 
     it('avec le menu des formes, la boite des credits et le menu d export de l accueil', async () => {
       const page = await editeur();
-      await cliquer(page.getByRole('button', { name: 'Choisir une forme' }));
-      await page.getByRole('menu', { name: 'Choisir une forme' }).waitFor();
+      await cliquer(page.getByRole('button', { name: 'Formes (F)' }));
+      await page.getByRole('menu', { name: 'Formes' }).waitFor();
       await exiger(page);
       await page.keyboard.press('Escape');
       // Une modification, puis « Terminer » : l'editeur se ferme sur la fiche du resultat et son menu « Autres formats ».

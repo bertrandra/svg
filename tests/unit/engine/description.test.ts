@@ -50,11 +50,22 @@ describe('genreDeForme', () => {
     expect(genreDeForme(premiere('<path d="M10 10L90 10L90 50L10 50Z"/>'))).toBe('rectangle');
   });
 
+  // Depuis les formes de base (ADR-0033), un losange et un rectangle aux coins ronds se disent par leur nom.
   it('ne prend pas un losange pour un rectangle, ni une courbe pour un polygone', () => {
-    expect(genreDeForme(premiere('<path d="M50 0L100 50L50 100L0 50Z"/>'))).toBe('polygone à 4 sommets');
+    expect(genreDeForme(premiere('<path d="M50 0L100 50L50 100L0 50Z"/>'))).toBe('losange');
+    expect(genreDeForme(premiere('<path d="M50 0L100 40L60 100L0 50Z"/>'))).toBe('polygone à 4 sommets');
     expect(genreDeForme(premiere('<path d="M0 0Q50 50 100 0"/>'))).toBe('courbe');
     expect(genreDeForme(premiere('<path d="M0 0Q50 50 100 0L50 80Z"/>'))).toBe('tracé courbe');
-    expect(genreDeForme(premiere('<rect x="0" y="0" width="80" height="40" rx="10"/>'))).toBe('tracé courbe');
+    expect(genreDeForme(premiere('<rect x="0" y="0" width="80" height="40" rx="10"/>'))).toBe('rectangle arrondi');
+  });
+
+  it('dit une image integree par sa nature, pas par le cadre de son chemin (paquet 2-D)', () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC';
+    const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><image x="0" y="0" width="40" height="30" href="data:image/png;base64,' + png + '"/></svg>', { modele: 'riche' });
+    if ('erreur' in r) throw new Error(r.erreur);
+    const image = au(r.dessin.formes, 0);
+    expect(genreDeForme(image)).toBe('image PNG');
+    expect(nomDeForme(image)).toMatch(/^Image PNG 1, /);
   });
 });
 
@@ -101,5 +112,13 @@ describe('la description d une forme', () => {
     const trait = premiere('<path d="M0 0L50 0" fill="none" stroke="#15181d" stroke-width="4"/>');
     expect(peintureDite(trait)).toBe('sans fond, contour noir #15181d');
     expect(nomDeForme({ ...f, verrouille: true, visible: false })).toBe('Rectangle 1, fond rouge #c81e28, verrouillée, masquée');
+  });
+
+  it('dit un degrade (modele v2) par son genre et ses couleurs extremes, jamais par sa couleur de repli', () => {
+    const arrets = [{ position: 0, couleur: '#c81e28' }, { position: 1, couleur: '#1f5fb0' }];
+    const g = { ...f, peintureRemplissage: { genre: 'lineaire' as const, x1: 0, y1: 0, x2: 1, y2: 0, arrets }, remplissage: '#7a4a7a' };
+    expect(peintureDite(g)).toBe('fond dégradé linéaire du rouge #c81e28 au bleu #1f5fb0');
+    const t = { ...f, contour: '#000000', peintureContour: { genre: 'radial' as const, cx: 0, cy: 0, r: 1, arrets: [...arrets, { position: 1, couleur: '#000000' }] } };
+    expect(peintureDite(t)).toBe('fond rouge #c81e28, contour dégradé radial du rouge #c81e28 au noir #000000, 3 arrêts');
   });
 });

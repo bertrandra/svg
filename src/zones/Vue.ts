@@ -6,9 +6,10 @@ import type { Vue, Vues } from './typesEditeur.js';
 
 /** Vrai tant que la requete de media est vraie ; elle se relit quand elle change (rotation, redimensionnement, pointeur branche). */
 function useMedia(requete: string): boolean {
-  const [v, poserV] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia(requete).matches);
+  // Hors navigateur (le rendu des tests, renderToStaticMarkup), aucune requete ne vaut.
+  const [v, poserV] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(requete).matches);
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const m = window.matchMedia(requete);
     const suivre = () => poserV(m.matches);
     suivre();
@@ -21,6 +22,15 @@ function useMedia(requete: string): boolean {
 /** Vrai quand le pointeur principal est un doigt : les poignees de la toile grossissent. */
 export function useTactile(): boolean {
   return useMedia('(pointer: coarse)');
+}
+
+/**
+ * Vrai quand le pointeur principal n'est pas un doigt (une souris, un stylet, ou aucun : le clavier seul) : l'arbre des calques n'y
+ * dessine les boutons d'une ligne qu'a la ligne active, survolee, ou dont l'etat n'est pas celui de repos (ArbreCalques.tsx). Faux au
+ * doigt, ou rien ne survole, et hors navigateur. (Pas `(hover: hover)` : Firefox sans ecran annonce `pointer: none`, sans survol.)
+ */
+export function useSurvolFin(): boolean {
+  return useMedia('not all and (pointer: coarse)');
 }
 
 /**

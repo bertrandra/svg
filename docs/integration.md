@@ -20,7 +20,7 @@ les fontes et le bundle. `npm run embarquer` ne refait que le bundle.
 
 ## 1. L’iframe de la page entière
 
-On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`, `polices-catalogue.js`, `polices-apercus.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte d’elle-même : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les annexes, au premier besoin. La page propose les polices libres téléchargeables (ADR-0025) : une police du catalogue ne se télécharge qu’après l’accord de la personne, auprès des serveurs nommés dans « Les serveurs de polices ».
+On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`, `polices-catalogue.js`, `polices-apercus.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte d’elle-même : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les annexes, au premier besoin. La page propose les polices libres téléchargeables (ADR-0025) : une police du catalogue ne se télécharge qu’au moment où la personne la choisit, auprès des serveurs nommés dans « Les serveurs de polices ».
 
 ```html
 <iframe src="/svg/editeur-svg.html" title="Éditeur SVG" style="width: 100%; height: 720px; border: 0"
@@ -35,6 +35,9 @@ On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `biblio
   copie du code). Si votre page doit recevoir le SVG, prenez le bundle.
 - `vtracer.js` (traceur, 877 Ko), `bibliotheque.js` et `polices.js` doivent être servis **à côté de `editeur-svg.html`** : la page les
   cherche par leur nom nu, chacun au premier besoin (une vectorisation, la bibliothèque, l’outil Texte).
+- La page lit en **modèle riche** (ADR-0012, étape 14) : un SVG à groupes, à dégradés, à découpes… s’ouvre et se réécrit avec ses
+  groupes et ses définitions. La personne revient à plat par la case « Groupes, dégradés, effets » du menu Édition (gardée dans le
+  stockage de la page). Si vous comptez sur des SVG réécrits à plat, prenez le bundle, qui reste à plat par défaut (voir « Le modèle »).
 
 ---
 
@@ -111,20 +114,48 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `onBrouillon` | `(svg: string) => void` | | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S`. Rendre `false` dit que le brouillon n’a pas été gardé : l’éditeur l’annonce au lieu de « Brouillon gardé. » |
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 | `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
-| `policesEnLigne` | `boolean` | `false` | Les polices libres téléchargeables (ADR-0025) : l’outil Texte propose « Toutes les polices » (plus de 2 000 familles libres, recherche, filtres, favoris, polices du document). Une police choisie se télécharge **seulement après l’accord de la personne**, serveur par serveur, retenu dans `stockage` (clé `svg.polices.consentement`, révocable dans le même panneau) ; chaque fichier est vérifié par son empreinte sha256 avant d’être lu. Faux ou absent : aucune requête, seules les dix fontes de `polices.js` se proposent. Vrai demande de servir aussi `polices-catalogue.js` (et, facultatif, `polices-apercus.js`) sous `baseAnnexes`, et d’autoriser les serveurs de polices dans votre politique de sécurité (voir « Les serveurs de polices ») |
+| `modele` | `'plat'` ou `'riche'` | `'plat'` | Le modèle de lecture (ADR-0012), fixé pour toute l’édition : la personne ne le change pas, le menu Édition n’a pas la case du modèle. `'plat'` est le contrat d’avant : les groupes se fondent, dégradé, motif, découpe, masque, filtre et image sont refusés en le nommant, et un SVG réécrit aujourd’hui l’est à l’identique demain. `'riche'` les garde et les réécrit (voir « Le modèle : plat ou riche ») |
+| `policesEnLigne` | `boolean` | `false` | Les polices libres téléchargeables (ADR-0025) : l’outil Texte propose « Toutes les polices » (plus de 2 000 familles libres, recherche, filtres, favoris, polices du document). Une police se télécharge **seulement quand la personne la choisit** (ouvrir la liste, chercher, voir les aperçus ne fait partir aucune requête) ; chaque fichier est vérifié par son empreinte sha256 avant d’être lu. Faux ou absent : aucune requête, seules les dix fontes de `polices.js` se proposent. Vrai demande de servir aussi `polices-catalogue.js` (et, facultatif, `polices-apercus.js`) sous `baseAnnexes`, et d’autoriser les serveurs de polices dans votre politique de sécurité (voir « Les serveurs de polices ») |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
 
 Une option qui ne convient pas lève un `TypeError` (en français) : `onEnregistrer` manquante, `svg` qui
-n’est pas un texte, etc. Un SVG que l’éditeur refuse (texte, image, dégradé, masque, découpe, filtre,
-un cycle de `<use>` ou un renvoi externe) ne lève rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer »
-(et `onFermer` est appelée). Pour le savoir avant, demandez `estEditable`.
+n’est pas un texte, `modele` qui n’est ni `'plat'` ni `'riche'`, etc. Un SVG que l’éditeur refuse (à plat : image, dégradé, masque,
+découpe, filtre ; dans les deux modèles : un cycle de `<use>` ou un renvoi externe, un filtre hors du flou et de l’ombre…) ne lève
+rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer » (et `onFermer` est appelée). Pour le savoir
+avant, demandez `estEditable`.
 
-#### `EditeurSvg.estEditable(svg)` → `boolean`
+#### `EditeurSvg.estEditable(svg, modele?)` → `boolean`
 
-Vrai quand l’éditeur sait ouvrir ce SVG : un texte, sans image enveloppée, que le moteur sait lire sans le
-refuser. Faux pour tout autre argument. Utile pour griser un bouton « Éditer ».
+Vrai quand l’éditeur sait ouvrir ce SVG dans ce modèle (`'plat'` par défaut, comme `ouvrir`) : un texte, sans image enveloppée à
+plat, que le moteur sait lire sans le refuser. Faux pour tout autre argument. Utile pour griser un bouton « Éditer » ; passez le
+même `modele` qu’à `ouvrir`.
+
+#### Le modèle : plat ou riche
+
+L’option `modele` choisit comment l’éditeur **lit** le SVG ; il écrit toujours ce que le dessin contient.
+
+- **`'plat'` (défaut)** : le contrat de l’ADR-0001. Les groupes se fondent dans les formes (leur transformation et leur opacité
+  cuites dans chacune), un `<use>` se déplie, et ce qui ne se ramène pas à des chemins pleins est refusé en le nommant. Le SVG rendu
+  n’a ni `<g>` ni `<defs>` ni `id`. **Ce défaut ne change pas** : la page autonome est passée au modèle riche, l’embarquement non
+  (ADR-0012, annexe 9, question 3), pour qu’un hôte qui garde les SVG réécrits ne voie rien bouger d’une version à l’autre.
+- **`'riche'`** : les groupes restent des groupes (nom, opacité, visibilité, verrou), et l’éditeur lit et écrit les dégradés
+  linéaires et radiaux, les motifs, les découpes (`clip-path`), les masques d’opacité, un flou et une ombre portée, les images
+  `data:` (PNG, JPEG, GIF, WebP, vérifiées sur leurs octets), un `<svg>` imbriqué et un `<text>` en groupes. Ce qui change pour vous :
+  - le SVG rendu peut porter des `<g>`, un `<defs>` et des `id` de la forme `ed-<genre>-<14 hex>` (l’empreinte du contenu : deux SVG
+    de l’éditeur posés dans la même page ne se marchent pas dessus), et `data-ed-modele="2"` sur la balise `<svg>` dès que le dessin
+    n’est pas plat ; un dessin sans rien de riche s’écrit à l’octet comme à plat ;
+  - un fichier à `<g>` se réécrit **avec** ses groupes, plus aplati : c’est un changement d’octets pour vos SVG d’hier ;
+  - le menu Édition propose Grouper (Ctrl+G), Dégrouper (Ctrl+Maj+G ; Combiner et Séparer y perdent ces raccourcis), les
+    découpes, les masques et les motifs, l’inspecteur ses sections Dégradé et Effets, les calques d’un dessin à groupes deviennent
+    un arbre, et le menu Fichier « Insérer une image… » et « Télécharger le SVG à plat » (les octets du contrat plat, un
+    téléchargement qui ne rend rien à `onEnregistrer`) ;
+  - un brouillon ou une version nommée écrits en riche ne se rouvrent pas dans un éditeur ouvert à plat : il le dit, sans rien effacer.
+
+Pour passer au modèle riche, relisez ce que votre page fait des SVG rendus (un `<img>` ou un `<object>` les montre tels quels ; un
+traitement maison qui suppose des `<path>` à plat ne lira pas les `<g>` ni les `url(#…)`), puis passez `modele: 'riche'` à `ouvrir`
+et à `estEditable`.
 
 #### `EditeurSvg.version` → `string`
 
@@ -140,8 +171,9 @@ La version du paquet (`package.json`) qui a construit le bundle.
   le dit (« Brouillon gardé. »). Sans `onBrouillon`, il dit que rien n’est gardé ici et nomme le bouton qui rend le dessin.
   *Changement :* jusqu’à cette version, `Ctrl+S` appelait `onEnregistrer` (et fermait l’éditeur avec
   `fermerApresEnregistrer: true`) ; l’habitude de `Ctrl+S` toutes les minutes éjectait la personne de l’éditeur.
-- Le SVG rendu est le dessin **réécrit** (ADR-0001) : à plat, en chemins absolus, coordonnées au
-  millième ; les groupes, classes et feuilles de style de l’entrée disparaissent, le rendu reste le même.
+- Le SVG rendu est le dessin **réécrit** (ADR-0001) : en chemins absolus, coordonnées au millième ; à plat (le défaut), les
+  groupes, classes et feuilles de style de l’entrée disparaissent, le rendu reste le même ; en modèle riche, les groupes et les
+  définitions se réécrivent sous une forme canonique (voir « Le modèle : plat ou riche »).
   Les formes masquées sont retirées, et le panneau le dit. Un SVG réécrit aujourd’hui l’est à l’identique
   demain : un changement de cette écriture est un événement de version majeure.
 - Le SVG passe par `nettoyerSvg` : il porte toujours `xmlns` et `viewBox`, et ne garde ni script, ni
@@ -173,7 +205,7 @@ rattrapée par l’éditeur.
 | Fichier | Taille | Quand | Rôle |
 |---|---|---|---|
 | `editeur-svg-embarque.js` | 717 Ko (227 Ko compressé) | toujours | L’éditeur, ses styles, React |
-| `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées quand la personne ouvre la bibliothèque |
+| `bibliotheque.js` | 6,6 Mo (2,7 Mo compressé) | si vous passez `bibliotheque` | 4 134 formes de game-icons.net, chargées d’elles-mêmes quand la personne ouvre la section « Bibliothèque de formes » (aucun bouton « Charger ») |
 | `bibliotheque-<source>.js` | de 0,9 à 3,6 Mo chacun (voir ci-dessous) | facultatifs, si vous passez `bibliotheque` | Les cinq bibliothèques libres (Material, Phosphor, Tabler, Healthicons, Lucide), chacune chargée quand la personne choisit sa pastille « Source » (ou « Toutes », ou une nature qu’elle propose). Un fichier absent se dit dans le panneau ; le reste de la bibliothèque marche |
 | `polices.js` | 2,7 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Dix fontes libres (OFL, dont une à trait unique), chargées quand la personne ouvre l’outil Texte (ou retape un texte vivant), ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
 | `polices-catalogue.js` | 1,4 Mo (0,7 Mo compressé) | seulement avec `policesEnLigne: true` | L’index des polices libres téléchargeables : noms, catégories, licences, versions épinglées et empreintes sha256. **Il ne contient aucune fonte.** Chargé quand la personne ouvre « Toutes les polices » (ou rouvre un texte composé dans une police du catalogue). Sans lui, le panneau le dit et propose les fontes livrées |
@@ -345,6 +377,16 @@ Pour un hôte, l’essentiel :
   `data-ed-texte`, `data-ed-police`… qui permettent de le rouvrir comme texte. Le texte y est **encodé en pourcentage** (lettres
   ASCII et chiffres seuls en clair) : votre nettoyage peut garder ces attributs tels quels, ou les retirer (le dessin ne change
   pas, le texte n’est plus modifiable). Aucun fichier de police n’est écrit : une fonte déposée n’y laisse que son empreinte.
+- **Le texte posé sur ou dans une forme** (ADR-0031, ADR-0032) : un texte vivant peut porter en plus `data-ed-disposition` (`sur`,
+  `dans`, ou `enveloppe` pour un texte déformé à la silhouette de sa forme), ses réglages (`data-ed-depart`, `data-ed-cote`, `data-ed-repartir`, `data-ed-marge`, `data-ed-ajuster`,
+  `data-ed-justifier`) et le lien vers sa forme : `data-ed-forme`, le rang de la forme parmi les chemins du fichier, ou, pour une
+  forme masquée, son tracé encodé en pourcentage (`data-ed-forme-d`, et `data-ed-forme-regle="evenodd"`). Ce ne sont que des
+  nombres, des mots fixes et du texte encodé ; les contours du `<path>` restent la vérité du dessin. Votre nettoyage peut les
+  garder, ou les retirer (le texte n’est plus lié à sa forme, ou plus modifiable du tout).
+- **Couper ou écrire** (ADR-0028) : en contexte Cricut seulement, un `<path>` peut porter `data-ed-operation="decoupe"` ou
+  `data-ed-operation="ecriture"`, quand la personne a choisi pour cette forme autre chose que ce que l’éditeur propose (une forme
+  pleine se coupe, un trait seul s’écrit au stylo). L’attribut n’a que ces deux valeurs ; votre nettoyage peut le garder, ou le
+  retirer (la forme reprend l’opération proposée). Un SVG sans contexte Cricut n’en porte jamais, et aucune option d’hôte ne change.
 - **Stockage** : l’éditeur garde les **versions nommées** (trente au plus, celles du panneau « Versions
   nommées ») et rien d’autre (pas de brouillon : c’est à vous de le garder par `onBrouillon`). **Par défaut**,
   elles vont dans le `localStorage` de **votre origine**, sous la clé `svg.versions`, partagées par tous les
@@ -362,17 +404,17 @@ Pour un hôte, l’essentiel :
 
   Un stockage d’hôte a trois verbes : `lire(cle)` rend la valeur (du JSON déjà décodé) ou `null`, `ecrire(cle,
   valeur)` rend vrai si elle est gardée, `retirer(cle)` l’oublie. Les clés écrites sont `svg.versions`, `svg.guide`
-  avec `visite: true` (la visite vue, les repères refermés), et avec `policesEnLigne: true` `svg.polices.consentement`
-  (les serveurs acceptés), `svg.polices.favoris` et `svg.polices.recentes`. Si l’un
+  avec `visite: true` (la visite vue, les repères refermés), et avec `policesEnLigne: true` `svg.polices.favoris` et
+  `svg.polices.recentes` ; une ancienne clé `svg.polices.consentement` (l’accord par serveur, retiré) est effacée. Si l’un
   des verbes lève une exception, l’éditeur la rattrape et lit le stockage comme refusé. Le stockage est un
   confort : refusé, absent ou plein, tout marche sans lui, les versions vivant alors le temps de l’éditeur.
-- **Aucun réseau sans accord** : par défaut l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>`
+- **Aucun réseau sans geste** : par défaut l’éditeur n’appelle aucun serveur. Les seules requêtes sont les balises `<script>`
   des annexes, et seulement si la personne ouvre la bibliothèque ou l’outil Texte. Avec `policesEnLigne: true`, une police
-  du catalogue se télécharge auprès d’un serveur de polices, et seulement après l’accord de la personne (voir ci-dessous).
-- **Les serveurs de polices** (seulement avec `policesEnLigne: true`, et seulement après l’accord de la personne) :
+  du catalogue se télécharge auprès d’un serveur de polices, et seulement quand la personne la choisit (voir ci-dessous).
+- **Les serveurs de polices** (seulement avec `policesEnLigne: true`, et seulement au choix d’une police) :
   `cdn.jsdelivr.net` (paquets npm `@fontsource/*` à une version épinglée), `fonts.bunny.net` (le même fichier, en repli si
   jsDelivr ne répond pas ou sert un autre fichier), `gitlab.com` (fontes de Velvetyne, par l’API au commit épinglé) et
-  `cdn.fontshare.com` (fontes de Fontshare). Le dialogue nomme le serveur avant toute requête. Ce qui part : une requête GET du
+  `cdn.fontshare.com` (fontes de Fontshare). Le pied de « Toutes les polices » dit que choisir une police non livrée la télécharge depuis sa source. Ce qui part : une requête GET du
   fichier demandé, sans cookie (`credentials: 'omit'`) ni page d’origine (`referrerPolicy: 'no-referrer'`) ; le serveur voit
   l’adresse IP, comme pour toute page. Chaque fichier est vérifié par son empreinte sha256 (`crypto.subtle`, qui demande un
   contexte sécurisé : https ou localhost) contre l’index avant d’être lu ; une empreinte fausse est refusée et dite. Un fichier
@@ -443,14 +485,21 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `nuancier?` | `readonly Teinte[]` (`{ nom, hex }`) | Les couleurs proposées |
 | `bibliotheque?` | `Bibliotheque \| 'a-charger'` | Les formes à insérer ; `'a-charger'` charge `bibliotheque.js` au premier besoin |
 | `fermer` | `() => void` | Appelée quand la personne ferme (après confirmation s’il y a des modifications) |
-| `enregistrer` | `(svg: string) => void` | Reçoit le SVG retouché, déjà nettoyé. Le composant ne se ferme pas de lui-même : c’est à vous |
+| `enregistrer` | `(svg: string, etat: EtatRendu) => void` | Reçoit le SVG retouché, déjà nettoyé, et l’état du modèle (`{ dessin, production }`, de quoi écrire un projet : ADR-0030). Le composant ne se ferme pas de lui-même : c’est à vous. Un hôte qui ne veut que le SVG ignore le second argument (le bundle ne le transmet pas) |
 | `brouillon?` | `(svg: string) => unknown` | Reçoit le SVG du moment, une seconde après la dernière modification, et à chaque `Ctrl+S` (qui ne ferme jamais). Rendre `false` : le brouillon n’a pas été gardé, et l’éditeur le dit |
 | `libelleEnregistrer?` | `string` | Le libellé du geste qui appelle `enregistrer` (défaut « Enregistrer ») ; la page dit « Terminer ». L’éditeur ne devine pas où il est : il reçoit son libellé |
 | `fermerSansModification?` | `boolean` | Le geste de fin reste actif sans modification et appelle alors `fermer` (rien n’est réécrit) ; faux par défaut : il est grisé et dit pourquoi. La page le pose |
 | `stockage?` | `Stockage \| null` (`src/io/stockage.ts`) | Où garder les versions nommées. **Absent ou `null` : rien n’est gardé**, le composant ne connaît aucun magasin. Pour le `localStorage` du navigateur, passez `stockageNavigateur()` ; pour la mémoire, `stockageMemoire()` |
 | `guide?` | `OptionsGuide \| null` (`src/zones/contexteGuide.tsx`) | L’accueil guidé (ADR-0019). **Absent : ni visite ni repère.** `{ demarrer: 'si-nouveau', recuperer: 'enregistrer' }` est ce que fait le bundle avec `visite: true` ; `demarrer: 'toujours'` ouvre la visite à chaque montage, `'jamais'` la laisse au menu Aide |
-| `policesEnLigne?` | `boolean` | Les polices libres téléchargeables (ADR-0025), après l’accord de la personne. **Absent : faux**, aucune requête ; la page autonome le donne vrai |
+| `policesEnLigne?` | `boolean` | Les polices libres téléchargeables (ADR-0025), au choix d’une police par la personne. **Absent : faux**, aucune requête ; la page autonome le donne vrai |
 | `production?` | `ChoixProduction` (`src/model/contextes.ts`) | Le contexte de production de départ (ADR-0013), quand le SVG ne porte aucune marque `data-ed-*` : par exemple `{ contexte: 'cricut', machine: 'maker', tapis: '12x12', materiau: 'papier-cartonne', procede: 'decoupe', unite: 'mm' }`. Une marque du SVG l’emporte toujours ; rien ne s’écrit tant que la personne ne modifie pas le dessin. La page le pose pour le public « machine » de son accueil (ADR-0024) ; le bundle ne l’expose pas |
+| `dessin?` | `DessinSvg` (`src/engine/editionSvg.ts`) | Le dessin du modèle à ouvrir tel quel, sans relire de SVG (`svg` est alors ignoré) : un projet rouvert (le site PHP, ADR-0030). Son contexte vient de `production` ; le SVG écrit ensuite est celui qu’écrivait ce dessin, octet pour octet |
+| `enregistrement?` | `EtatEnregistrement` (`{ etat: 'enregistre' \| 'modifie' \| 'en-cours' \| 'echec', message? }`) | Pour un hôte qui garde des projets : l’état de l’enregistrement, affiché dans la barre d’état (« Enregistré », « Modifications non enregistrées »…) ; il décide de ce qu’il reste à enregistrer et si fermer demande confirmation, et sa phrase se dit. **Absent** : la règle d’avant (une modification depuis l’ouverture) |
+| `changement?` | `(etat: EtatRendu) => void` | Appelée à chaque changement du dessin ou du contexte, avec l’état du moment : de quoi en déduire « enregistré » ou « modifié » (le même objet dessin après Ctrl+Z jusqu’à l’état enregistré) |
+| `ctrlSEnregistre?` | `boolean` | Ctrl+S appelle `enregistrer` sans fermer (le site PHP) ; faux par défaut : Ctrl+S garde un brouillon |
+| `actionsHote?` | `{ id, libelle, faire(etat) }[]` | Des gestes ajoutés au menu Fichier après le geste de fin (« Enregistrer sous… » sur le site PHP) ; chacun reçoit l’état du moment |
+| `modele?` | `'plat' \| 'riche'` | Le modèle de lecture (voir « Le modèle : plat ou riche »), **fixé** : la case du menu Édition disparaît. Absent : le réglage gardé dans `stockage` (clé `svg.modele`, la case du menu Édition), et sans réglage `modeleParDefaut` |
+| `modeleParDefaut?` | `'plat' \| 'riche'` | Le modèle quand ni `modele` ni le stockage n’en donnent un. **Absent : `'plat'`** ; la page autonome et le site PHP passent `'riche'` (`MODELE_PAGE`, `src/zones/modele.ts`). `BoutonEditerSvg` ne le passe pas |
 
 À savoir, côté React :
 

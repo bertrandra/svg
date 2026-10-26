@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 100" width="300" height="100">
+  <defs>
+    <linearGradient id="arrets">
+      <stop offset="0" stop-color="#0a2a8a"/>
+      <stop offset="1" stop-color="#d7262d"/>
+    </linearGradient>
+    <linearGradient id="horizontal" xlink:href="#arrets" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="90" y2="0"/>
+    <linearGradient id="reflet" href="#horizontal" x2="50" spreadMethod="reflect"/>
+    <radialGradient id="rond" xlink:href="#arrets" gradientUnits="userSpaceOnUse" cx="250" cy="50" r="40"/>
+  </defs>
+  <rect x="10" y="10" width="80" height="80" fill="url(#horizontal)"/>
+  <rect x="110" y="10" width="80" height="80" fill="url(#reflet)"/>
+  <rect x="210" y="10" width="80" height="80" fill="url(#rond)"/>
+</svg>

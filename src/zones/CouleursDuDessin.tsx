@@ -1,4 +1,4 @@
-// La section « Couleurs du dessin » de l'inspecteur (rien n'est choisi) : une ligne par couleur, pour la changer
+// La section « Recolorer le dessin » de l'inspecteur (rien n'est choisi) : une ligne par couleur, pour la changer
 // partout, choisir ses formes, ou la remplacer par une teinte du nuancier.
 //
 // Un dessin issu d'une photo compte des milliers de couleurs (ADR-0008) : au-dela de `SEUIL_COULEURS`, la liste se
@@ -15,6 +15,7 @@ import { Section } from './commun/Section.js';
 import { useDessin } from './contexteEditeur.js';
 import { montrerLigneAuClavier, useFenetreDefilante } from './Fenetre.js';
 import { LigneCouleurDessin } from './LigneCouleurDessin.js';
+import { LigneDegrades } from './LigneDegrades.js';
 import { SEUIL_COULEURS } from './ListeCouleurs.js';
 import { useActionsCouleursDessin, type ActionsCouleurDessin } from './actionsCouleursDessin.js';
 import type { SuiviCouleur } from './actionsCouleur.js';
@@ -32,11 +33,13 @@ export function CouleursDuDessin() {
   lecture.current = courante;
   const { actions, suivi } = useActionsCouleursDessin();
   return (
-    <Section titre="Couleurs du dessin" ouverte note={courante.couleurs.length}>
+    <Section titre="Recolorer le dessin" ouverte note={courante.couleurs.length}>
       {courante.couleurs.length ? <ListeCouleursDessin couleurs={courante.couleurs} nuancier={mo.nuancier} actions={actions} suivi={suivi} />
         : mo.dessin.formes.length
           ? <EtatVide genre="aucun-resultat" titre="Aucune couleur à changer.">Les formes n’ont ni remplissage ni contour : donnez-leur une couleur dans l’inspecteur, elle apparaîtra ici.</EtatVide>
           : <EtatVide genre="premiere-fois" icone="palette" titre="Aucune couleur pour l’instant.">Chaque couleur du dessin aura sa ligne ici, pour la changer partout d’un coup.</EtatVide>}
+      {/* Les arrets des degrades et les couleurs des tuiles sont dans la liste (couleurs.ts, etape 13d) ; une ligne a part choisit les formes a degrade (ADR-0012, etape 4). */}
+      <LigneDegrades dessin={mo.dessin} />
     </Section>
   );
 }

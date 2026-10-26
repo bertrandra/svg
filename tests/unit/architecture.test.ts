@@ -18,7 +18,8 @@ const src = resolve(__dirname, '../../src');
  * - **3** `engine` : ce qu'on calcule a partir du dessin. `styles` : la palette de l'interface.
  * - **4** `core`, `io`, `render`, `export`, `interaction` : ce qu'on fait du dessin.
  * - **5** `ui` : descripteurs de champs, aides de rendu.
- * - **6** `app`, `zones` : l'orchestration et les zones React.
+ * - **6** `app`, `zones` : l'orchestration et les zones React. `site` : l'hote du site PHP (ADR-0030), qui monte l'editeur comme
+ *   la page autonome, avec un magasin de projets par le serveur.
  */
 const NIVEAU: Record<string, number> = {
   util: 0, shell: 0,
@@ -27,7 +28,7 @@ const NIVEAU: Record<string, number> = {
   engine: 3, styles: 3,
   core: 4, io: 4, render: 4, export: 4, interaction: 4,
   ui: 5,
-  app: 6, zones: 6
+  app: 6, zones: 6, site: 6
 };
 
 function fichiersTs(dir: string): string[] {

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, attendreAnimations, boutonTelecharger, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe } from './aide.js';
+import { aLeFocus, attend, attendreAnimations, boutonTelecharger, modifications, ouvrirCode, ouvrirMenu, pilote, RACINE_DEPOT, texteDe, textesDe } from './aide.js';
 
 const AXE = readFileSync(resolve(RACINE_DEPOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
 interface ResultatAxe { violations: { id: string; nodes: { target: unknown[] }[] }[]; incomplete: { id: string; nodes: { target: unknown[] }[] }[] }
@@ -53,7 +53,7 @@ describe('le contexte Cricut', () => {
     expect(await panneau(page).count()).toBe(0);
     // Le menu met la machine en tete : Generique et les trois Cricut, rien d'autre tant qu'aucune n'est choisie.
     await selecteur(page).click();
-    expect(await page.getByRole('menu', { name: 'Machine' }).getByRole('menuitemradio').allInnerTexts()).toEqual(['Générique (aucune machine)', 'Cricut Joy', 'Cricut Explore (Air 2 / 3)', 'Cricut Maker (Maker / Maker 3)']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Machine' }).getByRole('menuitemradio'))).toEqual(['Générique (aucune machine)', 'Cricut Joy', 'Cricut Explore (Air 2 / 3)', 'Cricut Maker (Maker / Maker 3)']);
     expect(await page.locator('.menu-panneau .menu-rubrique').count()).toBe(1);
     await page.keyboard.press('Escape');
     await choisirCricut(page);
@@ -229,6 +229,21 @@ describe('le contexte Cricut', () => {
     await selecteur(page).click();
     await page.getByRole('menu', { name: 'Machine' }).waitFor();
     await axe();
+  });
+
+  it('garde le contraste d un bouton de constat survole, sur le fond d un constat bloquant', async () => {
+    // Le pointeur peut rester sur le panneau apres un clic : le cyan d'outil du survol n'y faisait que 4,33:1 (axe, par intermittence).
+    const page = await editeur();
+    await choisirCricut(page);
+    await attend(() => nombreDeConstats(page)).toBe(5);
+    await page.addScriptTag({ content: AXE });
+    const boutons = panneau(page).locator('.constat .boutons button');
+    for (let i = 0; i < await boutons.count(); i++) {
+      await boutons.nth(i).hover();
+      await attendreAnimations(page);
+      const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { runOnly: ['color-contrast'], resultTypes: ['violations'] })));
+      expect(r.violations.map(v => v.id + ' ' + JSON.stringify(v.nodes.map(n => n.target))), await boutons.nth(i).innerText()).toEqual([]);
+    }
   });
 
   it('au doigt sur 390 px : le contexte dans le menu « Plus », le panneau dans le tiroir, des cibles de 40 px', async () => {

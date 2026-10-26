@@ -37,7 +37,13 @@ describe('les autres phrases', () => {
 
   it('dit les deux manieres de poser une forme, et ce que fait Entree avec l outil texte', () => {
     expect(phraseOutil('ellipse')).toMatch(/Entrée pose la forme, Espace pose un coin puis l’autre/);
-    expect(phraseOutil('texte')).toMatch(/Entrée ouvre le champ/);
+    expect(phraseOutil('texte')).toMatch(/Entrée ouvre la saisie sur la toile/);
+  });
+
+  it('nomme chaque forme de base par son nom, accents compris (ADR-0033)', () => {
+    expect(phraseOutil('etoile')).toMatch(/^Outil étoile : /);
+    expect(phraseOutil('coeur')).toMatch(/^Outil cœur : flèches déplacent le réticule, Entrée pose la forme/);
+    expect(phraseOutil('rectangle-arrondi')).toMatch(/^Outil rectangle arrondi : /);
   });
 
   it('dit les coins d une forme a deux coins : place du premier, place et mesures de l autre', () => {

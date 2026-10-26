@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <mask id="tourne" transform="rotate(30)" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="120">
+      <rect x="10" y="10" width="80" height="100" fill="#fff"/>
+    </mask>
+    <mask id="dans-decoupe">
+      <rect x="0" y="0" width="200" height="120" fill="#fff"/>
+    </mask>
+    <clipPath id="decoupe">
+      <rect x="100" y="0" width="100" height="60" mask="url(#dans-decoupe)"/>
+    </clipPath>
+    <linearGradient id="pas-un-masque"><stop offset="0" stop-color="#000"/></linearGradient>
+  </defs>
+  <g mask="url(#tourne)"><rect x="0" y="0" width="100" height="120" fill="#1f5fb0"/></g>
+  <g clip-path="url(#decoupe)"><rect x="100" y="0" width="100" height="120" fill="#c81e28"/></g>
+  <g mask="url(#absent)"><circle cx="150" cy="90" r="20" fill="#f2b705"/></g>
+  <circle cx="120" cy="100" r="10" fill="#1f5f3f" mask="url(#pas-un-masque)"/>
+  <path d="M180 110L195 110L188 118Z" fill="#15181d" mask="none"/>
+</svg>

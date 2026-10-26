@@ -15,6 +15,7 @@ import { manquantes, phraseManquantes } from '../util/capacites.js';
 import { AtelierResultat, type Essai } from './AtelierResultat.js';
 import { FournisseurSections } from './commun/Section.js';
 import { LotImages } from './LotImages.js';
+import { ChampAdresse, fichierImage, useAdresseDeVoie, type Reception } from './OuvrirAdresse.js';
 
 const TOLERANCES: ReadonlyArray<readonly [number, string]> = [[0.04, 'Serrée : seul le fond exact'], [TOLERANCE_DEFAUT, 'Normale'], [0.16, 'Large : un fond irrégulier, une ombre']];
 const ESSAIS_MAX = 8;
@@ -82,7 +83,12 @@ function ChoixForme({ t, poserT }: { t: Traitement; poserT: (t: Traitement) => v
   );
 }
 
-export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => void }) {
+/**
+ * `surImage` : l'image deposee, telle quelle, pour un hote qui la garde avec le dessin qui en sortira (le site, ADR-0030 : l'image
+ * source d'une conversion entre dans le projet). La page ne la demande pas. `reception` : l'ouverture depuis une adresse
+ * (ADR-0036), partagee avec la voie d'ouverture ; une image recue arrive ici comme une image deposee.
+ */
+export function Vectoriser({ ouvrir, surImage, reception }: { ouvrir: (nom: string, svg: string) => void; surImage?: (nom: string, fichier: File) => void; reception?: Reception }) {
   const [source, poserSource] = useState<Deposee | null>(null);
   const [t, poserT] = useState<Traitement>(TRAITEMENT_DEFAUT);
   const [resultat, poserResultat] = useState<ImageConvertie | null>(null);
@@ -169,6 +175,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
     void lireSource(f).then(r => {
       if ('erreur' in r) { dire(r.erreur); return; }
       jeton.current++;
+      surImage?.(sansExtension(f.name), f);
       poserSource({ nom: sansExtension(f.name), image: r, original: apercuDetoure(r, { detourer: false, tolerance: TOLERANCE_DEFAUT, portee: 'bord' }) });
       poserResultat(null);
       poserEssais([]);
@@ -183,7 +190,8 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
     poserFichiersLot(liste.length > 1 ? liste : []);
     deposerUne(liste[0]);
   };
-  const glisser = (e: DragEvent<HTMLElement>) => { e.preventDefault(); poserSurvol(false); deposer(e.dataTransfer.files); };
+  const adresse = useAdresseDeVoie(reception, t => dire(t), reception?.imageRecue, r => deposer([fichierImage(r)])); // un lien glisse demande l'image
+  const glisser = (e: DragEvent<HTMLElement>) => { e.preventDefault(); poserSurvol(false); if (e.dataTransfer.files.length || !adresse.lienDepose(e.dataTransfer)) deposer(e.dataTransfer.files); };
 
   return (
     <FournisseurSections>
@@ -196,6 +204,7 @@ export function Vectoriser({ ouvrir }: { ouvrir: (nom: string, svg: string) => v
           <button type="button" className={source ? 'discret' : 'primaire'} onClick={() => entree.current?.click()}>{source ? 'Changer d’image…' : 'Choisir une image…'}</button>
           <input ref={entree} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden onChange={e => { deposer(e.target.files); e.target.value = ''; }} />
         </div>
+        {reception ? <ChampAdresse t={adresse.t} aide="Une image PNG, JPEG, GIF, WebP ou BMP ; un SVG ou un PDF s’ouvre dans l’éditeur." /> : null}
         {source ? (
           <div className="reglages-image">
             <fieldset className="editeur-groupe">

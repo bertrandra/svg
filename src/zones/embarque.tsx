@@ -17,6 +17,7 @@ import { editable, EditeurSvg, type Teinte } from './EditeurSvg.js';
 import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 import { policesPosees } from '../io/polices.js';
 import { FenetreIncompatible } from './Incompatible.js';
+import { estModele, optionsModele } from './modele.js';
 
 /** La racine du composant : l'element que `EditeurSvg` pose lui-meme, et sous lequel tout est cantonne. */
 export const RACINE_EDITEUR = '.editeur-svg';
@@ -56,12 +57,18 @@ export interface OptionsEmbarquees {
   visite?: boolean;
   /**
    * Les polices libres telechargeables (ADR-0025) : « Toutes les polices » dans l'outil Texte, et le telechargement d'une police
-   * apres l'accord de la personne (retenu dans `stockage`, cle `svg.polices.consentement`), aupres de cdn.jsdelivr.net,
+   * au moment ou la personne la choisit (le seul geste qui fait partir une requete), aupres de cdn.jsdelivr.net,
    * fonts.bunny.net, gitlab.com ou cdn.fontshare.com. Faux par defaut : aucune requete, seules les dix fontes livrees. Vrai
    * demande de servir aussi polices-catalogue.js sous `baseAnnexes` (et, facultatif, polices-apercus.js : les noms dessines
    * dans leur fonte, ADR-0026).
    */
   policesEnLigne?: boolean;
+  /**
+   * Le modele de lecture (ADR-0012, annexe 5 §3) : « plat » par defaut, le contrat d'avant (les groupes se fondent, les degrades et
+   * les images sont refuses) et la promesse qu'un SVG reecrit aujourd'hui le sera a l'identique demain ; « riche » garde les groupes,
+   * les degrades, les decoupes, les masques, les effets et les images. Fixe pour la duree de l'edition : la personne ne le change pas.
+   */
+  modele?: 'plat' | 'riche';
   /** Recoit le SVG retouche, deja passe par `nettoyerSvg`, a chaque « Enregistrer ». */
   onEnregistrer: (svg: string) => void;
   /** Appelee une fois, quand l'editeur se ferme, quelle qu'en soit la cause. */
@@ -79,7 +86,7 @@ export interface PoigneeEditeur {
 export interface ApiEditeurSvg {
   readonly version: string;
   readonly ouvrir: (options: OptionsEmbarquees) => PoigneeEditeur;
-  readonly estEditable: (svg: unknown) => boolean;
+  readonly estEditable: (svg: unknown, modele?: unknown) => boolean;
 }
 
 const estFonction = (v: unknown): boolean => typeof v === 'function';
@@ -113,6 +120,7 @@ export function verifierOptions(options: unknown): string | null {
     return 'L’option « stockage » doit être false (ou null) pour ne rien garder, ou un objet { lire, ecrire, retirer } de trois fonctions.';
   }
   for (const cle of ['fermerApresEnregistrer', 'visite', 'policesEnLigne'] as const) if (o[cle] !== undefined && typeof o[cle] !== 'boolean') return 'L’option « ' + cle + ' » doit être vraie ou fausse.';
+  if (o.modele !== undefined && !estModele(o.modele)) return 'L’option « modele » doit être « plat » (par défaut) ou « riche ».';
   return verifierLibelle(o.libelleEnregistrer);
 }
 
@@ -127,9 +135,13 @@ export function verifierLibelle(v: unknown): string | null {
   return null;
 }
 
-/** Vrai quand l'editeur sait ouvrir ce SVG : du texte, sans image enveloppee, et que le moteur sait lire. */
-export function estEditable(svg: unknown): boolean {
-  return typeof svg === 'string' && editable(svg) && !('erreur' in lireDessin(svg));
+/**
+ * Vrai quand l'editeur sait ouvrir ce SVG dans ce modele (`plat` par defaut, ou si la valeur n'en est pas un) : du texte, sans image
+ * enveloppee a plat, et que le moteur sait lire.
+ */
+export function estEditable(svg: unknown, modele?: unknown): boolean {
+  const m = estModele(modele) ? modele : 'plat';
+  return typeof svg === 'string' && editable(svg, m) && !('erreur' in lireDessin(svg, optionsModele(m)));
 }
 
 /** Le stockage voulu par l'hote : celui du navigateur par defaut, aucun pour `false` ou `null`, le sien (protege) sinon. */
@@ -201,6 +213,8 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     const nom = options.nom ?? 'dessin';
     const apresEnregistrer = options.fermerApresEnregistrer ?? true;
     const stockage = stockageDe(options.stockage);
+    // L'hote fixe le modele, `plat` s'il ne dit rien : un reglage garde dans son stockage ne compte pas (annexe 5 §3).
+    const modele = options.modele ?? 'plat';
     // Un navigateur qui manque d'une API de base ne casse pas la page de l'hote : une fenetre dit pourquoi, et se ferme.
     const absentes = manquantes(sonderNavigateur(), 'demarrage');
     if (absentes.length) {
@@ -212,7 +226,7 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     const monter = (svg: string, ignores: readonly string[]): void => {
       if (ferme) return;
       racine.render(
-        <EditeurSvg svg={svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []} ignores={ignores}
+        <EditeurSvg svg={svg} titre={options.titre ?? nom + '.svg'} nom={nom} nuancier={options.nuancier ?? []} ignores={ignores} modele={modele}
           {...(bibliotheque === undefined ? {} : { bibliotheque })}
           {...(options.onBrouillon === undefined ? {} : { brouillon: options.onBrouillon })}
           stockage={stockage} fermer={fermer} guide={options.visite === true ? GUIDE_HOTE : null} policesEnLigne={options.policesEnLigne === true}
@@ -223,7 +237,7 @@ export function creerApi(version: string, css: string): ApiEditeurSvg {
     // Du texte : ses lettres deviennent des formes avec les fontes de polices.js, chargees a la demande, quand l'hote dit ou les
     // trouver (baseAnnexes) ou les a deja posees. Sinon, ou si le fichier manque, l'editeur recoit le SVG tel quel et dit, comme
     // avant, que le texte ne s'edite pas : un hote qui ne sert pas polices.js n'a pas une requete en echec a chaque ouverture (ADR-0020).
-    if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
+    if (contientTexte(options.svg) && (options.baseAnnexes !== undefined || policesPosees())) void lettresDuSvg(options.svg, undefined, modele).then(r => ('erreur' in r ? monter(options.svg, []) : monter(r.svg, r.ignores)));
     else monter(options.svg, []);
     ouvert = { fermer };
     return ouvert;

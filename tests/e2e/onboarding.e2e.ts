@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Download, Page } from 'playwright';
-import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
+import { aLeFocus, attend, boutonTelecharger, BUNDLE_EMBARQUE, imageDeTest, ouvrirCode, ouvrirExemple, ouvrirMenu, pilote, texteDe, textesDe, URL_INTEGRATION, URL_PAGE } from './aide.js';
 
 const VERT = '#1f8a3a';
 const bulle = (page: Page) => page.locator('.bulle-visite');
@@ -218,7 +218,7 @@ describe('la visite guidee', () => {
     expect(await bulle(page).count()).toBe(0);
     // Le menu Aide la rejoue toujours, a la premiere etape ; il donne aussi les raccourcis.
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Visite guidée', 'Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier']);
     await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
     const boite = page.getByRole('dialog', { name: 'Raccourcis clavier' });
     await boite.waitFor();
@@ -269,7 +269,7 @@ describe('la visite guidee', () => {
     expect(await lu(page)).toContain('Touchez « Plus » (les trois points)');
     expect((await mesure()).petits).toBe(0);
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG' }).tap());
+    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).tap());
     expect(f.texte).toContain('fill="' + VERT + '"');
     await attend(() => etape(page)).toBe('5');
     // La suite « bibliotheque » ouvre le tiroir de l'inspecteur sur la section de la bibliotheque.
@@ -324,7 +324,7 @@ describe('la visite dans l editeur embarque', () => {
     await ouvrir(page, {});
     expect(await bulle(page).count()).toBe(0);
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Raccourcis clavier']);
     await page.keyboard.press('Escape');
     // Un double-clic sur une forme (ses points) : pas de repere chez un hote qui n'a rien demande.
     await page.locator('.editeur-svg-toile path[data-id="f1"]').dblclick();
@@ -354,7 +354,7 @@ describe('la visite dans l editeur embarque', () => {
     await ouvrir(page, { visite: true });
     expect(await bulle(page).count()).toBe(0);
     await ouvrirMenu(page, 'Aide');
-    expect(await page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem').allInnerTexts()).toEqual(['Visite guidée', 'Raccourcis clavier']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier']);
   });
 
   it('refuse une option « visite » qui n est pas vraie ou fausse, en francais', async () => {
@@ -449,7 +449,7 @@ describe('les etats vides', () => {
     await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBe(0);
     expect(await lu(page, page.locator('.editeur-calques [data-vide="vide"]'))).toContain('Toutes les formes ont été retirées.');
     expect(await page.locator('.toile-vide[data-vide="vide"]').count()).toBe(1);
-    expect(await lu(page, page.locator('.editeur-inspecteur details.section', { hasText: 'Couleurs du dessin' }))).toContain('Aucune couleur pour l’instant.');
+    expect(await lu(page, page.locator('.editeur-inspecteur details.section:not(.section-nuancier)', { hasText: 'Recolorer le dessin' }))).toContain('Aucune couleur pour l’instant.');
     await page.locator('.editeur-inspecteur [data-vide="vide"]').getByRole('button', { name: 'Faire revenir les formes' }).click();
     await attend(() => page.locator('.editeur-svg-toile path[data-id]').count()).toBe(4);
     expect(await page.locator('.toile-vide').count()).toBe(0);
@@ -467,7 +467,6 @@ describe('les etats vides', () => {
     await attend(() => section.getByRole('button', { name: 'Les deux', exact: true }).getAttribute('aria-pressed')).toBe('true');
     // La bibliotheque du panneau : un panier vide qui dit a quoi il sert, puis une recherche sans resultat.
     await page.locator('.editeur-inspecteur details.section', { hasText: 'Bibliothèque de formes' }).locator('> summary').click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await page.locator('.editeur-inspecteur .vignette').first().waitFor({ timeout: 60_000 });
     expect(await page.locator('.editeur-inspecteur').innerText()).toContain('Panier vide.');
     await page.locator('.editeur-inspecteur input[type=search]').fill('zzqxw');

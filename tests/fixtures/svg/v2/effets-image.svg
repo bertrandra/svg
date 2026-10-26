@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 80">
+  <!-- Deux images integrees a ombre portee (l'une tournee, a demi transparente) et un chemin : le filtre s'ajoute apres ce que l'image ecrit -->
+  <defs>
+    <filter id="photo" color-interpolation-filters="sRGB"><feDropShadow dx="1.5" dy="2" stdDeviation="1.2" flood-color="#000000" flood-opacity="0.5"/></filter>
+  </defs>
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAGUlEQVR42mMQ0VhwQk4DQjLAWSIaCxiQZQDf+wt9qZvCzAAAAABJRU5ErkJggg==" x="10" y="10" width="40" height="30" preserveAspectRatio="none" filter="url(#photo)"/>
+  <image xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC" x="60" y="10" width="20" height="20" opacity="0.5" transform="rotate(15 70 20)" filter="url(#photo)"/>
+  <path d="M10 60h30v12h-30z" fill="#1428a0" filter="url(#photo)"/>
+</svg>

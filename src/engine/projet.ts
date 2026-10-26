@@ -1,0 +1,187 @@
+// Le projet et le dessin du modele, dans les deux sens (ADR-0030). Pur : un projet valide (model/projet.ts) devient le dessin que
+// l'editeur ouvre, et l'etat de l'editeur devient un projet a enregistrer. L'aller-retour est exact : projet -> dessin -> projet rend
+// le meme projet, et le SVG ecrit depuis un projet rouvert est celui ecrit avant l'enregistrement, octet pour octet (chaque nombre
+// du trace garde sa pleine precision, chaque champ facultatif reste absent quand il l'etait).
+
+import type { ChoixProduction } from '../model/contextes.js';
+import {
+  FORMAT_PROJET, VERSION_PROJET, nomDeProjet,
+  type FormeProjet, type ImageProjet, type PoliceProjet, type Projet, type TeinteProjet, type TexteProjet
+} from '../model/projet.js';
+import { peintureSure, verifierDessin, type DessinSvg, type DispositionTexte, type Forme, type TexteVivant } from './editionSvg.js';
+import { ecrireCheminProjet, lireCheminProjet } from './projetV2/chemin.js';
+import { champsV2VersModele, champsV2VersProjet, groupeDuProjet, groupeProjet, refusChampsV2, tableVers, type ConversionFormes } from './projetV2/champs.js';
+import type { DispositionProjet } from '../model/projet.js';
+import { avecReperes, normaliserReperes } from './editionSvg.js';
+import type { NuancierDessin } from '../model/nuancier.js';
+
+
+/** Ce que l'editeur et son hote savent d'un travail : de quoi ecrire un projet, et ce qu'un projet rouvert redonne. */
+export interface EtatProjet {
+  readonly nom: string;
+  readonly dessin: DessinSvg;
+  readonly production: ChoixProduction;
+  readonly nuancier: readonly TeinteProjet[];
+  /** Les fontes deposees qu'emploient les textes du dessin, incluses (une fonte qu'aucun texte n'emploie ne se garde pas). */
+  readonly polices: readonly PoliceProjet[];
+  readonly images: readonly ImageProjet[];
+  readonly creeLe?: string | undefined;
+  readonly modifieLe?: string | undefined;
+}
+
+// Le chemin en texte de projet, et retour : dans projetV2/chemin.ts (les feuilles d'une decoupe s'en servent aussi, sans cycle).
+export { ecrireCheminProjet, lireCheminProjet };
+
+/** Une disposition (ADR-0031), champ pour champ, dans l'ordre du modele : la meme copie sert dans les deux sens. */
+function disposition<D extends DispositionTexte | DispositionProjet>(d: D): D {
+  return (d.mode === 'sur'
+    ? { mode: 'sur', forme: d.forme, depart: d.depart, cote: d.cote, repartir: d.repartir }
+    : d.mode === 'dans' ? { mode: 'dans', forme: d.forme, marge: d.marge, ajuster: d.ajuster, justifier: d.justifier }
+      : { mode: 'enveloppe', forme: d.forme, marge: d.marge }) as D;
+}
+
+function texteProjet(t: TexteVivant): TexteProjet {
+  return {
+    texte: t.texte,
+    police: { id: t.police.id, ...(t.police.version !== undefined ? { version: t.police.version } : {}), ...(t.police.famille !== undefined ? { famille: t.police.famille } : {}) },
+    taille: t.taille, interlettrage: t.interlettrage, interligne: t.interligne, alignement: t.alignement, ligatures: t.ligatures,
+    ...(t.trace !== undefined ? { trace: t.trace } : {}),
+    matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]],
+    ...(t.disposition !== undefined ? { disposition: disposition(t.disposition) } : {})
+  };
+}
+
+const texteVivant = (t: TexteProjet): TexteVivant => ({
+  texte: t.texte,
+  police: { id: t.police.id, ...(t.police.version !== undefined ? { version: t.police.version } : {}), ...(t.police.famille !== undefined ? { famille: t.police.famille } : {}) },
+  taille: t.taille, interlettrage: t.interlettrage, interligne: t.interligne, alignement: t.alignement, ligatures: t.ligatures,
+  ...(t.trace !== undefined ? { trace: t.trace } : {}),
+  matrice: [t.matrice[0], t.matrice[1], t.matrice[2], t.matrice[3], t.matrice[4], t.matrice[5]],
+  ...(t.disposition !== undefined ? { disposition: disposition(t.disposition) } : {})
+});
+
+/**
+ * Les champs facultatifs d'une forme, dans l'ordre du format, chacun seulement quand il est present : le meme etalement sert dans
+ * les deux sens, ce qui garde l'ordre et l'absence a l'identique.
+ */
+function facultatifs(f: Forme | FormeProjet): Partial<Forme & FormeProjet> {
+  return {
+    ...(f.opaciteRemplissage !== undefined ? { opaciteRemplissage: f.opaciteRemplissage } : {}),
+    ...(f.opaciteContour !== undefined ? { opaciteContour: f.opaciteContour } : {}),
+    ...(f.pointilles !== undefined ? { pointilles: [...f.pointilles] } : {}),
+    ...(f.decalagePointilles !== undefined ? { decalagePointilles: f.decalagePointilles } : {}),
+    ...(f.bout !== undefined ? { bout: f.bout } : {}),
+    ...(f.jonction !== undefined ? { jonction: f.jonction } : {}),
+    ...(f.limiteMitre !== undefined ? { limiteMitre: f.limiteMitre } : {}),
+    ...(f.origine !== undefined ? { origine: [...f.origine] } : {})
+  };
+}
+
+/** Une forme du modele en forme de projet. */
+export function formeProjet(f: Forme): FormeProjet {
+  return {
+    id: f.id, d: ecrireCheminProjet(f.d), remplissage: f.remplissage, contour: f.contour, epaisseur: f.epaisseur, opacite: f.opacite,
+    ...facultatifs(f),
+    ...(f.texte !== undefined ? { texte: texteProjet(f.texte) } : {}),
+    ...(f.operation !== undefined ? { operation: f.operation } : {}),
+    ...champsV2VersProjet(f, CONVERSION),
+    regle: f.regle, visible: f.visible, verrouille: f.verrouille
+  } as FormeProjet;
+}
+
+/** Une forme de projet (deja validee) en forme du modele. */
+export function formeDuProjet(f: FormeProjet): Forme {
+  return {
+    id: f.id, d: lireCheminProjet(f.d), remplissage: f.remplissage, contour: f.contour, epaisseur: f.epaisseur, opacite: f.opacite,
+    ...facultatifs(f),
+    ...(f.texte !== undefined ? { texte: texteVivant(f.texte) } : {}),
+    ...(f.operation !== undefined ? { operation: f.operation } : {}),
+    ...champsV2VersModele(f, CONVERSION),
+    regle: f.regle, visible: f.visible, verrouille: f.verrouille
+  } as Forme;
+}
+
+/** La conversion d'une forme entiere, pretee aux contenus qui portent des formes (le masque d'un groupe, etape 6 ; la tuile d'un motif, etape 9). */
+const CONVERSION: ConversionFormes = { versProjet: formeProjet, versModele: formeDuProjet };
+
+const choixCopie = (c: ChoixProduction): ChoixProduction => (c.contexte === 'cricut'
+  ? { contexte: 'cricut', machine: c.machine, tapis: c.tapis, materiau: c.materiau, procede: c.procede, unite: c.unite }
+  : { contexte: 'generique' });
+
+/**
+ * Le nuancier du dessin (ADR-0037), champ pour champ et dans l'ordre du format, a etaler : absent quand le dessin n'en porte pas
+ * (un projet d'avant lui reste tel quel, octet pour octet).
+ */
+const nuancierCopie = (n: NuancierDessin | undefined): { nuancier?: NuancierDessin } => (n === undefined ? {} : {
+  nuancier: { provenance: n.provenance, teintes: n.teintes.map(t => (t.opacite === undefined ? { hex: t.hex } : { hex: t.hex, opacite: t.opacite })) }
+});
+
+/**
+ * Le projet d'un etat de l'editeur : le nom assaini, les champs dans l'ordre du format, les dates seulement quand le serveur les a
+ * posees. Un seul format (ADR-0030, revision du 26 octobre 2026) : les champs du modele v2 n'y paraissent que presents, ce qui garde le
+ * projet d'un dessin plat octet pour octet celui d'avant le modele v2.
+ */
+export function projetDe(e: EtatProjet): Projet {
+  return {
+    format: FORMAT_PROJET, version: VERSION_PROJET, nom: nomDeProjet(e.nom),
+    ...(e.creeLe !== undefined ? { creeLe: e.creeLe } : {}),
+    ...(e.modifieLe !== undefined ? { modifieLe: e.modifieLe } : {}),
+    dessin: {
+      vb: [e.dessin.vb[0], e.dessin.vb[1], e.dessin.vb[2], e.dessin.vb[3]], formes: e.dessin.formes.map(formeProjet), ...nuancierCopie(e.dessin.nuancier),
+      // Les reperes (ADR-0038), seulement s'il y en a : le projet d'un dessin sans repere reste le meme texte.
+      ...(e.dessin.reperes ? { reperes: { h: [...e.dessin.reperes.h], v: [...e.dessin.reperes.v] } } : {}),
+      // Les groupes (ADR-0012, etape 1), seulement s'il y en a : le projet d'un dessin sans groupe reste le meme texte.
+      ...tableVers(e.dessin.groupes, g => groupeProjet(g, CONVERSION))
+    },
+    production: choixCopie(e.production),
+    nuancier: e.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
+    ressources: {
+      polices: e.polices.map(p => ({ id: p.id, famille: p.famille, donnees: p.donnees })),
+      images: e.images.map(i => ({ role: i.role, nom: i.nom, type: i.type, donnees: i.donnees }))
+    }
+  };
+}
+
+/**
+ * L'etat d'un projet valide : le dessin du modele et ce qui l'accompagne. Une derniere garde verifie chaque peinture par la regle de
+ * l'ecriture (`peintureSure`) : la validation du format porte la meme, ce n'est qu'un filet.
+ */
+export function etatDuProjet(p: Projet): EtatProjet | { erreur: string } {
+  for (const f of p.dessin.formes) {
+    if ((f.remplissage !== null && !peintureSure(f.remplissage)) || (f.contour !== null && !peintureSure(f.contour))) return { erreur: 'Ce projet porte une couleur que l’éditeur n’écrit pas.' };
+  }
+  // Les champs du modele v2 que la validation du format ne peut pas juger (les octets d'une image) : verifies avant d'ouvrir.
+  const refus = refusChampsV2(p.dessin.formes, p.dessin.groupes);
+  if (refus !== null) return { erreur: refus };
+  const dessin = avecReperes(
+    {
+      vb: [p.dessin.vb[0], p.dessin.vb[1], p.dessin.vb[2], p.dessin.vb[3]], formes: p.dessin.formes.map(formeDuProjet), ...nuancierCopie(p.dessin.nuancier),
+      ...tableVers(p.dessin.groupes, g => groupeDuProjet(g, CONVERSION))
+    },
+    p.dessin.reperes ? normaliserReperes(p.dessin.reperes) : null
+  );
+  // L'arbre (cycles, profondeur, contiguite des feuilles d'un groupe) ne se verifie qu'avec le moteur : un arbre abime est refuse.
+  if (dessin.groupes && verifierDessin(dessin).length) return { erreur: 'Ce projet porte des groupes mal formés.' };
+  return {
+    nom: p.nom,
+    dessin,
+    production: choixCopie(p.production),
+    nuancier: p.nuancier.map(t => ({ nom: t.nom, hex: t.hex })),
+    polices: p.ressources.polices, images: p.ressources.images,
+    ...(p.creeLe !== undefined ? { creeLe: p.creeLe } : {}),
+    ...(p.modifieLe !== undefined ? { modifieLe: p.modifieLe } : {})
+  };
+}
+
+/** Les fontes deposees (`u-…`) qu'emploient les textes vivants du dessin, sans doublon, dans l'ordre des formes. */
+export function policesDeposeesDu(dessin: DessinSvg): string[] {
+  const ids: string[] = [];
+  for (const f of dessin.formes) {
+    const id = f.texte?.police.id;
+    if (id !== undefined && /^u-[0-9a-f]{14}$/.test(id) && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
+/** Le texte du projet tel qu'il part au serveur : du JSON, dans l'ordre des champs du format. */
+export const texteDuProjet = (p: Projet): string => JSON.stringify(p);

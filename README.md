@@ -34,7 +34,15 @@ s'embarque aussi comme composant React dans un autre produit.
     soudé ; l'aperçu « forme / ligne » montre ce qu'en feraient la lame et le stylo (ADR-0022) ; « Toutes les polices »
     ouvre plus de 2 000 familles libres (Google Fonts et Fontsource, la League of Moveable Type, SIL, Velvetyne, Fontshare…),
     avec recherche, filtres, favoris, récentes, polices du document et « Remplacer partout » : une police se télécharge
-    seulement après votre accord, serveur par serveur, et chaque fichier est vérifié par son empreinte (ADR-0025) ;
+    seulement quand vous la choisissez, et chaque fichier est vérifié par son empreinte (ADR-0025) ;
+  - **groupes** : un fichier garde ses `<g>` à l'ouverture et les réécrit ; Ctrl+G groupe, Ctrl+Maj+G dégroupe, double-clic ou
+    Entrée entre dans un groupe (on n'y prend, n'y encadre et n'y aimante que ses voisines), Échap en sort, un fil d'Ariane dit où
+    l'on est ; les calques d'un dessin à groupes sont un arbre, au clavier comme à la souris (ADR-0012) ;
+  - **dégradés** linéaires et radiaux, réglés à l'inspecteur (arrêts en liste, poignées sur la toile en raccourci), et **motifs**
+    (« Créer un motif depuis la sélection ») ; leurs couleurs comptent parmi celles du dessin, listes et remplacements compris ;
+  - **découpes** et **masques d'opacité** (menu Édition : créer, modifier sur place, inverser, libérer), **effets** (un flou et
+    une ombre portée, section Effets de l'inspecteur), **images intégrées** (« Insérer une image… », menu Fichier, ou un dépôt sur la toile :
+    PNG, JPEG, GIF, WebP, vérifiées sur leurs octets) ; un `<svg>` imbriqué et un `<text>` se lisent en groupes ;
   - booléens : union, soustraction, intersection, exclusion, avec les courbes rebâties (réglage du
     menu Édition) ;
   - aimants vers les bords et centres des autres formes, transformations numériques (rotation,
@@ -45,7 +53,8 @@ s'embarque aussi comme composant React dans un autre produit.
   - couleurs : sélecteur, code, nuancier, remplacement d'une couleur partout ; opacité du fond et du
     contour, bout, jonction et pointillés du trait ;
   - calques par couleur : choisir, masquer, verrouiller, isoler, combiner, supprimer, recolorer les
-    formes d'une couleur, choisir ou fusionner les nuances proches ;
+    formes d'une couleur, choisir ou fusionner les nuances proches ; pour un dessin à groupes, l'arbre des calques (nommer,
+    déplier, masquer, verrouiller, déplacer au clavier par Ctrl+Maj+flèches ou « Déplacer vers… ») ;
   - nettoyage du tracé : poussières sous un seuil, voisines de même couleur regroupées si le rendu
     reste identique, tracés simplifiés, plan de travail ajusté au trait réel ;
   - insertion d'une forme de la bibliothèque au centre du dessin, d'un panier en grille, ou d'une
@@ -53,10 +62,13 @@ s'embarque aussi comme composant React dans un autre produit.
   - versions nommées, et reprise du dessin après un rechargement ;
   - annuler et rétablir chaque geste (Ctrl+Z, Ctrl+Maj+Z) ; zoom, main, vue contours, fonds.
 - **Récupérer le résultat** : « Télécharger le SVG », d'un geste, dans la barre de l'éditeur ; « Autres formats » à côté
-  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. « Terminer » ramène à la
+  (PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, copie du code), chacun dit par son usage. Le SVG écrit garde les groupes et
+  les définitions (dégradés, motifs, découpes, masques, filtres, nommés par l'empreinte de leur contenu) ; « Télécharger le SVG
+  à plat » (menu Fichier) rend les octets d'avant le modèle riche, sans groupe ni définition. Le PDF écrit nativement dégradés,
+  motifs, découpes, masques et images ; les formats qui ne les connaissent pas (EPS, DXF, SVG de découpe) les approchent et le disent. « Terminer » ramène à la
   fiche du dessin, dont le téléchargement est l'action principale. Rien ne quitte le navigateur, pas même l'adresse de la personne : la page autonome embarque ses fontes
   et ne contacte aucun serveur d'elle-même (un test en navigateur, réseau coupé, le vérifie) ; seule une police libre que
-  vous choisissez de télécharger, après avoir accepté, se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
+  vous choisissez se demande à son serveur, sans rien de vous ni du dessin (ADR-0025).
 - **Préparer pour une Cricut** : la machine se choisit dans la barre (« Machine : Générique », puis Joy, Explore, Maker ;
   tapis ; papier cartonné ; découpe ou Print Then Cut ; millimètres, ou pouces, retenus). Le tapis entier s’affiche et se
   cadre sur la toile (« Ajuster », touche 0 ; « Ajuster au dessin », D), le panneau « Prêt pour Cricut » juge le dessin en
@@ -64,6 +76,15 @@ s'embarque aussi comme composant React dans un autre produit.
   constat une correction annulable ; « Exporter pour Cricut » écrit un SVG à taille physique, ou une archive Print Then Cut,
   demande confirmation tant qu’un point reste « à corriger », puis dit les étapes dans Design Space. Les valeurs encore à vérifier sur une machine sont dans
   [`docs/cricut/protocole.md`](docs/cricut/protocole.md) (ADR-0013).
+- **Couper et écrire dans le même projet** : en Cricut, chaque forme est « À couper » ou « À écrire » (une forme pleine se coupe, un
+  trait seul s’écrit au stylo, et chacun se change dans le panneau de gauche, la rangée de la sélection, Maj+X ou Maj+E) ; la toile
+  hachure ce que la lame détache et trace la ligne du stylo (« Aperçu de la machine », Maj+O) ; un dessin mêlé s’exporte en un fichier
+  à couper, un fichier à écrire et les deux ensemble (ADR-0028).
+- **Le texte épouse une forme** : posé **sur** une forme, il suit son tracé (le cercle d’un badge, un arc, une vague), ses
+  lettres tournées sans être déformées, son point de départ glissé à la souris ou réglé au clavier ; posé **dans** une forme
+  fermée, il en prend la silhouette, lettres étirées et courbées jusqu’au bord (un cœur, un cercle, une étoile, ADR-0032), ou,
+  au choix du panneau, la remplit ligne à ligne, coupée sur ses bords, trous respectés, à la taille voulue ou ajustée.
+  Le texte reste modifiable et suit sa forme quand elle change ; le fichier ne porte que des contours (ADR-0031).
 - **Sur tablette et mobile** : barres qui défilent, panneaux en tiroirs, cibles de 40 px, zoom à deux
   doigts.
 - **Au clavier et au lecteur d'écran** : Tab parcourt les formes, Alt+flèches redimensionnent,
@@ -73,11 +94,19 @@ s'embarque aussi comme composant React dans un autre produit.
 - **Gros dessins** : des milliers de formes et de couleurs restent fluides (listes fenêtrées,
   historique borné selon la taille).
 
-Ce que l'éditeur refuse, en le nommant : texte, image, dégradé, masque, découpe, filtre, un `<use>` en cycle
-ou renvoyant à un fichier extérieur. Un `<use>` ordinaire (planche d'icônes, `<symbol>`) se déplie en formes
-indépendantes, et la feuille `<style>` se lit avec ses vrais sélecteurs ; ce qui n'est pas repris
-(marqueurs, animations, `@media`…) est dit à l'ouverture.
-On n'édite pas ce qu'on ne saurait pas réécrire ; une image se vectorise d'abord.
+**Le modèle riche est celui de la page** (ADR-0012) : un SVG à groupes, à dégradés, à motifs, à découpes, à masques, à flou ou à
+ombre, ou à image `data:` s'ouvre tel qu'il est et se réécrit avec ses groupes et ses définitions. Ce que l'éditeur refuse encore,
+en le nommant : un filtre hors du flou et de l'ombre (`feTurbulence`…), une découpe par forme CSS, un masque CSS (`mask-image`),
+une image ou une découpe qui renvoie à une adresse extérieure, une « image » SVG, `<foreignObject>`, `<switch>`, le texte sur un
+tracé (`<textPath>`), un cycle de définitions, des bornes dépassées (64 niveaux de groupes, 64 arrêts, 4 Mo par image…), un
+`<use>` en cycle ou renvoyant à un fichier extérieur. Un `<use>` ordinaire (planche d'icônes, `<symbol>`) se déplie en formes
+indépendantes, et la feuille `<style>` se lit avec ses vrais sélecteurs ; ce qui n'est pas repris (marqueurs, animations,
+`@media`, mode de fusion…) est dit à l'ouverture.
+
+La case « Groupes, dégradés, effets » du menu Édition, décochée, rend le modèle **à plat** d'avant pour les fichiers ouverts
+ensuite : les groupes se fondent, et dégradé, masque, découpe, filtre et image sont refusés en le nommant. L'éditeur embarqué
+reste à plat tant que l'hôte ne demande pas `modele: 'riche'` ([`docs/integration.md`](docs/integration.md)). On n'édite pas ce
+qu'on ne saurait pas réécrire.
 
 ## Démarrer
 
@@ -86,7 +115,8 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
+npm run test:php     # les tests du site PHP (PHP 8.1+, cURL), sans dépendance
 npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
 
@@ -96,7 +126,9 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run lint` | Aucun `any` dans le moteur, aucune assertion `!`, aucune fonction de plus de 150 lignes |
 | `npm run cliquet` | Aucun dossier ne régresse en typage |
 | `npm test` | Couches, cycles, pureté du cœur, lecture et écriture du dessin, opérations, points, historique, vectorisation réelle, bibliothèque entière |
-| `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/` |
+| `npm run construire` | La page, le traceur, la bibliothèque et les fontes, dans `dist/`, puis le site PHP dans `dist/php/` |
+| `npm run site-php` | Le site PHP seul (après les autres) : `dist/php/` (ADR-0030, [`docs/deploiement-php.md`](docs/deploiement-php.md)) |
+| `npm run test:php` | Les tests du site PHP : ses fonctions sur un dossier temporaire, puis ses routes sous `php -S` (`tests/php/`) |
 | `npm run vtracer` | Le traceur seul : `dist/vtracer.js` |
 | `npm run embarquer` | Le script d'embarquement seul : `dist/editeur-svg-embarque.js` |
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
@@ -108,6 +140,26 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 La page construite s'ouvre telle quelle dans un navigateur, depuis le disque ou un serveur
 statique ; `vtracer.js` (0,9 Mo), `bibliotheque.js` (7 Mo), les `bibliotheque-<source>.js` (de 0,9 à 3,6 Mo) et `polices.js` (2,7 Mo) doivent rester à côté
 d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la bibliothèque, au premier texte).
+
+## Le site PHP
+
+Une autre cible, à côté de la page autonome (qui ne change pas) : `npm run construire` écrit aussi `dist/php/`, un site PHP où l’on
+retrouve ses **projets** d’une session à l’autre, derrière un **mot de passe** (ADR-0030). Un projet n’est pas le SVG mais le JSON
+natif du modèle, avec tout ce qu’il faut pour le rouvrir à l’identique (formes, textes vivants, opérations Cricut, contexte de
+production, nuancier, fonte déposée, image source) ; le SVG reste un export.
+
+- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : la connexion, puis l’écran
+  « Projets » ; `api.php` : projets, données, polices) ; `data/` est dedans, refusé au Web par son `.htaccess` (`data/pwd`,
+  `data/projets`, `data/json`, `data/font`), ou à côté de `public/` pour qui a la main sur le serveur.
+- Le mot de passe se choisit dans la page à la première visite, ou par un fichier `data/password` (converti en empreinte, puis
+  supprimé), ou par `php inc/mot-de-passe.php` ; seule son empreinte est gardée.
+- « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
+  Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
+- Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
+  est téléchargée et vérifiée par le serveur, puis gardée dans `data/font`.
+
+Installation sur un hébergeur (où poser `public/` et `data/`, droits, mot de passe, HTTPS, mise à jour) :
+[`docs/deploiement-php.md`](docs/deploiement-php.md) ; sécurité : [`docs/securite.md`](docs/securite.md), § 9.
 
 ## Embarquer l'éditeur
 
@@ -135,22 +187,28 @@ se posent à côté de la page de l'hôte, ou sous une adresse donnée par `base
 React (`src/zones/EditeurSvg.tsx`, propriétés `ProprietesEditeur`) et le moteur seul
 (`src/engine/editionSvg.ts`, sans React ni DOM) restent utilisables tels quels.
 
+L'éditeur embarqué lit **à plat** par défaut, le contrat d'avant le modèle riche : un hôte qui stocke les SVG réécrits ne voit
+rien changer. Il passe `modele: 'riche'` pour garder groupes, dégradés, découpes, masques, effets et images.
+
 ## Organisation du dépôt
 
 | Chemin | Rôle |
 |---|---|
 | `src/util/` | Primitives pures : lecture XML sans DOM, nettoyage d'un SVG, historique immuable, couleur (OKLab), lecture indexée sûre (`au`) |
-| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) |
-| `src/engine/` | Le dessin à plat (`editionSvg.ts`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
+| `src/model/` | La bibliothèque : le lexique anglais → français, les événements et leurs règles, le nom et le classement d'une forme ; les profils de production (`contextes.ts`) ; le format du projet (`projet.ts`) |
+| `src/engine/` | Le dessin (`editionSvg.ts` ; le modèle riche dans `edition/` : une fonctionnalité par fichier de `edition/fonctions/`, la descente vers les exports dans `descente/`), les booléens, les transformations et aimants, le texte en formes, les palettes, le détourage, l'extraction des couleurs, les réglages de vectorisation. Pur : ni DOM, ni réseau, ni horloge |
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
-| `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier |
+| `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
+| `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |
+| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `public/inc/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
+| `tests/php/` | Les tests du site PHP, sans dépendance (`npm run test:php`) |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |
 | `outils/editeur-svg/` | La page, ses feuilles de style (`base.css`, `editeur.css`) et ses points d'entrée (page, embarquement, traceur) ; `scripts/construire.mjs` assemble la page, `scripts/embarquer.mjs` le script d'embarquement |
 | `exemples/` | Une page d'intégration qui tourne depuis le disque |
 | `tests/unit/` | Un dossier par couche de `src/`, plus `architecture.test.ts` |
 | `src/styles/` | Le registre des jetons de couleur de l'interface (rôle, clair, sombre, contrastes), d'où le CSS se génère |
-| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md) ; le texte vivant, la vectorisation et le trait unique, [ADR-0022](docs/adr/0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md) ; les bibliothèques libres, [ADR-0023](docs/adr/0023-plusieurs-bibliotheques-libres.md) ; les polices libres à la demande, [ADR-0025](docs/adr/0025-les-polices-libres-a-la-demande.md)) ; `docs/jetons.md` : les jetons, générés |
+| `docs/adr/` | Les décisions, une par fichier (dont la sécurité, [ADR-0014](docs/adr/0014-un-svg-d-inconnu-se-lit-il-ne-se-nettoie-pas.md) ; les outils de tracé, [ADR-0015](docs/adr/0015-les-outils-de-trace-des-morceaux-qui-partagent-leurs-aretes.md) ; les navigateurs, [ADR-0016](docs/adr/0016-les-navigateurs-pris-en-charge.md) ; la conformité et la provenance, [ADR-0017](docs/adr/0017-conformite-et-provenance.md) ; les exports et le prétraitement, [ADR-0018](docs/adr/0018-des-exports-purs-un-pretraitement-qui-n-existe-que-touche.md) ; l’import PDF et le texte en lettres, [ADR-0020](docs/adr/0020-un-pdf-se-lit-en-formes.md) ; le texte vivant, la vectorisation et le trait unique, [ADR-0022](docs/adr/0022-le-texte-vivant-la-vectorisation-et-le-trait-unique.md) ; les bibliothèques libres, [ADR-0023](docs/adr/0023-plusieurs-bibliotheques-libres.md) ; les polices libres à la demande, [ADR-0025](docs/adr/0025-les-polices-libres-a-la-demande.md) ; le site PHP et le projet JSON, [ADR-0030](docs/adr/0030-le-site-php-et-le-projet-json.md)) ; `docs/jetons.md` : les jetons, générés |
 
 Les couches vont de `util` à `zones` : `util/shell` → `geometry` → `model/plateforme` → `engine` →
 `core/io/render/export/interaction` → `ui` → `app/zones`, jamais dans l'autre sens, et le cœur pur

@@ -2,8 +2,8 @@
 // nettoyage, bibliotheque, versions, raccourcis.
 
 import { memo, useMemo, useState } from 'react';
-import { ajusterPlan, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
-import { bibliothequeChargee, type Bibliotheque } from '../io/bibliotheque.js';
+import { ajusterPlan, FICHES_FORMES, regrouper, retirerPetites, simplifier, statistiques } from '../engine/editionSvg.js';
+import type { Bibliotheque } from '../io/bibliotheque.js';
 import type { EntreeBibliotheque } from '../model/bibliotheque.js';
 import { origineDeBibliotheque, origineDeForme } from '../model/credits.js';
 import { SCENES } from '../model/scenes.js';
@@ -14,13 +14,18 @@ import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { ListeRaccourcis } from './AideEditeur.js';
 import { CouleursDuDessin } from './CouleursDuDessin.js';
+import { SectionNuancier } from './SectionNuancier.js';
 import { Icone } from './icones.js';
 import { Nombre, Peinture } from './Inspecteur.js';
 import { PanneauPalettes } from './Palettes.js';
 import { PanneauTexte } from './Texte.js';
 import { PanneauVersions } from './Versions.js';
+import { ReglagesForme } from './ReglagesForme.js';
 import { phraseIgnores } from './aidesEditeur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
+import type { OutilForme } from './typesEditeur.js';
+import { lentilleDe } from './lentille.js';
+import { RAISONS_LENTILLE } from './phrasesContenus.js';
 
 const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières (0,01 %)'], [0.0005, 'Petits détails (0,05 %)'], [0.002, 'Détails moyens (0,2 %)']];
 
@@ -28,6 +33,7 @@ const SEUILS: ReadonlyArray<readonly [number, string]> = [[0.0001, 'Poussières 
 export function PanneauDessin() {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
   const { dessin } = mo;
+  const lentille = lentilleDe(ui.contexte) !== null;
   const [seuil, poserSeuil] = useState(0.0005);
   const stats = useMemo(() => statistiques(dessin), [dessin]);
   const masquees = dessin.formes.filter(f => !f.visible).length;
@@ -36,9 +42,11 @@ export function PanneauDessin() {
     <>
       <h3>{ui.outil === 'texte' ? 'Texte' : trace ? 'Nouvelle forme' : 'Dessin'}</h3>
       {ui.outil === 'texte' ? <PanneauTexte /> : null}
+      {FORMES.has(ui.outil) ? <ReglagesForme /> : null}
       {trace ? <StyleNouvelleForme /> : <SansSelection />}
       <p className="aide">{pluriel(stats.formes, 'forme')} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko{masquees ? ' · ' + pluriel(masquees, 'masquée') + ', retirée' + (masquees > 1 ? 's' : '') + ' à l’enregistrement' : ''}</p>
       {mo.ignores.length ? <p className="aide" role="note">{phraseIgnores(mo.ignores)}</p> : null}
+      <SectionNuancier />
       <CouleursDuDessin />
       <PanneauPalettes />
       {mo.bibliotheque ? <PanneauBibliotheque bibliotheque={mo.bibliotheque} /> : null}
@@ -53,7 +61,8 @@ export function PanneauDessin() {
           <button type="button" onClick={() => { const r = retirerPetites(dessin, seuil); ac.appliquer(() => r.dessin); ac.dire(r.retirees ? pluriel(r.retirees, 'petite forme') + ' retirée' + (r.retirees > 1 ? 's' : '') + '.' : 'Aucune forme sous ce seuil.'); }}>Retirer les petites formes</button>
           <button type="button" onClick={() => { const r = regrouper(dessin); ac.appliquer(() => r.dessin); ac.dire(r.reunies ? pluriel(r.reunies, 'forme') + ' regroupée' + (r.reunies > 1 ? 's' : '') + ' avec leur voisine de même couleur.' : 'Rien à regrouper sans changer le rendu.'); }}>Regrouper les voisines de même couleur</button>
           <button type="button" title={ui.profil ? 'Retire les points inutiles des segments droits, à la tolérance du matériau ; les courbes et les formes verrouillées restent' : 'Retire les points inutiles des segments droits, à l’écart près du seuil ; les courbes et les formes verrouillées restent'} onClick={() => { const r = simplifier(dessin, dessin.formes.map(f => f.id), ui.profil ? ui.profil.toleranceNettoyage : Math.max(dessin.vb[2], dessin.vb[3]) * seuil); ac.appliquer(() => r.dessin); ac.dire(r.retires ? pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' sur ' + pluriel(r.formes, 'forme') + '.' : 'Aucun point à retirer à ce seuil.'); }}>Simplifier les tracés</button>
-          <button type="button" onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
+          {/* Le plan est celui du dessin entier : il ne se regle pas depuis une decoupe ou un masque (paquet 8-D). */}
+          <button type="button" disabled={lentille} title={lentille ? RAISONS_LENTILLE.plan : undefined} onClick={() => ac.faire(d => ajusterPlan(d), 'Plan de travail ajusté au dessin.')}>Ajuster le plan de travail</button>
         </div>
       </Section>
       <PanneauVersions />
@@ -71,6 +80,14 @@ export function PanneauDessin() {
 function SansSelection() {
   const mo = useDessin(), ac = useActions();
   const choisissables = mo.dessin.formes.filter(f => f.visible && !f.verrouille);
+  // Un projet vierge du site (ADR-0030) part sans forme et sans rien a defaire : il dit le premier geste, pas le retour.
+  if (!mo.dessin.formes.length && !mo.h.passe.length) {
+    return (
+      <EtatVide genre="premiere-fois" titre="Le plan est vide.">
+        Tracez une première forme avec les outils de la barre, ou insérez-en une de la bibliothèque de formes, ci-dessous.
+      </EtatVide>
+    );
+  }
   if (!mo.dessin.formes.length) {
     return (
       <EtatVide genre="vide" icone="annuler" titre="Vous avez retiré toutes les formes." action={{ libelle: 'Faire revenir les formes', onClick: ac.defaire }}>
@@ -89,23 +106,25 @@ function SansSelection() {
 /** Le style des formes a venir : remplissage, contour, epaisseur. */
 function StyleNouvelleForme() {
   const mo = useDessin(), ac = useActions(), ui = useInterface();
-  const s = ui.style;
+  const s = ui.style, trait = ui.outil === 'ligne' || (FORMES.has(ui.outil) && FICHES_FORMES[ui.outil as OutilForme].trait);
   return (
     <>
       <Peinture libelle="Remplissage" valeur={s.remplissage} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, remplissage: v })} />
       <Peinture libelle="Contour" valeur={s.contour} mixte={false} nuancier={mo.nuancier} finir={() => undefined} poser={v => ac.poserStyle({ ...s, contour: v })} />
-      {s.contour || ui.outil === 'ligne' ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ac.poserStyle({ ...s, epaisseur: v })} /> : null}
-      <p className="aide">{ui.outil === 'ligne' ? 'Une ligne prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
+      {s.contour || trait ? <Nombre libelle="Épaisseur" valeur={s.epaisseur} min={0} poser={v => ac.poserStyle({ ...s, epaisseur: v })} /> : null}
+      <p className="aide">{trait ? 'Un trait prend la couleur de contour, ou celle du remplissage à défaut.' : 'Les formes tracées prennent ce style ; elles se règlent ensuite comme les autres.'}</p>
     </>
   );
 }
 
-/** La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. */
+/**
+ * La bibliotheque dans l'editeur : chercher, cliquer, la forme arrive au centre du plan. Elle se charge d'elle-meme a la premiere
+ * ouverture de sa section (un fichier voisin, aucun serveur) : une section fermee ne coute rien, ouverte elle montre les formes.
+ */
 function PanneauBibliotheque({ bibliotheque }: { bibliotheque: Bibliotheque | 'a-charger' }) {
-  const [voulue, vouloir] = useState(bibliotheque !== 'a-charger' || bibliothequeChargee());
   return (
-    <Section titre="Bibliothèque de formes">
-      {voulue ? <BibliothequeChargee bibliotheque={bibliotheque} /> : <button type="button" className="primaire" onClick={() => vouloir(true)}>Charger la bibliothèque (environ 7 Mo)</button>}
+    <Section titre="Bibliothèque de formes" differee>
+      <BibliothequeChargee bibliotheque={bibliotheque} />
     </Section>
   );
 }

@@ -1,6 +1,6 @@
-// Telecharger une police du catalogue (ADR-0025) : seulement apres le consentement de la personne, seulement aupres des
-// serveurs qu'elle a acceptes, et chaque fichier verifie par son empreinte sha256 avant d'etre lu. Le reseau et
-// crypto.subtle vivent ici, dans `io` ; le coeur pur ne voit qu'une interface `Glyphes`.
+// Telecharger une police du catalogue (ADR-0025) : seulement quand la personne la choisit (le choix vaut demande, rien ne part
+// sans ce geste), seulement aupres des serveurs du registre, et chaque fichier verifie par son empreinte sha256 avant d'etre lu.
+// Le reseau et crypto.subtle vivent ici, dans `io` ; le coeur pur ne voit qu'une interface `Glyphes`.
 //
 // Ce qui part : une requete GET du fichier demande, sans cookie (`credentials: 'omit'`) ni page d'origine
 // (`referrerPolicy: 'no-referrer'`). Rien du dessin, rien de la personne. Le serveur voit l'adresse IP, comme pour toute page.
@@ -10,40 +10,24 @@
 
 import type { Glyphes } from '../engine/texte.js';
 import { estIdCatalogue, trouverVariante, type CataloguePolices, type VariantePolice } from '../model/cataloguePolices.js';
-import { SERVEURS_POLICES, type IdServeur } from '../model/sourcesPolices.js';
+import { SERVEURS_POLICES } from '../model/sourcesPolices.js';
 import { glyphesDe, retenirDeposee, type Police } from './polices.js';
 import type { Stockage } from './stockage.js';
 import { enSfnt } from './woff.js';
 import { parse } from 'opentype.js';
 
-/** La cle du consentement dans le stockage injecte : la liste des serveurs acceptes. */
-export const CLE_CONSENTEMENT = 'svg.polices.consentement';
+/**
+ * L'ancienne cle d'un accord par serveur, retire le 25 octobre 2026 : choisir une police vaut demande. Une valeur restee dans le
+ * stockage d'une personne ne decide plus de rien ; elle s'efface (le stockage ne leve jamais).
+ */
+export const ANCIENNE_CLE_CONSENTEMENT = 'svg.polices.consentement';
 /** Un fichier de fonte de texte pese quelques dizaines de Ko ; au-dela de cette borne, on ne le lit pas. */
 export const OCTETS_MAX = 8 * 1024 * 1024;
 const NOM_CACHE = 'svg-polices-v1';
-const IDS_SERVEURS = Object.keys(SERVEURS_POLICES) as IdServeur[];
 
-/** Les serveurs acceptes, lus dans le stockage ; rien (ou une valeur etrangere) se lit comme aucun consentement. */
-export function lireConsentement(s: Stockage | null): ReadonlySet<IdServeur> {
-  const v = s?.lire<unknown>(CLE_CONSENTEMENT);
-  const liste = typeof v === 'object' && v !== null && Array.isArray((v as { serveurs?: unknown }).serveurs) ? (v as { serveurs: unknown[] }).serveurs : [];
-  return new Set(liste.filter((x): x is IdServeur => typeof x === 'string' && (IDS_SERVEURS as string[]).includes(x)));
-}
-
-/** Retient les serveurs acceptes (ajoutes a ceux deja acceptes) ; rend l'ensemble. Sans stockage, rien ne se retient au-dela de la session. */
-export function accorderConsentement(s: Stockage | null, deja: ReadonlySet<IdServeur>, serveurs: readonly IdServeur[]): ReadonlySet<IdServeur> {
-  const tous = new Set([...deja, ...serveurs]);
-  s?.ecrire(CLE_CONSENTEMENT, { serveurs: IDS_SERVEURS.filter(id => tous.has(id)) });
-  return tous;
-}
-
-/** Oublie le consentement : plus aucune requete tant que la personne n'a pas accepte de nouveau. */
-export function retirerConsentement(s: Stockage | null): void { s?.retirer(CLE_CONSENTEMENT); }
-
-/** Les serveurs que demande une variante et que la personne n'a pas encore acceptes (le dialogue les nomme). */
-export function serveursAAccepter(v: VariantePolice, acceptes: ReadonlySet<IdServeur>): IdServeur[] {
-  // Un repli (Bunny) n'est demande que si le serveur principal echoue ; il fait partie de ce qu'on accepte d'un coup.
-  return [...new Set(v.fichiers.flatMap(f => f.adresses.map(a => a.serveur)))].filter(id => !acceptes.has(id));
+/** Efface l'ancien accord par serveur, s'il en reste un ; sans stockage, rien a faire. */
+export function oublierAncienConsentement(s: Stockage | null): void {
+  if (s && s.lire(ANCIENNE_CLE_CONSENTEMENT) !== null) s.retirer(ANCIENNE_CLE_CONSENTEMENT);
 }
 
 /** Ce que le telechargement emploie du navigateur, remplacable en test. */
@@ -77,7 +61,47 @@ export function cacheNavigateur(): CachePolices | null {
   };
 }
 
+/**
+ * Les adresses des fichiers que le cache du navigateur garde deja : une lecture locale de ses cles, sans requete ni fichier lu.
+ * La liste des polices s'en sert pour ne pas marquer « à télécharger » une police que la choisir relirait du cache. Sans cache
+ * (contexte non securise, stockage refuse), un ensemble vide : la marque reste, et le choix relirait ou telechargerait comme avant.
+ */
+export async function adressesEnCache(): Promise<ReadonlySet<string>> {
+  if (typeof caches === 'undefined') return new Set();
+  try { return new Set((await (await caches.open(NOM_CACHE)).keys()).map(r => r.url)); } catch { return new Set(); }
+}
+
+/** Vrai quand chaque fichier de la variante a une adresse dans le cache (`adressesEnCache`) : la choisir ne contacterait personne. */
+export function varianteEnCache(v: VariantePolice, enCache: ReadonlySet<string>): boolean {
+  return enCache.size > 0 && v.fichiers.length > 0 && v.fichiers.every(f => adressesDe(f).some(a => enCache.has(a.url)));
+}
+
 const OUTILS: OutilsTelechargement = { chercher: (url, init) => fetch(url, init), empreinte: empreinteSha256, cache: null };
+
+/**
+ * Un hote qui sert lui-meme les polices du catalogue (le site PHP, ADR-0030) : le navigateur ne contacte que lui. Chaque fichier se
+ * demande a son adresse, avec sa session ; l'empreinte se verifie ici comme pour un serveur de polices, le serveur l'ayant deja
+ * verifiee avant de le ranger.
+ */
+export interface ServeurPolicesHote {
+  /** L'adresse du fichier chez l'hote, par son empreinte sha256 (la seule chose que le serveur accepte : un fichier de l'index). */
+  readonly adresse: (empreinte: string) => string;
+  /** Le nom dit dans une erreur (« le site »). */
+  readonly nom: string;
+}
+
+let serveurHote: ServeurPolicesHote | null = null;
+
+/** Pose (ou retire, null) le serveur de polices de l'hote ; la page autonome n'en pose jamais : elle va aux serveurs du registre. */
+export function definirServeurPolices(s: ServeurPolicesHote | null): void { serveurHote = s; }
+
+type FichierAdresse = { readonly url: string; readonly hote: string; readonly init: RequestInit };
+
+/** Les adresses ou demander un fichier : celle de l'hote s'il en pose une, sinon celles du registre, chacune sous son prefixe. */
+function adressesDe(f: VariantePolice['fichiers'][number]): FichierAdresse[] {
+  if (serveurHote) return [{ url: serveurHote.adresse(f.empreinte), hote: serveurHote.nom, init: { credentials: 'same-origin', mode: 'same-origin', cache: 'default' } }];
+  return f.adresses.filter(adresseAdmise).map(a => ({ url: a.url, hote: SERVEURS_POLICES[a.serveur].hote, init: { credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', cache: 'default' } }));
+}
 
 /** Les octets d'une reponse, bornes : un serveur qui enverrait davantage est coupe. */
 async function lireBorne(r: Response): Promise<Uint8Array | null> {
@@ -87,20 +111,24 @@ async function lireBorne(r: Response): Promise<Uint8Array | null> {
   return o.length > OCTETS_MAX ? null : o;
 }
 
+type Adresse = VariantePolice['fichiers'][number]['adresses'][number];
+
+/** Vrai pour une adresse qui part du prefixe de son serveur : une autre n'est jamais demandee (l'index la refuse deja). */
+const adresseAdmise = (a: Adresse): boolean => a.url.startsWith(SERVEURS_POLICES[a.serveur].prefixe);
+
 /**
- * Un fichier, verifie : le cache d'abord, puis chaque adresse d'un serveur accepte, dans l'ordre. Une empreinte fausse est
- * refusee en le nommant, et l'adresse suivante essayee (un miroir peut servir une autre version que l'index).
+ * Un fichier, verifie : le cache d'abord, puis chaque adresse, dans l'ordre (le serveur principal, puis son repli). Une empreinte
+ * fausse est refusee en le nommant, et l'adresse suivante essayee (un miroir peut servir une autre version que l'index).
  */
-async function fichierVerifie(f: VariantePolice['fichiers'][number], acceptes: ReadonlySet<IdServeur>, o: OutilsTelechargement): Promise<Uint8Array | { erreur: string }> {
+async function fichierVerifie(f: VariantePolice['fichiers'][number], o: OutilsTelechargement): Promise<Uint8Array | { erreur: string }> {
   const raisons: string[] = [];
-  for (const a of f.adresses) {
-    if (!acceptes.has(a.serveur)) continue;
-    const hote = SERVEURS_POLICES[a.serveur].hote;
+  for (const a of adressesDe(f)) {
+    const hote = a.hote;
     const enCache = await o.cache?.lire(a.url).catch(() => null);
     if (enCache && (await o.empreinte(enCache)) === f.empreinte) return enCache;
     let octets: Uint8Array | null;
     try {
-      const r = await o.chercher(a.url, { credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', cache: 'default' });
+      const r = await o.chercher(a.url, a.init);
       if (!r.ok) { raisons.push(hote + ' a répondu ' + r.status); continue; }
       octets = await lireBorne(r);
     } catch {
@@ -114,7 +142,7 @@ async function fichierVerifie(f: VariantePolice['fichiers'][number], acceptes: R
     await o.cache?.ecrire(a.url, octets).catch(() => undefined);
     return octets;
   }
-  return { erreur: raisons.length ? raisons.join(' ; ') : 'aucun serveur accepté ne sert ce fichier' };
+  return { erreur: raisons.length ? raisons.join(' ; ') : 'aucun serveur connu ne sert ce fichier' };
 }
 
 /**
@@ -144,17 +172,17 @@ async function glyphesDuFichier(o: Uint8Array): Promise<Glyphes | { erreur: stri
 }
 
 /**
- * Telecharge, verifie et lit une variante du catalogue ; la retient pour la session. Sans serveur accepte, aucune requete :
- * le consentement est verifie ici aussi, pas seulement dans l'interface.
+ * Telecharge, verifie et lit une variante du catalogue ; la retient pour la session. Seul le choix d'une police par la personne
+ * l'appelle : ouvrir la liste, chercher ou voir les apercus ne passe jamais ici.
  */
-export async function telechargerVariante(v: VariantePolice, acceptes: ReadonlySet<IdServeur>, outils: Partial<OutilsTelechargement> = {}): Promise<Police | { erreur: string }> {
+export async function telechargerVariante(v: VariantePolice, outils: Partial<OutilsTelechargement> = {}): Promise<Police | { erreur: string }> {
   const o = { ...OUTILS, ...outils };
   if (!estIdCatalogue(v.id)) return { erreur: 'identifiant de police inconnu' };
-  // Chaque fichier doit avoir au moins une adresse chez un serveur accepte ; sinon, pas une seule requete.
-  if (!v.fichiers.length || !v.fichiers.every(f => f.adresses.some(a => acceptes.has(a.serveur)))) return { erreur: 'le téléchargement de cette police n’est pas autorisé' };
+  // Chaque fichier doit avoir au moins une adresse admise ; sinon, pas une seule requete.
+  if (!v.fichiers.length || !v.fichiers.every(f => adressesDe(f).length > 0)) return { erreur: 'aucun serveur connu ne sert cette police' };
   const glyphes: Glyphes[] = [];
   for (const f of v.fichiers) {
-    const octets = await fichierVerifie(f, acceptes, o);
+    const octets = await fichierVerifie(f, o);
     if ('erreur' in octets) return { erreur: v.nom + ' : ' + octets.erreur + '.' };
     const g = await glyphesDuFichier(octets);
     if ('erreur' in g) return { erreur: v.nom + ' : ' + g.erreur + '.' };

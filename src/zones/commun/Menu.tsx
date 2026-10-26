@@ -3,9 +3,10 @@
 // position fixe sous le bouton : les barres d'outils defilent sur mobile et couperaient un panneau
 // absolu. Il se ferme sur un clic au-dehors, sur Echap, au defilement et au redimensionnement.
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent as KE, type ReactNode } from 'react';
-import { dernier, premier, suivant } from '../../util/menu.js';
+import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent as KE, type ReactNode } from 'react';
+import { dernier, premier, suivant, voisinVertical } from '../../util/menu.js';
 import { Icone, type NomIcone } from '../icones.js';
+import { focusAuClavier } from './focusClavier.js';
 
 export interface ElementMenu {
   id: string;
@@ -24,6 +25,8 @@ export interface ElementMenu {
   pastille?: string;
   /** Un filet avant cet element. */
   separateur?: boolean;
+  /** Pourquoi l'element est grise (son infobulle, annexe 6 §3) ; sans effet tant qu'il ne l'est pas. */
+  raison?: string;
 }
 
 /**
@@ -53,6 +56,15 @@ interface Proprietes {
   /** Le bord du bouton auquel le panneau s'aligne. */
   alignement?: 'gauche' | 'droite';
   className?: string;
+  /**
+   * Les rubriques en grille de tuiles (la palette des formes, ADR-0033) : un seul menu nomme `titreMenu`, un groupe par rubrique,
+   * chaque element une tuile (son icone, son nom, sa lettre) ; les fleches vont a gauche et a droite, en haut et en bas.
+   */
+  grille?: boolean;
+  /** Le nom du menu d'une grille, quand l'etiquette du bouton porte aussi son raccourci (« Formes (F) »). */
+  titreMenu?: string;
+  /** Un compteur : quand il change, le menu s'ouvre comme au clavier, le focus sur l'element coche (un raccourci, F). */
+  demandeOuverture?: number;
 }
 
 interface Position { top: number; left?: number; right?: number }
@@ -64,11 +76,11 @@ interface Position { top: number; left?: number; right?: number }
 const ContexteMenusOuverts = createContext<((ouvert: boolean) => void) | null>(null);
 export const FournisseurMenusOuverts = ContexteMenusOuverts.Provider;
 
-export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className }: Proprietes) {
+export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, elements = [], enfants, sections, alignement = 'gauche', className, grille = false, titreMenu, demandeOuverture }: Proprietes) {
   const [ouvert, poserOuvert] = useState(false);
   const [position, poserPosition] = useState<Position | null>(null);
   const bouton = useRef<HTMLButtonElement>(null), panneau = useRef<HTMLDivElement>(null);
-  const focusInitial = useRef<'premier' | 'dernier' | null>(null);
+  const focusInitial = useRef<'premier' | 'dernier' | 'coche' | null>(null);
   const origine = useRef<{ top: number; left: number } | null>(null);
   const signaler = useContext(ContexteMenusOuverts);
   useEffect(() => {
@@ -81,7 +93,7 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
     poserOuvert(false);
     if (rendreFocus) bouton.current?.focus();
   }, []);
-  const ouvrir = (focus: 'premier' | 'dernier' | null) => {
+  const ouvrir = (focus: 'premier' | 'dernier' | 'coche' | null) => {
     const r = bouton.current?.getBoundingClientRect();
     if (!r) return;
     focusInitial.current = focus;
@@ -91,13 +103,23 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   };
 
   const elementsActifs = (): HTMLButtonElement[] => Array.from(panneau.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]') ?? []);
-  // A l'ouverture au clavier, le focus va a un element ; a la souris, au panneau lui-meme.
+  // A l'ouverture au clavier, le focus va a un element (dans une grille, a l'element coche) ; a la souris, au panneau lui-meme.
   useLayoutEffect(() => {
     if (!ouvert) return;
-    const liste = elementsActifs(), d = liste.map(b => b.disabled);
-    const i = focusInitial.current === 'dernier' ? dernier(d) : focusInitial.current === 'premier' ? premier(d) : -1;
+    const liste = elementsActifs(), d = liste.map(b => b.disabled), coche = liste.findIndex(b => b.getAttribute('aria-checked') === 'true' && !b.disabled);
+    const voulu = focusInitial.current === 'premier' && grille ? 'coche' : focusInitial.current;
+    const i = voulu === 'dernier' ? dernier(d) : voulu === 'coche' ? (coche >= 0 ? coche : premier(d)) : voulu === 'premier' ? premier(d) : -1;
     (liste[i] ?? panneau.current)?.focus({ preventScroll: true });
-  }, [ouvert]);
+  }, [ouvert, grille]);
+
+  // Un raccourci global (F pour les formes) demande l'ouverture : le compteur a change depuis le dernier rendu.
+  const demandeVue = useRef(demandeOuverture);
+  useEffect(() => {
+    if (demandeOuverture === demandeVue.current) return;
+    demandeVue.current = demandeOuverture;
+    if (!ouvert) ouvrir('coche');
+    else elementsActifs().find(b => b.getAttribute('aria-checked') === 'true')?.focus();
+  });
 
   // Le panneau tient dans l'ecran : un contenu large (le panneau d'export) ne doit pas sortir d'un cote ou de l'autre.
   // On mesure la largeur de mise en page (`offsetWidth`), que l'animation d'entree (une echelle) ne fausse pas.
@@ -139,9 +161,16 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   const clavierPanneau = (e: KE<HTMLDivElement>) => {
     const liste = elementsActifs(), d = liste.map(b => b.disabled);
     const courant = liste.indexOf(document.activeElement as HTMLButtonElement);
-    const aller = (i: number) => { if (i >= 0) liste[i]?.focus(); };
-    if (e.key === 'ArrowDown') { e.preventDefault(); aller(suivant(d, courant, 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); aller(suivant(d, courant, -1)); }
+    const aller = (i: number) => { if (i >= 0) focusAuClavier(liste[i]); };
+    // Dans une grille, gauche et droite suivent l'ordre (en boucle), haut et bas changent de rangee a la case la plus proche.
+    const vertical = (sens: 1 | -1) => {
+      if (!grille || courant < 0) return suivant(d, courant, sens);
+      const cases = liste.map(b => { const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, l: r.width, h: r.height, desactive: b.disabled }; });
+      return voisinVertical(cases, courant, sens);
+    };
+    if (e.key === 'ArrowDown') { e.preventDefault(); aller(vertical(1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); aller(vertical(-1)); }
+    else if (grille && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); aller(suivant(d, courant, e.key === 'ArrowRight' ? 1 : -1)); }
     else if (e.key === 'Home') { e.preventDefault(); aller(premier(d)); }
     else if (e.key === 'End') { e.preventDefault(); aller(dernier(d)); }
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(true); }
@@ -171,9 +200,9 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
         {chevron ? <Icone nom="chevron-bas" taille={12} /> : null}
       </button>
       {ouvert && position ? (
-        <div ref={panneau} className="menu-panneau" tabIndex={-1} style={position} onKeyDown={clavierPanneau} onBlur={quitte}>
+        <div ref={panneau} className={'menu-panneau' + (grille ? ' menu-panneau-grille' : '')} tabIndex={-1} style={position} onKeyDown={clavierPanneau} onBlur={quitte}>
           {/* Le menu n'est que ses elements : un contenu libre (l'export) n'est pas un enfant permis d'un role menu. */}
-          {sections ? sections.map(sc => (
+          {grille && sections ? <GrilleElements titre={titreMenu ?? etiquette} sections={sections} fermer={fermer} /> : sections ? sections.map(sc => (
             <div key={sc.id} className="menu-rubrique">
               <p className="menu-titre" aria-hidden="true">{sc.titre}</p>
               {sc.elements?.length ? <ListeElements titre={sc.titre} elements={sc.elements} fermer={fermer} /> : null}
@@ -191,6 +220,30 @@ export function MenuDeroulant({ etiquette, libelle, icone, chevron = true, eleme
   );
 }
 
+/**
+ * Un menu en grille : un seul `role="menu"`, un `role="group"` par rubrique (nomme par son titre, que l'on voit mais que le lecteur
+ * d'ecran lit par le nom du groupe), chaque element une tuile : l'icone, le nom, la lettre s'il en a une. Un choix exclusif est un
+ * `menuitemradio`, coche quand il est le choix du moment.
+ */
+function GrilleElements({ titre, sections, fermer }: { titre: string; sections: readonly SectionMenu[]; fermer: (rendreFocus: boolean) => void }) {
+  const base = useId();
+  return (
+    <div role="menu" aria-label={titre} className="menu-grille">{sections.map(sc => (
+      <div key={sc.id} role="group" aria-labelledby={base + sc.id} className="menu-groupe">
+        <span id={base + sc.id} className="menu-titre" aria-hidden="true">{sc.titre}</span>
+        <div className="menu-tuiles" role="none">{(sc.elements ?? []).map(el => (
+          <button key={el.id} type="button" role={el.radio ? 'menuitemradio' : 'menuitem'} aria-checked={el.radio ? !!el.coche : undefined} disabled={el.desactive}
+            className="menu-tuile" onClick={() => { fermer(true); el.onClick?.(); }}>
+            {el.icone ? <Icone nom={el.icone} taille={22} /> : null}
+            <span className="menu-libelle">{el.libelle}</span>
+            {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}
+          </button>
+        ))}</div>
+      </div>
+    ))}</div>
+  );
+}
+
 /** Les elements d'un menu : un `role="menu"` nomme, une ligne par element, un filet avant ceux qui le demandent. */
 function ListeElements({ titre, elements, fermer }: { titre: string; elements: readonly ElementMenu[]; fermer: (rendreFocus: boolean) => void }) {
   return (
@@ -198,7 +251,7 @@ function ListeElements({ titre, elements, fermer }: { titre: string; elements: r
       <div key={el.id} className="menu-ligne">
         {el.separateur ? <hr className="menu-filet" /> : null}
         <button type="button" role={el.radio ? 'menuitemradio' : el.coche !== undefined ? 'menuitemcheckbox' : 'menuitem'} aria-checked={el.coche} disabled={el.desactive} className={'menu-element' + (el.danger ? ' danger' : '')}
-          onClick={() => { fermer(true); el.onClick?.(); }}>
+          title={el.desactive ? el.raison : undefined} onClick={() => { fermer(true); el.onClick?.(); }}>
           <span className="menu-coche">{el.coche ? <Icone nom="coche" taille={14} /> : el.pastille ? <span className="menu-pastille" style={{ background: el.pastille }} /> : el.icone ? <Icone nom={el.icone} taille={14} /> : null}</span>
           <span className="menu-libelle">{el.libelle}</span>
           {el.raccourci ? <kbd className="menu-raccourci">{el.raccourci}</kbd> : null}

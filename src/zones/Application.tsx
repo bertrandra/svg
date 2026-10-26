@@ -21,29 +21,34 @@ import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
 import { insecables, nomDeFichier } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
+import { garderModele, MODELE_PAGE, modeleRetenu, refusAvecRepli, refusModele } from './modele.js';
+import type { Modele } from './typesEditeur.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
 import { svgDeBibliotheque } from './provenanceBibliotheque.js';
 import { Message, type TonMessage } from './commun/Message.js';
+import { focusAuClavier } from './commun/focusClavier.js';
 import { ChoixPagePdf, fichierPdf, usePdf, type OuvrirDessin } from './OuvrirPdf.js';
 import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 import type { ChoixProduction } from '../model/contextes.js';
 import { au } from '../util/tableaux.js';
 import { uniteRetenue } from './actionsProduction.js';
 import { CircuitPublic, ID_TITRE_SUITE, PanneauIntegration, QuestionPublic, usePublic } from './AccueilPublic.js';
+import { adressesPermises, ChampAdresse, texteDuSvg, useAdresseDeVoie, useReception, type Dire, type Reception } from './OuvrirAdresse.js';
+import { estAdresseSeule } from '../model/adresse.js';
 import { circuitDu, DEMO_HOTE, ordreDesVoies, phraseRecu, phraseReglageMachine, productionDuPublic, type ChoixPublic, type Voie } from './publics.js';
 
 /** Le dessin ouvert ; `production` : le contexte de depart propose a l'editeur (le public « machine »), quand il y en a un. */
 interface Fichier { nom: string; svg: string; ignores?: readonly string[]; production?: ChoixProduction }
 
-const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
+export const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">'
   + '<rect x="16" y="16" width="208" height="128" rx="14" fill="#e9ecef"/>'
   + '<circle cx="80" cy="80" r="40" fill="#c81e28"/>'
   + '<path d="M130 120 L170 40 L210 120 Z" fill="#1428a0"/>'
   + '<path d="M40 130 Q120 90 200 130" fill="none" stroke="#15181d" stroke-width="4"/>'
   + '</svg>';
 
-const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
+export const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
 
 /** Chaque voie : son icone, son titre, son aide. Leur ordre vient du public (publics.ts, ordreDesVoies). */
 const VOIES: Readonly<Record<Voie, readonly [NomIcone, string, string]>> = {
@@ -54,6 +59,9 @@ const VOIES: Readonly<Record<Voie, readonly [NomIcone, string, string]>> = {
 
 // La page est ce qui connait le magasin : le brouillon et les versions de l'editeur vont dans le navigateur.
 const STOCKAGE = stockageNavigateur();
+
+/** Le modele de lecture de la page : le reglage garde, son defaut sinon (ADR-0012, etape 14). */
+const modeleDeLaPage = (): Modele => modeleRetenu(STOCKAGE, MODELE_PAGE);
 
 const sansExtension = (nom: string) => nom.replace(/\.(svg|pdf)$/i, '').trim() || 'dessin';
 
@@ -70,6 +78,8 @@ function Accueil() {
   const [publicChoisi, choisirPublic] = usePublic(STOCKAGE);
   const [question, poserQuestion] = useState(publicChoisi === null);
   const [voie, poserVoie] = useState<Voie>(() => au(ordreDesVoies(publicChoisi), 0));
+  // Un fichier ouvert depuis une adresse (ADR-0036) va a la voie de sa nature, decidee sur ses octets.
+  const reception = useReception(poserVoie);
   // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
   const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
@@ -122,9 +132,11 @@ function Accueil() {
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
     if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
     // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
-    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
-    const lu = lireDessinMemo(propre.svg);
-    if ('erreur' in lu) { dire(lu.erreur); return; }
+    // Le modele de lecture (ADR-0012, annexe 5 §3) : le reglage garde, celui que l'editeur reprendra a l'ouverture.
+    const modele = modeleDeLaPage();
+    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg, undefined, modele).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
+    const lu = lireDessinMemo(propre.svg, modele);
+    if ('erreur' in lu) { dire(refusAvecRepli(propre.svg, lu.erreur, modele)); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores, ...(production ? { production } : {}) });
     poserEdition(true);
     // Une seule fois, ici : ce que la lecture a laisse tomber, pour qu'un rendu qui change ne passe pas inapercu.
@@ -146,15 +158,7 @@ function Accueil() {
 
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
 
-      {brouillon && !fichier ? (
-        <section className="reprise" aria-label="Reprendre">
-          <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
-          <div className="actions">
-            <button type="button" className="primaire" onClick={() => { ouvrir(brouillon.nom, brouillon.svg); }}>Reprendre</button>
-            <button type="button" className="discret" onClick={() => { oublierBrouillon(STOCKAGE); poserBrouillon(null); }}>Oublier</button>
-          </div>
-        </section>
-      ) : null}
+      {brouillon && !fichier ? <RepriseBrouillon brouillon={brouillon} reprendre={() => ouvrir(brouillon.nom, brouillon.svg)} oublier={() => { oublierBrouillon(STOCKAGE); poserBrouillon(null); }} /> : null}
 
       {fichier ? <FicheResultat fichier={fichier} telecharger={telecharger} informer={informer} reprendre={() => poserEdition(true)}
         fermer={() => { poserFichier(null); oublierBrouillon(STOCKAGE); poserBrouillon(null); dire(''); }} /> : null}
@@ -172,9 +176,9 @@ function Accueil() {
 
       <Voies ordre={ordreDesVoies(publicChoisi)} voie={voie} poserVoie={poserVoie}>
         {{
-          svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} />,
-          image: <Vectoriser ouvrir={ouvrir} />,
-          formes: <SectionBibliotheque ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
+          svg: <OuvrirSvg ouvrir={ouvrir} dire={dire} essayer={essayer} invitation={publicChoisi !== 'retouche'} reception={reception} />,
+          image: <Vectoriser ouvrir={ouvrir} reception={reception} />,
+          formes: <SectionBibliotheque active={voie === 'formes'} ouvrir={x => ouvrir(nomDeFichier(x.nom, x.id), svgDeBibliotheque(x.id, x.svg, x.source))} />
         }}
       </Voies>
 
@@ -188,7 +192,7 @@ function Accueil() {
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
-        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} guide={guide} ignores={fichier.ignores}
+        <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE} guide={guide} ignores={fichier.ignores}
           production={fichier.production} libelleEnregistrer="Terminer" fermerSansModification policesEnLigne
           fermer={() => { poserEdition(false); demanderVisite(false); }}
           enregistrer={s => {
@@ -202,10 +206,30 @@ function Accueil() {
       {/* L'editeur comme un hote l'ouvre (embarque.tsx) : son libelle de fin, aucun guide, ni bibliotheque ni nuancier, et la page
           garde la main a l'enregistrement (fermerApresEnregistrer). Rien de la fiche ni du brouillon n'est touche. */}
       {demo ? (
-        <EditeurSvg svg={EXEMPLE} titre={DEMO_HOTE.nom + '.svg'} nom={DEMO_HOTE.nom} stockage={STOCKAGE} guide={null} libelleEnregistrer={DEMO_HOTE.libelleEnregistrer}
+        <EditeurSvg svg={EXEMPLE} titre={DEMO_HOTE.nom + '.svg'} nom={DEMO_HOTE.nom} stockage={STOCKAGE} guide={null} libelleEnregistrer={DEMO_HOTE.libelleEnregistrer} modele="plat"
           fermer={() => poserDemo(false)} enregistrer={s => { poserRecu(phraseRecu(s)); poserDemo(false); }} />
       ) : null}
     </main>
+  );
+}
+
+/**
+ * Le bandeau de reprise (un dessin etait en cours) : reprendre ou oublier le brouillon. Un brouillon ecrit en modele riche ne se reprend pas
+ * a plat (ADR-0012, annexe 5 §3) : le bandeau le dit, et propose d'activer le modele riche pour le reprendre ; rien n'est efface.
+ */
+function RepriseBrouillon({ brouillon, reprendre, oublier }: { brouillon: Brouillon; reprendre: () => void; oublier: () => void }) {
+  const refus = refusModele(brouillon.svg, modeleDeLaPage(), 'brouillon');
+  return (
+    <section className="reprise" aria-label="Reprendre">
+      <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
+      {refus ? <p className="aide">{refus}</p> : null}
+      <div className="actions">
+        {refus
+          ? <button type="button" className="primaire" onClick={() => { garderModele(STOCKAGE, 'riche'); reprendre(); }}>Activer le modèle riche et reprendre</button>
+          : <button type="button" className="primaire" onClick={reprendre}>Reprendre</button>}
+        <button type="button" className="discret" onClick={oublier}>Oublier</button>
+      </div>
+    </section>
   );
 }
 
@@ -228,7 +252,7 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
   fichier: Fichier; telecharger: RefObject<HTMLButtonElement | null>; informer: (t: string) => void; reprendre: () => void; fermer: () => void;
 }) {
   const stats = useMemo(() => {
-    const lu = lireDessinMemo(fichier.svg);
+    const lu = lireDessinMemo(fichier.svg, modeleDeLaPage());
     return 'erreur' in lu ? null : statistiques(lu.dessin);
   }, [fichier]);
   return (
@@ -239,9 +263,9 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
         {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
         {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
         <div className="actions">
-          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer)}>Télécharger le SVG</button>
+          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer, modeleDeLaPage())}>Télécharger le SVG</button>
           <button type="button" onClick={reprendre}>Reprendre l’édition</button>
-          <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} />
+          <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} modele={modeleDeLaPage()} />
           <button type="button" className="discret" onClick={fermer}>Fermer</button>
         </div>
       </div>
@@ -254,7 +278,7 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
  * trois panneaux restent montes, dans un ordre fixe : ce qu'on a regle dans l'un survit a un detour par un autre, et a un changement
  * de public.
  */
-function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
+export function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
   return (
     <section className="voies" aria-label="Par où commencer">
       <div className="voies-choix" role="tablist" aria-label="Point de départ">
@@ -268,7 +292,7 @@ function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; v
                 if (!pas) return;
                 e.preventDefault();
                 const suite = ordre[(i + pas + ordre.length) % ordre.length];
-                if (suite) { poserVoie(suite); document.getElementById('voie-' + suite)?.focus(); }
+                if (suite) { poserVoie(suite); focusAuClavier(document.getElementById('voie-' + suite)); }
               }}>
               <Icone nom={icone} taille={22} />
               <span className="voie-titre">{titre}</span>
@@ -300,12 +324,17 @@ function Invitation({ essayer }: { essayer: () => void }) {
   );
 }
 
-/** Deposer un fichier SVG ou PDF, en coller le code, ou ouvrir l'exemple. L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit. */
-function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin; dire: (message: string) => void; essayer: () => void; invitation: boolean }) {
+/**
+ * Deposer un fichier SVG ou PDF, en coller le code, l'ouvrir depuis une adresse (`reception`, ADR-0036), ou ouvrir l'exemple.
+ * L'invitation a la visite y est, sauf pour le public « retouche », qui l'a sous son circuit.
+ */
+export function OuvrirSvg({ ouvrir, dire, essayer, invitation, reception }: { ouvrir: OuvrirDessin; dire: Dire; essayer: () => void; invitation: boolean; reception?: Reception }) {
   const [code, poserCode] = useState('');
   const [survol, poserSurvol] = useState(false);
   const entree = useRef<HTMLInputElement>(null);
   const pdf = usePdf(ouvrir, dire);
+  // Un SVG ou un PDF recu d'une adresse (tapee ici, ou dans la voie « Convertir une image ») : la lecture d'un fichier depose.
+  const { t: adresse, lienDepose } = useAdresseDeVoie(reception, dire, reception?.documentRecu, r => { if (r.nature === 'pdf') pdf.ouvrirOctets(r.nom, r.octets); else ouvrir(r.nom, texteDuSvg(r.octets)); });
   const ouvrirFichier = (f: File | undefined) => {
     if (!f) return;
     if (fichierPdf(f)) { pdf.ouvrirFichier(f); return; }
@@ -316,6 +345,8 @@ function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin
     poserSurvol(false);
     const f = e.dataTransfer.files[0];
     if (f) { ouvrirFichier(f); return; }
+    // Un lien glisse depuis une autre page : le deposer est le geste qui demande le fichier.
+    if (lienDepose(e.dataTransfer)) return;
     const t = e.dataTransfer.getData('text/plain');
     if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
   };
@@ -331,10 +362,16 @@ function OuvrirSvg({ ouvrir, dire, essayer, invitation }: { ouvrir: OuvrirDessin
         <input ref={entree} type="file" accept=".svg,image/svg+xml,.pdf,application/pdf" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
         {invitation ? <Invitation essayer={essayer} /> : null}
       </div>
+      {reception ? <ChampAdresse t={adresse} aide="Un SVG, un PDF ou une image PNG, JPEG, GIF, WebP ou BMP." /> : null}
       <ChoixPagePdf pdf={pdf} />
       <label className="champ">
         <span>Ou collez le code d’un SVG</span>
-        <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)} />
+        <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)}
+          onPaste={e => {
+            // Une adresse collee seule, a la place d'un code : coller est le geste qui demande le fichier, comme « Ouvrir ».
+            const texte = e.clipboardData.getData('text/plain');
+            if (reception && adressesPermises() && estAdresseSeule(texte)) { e.preventDefault(); adresse.lancer(texte.trim()); }
+          }} />
         <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>Ouvrir ce code</button>
       </label>
     </section>

@@ -268,6 +268,12 @@ describe('outils de trace', () => {
       await pointActif(page, 1);
       const resume = inspecteur(page).locator('details.section > summary', { hasText: 'Transformer' });
       if (!(await resume.evaluate(e => (e.parentElement as HTMLDetailsElement).open))) await resume.click();
+      // Un texte coupe par le bord du panneau qui defile est un « doute » pour axe, pas un contraste : comme l'audit general
+      // (accessibilite-axe.e2e.ts), la fenetre prend la hauteur de l'inspecteur, que le nuancier (ADR-0037) a allonge.
+      await attendreAnimations(page);
+      const surplus = await inspecteur(page).evaluate(e => e.scrollHeight - e.clientHeight);
+      const vue = page.viewportSize();
+      if (surplus > 0 && vue) await page.setViewportSize({ width: vue.width, height: vue.height + surplus + 40 });
       await attendreAnimations(page);
       await page.addScriptTag({ content: AXE });
       const r = await page.evaluate(async () => (await (window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<ResultatAxe> } }).axe.run(document, { resultTypes: ['violations', 'incomplete'] })));

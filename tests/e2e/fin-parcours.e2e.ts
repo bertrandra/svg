@@ -123,7 +123,7 @@ describe('recuperer son dessin', () => {
     await page.locator('.editeur-svg-toile path[data-id="f2"]').tap();
     await page.locator('.editeur-barre input[type=color][aria-label="Remplissage"]').fill(VERT);
     await page.getByRole('button', { name: /^Plus d’actions/ }).tap();
-    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG' }).tap());
+    const f = await telecharger(page, () => page.getByRole('menuitem', { name: 'Télécharger le SVG', exact: true }).tap());
     expect(f.texte).toContain(VERT);
     const fin = page.locator('.editeur-etat').getByRole('button', { name: 'Terminer' });
     const r = await fin.boundingBox();
@@ -249,7 +249,6 @@ describe('la fin du parcours Cricut', () => {
   it('nomme le fichier d une forme de la bibliotheque par son nom francais : bonhomme-de-neige.svg, bonhomme-de-neige-cricut.svg', async () => {
     const { page } = await navigateur.ouvrir({ largeur: 1280, hauteur: 800 });
     await page.getByRole('tab', { name: /Bibliothèque/ }).click();
-    await page.getByRole('button', { name: /Charger la bibliothèque/ }).click();
     await page.locator('.bibliotheque input[type=search]').waitFor({ timeout: CHARGEMENT });
     await page.locator('.bibliotheque input[type=search]').fill('bonhomme de neige');
     const vignette = page.locator('.bibliotheque .vignette', { hasText: /^bonhomme de neige$/ });

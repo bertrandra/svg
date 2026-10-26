@@ -53,11 +53,9 @@ const annexe: Annexe<Bibliotheque> = {
   globale: '__bibliothequeSvg',
   contenu: 'la bibliothèque',
   consigne: 'lancez « npm run bibliotheque »',
+  donnees: true,
   valider: v => (typeof v === 'object' && v !== null && 'entrees' in v && Array.isArray(v.entrees) ? v as Bibliotheque : undefined)
 };
-
-/** Vrai quand le script est deja arrive : un panneau qui se rouvre n'a pas a redemander le chargement. */
-export const bibliothequeChargee = (): boolean => annexePosee(annexe);
 
 export const chargerBibliotheque: () => Promise<Bibliotheque> = fabriquerChargeurAnnexe(annexe, navigateur).charger;
 
@@ -96,6 +94,7 @@ export const annexeSource = (s: SourceFormes): Annexe<SourceChargee> => ({
   globale: s.globale,
   contenu: 'les formes de ' + s.nomCourt,
   consigne: 'lancez « npm run bibliotheque »',
+  donnees: true,
   valider: v => normaliserSource(s, v)
 });
 

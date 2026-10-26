@@ -9,10 +9,9 @@ import {
   combiner, coller, deplacer, dupliquer, ecrireDessin, fusionnerCouleursProches, lireDessin, lirePeinture, lirePeintureAlpha, modifier, opaciteDuContour, opaciteDuRemplissage,
   regrouper, remplacerCouleur, remplacerCouleurSur, separer, transformer, translation, type DessinSvg, type LectureDessin
 } from '../../../src/engine/editionSvg.js';
-import { ecrirePdf } from '../../../src/export/pdf.js';
-import { svgDecoupe } from '../../../src/export/svgs.js';
 import { construireBibliotheque, type IconeSource } from '../../../src/model/bibliotheque.js';
 import { au } from '../../../src/util/tableaux.js';
+import { ecrirePdf, svgDecoupe } from '../export/plats.js';
 
 const enveloppe = (corps: string, entete = '') => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"' + entete + '>' + corps + '</svg>';
 const lecture = (corps: string, entete = ''): LectureDessin => lireDessin(enveloppe(corps, entete));

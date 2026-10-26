@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="200" height="100">
+  <linearGradient id="commun" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="200" y2="0">
+    <stop offset="0" stop-color="#7bdc6b"/>
+    <stop offset="1" stop-color="#3fb0ff"/>
+  </linearGradient>
+  <linearGradient id="parForme">
+    <stop offset="0" stop-color="#ffc53d"/>
+    <stop offset="1" stop-color="#ff5d8f"/>
+  </linearGradient>
+  <rect x="10" y="10" width="40" height="35" fill="url(#commun)"/>
+  <rect x="60" y="10" width="40" height="35" fill="url(#commun)"/>
+  <rect x="110" y="10" width="40" height="35" fill="url(#commun)"/>
+  <rect x="10" y="55" width="40" height="35" fill="url(#parForme)"/>
+  <rect x="60" y="55" width="40" height="35" fill="url(#parForme)"/>
+  <rect x="110" y="55" width="80" height="35" fill="url(#parForme)"/>
+</svg>

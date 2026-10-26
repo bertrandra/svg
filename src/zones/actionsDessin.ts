@@ -12,6 +12,7 @@ import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { svgDocument } from './actionsProduction.js';
 import { avecVectorisation } from './phrasesTexte.js';
+import { optionsModele } from './modele.js';
 
 type ActionsDessin = Pick<ActionsEditeur, 'finirTrace' | 'zoomerSelection' | 'enregistrerTout' | 'insererForme' | 'insererPlusieurs' | 'booleen' | 'transformerNumerique'>;
 
@@ -29,12 +30,14 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       vues.poserVue({ zoom, x: (el.clientWidth - bo.l * zoom) / 2 - bo.x * zoom, y: (el.clientHeight - bo.h * zoom) / 2 - bo.y * zoom });
     },
     enregistrerTout: () => {
-      const { dessin, enregistrer, production } = lire();
+      // Le dessin complet, meme dans une decoupe ou un masque (paquet 8-D) : c'est lui qu'on rend.
+      const e = lire(), dessin = e.complet ?? e.dessin, { enregistrer, production } = e;
       // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
       // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
       const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;
       if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return false; }
-      enregistrer(propre.svg);
+      // L'etat du modele accompagne le SVG : un hote qui garde des projets (le site, ADR-0030) en ecrit le JSON natif.
+      enregistrer(propre.svg, { dessin, production });
       return true;
     },
     finirTrace: (fermerTrace: boolean) => {
@@ -51,8 +54,8 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       dire('Tracé ajouté : ' + points.length + ' points.');
     },
     insererForme: (svgForme: string, origine?: string) => {
-      const { dessin } = lire();
-      const autre = lireDessin(svgForme);
+      const { dessin, modele } = lire();
+      const autre = lireDessin(svgForme, optionsModele(modele));
       if ('erreur' in autre) { dire(autre.erreur); return; }
       const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh) / 3;
       const r = inserer(dessin, creditee(autre.dessin, origine), { x: vx + (vl - c) / 2, y: vy + (vh - c) / 2, l: c, h: c });
@@ -64,12 +67,12 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
     },
     // Plusieurs formes d'un coup, chacune a sa place relative (0 a 1) dans le carre inscrit au plan.
     insererPlusieurs: elements => {
-      const { dessin } = lire();
+      const { dessin, modele } = lire();
       const [vx, vy, vl, vh] = dessin.vb, c = Math.min(vl, vh), ox = vx + (vl - c) / 2, oy = vy + (vh - c) / 2;
       let d = dessin;
       const ids: string[] = [];
       for (const e of elements) {
-        const autre = lireDessin(e.svg);
+        const autre = lireDessin(e.svg, optionsModele(modele));
         if ('erreur' in autre) continue;
         const r = inserer(d, creditee(autre.dessin, e.origine), { x: ox + e.x * c, y: oy + e.y * c, l: e.taille * c, h: e.taille * c });
         d = r.dessin;

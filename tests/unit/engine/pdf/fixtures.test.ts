@@ -30,8 +30,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { lireDessin } from '../../../../src/engine/editionSvg.js';
-import { ecrirePdf } from '../../../../src/export/pdf.js';
 import { enTexte, flux, lire, lu, luTexte, octets, pdfClassique, pdfModerne, refus } from './fabrique.js';
+import { ecrirePdf } from '../../export/plats.js';
 
 const DOSSIER = resolve(__dirname, '../../../fixtures/pdf');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';

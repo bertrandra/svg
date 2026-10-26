@@ -6,18 +6,19 @@
 // nombres, meme ordre, memes octets demain. Pur.
 
 import { dessinSansTextes, marquerProduction, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import type { DessinPlat } from '../engine/aplatir.js';
 import type { UniteLongueur } from '../model/contextes.js';
-import { constatsBloquants, marqueDeProfil, versUnite, type ProfilProduction } from '../engine/preparation.js';
+import { constatsBloquants, marqueDeProfil, partagerOperations, versUnite, type ProfilProduction } from '../engine/preparation.js';
 import { svgExporte } from './svgs.js';
 import { phraseRefus } from './cricut.js';
 
 export interface ExportStylo { readonly svg: string; readonly couches: number; readonly pourtours: number }
 
 /** Les champs qu'un trait de stylo n'a pas : l'opacite (un stylo ecrit plein) et le texte vivant (le fichier porte les traits). */
-const CHAMPS_RETIRES: ReadonlySet<string> = new Set(['opaciteRemplissage', 'opaciteContour']);
+const CHAMPS_RETIRES: ReadonlySet<string> = new Set(['opaciteRemplissage', 'opaciteContour', 'operation']);
 
 /** La forme telle que le stylo la trace : son trait (ou, sans trait, son pourtour a la couleur du fond), sans fond, opaque. */
-function enTrait(f: Forme, largeur: number): Forme {
+export function enTrait(f: Forme, largeur: number): Forme {
   const reste = Object.fromEntries(Object.entries(f).filter(([c]) => !CHAMPS_RETIRES.has(c))) as unknown as Forme;
   const couleur = f.contour ?? f.remplissage ?? '#000000';
   const epaisseur = f.contour && f.epaisseur > 0 ? f.epaisseur : largeur;
@@ -40,13 +41,15 @@ export type ExportStyloProfil = (ExportStylo & { readonly erreur?: undefined }) 
 
 /**
  * L'export du procede « Dessin au stylo » pour un profil : le refus d'un dessin a constat bloquant (une piece plus grande que le
- * tapis), sinon les traits a la taille physique du profil et a la largeur de son stylo, avec la marque du contexte (rouvert dans
- * l'editeur, le fichier retrouve son panneau).
+ * tapis), sinon les traits des formes a ecrire a la taille physique du profil et a la largeur de son stylo, avec la marque du
+ * contexte (rouvert dans l'editeur, le fichier retrouve son panneau).
  */
-export function svgPourStylo(dessin: DessinSvg, p: ProfilProduction): ExportStyloProfil {
+export function svgPourStylo(dessin: DessinPlat, p: ProfilProduction): ExportStyloProfil {
   const profil: ProfilProduction = p.procede === 'dessin-stylo' ? p : { ...p, procede: 'dessin-stylo' };
-  const bloquants = constatsBloquants(dessin, profil);
+  // Seules les formes a ecrire (ADR-0028), selon le procede du profil d'origine : en decoupe, une forme pleine reste a la lame.
+  const { ecriture } = p.procede === 'imprimer-decouper' ? { ecriture: dessin } : partagerOperations(dessin, p.procede);
+  const bloquants = constatsBloquants(ecriture, profil);
   if (bloquants.length) return { erreur: phraseRefus(bloquants) };
-  const r = svgStylo(dessin, profil.unite, profil.largeurStylo);
+  const r = svgStylo(ecriture, profil.unite, profil.largeurStylo);
   return { ...r, svg: marquerProduction(r.svg, marqueDeProfil(profil)) };
 }

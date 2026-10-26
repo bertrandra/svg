@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <svg id="pastille" width="40" height="40" viewBox="0 0 10 10">
+      <circle cx="5" cy="5" r="5" fill="#c81e28"/>
+      <path d="M0 0L12 0L12 3L0 3Z" fill="#15181d"/>
+    </svg>
+  </defs>
+  <use href="#pastille" x="10" y="10"/>
+  <use xlink:href="#pastille" x="70" y="10" width="100" height="60"/>
+  <use href="#pastille" x="10" y="70" transform="translate(0 5)"/>
+</svg>

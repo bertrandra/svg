@@ -11,10 +11,10 @@
 
 import { estPoliceLivree, phraseRemplacement, remplacerPolice } from '../../model/polices.js';
 import { estIdCatalogue } from '../../model/cataloguePolices.js';
-import type { AlignementTexte, Chemin, DessinSvg, Forme, Matrice, PoliceTexte, TexteVivant } from './types.js';
+import type { AlignementTexte, Chemin, Commande, DessinSvg, DispositionTexte, Forme, Matrice, PoliceTexte, TexteVivant } from './types.js';
 import { IDENTITE } from './types.js';
-import { nb } from './chemins.js';
-import { multiplier } from './geometrie.js';
+import { ecrireChemin, lireChemin, nb } from './chemins.js';
+import { multiplier, transformerChemin } from './geometrie.js';
 
 /** Au-dela, un texte n'est pas repris comme texte : il reste en contours (annexe 5 de l'ADR-0012). */
 export const TEXTE_MAX = 10_000;
@@ -50,8 +50,27 @@ export function decoderTexte(v: string): string | null {
 /** Les noms des attributs, dans leur ordre d'ecriture. */
 export const ATTRIBUTS_TEXTE = [
   'data-ed-texte', 'data-ed-police', 'data-ed-police-version', 'data-ed-famille', 'data-ed-taille', 'data-ed-interlettrage',
-  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-matrice'
+  'data-ed-interligne', 'data-ed-alignement', 'data-ed-ligatures', 'data-ed-trace', 'data-ed-matrice',
+  // La disposition sur ou dans une forme (ADR-0031), seulement quand elle existe, chacun absent a son defaut.
+  'data-ed-disposition', 'data-ed-depart', 'data-ed-cote', 'data-ed-repartir', 'data-ed-marge', 'data-ed-ajuster', 'data-ed-justifier'
 ] as const;
+
+/**
+ * Les attributs du lien d'un texte pose vers sa forme (ADR-0031), ecrits apres les autres par l'ecriture du dessin (ils dependent
+ * de la place de la forme, pas du texte seul) : le rang de la forme parmi les chemins ecrits, ou, pour une forme masquee (qui ne
+ * s'ecrit pas), son trace encode et sa regle de remplissage quand elle est pair-impair.
+ */
+export const ATTRIBUTS_LIEN = ['data-ed-forme', 'data-ed-forme-d', 'data-ed-forme-regle'] as const;
+
+/** La marge interieure par defaut d'un texte dans une forme, en part de la taille. */
+export const MARGE_DEFAUT = 0.25;
+/**
+ * La marge interieure par defaut d'un texte deforme dans une forme (ADR-0032), en part de sa taille : plus petite que celle des
+ * lignes, parce que la taille d'un texte deforme est celle de tout le bloc dans la forme (une ligne seule : toute sa hauteur).
+ */
+export const MARGE_ENVELOPPE_DEFAUT = 0.05;
+/** Au-dela, le trace d'une forme masquee n'est pas repris (en caracteres encodes). */
+const TRACE_LIEN_MAX = 400_000;
 
 const estIdentite = (m: Matrice): boolean => m.every((v, i) => v === IDENTITE[i]);
 // Les parts lineaires d'une matrice sont des rapports sans unite : six decimales, pour qu'une rotation reste une rotation.
@@ -69,8 +88,36 @@ export function attributsTexte(f: Forme): string {
   if (t.interligne !== INTERLIGNE_DEFAUT) a.push(['data-ed-interligne', nb(t.interligne, 4)]);
   if (t.alignement !== 'gauche') a.push(['data-ed-alignement', t.alignement]);
   if (t.ligatures) a.push(['data-ed-ligatures', '1']);
+  if (t.trace === 'median') a.push(['data-ed-trace', 'median']);
   if (!estIdentite(t.matrice)) a.push(['data-ed-matrice', ecrireMatrice(t.matrice)]);
+  const p = t.disposition;
+  if (p) {
+    a.push(['data-ed-disposition', p.mode]);
+    if (p.mode === 'sur') {
+      if (p.depart !== 0) a.push(['data-ed-depart', nb(p.depart, 4)]);
+      if (p.cote !== 'dessus') a.push(['data-ed-cote', p.cote]);
+      if (p.repartir) a.push(['data-ed-repartir', '1']);
+    } else if (p.mode === 'dans') {
+      if (p.marge !== MARGE_DEFAUT) a.push(['data-ed-marge', nb(p.marge, 4)]);
+      if (p.ajuster) a.push(['data-ed-ajuster', '1']);
+      if (p.justifier) a.push(['data-ed-justifier', '1']);
+    } else if (p.marge !== MARGE_ENVELOPPE_DEFAUT) a.push(['data-ed-marge', nb(p.marge, 4)]);
+  }
   return a.map(([k, v]) => ' ' + k + '="' + v + '"').join('');
+}
+
+/**
+ * Le lien d'un texte pose vers sa forme, tel que l'ecriture du dessin l'ajoute (ADR-0031) : `data-ed-forme` et le rang de la
+ * forme parmi les chemins ecrits (`rangs`, a partir de 1) quand elle est ecrite ; sinon, pour une forme masquee, son trace
+ * encode (`data-ed-forme-d`), et `data-ed-forme-regle="evenodd"` s'il le faut. Rien pour un texte libre ou sans forme.
+ */
+export function attributsLien(f: Forme, formes: ReadonlyMap<string, Forme>, rangs: ReadonlyMap<string, number>, precision: number): string {
+  const p = f.texte?.disposition;
+  const base = p ? formes.get(p.forme) : undefined;
+  if (!base || base.id === f.id || base.texte) return '';
+  const rang = rangs.get(base.id);
+  if (rang !== undefined) return ' data-ed-forme="' + rang + '"';
+  return ' data-ed-forme-d="' + encoderTexte(ecrireChemin(base.d, precision)) + '"' + (base.regle === 'evenodd' ? ' data-ed-forme-regle="evenodd"' : '');
 }
 
 const nombre = (v: string | undefined, defaut: number): number | null => {
@@ -88,8 +135,52 @@ function lireMatrice(v: string | undefined): Matrice | null {
   return Math.abs(m[0] * m[3] - m[1] * m[2]) > 1e-12 ? m : null;
 }
 
-/** Un texte lu, ou la raison de ne pas le reprendre. `remplacement` dit une police inconnue, remplacee par la regle. */
-export type TexteLu = { readonly texte: TexteVivant; readonly remplacement?: string } | { readonly illisible: true } | null;
+/**
+ * Le lien d'un texte pose vers sa forme, tel que la lecture le trouve (ADR-0031) : le rang de la forme parmi les formes lues, ou
+ * le trace d'une forme masquee, que la lecture recree (masquee) juste avant le texte.
+ */
+export type LienLu = { readonly rang: number } | { readonly d: Commande[]; readonly regle: 'nonzero' | 'evenodd' };
+
+/**
+ * Un texte lu, ou la raison de ne pas le reprendre. `remplacement` dit une police inconnue, remplacee par la regle. Un texte pose
+ * (ADR-0031) porte une disposition dont la forme est encore a trouver (`forme` vide) et son `lien`, que la lecture resout.
+ */
+export type TexteLu = { readonly texte: TexteVivant; readonly remplacement?: string; readonly lien?: LienLu } | { readonly illisible: true } | null;
+
+/** La disposition lue (forme encore inconnue), null si elle est hors de ses bornes, undefined sans disposition. */
+function lireDisposition(a: Readonly<Record<string, string>>): DispositionTexte | null | undefined {
+  const mode = a['data-ed-disposition'];
+  if (mode === undefined) return undefined;
+  const drapeau = (k: string): boolean | null => (a[k] === undefined ? false : a[k] === '1' ? true : null);
+  if (mode === 'sur') {
+    const depart = nombre(a['data-ed-depart'], 0), cote = a['data-ed-cote'] ?? 'dessus', repartir = drapeau('data-ed-repartir');
+    if (depart === null || !(depart >= 0 && depart <= 1) || (cote !== 'dessus' && cote !== 'dessous') || repartir === null) return null;
+    return { mode, forme: '', depart, cote, repartir };
+  }
+  if (mode === 'dans') {
+    const marge = nombre(a['data-ed-marge'], MARGE_DEFAUT), ajuster = drapeau('data-ed-ajuster'), justifier = drapeau('data-ed-justifier');
+    if (marge === null || !(marge >= 0 && marge <= COEFFICIENT_MAX) || ajuster === null || justifier === null) return null;
+    return { mode, forme: '', marge, ajuster, justifier };
+  }
+  if (mode === 'enveloppe') {
+    // Le texte deforme (ADR-0032) n'a que sa marge ; ses autres reglages sont ceux de tout texte.
+    const marge = nombre(a['data-ed-marge'], MARGE_ENVELOPPE_DEFAUT);
+    if (marge === null || !(marge >= 0 && marge <= COEFFICIENT_MAX)) return null;
+    return { mode, forme: '', marge };
+  }
+  return null;
+}
+
+/** Le lien d'un texte pose : null s'il est illisible, undefined s'il n'y en a pas (la forme n'a pas ete ecrite). */
+function lireLien(a: Readonly<Record<string, string>>, m: Matrice): LienLu | null | undefined {
+  const rang = a['data-ed-forme'], d = a['data-ed-forme-d'], regle = a['data-ed-forme-regle'];
+  if (rang !== undefined) return /^[1-9]\d{0,6}$/.test(rang) && d === undefined ? { rang: Number(rang) } : null;
+  if (d === undefined) return regle === undefined ? undefined : null;
+  const texte = d.length <= TRACE_LIEN_MAX ? decoderTexte(d) : null;
+  const chemin = texte === null ? [] : lireChemin(texte);
+  if (!chemin.length || (regle !== undefined && regle !== 'evenodd')) return null;
+  return { d: estIdentite(m) ? chemin : transformerChemin(chemin, m), regle: regle === 'evenodd' ? 'evenodd' : 'nonzero' };
+}
 
 function lirePolice(a: Readonly<Record<string, string>>): { police: PoliceTexte; remplacement?: string } | null {
   const id = (a['data-ed-police'] ?? '').trim(), version = a['data-ed-police-version'];
@@ -113,17 +204,63 @@ export function lireTexteVivant(a: Readonly<Record<string, string>>, m: Matrice)
   if (a['data-ed-texte'] === undefined) return null;
   const texte = decoderTexte(a['data-ed-texte']), police = lirePolice(a);
   const taille = nombre(a['data-ed-taille'], NaN), interlettrage = nombre(a['data-ed-interlettrage'], 0), interligne = nombre(a['data-ed-interligne'], INTERLIGNE_DEFAUT);
-  const alignement = a['data-ed-alignement'] ?? 'gauche', ligatures = a['data-ed-ligatures'];
+  const alignement = a['data-ed-alignement'] ?? 'gauche', ligatures = a['data-ed-ligatures'], trace = a['data-ed-trace'];
   const matrice = lireMatrice(a['data-ed-matrice']);
+  const disposition = lireDisposition(a), lien = disposition ? lireLien(a, m) : undefined;
+  if (disposition === null || lien === null) return { illisible: true };
   if (texte === null || texte.length > TEXTE_MAX || /^\s*$/.test(texte) || !police || taille === null || !(taille > 0 && taille <= TAILLE_MAX)
     || interlettrage === null || Math.abs(interlettrage) > COEFFICIENT_MAX || interligne === null || !(interligne > 0 && interligne <= COEFFICIENT_MAX)
-    || (alignement !== 'gauche' && alignement !== 'centre' && alignement !== 'droite') || (ligatures !== undefined && ligatures !== '1') || !matrice) return { illisible: true };
+    || (alignement !== 'gauche' && alignement !== 'centre' && alignement !== 'droite') || (ligatures !== undefined && ligatures !== '1') || (trace !== undefined && trace !== 'median') || !matrice) return { illisible: true };
   const vivant: TexteVivant = {
-    texte, police: police.police, taille, interlettrage, interligne, alignement: alignement as AlignementTexte, ligatures: ligatures === '1',
-    matrice: estIdentite(m) ? matrice : multiplier(m, matrice)
+    texte, police: police.police, taille, interlettrage, interligne, alignement: alignement as AlignementTexte, ligatures: ligatures === '1', ...(trace === 'median' ? { trace: 'median' as const } : {}),
+    matrice: estIdentite(m) ? matrice : multiplier(m, matrice),
+    // Une disposition sans lien (sa forme n'a pas ete ecrite) ne se reprend pas : le texte redevient libre, ses contours restent.
+    ...(disposition && lien ? { disposition } : {})
   };
-  return { texte: vivant, ...(police.remplacement ? { remplacement: police.remplacement } : {}) };
+  return { texte: vivant, ...(police.remplacement ? { remplacement: police.remplacement } : {}), ...(disposition && lien ? { lien } : {}) };
 }
+
+/** Le texte sans disposition : un texte libre (ses contours ne bougent qu'a la prochaine composition). Le meme s'il n'en a pas. */
+export function sansDisposition(t: TexteVivant): TexteVivant {
+  if (!t.disposition) return t;
+  const { disposition: _d, ...reste } = t;
+  void _d;
+  return reste;
+}
+
+/**
+ * Les formes que transforme une operation affine sur `ids` (ADR-0031) : un texte pose emmene sa forme (sauf verrouillee), qui le
+ * porte ; le texte se recompose ensuite sur elle (suivreDispositions). Les memes identifiants quand aucun texte pose n'est choisi.
+ */
+export function avecFormesPorteuses(dessin: DessinSvg, ids: readonly string[]): readonly string[] {
+  if (!dessin.formes.some(f => f.texte?.disposition)) return ids;
+  const voulus = new Set(ids), avant = voulus.size;
+  for (const f of dessin.formes) {
+    const p = voulus.has(f.id) ? f.texte?.disposition : undefined;
+    const base = p ? dessin.formes.find(x => x.id === p.forme) : undefined;
+    if (base && !base.verrouille) voulus.add(base.id);
+  }
+  return voulus.size === avant ? ids : [...voulus];
+}
+
+/** Vrai si `id` est un texte pose sur une forme qui est aussi parmi `ids` : il la suit, on ne le deplace pas pour lui-meme. */
+export function suitUneFormeChoisie(dessin: DessinSvg, id: string, ids: readonly string[]): boolean {
+  const p = dessin.formes.find(f => f.id === id)?.texte?.disposition;
+  return !!p && p.forme !== id && ids.includes(p.forme);
+}
+
+/**
+ * Les copies d'une operation (dupliquer, coller, inserer) gardent le lien de leurs textes poses vers la copie de leur forme quand
+ * elle est copiee aussi ; sinon le lien se perd (forme vide), et la recomposition fera de la copie un texte libre.
+ */
+export function relierCopie(f: Forme, correspondance: ReadonlyMap<string, string>): Forme {
+  const p = f.texte?.disposition;
+  if (!p || !f.texte) return f;
+  const forme = correspondance.get(p.forme) ?? '';
+  return forme === p.forme ? f : { ...f, texte: { ...f.texte, disposition: { ...p, forme } } };
+}
+
+export const relierCopies = (formes: readonly Forme[], correspondance: ReadonlyMap<string, string>): Forme[] => formes.map(f => relierCopie(f, correspondance));
 
 /** Le texte transforme avec sa forme : la matrice de composition suit la transformation `m` du plan. */
 export const transformerTexte = (t: TexteVivant, m: Matrice): TexteVivant => ({ ...t, matrice: multiplier(m, t.matrice) });
@@ -164,4 +301,30 @@ export function garderTextes(avant: DessinSvg, apres: DessinSvg): { dessin: Dess
     return sansTexte(f);
   });
   return vectorises.length ? { dessin: { ...apres, formes }, vectorises } : { dessin: apres, vectorises };
+}
+
+/**
+ * Les liens des textes poses, resolus apres la lecture de toutes les formes (ADR-0031) : un rang designe la forme lue a cette
+ * place (ni le texte lui-meme, ni un autre texte) ; un trace recree la forme masquee juste avant son texte, sans peinture a elle
+ * (un filet noir d'une unite, s'il est un jour montre). Un lien qui ne mene a rien rend le texte libre, ses contours inchanges.
+ */
+export function resoudreLiens(formes: readonly Forme[], liens: ReadonlyArray<{ readonly id: string; readonly lien: LienLu }>): Forme[] {
+  if (!liens.length) return [...formes];
+  const parId = new Map(liens.map(l => [l.id, l.lien]));
+  let n = formes.reduce((m, f) => Math.max(m, Number(/^f(\d+)$/.exec(f.id)?.[1] ?? 0)), 0) + 1;
+  const r: Forme[] = [];
+  for (const f of formes) {
+    const lien = parId.get(f.id), p = f.texte?.disposition;
+    if (!lien || !p || !f.texte) { r.push(f); continue; }
+    if ('rang' in lien) {
+      const base = formes[lien.rang - 1];
+      const ok = !!base && base.id !== f.id && !base.texte && base.d.length > 0;
+      r.push({ ...f, texte: ok ? { ...f.texte, disposition: { ...p, forme: base.id } } : sansDisposition(f.texte) });
+      continue;
+    }
+    const id = 'f' + n++;
+    r.push({ id, d: lien.d, remplissage: null, contour: '#000000', epaisseur: 1, opacite: 1, regle: lien.regle, visible: false, verrouille: false });
+    r.push({ ...f, texte: { ...f.texte, disposition: { ...p, forme: id } } });
+  }
+  return r;
 }

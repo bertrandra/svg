@@ -1,8 +1,10 @@
 // Les formes qu'on dessine : rectangle, ellipse, etoile, ligne brisee, et leur ajout au premier plan
-// avec la peinture courante de l'editeur.
+// avec la peinture courante de l'editeur. Les autres formes de la palette sont dans formesDeBase.ts.
 
 import type { Chemin, Commande, DessinSvg, Forme } from './types.js';
 import { prochainId } from './operations.js';
+import { arbreDe } from './arbre.js';
+import { groupeDe } from './groupes.js';
 
 /** Ce qu'une forme nouvelle recoit : la peinture courante de l'editeur. */
 export interface Style { remplissage: string | null; contour: string | null; epaisseur: number }
@@ -51,11 +53,27 @@ export function polygone(points: readonly (readonly [number, number])[], fermer:
   return out;
 }
 
-/** Ajoute une forme au premier plan avec le style donne ; rend le dessin et son identifiant. */
-export function ajouterForme(dessin: DessinSvg, d: Chemin, style: Style): { dessin: DessinSvg; id: string | null } {
+/**
+ * Ajoute une forme au premier plan avec le style donne ; rend le dessin et son identifiant. La regle de remplissage est `nonzero`
+ * sauf demande (l'anneau des formes de base, perce en `evenodd`). `parent` (modele v2, ADR-0012 annexe 3 §2) : le groupe du
+ * contexte d'edition, au premier plan duquel la forme s'ajoute ; absent, ou inconnu du dessin, c'est la racine.
+ */
+export function ajouterForme(dessin: DessinSvg, d: Chemin, style: Style, regle: Forme['regle'] = 'nonzero', parent?: string): { dessin: DessinSvg; id: string | null } {
+  if (parent !== undefined && groupeDe(dessin, parent)) return ajouterDansGroupe(dessin, d, style, regle, parent);
   if (!d.length) return { dessin, id: null };
   const id = 'f' + prochainId(dessin);
   const contour = style.contour, remplissage = style.remplissage ?? (contour ? null : '#000000');
-  const forme: Forme = { id, d, remplissage, contour, epaisseur: contour ? style.epaisseur || 1 : 0, opacite: 1, regle: 'nonzero', visible: true, verrouille: false };
+  const forme: Forme = { id, d, remplissage, contour, epaisseur: contour ? style.epaisseur || 1 : 0, opacite: 1, regle, visible: true, verrouille: false };
   return { dessin: { ...dessin, formes: [...dessin.formes, forme] }, id };
+}
+
+/** Le chemin riche d'`ajouterForme` : la forme nouvelle, juste apres la derniere feuille du groupe (son premier plan). */
+function ajouterDansGroupe(dessin: DessinSvg, d: Chemin, style: Style, regle: Forme['regle'], parent: string): { dessin: DessinSvg; id: string | null } {
+  const r = ajouterForme(dessin, d, style, regle);
+  const neuve = r.dessin.formes[r.dessin.formes.length - 1];
+  const g = arbreDe(dessin).parId.get(parent);
+  if (r.id === null || !neuve || g?.genre !== 'groupe') return r;
+  const formes = [...dessin.formes];
+  formes.splice(g.fin, 0, { ...neuve, parent });
+  return { dessin: { ...dessin, formes }, id: r.id };
 }

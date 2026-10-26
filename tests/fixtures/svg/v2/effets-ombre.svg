@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140" width="240" height="140">
+  <!-- Ombres portees : la forme decomposee, feDropShadow (valeurs par defaut comprises), une couleur nommee, un aplat par style -->
+  <defs>
+    <filter id="ombre" x="-0.5" y="-0.5" width="2" height="2" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="flou"/>
+      <feOffset in="flou" dx="4" dy="5" result="decale"/>
+      <feFlood flood-color="#1d3557" flood-opacity="0.45" result="teinte"/>
+      <feComposite in="teinte" in2="decale" operator="in" result="ombre"/>
+      <feMerge><feMergeNode in="ombre"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="portee"><feDropShadow dx="-3" dy="2" stdDeviation="1.5" flood-color="rebeccapurple" flood-opacity="0.8"/></filter>
+    <filter id="defaut"><feDropShadow/></filter>
+    <filter id="style">
+      <feOffset in="SourceAlpha" dx="2" dy="2"/>
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feFlood style="flood-color: #e63946; flood-opacity: 50%"/>
+      <feComposite in2="b" operator="in"/>
+      <feComposite in="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+  <rect x="15" y="15" width="70" height="45" rx="6" fill="#f1faee" stroke="#457b9d" stroke-width="2" filter="url(#ombre)"/>
+  <circle cx="150" cy="40" r="25" fill="#a8dadc" filter="url(#portee)"/>
+  <path d="M20 90L80 90L50 130Z" fill="#457b9d" filter="url(#defaut)"/>
+  <rect x="130" y="85" width="60" height="35" fill="#f4a261" filter="url(#style)"/>
+</svg>

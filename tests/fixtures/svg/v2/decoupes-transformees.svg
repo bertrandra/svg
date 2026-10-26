@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <clipPath id="bande" transform="rotate(-20 100 60)">
+      <rect x="0" y="40" width="200" height="40"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(100 60) scale(1.5 1) translate(-100 -60)" clip-path="url(#bande)">
+    <ellipse cx="100" cy="60" rx="60" ry="45" fill="#5b3cc4"/>
+    <path d="M40 60Q100 0 160 60" fill="none" stroke="#f2b705" stroke-width="6"/>
+  </g>
+</svg>

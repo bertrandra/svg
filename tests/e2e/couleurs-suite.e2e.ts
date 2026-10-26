@@ -156,7 +156,7 @@ describe('calques par couleur, suite', () => {
     it('est grise sans selection, et la touche C n\'y fait rien', async () => {
       const page = await editeur();
       await ouvrirMenu(page, 'Édition');
-      const entree = page.getByRole('menuitem', { name: /Sélectionner la même couleur/ });
+      const entree = page.getByRole('menuitem', { name: /Sélectionner la même couleur de fond/ });
       await attend(() => entree.isDisabled()).toBe(true);
       await page.keyboard.press('Escape');
       await attend(() => page.getByRole('menu', { name: 'Édition' }).count()).toBe(0);
@@ -172,7 +172,7 @@ describe('calques par couleur, suite', () => {
       await calque(page, 'f1').click();
       await attend(() => choisies(page)).toEqual(['Forme 1']);
       await ouvrirMenu(page, 'Édition');
-      const entree = page.getByRole('menuitem', { name: /Sélectionner la même couleur/ });
+      const entree = page.getByRole('menuitem', { name: /Sélectionner la même couleur de fond/ });
       await attend(() => entree.isDisabled()).toBe(false);
       expect(await entree.textContent()).toContain('C');
       await entree.click();

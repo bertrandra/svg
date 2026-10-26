@@ -4,9 +4,11 @@
 
 import { memo, useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react';
 import { RegionVocale } from './RegionVocale.js';
+import { FilAriane } from './FilAriane.js';
 import { Barre, BoutonEnregistrer } from './BarreOutils.js';
 import { useTactile, useTelephone } from './Vue.js';
 import { BarreSelection } from './BarreSelection.js';
+import { BarreTexte } from './BarreTexte.js';
 import { Calques } from './Calques.js';
 import { useClavier } from './Clavier.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
@@ -14,17 +16,26 @@ import { Inspecteur } from './Inspecteur.js';
 import { PanneauDessin } from './PanneauDessin.js';
 import { PanneauCricut } from './Production.js';
 import { FournisseurTexte } from './contexteTexte.js';
+import { FournisseurSaisie, useSaisie } from './contexteSaisie.js';
+import { SuiviDispositions } from './DispositionToile.js';
 import { ToileEditeur } from './ToileEditeur.js';
 import { Bouton } from './commun/Bouton.js';
 import { BulleVisite, LienVisite } from './BulleVisite.js';
 import { FournisseurMenusOuverts } from './commun/Menu.js';
-import { FORMES, phraseAbandon } from './aidesEditeur.js';
+import { FORMES, nomOutilForme, phraseAbandon } from './aidesEditeur.js';
 import { pluriel, selonSaisie } from '../util/texte.js';
-import type { Outil, Tiroir } from './typesEditeur.js';
+import type { Outil, OutilForme, Tiroir } from './typesEditeur.js';
+import { LIBELLES_ENREGISTREMENT } from './enregistrement.js';
+import { FournisseurRegles } from './contexteRegles.js';
+import { useClavierOutilsPro } from './ClavierOutilsPro.js';
+import { estOutilZone, etatOutilZone } from './commandesSelection.js';
+import type { RegleZone } from '../engine/selection.js';
 
 /** Les raccourcis clavier : un composant sans rendu, pour que le crochet vive sous les contextes. */
 function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
   useClavier(toile);
+  // Les regles et les reperes (ADR-0038) : a la capture, avant les raccourcis de l'editeur.
+  useClavierOutilsPro();
   return null;
 }
 
@@ -36,6 +47,15 @@ function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
  */
 function LienToile({ svgRef, idToile }: { svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
   return <a className="saut" href={'#' + idToile} onClick={e => { e.preventDefault(); svgRef.current?.focus(); }}>Aller à la toile</a>;
+}
+
+/**
+ * La rangee sous la barre : la barre de texte avec l'outil Texte (elle regle le prochain texte : un clic sur la toile ne fait donc
+ * pas descendre le plan sous le pointeur), pendant une saisie, ou quand un texte est choisi seul (ADR-0027) ; sinon celle de la selection.
+ */
+function Rangee() {
+  const { formeSeule } = useDessin(), { outil } = useInterface(), sx = useSaisie();
+  return sx.saisie || outil === 'texte' || (formeSeule?.texte && outil === 'selection') ? <BarreTexte /> : <BarreSelection />;
 }
 
 /** Le panneau de droite : l'inspecteur d'une selection, le panneau du dessin sinon (ou avec un outil de trace). */
@@ -56,7 +76,7 @@ function PanneauLateral({ nom }: { nom: string }) {
  * Trois choix : abandonner, garder et fermer (le geste de fin), continuer.
  */
 function ConfirmerAbandon() {
-  const { h } = useDessin(), { quitter, fin } = useInterface(), ac = useActions();
+  const { h } = useDessin(), { quitter, fin, enregistrement } = useInterface(), ac = useActions();
   const racine = useRef<HTMLDivElement>(null), idMessage = useId();
   useEffect(() => {
     if (!quitter) return;
@@ -73,7 +93,8 @@ function ConfirmerAbandon() {
   const n = h.passe.length;
   return (
     <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications" aria-describedby={idMessage} ref={racine}>
-      <span id={idMessage}>{phraseAbandon(n)}</span>
+      {/* Chez un hote qui garde des projets, le compte depuis l'ouverture ne dit pas ce qui reste a enregistrer : une phrase generale. */}
+      <span id={idMessage}>{enregistrement ? 'Abandonner les modifications non enregistrées ?' : phraseAbandon(n)}</span>
       <button type="button" onClick={ac.fermer}>Abandonner</button>
       {/* Le troisieme choix : garder et fermer, sous le libelle du geste de fin (« Terminer » dans la page). */}
       <button type="button" onClick={ac.enregistrerEtFermer}>{fin.libelle}</button>
@@ -88,15 +109,16 @@ function Voile() {
   return tiroir ? <div className="voile" aria-hidden="true" onClick={() => ac.poserTiroir(null)} /> : null;
 }
 
-function etatParDefaut(outil: Outil, nTrace: number, nSel: number): string {
+function etatParDefaut(outil: Outil, nTrace: number, nSel: number, regle: RegleZone): string {
+  if (estOutilZone(outil)) return etatOutilZone(outil, regle, nTrace);
   if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.';
-  if (FORMES.has(outil)) return 'Glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée.';
+  if (FORMES.has(outil)) return nomOutilForme(outil as OutilForme) + ' : glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée · F : autres formes.';
   if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : proportions)' : '');
   return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.';
 }
 
 function BarreEtat() {
-  const { h, sel } = useDessin(), { tiroir, outil, trace, message } = useInterface(), ac = useActions();
+  const { h, sel } = useDessin(), { tiroir, outil, trace, message, enregistrement, regleZone } = useInterface(), ac = useActions();
   const telephone = useTelephone(), doigt = useTactile();
   return (
     <footer className="editeur-etat">
@@ -104,9 +126,13 @@ function BarreEtat() {
         <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
         <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
       </span>
-      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length), doigt)}</span>
+      {/* Le fil d'Ariane, seulement dans un groupe (ADR-0012, annexe 6 §2) : il vient avant le message, qui peut passer a la ligne. */}
+      <FilAriane />
+      <span className="message-etat">{selonSaisie(message || etatParDefaut(outil, trace.length, sel.length, regleZone), doigt)}</span>
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
+      {/* L'etat que l'hote annonce (le site, ADR-0030) : pas une region vocale, la phrase qui l'accompagne passe par la region unique. */}
+      {enregistrement ? <span className="etat-enregistrement" data-etat={enregistrement.etat}>{LIBELLES_ENREGISTREMENT[enregistrement.etat]}</span> : null}
       {telephone ? <BoutonEnregistrer /> : null}
     </footer>
   );
@@ -153,13 +179,16 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
   return (
     <FournisseurMenusOuverts value={signaler}>
       <FournisseurTexte>
-      <div className={'editeur-cadre outil-' + outil + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
+      <FournisseurSaisie>
+      <FournisseurRegles>
+      <div className={'editeur-cadre outil-' + outil + (FORMES.has(outil) ? ' trace-forme' : '') + (tiroir ? ' tiroir-' + tiroir : '') + classes} ref={racine}>
         <Raccourcis toile={toile} />
+        <SuiviDispositions />
         <LienToile svgRef={svgRef} idToile={idToile} />
         <LienVisite />
         <RegionVocale />
         <Barre titre={titre} nom={nom} />
-        <BarreSelection />
+        <Rangee />
         <ConfirmerAbandon />
         <Calques />
         <Voile />
@@ -168,6 +197,8 @@ export const Cadre = memo(function Cadre({ titre, nom, toile, svgRef }: Propriet
         <BarreEtat />
         <BulleVisite />
       </div>
+      </FournisseurRegles>
+      </FournisseurSaisie>
       </FournisseurTexte>
     </FournisseurMenusOuverts>
   );

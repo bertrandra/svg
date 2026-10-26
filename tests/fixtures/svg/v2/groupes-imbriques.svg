@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80">
+  <!-- Des groupes emboites : la matrice et la peinture se resolvent sur les feuilles, l'arbre reste. -->
+  <g fill="#1f5f3f">
+    <rect x="5" y="5" width="30" height="20"/>
+    <g transform="translate(40 0)" fill="#c81e28">
+      <rect x="5" y="5" width="30" height="20"/>
+      <g transform="rotate(15 20 45)"><circle cx="20" cy="45" r="10"/></g>
+    </g>
+    <path d="M5 40h20v20h-20z"/>
+  </g>
+  <!-- Un lien est un groupe comme un autre. -->
+  <a href="#rien"><path d="M90 50h20v20h-20z" fill="#d4a537"/></a>
+  <!-- Un groupe sans rien a dessiner disparait ; un groupe d'une seule forme reste. -->
+  <g><g/></g>
+  <g><path d="M90 5h20v20h-20z" fill="#2a5db0"/></g>
+</svg>

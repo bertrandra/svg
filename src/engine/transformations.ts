@@ -3,7 +3,10 @@
 // pendant un deplacement, les bords et les centres des autres formes et du plan attirent ceux de la
 // selection, a un seuil pres, et disent la ligne a montrer.
 
-import { boiteDe, boiteForme, echelle, multiplier, rotation, transformer, translation, type Boite, type DessinSvg, type Matrice } from './editionSvg.js';
+import {
+  boiteDe, boiteForme, boitesReperes, contexteValide, echelle, estPlat, feuillesDe, multiplier, noeudsDuNiveau, rotation, transformer, translation, visibleEffectif,
+  type Boite, type DessinSvg, type Matrice
+} from './editionSvg.js';
 
 /** Le centre d'une boite. */
 export const centre = (b: Boite): [number, number] => [b.x + b.l / 2, b.y + b.h / 2];
@@ -65,8 +68,12 @@ export function aimanter(boite: Boite, cibles: readonly Boite[], seuil: number):
   return { dx: mx?.d ?? 0, dy: my?.d ?? 0, lignes };
 }
 
-/** Les boites qui servent d'aimants : le plan, et chaque forme visible hors de la selection. */
-export function ciblesAimants(dessin: DessinSvg, exclus: readonly string[]): Boite[] {
+/**
+ * Les boites qui servent d'aimants : le plan, chaque forme visible hors de la selection, et les reperes du document (ADR-0038),
+ * en boites sans epaisseur (`boitesReperes`) : un bord ou le centre de la selection s'y accroche dans leur axe.
+ */
+export function ciblesAimants(dessin: DessinSvg, exclus: readonly string[], contexte: string | null = null): Boite[] {
+  if (!estPlat(dessin)) return ciblesDuContexte(dessin, exclus, contexte);
   const e = new Set(exclus);
   const [x, y, l, h] = dessin.vb;
   const r: Boite[] = [{ x, y, l, h }];
@@ -75,5 +82,25 @@ export function ciblesAimants(dessin: DessinSvg, exclus: readonly string[]): Boi
     const b = boiteForme(f);
     if (b) r.push(b);
   }
+  r.push(...boitesReperes(dessin));
+  return r;
+}
+
+/**
+ * Les aimants d'un dessin riche (ADR-0012, annexe 6 §2) : le plan, les noeuds visibles du niveau du contexte (les freres de ce qu'on
+ * deplace, un groupe par sa boite) hors de la selection, et les reperes. Un noeud dont une feuille est choisie n'attire pas.
+ */
+function ciblesDuContexte(dessin: DessinSvg, exclus: readonly string[], contexte: string | null): Boite[] {
+  const e = new Set(feuillesDe(dessin, exclus));
+  const [x, y, l, h] = dessin.vb;
+  const r: Boite[] = [{ x, y, l, h }];
+  for (const n of noeudsDuNiveau(dessin, contexteValide(dessin, contexte))) {
+    const id = n.genre === 'feuille' ? n.forme.id : n.groupe.id;
+    if (!visibleEffectif(dessin, id)) continue;
+    if (n.genre === 'feuille' ? e.has(id) : dessin.formes.slice(n.debut, n.fin).some(f => e.has(f.id))) continue;
+    const b = n.genre === 'feuille' ? boiteForme(n.forme) : boiteDe(dessin, [id]);
+    if (b) r.push(b);
+  }
+  r.push(...boitesReperes(dessin));
   return r;
 }

@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { lireDessin, marquerOrigine, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { ecrirePdf } from '../../../src/export/pdf.js';
-import { svgDecoupe } from '../../../src/export/svgs.js';
 import { mentionOrigines } from '../../../src/model/credits.js';
+import { ecrirePdf, svgDecoupe } from './plats.js';
 
 // Les exports portent la mention des formes creditees (CC BY 3.0) : le PDF dans son dictionnaire d'informations, le SVG de
 // decoupe en commentaire ; sans forme creditee ils s'ecrivent comme avant. Un PNG ne peut pas la porter (documente).

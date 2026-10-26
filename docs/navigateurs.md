@@ -7,9 +7,9 @@ qui entre dans le code sans y figurer, ou une version au-dessus du plancher sans
 
 > **Honnêteté sur l’origine des chiffres.** Les versions minimales viennent des données de compatibilité
 > de MDN et de caniuse, relevées de mémoire : cet audit a été écrit sans accès au réseau et sans Firefox ni
-> WebKit sous la main. Elles sont à recouper avant de les citer hors de ce dépôt. Chromium est le seul moteur
-> que l’on ait pu exécuter ; Firefox et WebKit tournent en CI (`navigateur`) mais n’y sont pas encore exigés
-> (voir « Ce qui est vérifié »).
+> WebKit sous la main. Elles sont à recouper avant de les citer hors de ce dépôt. Les trois moteurs de
+> Playwright 1.56.1 tournent en CI (`navigateur`) et ont été rejoués en local le 25 octobre 2026 ; Chromium et
+> Firefox y sont exigés, WebKit pas encore (voir « Ce qui est vérifié »).
 
 ## La promesse, en trois niveaux
 
@@ -41,7 +41,8 @@ Ne sont pas pris en charge : Internet Explorer, les navigateurs de console ou de
 |---|---|---|
 | Les versions récentes de Chromium, Firefox et WebKit | La suite `tests/e2e` complète, dans les trois moteurs que Playwright 1.56.1 embarque (Chromium 141, Firefox 142, WebKit 26.0) | job `navigateur` de la CI, une passe par moteur (`NAVIGATEUR=chromium\|firefox\|webkit npm run e2e`) |
 | Chromium | Exigé : la CI échoue si un test tombe | idem |
-| Firefox et WebKit | **Pas encore exigés** (`continue-on-error`, 60 minutes au lieu de 25). Premiers passages lus (voir « Premiers passages de Firefox et WebKit ») : quinze échecs sous Firefox, onze sous WebKit, qui coupait avant la fin. Les causes sont corrigées, mais seul Chromium a pu rejouer la suite depuis : le TODO du workflow dit de les rendre obligatoires dès qu’un passage est vert | idem |
+| Firefox | **Exigé** depuis le 25 octobre 2026 (60 minutes au lieu de 25) : passage entièrement vert en CI sur la fusion de `cc8be02` (1 071 tests passés, les 8 ignorés étant le contraste forcé, alors sauté hors de Chromium) ; le seul échec du passage suivant (une transition lue en route, voir « Passages suivants ») est corrigé | idem |
+| WebKit | **Pas encore exigé** (`continue-on-error`, 60 minutes). Second passage en CI : 20 échecs sur 1 079, tous rejoués et corrigés en local sous WebKit 26 (voir « Passages suivants ») ; le TODO du workflow dit de le rendre obligatoire dès qu’un passage en CI est vert | idem |
 | Les replis de `color-mix()` | Test de navigateur : chaque teinte de repli égale ce que `color-mix()` calcule, à un pas de 8 bits | `tests/e2e/compatibilite.e2e.ts` |
 | Les gardes (API de base manquante, WebAssembly manquant, JavaScript coupé) | Tests de navigateur qui retirent l’API avant l’ouverture de la page | idem |
 | Le moteur et les versions plus anciennes | Aucun test : l’audit statique de ce document, relu par `tests/unit/depot/navigateurs.test.ts` | ce fichier |
@@ -78,26 +79,29 @@ version au-dessus du plancher de la promesse exige un repli écrit dans la derni
 | `prefers-reduced-motion` | 74 | 63 | 10.1 | Absent : les animations jouent |
 | `prefers-color-scheme` | 76 | 67 | 12.1 | Absent : thème clair |
 | `all: revert` | 84 | 67 | 9.1 | Aucun : le bouclier de l’embarquement n’agit pas, l’hôte peut teinter les boutons. Sous le plancher technique |
-| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image |
+| `clip-path` | 55 | 54 | 13.1 | Aucun : le rideau de comparaison de l’atelier (`inset()`) ne coupe pas l’image. Les découpes du modèle riche sont des `<clipPath>` SVG en unités du plan (`userSpaceOnUse`), lus partout bien avant ces versions |
+| `<filter>` | 8 | 3 | 6 | Aucun, sous le plancher technique : le flou et l’ombre du modèle riche (ADR-0012, étape 7) s’écrivent en primitives que tous lisent (`feGaussianBlur`, `feOffset`, `feFlood`, `feComposite`, `feMerge` ; `feDropShadow` se lit, ne s’écrit jamais), sur une région explicite et en `color-interpolation-filters="sRGB"`, dont le défaut linéaire varie d’un moteur à l’autre. Au-delà de 20 nœuds à effet, la toile retire les filtres pendant un geste (`data-brouillon`) |
+| `mask-type` | 24 | 35 | 7 | Aucun, sous le plancher technique : un masque alpha du modèle riche s’écrit `style="mask-type:alpha"` ; un moteur qui l’ignorerait le peindrait en luminance |
 | `vector-effect` | 6 | 15 | 5.1 | Aucun : les traits de sélection grossiraient avec le zoom. Sous le plancher technique |
 | `<details>` | 12 | 49 | 6 | Aucun, toujours présent |
 | `type="color"` | 20 | 29 | 12.1 | Aucun, toujours présent |
 | `Object.hasOwn` | 93 | 92 | 15.4 | Garde de démarrage : le navigateur qui ne l’a pas voit une page en français qui le dit |
 | lookbehind `(?<!` | 62 | 78 | 16.4 | Évité : deux regex de `util/cssPortee.ts` s’en servaient, et une regex que Safari ne sait pas lire tue tout le bundle d’embarquement à l’analyse |
 | `\p{…}` | 64 | 78 | 11.1 | Aucun, toujours présent |
-| `ResizeObserver` | 64 | 69 | 13.1 | Testé avant emploi ; sans lui, les longues listes se remesurent moins vite, et la bulle de la visite guidée ne se replace qu’au redimensionnement de la fenêtre et au relâcher d’un pointeur |
+| `ResizeObserver` | 64 | 69 | 13.1 | Testé avant emploi ; sans lui, les longues listes se remesurent moins vite, et la bulle de la visite guidée ne se replace qu’au redimensionnement de la fenêtre et au relâcher d’un pointeur, et les règles de la toile (ADR-0038) ne se remesurent qu’au redimensionnement de la fenêtre |
 | `matchMedia` | 45 | 55 | 14 | Testé avant emploi ; sans lui, le pointeur est tenu pour fin. L’écoute `addEventListener('change')` demande Safari 14 |
 | `PointerEvent` | 55 | 59 | 13 | Garde de démarrage |
 | `setPointerCapture` | 55 | 59 | 13 | Dans un `try` : sans capture, la toile suit le pointeur tant qu’il la survole |
 | `wheel` | 31 | 17 | 7 | Le pincement du pavé tactile arrive en `wheel` + `Ctrl` dans Chrome et Firefox ; **Safari sur Mac envoie un évènement de geste, non traité** : le zoom passe par la molette, les boutons et le menu Vue |
 | `WebAssembly` | 96 | 79 | 15 | Garde avant la vectorisation : le message dit qu’il manque WebAssembly, l’image reste une image. Extensions du traceur lues dans le binaire par un test : `bulk-memory`, `mutable-globals`, `nontrapping-fptoint`, `reference-types`, `sign-ext`, `multivalue` |
 | `inert` | 102 | 112 | 15.5 | L’hôte est aussi caché par `visibility: hidden`, qui le retire déjà de l’ordre de Tab et des lecteurs d’écran : sans `inert`, rien ne change |
+| `focusVisible` | — | 104 | 18.4 | Ignoré : Chromium et Firefox appliquent d’eux-mêmes `:focus-visible` au focus qu’une flèche déplace ; sans l’option, WebKit ne montre pas l’élément atteint aux flèches dans un menu ouvert à la souris (ni fond ni filet), un lecteur d’écran l’annonce toujours. Voir `zones/commun/focusClavier.ts` |
 | `navigator.clipboard` | 66 | 63 | 13.1 | Dans un `try` ; il n’existe qu’en contexte sécurisé (https, localhost, et pas toujours `file://` selon le navigateur) : « Copier » rend faux et la page le dit |
 | `URL.createObjectURL` | 23 | 19 | 7 | Garde de démarrage. Sur iOS, un téléchargement s’ouvre dans l’aperçu ou la feuille de partage plutôt que dans un dossier |
 | `localStorage` | 4 | 3.5 | 4 | Dans un `try` (accès refusé, navigation privée, `file://`) : brouillon et versions nommées disparaissent, l’éditeur marche |
 | `TextEncoder` | 38 | 18 | 10.1 | Aucun, toujours présent |
 | `DecompressionStream` | 80 | 113 | 16.4 | Testé avant emploi, à l’ouverture d’un PDF et d’une police WOFF du catalogue : sans lui, une police WOFF n’est pas lue ; un PDF dont les flux sont compressés est refusé en le disant (« ce navigateur ne sait pas décompresser… ») ; un PDF sans flux compressé s’ouvre |
-| `fetch` | 42 | 39 | 10.1 | Aucun, sous le plancher technique : il ne sert qu’à télécharger une police du catalogue, après l’accord de la personne (ADR-0025) ; la page ne l’appelle jamais d’elle-même |
+| `fetch` | 42 | 39 | 10.1 | Aucun, sous le plancher technique : il ne sert qu’à télécharger une police du catalogue, quand la personne la choisit (ADR-0025) ; la page ne l’appelle jamais d’elle-même |
 | `crypto.subtle` | 37 | 34 | 11 | Testé avant emploi ; il n’existe qu’en contexte sécurisé (https, localhost, `file://` selon le navigateur) : sans lui, une police téléchargée n’est pas lue (son empreinte ne peut pas être vérifiée) et la page le dit |
 | `caches` | 43 | 41 | 11.1 | Dans un `try` : sans Cache Storage (contexte non sécurisé, refus, stockage plein), une police du catalogue se retélécharge à la session suivante |
 | `queryLocalFonts` | 103 | — | — | Testé avant emploi : sans lui, le bouton « Polices de cet appareil » n’apparaît pas ; déposer un fichier TTF ou OTF reste possible partout |
@@ -149,14 +153,22 @@ Trois cas, du plus doux au plus brutal :
 Un test ne saute jamais en silence : il passe par `sauteSauf(moteurs, raison)` dans `tests/e2e/aide.ts`, et un
 test de dépôt vérifie que la raison est écrite ici, mot pour mot.
 
+**Aucun saut aujourd’hui** : les trois moteurs jouent toute la suite.
+
 | Test | Moteurs qui le jouent | Raison (texte du code) |
 |---|---|---|
-| `contraste-force.e2e.ts` (tout le fichier) | Chromium | `emulateMedia({ forcedColors }) : emulation verifiee sur Chromium seulement` |
+| — | — | — |
 
-À essayer quand la CI aura tourné : Playwright expose `forcedColors` aussi pour Firefox et WebKit ; si
-l’émulation y agit, lever le saut. Le saut de « detecte un pointeur grossier » sous Firefox est levé : un contexte
+Sauts levés : celui de `contraste-force.e2e.ts` (tout le fichier, huit tests), le 25 octobre 2026 : l’émulation
+`emulateMedia({ forcedColors })` agit sous Firefox 142 et WebKit 26 comme sous Chromium (mesuré en local). Deux de ses
+tests tombaient hors de Chromium : l’anneau de focus, parce que le test y arrivait par une touche Maj et un `focus()` par
+script (il y arrive maintenant par Tab et Maj+Tab), et l’élément de menu au focus sous WebKit, un défaut de la page
+(voir `focusVisible` au tableau). Le saut de « detecte un pointeur grossier » sous Firefox est levé aussi : un contexte
 tactile n’y a que `hasTouch` (Playwright refuse `isMobile`), mais Firefox annonce quand même `(pointer: coarse)`
 (lu en CI, Firefox 142), et les trois moteurs attendent maintenant un pointeur grossier.
+
+Ce qu’un moteur n’a pas, sans saut : sous WebKit, `scrollbar-color` n’existe pas (ligne du tableau) ; le test de finition
+admet son absence sous WebKit seul, et exige le jeton partout où elle existe.
 
 Autres différences relues dans les specs, sans changement : les raccourcis `Control+…` passent partout parce que
 l’éditeur accepte Ctrl ou Cmd ; les durées calculées se lisent en secondes par `parseFloat`, donc `1e-05s` passe ;
@@ -190,6 +202,46 @@ WebKit seul est marqué ainsi ; sa cause est déduite de celle de Firefox.
 
 Non vérifié : que ces corrections suffisent sous Firefox et WebKit (aucun passage depuis), la cause exacte des deux audits
 axe, et le reste de `securite.e2e.ts` sous WebKit, qui n’a jamais fini.
+
+## Passages suivants
+
+Firefox, fusion de `5107e87` (PR #16) : **un échec sur 1 084**, le filet du bouton « aucun » lu à 1,98 px d’une teinte
+intermédiaire. Test : il attendait la fin de la transition de la couleur du texte, déjà à la couleur d’outil par le survol,
+pendant que le filet passait encore de 1 à 2 px ; il attend maintenant la fin de toutes les transitions
+(`attendreAnimations`).
+
+WebKit 26, fusion de `cc8be02` : **20 échecs sur 1 079**, la suite enfin finie en 60 minutes. Tous rejoués en local (WebKit 26
+de Playwright 1.56.1) avant et après correction :
+
+| Échec | Cause établie (rejouée en local) | Correction |
+|---|---|---|
+| Onze « fichier déposé » du corpus hostile (`securite.e2e.ts`), un tirage différent à chaque passage (21 en local) | Test : `goto` rend la main à l’évènement `load`, et sous WebKit React n’a pas encore rendu l’accueil une fois sur quatre environ (8 sur 30 chargements mesurés, 0 sous Chromium). Le `drop` synthétique visait `document.querySelector('.depot')?.` : rien, en silence, puis 30 s d’attente | `deposerFichier` (`tests/e2e/aide.ts`) attend la zone de dépôt et échoue en le disant si elle manque ; `import-pdf.e2e.ts` passe par la même aide. Le dépôt par `DataTransfer` et la lecture du `File` marchent sous WebKit |
+| Menus Aide et Machine (`onboarding.e2e.ts` ×3, `cricut.e2e.ts`) : `"Visite guidée\n"` au lieu de `"Visite guidée"` | Test : WebKit termine le `innerText` d’un élément de menu (un bouton en flex aux enfants en boîtes) par une fin de ligne, que la norme fait retirer | `textesDe` (`tests/e2e/aide.ts`) ramène les espaces et retire les bords |
+| Couleur d’outil des curseurs (`finition.e2e.ts`, deux thèmes) : `scrollbarColor` indéfini | WebKit ne connaît pas `scrollbar-color` (ligne du tableau, repli « barres aux couleurs du système ») | Le test lit `CSS.supports` : l’absence n’est admise que sous WebKit, le jeton est exigé ailleurs |
+| Texte d’exemple en grotesque (`finition.e2e.ts`, deux thèmes) : la chasse fixe du champ | Test : WebKit ne calcule pas le style de `::placeholder` par `getComputedStyle`, il rend celui du champ (sonde : couleur et famille du champ, pas de l’exemple) | Une sonde dit si le moteur le calcule ; sinon la couleur, la famille et l’opacité sont relues dans les feuilles (dernière règle `::placeholder` qui vise le champ) et calculées sur un élément voisin. Le contraste de 4,5:1 est ainsi mesuré pour de bon sous WebKit, il ne l’était pas |
+| La molette qui retire la ligne au focus (`couleurs-nombreuses.e2e.ts`) : 3 123 px au lieu de 3 600 | Test : passé 1 000 px, il n’attendait plus qu’un cran ait porté avant d’envoyer le suivant, et WebKit en perdait ; cran par cran, la liste va jusqu’au bout, focus retiré compris (mesuré) | Chaque cran est attendu |
+
+La bascule du modèle riche (ADR-0012, étape 14, 26 octobre 2026), en local, suite entière : Firefox 142 et WebKit 26 **entièrement
+verts** (1 492 tests passés dans chacun, les 4 non joués étant les captures demandées de `texte-enveloppe.e2e.ts`), Chromium 141 aussi,
+sauf un audit axe intermittent (un bouton de constat Cricut survolé à 4,33:1, défaut de la page, corrigé, son fichier et quatre autres
+rejoués verts dans les trois). En route, sous Firefox seul : un clic synthétique ne choisit pas une forme dans un contexte tactile (le
+test la touche), et Firefox tronque au pixel les coordonnées du pointeur (un geste peut perdre un pixel : le test de l'aimant des repères
+visait 5,8 px pour une attraction à 6). Le détail est à l'annexe 8 de l'ADR-0012, « Ce que l'étape 14 a posé ».
+
+Le site PHP sous Firefox (26 octobre 2026) : le premier `goto` d'une session tombait une fois sur deux à 10 s, un test différent
+à chaque passage. **Défaut de Playwright 1.56.1 sous Firefox 142, pas du site** : la page pose `Cross-Origin-Opener-Policy:
+same-origin`, et son premier chargement depuis l'`about:blank` d'une page neuve fait changer Firefox de groupe de contextes de
+navigation ; pendant ce changement, Playwright perd les évènements de cycle de vie du nouveau document (`load`, parfois `commit`)
+alors que la page est chargée (`readyState` à `complete`, relevé pendant l'échec ; toutes les requêtes finies des deux côtés). Une
+page minimale le reproduit (2 sur 30 avec l'en-tête, 0 sur 30 sans). Le fichier du site lance Firefox avec la politique ignorée
+(`pilote({ coopIgnoreeParFirefox: true })`) ; l'en-tête reste exigé par le test, et Chromium et WebKit l'appliquent. Un vrai
+visiteur sous Firefox n'est pas touché.
+
+Trouvé en levant le saut du contraste forcé, **défaut de la page sous WebKit** : un focus posé par script pendant un `keydown`
+dont le geste par défaut est empêché (`preventDefault`, pour que la flèche ne fasse pas défiler la page) n’y reçoit pas
+`:focus-visible`. Un menu ouvert à la souris puis parcouru aux flèches ne montrait donc aucun élément atteint, pas plus que
+les pastilles de la bibliothèque et les onglets de l’accueil parcourus aux flèches après un clic. Correction : ces quatre
+déplacements passent par `focusAuClavier` (`focus({ focusVisible: true })`), sans effet sous Chromium et Firefox.
 
 ## Reproductibilité d’un navigateur à l’autre
 

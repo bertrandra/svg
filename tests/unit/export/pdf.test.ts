@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { composantes, ecrirePdf, operateurs } from '../../../src/export/pdf.js';
-import { svgDecoupe } from '../../../src/export/svgs.js';
+import { composantes, operateurs } from '../../../src/export/pdf.js';
 import { lireDessin, type DessinSvg } from '../../../src/engine/editionSvg.js';
+import { ecrirePdf, svgDecoupe } from './plats.js';
 
 const dessin = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };
 const texte = (o: Uint8Array) => String.fromCharCode(...o);

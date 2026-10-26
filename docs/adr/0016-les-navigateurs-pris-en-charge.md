@@ -1,6 +1,6 @@
 # ADR-0016 — Les navigateurs pris en charge : une garde qui nomme, des replis écrits, trois moteurs en CI
 
-**Date :** 24 octobre 2026
+**Date :** 24 octobre 2026, amendée le 25 octobre 2026 (Firefox exigé, voir « Amendement »)
 **Statut :** acceptée (prolonge les ADR-0007 et 0011) ; aucun octet écrit ne change
 
 ## Contexte
@@ -38,7 +38,7 @@ par la norme.
 5. **Des tests de navigateur indépendants du moteur, en matrice.** `tests/e2e/aide.ts` lance le moteur que nomme
    `NAVIGATEUR` (`chromium` par défaut, `firefox`, `webkit`) ; un test propre à un moteur passe par
    `sauteSauf(moteurs, raison)`, jamais en silence, et sa raison est recopiée mot pour mot dans `docs/navigateurs.md`
-   (deux sauts aujourd'hui). Le job `navigateur` de la CI joue la suite entière dans les trois moteurs que
+   (deux sauts quand la matrice a été posée, aucun depuis l'amendement). Le job `navigateur` de la CI joue la suite entière dans les trois moteurs que
    Playwright 1.56.1 embarque, `fail-fast: false` pour avoir les trois résultats à chaque passage.
 6. **Firefox et WebKit ne bloquent pas encore** (`continue-on-error: ${{ matrix.navigateur != 'chromium' }}` dans
    `.github/workflows/ci.yml`) : ils n'avaient jamais tourné en CI quand la matrice a été posée, et les versions
@@ -52,6 +52,25 @@ par la norme.
 7. **La reproductibilité vaut aussi d'un moteur à l'autre** : `tests/e2e/reecriture.e2e.ts` joue la même rotation,
    inclinaison et mise à l'échelle de courbes et d'arcs dans chaque navigateur et exige les octets du moteur sous Node.
    Un écart sur Firefox ou WebKit est un événement de version majeure à annoncer, pas un bruit.
+
+## Amendement — 25 octobre 2026 : Firefox exigé, le contraste forcé dans les trois moteurs
+
+- **Passage vert constaté.** Firefox 142 a passé la suite entière en CI sur la fusion de `cc8be02` : 1 071 tests passés,
+  8 ignorés, aucun échec. Les 8 ignorés étaient le fichier `contraste-force.e2e.ts`, alors sauté hors de Chromium. Le
+  passage suivant (fusion de `5107e87`) a eu un échec, une transition lue en route par le test, corrigé. **Firefox est
+  exigé** : `continue-on-error: ${{ matrix.navigateur == 'webkit' }}` dans `.github/workflows/ci.yml`. Reste à en faire un
+  contrôle requis de la branche, réglage du dépôt hors du workflow.
+- **WebKit n'est pas encore exigé.** Son second passage en CI a fini (60 minutes) avec 20 échecs sur 1 079. Firefox et WebKit
+  ont pu être installés en local pour la première fois : chaque échec a été rejoué, sa cause établie, et corrigé (quatre
+  causes de test et une de la page, `docs/navigateurs.md`, « Passages suivants »). Il deviendra exigé, par la même ligne,
+  après un passage vert en CI.
+- **Le saut du contraste forcé est levé** : l'émulation `forcedColors` agit sous Firefox et WebKit. Aucun test ne saute plus.
+- **Un défaut de la page sous WebKit, trouvé ainsi** : un focus posé pendant un `keydown` dont le geste par défaut est empêché
+  n'y reçoit pas `:focus-visible` ; les déplacements aux flèches (menus, pastilles, onglets de l'accueil) demandent
+  maintenant l'anneau par `focus({ focusVisible: true })` (`zones/commun/focusClavier.ts`, ligne `focusVisible` du tableau).
+- **Ce que le point 6 laissait ouvert, confirmé** : le `tap()` de Firefox, le téléchargement d'un `blob:` sous WebKit,
+  `localStorage` sous `file://` ; infirmé : `:focus-visible` après une touche Maj et un `focus()` par script, que seul Chromium
+  applique (les tests arrivent au focus par Tab).
 
 ## Conséquences
 

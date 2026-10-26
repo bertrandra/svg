@@ -12,10 +12,11 @@
 // plusieurs morceaux (i, e accent aigu) se separent en morceaux. Pur et deterministe.
 
 import clipping, { type MultiPolygon } from 'polygon-clipping';
-import { boiteChemin, prochainId, sansTexte, seCroisent, sousChemins, type Boite, type Chemin, type Commande, type DessinSvg, type Forme } from '../editionSvg.js';
+import { boiteChemin, grouper, prochainId, sansTexte, seCroisent, sousChemins, type Boite, type Chemin, type Commande, type DessinSvg, type Forme } from '../editionSvg.js';
 import { aireSignee, aplatir, cheminDeRegion, cheminLisseDeRegion, regionDeChemin, toleranceBooleen } from '../booleens.js';
 import { aireDeRegion } from '../contour/region.js';
-import { naturePolice } from '../../model/polices.js';
+import { natureDuTexte } from './vivant.js';
+import { nomGroupeTexte } from '../edition/texteSvg.js';
 
 export type ModeVectorisation = 'lettres' | 'souder-touchantes' | 'tout';
 export const MODES_VECTORISATION: readonly ModeVectorisation[] = ['lettres', 'souder-touchantes', 'tout'];
@@ -43,7 +44,7 @@ export interface ResultatVectorisation {
 }
 
 /** Un texte a trait unique se vectorise sans union : ses traces n'ont pas d'aire. */
-export const estTraceOuvert = (f: Forme): boolean => (f.texte ? naturePolice(f.texte.police.id) === 'trait' : false) || (f.remplissage === null && f.contour !== null);
+export const estTraceOuvert = (f: Forme): boolean => (f.texte ? natureDuTexte(f.texte) === 'trait' : false) || (f.remplissage === null && f.contour !== null);
 
 /** Vrai si deux chemins ont les memes commandes, a `tol` pres (une relecture arrondit au millieme). */
 function memesChemins(a: Chemin, b: Chemin, tol: number): boolean {
@@ -178,4 +179,37 @@ export function vectoriserTextes(dessin: DessinSvg, ids: readonly string[], mode
     return traces.map((d, i) => { const id = i === 0 ? f.id : 'f' + n++; produits.push(id); return { ...base, id, d, regle: 'nonzero' as const }; });
   });
   return { dessin: textes ? { ...dessin, formes } : dessin, ids: produits, textes, parParties };
+}
+
+// Le nom du groupe des lettres d'un texte vit avec la lecture du texte (edition/texteSvg.ts) : un <text> lu en riche le porte aussi
+// (etape 13c). Il reste exporte d'ici, ou on le cherchait.
+export { nomGroupeTexte };
+
+/**
+ * « Lettres séparées » dans le modele riche (ADR-0012, etape 1, le reste de l'etape 10) : comme `vectoriserTextes` en mode
+ * `lettres`, puis les lettres de chaque texte deviennent UN groupe nomme « Texte « … » », a la place et dans le groupe du texte. Un
+ * texte qui ne donne qu'une forme reste une forme. `groupes` : les identifiants des groupes crees, dans l'ordre du dessin. Le choix
+ * du modele est celui de l'interface (etape 2) ; le moteur n'en suppose aucun.
+ */
+export function vectoriserLettresEnGroupes(dessin: DessinSvg, ids: readonly string[], options: OptionsVectorisation = {}): ResultatVectorisation & { readonly groupes: readonly string[] } {
+  const voulus = new Set(ids), existants = new Set(dessin.formes.map(f => f.id));
+  const noms = new Map(dessin.formes.flatMap(f => (voulus.has(f.id) && f.texte && !f.verrouille ? [[f.id, f.texte.texte] as const] : [])));
+  const r = vectoriserTextes(dessin, ids, 'lettres', options);
+  // Les lettres d'un texte se suivent dans `ids` : la premiere garde l'identifiant du texte, les autres sont neuves.
+  const lots: string[][] = [];
+  for (const id of r.ids) {
+    if (noms.has(id)) lots.push([id]);
+    else if (!existants.has(id)) lots[lots.length - 1]?.push(id);
+  }
+  let d = r.dessin;
+  const groupes: string[] = [];
+  for (const lot of lots) {
+    const premier = lot[0];
+    if (lot.length < 2 || premier === undefined) continue;
+    const g = grouper(d, lot, nomGroupeTexte(noms.get(premier) ?? ''));
+    if (g.id === null) continue;
+    d = g.dessin;
+    groupes.push(g.id);
+  }
+  return { ...r, dessin: d, groupes };
 }

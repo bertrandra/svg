@@ -9,8 +9,8 @@ const carre: Chemin = [{ c: 'M', p: [0, 0] }, { c: 'L', p: [10, 0] }, { c: 'L', 
 const trait: Chemin = [{ c: 'M', p: [0, 0] }, { c: 'L', p: [20, 0] }];
 
 describe('les verdicts de l apercu', () => {
-  it('une police a contour : pleine a la decoupe, double trait au stylo', () => {
-    expect(verdictsApercu('contour')).toEqual({ forme: 'Lettres pleines : la lame suit leur pourtour.', ligne: 'Au stylo : lettres creuses, double trait.' });
+  it('une police a contour : pleine a la decoupe, sa ligne au milieu du trait au stylo (le trace Median, ADR-0027)', () => {
+    expect(verdictsApercu('contour')).toEqual({ forme: 'Lettres pleines : la lame suit leur pourtour.', ligne: 'Au stylo : une ligne au milieu du trait (tracé Médian).' });
   });
 
   it('une police a trait : epaissie a la decoupe, une seule ligne au stylo', () => {
@@ -23,11 +23,12 @@ describe('les verdicts de l apercu', () => {
 });
 
 describe('les deux rendus', () => {
-  it('une police a contour : la meme forme, pleine puis en ligne', () => {
-    const a = apercusTexte(carre, 'contour', 1);
+  it('une police a contour : la forme pleine, puis sa ligne mediane quand on la donne (sinon son pourtour)', () => {
+    const a = apercusTexte(carre, 'contour', 1, trait);
     expect(a.forme).toMatchObject({ d: carre, plein: true });
-    expect(a.ligne).toMatchObject({ d: carre, plein: false });
+    expect(a.ligne).toMatchObject({ d: trait, plein: false, verdict: 'Au stylo : une ligne au milieu du trait (tracé Médian).' });
     expect(a.boite).toEqual({ x: 0, y: 0, l: 10, h: 10 });
+    expect(apercusTexte(carre, 'contour', 1).ligne).toMatchObject({ d: carre, plein: false, verdict: 'Au stylo : lettres creuses, double trait.' });
   });
 
   it('une police a trait : la ligne telle quelle, et pour la decoupe le trait epaissi en forme pleine', () => {

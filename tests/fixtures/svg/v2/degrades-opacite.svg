@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="200" height="100">
+  <style>.debut { stop-color: #d4a537 } .fin { stop-color: #1f5f3f; stop-opacity: 0.25 }</style>
+  <linearGradient id="voile" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="90" y2="0">
+    <stop offset="0" class="debut"/>
+    <stop offset="0.6" style="stop-color: rgba(200, 30, 40, 0.5)"/>
+    <stop offset="1" class="fin"/>
+  </linearGradient>
+  <linearGradient id="couleur" gradientUnits="userSpaceOnUse" x1="110" y1="0" x2="190" y2="0" color="#6a2c91">
+    <stop offset="0" stop-color="currentColor"/>
+    <stop offset="1" stop-color="transparent"/>
+  </linearGradient>
+  <rect x="10" y="10" width="80" height="80" fill="url(#voile)" opacity="0.8"/>
+  <rect x="110" y="10" width="80" height="80" fill="url(#couleur)" fill-opacity="0.5" stroke="#15181d" stroke-width="2"/>
+</svg>

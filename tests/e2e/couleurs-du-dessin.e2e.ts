@@ -1,4 +1,4 @@
-// La section « Couleurs du dessin » de l'inspecteur sur un dessin de deux mille couleurs (une vectorisation de photo en
+// La section « Recolorer le dessin » de l'inspecteur sur un dessin de deux mille couleurs (une vectorisation de photo en
 // compte autant, ADR-0008) : la liste se fenetre comme « Par couleur ». Ces tests gardent ce qu'on ne doit pas perdre
 // en la fenetrant : peu de lignes dans la page, mais toutes atteignables (defilement, clavier, doigt), chaque geste d'une
 // ligne qui marche loin dans la liste, et le DOM d'avant sous le seuil.
@@ -72,7 +72,7 @@ describe('couleurs du dessin, deux mille couleurs', () => {
   it('ne dessine qu’une poignee de lignes, et dit leur place aux lecteurs d’ecran', async () => {
     const page = await editeur();
     expect(await formesVisibles(page)).toBe(N);
-    expect(await texteDe(page.locator('details.section', { hasText: 'Couleurs du dessin' }).locator('summary').first())).toContain(String(N));
+    expect(await texteDe(page.locator('details.section:not(.section-nuancier)', { hasText: 'Recolorer le dessin' }).locator('summary').first())).toContain(String(N));
     const n = await lignes(page).count();
     expect(n).toBeGreaterThan(8);
     expect(n).toBeLessThan(LIGNES_MAX);

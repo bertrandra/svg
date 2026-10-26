@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160">
+  <!-- Des degrades lineaires et radiaux (foyer, arret double, unites de boite, transformation), un trait en degrade, des opacites d arrets variables et constantes, la repetition et le reflet. -->
+  <defs>
+    <linearGradient id="trois" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0a2a8a"/><stop offset="0.5" stop-color="#f2b705"/><stop offset="0.5" stop-color="#1f8f4f"/><stop offset="1" stop-color="#c81e28"/></linearGradient>
+    <radialGradient id="foyer" cx="0.5" cy="0.5" r="0.5" fx="0.3" fy="0.3"><stop offset="0" stop-color="#ffffff"/><stop offset="0.6" stop-color="#e05a10"/><stop offset="1" stop-color="#5a1000"/></radialGradient>
+    <linearGradient id="trait" gradientUnits="userSpaceOnUse" x1="170" y1="10" x2="230" y2="70"><stop offset="0" stop-color="#7a00c0"/><stop offset="1" stop-color="#00b0c0"/></linearGradient>
+    <linearGradient id="fondu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2050d0" stop-opacity="1"/><stop offset="1" stop-color="#2050d0" stop-opacity="0"/></linearGradient>
+    <linearGradient id="voile" x1="0" y1="0" x2="1" y2="1"><stop offset="0.2" stop-color="#d02060" stop-opacity="0.5"/><stop offset="0.8" stop-color="#20a0d0" stop-opacity="0.5"/></linearGradient>
+    <linearGradient id="raies" gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="25" y2="0" spreadMethod="repeat"><stop offset="0" stop-color="#202020"/><stop offset="1" stop-color="#e0e0e0"/></linearGradient>
+    <radialGradient id="ondes" gradientUnits="userSpaceOnUse" cx="140" cy="125" r="12" spreadMethod="reflect"><stop offset="0" stop-color="#f0d020"/><stop offset="1" stop-color="#2060a0"/></radialGradient>
+    <linearGradient id="tourne" gradientTransform="rotate(30 0.5 0.5)"><stop offset="0" stop-color="#103010"/><stop offset="1" stop-color="#a0f0a0"/></linearGradient>
+  </defs>
+  <rect x="10" y="10" width="70" height="60" fill="url(#trois)"/>
+  <circle cx="125" cy="40" r="30" fill="url(#foyer)"/>
+  <rect x="173" y="13" width="54" height="54" fill="#fff8e0" stroke="url(#trait)" stroke-width="6"/>
+  <rect x="10" y="90" width="50" height="60" fill="url(#fondu)"/>
+  <rect x="40" y="100" width="50" height="40" fill="url(#voile)" fill-opacity="0.8"/>
+  <rect x="100" y="90" width="20" height="60" fill="url(#raies)"/>
+  <rect x="125" y="95" width="45" height="60" fill="url(#ondes)"/>
+  <rect x="180" y="90" width="50" height="60" fill="url(#tourne)" stroke="#000" stroke-width="1"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140" width="220" height="140">
+  <!-- Sous rotation : un flou isotrope reste isotrope, un flou anisotrope prend l'ecart moyen (dit), sauf au quart de tour ; l'ombre tourne a la lecture -->
+  <defs>
+    <filter id="iso" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="aniso" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="4 1"/></filter>
+    <filter id="ombre" color-interpolation-filters="sRGB"><feDropShadow dx="5" dy="0" stdDeviation="1" flood-color="#000" flood-opacity="0.5"/></filter>
+  </defs>
+  <g transform="rotate(30 60 70)">
+    <rect x="30" y="50" width="60" height="40" fill="#8ecae6" filter="url(#iso)"/>
+  </g>
+  <rect x="120" y="20" width="60" height="30" fill="#219ebc" transform="rotate(-20 150 35)" filter="url(#aniso)"/>
+  <g transform="translate(150 100) rotate(90)" filter="url(#ombre)">
+    <path d="M-15 -15L15 -15L15 15L-15 15Z" fill="#ffb703"/>
+  </g>
+  <path d="M190 80L210 80L200 95Z" fill="#fb8500" transform="matrix(0 1 -1 0 287.5 -112.5)" filter="url(#aniso)"/>
+</svg>

@@ -1,5 +1,5 @@
 {
-  "commentaire": "Corpus hostile : chaque fichier porte un vecteur d'attaque ou un cas limite (voir docs/securite.md). attendu = ouvre (le dessin s'ouvre sans le danger), refus (nettoyage ou lecture refuse, nomme). Les cas volumineux (un million de points, cent mille freres…) sont engendres par tests/unit/securite/volumineux.ts.",
+  "commentaire": "Corpus hostile : chaque fichier porte un vecteur d'attaque ou un cas limite (voir docs/securite.md). attendu = ouvre (le dessin s'ouvre sans le danger), refus (nettoyage ou lecture refuse, nomme), en lecture plate (l'embarquement) ; attenduRiche, quand elle differe, l'issue de la lecture riche (la page, depuis l'etape 14 de l'ADR-0012). Les cas volumineux (un million de points, cent mille freres…) sont engendres par tests/unit/securite/volumineux.ts.",
   "fichiers": [
     {
       "fichier": "script-balise.svg",
@@ -335,7 +335,8 @@
       "fichier": "image-data-png-legitime.svg",
       "famille": "image",
       "vecteur": "Image PNG en base64 legitime : doit rester intacte au nettoyage (mais l'editeur refuse les images)",
-      "attendu": "refus"
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
     },
     {
       "fichier": "image-dans-filtre-feimage.svg",
@@ -473,7 +474,8 @@
       "fichier": "css-selecteur-bombe.svg",
       "famille": "css",
       "vecteur": "Selecteurs a descendants multiples sur un arbre profond (explosion combinatoire)",
-      "attendu": "ouvre"
+      "attendu": "ouvre",
+      "attenduRiche": "refus"
     },
     {
       "fichier": "parsing-commentaire-ferme-tot.svg",
@@ -630,7 +632,8 @@
       "fichier": "ns-svg-imbrique-xhtml.svg",
       "famille": "espace-de-noms",
       "vecteur": "Un <svg> imbrique redeclare xmlns vers XHTML puis rouvre un SVG",
-      "attendu": "refus"
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
     },
     {
       "fichier": "ns-inkscape-legitime.svg",
@@ -834,7 +837,8 @@
       "fichier": "structure-imbrication-modeste.svg",
       "famille": "structure",
       "vecteur": "120 niveaux de <g> : un SVG genere par un outil peut aller aussi loin et doit s'ouvrir",
-      "attendu": "ouvre"
+      "attendu": "ouvre",
+      "attenduRiche": "refus"
     },
     {
       "fichier": "structure-freres-10000.svg",
@@ -1010,6 +1014,461 @@
       "famille": "css",
       "vecteur": "Un NUL glisse dans un echappement CSS (« @\\69m<NUL>port ») : retirer le caractere interdit apres le nettoyage reassemblait @import dans une valeur d'attribut (trouve par le fuzzer)",
       "attendu": "ouvre"
+    },
+    {
+      "fichier": "operation-attribut-piege.svg",
+      "famille": "encodage",
+      "vecteur": "L'operation de production (data-ed-operation, ADR-0028) piegee : schema actif, guillemet qui ferme l'attribut et ouvre un gestionnaire, url(), casse et blancs, operation posee sur un groupe pour etre heritee",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "texte-pose-lien-piege.svg",
+      "famille": "encodage",
+      "vecteur": "Le lien d'un texte pose vers sa forme (ADR-0031) piege : un texte qui se designe lui-meme, deux textes qui se designent l'un l'autre, un rang demesure, un trace encode qui decode en schema actif ou en nombre demesure, une regle qui porte url(), un rang et un trace a la fois, un guillemet qui ferme l'attribut, une marge negative dans un groupe transforme, un reglage sans disposition",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-images-bombe-pixels.svg",
+      "famille": "image",
+      "vecteur": "Bombe de decompression (modele v2, images) : un PNG de 177 octets, un GIF et un WebP etendu (VP8X) qui annoncent 65 000 x 65 000 pixels et plus ; la lecture riche refuse sur l'en-tete, avant tout decodeur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-octets-mensongers.svg",
+      "famille": "image",
+      "vecteur": "Type annonce mensonger (modele v2, images) : un RIFF/WAVE annonce WebP, un BMP annonce PNG, un SVG a script annonce JPEG (marque d'ordre et blancs devant), un PNG sans IHDR, un GIF de 0 x 0 ; la nature se lit sur les octets",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-adresses-actives.svg",
+      "famille": "image",
+      "vecteur": "Adresses d'image actives (modele v2, images) : javascript: en casse mixte et blancs devant, data:text/html, donnees non base64, data:image/svg+xml qui charge une image distante, href distant qui l'emporte sur un xlink:href en ligne",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-base64-abime.svg",
+      "famille": "image",
+      "vecteur": "Base64 abime dans une image en ligne (modele v2, images) : un = au milieu, des caracteres de l'alphabet d'URL, une longueur qui n'est pas un multiple de 4, un echappement pour-cent",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-images-jpeg-segments-pieges.svg",
+      "famille": "image",
+      "vecteur": "Segments JPEG pieges (modele v2, images) : longueur nulle, remplissage 0xFF sans fin, trame SOF coupee, segment qui pointe au-dela du fichier, donnees SOS sans trame ; la lecture des dimensions termine et refuse",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-cycle-href.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrades dont le href boucle (a -> b -> a) : refuse en mode riche, « un cycle de dégradés »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-arrets-massifs.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade de 2 000 arrets (le million est engendre par degrades-hostiles.test.ts) : 64 gardes, le reste dit",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-matrice-nulle.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform nulle ou scale(0) : rien n est peint, comme un navigateur, et c est dit",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-stop-color-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "stop-color en url(http://...) par attribut et par style : une couleur illisible vaut le noir, jamais suivie",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-href-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Degrade utilise dont xlink:href vise un autre fichier : refuse en mode riche, jamais telecharge",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-fill-url-externe.svg",
+      "famille": "v2-degrades",
+      "vecteur": "fill et stroke en url() vers une adresse exterieure, avec couleur de secours : refuses, jamais suivis",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-chaine-longue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Chaine href de 21 degrades : au-dela de 16 maillons, refusee en le nommant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-reference-absente.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#inexistant), avec et sans couleur de secours : rien ou la couleur de secours, et c est dit",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-autre-genre.svg",
+      "famille": "v2-degrades",
+      "vecteur": "url(#a) vers un clipPath ou un rect : ce n est pas un degrade, rien n est peint",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-coordonnees-demesurees.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnee de degrade a 1e300 : refusee, aucune valeur demesuree n entre dans le modele",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-id-double.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Deux degrades de meme id : le premier l emporte, comme un navigateur",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-style-url.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Feuille de style qui reintroduit un stroke url(https://...) sur une forme a degrade",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-degrades-entites-javascript.svg",
+      "famille": "v2-degrades",
+      "vecteur": "gradientTransform qui compose javascript: par entites numeriques : illisible, refuse",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-degrades-unite-inconnue.svg",
+      "famille": "v2-degrades",
+      "vecteur": "Coordonnees de degrade en mm et en em : ni nombre, ni pixels, ni pourcentage, refusees",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "use-href-schema-coupe.svg",
+      "famille": "use",
+      "vecteur": "Renvoi externe d un <use> dont le schema est coupe par un blanc ou un invisible (d<TAB>ata:, java&#10;script:) : rien ne le recompose dans data-href-externe",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-groupes-65-niveaux.svg",
+      "famille": "v2-groupes",
+      "vecteur": "64 + 1 groupes emboites : le mode riche refuse au-dela de PROFONDEUR_GROUPES_MAX, le mode plat les fond",
+      "attendu": "ouvre",
+      "attenduRiche": "refus"
+    },
+    {
+      "fichier": "v2-groupes-10000-emboites.svg",
+      "famille": "v2-groupes",
+      "vecteur": "10 000 groupes emboites : la profondeur de l'analyse XML refuse avant toute lecture, dans les deux modes",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-groupes-bombe-vides.svg",
+      "famille": "v2-groupes",
+      "vecteur": "Bombe de 20 001 groupes vides : le mode riche refuse au-dela de GROUPES_MAX sans rien construire de plus, le mode plat n'en voit aucun",
+      "attendu": "ouvre",
+      "attenduRiche": "refus"
+    },
+    {
+      "fichier": "v2-groupes-nom-injection.svg",
+      "famille": "v2-groupes",
+      "vecteur": "Noms de groupes piegeux (javascript:, onload=, url(), @import, balise script) : ils s'ecrivent encodes en pourcentage, rien ne survit en clair",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-groupes-marqueur-futur.svg",
+      "famille": "v2-groupes",
+      "vecteur": "Marqueur data-ed-modele d'une version plus recente : refuse dans les deux modes, jamais lu au mieux",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-cycle-soi.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Un <clipPath> decoupe par lui-meme : refuse en mode riche, « un cycle de découpes »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-cycle-croise.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Deux decoupes qui s'emploient l'une l'autre (un enfant de a decoupe par b, b decoupe par a) : refuse, « un cycle de découpes »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-use-vers-soi.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Un <use> dans un <clipPath> qui renvoie au <clipPath> : ignore et dit en mode riche, comme un navigateur (un clone n'y vise qu'une forme)",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-decoupes-bombe-imbrication.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Douze decoupes emboitees (chacune decoupee par la suivante) : refuse au-dela de PROFONDEUR_DEFS_MAX (8), sans rien construire de plus",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-bombe-references.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Une decoupe de 50 formes citee par 500 groupes (25 000 formes de definitions) : refuse au-dela de NOEUDS_DEFS_MAX, la lecture termine vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-renvoi-externe.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupes qui renvoient a un fichier ou a une adresse exterieurs : refusees en mode riche ; le nettoyage les neutralise (none), le dessin s'ouvre sans elles",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-decoupes-forme-css.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupe par forme CSS (circle()) : refusee en le nommant, « une découpe par forme CSS », dans les deux modes (en plat, « un masque ou une découpe »)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-porteur-use.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Decoupe posee sur un clone <use> : refusee en le nommant en mode riche (on ne saurait pas la garder), comme en mode plat",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-decoupes-transformation-illisible.svg",
+      "famille": "v2-decoupes",
+      "vecteur": "Transformation illisible sur un <clipPath> (un schema javascript: dans rotate()) : refusee, « une découpe dont la transformation est illisible »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-ecart-1e308.svg",
+      "famille": "v2-effets",
+      "vecteur": "Ecarts de flou et d'ombre demesures (modele v2, effets) : stdDeviation=\"1e308\", un flou de 9e307 sous une echelle de 10 qui deborde a l'infini ; la lecture riche les borne a ECART_MAX et le dit, le mode plat refuse le filtre",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-nan.svg",
+      "famille": "v2-effets",
+      "vecteur": "Nombres illisibles dans des filtres (modele v2, effets) : NaN, Infinity, 1e999, un ecart negatif, trois nombres ; chacun prend sa valeur par defaut, comme dans un navigateur, et c'est dit",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-region-infinie.svg",
+      "famille": "v2-effets",
+      "vecteur": "Regions de filtre infinies, immenses ou en millimetres (modele v2, effets) : la lecture ne s'en sert que pour dire ce qui rognait, l'ecriture pose une region calculee, finie",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-decalage-enorme.svg",
+      "famille": "v2-effets",
+      "vecteur": "Ombre portee decalee de 1e300 (modele v2, effets) : bornee au plus grand cote du plan, et dit",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-primitive-interdite.svg",
+      "famille": "v2-effets",
+      "vecteur": "Primitives hors du sous-ensemble (modele v2, effets) : feImage vers une adresse (pixel espion, fusionnee par feBlend), feTurbulence, feDisplacementMap ; refuse en nommant la primitive, jamais rien de charge",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-filtre-externe.svg",
+      "famille": "v2-effets",
+      "vecteur": "Filtres vers un autre fichier ou une adresse (modele v2, effets) : en attribut et dans une feuille de style ; le nettoyage les eteint (none), la lecture riche du texte brut les refuse en le nommant",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-effets-href-cycle.svg",
+      "famille": "v2-effets",
+      "vecteur": "Filtres qui heritent l'un de l'autre en boucle (xlink:href, modele v2, effets) : l'heritage d'un filtre est refuse en le nommant, sans suivre la chaine",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-chaine-demesuree.svg",
+      "famille": "v2-effets",
+      "vecteur": "Chaine de 500 primitives (modele v2, effets) : refusee des la borne de 16, sans rien evaluer ; le cas massif est engendre par effets-hostiles.test.ts",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-fusion-demesuree.svg",
+      "famille": "v2-effets",
+      "vecteur": "feMerge de 500 noeuds (modele v2, effets) : refuse a la borne de 16 noeuds, sans construire de pile",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-effets-matrice-couleurs.svg",
+      "famille": "v2-effets",
+      "vecteur": "Matrices de couleurs et fusions hostiles (modele v2, etape 13b) : cinq mille nombres, NaN, 1e309, rotation de teinte de 1e308 degres, coefficients arithmetiques demesures, mode de fusion invalide portant une adresse, alpha multiplie par 1e308 ; refuse en nommant la matrice illisible, sans lever ni rien charger",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-cycle-soi.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un <mask> dont le contenu emploie le meme masque : refuse en mode riche, « un cycle de masques »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-cycle-croise.svg",
+      "famille": "v2-masques",
+      "vecteur": "Deux masques qui s'emploient l'un l'autre (un groupe du contenu de a masque par b, une forme de b masquee par a) : refuse, « un cycle de masques »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-use-vers-soi.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un <use> dans un <mask> qui renvoie au <mask> (rien n'est dessine, comme dans un navigateur) et un autre au groupe masque lui-meme (un cycle) : refuse en mode riche",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-bombe-imbrication.svg",
+      "famille": "v2-masques",
+      "vecteur": "Douze masques emboites (une forme de chacun masquee par le suivant) : refuse au-dela de PROFONDEUR_DEFS_MAX (8), sans rien construire de plus",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-bombe-references.svg",
+      "famille": "v2-masques",
+      "vecteur": "Un masque de 50 formes cite par 500 groupes (25 000 formes de definitions) : refuse au-dela de NOEUDS_DEFS_MAX, la lecture termine vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-renvoi-externe.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masques qui renvoient a un fichier ou a une adresse exterieurs : refuses en mode riche ; le nettoyage les neutralise (none), le dessin s'ouvre sans eux",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-masques-css-image.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque CSS (mask-image vers une adresse) : refuse en mode riche, « un masque CSS » ; le nettoyage neutralise l'adresse, le mode plat ne lit pas mask-image",
+      "attendu": "ouvre"
+    },
+    {
+      "fichier": "v2-masques-css-degrade.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque CSS par une feuille de style (-webkit-mask-image en degrade, mask-composite) : refuse en mode riche ; le mode plat ne le lit pas (rien ne change en plat)",
+      "attendu": "ouvre",
+      "attenduRiche": "refus"
+    },
+    {
+      "fichier": "v2-masques-porteur-use.svg",
+      "famille": "v2-masques",
+      "vecteur": "Masque pose sur un clone <use> : refuse en le nommant, « un masque ou une découpe (posé sur un clone <use>) »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-masques-region-demesuree.svg",
+      "famille": "v2-masques",
+      "vecteur": "Region de masque demesuree (x=-1e308, width=1e309, height=NaN) : refusee comme toute coordonnee hors bornes, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-use-recursif.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Un <svg> imbrique qui se clone lui-meme par un <use> : refuse en mode riche, « un cycle de clones <use> » ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-use-croise.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Deux <svg> imbriques qui se clonent l'un l'autre par des <use> : refuse en mode riche, « un cycle de clones <use> »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-viewbox-nul.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbriques a viewBox nul, negatif ou illisible, a largeur nulle ou hauteur negative : en mode riche, rien n'est dessine pour un cadre nul ou un viewBox vide (comme dans un navigateur), le reste s'ouvre ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus",
+      "attenduRiche": "ouvre"
+    },
+    {
+      "fichier": "v2-imbrications-demesure.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbriques a viewBox minuscule (echelle 1e300) et a cadre infini (1e309) : refuses comme toute coordonnee hors bornes, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-unites.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "<svg> imbrique dont le cadre est en cm, mm, in : refuse en le nommant en mode riche (une longueur qui n'est ni un nombre, ni des pixels, ni un pourcentage)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-imbrications-profondeur.svg",
+      "famille": "v2-imbrications",
+      "vecteur": "Cent <svg> imbriques les uns dans les autres : refuse en mode riche par la borne des groupes emboites ; le mode plat refuse le SVG imbrique",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-soi.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Un <pattern> dont la tuile se peint du meme motif : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-croise.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Deux motifs dont chacun peint la tuile de l'autre (fond et trait) : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-cycle-href.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Deux motifs qui heritent l'un de l'autre (href et xlink:href en boucle) : refuse en mode riche, « un cycle de motifs »",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-recursif.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Dix motifs emboites, chacun peint par le suivant : refuse au-dela de PROFONDEUR_DEFS_MAX, en le nommant",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-bombe-references.svg",
+      "famille": "v2-motifs",
+      "vecteur": "150 carres d'une tuile peints par un motif en unites de boite de 150 carres (relu pour chaque taille) : refuse a la borne NOEUDS_DEFS_MAX, vite",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-minuscule.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile de 1e-300 (un motif qui se repeterait 10^600 fois) : refusee en le nommant, rien ne se pave cote moteur",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-nulle.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile de largeur nulle : refusee en le nommant (« la tuile est vide, nulle… »)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-tuile-vide.svg",
+      "famille": "v2-motifs",
+      "vecteur": "<pattern> sans contenu : refuse en le nommant (rien ne s'y repete)",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-renvoi-externe.svg",
+      "famille": "v2-motifs",
+      "vecteur": "<pattern> qui herite d'un fichier distant (xlink:href https://…) : refuse, jamais suivi",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-demesure.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Tuile demesuree (x=-1e308, width=1e309) : refusee, rien ne s'ecrit en Infinity",
+      "attendu": "refus"
+    },
+    {
+      "fichier": "v2-motifs-image.svg",
+      "famille": "v2-motifs",
+      "vecteur": "Une <image> dans une tuile : refusee en le nommant (l'ecriture ne declarerait pas xlink dans une definition)",
+      "attendu": "refus"
     }
   ]
 }

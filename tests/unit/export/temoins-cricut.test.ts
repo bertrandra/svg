@@ -9,17 +9,15 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireDessin, lireDessin, marquerProduction, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { constatsPreparation, marqueDeProfil, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
-import { svgCricut } from '../../../src/export/cricut.js';
-import { printThenCut } from '../../../src/export/printThenCut.js';
+import { constatsPreparation, marqueDeProfil, poserOperation, resoudreProfil, type ProfilProduction } from '../../../src/engine/preparation.js';
 import { svgExporte } from '../../../src/export/svgs.js';
 import { CHOIX_CRICUT_DEFAUT } from '../../../src/model/contextes.js';
-import { svgPourStylo } from '../../../src/export/stylo.js';
 import { hachurerFormes } from '../../../src/engine/contour/hachures.js';
 import { cheminDuTexte } from '../../../src/engine/texte/bloc.js';
 import { creerTexte, nouveauTexte, peintureDuTexte } from '../../../src/engine/texte/vivant.js';
 import { glyphesTrait, type DonneesTrait } from '../../../src/io/policesTrait.js';
 import { pathToFileURL } from 'node:url';
+import { exportParOperation, printThenCut, svgCricut, svgPourStylo } from './plats.js';
 
 const DOSSIER = resolve(__dirname, '../../../docs/cricut/temoins');
 const ACTUALISER = process.env.ACTUALISER_REFERENCES === '1';
@@ -117,7 +115,21 @@ const TEMOINS: ReadonlyArray<{ nom: string; fabriquer: () => string }> = [
       const a = hachurerFormes(d, ['f1', 'f3'], STYLO.largeurStylo, 45).dessin;
       return pourStylo(hachurerFormes(a, ['f2'], STYLO.largeurStylo, 0).dessin);
     }
-  }
+  },
+  // 9. Couper et ecrire (ADR-0028) : une carte de 4 × 2,5 po a couper (rouge), un disque de 1 po a couper (bleu), et le mot « Merci »
+  //    a ecrire au stylo dans la police a trait unique, pose sur la carte. L'export livre trois fichiers : a couper, a ecrire, et les
+  //    deux ensemble en deux groupes. Design Space superpose-t-il les deux premiers ? « Dessiner » et « Attacher » suffisent-ils ?
+  ...(['a-couper', 'a-ecrire', 'combine'] as const).map(fichier => ({
+    nom: 'temoin-9-couper-ecrire-' + fichier + '.svg',
+    fabriquer: () => {
+      const d = lire(rect(0.5, 0.5, 4, 2.5, '#c81e28') + '<circle cx="' + 5.5 * P + '" cy="' + 1.75 * P + '" r="' + P / 2 + '" fill="#1f4e8c"/>', 6.5, 3.5);
+      const t = nouveauTexte('Merci', { id: 'ems-readability' }, P, [1, 0, 0, 1, 1 * P, 2.1 * P]);
+      const mele = creerTexte(d, t, cheminDuTexte(t, glyphesTraitUnique), peintureDuTexte('trait', { remplissage: '#15181d', contour: null, epaisseur: 1 }, MAKER.largeurStylo)).dessin;
+      const r = exportParOperation(mele, MAKER);
+      if ('erreur' in r || r.genre !== 'mixte') throw new Error('erreur' in r ? r.erreur : 'une seule opération');
+      return fichier === 'a-couper' ? r.aCouper : fichier === 'a-ecrire' ? r.aEcrire : r.combine;
+    }
+  }))
 ];
 
 describe('les temoins du protocole Cricut', () => {
@@ -149,9 +161,18 @@ describe('les temoins du protocole Cricut', () => {
     expect(constats('temoin-4-trait.svg')).toEqual(['trait', 'detail-fin']);
     expect(constats('temoin-5-depasse-le-tapis.svg')).toEqual(['piece-trop-grande']);
     expect(constats('temoin-6-print-then-cut-impression.svg', PTC)).toEqual([]);
-    // Au stylo, des traits seuls : rien a dire ; a la lame, le trait unique ne se decoupe pas.
+    // Au stylo, des traits seuls : rien a dire. A la lame non plus : des lignes se proposent a ecrire (ADR-0028) ; dites « à couper »,
+    // elles ne se decoupent pas.
     expect(constats('temoin-7-trait-unique.svg', STYLO)).toEqual([]);
-    expect(constats('temoin-7-trait-unique.svg')).toContain('decoupe-trait-ouvert');
+    expect(constats('temoin-7-trait-unique.svg')).toEqual([]);
+    const lu = lireDessin(readFileSync(resolve(DOSSIER, 'temoin-7-trait-unique.svg'), 'utf8'));
+    if ('erreur' in lu) throw new Error(lu.erreur);
+    const aCouper = poserOperation(lu.dessin, lu.dessin.formes.map(f => f.id), 'decoupe', 'decoupe').dessin;
+    expect(constatsPreparation(aCouper, MAKER).map(c => c.code)).toContain('decoupe-trait-ouvert');
     expect(constats('temoin-8-hachures.svg', STYLO)).toEqual([]);
+    // 9 : chaque fichier d'une seule operation n'a rien a dire, et le fichier combine, rouvert, se partage de lui-meme.
+    expect(constats('temoin-9-couper-ecrire-a-couper.svg')).toEqual([]);
+    expect(constats('temoin-9-couper-ecrire-a-ecrire.svg', STYLO)).toEqual([]);
+    expect(constats('temoin-9-couper-ecrire-combine.svg')).toEqual([]);
   });
 });

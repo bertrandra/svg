@@ -48,6 +48,34 @@ que si « Appuyer sur Tab pour mettre en évidence chaque élément » est coch�
 Avancé (ou avec Option+Tab) ; la toile, elle, a `tabindex`, elle est atteinte dans tous les cas. Sur **iOS et
 TalkBack**, la toile se parcourt par balayage et les touches de forme n’existent pas sans clavier physique :
 vérifier qu’on atteint **tous les boutons** et que les tiroirs s’ouvrent et se ferment (1.13).
+## 1 bis. Lecteurs d’écran : le modèle riche (25 min)
+
+La condition de la bascule de l’ADR-0012 (annexe 6 §9, annexe 8 §1 « Étape 14 ») : l’arbre des calques, le dégradé et les lentilles
+sont les pièces d’accessibilité les plus difficiles de l’éditeur, et aucun lecteur d’écran réel ne tourne en CI. Mêmes paires et même
+critère commun qu’au § 1 ; **NVDA + Firefox** et **VoiceOver + Safari (macOS)** au moins. La page est en modèle riche par défaut
+(la case « Groupes, dégradés, effets » du menu Édition est cochée). Fichier d’essai : collez dans « Ouvrir un SVG ou un PDF »
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><defs><linearGradient id="a"><stop offset="0" stop-color="#c81e28"/><stop offset="1" stop-color="#1428a0"/></linearGradient></defs><g id="Logo"><rect x="10" y="10" width="80" height="60" fill="url(#a)"/><circle cx="140" cy="40" r="30" fill="#1428a0"/></g><path d="M10 100 L190 100" stroke="#15181d" stroke-width="4" fill="none"/></svg>
+```
+
+| # | Geste | Ce qui doit être dit | Réussi si |
+|---|---|---|---|
+| 1b.1 | Calques : Tab jusqu’à l’arbre | « Calques », grille arborescente ; la ligne « Logo », niveau 1, 1 sur 2, réduite ; son nombre d’éléments | **un seul arrêt de Tab** pour toute la grille ; Tab suivant en sort |
+| 1b.2 | Flèche droite, flèche bas, flèche gauche | « développée » ; la ligne enfant, niveau 2, 1 sur 2 ; retour au groupe, « réduite » | niveau, rang et état dits à chaque ligne ; Début et Fin vont aux bouts |
+| 1b.3 | F2 sur « Logo », taper « Marque », Entrée | le champ « Nouveau nom du groupe … » ; la ligne dit ensuite « Marque » | Échap annule sans rien dire de faux |
+| 1b.4 | Ctrl+Maj+flèche bas sur une ligne, puis « Déplacer vers… » | la phrase du déplacement ; le menu des destinations, chaque groupe nommé | le focus reste sur la ligne déplacée |
+| 1b.5 | Toile : Entrée sur le groupe, puis Échap | « Dans le groupe Marque, 2 éléments. », puis « Retour à la racine. » | le fil d’Ariane (« Contexte d’édition ») se lit, et rend le focus à la toile |
+| 1b.6 | Choisir deux formes, Ctrl+G, puis Ctrl+Maj+G | « Groupe créé : 2 formes. », puis « Groupe défait : 2 formes. » | |
+| 1b.7 | Inspecteur, rectangle choisi : Remplissage « Dégradé linéaire » | la liste « Arrêts du remplissage » (zone de liste) ; chaque arrêt avec sa couleur nommée et sa position | flèches haut et bas parcourent les arrêts ; les réglages de l’arrêt se lisent dans le groupe « Réglages de … » |
+| 1b.8 | Toile : Tab jusqu’aux poignées du dégradé, flèches, Maj+flèches, Suppr | chaque poignée est un curseur (« slider ») avec sa valeur en pour cent et sa phrase | ±1 % puis ±10 % dits ; Suppr retire un arrêt du milieu et le dit |
+| 1b.9 | Menu Édition › « Créer une découpe », puis « Modifier la découpe », Échap | la création ; l’entrée dans la découpe, le fil « Racine › Groupe › Découpe » ; la sortie | le reste du dessin estompé n’est pas lu comme choisissable |
+| 1b.10 | « Créer un masque », « Inverser le masque », « Libérer le masque » | chaque geste dit une fois ; une commande grisée dit sa raison | |
+| 1b.11 | Section Effets : flou, puis ombre ; régler l’écart au clavier | chaque champ nommé, sa valeur dite | pas de relecture de toute la section à chaque pas |
+| 1b.12 | Fichier › « Insérer une image… », puis Entrée (points) sur l’image | l’image insérée, dite « image PNG » ; le refus des points, en clair | |
+| 1b.13 | Texte : saisir « Bonjour », Vectoriser › Lettres séparées | « … : 7 formes ordinaires, en un groupe. » | l’arbre montre le groupe « Texte « Bonjour » » |
+| 1b.14 | Fichier › « Télécharger le SVG à plat » ; Édition › case du modèle | le téléchargement dit, sans enregistrement ; « Groupes, dégradés et effets désactivés : … » | la case est dite « case à cocher de menu, cochée / non cochée » |
+
 ## 2. Contraste élevé de Windows (10 min)
 
 Windows 11 › Accessibilité › Thèmes de contraste : **Aquatique**, **Désert**, **Crépuscule**, **Contraste
@@ -101,6 +129,7 @@ paysage.
 | 4.4 | Paume posée sur l’écran pendant un trait | pas de seconde forme ni de zoom parasite |
 | 4.5 | Stylet puis doigt sur la même toile | le doigt déplace/zoome, le stylet dessine, sans geste coincé |
 | 4.6 | Survol de l’Apple Pencil (iPad M2) ou S Pen au-dessus d’une forme | sans erreur ; pas d’effet attendu |
+| 4.7 | Au doigt, l’outil Cadre (menu du bouton Sélection), un glisser commencé sur une forme ; puis le Lasso | rien ne se déplace ; les formes touchées portent le liseré pendant le geste et sont choisies au relâchement ; deux doigts pendant le geste zooment sans rien choisir |
 
 ## 5. Claviers AZERTY, QWERTZ, QWERTY (10 min)
 
@@ -109,7 +138,7 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | # | Raccourci | Réussi si |
 |---|---|---|
 | 5.1 | Ctrl (Cmd sur Mac) + Z, Y, Maj+Z | annuler / rétablir ; la touche est celle de la lettre, pas sa position |
-| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare) ; Ctrl+S garde un brouillon et dit « Brouillon gardé. », **sans fermer l’éditeur** ni ouvrir « Enregistrer sous » du navigateur |
+| 5.2 | Ctrl+A, Ctrl+D, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+G, Ctrl+S | tout choisir, dupliquer, copier, coller, couper, combiner (Maj+Ctrl+G sépare ; avec le modèle riche, grouper et dégrouper) ; Ctrl+S garde un brouillon et dit « Brouillon gardé. », **sans fermer l’éditeur** ni ouvrir « Enregistrer sous » du navigateur |
 | 5.3 | Ctrl+] et Ctrl+[ : sur AZERTY et QWERTZ ces crochets demandent AltGr (Ctrl+Alt sous Windows) | le plan avance / recule, ou le menu Édition dit un raccourci qui marche sur cette disposition ; noter la combinaison réelle |
 | 5.4 | Lettres d’outils et de vue (R rectangle, G grille, Z zoom sur la sélection, M aimants) sur AZERTY et QWERTZ : « Z », « W », « Y » ne sont pas aux mêmes places | la lettre d’outil est celle **imprimée sur la touche** (`e.key`), pas la position QWERTY |
 | 5.5 | Alt+flèches (Windows, Linux) | l’objet se redimensionne, **le navigateur ne revient pas à la page précédente** (Chrome, Edge, Firefox) |
@@ -117,6 +146,8 @@ Windows (Edge ou Chrome) puis macOS (Safari), pour chaque disposition. Sur la to
 | 5.7 | Cmd+[ et Cmd+] dans Safari | le plan change **et** Safari ne navigue pas en arrière/avant |
 | 5.8 | Tab, Maj+Tab, Échap, Entrée, Espace, Suppr, Retour arrière | comme dans les tests : Tab ne piège jamais |
 | 5.9 | Saisir « é », « ç » et le texte de la forme avec les dispositions ci-dessus | le texte en formes écrit les bons caractères |
+| 5.10 | Alt+C (même couleur de contour), et en contexte Cricut Alt+Maj+X et Alt+Maj+E (tout ce qui est à couper, à écrire), sous Windows (barre de menus du navigateur visible ou non) et Option sur macOS | la sélection change ; aucun menu du navigateur ne s’ouvre ; sur macOS, Option+C ne tape pas « ç » dans la toile |
+| 5.11 | Alt+glisser sur le vide (retirer de la sélection) sous un bureau Linux qui réserve Alt+glisser au déplacement des fenêtres | noter si la fenêtre se déplace au lieu du cadre ; Alt+cadre avec l’outil Cadre (B) aussi |
 
 ## 6. Zoom et taille du texte (5 min)
 

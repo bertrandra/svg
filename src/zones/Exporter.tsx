@@ -12,9 +12,13 @@ import { LARGEURS_PNG, OPTIONS_EXPORT_DEFAUT, type OptionsExport } from '../expo
 import { MenuDeroulant } from './commun/Menu.js';
 import { copierSvg, exporterDecoupe, exporterDxf, exporterEps, exporterPdf, exporterPng, exporterRaster, exporterSvg, svgPropreDe, type ContexteExport } from './actionsExport.js';
 import { OptionsExportPanneau } from './OptionsExport.js';
+import { optionsModele } from './modele.js';
+import type { Modele } from './typesEditeur.js';
 
 interface Proprietes {
   svg: string; dessin?: DessinSvg; nom: string; dire: (t: string) => void;
+  /** Le modele de lecture de `svg` quand le dessin n'est pas donne (la page, ADR-0012 annexe 5 §3) ; absent : `plat`. */
+  modele?: Modele;
   /** Une ligne de plus en tete (l'export du contexte, ou le SVG quand le bouton principal est un autre format). */
   enTete?: ReactNode;
 }
@@ -26,9 +30,12 @@ const session = { options: OPTIONS_EXPORT_DEFAUT, largeurPng: 1024, couleurDecou
 /** Les options du moment (session) : le bouton principal « Télécharger le SVG » de la page les suit, comme le faisait « SVG ». */
 export const optionsDeSession = (): OptionsExport => session.options;
 
-/** Le contexte d'export d'un SVG donne (la page) ou d'un dessin deja lu (l'editeur), avec les reglages de la session. */
-export function contexteExport(svg: string, dessin: DessinSvg | undefined, nom: string, dire: (t: string) => void, options = session.options): ContexteExport {
-  const lu = dessin ?? (() => { const r = lireDessin(svg); return 'erreur' in r ? null : r.dessin; })();
+/**
+ * Le contexte d'export d'un SVG donne (la page) ou d'un dessin deja lu (l'editeur), avec les reglages de la session. Le SVG se lit
+ * dans le modele donne (`plat` par defaut) : celui ou l'editeur l'a ecrit.
+ */
+export function contexteExport(svg: string, dessin: DessinSvg | undefined, nom: string, dire: (t: string) => void, options = session.options, modele?: Modele): ContexteExport {
+  const lu = dessin ?? (() => { const r = lireDessin(svg, optionsModele(modele)); return 'erreur' in r ? null : r.dessin; })();
   return { lu, svgPropre: svgPropreDe(lu, svg), nom, options, couleurDecoupe: session.couleurDecoupe, largeurPng: session.largeurPng, dire };
 }
 
@@ -44,12 +51,12 @@ export function LigneFormat({ libelle, aide, desactive, onClick, children }: { l
 }
 
 /** Les autres formats, une ligne chacun, puis les options d'export repliees. */
-export function ListeFormats({ svg, dessin, nom, dire, enTete }: Proprietes) {
+export function ListeFormats({ svg, dessin, nom, dire, enTete, modele }: Proprietes) {
   const [options, poserOptions] = useState<OptionsExport>(session.options);
   const [largeurPng, poserLargeurPng] = useState(session.largeurPng);
   const [couleurDecoupe, poserCouleurDecoupe] = useState(session.couleurDecoupe);
   const poser = (p: Partial<OptionsExport>) => { const n = { ...options, ...p }; session.options = n; poserOptions(n); };
-  const c: ContexteExport = { ...contexteExport(svg, dessin, nom, dire, options), couleurDecoupe, largeurPng };
+  const c: ContexteExport = { ...contexteExport(svg, dessin, nom, dire, options, modele), couleurDecoupe, largeurPng };
   const vect = !c.lu;
   return (
     <div className="contenu-export" role="group" aria-label="Autres formats">
@@ -79,8 +86,8 @@ export function LigneSvg({ faire }: { faire: () => void }) {
 }
 
 /** « Télécharger le SVG » de la page : le SVG avec les options d'export du moment, comme le faisait le bouton « SVG » du menu. */
-export function telechargerSvgPage(svg: string, nom: string, dire: (t: string) => void): void {
-  exporterSvg(contexteExport(svg, undefined, nom, dire));
+export function telechargerSvgPage(svg: string, nom: string, dire: (t: string) => void, modele?: Modele): void {
+  exporterSvg(contexteExport(svg, undefined, nom, dire, session.options, modele));
 }
 
 /** « Autres formats » de la fiche de la page : un menu dont le contenu est la liste des formats. */

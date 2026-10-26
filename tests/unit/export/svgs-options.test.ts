@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ecrireChemin, ecrireDessin, lireChemin, lireDessin, sousChemins, type Chemin, type DessinSvg } from '../../../src/engine/editionSvg.js';
-import { cheminCompact, svgDecoupe, svgExporte, tailleRacine } from '../../../src/export/svgs.js';
+import { cheminCompact, svgExporte, tailleRacine } from '../../../src/export/svgs.js';
+import { svgDecoupe } from './plats.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const dessin = (svg: string): DessinSvg => { const r = lireDessin(svg); if ('erreur' in r) throw new Error(r.erreur); return r.dessin; };

@@ -14,6 +14,7 @@ import { EtatVide } from './commun/EtatVide.js';
 import { Section } from './commun/Section.js';
 import { useDessin, useInterface } from './contexteEditeur.js';
 import { ListeCouleurs } from './ListeCouleurs.js';
+import { LigneDegrades } from './LigneDegrades.js';
 import { useActionsCouleur } from './actionsCouleur.js';
 
 const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
@@ -23,7 +24,7 @@ const SURS: ReadonlyArray<readonly [SurCouleur, string, string]> = [
 // La tolerance se regle en centiemes d'ecart OKLab (util/couleur.ts) : 2 se devine, 10 saute aux yeux.
 const TOLERANCE_MIN = 1, TOLERANCE_MAX = 15, TOLERANCE_DEFAUT = 4;
 
-// Un petit dessin n'a rien a gagner d'un regroupement par couleur : la liste des formes et « Couleurs du dessin » disent deja tout, et
+// Un petit dessin n'a rien a gagner d'un regroupement par couleur : la liste des formes et « Recolorer le dessin » disent deja tout, et
 // l'ouvrir ajoute au premier ecran des onglets, une tolerance et deux boutons qu'on ne touche pas encore. La section ne s'ouvre d'elle-meme
 // qu'a partir de ces seuils, jugee une fois, a l'ouverture du dessin (pas a chaque forme qu'on ajoute : elle ne bougerait plus d'elle-meme) ;
 // ce que la personne ouvre ou ferme ensuite se retient (Section).
@@ -68,6 +69,7 @@ export function ParCouleur() {
       ) : sur === 'tout'
         ? <EtatVide genre="aucun-resultat" titre="Aucune forme n’a de couleur." />
         : <EtatVide genre="aucun-resultat" titre={'Aucune forme n’a de ' + (sur === 'contour' ? 'contour' : 'remplissage') + '.'} action={{ libelle: 'Lire le fond et le trait', onClick: () => poserSur('tout') }} />}
+      <LigneDegrades dessin={dessin} sur={sur} />
       <div className="nuances-proches">
         <label className="champ-ligne">
           <span>Tolérance</span>

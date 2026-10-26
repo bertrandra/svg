@@ -5,6 +5,7 @@ import type { Forme } from './types.js';
 import { lirePeintureAlpha, type PeintureLue } from './peinture.js';
 import { arrondirOpacite, lireOpacite } from './opacites.js';
 import type { Proprietes } from './ignores.js';
+import type { PriseEnCharge } from './fonctionnalites.js';
 
 // Les proprietes que CSS transmet d'un element a ses enfants (`opacity`, `display`, le masque ne le sont pas).
 const HERITEES = [
@@ -64,11 +65,26 @@ export function lireTaillePolice(v: string | undefined, parent: number): number 
   return Math.min(px, 1e6);
 }
 
-/** Ce qui change le rendu au point de ne pas s'editer (masque, decoupe, filtre) sur un element, ou null. */
-export function refusDe(pr: Proprietes): string | null {
-  if ((pr['clip-path'] && pr['clip-path'] !== 'none') || (pr.mask && pr.mask !== 'none')) return 'un masque ou une découpe';
-  if (pr.filter && pr.filter !== 'none') return 'un filtre';
+const AUCUNE_PRISE: ReadonlySet<PriseEnCharge> = new Set();
+
+/**
+ * Ce qui change le rendu au point de ne pas s'editer (masque, decoupe, filtre) sur un element, ou null. `prises` dit ce qu'une
+ * fonctionnalite du mode riche sait lire (fonctionnalites.ts) ; vide en mode plat, qui refuse donc exactement comme avant.
+ */
+export function refusDe(pr: Proprietes, prises: ReadonlySet<PriseEnCharge> = AUCUNE_PRISE): string | null {
+  if ((pr['clip-path'] && pr['clip-path'] !== 'none' && !prises.has('decoupe')) || (pr.mask && pr.mask !== 'none' && !prises.has('masque'))) return 'un masque ou une découpe';
+  if (pr.filter && pr.filter !== 'none' && !prises.has('filtre')) return 'un filtre';
   return null;
+}
+
+/**
+ * Une prise (filtre, decoupe, masque) posee sur un element qu'aucune fonctionnalite ne complete en feuille ni en groupe (un clone
+ * <use>, un texte lu en lettres, un symbole, la racine) : refusee comme en mode plat, en disant ou elle est posee. null si l'element
+ * n'en porte pas. En mode plat, `refusDe` l'a deja refusee avec la phrase d'aujourd'hui : rien ne change par ici (ADR-0012, etape 7).
+ */
+export function refusHorsFeuille(pr: Proprietes, ou: string): string | null {
+  const r = refusDe(pr);
+  return r ? r + ' (' + ou + ')' : null;
 }
 
 /**

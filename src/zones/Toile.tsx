@@ -1,10 +1,12 @@
 // Ce qui se dessine sur la toile : les formes, la grille, et la surcouche (selection, poignees, trace).
 
 import { memo, type ReactNode } from 'react';
-import { ancre, attributsTrait, depart, ecrireChemin, opaciteDuContour, opaciteDuRemplissage, type Boite, type DessinSvg, type Forme } from '../engine/editionSvg.js';
+import { ancre, attributsTrait, boiteDe, depart, ecrireChemin, estPlat, feuillesDe, opaciteDuContour, opaciteDuRemplissage, type DessinSvg, type Forme } from '../engine/editionSvg.js';
 import { FORMES } from './aidesEditeur.js';
 import { formeTracee } from './Gestes.js';
+import { PoigneesDegrade } from './PoigneesDegrade.js';
 import type { Coin, EtatInterface, ModeleDessin, OutilForme } from './typesEditeur.js';
+import { niveauEdition } from './lentille.js';
 
 const cacheChemins = new WeakMap<Forme, string>();
 export function cheminDe(f: Forme): string {
@@ -14,11 +16,12 @@ export function cheminDe(f: Forme): string {
 }
 
 /** Le style du trait en proprietes React (stroke-dasharray devient strokeDasharray) : la meme liste que l'ecriture du SVG. */
-const traitReact = (f: Forme): Record<string, string> =>
+export const traitReact = (f: Forme): Record<string, string> =>
   Object.fromEntries(attributsTrait(f).map(([k, v]) => [k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()), v]));
 
-export const Calque = memo(function Calque({ f, contours }: { f: Forme; contours: boolean }) {
-  if (!f.visible) return null;
+export const Calque = memo(function Calque({ f, contours, masquee = false }: { f: Forme; contours: boolean; masquee?: boolean }) {
+  // Masquee : le texte en saisie ne dessine rien pour l'instant (vide, ou fait de blancs), ses contours d'avant ne se montrent pas.
+  if (!f.visible || masquee) return null;
   const pe = f.verrouille ? 'none' : contours ? 'all' : f.remplissage ? 'visiblePainted' : 'stroke';
   return contours
     ? <path data-id={f.id} className="trace-contour" d={cheminDe(f)} fill="none" fillRule={f.regle} pointerEvents={pe} />
@@ -41,15 +44,29 @@ export function Grille({ vb, pas }: { vb: DessinSvg['vb']; pas: number }) {
   );
 }
 
-/** Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, cadre, trace en cours. */
-export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, cadre: Boite | null, tactile: boolean): ReactNode[] {
+/**
+ * Ce qui se dessine par-dessus : selection, boite et coins, points et poignees, trace en cours. Pendant la saisie d'un texte
+ * (`saisie`), ni selection ni poignees : la saisie dessine son cadre et son curseur (SaisieTexte.tsx). Le cadre et le lasso de
+ * selection se dessinent a part (ZoneToile.tsx, ADR-0035).
+ */
+export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, tactile: boolean, saisie = false): ReactNode[] {
   const r: ReactNode[] = [];
+  if (saisie) return r;
   // Au doigt, les poignees grossissent : une cible de 8 px ne se touche pas.
   const px = unite * (tactile ? 1.8 : 1);
   // Une forme par identifiant, une fois : `find` pour chaque forme choisie coute n x m (5000 x 5000 = 60 ms).
   const parId = new Map<string, Forme>();
   if (mo.sel.length) for (const x of mo.dessin.formes) if (!parId.has(x.id)) parId.set(x.id, x);
-  for (const id of mo.sel) {
+  // Un dessin riche (ADR-0012, etape 2) : le groupe ou l'on est entre montre sa boite, et un groupe choisi le trace de ses feuilles.
+  const riche = !estPlat(mo.dessin);
+  // Dans une decoupe ou un masque (paquet 8-D), le niveau est un groupe du contenu, ou sa racine (rien a cerner : la toile le montre).
+  const niveau = niveauEdition(ui.contexte), boiteContexte = riche && niveau !== null ? boiteDe(mo.dessin, [niveau]) : null;
+  if (boiteContexte) {
+    const { x, y, l, h } = boiteContexte;
+    r.push(<rect key="contexte-fond" className="contour-groupe-fond" x={x} y={y} width={l} height={h} pointerEvents="none" />);
+    r.push(<rect key="contexte" className="contour-groupe" x={x} y={y} width={l} height={h} pointerEvents="none" />);
+  }
+  for (const id of riche ? feuillesDe(mo.dessin, mo.sel) : mo.sel) {
     const f = parId.get(id);
     if (f) r.push(<path key={'s' + id} className="trace-choisi" d={cheminDe(f)} pointerEvents="none" />);
   }
@@ -67,6 +84,8 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
     // La poignee de rotation, au-dessus du milieu du bord haut.
     r.push(<line key="lien-rot" className="lien-poignee" x1={b.x + b.l / 2} y1={b.y} x2={b.x + b.l / 2} y2={b.y - 22 * px} pointerEvents="none" />);
     r.push(<circle key="rot" data-rotation="1" className="poignee-rotation" cx={b.x + b.l / 2} cy={b.y - 22 * px} r={5 * px} />);
+    // Les poignees du degrade de la forme choisie seule (ADR-0012, etape 4) : par-dessus la boite, un curseur par arret et par extremite.
+    r.push(<PoigneesDegrade key="poignees-degrade" unite={unite} tactile={tactile} />);
   }
   for (const [i, g] of ui.guides.entries()) {
     r.push(g.axe === 'x'
@@ -95,14 +114,14 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
   // Une forme a deux coins au clavier : le premier coin est pose (la trace n'a que lui), l'apercu va jusqu'au reticule.
   const [coin1] = ui.trace;
   if (FORMES.has(ui.outil) && ui.trace.length === 1 && coin1 && ui.curseur) {
-    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false);
+    const d = formeTracee(ui.outil as OutilForme, coin1[0], coin1[1], ui.curseur[0], ui.curseur[1], false, ui.parametres);
     r.push(<path key="apercu" className="trace-en-cours" d={ecrireChemin(d, 3)} pointerEvents="none" />);
   }
   if (ui.trace.length) {
     r.push(<polyline key="trace" className="trace-en-cours" points={ui.trace.map(q => q[0] + ',' + q[1]).join(' ')} pointerEvents="none" />);
     ui.trace.forEach((q, i) => r.push(<rect key={'t' + i} className={'ancre' + (i === 0 ? ' ancre-choisie' : '')} x={q[0] - 3.5 * px} y={q[1] - 3.5 * px} width={7 * px} height={7 * px} pointerEvents="none" />));
   }
-  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume')) {
+  if (ui.curseur && (FORMES.has(ui.outil) || ui.outil === 'plume' || ui.outil === 'texte')) {
     // Le reticule du clavier : deux traits et un point, de taille fixe a l'ecran quel que soit le zoom.
     const [cx, cy] = ui.curseur, t = 12 * px;
     r.push(
@@ -113,6 +132,5 @@ export function surcouche(mo: ModeleDessin, ui: EtatInterface, unite: number, ca
       </g>
     );
   }
-  if (cadre) r.push(<rect key="cadre" className="cadre-selection" x={cadre.x} y={cadre.y} width={cadre.l} height={cadre.h} pointerEvents="none" />);
   return r;
 }

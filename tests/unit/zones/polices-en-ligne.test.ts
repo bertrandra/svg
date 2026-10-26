@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { CLE_FAVORIS, CLE_RECENTES, listeDeCles } from '../../../src/zones/contexteTexte.js';
-import { phraseServeurs } from '../../../src/zones/ConsentementPolices.js';
 import { policeDuTexte } from '../../../src/zones/actionsTexte.js';
 import { glyphesCarres } from '../engine/glyphesFactices.js';
 
-// Les polices en ligne dans l'interface (ADR-0025) : les conforts du stockage (favoris, recentes) lus avec mefiance, la phrase
-// du dialogue qui nomme les serveurs, ce qu'un texte garde de sa police, et la regle qui tient le reseau dans `io`.
+// Les polices en ligne dans l'interface (ADR-0025) : les conforts du stockage (favoris, recentes) lus avec mefiance, ce qu'un
+// texte garde de sa police, la regle qui tient le reseau dans `io`, et l'accord par serveur retire (le choix vaut demande).
 
 const racine = resolve(__dirname, '../../..');
 function fichiers(dir: string): string[] {
@@ -24,11 +23,13 @@ describe('les favoris et les recentes du stockage', () => {
   });
 });
 
-describe('le dialogue de consentement', () => {
-  it('nomme chaque serveur et son hote, le repli apres le principal', () => {
-    expect(phraseServeurs(['jsdelivr', 'bunny'])).toBe('jsDelivr (cdn.jsdelivr.net), puis, s’il ne répond pas, Bunny Fonts (fonts.bunny.net)');
-    expect(phraseServeurs(['fontshare'])).toBe('Fontshare (cdn.fontshare.com)');
-    expect(phraseServeurs(['bunny'])).toBe('Bunny Fonts (fonts.bunny.net)');
+describe('plus d accord par serveur', () => {
+  it('aucun dialogue de consentement ni ecriture de l ancienne cle dans src/ : choisir une police vaut demande', () => {
+    for (const f of fichiers(join(racine, 'src'))) {
+      const t = readFileSync(f, 'utf8'), chemin = relative(racine, f).replace(/\\/g, '/');
+      expect(/DialogueConsentement|Accepter et retenir|Retirer l’autorisation|ecrire\(ANCIENNE_CLE/.test(t), chemin).toBe(false);
+      if (chemin !== 'src/io/policesEnLigne.ts') expect(t.includes('svg.polices.consentement'), chemin).toBe(false);
+    }
   });
 });
 
@@ -42,9 +43,14 @@ describe('ce qu un texte garde de sa police', () => {
 });
 
 describe('le reseau ne vit que dans io', () => {
-  it('un seul appel a fetch dans tout src/ : le telechargement d une police, dans io/policesEnLigne.ts', () => {
+  // La regle « un seul fetch dans src/ » (ADR-0025) devient « le reseau passe par io/ » avec le site PHP (ADR-0030) : le
+  // telechargement d'une police, et le serveur du site (projets, donnees, polices servies par le site). Ouvrir depuis une adresse
+  // (ADR-0036) y ajoute io/adresse.ts, au seul geste de la personne. Rien d'autre, nulle part.
+  it('le reseau ne passe que par io/ : une police, une adresse ouverte, le serveur du site, rien d autre', () => {
     const appels = fichiers(join(racine, 'src')).filter(f => /\bfetch\(|XMLHttpRequest|sendBeacon|new WebSocket|new EventSource/.test(readFileSync(f, 'utf8')));
-    expect(appels.map(f => relative(racine, f).replace(/\\/g, '/'))).toEqual(['src/io/policesEnLigne.ts']);
+    const chemins = appels.map(f => relative(racine, f).replace(/\\/g, '/'));
+    expect(chemins.every(c => c.startsWith('src/io/')), chemins.join(', ')).toBe(true);
+    expect(chemins).toEqual(['src/io/adresse.ts', 'src/io/policesEnLigne.ts', 'src/io/serveur.ts']);
   });
 
   it('crypto.subtle, Cache Storage et Local Font Access ne s emploient que dans io', () => {

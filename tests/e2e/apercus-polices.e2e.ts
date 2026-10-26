@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
 import { attend, ouvrirCode, pilote, RACINE_DEPOT, URL_PAGE, type Session } from './aide.js';
+import { champPolice } from './polices.js';
 import { enWoff } from '../unit/io/woffFactice.js';
 import type { CataloguePolices, FamilleCatalogue } from '../../src/model/cataloguePolices.js';
 
@@ -42,7 +43,7 @@ async function explorer(page: Page, tactile = false): Promise<void> {
     await page.keyboard.press('t');
   }
   const inspecteur = page.locator('.editeur-inspecteur');
-  await inspecteur.locator('select[aria-label="Police"]').waitFor({ timeout: 30_000 });
+  await champPolice(inspecteur).waitFor({ timeout: 30_000 });
   const bouton = inspecteur.getByRole('button', { name: 'Toutes les polices' });
   if (tactile) await bouton.tap(); else await bouton.click();
   await attend(() => page.locator('.explorateur-polices .polices-total').innerText()).toMatch(/polices$/);
@@ -157,7 +158,6 @@ describe('les apercus des polices', () => {
     // Avant : une famille de l'index d'essai, sans apercu prepare (l'annexe ne la connait pas) : son nom ecrit.
     expect((await apercuDe(page, 'Police Essai')).source).toBe('nom');
     await ligne(page, 'Police Essai').click();
-    await page.getByRole('button', { name: 'Accepter et retenir' }).click();
     await attend(() => apercuDe(page, 'Police Essai').then(a => a.source)).toBe('disponible');
   });
 

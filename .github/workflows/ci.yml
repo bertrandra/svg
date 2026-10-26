@@ -31,7 +31,11 @@ jobs:
         run: npm run cliquet
       - name: Tests (couches, purete, moteur)
         run: npm test
-      - name: Page autonome (le moteur se compile pour la page)
+      # Le site PHP (ADR-0030) : ses fonctions et ses routes, sous `php -S`, sans dependance. Le PHP du runner Ubuntu suffit
+      # (8.3, avec cURL et mbstring) ; la version minimale promise est 8.1 (docs/deploiement-php.md).
+      - name: Tests PHP (site, connexion, projets, polices)
+        run: php -v && npm run test:php
+      - name: Page autonome et site PHP (le moteur se compile pour la page, dist/php se construit)
         run: npm run construire
 
   # Les tests de navigateur (tests/e2e) : la page construite, ouverte dans un vrai navigateur, dans les trois
@@ -44,11 +48,12 @@ jobs:
     # Chromium passe la suite en 8 minutes. Firefox en a mis 19 (dont 15 pour les 510 tests du corpus hostile, securite.e2e.ts),
     # et WebKit a ete coupe par l'ancienne limite de 25 minutes avant d'avoir fini ce fichier : sans resultat, il ne disait rien.
     timeout-minutes: ${{ matrix.navigateur == 'chromium' && 25 || 60 }}
-    # Chromium est exige. Firefox et WebKit n'ont jamais tourne en CI : leurs premiers essais peuvent echouer
-    # sans que la PR le soit.
-    # TODO : retirer `continue-on-error` pour firefox et webkit (et en faire des controles requis de la
-    # branche) des que leurs premiers passages sont verts ; docs/navigateurs.md dit alors « verifie » pour eux.
-    continue-on-error: ${{ matrix.navigateur != 'chromium' }}
+    # Chromium et Firefox sont exiges (ADR-0016, amendement du 25 octobre 2026 : Firefox entierement vert en CI sur la
+    # fusion de cc8be02, 1 071 tests passes). WebKit n'a pas encore eu de passage vert : un echec ne fait pas encore
+    # echouer la PR.
+    # TODO : retirer `continue-on-error` pour webkit (et en faire un controle requis de la branche) des que son premier
+    # passage est vert ; docs/navigateurs.md dit alors « verifie » pour lui.
+    continue-on-error: ${{ matrix.navigateur == 'webkit' }}
     strategy:
       # Un moteur rouge ne doit pas masquer les deux autres : on veut les trois resultats a chaque passage.
       fail-fast: false
@@ -63,8 +68,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Construire la page, la bibliothèque, les fontes et le bundle d’embarquement
+      - name: Construire la page, la bibliothèque, les fontes, le bundle d’embarquement et le site PHP
         run: npm run construire
+      # tests/e2e/site-php.e2e.ts lance le site sous `php -S` : le PHP du runner Ubuntu suffit.
+      - name: PHP pour le site
+        run: php -v
       - name: ${{ matrix.navigateur }} de Playwright
         run: npx playwright install --with-deps ${{ matrix.navigateur }}
       - name: Tests de navigateur (${{ matrix.navigateur }})

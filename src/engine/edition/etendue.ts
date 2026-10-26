@@ -141,3 +141,4 @@ export function boiteAvecTrait(f: Forme): Boite | null {
   if (x0 === base.x && y0 === base.y && x1 === base.x + base.l && y1 === base.y + base.h) return base;
   return { x: x0, y: y0, l: x1 - x0, h: y1 - y0 };
 }
+
