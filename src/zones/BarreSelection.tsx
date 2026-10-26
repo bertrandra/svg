@@ -58,7 +58,9 @@ function useGestes() {
 export const BarreSelection = memo(function BarreSelection() {
   const { sel } = useDessin();
   const compacte = useRangeeCompacte();
-  if (!sel.length) return null;
+  // Sans selection, la place de la rangee reste prise par une cale vide : la premiere selection ne pousse plus les panneaux et la
+  // toile vers le bas (un double-clic tombait alors a cote de sa cible).
+  if (!sel.length) return <div className="editeur-cale-selection" aria-hidden="true" />;
   return compacte ? <RangeeCompacte /> : <RangeeEntiere />;
 });
 

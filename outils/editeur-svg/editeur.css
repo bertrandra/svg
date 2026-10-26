@@ -116,6 +116,9 @@ button[aria-disabled="true"]:active:not(:disabled) { transform: none; }
 /* La rangee de la selection, sous la barre : aligner, transformer, empiler, combiner, separer. */
 .editeur-barre-selection { grid-area: selection; display: flex; flex-wrap: wrap; align-items: center; gap: var(--esp-xs) 0; padding: var(--esp-2xs) var(--esp-m); border-bottom: 1px solid var(--filet); background: color-mix(in srgb, var(--cyan) 6%, var(--panneau)); }
 @supports not (color: color-mix(in srgb, currentcolor, currentcolor)) { .editeur-barre-selection { background: var(--repli-cyan-6-panneau); } }
+.editeur-cale-selection { grid-area: selection; padding: var(--esp-2xs) var(--esp-m); border-bottom: 1px solid var(--filet); background: var(--panneau); }
+/* La hauteur d'un bouton de la rangee : la cale et la rangee ont la meme, a la souris comme au doigt (40 px plus bas). */
+.editeur-cale-selection::before { content: ''; display: block; height: 28px; }
 .editeur-barre-selection > .aide { min-width: 96px; padding-right: var(--esp-s); }
 .editeur-barre-selection .icone-bouton { width: 28px; height: 28px; }
 /* La rangee resserree (au doigt, petit ecran) : le compte ne reserve plus sa largeur, les gestes frequents et « Plus » tiennent a 390 px. */
@@ -591,6 +594,7 @@ button.calque-chevron::before { content: ""; width: 5px; height: 5px; border: so
 /* Au doigt (ecran tactile ou etroit) : des cibles de 40 px, des poignees plus grosses. */
 @media (pointer: coarse), (max-width: 900px) {
   .icone-bouton, .editeur-barre-selection .icone-bouton, .editeur-etat .tiroirs .icone-bouton, button.icone-bouton.petit { width: 40px; height: 40px; }
+  .editeur-cale-selection::before { height: 40px; }
   .chevron-seul .icone-bouton { width: 40px; margin-left: calc(-1 * var(--esp-2xs)); }
   button:where(:not(.icone-bouton, .aucun, .echantillon, .calque-bascule, .calque-nom, .plus)) { min-height: 40px; }
   .editeur-barre .zoom, .editeur-barre button.texte, .editeur-etat button.texte, .menu-bouton.texte { height: 40px; }
