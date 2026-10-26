@@ -157,6 +157,10 @@ npm run test:php     # les tests du site PHP (tests/php/)
   `<clipPath id="ed-c-…">` par empreinte ; la découpe suit la fermeture et rogne la boîte visuelle ; la descente rogne les
   remplissages par intersection booléenne, garde un trait entier et le dit ; une copie renumérote les contenus
   (`renumeroterContenus`) ; un vecteur nouveau entre dans `tests/fixtures/hostile/v2-decoupes-*`.
+- **Les idiomes de filtres se reconnaissent par le calcul** (ADR-0012, étape 13b) : `edition/filtres.ts` (pur) évalue `feColorMatrix`,
+  `feBlend`, `out` et `arithmetic`, jamais écrits, en simplifications exactes (aplat transparent, fusion avec une image transparente,
+  identité, teinte en RVB linéaire si le filtre l'est, alpha durci), puis reconnaît flou et ombre ; l'ombre pleine de Figma exige des
+  feuilles opaques (`verifierPleines`) ; un refus nomme l'idiome (`avecIdiome`), un nom qui n'accepte jamais rien.
 - **Un masque d'opacité est un contenu peint, rangé sur un groupe** (ADR-0012, étape 6) : `Groupe.masque` garde type, région (boîte
   du plan) et contenu entier, lu par `edition/contenus.ts` (pile, tables et budget communs aux définitions) ; une feuille masquée
   s'enveloppe dans un groupe ; l'écriture pose `<mask id="ed-m-…" maskUnits="userSpaceOnUse">` par empreinte ; le contenu suit la

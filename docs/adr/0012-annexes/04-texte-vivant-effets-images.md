@@ -129,7 +129,10 @@ Toute autre primitive (`feTurbulence`, `feMorphology`, `feDisplacementMap`, `feI
 « un filtre » aujourd'hui, mais en disant lequel. Les idiomes d'éditeurs qui s'écartent du canonique
 (Figma : `feFlood` + `feColorMatrix` + `feOffset` + `feGaussianBlur` + `feBlend` ; Sketch :
 `feOffset` + `feGaussianBlur` + `feColorMatrix` d'alpha ; Illustrator : `Adobe_OpacityMaskFilter`) sont
-reconnus par des **reconnaisseurs** dédiés à l'étape 13, un par idiome, chacun avec une fixture. Phrases
+reconnus par des **reconnaisseurs** dédiés à l'étape 13, un par idiome, chacun avec une fixture. *Révision (étape 13b, annexe 8 §0) :
+l'évaluation des primitives suffit (`edition/filtres.ts` : matrice de teinte, alpha durci, fusion avec un aplat transparent, découpe
+`out`), chaque idiome a sa fixture au corpus ; ce qui n'équivaut pas à un flou et une ombre (ombre intérieure, plusieurs ombres, fusion
+autre que normale entre deux images visibles, ombre pleine sous une forme transparente) est refusé en nommant l'idiome.* Phrases
 d'`ignores` : la région d'origine remplacée quand elle rognait l'effet ; un flou de graphique lu en sRVB
 alors que le filtre ne fixait pas `color-interpolation-filters` ; un écart borné à `ECART_MAX = max(l, h) / 4`.
 

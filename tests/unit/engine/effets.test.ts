@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  ajusterPlan, boiteVisuelle, definitionFiltre, ecartsSous, ecrireDessin, effetsEcrits, grouper, lireDessin, margeEffets, MSG_EFFETS, REFUS_EFFETS,
+  ajusterPlan, boiteVisuelle, definitionFiltre, ecartsSous, ecrireDessin, effetsEcrits, grouper, lireDessin, margeEffets, MSG_EFFETS, REFUS_EFFETS, REFUS_IDIOMES,
   refusPrimitive, regionEcrite, rotation, echelle, transformer, transformerEffets, translation, verifierDessin, type DessinSvg, type Effets, type Forme,
   type Matrice
 } from '../../../src/engine/editionSvg.js';
@@ -100,7 +100,7 @@ describe('la lecture riche des effets', () => {
   it('refuse en nommant toute primitive ou combinaison hors du sous-ensemble', () => {
     const avec = (filtre: string, ou = '<rect width="10" height="10" filter="url(#f)"/>') => erreur(SVG('<filter id="f">' + filtre + '</filter>' + ou));
     expect(avec('<feTurbulence baseFrequency="0.1"/>')).toContain(refusPrimitive('feTurbulence'));
-    expect(avec('<feFlood flood-opacity="0"/><feColorMatrix type="matrix" values="0 0 0 0 0"/>')).toContain(refusPrimitive('feColorMatrix'));
+    expect(avec('<feFlood flood-opacity="0"/><feColorMatrix type="matrix" values="0 0 0 0 0"/>')).toContain(REFUS_IDIOMES.matrice);
     expect(avec('<feOffset dx="3"/>')).toContain(REFUS_EFFETS.forme);
     expect(avec('<feGaussianBlur in="SourceAlpha" stdDeviation="2"/>')).toContain(REFUS_EFFETS.forme);
     expect(avec('<feFlood/><feComposite in2="SourceAlpha" operator="xor"/>')).toContain(REFUS_EFFETS.forme);

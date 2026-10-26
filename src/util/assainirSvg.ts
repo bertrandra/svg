@@ -55,7 +55,7 @@ const SCHEMAS = /(?:javascript|vbscript|livescript|data)\s*:/gi;
 const UN_SCHEMA = /(?:javascript|vbscript|livescript|data)\s*:/i;
 /** Ce qui, dans un texte de style ou une valeur, demande un nettoyage : evite de passer les remplacements sur un chemin de 7 Mo. */
 const SUSPECT = /url\s*\(|@|script\s*:|data\s*:|expression|binding|behavio|image-set|cross-fade|src\s*\(|\\|\/\*/i;
-const DANGER_CSS = /@import|url\s*\(|expression\s*\(|-moz-binding|behavior\s*:|image-set|cross-fade|\bsrc\s*\(|(?:javascript|vbscript|livescript|data)\s*:/i;
+const DANGER_CSS = /@\s*import|url\s*\(|expression\s*\(|-moz-binding|behavior\s*:|image-set|cross-fade|\bsrc\s*\(|(?:javascript|vbscript|livescript|data)\s*:/i;
 
 /** Un texte CSS dont les commentaires et les echappements (`\72` pour « r ») sont resolus : c'est ce qu'un navigateur lit. */
 function resoudreCss(css: string): string {
@@ -95,7 +95,8 @@ function neutraliserUrl(s: string): string {
 /** Une passe de nettoyage ; rend le meme texte quand il n'y a plus rien a retirer. */
 function passeCss(s: string): string {
   return neutraliserUrl(s)
-    .replace(/@import[^;]*;?/gi, '')
+    // « @ import » n'est pas une regle pour un navigateur (le mot doit suivre @), mais rien ne doit pouvoir la recomposer.
+    .replace(/@\s*import[^;]*;?/gi, '')
     .replace(/expression\s*\(/gi, 'none(')
     // -moz-binding part meme sans « : » : un nom de propriete seul est inerte, mais rien ne doit pouvoir le recomposer.
     .replace(/-moz-binding(?:\s*:[^;}]*)?/gi, '')

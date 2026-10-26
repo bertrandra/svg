@@ -6,8 +6,10 @@
 // Lecture (mode riche seulement : le mode plat ne consulte aucune fonctionnalite et refuse comme avant, « un filtre ») : le filtre se
 // lit en EVALUANT ses primitives (`in`, `in2`, `result` resolus comme un navigateur le fait), puis le resultat se reconnait : un
 // feGaussianBlur sur le graphique ; un feDropShadow ; l'ombre decomposee (flou de l'alpha, decalage, aplat, composition `in`,
-// fusion sous le graphique) ; l'ombre puis un flou du graphique fusionne. Tout autre primitive refuse le SVG en la nommant (« un
-// filtre (feTurbulence) ») ; toute autre combinaison des primitives admises aussi. Ce qui se perd se dit : la region d'origine
+// fusion sous le graphique) ; l'ombre puis un flou du graphique fusionne. Les idiomes des editeurs (etape 13b : matrices de couleurs
+// et fusions de Figma, Sketch, Illustrator) passent par le meme calcul (edition/filtres.ts) : lus quand ils equivalent a ces formes,
+// neutres quand ils ne changent rien (Adobe_OpacityMaskFilter), refuses sinon en nommant l'idiome (« une ombre intérieure (Figma) »).
+// Tout autre primitive refuse le SVG en la nommant (« un filtre (feTurbulence) »). Ce qui se perd se dit : la region d'origine
 // remplacee quand elle rognait l'effet, le RVB lineaire calcule en sRVB, un ecart ou un decalage bornes, un flou anisotrope sous une
 // rotation. Sous une transformation, l'ecart se met a l'echelle et le decalage de l'ombre tourne avec la matrice A LA LECTURE, puis
 // vit dans le repere du plan.
@@ -37,6 +39,10 @@ import {
   transformerEffets
 } from '../effets.js';
 import { ecrireImage, rectangleImage } from './images.js';
+import {
+  ALPHA, SOURCE, REFUS_IDIOMES, aplat, appliquerMatrice, arithmetique, avecIdiome, dans, decalage, flou, fusion, hors, matriceCouleurs, matriceDeTeinte, pile,
+  reconnaitre, type EffetsBruts, type Idiome, type Image
+} from '../filtres.js';
 
 // ---------------------------------------------------------------- phrases
 
@@ -46,6 +52,7 @@ const nombreDit = (v: number): string => v.toLocaleString('fr-FR', { maximumFrac
 export const MSG_EFFETS = {
   lineaire: 'un flou calculé en RVB linéaire se calcule en sRVB (différence légère sur les bords colorés)',
   region: 'la région d’un filtre plus étroite que son effet : l’effet s’écrit en entier',
+  regionNeutre: 'la région d’un filtre sans effet plus étroite que la forme : la forme s’écrit entière',
   anisotrope: 'un flou anisotrope sous une rotation ou un cisaillement : écart moyen',
   ombreAnisotrope: 'une ombre au flou anisotrope ou déformé : écart moyen',
   nombreux: 'les effets de plus de ' + NOEUDS_A_EFFET_MAX.toLocaleString('fr-FR') + ' formes ou groupes (les suivants sont ignorés)',
@@ -78,32 +85,17 @@ export const refusEntree = (nom: string): string => 'un filtre qui emploie l’a
 
 // ---------------------------------------------------------------- bornes de lecture
 
-/** Les primitives d'un filtre, au plus (les formes reconnues en ont sept) ; et les noeuds d'un feMerge. */
+/** Les primitives d'un filtre, au plus (les formes reconnues en ont sept, une ombre de Figma huit) ; et les noeuds d'un feMerge. */
 export const PRIMITIVES_MAX = 16;
 
-const PRIMITIVES: ReadonlySet<string> = new Set(['feGaussianBlur', 'feOffset', 'feFlood', 'feComposite', 'feMerge', 'feDropShadow']);
+/**
+ * Les primitives que l'evaluation sait calculer. feColorMatrix et feBlend ne s'ecrivent jamais (annexe 2 §6) : ils se lisent pour
+ * reconnaitre les idiomes des editeurs (etape 13b), qui se ramenent a un flou et une ombre portee ou sont refuses en le nommant.
+ */
+const PRIMITIVES: ReadonlySet<string> = new Set(['feGaussianBlur', 'feOffset', 'feFlood', 'feComposite', 'feMerge', 'feDropShadow', 'feColorMatrix', 'feBlend']);
 const ENTREES_REFUSEES: ReadonlySet<string> = new Set(['BackgroundImage', 'BackgroundAlpha', 'FillPaint', 'StrokePaint']);
 
-// ---------------------------------------------------------------- l'evaluation d'un filtre
-
-/** Une image intermediaire d'un filtre, en unites de primitive (pas encore dans le plan). */
-type Image =
-  | { readonly k: 'source' }
-  | { readonly k: 'alpha' }
-  | { readonly k: 'aplat'; readonly couleur: string; readonly opacite: number }
-  | { readonly k: 'flou'; readonly de: Image; readonly sx: number; readonly sy: number; readonly lineaire: boolean }
-  | { readonly k: 'decalage'; readonly de: Image; readonly dx: number; readonly dy: number }
-  | { readonly k: 'dans'; readonly a: Image; readonly b: Image }
-  | { readonly k: 'pile'; readonly couches: readonly Image[] };
-
-const SOURCE: Image = { k: 'source' };
-const ALPHA: Image = { k: 'alpha' };
-
-/** Un flou : un ecart negatif, ou deux ecarts nuls, desactivent la primitive (son resultat est son entree), comme le dit la specification. */
-const flou = (de: Image, sx: number, sy: number, lineaire: boolean): Image => (sx < 0 || sy < 0 || (sx === 0 && sy === 0) ? de : { k: 'flou', de, sx, sy, lineaire });
-const decalage = (de: Image, dx: number, dy: number): Image => (dx === 0 && dy === 0 ? de : { k: 'decalage', de, dx, dy });
-/** Une pile (de bas en haut) ; une seule couche est cette couche. Jamais aplatie : une pile de piles reste petite. */
-const pile = (couches: readonly Image[]): Image => (couches.length === 1 ? (couches[0] ?? SOURCE) : { k: 'pile', couches });
+// ---------------------------------------------------------------- l'evaluation d'un filtre (le calcul : edition/filtres.ts)
 
 /** Ce qu'un filtre lu donne, avant les unites et le plan. */
 interface FiltreLu {
@@ -113,6 +105,8 @@ interface FiltreLu {
   readonly sousRegions: boolean;
   readonly illisible: boolean;
   readonly resultat: Image;
+  /** L'editeur dont le filtre porte l'idiome, pour nommer un refus. */
+  readonly idiome?: Idiome;
 }
 
 /** Un nombre d'attribut de primitive : la valeur par defaut s'il est absent ; illisible, la valeur par defaut aussi, et c'est note. */
@@ -167,6 +161,23 @@ function aplatDe(a: Analyse, n: Noeud): { readonly couleur: string; readonly opa
   return { couleur: hex && lue.couleur ? lue.couleur : '#000000', opacite: arrondirOpacite(lireFraction(propriete(a, n, 'flood-opacity'), 1) * alpha) };
 }
 
+/**
+ * L'editeur dont un filtre porte l'idiome, pour nommer ce qui est refuse (jamais pour accepter : la reconnaissance passe par le calcul).
+ * Illustrator nomme ses filtres (`AI_Shadow_1`, `Adobe_OpacityMaskFilter`) ; Figma pose un aplat transparent sous ses fusions
+ * (« BackgroundImageFix ») ; Sketch teint ses ombres par une matrice, sans aplat ni fusion.
+ */
+function idiomeDe(cible: Noeud, primitives: readonly Noeud[], a: Analyse): Idiome | undefined {
+  if (/^(?:AI_|Adobe_)/.test(cible.attributs.id ?? '')) return 'Illustrator';
+  const transparents = new Set(primitives.flatMap(p => (p.nom === 'feFlood' && aplatDe(a, p).opacite === 0 && p.attributs.result?.trim() ? [p.attributs.result.trim()] : [])));
+  if (primitives.some(p => p.nom === 'feBlend' && [p.attributs.in, p.attributs.in2].some(v => v !== undefined && transparents.has(v.trim())))) return 'Figma';
+  const teinte = (p: Noeud): boolean => {
+    const x = p.nom === 'feColorMatrix' ? matriceCouleurs(p.attributs.type, p.attributs.values) : null;
+    return x !== null && matriceDeTeinte(x);
+  };
+  if (!primitives.some(p => p.nom === 'feFlood' || p.nom === 'feBlend') && primitives.some(teinte)) return 'Sketch';
+  return undefined;
+}
+
 /** Lit un <filter> une fois par lecture : ses unites, sa region, et l'image que ses primitives calculent ; ou ce qui le refuse. */
 function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: string } {
   const a = marche.parcours.analyse;
@@ -175,12 +186,16 @@ function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: 
   for (const e of cible.enfants) {
     if (ANIMATIONS.has(e.nom)) { marche.ignorer(MSG_ANIMATIONS); continue; }
     // title, desc, metadata, ou un element sans rapport : un navigateur les ignore dans un filtre.
-    if (!e.nom.startsWith('fe')) continue;
-    if (!PRIMITIVES.has(e.nom)) return { refus: refusPrimitive(e.nom) };
-    primitives.push(e);
+    if (e.nom.startsWith('fe')) primitives.push(e);
   }
   if (!primitives.length) return { refus: REFUS_EFFETS.vide };
-  if (primitives.length > PRIMITIVES_MAX || primitives.some(p => p.nom === 'feMerge' && p.enfants.length > PRIMITIVES_MAX)) return { refus: REFUS_EFFETS.long };
+  const court = primitives.length <= PRIMITIVES_MAX && !primitives.some(p => p.nom === 'feMerge' && p.enfants.length > PRIMITIVES_MAX);
+  // L'idiome ne se cherche que dans un filtre court : une chaine demesuree est refusee sans rien lire de ses valeurs.
+  const idiome = court ? idiomeDe(cible, primitives, a) : undefined;
+  const refus = (phrase: string): { readonly refus: string } => ({ refus: avecIdiome(phrase, idiome) });
+  const inconnue = primitives.find(p => !PRIMITIVES.has(p.nom));
+  if (inconnue) return refus(refusPrimitive(inconnue.nom));
+  if (!court) return { refus: REFUS_EFFETS.long };
   const note = { illisible: false };
   const resultats = new Map<string, Image>();
   let precedent: Image = SOURCE, sousRegions = false;
@@ -207,16 +222,38 @@ function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: 
       case 'feOffset':
         image = decalage(de, nombre(p.attributs.dx, 0, note), nombre(p.attributs.dy, 0, note));
         break;
-      case 'feFlood':
-        image = { k: 'aplat', ...aplatDe(a, p) };
+      case 'feFlood': {
+        const f = aplatDe(a, p);
+        image = aplat(f.couleur, f.opacite);
         break;
+      }
       case 'feComposite': {
         const b = entree(p.attributs.in2);
         if ('refus' in b) return b;
         const op = (p.attributs.operator ?? 'over').trim();
-        if (op === 'in') image = { k: 'dans', a: de, b };
+        if (op === 'in') image = dans(de, b);
         else if (op === 'over') image = pile([b, de]);
-        else return { refus: REFUS_EFFETS.forme };
+        else if (op === 'out') image = hors(de, b);
+        else if (op === 'arithmetic') {
+          const k = (n: string): number => nombre(p.attributs[n], 0, note);
+          image = arithmetique(de, b, k('k1'), k('k2'), k('k3'), k('k4'));
+        } else return refus(REFUS_EFFETS.forme);
+        break;
+      }
+      case 'feColorMatrix': {
+        const x = matriceCouleurs(p.attributs.type, p.attributs.values);
+        if (!x) return refus(REFUS_IDIOMES.matrice);
+        const r = appliquerMatrice(de, x, enLineaire(a, p));
+        if ('refus' in r) return refus(r.refus);
+        image = r;
+        break;
+      }
+      case 'feBlend': {
+        const b = entree(p.attributs.in2);
+        if ('refus' in b) return b;
+        const r = fusion(de, b, p.attributs.mode);
+        if ('refus' in r) return refus(r.refus);
+        image = r;
         break;
       }
       case 'feMerge': {
@@ -227,14 +264,15 @@ function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: 
           if ('refus' in c) return c;
           couches.push(c);
         }
-        if (!couches.length) return { refus: REFUS_EFFETS.forme };
+        if (!couches.length) return refus(REFUS_EFFETS.forme);
         image = pile(couches);
         break;
       }
       default: {
         // feDropShadow : une ombre (ecart 2, decalage 2 et 2 par defaut) sous son entree.
         const [sx, sy] = ecartsLus(p.attributs.stdDeviation, 2, note);
-        const ombre: Image = { k: 'dans', a: { k: 'aplat', ...aplatDe(a, p) }, b: decalage(flou(de, sx, sy, false), nombre(p.attributs.dx, 2, note), nombre(p.attributs.dy, 2, note)) };
+        const f = aplatDe(a, p);
+        const ombre = dans(aplat(f.couleur, f.opacite), decalage(flou(de, sx, sy, false), nombre(p.attributs.dx, 2, note), nombre(p.attributs.dy, 2, note)));
         image = pile([ombre, de]);
       }
     }
@@ -249,49 +287,9 @@ function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: 
     region: [lireLongueur(cible.attributs.x), lireLongueur(cible.attributs.y), lireLongueur(cible.attributs.width), lireLongueur(cible.attributs.height)],
     sousRegions,
     illisible: note.illisible,
-    resultat: precedent
+    resultat: precedent,
+    ...(idiome ? { idiome } : {})
   };
-}
-
-// ---------------------------------------------------------------- la reconnaissance
-
-/** Des effets reconnus, en unites de primitive. */
-interface EffetsBruts {
-  readonly flou?: { readonly sx: number; readonly sy: number; readonly lineaire: boolean };
-  readonly ombre?: { readonly sx: number; readonly sy: number; readonly dx: number; readonly dy: number; readonly couleur: string; readonly opacite: number };
-}
-
-/** La silhouette d'une ombre : l'alpha du graphique (une composition `in` ne lit que l'alpha), au plus un flou et un decalage. */
-function silhouette(i: Image): { sx: number; sy: number; dx: number; dy: number } | null {
-  const r = { sx: 0, sy: 0, dx: 0, dy: 0 };
-  let flous = 0, decalages = 0;
-  for (let x = i, n = 0; n < 3; n++) {
-    if (x.k === 'source' || x.k === 'alpha') return r;
-    if (x.k === 'flou' && !flous++) { r.sx = x.sx; r.sy = x.sy; x = x.de; continue; }
-    if (x.k === 'decalage' && !decalages++) { r.dx = x.dx; r.dy = x.dy; x = x.de; continue; }
-    return null;
-  }
-  return null;
-}
-
-/** Une ombre : un aplat compose `in` dans une silhouette. */
-function ombreDe(i: Image): EffetsBruts['ombre'] | null {
-  if (i.k !== 'dans' || i.a.k !== 'aplat') return null;
-  const s = silhouette(i.b);
-  return s ? { ...s, couleur: i.a.couleur, opacite: i.a.opacite } : null;
-}
-
-/** Les effets que calcule l'image finale d'un filtre, ou null si elle n'est pas du sous-ensemble (annexe 4 B §3). */
-function reconnaitre(r: Image): EffetsBruts | null {
-  if (r.k === 'source') return {};
-  if (r.k === 'flou' && r.de.k === 'source') return { flou: { sx: r.sx, sy: r.sy, lineaire: r.lineaire } };
-  if (r.k !== 'pile' || r.couches.length !== 2) return null;
-  const [bas, haut] = r.couches;
-  const ombre = bas ? ombreDe(bas) : null;
-  if (!ombre || !haut) return null;
-  if (haut.k === 'source') return { ombre };
-  if (haut.k === 'flou' && haut.de.k === 'source') return { ombre, flou: { sx: haut.sx, sy: haut.sy, lineaire: haut.lineaire } };
-  return null;
 }
 
 // ---------------------------------------------------------------- la memoire d'une lecture
@@ -299,13 +297,15 @@ function reconnaitre(r: Image): EffetsBruts | null {
 interface Memoire {
   readonly filtres: Map<Noeud, FiltreLu | { readonly refus: string }>;
   /** Les regions d'origine des groupes a effets, dans le plan, pour dire si elles rognaient ce que leurs feuilles y dessinent. */
-  readonly regions: Map<string, { readonly region: Boite; readonly marge: number; dit: boolean }>;
+  readonly regions: Map<string, { readonly region: Boite; readonly marge: number; readonly phrase: string; dit: boolean }>;
+  /** Les groupes dont l'ombre exige des feuilles opaques (Figma), et la phrase du refus sinon. */
+  readonly pleines: Map<string, string>;
   compte: number;
 }
 const memoires = new WeakMap<object, Memoire>();
 function memoire(marche: Marche): Memoire {
   let m = memoires.get(marche.parcours);
-  if (!m) { m = { filtres: new Map(), regions: new Map(), compte: 0 }; memoires.set(marche.parcours, m); }
+  if (!m) { m = { filtres: new Map(), regions: new Map(), pleines: new Map(), compte: 0 }; memoires.set(marche.parcours, m); }
   return m;
 }
 
@@ -388,11 +388,19 @@ function effetsDuPlan(brut: EffetsBruts, lu: FiltreLu, boite: Boite | null, m: M
   return { ...(flouLu ? { flou: flouLu } : {}), ...(ombreLue ? { ombre: ombreLue } : {}) };
 }
 
+/** Ce qu'un filtre lu donne a un element : ses effets (aucun pour un filtre neutre, l'identite d'Illustrator par exemple). */
+interface Lu {
+  readonly effets: Effets | null;
+  readonly lu: FiltreLu;
+  /** L'ombre ne vaut celle du modele que sous une forme opaque (alpha durci ou ombre retiree sous la forme, Figma). */
+  readonly pleine: boolean;
+}
+
 /**
- * Les effets d'un element (feuille ou groupe) dont le `filter` vaut `valeur`, ou rien (aucun filtre, un filtre sans effet, une
- * reference qui ne mene a aucun filtre et qui est dite). Les refus passent par `marche.refuser`.
+ * Les effets d'un element (feuille ou groupe) dont le `filter` vaut `valeur` ; null s'il n'y a rien a lire (une reference qui ne mene
+ * a aucun filtre et qui est dite, un refus). Les refus passent par `marche.refuser`.
  */
-function effetsLus(valeur: string, boite: Boite | null, pret: Pret, marche: Marche): { readonly effets: Effets; readonly lu: FiltreLu } | null {
+function effetsLus(valeur: string, boite: Boite | null, pret: Pret, marche: Marche): Lu | null {
   const ref = lireReference(valeur);
   if (!ref) { marche.refuser(REFUS_EFFETS.css); return null; }
   if (ref.genre === 'externe') { marche.refuser(REFUS_EFFETS.externe); return null; }
@@ -403,13 +411,13 @@ function effetsLus(valeur: string, boite: Boite | null, pret: Pret, marche: Marc
   let lu = memo.filtres.get(cible);
   if (!lu) { lu = lireFiltre(cible, marche); memo.filtres.set(cible, lu); }
   if ('refus' in lu) { marche.refuser(lu.refus); return null; }
-  const brut = reconnaitre(lu.resultat);
-  if (!brut) { marche.refuser(REFUS_EFFETS.forme); return null; }
-  if (!brut.flou && !brut.ombre) return null;
+  const brut: EffetsBruts | { readonly refus: string } = reconnaitre(lu.resultat);
+  if ('refus' in brut) { marche.refuser(avecIdiome(brut.refus, lu.idiome)); return null; }
+  if (!brut.flou && !brut.ombre) return { effets: null, lu, pleine: false };
   const effets = effetsDuPlan(brut, lu, boite, pret.m, marche);
   if ('refus' in effets) { marche.refuser(effets.refus); return null; }
   if (++memo.compte > NOEUDS_A_EFFET_MAX) { marche.ignorer(MSG_EFFETS.nombreux); return null; }
-  return { effets, lu };
+  return { effets, lu, pleine: brut.pleine === true };
 }
 
 /** La boite d'une feuille dans son propre repere (de quoi resoudre `objectBoundingBox`) ; null si elle n'en a pas. */
@@ -418,7 +426,7 @@ function boiteLocale(f: Forme, n: Noeud, pret: Pret, marche: Marche): Boite | nu
   return marche.boiteForme(n, { ...pret, m: IDENTITE });
 }
 
-/** Ce qu'une feuille dessine dans les groupes a effets qui l'entourent : si elle deborde de leur region d'origine, c'est dit. */
+/** Ce qu'une feuille dessine dans les groupes a filtre qui l'entourent : si elle deborde de leur region d'origine, c'est dit. */
 function verifierRegionsDesGroupes(f: Forme, marche: Marche): void {
   const memo = memoires.get(marche.parcours), table = marche.parcours.groupes;
   if (!memo?.regions.size || !table || f.parent === undefined) return;
@@ -428,22 +436,58 @@ function verifierRegionsDesGroupes(f: Forme, marche: Marche): void {
     const r = memo.regions.get(id);
     if (!r || r.dit) continue;
     b ??= boiteAvecTrait(f);
-    if (b && !contient(r.region, elargir(b, propre + r.marge))) { r.dit = true; marche.ignorer(MSG_EFFETS.region); }
+    if (b && !contient(r.region, elargir(b, propre + r.marge))) { r.dit = true; marche.ignorer(r.phrase); }
+  }
+}
+
+/** Une peinture sans transparence : un degrade aux arrets pleins (un motif peut laisser voir entre ses tuiles). */
+const peintureOpaque = (p: Forme['peintureRemplissage']): boolean => p === undefined || (p.genre !== 'motif' && p.arrets.every(a => (a.opacite ?? 1) >= 1));
+
+/**
+ * Vrai si la feuille est opaque partout ou elle peint (a l'anticrenelage pres) : opacites pleines, peintures pleines, sans effet propre
+ * (un flou ou une ombre adoucissent l'alpha), une image en JPEG seulement (les autres natures portent un alpha).
+ */
+function feuilleOpaque(f: Forme): boolean {
+  if (f.opacite < 1 || (f.opaciteRemplissage ?? 1) < 1 || (f.opaciteContour ?? 1) < 1 || aDesEffets(f.effets)) return false;
+  if (f.image) return f.image.donnees.startsWith('data:image/jpeg');
+  return peintureOpaque(f.peintureRemplissage) && peintureOpaque(f.peintureContour);
+}
+
+/**
+ * Une feuille dans un groupe dont l'ombre ne vaut celle du modele que sous une forme opaque (Figma) : elle doit l'etre, et chaque groupe
+ * entre elle et lui aussi (ni opacite, ni masque, ni effet) ; sinon le SVG est refuse en le nommant. L'opacite, le masque ou la decoupe
+ * du groupe a filtre lui-meme s'appliquent apres le filtre : ils ne comptent pas.
+ */
+function verifierPleines(f: Forme, marche: Marche): void {
+  const memo = memoires.get(marche.parcours), table = marche.parcours.groupes;
+  if (!memo?.pleines.size || !table || f.parent === undefined) return;
+  let opaque = feuilleOpaque(f);
+  for (let id: string | undefined = f.parent, n = 0; id !== undefined && n < 128; n++) {
+    const g = table.get(id);
+    const phrase = memo.pleines.get(id);
+    if (phrase !== undefined && !opaque) { memo.pleines.delete(id); marche.refuser(phrase); }
+    if (!g) return;
+    if ((g.opacite ?? 1) < 1 || g.masque || aDesEffets(g.effets)) opaque = false;
+    id = g.parent;
   }
 }
 
 function lireFeuille(f: Forme, n: Noeud, pret: Pret, marche: Marche): Forme {
+  verifierPleines(f, marche);
   const v = pret.pr.filter?.trim();
   if (!v || v === 'none') { verifierRegionsDesGroupes(f, marche); return f; }
   const boite = boiteLocale(f, n, pret, marche);
   const r = effetsLus(v, boite, pret, marche);
   if (!r) return f;
-  const lue: Forme = { ...f, effets: r.effets };
-  // La region d'origine, si elle rognait l'effet : l'ecriture la remplace par une region entiere, et le dit.
+  if (r.pleine && !feuilleOpaque(f)) { marche.refuser(avecIdiome(REFUS_IDIOMES.transparente, r.lu.idiome)); return f; }
+  const lue: Forme = r.effets ? { ...f, effets: r.effets } : f;
+  const marge = r.effets ? margeEffets(r.effets) : 0;
+  // La region d'origine, si elle rognait l'effet (ou la forme, sous un filtre neutre) : l'ecriture la remplace par une region entiere
+  // (ou n'en ecrit pas), et le dit.
   const locale = regionLocale(r.lu, boite, marche.parcours.plan);
   if (locale === 'vide') { marche.refuser(REFUS_EFFETS.regionVide); return f; }
   const visible = boiteAvecTrait(lue);
-  if (r.lu.sousRegions || (locale && visible && !contient(versPlan(locale, pret.m), elargir(visible, margeEffets(r.effets))))) marche.ignorer(MSG_EFFETS.region);
+  if (r.lu.sousRegions || (locale && visible && !contient(versPlan(locale, pret.m), elargir(visible, marge)))) marche.ignorer(r.effets ? MSG_EFFETS.region : MSG_EFFETS.regionNeutre);
   verifierRegionsDesGroupes(lue, marche);
   return lue;
 }
@@ -453,15 +497,18 @@ function lireGroupe(g: Groupe, _n: Noeud, pret: Pret, marche: Marche): Groupe {
   if (!v || v === 'none') return g;
   const r = effetsLus(v, null, pret, marche);
   if (!r) return g;
-  if (r.lu.sousRegions) marche.ignorer(MSG_EFFETS.region);
+  const phrase = r.effets ? MSG_EFFETS.region : MSG_EFFETS.regionNeutre;
+  if (r.lu.sousRegions) marche.ignorer(phrase);
   // Une region en unites du plan se confronte a chaque feuille du groupe, a mesure qu'elle se lit ; en unites de boite, la boite du
   // groupe n'est connue qu'apres ses feuilles : rien n'est dit (l'ecriture pose de toute facon une region entiere).
   if (!r.lu.unitesBoite) {
     const locale = regionLocale(r.lu, null, marche.parcours.plan);
     if (locale === 'vide') { marche.refuser(REFUS_EFFETS.regionVide); return g; }
-    if (locale) memoire(marche).regions.set(g.id, { region: versPlan(locale, pret.m), marge: margeEffets(r.effets), dit: false });
+    if (locale) memoire(marche).regions.set(g.id, { region: versPlan(locale, pret.m), marge: r.effets ? margeEffets(r.effets) : 0, phrase, dit: false });
   }
-  return { ...g, effets: r.effets };
+  // L'opacite des feuilles se verifie a mesure qu'elles se lisent (le crochet est appele avant elles).
+  if (r.pleine) memoire(marche).pleines.set(g.id, avecIdiome(REFUS_IDIOMES.transparente, r.lu.idiome));
+  return r.effets ? { ...g, effets: r.effets } : g;
 }
 
 // ---------------------------------------------------------------- la boite telle qu'elle s'ecrit

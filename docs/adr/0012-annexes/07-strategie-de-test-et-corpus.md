@@ -154,13 +154,15 @@ compte. Chaque fichier cite la version de l'outil qu'il imite. Critères : (a) p
 | `inkscape-texte-ligne` | `<text xml:space="preserve" style="font-size…"><tspan sodipodi:role="line" x y>` | 13 |
 | `illustrator-calque` | `<style>.st0{…}</style>`, `<g id="Layer_1">`, `enable-background`, `xml:space` | 1 |
 | `illustrator-degrade-decoupe` | `id="SVGID_1_"`, `<clipPath><use xlink:href="#SVGID_2_" style="overflow:visible"/></clipPath>`, `gradientUnits="userSpaceOnUse"` + `gradientTransform="matrix(1 0 0 -1 …)"` | 3 et 5 |
-| `illustrator-masque-opacite` | `<mask><g style="filter:url(#Adobe_OpacityMaskFilter)"><…/></g></mask>` | 13 |
+| `illustrator-masque-opacite` | `<mask><g class="st1"><…/></g></mask>`, `.st1{filter:url(#Adobe_OpacityMaskFilter);}`, matrice identité | 13b (fait) |
+| `illustrator-ombre` | `<filter  filterUnits="objectBoundingBox" height="150%" id="AI_Shadow_1" …>` : alpha flou, décalé, `feMerge` sous le graphique | 13b (fait) |
 | `illustrator-texte` | `<text transform="matrix(1 0 0 1 x y)" class="st1 st2">` | 13 |
 | `figma-cadre-decoupe` | `<g clip-path="url(#clip0_1_2)">` + `<clipPath><rect width height fill="white"/></clipPath>` | 5 |
 | `figma-degrade` | `paint0_linear`, `gradientUnits="userSpaceOnUse"`, `stop-opacity="0"` | 3 |
-| `figma-ombre` | `<filter id="filter0_d_1_2" … color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix …/><feOffset dy="4"/><feGaussianBlur stdDeviation="2"/><feColorMatrix …/><feBlend …/><feBlend …/>` | 13 |
+| `figma-ombre` | `<filter id="filter0_d_1_2" … color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix …/><feOffset dy="4"/><feGaussianBlur stdDeviation="2"/><feComposite in2="hardAlpha" operator="out"/><feColorMatrix …/><feBlend …/><feBlend …/>` | 13b (fait) |
+| `figma-flou-calque` | `<filter id="filter0_f_7_2" …>` : `feFlood` transparent, `feBlend` du graphique, `feGaussianBlur` | 13b (fait) |
 | `figma-trait-interieur` | `<mask id="path-1-inside-1_1_2" fill="white">` portant le tracé, appliqué à un contour | 6 |
-| `sketch-ombre` | `<use filter="url(#filter-3)" xlink:href="#path-2">`, `<filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox">` : `feOffset`, `feGaussianBlur`, `feColorMatrix` d'alpha | 13 |
+| `sketch-ombre` | `<filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox">` : `feOffset`, `feGaussianBlur`, `feColorMatrix` d'alpha, `feMerge` (Sketch 3, sur une forme et un groupe) ; la variante `<use filter>`, dont le filtre ne rend que l'ombre, reste refusée (annexe 8 §0, 13b) | 13b (fait) |
 | `sketch-degrade-pourcent` | `x1="50%" y1="0%" x2="50%" y2="100%"` | 3 |
 | `sketch-masque-use` | `<mask id="mask-2" fill="white"><use xlink:href="#path-1"/></mask>` | 6 |
 | `motif-hachures` | `<pattern patternTransform="rotate(45)" patternUnits="userSpaceOnUse">` | 9 |
