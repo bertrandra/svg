@@ -58,6 +58,15 @@ describe('genreDeForme', () => {
     expect(genreDeForme(premiere('<path d="M0 0Q50 50 100 0L50 80Z"/>'))).toBe('tracé courbe');
     expect(genreDeForme(premiere('<rect x="0" y="0" width="80" height="40" rx="10"/>'))).toBe('rectangle arrondi');
   });
+
+  it('dit une image integree par sa nature, pas par le cadre de son chemin (paquet 2-D)', () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mM4IacBAALAAQ/kvVIVAAAAAElFTkSuQmCC';
+    const r = lireDessin('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><image x="0" y="0" width="40" height="30" href="data:image/png;base64,' + png + '"/></svg>', { modele: 'riche' });
+    if ('erreur' in r) throw new Error(r.erreur);
+    const image = au(r.dessin.formes, 0);
+    expect(genreDeForme(image)).toBe('image PNG');
+    expect(nomDeForme(image)).toMatch(/^Image PNG 1, /);
+  });
 });
 
 describe('les couleurs dites', () => {

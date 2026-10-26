@@ -9,7 +9,7 @@ import { composerDansDessin, peutPorter, texteDispose } from '../engine/texte/di
 import { traceFerme } from '../engine/texte/surTrace.js';
 import type { Pose } from '../engine/texte/pose.js';
 import { avecTrace, basculerPeinture, creerTexte, natureDuTexte, nouveauTexte, peintureDuTexte, poserTexte } from '../engine/texte/vivant.js';
-import { NOMS_MODES, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
+import { NOMS_MODES, vectoriserLettresEnGroupes, vectoriserTextes, type ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { toleranceBooleen } from '../engine/booleens.js';
 import { NOMS_POLICES, estPoliceLivree } from '../model/polices.js';
 import { estIdCatalogue } from '../model/cataloguePolices.js';
@@ -18,6 +18,7 @@ import { toutesLesPolices, type Police } from '../io/polices.js';
 import { pluriel } from '../util/texte.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useTexte } from './contexteTexte.js';
+import { groupesActifs } from './modele.js';
 import type { ProfilProduction } from '../engine/preparation.js';
 
 /** Le texte d'exemple de l'apercu quand le champ est vide. */
@@ -165,13 +166,20 @@ export function useActionsTexte() {
       const p = policeDe(f, polices);
       if (p && f.texte) lettres.set(f.id, lettresDansDessin(dessin, f, p));
     }
-    const r = vectoriserTextes(dessin, textes.map(f => f.id), mode, { lettres, tolerance: toleranceBooleen(dessin), lisser: lisserBooleens });
+    const options = { lettres, tolerance: toleranceBooleen(dessin), lisser: lisserBooleens };
+    // En modele riche, « Lettres séparées » rend les lettres de chaque texte en UN groupe « Texte « … » » (annexe 4 A §2 ; le moteur
+    // l'avait, l'interface ne l'appelait pas) : le groupe est choisi, et la phrase le dit. A plat, les formes d'avant.
+    const enGroupes = mode === 'lettres' && groupesActifs(dessin, ui.modele);
+    const r = enGroupes ? vectoriserLettresEnGroupes(dessin, textes.map(f => f.id), options) : { ...vectoriserTextes(dessin, textes.map(f => f.id), mode, options), groupes: [] };
     if (!r.textes) { ac.dire('Ce texte est verrouillé : déverrouillez-le pour le vectoriser.'); return; }
     ac.appliquer(() => r.dessin);
-    ac.choisir(r.ids);
+    // Le choix : les groupes crees, et les lettres seules d'un texte qui n'a donne qu'une forme (les autres sont dans un groupe).
+    const dansUnGroupe = new Set(r.groupes.flatMap(g => r.dessin.formes.filter(f => f.parent === g).map(f => f.id)));
+    ac.choisir([...r.groupes, ...r.ids.filter(id => !dansUnGroupe.has(id))]);
     ac.dire(pluriel(r.textes, 'texte') + ' vectorisé' + (r.textes > 1 ? 's' : '') + ' (' + NOMS_MODES[mode].toLowerCase() + ') : ' + pluriel(r.ids.length, 'forme') + ' ordinaire' + (r.ids.length > 1 ? 's' : '')
+      + (r.groupes.length ? (r.groupes.length > 1 ? ', en ' + r.groupes.length + ' groupes' : ', en un groupe') : '')
       + (r.parParties ? ', coupée' + (r.ids.length > 1 ? 's' : '') + ' par parties de lettres faute de la police' : '') + '. Ctrl+Z rend le texte modifiable.');
-  }, [ac, dessin, lisserBooleens, mo.choisies, tx.polices]);
+  }, [ac, dessin, lisserBooleens, mo.choisies, tx.polices, ui.modele]);
 
   /**
    * Remplace une police partout dans le dessin (ADR-0025) : chaque texte vivant qui la porte se recompose avec `police`, en une

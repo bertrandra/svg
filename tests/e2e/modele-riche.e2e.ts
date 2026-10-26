@@ -21,11 +21,16 @@ const GROUPES = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">'
 describe('le modele riche sur la toile', () => {
   const navigateur = pilote();
 
-  /** Une page dont le stockage porte deja le reglage voulu (pose seulement s'il manque, pour qu'un choix fait dans le test survive). */
+  /**
+   * Une page dont le stockage porte le reglage voulu, pose par la page une fois chargee (la page ne le lit qu'a l'ouverture d'un
+   * dessin). Pas par un script d'amorce du contexte : sous Chromium, un document dont le script d'amorce touche `localStorage` des sa
+   * creation recoit parfois une zone de stockage a lui seul (une autre page du contexte n'y voit pas ce qu'il ecrit, et un rechargement
+   * la perd) : le brouillon du test de reprise disparaissait ainsi, 2 a 4 fois sur 16 sous charge, 0 sur 20 sans ce script.
+   */
   async function page(modele: 'plat' | 'riche' | null, options: { schema?: 'light' | 'dark'; tactile?: boolean } = {}): Promise<Page> {
     const s = await navigateur.ouvrir({ naviguer: false, ...options });
-    if (modele) await s.contexte.addInitScript(m => { try { if (localStorage.getItem('svg.modele') === null) localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); } catch { /* sans stockage */ } }, modele);
     await s.page.goto(URL_PAGE);
+    if (modele) await s.page.evaluate(m => { localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); }, modele);
     return s.page;
   }
 

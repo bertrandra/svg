@@ -3,7 +3,7 @@
 // qui rend l'etat du dernier rendu. Les setters de React, eux, sont stables par construction.
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
-import { bornerParametres, contenuEnDessin, dessinableEnPoints, reposerContenu, garderTextes, MSG_POINTS_IMAGE, poidsDessin, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
+import { bornerParametres, contenuEnDessin, dessinableEnPoints, reposerContenu, garderTextes, MSG_POINTS_IMAGE, poidsDessin, rangerDansLeContexte, sansTexte, type DessinSvg, type Forme, type ParametresFormes, type PoliceTexte, type Style } from '../engine/editionSvg.js';
 import { suivreDispositions } from '../engine/texte/disposition.js';
 import type { Glyphes } from '../engine/texte.js';
 import { annuler, avancer, clore, limitePourTaille, retablir, type Historique } from '../util/historique.js';
@@ -72,9 +72,11 @@ export function creerActions(lire: () => EtatDuMoment, s: Setters): ActionsEdite
     return vue ? reposerContenu(complet, l.groupe, l.genre, suivre(vue, f(vue))).dessin : complet;
   };
   const avancerAvec = (x: Historique<DessinSvg>, d: DessinSvg, cle: string | null) => avancer(x, d, cle, limitePourTaille(poidsDessin(d)));
+  // Dans un groupe (hors lentille), ce qu'une operation ajoute a la racine (une forme dessinee, collee, inseree) entre dans ce groupe
+  // (annexe 6 §9, paquet 2-D) : sinon elle naitrait hors du contexte, estompee et imprenable. Un dessin plat n'a pas de contexte.
   const appliquer: ActionsEditeur['appliquer'] = (f, cle = null) => {
-    const l = lentilleDe(lire().contexte);
-    s.poserH(x => avancerAvec(x, l ? parLentille(x.present, l, f) : suivre(x.present, f(x.present)), cle));
+    const contexte = lire().contexte, l = lentilleDe(contexte), groupe = l ? null : contexte?.groupe ?? null;
+    s.poserH(x => avancerAvec(x, l ? parLentille(x.present, l, f) : suivre(x.present, rangerDansLeContexte(x.present, f(x.present), groupe)), cle));
   };
   // Ce qui vise le dessin entier meme dans une lentille : liberer ou inverser son contenu, corriger un constat de la machine.
   const appliquerComplet = (f: (d: DessinSvg) => DessinSvg, cle: string | null = null) => s.poserH(x => avancerAvec(x, suivre(x.present, f(x.present)), cle));

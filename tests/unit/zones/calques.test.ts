@@ -102,6 +102,32 @@ describe('un dessin riche montre ses calques en arbre', () => {
     expect(html).toMatch(/<div data-cale="" aria-hidden="true" style="height:\d+px"><\/div><\/div><\/aside>$/);
   });
 
+  it('a la souris, seules la ligne active et une ligne masquee ou verrouillee dessinent leurs boutons ; les cellules restent', () => {
+    // Le budget du DOM de la grille (annexe 7 §4, paquet 2-D) : un pointeur qui survole finement (une souris) voit les boutons de la
+    // ligne active et de la ligne survolee ; une ligne masquee ou verrouillee garde les siens, son etat se lit sur eux. Au doigt (et
+    // hors navigateur, comme dans les autres cas de ce fichier), chaque ligne garde ses boutons.
+    const masque: DessinSvg = { ...d, formes: d.formes.map(f => (f.id === 'f3' ? { ...f, visible: false } : f)) };
+    const avant = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = { matchMedia: () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }) };
+    try {
+      const html = rendreCalques(d, { deplies: new Set([ciel, nuage]), sel: ['f2'] });
+      expect(html.match(/role="row"/g)?.length).toBe(6);
+      expect(html.match(/class="calque-cellule-bascule"/g)?.length).toBe(12);
+      // La ligne active (la choisie) seule a ses deux boutons, l'arret de tabulation sur la ligne.
+      const avecBoutons = html.split('data-ligne="').slice(1).filter(l => l.includes('data-action="visible"')).map(l => l.slice(0, l.indexOf('"')));
+      expect(avecBoutons).toEqual(['f2']);
+      expect(html.match(/data-action="(visible|verrou)"/g)?.length).toBe(2);
+      // Une forme masquee garde son bouton « Afficher » (et le verrou voisin), sans etre active (l'active est la premiere ligne).
+      const h2 = rendreCalques(masque, { deplies: new Set([ciel]) });
+      expect(h2).toContain('aria-label="Afficher la forme 3"');
+      expect(h2.match(/data-action="(visible|verrou)"/g)?.length).toBe(4);
+    } finally {
+      (globalThis as { window?: unknown }).window = avant;
+    }
+    // Hors navigateur : toutes les lignes ont leurs boutons, comme au doigt.
+    expect(rendreCalques(d, { deplies: new Set([ciel, nuage]) }).match(/data-action="visible"/g)?.length).toBe(6);
+  });
+
   it('en Cricut, les deux groupes d operations d abord, l arbre dessous', () => {
     if (!PROFIL) throw new Error('profil');
     const html = rendreCalques(d, { profil: PROFIL });

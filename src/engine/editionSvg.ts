@@ -126,7 +126,7 @@ export { transformerFeuille, transformerGroupe } from './edition/transformation.
 
 // ---- etape 1 : groupes (moteur)
 export {
-  grouper, degrouper, deplacerDans, renommer, groupeDe, reglerGroupes, dupliquerNoeuds, ordonnerNoeuds, montrerSeulementNoeuds, insererContenu,
+  grouper, degrouper, deplacerDans, rangerDansLeContexte, renommer, groupeDe, reglerGroupes, dupliquerNoeuds, ordonnerNoeuds, montrerSeulementNoeuds, insererContenu,
   collerContenu, egales, MSG_MEME_PARENT, type OrdreNoeuds
 } from './edition/groupes.js';
 export { groupes, nomDuGroupe, GROUPES_MAX, NOM_GROUPE_MAX, ATTRIBUT_NOM, MSG_GROUPES_PROFONDS, MSG_GROUPES_NOMBREUX } from './edition/fonctions/groupes.js';

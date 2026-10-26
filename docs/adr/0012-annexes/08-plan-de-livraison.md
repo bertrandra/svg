@@ -17,7 +17,7 @@ Les tailles sont des estimations d'ordre de grandeur, non mesurées : **P** (≈
 | 11 Texte vivant, interface | **faite** (ADR-0022, 0027, 0031, 0032 : `InspecteurTexte`, `BarreTexte`, `SaisieTexte`, `ChoixPolice`) |
 | 3 Dégradés, moteur | **faite** le 26 octobre 2026 (vague 1, paquets A, B et C en un seul arbre ; ce qui a été posé et les écarts : §1 « Étape 3 ») |
 | 12 Images | **faite pour le moteur** le 26 octobre 2026 (ce qui a été posé et ce qui reste : ci-dessous, « Ce que l'étape 12 a posé ») ; ses fonctions de projet sont **branchées** à la fusion des étapes 3 et 12 (cadre des champs v2 posé par l'étape 3) ; sous un groupe depuis la fusion avec l'étape 1 |
-| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-B** (calques en arbre) **fait** le 26 octobre 2026 (« Ce que le paquet 2-B a posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; 2-D proposé |
+| 2 Groupes, interface | paquets **2-0** (état, réglage) et **2-A** (toile) **faits** le 26 octobre 2026 (ce qui a été posé : ci-dessous, « Ce que les paquets 2-0 et 2-A ont posé ») ; **2-B** (calques en arbre) **fait** le 26 octobre 2026 (« Ce que le paquet 2-B a posé ») ; **2-C** (commandes, fil d'Ariane, clavier, phrases) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-C a posé ») ; **2-D** (e2e, axe, trois moteurs, budgets, passe de qualité de l'interface riche) **fait** le 26 octobre 2026 (ci-dessous, « Ce que le paquet 2-D a posé ») : l'étape 2 est faite, sauf la revue NVDA/VoiceOver |
 | 5 Découpes | **faite pour le moteur** le 26 octobre 2026 (paquets 5-A, 5-B, 5-C en un seul arbre ; ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que l'étape 5 a posé ») ; la toile vient du rendu générique de l'étape 2, l'interface de l'étape 8 |
 | 7 Effets | **paquet 7-A (moteur) fait** le 26 octobre 2026 (ce qui a été posé, les écarts et ce qui reste : ci-dessous, « Ce que le paquet 7-A a posé ») ; **7-B (toile, brouillon, mesures) fait** le 26 octobre 2026 (ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») ; l'interface des effets est à l'étape 8 |
 | 4 Dégradés, interface | **faite** le 26 octobre 2026 (paquets 4-A et 4-B en un seul arbre ; ci-dessous, « Ce que l'étape 4 et le paquet 7-B ont posé ») |
@@ -1196,11 +1196,106 @@ l'étape 8 tient). On modifie maintenant le contenu d'une découpe ou d'un masqu
   une matrice à l'aller et au retour) ; la phrase d'une sélection dans une découpe nomme encore la peinture refixée (« fond noir ») ;
   les aimants et le cadre ne voient que le contenu (pas le reste du dessin, inerte) ; le premier clic sur une ligne de groupe des
   calques décale la liste d'une ligne (observé en e2e : un double-clic sur une ligne non choisie tombe sur la voisine ; hors de ce
-  paquet, à regarder par 2-D) ; contraste forcé et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
+  paquet, à regarder par 2-D ; **traité** par 2-D, ci-dessous) ; contraste forcé et WebKit sur ces écrans en CI ; la revue NVDA/VoiceOver (condition de la bascule).
   `tests/e2e/modele-riche.e2e.ts` « un brouillon écrit en riche… » a échoué trois fois (juste après une construction de la page, dont
   une fois dans la série complète), puis passé cinq fois de suite, sur la même construction : le brouillon écrit, présent avant le
   rechargement, n'y était plus après (un rechargement qui suit de près l'écriture) ; instrumenté, il a passé : cause non trouvée, à
-  surveiller par 2-D.
+  surveiller par 2-D (**racine trouvée** par 2-D, ci-dessous : un stockage isolé par le script d'amorce du test).
+
+### Ce que le paquet 2-D a posé (26 octobre 2026)
+
+Aucun octet écrit ne bouge (références v1 gelées, références v2 intactes), la lecture `plat` est inchangée, la liste des calques d'un
+dessin plat garde son DOM au nœud près (`plat.sha256.json` vert sans régénérer). La passe a rejoué au clavier chaque parcours de
+l'annexe 6 §9 dans les trois moteurs, et corrigé à la racine ce qu'elle a trouvé.
+
+- **Défauts trouvés et corrigés** :
+  - *Dessiner dans un groupe* : une forme dessinée (ou collée, insérée) pendant qu'on édite dans un groupe naissait à la racine, hors
+    du contexte, estompée et imprenable, alors qu'elle était dite choisie. `rangerDansLeContexte(avant, après, groupe)`
+    (`engine/edition/groupes.ts`, pur, dans la façade) fait entrer les feuilles nouvelles posées à la racine au premier plan du groupe du
+    contexte ; `appliquer` (`creerActions.ts`) l'appelle hors d'une lentille (dans une découpe ou un masque, la lentille de 8-D range déjà
+    ce qui s'ajoute dans le contenu). Un dessin plat n'a pas de contexte.
+  - *« Lettres séparées » en groupe* : le moteur savait rendre le groupe « Texte « … » » (`vectoriserLettresEnGroupes`, étape 1) mais
+    l'interface ne l'appelait pas. En riche, `vectoriser` (`actionsTexte.ts`) l'appelle, choisit le groupe et le dit (« … : 4 formes
+    ordinaires, en un groupe. »). `groupesActifs` passe dans `zones/modele.ts` (sans dépendance ; `commandesGroupes.ts` la réexporte)
+    pour éviter un cycle d'import.
+  - *Une image dite « rectangle »* : son genre se lisait sur le cadre de son chemin (calques, sélection, Alt+clic). `genreDeForme` dit
+    « image PNG » (ancien corps dans `anciennes/etape2d.ts`, cas dans `loi-dessin-plat.test.ts`).
+  - *Double-clic dans l'arbre* (vu par 8-D) : le premier clic sur une ligne non choisie fait apparaître la rangée de la sélection
+    au-dessus des panneaux, la liste descend d'une ligne et le second clic tombait sur la voisine. Le second clic (`detail` 2) et le
+    double-clic visent la ligne du premier (`MemoireArbre.premierClic`). **La cause de mise en page reste** : la rangée de la sélection
+    occupe toute la largeur et décale panneaux **et toile** de 33 px à la première sélection (un double-clic sur une petite forme de la
+    toile peut aussi manquer sa cible). Deux remèdes, à trancher hors de ce paquet (ils changent l'aspect pour tous) : réserver la
+    hauteur de la rangée en permanence, ou la poser au-dessus de la seule toile (elle passe alors sur deux lignes à 1 400 px).
+  - *Contraste forcé* : le numéro et les pastilles d'une ligne choisie gardaient leur encre douce sur `Highlight` (illisibles, arbre et
+    liste plate : CSS seul, DOM inchangé) ; un mini-onglet enfoncé (« Les deux », « Fond », « Contour ») ne se distinguait pas des autres ;
+    le fil d'Ariane se redit lui-même en couleurs du système (WebKit ne force aucune couleur d'auteur). Hors contraste forcé : le bouton
+    « Déplacer vers… » repliait son texte au-delà de sa hauteur fixe (le menu ouvert le recouvrait, axe le disait), il tient sur une ligne.
+- **Le test instable** (`modele-riche`, « un brouillon écrit en riche ne se reprend pas à plat ») : **racine trouvée, hors de
+  l'application**. Sous Chromium, un document dont le script d'amorce du contexte (`addInitScript`) touche `localStorage` dès sa création
+  reçoit parfois une zone de stockage à lui seul : une marque qu'il pose au chargement reste invisible à une autre page du même contexte,
+  et le rechargement repart de la zone partagée, sans le brouillon ni le réglage (reproduit hors du test : 2 à 4 fois sur 16 sous
+  charge ; sur une page vide, 4 isolements et 1 perte sur 30 avec le script, aucun sans). Le réglage est désormais posé par la page une
+  fois chargée (elle ne le lit qu'à l'ouverture d'un dessin) : 0 échec sur 20 sous charge, et les passes ci-dessous. Aucun autre fichier
+  ne combine un tel script et un rechargement (ceux qui posent le modèle ainsi ne rechargent pas : le document garde sa zone d'un bout à
+  l'autre ; ceux qui rechargent n'ont pas de script, ou un script qui refuse le stockage). Un profil réel écrit sur le disque : personne
+  ne perd son brouillon ainsi.
+- **L'arbre des calques tient le budget du DOM** (annexe 7 §4 : 400 éléments). Mesuré : ≈ 17 éléments par ligne repliée, dont 11 pour
+  les deux boutons à icône et le chevron. À la souris (`useSurvolFin` : `not all and (pointer: coarse)` — Firefox sans écran annonce
+  `pointer: none`), les boutons de visibilité et de verrou ne se dessinent que sur la ligne active (celle du tabindex itinérant : Droite
+  les atteint toujours, le clavier n'a rien perdu), la ligne survolée et une ligne masquée ou verrouillée (son état se lit sur eux) ;
+  leurs cellules restent, vides, à la même largeur. Au doigt et hors navigateur, chaque ligne garde ses boutons. Le chevron d'un groupe
+  est dessiné par deux bords en CSS. **La liste plate n'a pas été touchée** (651 éléments pour 50 lignes à 1 920 × 1 080, 559 à
+  1 400 × 900 : hors du budget de la grille, qui ne la vise pas ; la réduire changerait le DOM gardé d'un dessin plat).
+- **Mesures** (méthode de l'ADR-0008 : Chromium sans écran, 1 920 × 1 080, `TaskDuration` du fil principal, médianes, versions
+  entrelacées ; « avant » = `7264fbd`, « après » = ce paquet fusionné avec 8-D et 13b ; poste partagé avec deux autres agents, charge 1 à 4 :
+  l'écart d'une série à l'autre atteint ± 12 %) :
+
+  | Témoin | Avant | Après | Budget |
+  |---|---|---|---|
+  | Grille repliée, 200 groupes de 10 (47 lignes dessinées) | 801 éléments | **339** | ≤ 400 |
+  | Même grille, `*` (200 groupes dépliés, fenêtrée) | 759 éléments, 123 ms | 381 éléments, 67 ms | ≤ 100 ms |
+  | 5 000 feuilles / 500 groupes sur 3 niveaux, replié (5 lignes) | 86 éléments | 44 | ≤ 400 |
+  | idem : ouvrir | 1 014 ms | 928 ms | ≤ 1,2 × plat (photo : 1 109–1 176) |
+  | idem : Ctrl+A | 296 ms | 355 ms | ≤ 1,2 × plat (photo : 666–718) |
+  | idem : glisser une feuille / un groupe de 110 feuilles (par mouvement) | 34,5 / 36,1 ms | 38,8 / 39,6 ms | ≤ 40 / ≤ 60 ms |
+  | idem : `*` sur les 5 groupes de la racine | 126 ms, 1 021 éléments | 109 ms, 429 éléments | ≤ 100 ms (tout déplier) |
+  | Plat photo (5 000 formes, 120 couleurs), n = 8 | ouvrir 1 109, Ctrl+A 666, glisser 41,7 | 1 176 (+6 %), 718 (+8 %), 33,9 | ± 10 % |
+  | Plat logo (6 couleurs), n = 8 | 1 001, 723, 41,2 | 1 038 (+4 %), 727 (+1 %), 39,6 | ± 10 % |
+  | Plat 2 000 couleurs, n = 3 | 1 132, 807, 40,4 | 1 206 (+7 %), 612 (−24 %), 35,5 | ± 10 % |
+  | Plat 2 000 formes (témoin de 2-B), n = 20 | 549, 311, 20,1 | 601 (+9 %), 302 (−3 %), 20,9 | ± 10 % |
+
+  Les témoins plats restent sous 10 % ; leurs DOM sont identiques à l'élément près. Sur le témoin de 2-B, la build de 8-D seule
+  (`f6ceff5`, n = 12) ouvre en 559 ms : l'écart ne vient pas de ce paquet, et il est dans le bruit du poste. Hors budget, ou non mesuré
+  ici : « tout déplier » 500 groupes n'a pas de geste unique (`*` déplie les frères d'un niveau) ; l'historique et l'image de 2 Mo n'ont
+  pas changé depuis 7-B et l'étape 8. Le script de mesure n'est pas commis (il pilote la page construite) ; sa méthode est celle-ci.
+- **e2e** : `tests/e2e/interface-riche.e2e.ts` (nouveau) — sans souris, chaque geste dit dans la région vocale : créer un groupe, y
+  entrer, y dessiner au réticule, en sortir ; créer puis libérer un masque ; créer un motif ; insérer une image, la déplacer, la
+  redimensionner, ses points refusés ; saisir un texte et le vectoriser en groupe ; le budget du DOM de la grille et ce que le survol
+  montre ; axe sur l'image et le motif en clair, sombre, au doigt et en contraste forcé ; axe en contraste forcé sur le contexte de
+  groupe et le fil d'Ariane, l'arbre déplié et « Déplacer vers… », le dégradé linéaire et radial, la section Effets et les pastilles, une
+  découpe en lentille. En contraste forcé, l'audit laisse un contraste entre **deux couleurs du système** (la palette émulée sans écran
+  met `HighlightText` sur `Highlight` à 2,9:1 sous Firefox et 4:1 sous WebKit : ce n'est pas la page) et compte tout autre contraste.
+  `contraste-force.e2e.ts` : le fil d'Ariane (bouton bordé `ButtonText`, niveau courant en texte `CanvasText`, anneau `Highlight`), le
+  contour du groupe (`Highlight` sur `Canvas`), la ligne choisie de l'arbre, son numéro et son chevron. `calques-arbre.e2e.ts` : le
+  double-clic sur une ligne de groupe non choisie. Unitaires : `calques.test.ts` (boutons de la grille à la souris), `creerActions.test.ts`
+  et `groupes.test.ts` (ranger dans le contexte), `description.test.ts` et la loi du dessin plat (genre d'une image).
+- **Trois moteurs** (fichiers joués dans chacun, page construite, deux fichiers en parallèle) :
+
+  | Moteur | Fichiers | Tests | Échecs trouvés en route, et leur racine |
+  |---|---|---|---|
+  | Chromium | 21 | 310 réussis | le test de reprise (stockage isolé par un script d'amorce, ci-dessus) ; dans les tests neufs : le choix de fichier attendu après la touche (Playwright n'intercepte le dialogue qu'une fois sa demande faite : l'attente se pose avant d'ouvrir le menu) et un focus donné avant celui que le menu pose sur son premier élément (on attend le focus dans le menu) |
+  | Firefox | 21 | 310 réussis | le budget du DOM (`pointer: none` sans écran : la requête ne réserve plus les boutons qu'au doigt) ; le fil d'Ariane bordé d'une couleur forcée (`ButtonBorder`) : ses couleurs du système sont écrites ; la palette émulée (contrastes entre couleurs du système, laissés) |
+  | WebKit | 21 | 310 réussis | aucune couleur d'auteur forcée en contraste forcé : le fil d'Ariane se redit lui-même ; la palette émulée, comme Firefox |
+
+  Fichiers : `interface-riche`, `modele-riche`, `calques-arbre`, `degrades`, `decoupes-masques-effets`, `pdf-natif`, `lentilles`, `clavier`,
+  `clavier-suite`, `accessibilite-axe`, `tactile`, `contraste-force`, `menus`, `selection`, `prise`, `edition`, `operations`, `cricut`,
+  `exports`, `exports-formats`, `couleurs-du-dessin`. Avant le paquet (base `7264fbd`), les cinq fichiers riches passaient déjà dans les
+  trois moteurs, et les quatorze autres dans Chromium et Firefox. Sous charge (le fichier de reprise avec trois autres, deux fois, pendant
+  la passe Firefox) : vert. Aucun test sauté, aucun délai ajouté, aucune règle d'axe désactivée.
+
+- **Reste** : la revue NVDA/VoiceOver de l'arbre, du dégradé et des lentilles (condition de la bascule, un humain) ; la rangée de la
+  sélection qui décale panneaux et toile (ci-dessus, décision de mise en page) ; le choix du genre d'un remplissage à motif montre
+  « Uni » (reste de l'étape 9) ; `CI` : `interface-riche.e2e.ts` entre dans la matrice des trois moteurs comme les autres fichiers.
 
 ### Caduc
 
@@ -1302,7 +1397,7 @@ encore les feuilles d'un groupe masqué ou verrouillé (leur fichier est à l'é
 - Paquets : **A** lecture + écriture (G) ; **B** opérations et lois (G) ; **C** descente, fixtures, hostiles,
   budgets `arbreDe` (M). A et B en parallèle (fichiers différents, interface fixée par l'étape 0), C ensuite.
 
-### Étape 2 — Groupes : l'interface · taille G · risque élevé (accessibilité)
+### Étape 2 — Groupes : l'interface · taille G · risque élevé (accessibilité) · **faite le 26 octobre 2026** (paquets 0, A, B, C, D ; §0), sauf la revue NVDA/VoiceOver
 
 - Réglage `modele` (menu Édition, gardé par le `stockage` injecté) et propriété de l'éditeur.
 - Contexte d'édition (état d'`Interface`), rendu récursif de la toile, `Gestes.ts` (clic → nœud du

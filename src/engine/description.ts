@@ -51,6 +51,9 @@ function estEtoile(d: Chemin): boolean {
     && pairs.every(v => proche(v, mp, 0.1 * mp)) && impairs.every(v => proche(v, mi, 0.1 * mi));
 }
 
+/** Les natures d'une image integree, telles qu'on les dit. */
+const NATURES_IMAGE: Readonly<Record<string, string>> = { png: 'PNG', jpeg: 'JPEG', gif: 'GIF', webp: 'WebP' };
+
 /**
  * Le genre d'une forme en un mot ou deux : rectangle, ellipse, cercle, etoile, triangle, ligne, polygone, courbe, trace, et les
  * formes de base de la palette (ADR-0033 : cœur, hexagone, flèche, anneau…), reconnues sur leur geometrie comme les autres : une
@@ -59,6 +62,8 @@ function estEtoile(d: Chemin): boolean {
 export function genreDeForme(f: Forme): string {
   // Un texte vivant se nomme par ce qu'il dit (ADR-0022) : « texte « Joyeux Noël » », coupe a trente caracteres.
   if (f.texte) { const t = f.texte.texte.replace(/\s+/g, ' ').trim(); return 'texte « ' + (t.length > 30 ? t.slice(0, 29) + '…' : t) + ' »'; }
+  // Une image integree (ADR-0012, etape 12) se dit par sa nature, pas par le cadre de son chemin (« rectangle ») : paquet 2-D.
+  if (f.image) return 'image ' + (NATURES_IMAGE[/^data:image\/(png|jpeg|gif|webp)/.exec(f.image.donnees)?.[1] ?? ''] ?? '').trim();
   const b = boiteForme(f);
   if (!b) return 'tracé vide';
   const tol = Math.max(b.l, b.h) * 0.002 + 1e-9;

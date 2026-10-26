@@ -176,6 +176,17 @@ describe('l arbre des calques', () => {
     });
   }
 
+  it('un double-clic sur une ligne de groupe non choisie y entre, meme si la rangee de la selection decale la liste entre les deux clics', async () => {
+    const p = await page();
+    await ouvrirCode(p, RICHE);
+    await grille(p).waitFor();
+    // Rien n'est choisi : le premier clic fait apparaitre la rangee de la selection, au-dessus des panneaux, et la liste descend.
+    expect(await p.locator('.editeur-barre-selection').count()).toBe(0);
+    await ligne(p, /^Groupe « Herbe »/).dblclick();
+    await attend(() => annonce(p)).toBe('Dans le groupe « Herbe », 2 éléments.');
+    expect(await ligne(p, /^Groupe « Herbe »/).getAttribute('aria-current')).toBe('true');
+  });
+
   it('glisser une ligne sur un groupe l y fait entrer', async () => {
     const p = await page();
     await ouvrirCode(p, RICHE);

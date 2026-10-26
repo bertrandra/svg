@@ -31,6 +31,12 @@ export interface MemoireArbre {
   dernierFocus: HTMLElement | null;
   /** Le groupe qu'on renomme (F2), tant que le champ est ouvert. */
   renommeEnCours: string | null;
+  /**
+   * La ligne du premier clic d'un double-clic : le premier clic choisit, la rangee de la selection apparait au-dessus des panneaux et
+   * decale la liste d'une ligne, et le second clic tombait sur la ligne voisine (vu par le paquet 8-D). Le second clic et le
+   * double-clic visent donc la ligne du premier.
+   */
+  premierClic: string | null;
 }
 
 export interface EtatArbre {
@@ -162,9 +168,12 @@ const celluleDe = (t: HTMLElement, ligne: HTMLElement): number => (t === ligne ?
 export function gestesSouris(e: EtatArbre, v: VerbesArbre) {
   const { dessin, sel, ac, memoire } = e;
   const clic = (ev: MouseEvent<HTMLDivElement>) => {
-    const t = ev.target as HTMLElement, l = ligneDe(t);
-    if (!l || t.closest('input')) return;
+    const t = ev.target as HTMLElement, sous = ligneDe(t);
+    if (!sous || t.closest('input')) return;
     const action = t.closest<HTMLElement>('[data-action]')?.dataset['action'];
+    // Le second clic d'un double-clic (`detail` 2) vise la ligne du premier, meme si la liste a bouge sous le pointeur entre les deux.
+    if (ev.detail <= 1 || action) memoire.premierClic = action ? null : sous.id;
+    const l = ev.detail >= 2 && memoire.premierClic !== null && !action ? { ...sous, id: memoire.premierClic } : sous;
     if (action === 'deplier') { v.basculer(l.id); return; }
     const g = groupeDe(dessin, l.id), f = g ? undefined : dessin.formes.find(x => x.id === l.id);
     if (action === 'visible') { const vu = g?.visible ?? f?.visible ?? true; ac.appliquer(d => modifier(d, [l.id], { visible: !vu })); return; }
@@ -178,10 +187,11 @@ export function gestesSouris(e: EtatArbre, v: VerbesArbre) {
     v.choisirLigne(l.id, ev.shiftKey ? 'etendre' : ev.ctrlKey || ev.metaKey ? 'basculer' : 'seul');
   };
   const doubleClic = (ev: MouseEvent<HTMLDivElement>) => {
-    const t = ev.target as HTMLElement, l = ligneDe(t);
+    const t = ev.target as HTMLElement, sous = ligneDe(t);
+    const l = sous && memoire.premierClic !== null ? { ...sous, id: memoire.premierClic } : sous;
     if (!l || t.closest('[data-action], input') || !groupeDe(dessin, l.id)) return;
     // La pastille d'une decoupe ou d'un masque : on en modifie le contenu (paquet 8-D) ; ailleurs sur la ligne, on entre dans le groupe.
-    const pastille = t.closest<HTMLElement>('[data-pastille]')?.dataset.pastille;
+    const pastille = sous?.id === l.id ? t.closest<HTMLElement>('[data-pastille]')?.dataset.pastille : undefined;
     if (pastille === 'decoupe' || pastille === 'masque') { ac.modifierContenu(pastille, l.id); return; }
     v.entrer(l.id);
   };

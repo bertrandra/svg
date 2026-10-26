@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Page } from 'playwright';
-import { aLeFocus, attend, ouvrirExemple, pilote, URL_INTEGRATION } from './aide.js';
+import { aLeFocus, attend, ouvrirCode, ouvrirExemple, pilote, URL_INTEGRATION, URL_PAGE } from './aide.js';
 
 describe('contraste forcé', () => {
   const navigateur = pilote();
@@ -122,6 +122,57 @@ describe('contraste forcé', () => {
     await page.locator('.editeur-svg .editeur-cadre').waitFor();
     const actif = '.editeur-svg .editeur-barre .icone-bouton[aria-pressed="true"]';
     await attend(() => style(page, actif, 'background-color')).toBe(await systeme(page, 'Highlight'));
+  });
+
+  it('redit le fil d Ariane, le contour du groupe et l arbre des calques d un dessin riche (ADR-0012, etape 2)', async () => {
+    const { page, contexte } = await navigateur.ouvrir({ naviguer: false });
+    await contexte.addInitScript(() => { try { localStorage.setItem('svg.modele', JSON.stringify({ modele: 'riche' })); } catch { /* sans stockage */ } });
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.goto(URL_PAGE);
+    await ouvrirCode(page, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><g data-ed-nom="Nuage"><rect x="40" y="40" width="80" height="60" fill="#c81e28"/>'
+      + '<rect x="160" y="40" width="80" height="60" fill="#1f4e8c"/></g><rect x="40" y="180" width="80" height="60" fill="#e0b84a"/></svg>');
+    const toile = page.locator('.editeur-svg-toile');
+    await attend(() => aLeFocus(toile)).toBe(true);
+    await page.keyboard.press('PageDown');
+    await page.keyboard.press('Enter');
+    const fil = page.getByRole('navigation', { name: 'Contexte d’édition' });
+    await attend(() => fil.textContent()).toBe('Racine›Nuage');
+    // Le contour du groupe en contexte : Highlight sur un halo Canvas, comme le lisere de survol ; le reste s'estompe (une opacite).
+    expect(await style(page, '.editeur-svg-toile .contour-groupe', 'stroke')).toBe(await systeme(page, 'Highlight'));
+    expect(await style(page, '.editeur-svg-toile .contour-groupe-fond', 'stroke')).toBe(await systeme(page, 'Canvas'));
+    expect(Number(await style(page, '.editeur-svg-toile .hors-contexte', 'opacity'))).toBeLessThan(1);
+    // Le fil : un bouton se voit comme un bouton (un bord du systeme), le niveau du moment comme un texte (sans bord, en gras).
+    const bouton = '.fil-ariane button', courant = '.fil-ariane [aria-current="location"]';
+    expect(await style(page, bouton, 'color')).toBe(await systeme(page, 'ButtonText'));
+    expect(await style(page, bouton, 'border-top-style')).toBe('solid');
+    expect(await style(page, bouton, 'border-top-color')).toBe(await systeme(page, 'ButtonText'));
+    expect(await style(page, courant, 'color')).toBe(await systeme(page, 'CanvasText'));
+    expect(await style(page, courant, 'border-top-style')).toBe('none');
+    expect(Number(await style(page, courant, 'font-weight'))).toBeGreaterThanOrEqual(600);
+    // Au clavier, le bouton du fil a un anneau Highlight de 2 px.
+    await page.locator(bouton).focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await attend(() => aLeFocus(page.locator(bouton))).toBe(true);
+    await attend(() => style(page, bouton, 'outline-color')).toBe(await systeme(page, 'Highlight'));
+    expect(await style(page, bouton, 'outline-width')).toBe('2px');
+    // L'arbre : la ligne choisie en Highlight, son nom, son numero et ses boutons en HighlightText ; le chevron d'un groupe (dessine
+    // par deux bords) prend la couleur du texte du systeme.
+    const choisie = '.calque-ligne.choisi';
+    await attend(() => page.locator(choisie).count()).toBe(1);
+    await attend(() => style(page, choisie, 'background-color')).toBe(await systeme(page, 'Highlight'));
+    const blanc = await systeme(page, 'HighlightText');
+    expect(await style(page, choisie + ' .calque-genre', 'color')).toBe(blanc);
+    expect(await style(page, choisie + ' .calque-numero', 'color')).toBe(blanc);
+    await page.locator(choisie).hover();
+    await attend(() => page.locator(choisie + ' .calque-bascule').count()).toBe(2);
+    expect(await style(page, choisie + ' .calque-bascule', 'color')).toBe(blanc);
+    const chevron = await page.locator('.calque-ligne[aria-expanded] button.calque-chevron').first().evaluate(e => {
+      const s = getComputedStyle(e, '::before');
+      return { haut: s.borderRightColor, largeur: s.borderRightWidth, texte: getComputedStyle(e).color };
+    });
+    expect(chevron.haut).toBe(chevron.texte);
+    expect(parseFloat(chevron.largeur)).toBeGreaterThanOrEqual(1);
   });
 
   it('redit le lisere de survol d une forme en Highlight sur un halo Canvas (ADR-0029)', async () => {

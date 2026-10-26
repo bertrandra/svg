@@ -35,8 +35,9 @@ import { couleursProchesAncien, fusionnerCouleursProchesAncien, idsDeNuancesProc
 import { apportsDeAncien } from './anciennes/nuancier.js';
 import { appliquerPalette, PALETTES, uneCouleur } from '../../../src/engine/palettes.js';
 import { appliquerPaletteAncien, uneCouleurAncien } from './anciennes/palettes.js';
-import { peintureDite } from '../../../src/engine/description.js';
+import { genreDeForme, peintureDite } from '../../../src/engine/description.js';
 import { peintureDiteAncienne } from './anciennes/etape4.js';
+import { genreDeFormeAncien } from './anciennes/etape2d.js';
 
 const DOSSIER = resolve(__dirname, '../../fixtures/svg');
 const textes = readdirSync(DOSSIER).filter(n => n.endsWith('.svg')).sort().map(nom => ({ nom, svg: readFileSync(resolve(DOSSIER, nom), 'utf8').replace(/\r\n/g, '\n') }));
@@ -158,6 +159,10 @@ describe('la loi du dessin plat', () => {
 
   it('etape 4 : peintureDite dit ce que disait l ancienne', () => {
     for (const { nom, d } of corpus) for (const f of d.formes) expect(peintureDite(f), nom + ' ' + f.id).toBe(peintureDiteAncienne(f));
+  });
+
+  it('paquet 2-D : genreDeForme dit ce que disait l ancienne', () => {
+    for (const { nom, d } of corpus) for (const f of d.formes) expect(genreDeForme(f), nom + ' ' + f.id).toBe(genreDeFormeAncien(f));
   });
 
   it('refusDe sans fonctionnalite refuse exactement comme avant', () => {
