@@ -206,6 +206,12 @@ empreintes.
 
 ### Ajouté
 
+- Modèle v2, étape 13d : les outils de couleur voient les dégradés et les motifs. « Couleurs du dessin » et « Par couleur » ont une
+  ligne pour chaque couleur d'arrêt et de tuile, jamais pour la couleur moyenne de repli. Remplacer une couleur (partout, sur le
+  fond ou sur le trait), fusionner les nuances proches, appliquer une palette ou tout mettre d'une couleur changent les arrêts et
+  les tuiles, puis recalculent la couleur de repli. La sélection par couleur prend une forme dont un arrêt ou la tuile porte la
+  couleur. Le contenu d'un masque n'est pas touché. Un dessin plat ne change pas d'un octet.
+
 - Modèle v2, étape 9 : les motifs. En mode riche, une peinture `url(#…)` vers un `<pattern>` s'ouvre (unités de la tuile et du
   contenu, viewBox, transformation, héritage `href`, tuile peinte avec dégradés et motifs imbriqués) et se réécrit en
   `<pattern id="ed-p-…">` canonique et dédoublonné. Le motif suit sa forme, sa couleur de repli est la moyenne de sa tuile, le
