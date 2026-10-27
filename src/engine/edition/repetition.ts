@@ -11,6 +11,7 @@ import type { DessinSvg, Forme, Matrice } from './types.js';
 import { boiteDe, echelle, rotation, translation } from './geometrie.js';
 import { prochainId, transformer } from './operations.js';
 import { relierCopie } from './texteVivant.js';
+import { nombre, t } from '../../util/i18n.js';
 
 /** Ce qu'une repetition rend : le dessin, les formes a choisir ensuite (la selection et ses copies), le nombre de copies. */
 export interface ResultatRepetition {
@@ -47,10 +48,10 @@ const aRepeter = (dessin: DessinSvg, ids: readonly string[]): Forme[] => {
  */
 export function copierPar(dessin: DessinSvg, ids: readonly string[], matrices: readonly Matrice[]): ResultatRepetition {
   const choisies = aRepeter(dessin, ids);
-  if (!choisies.length) return refus(dessin, ids, 'Choisissez d’abord une forme visible et déverrouillée à répéter.');
+  if (!choisies.length) return refus(dessin, ids, t('Choisissez d’abord une forme visible et déverrouillée à répéter.'));
   if (!matrices.length) return { dessin, ids: choisies.map(f => f.id), copies: 0 };
   if (choisies.length * matrices.length > REPETITION_MAX.formes) {
-    return refus(dessin, ids, 'Trop de copies : ' + (choisies.length * matrices.length).toLocaleString('fr-FR') + ' formes, au-delà des ' + REPETITION_MAX.formes.toLocaleString('fr-FR') + ' qu’un geste peut créer.');
+    return refus(dessin, ids, t('Trop de copies : {n} formes, au-delà des {max} qu’un geste peut créer.', { n: nombre(choisies.length * matrices.length), max: nombre(REPETITION_MAX.formes) }));
   }
   let n = prochainId(dessin);
   const poses: Forme[] = [], nouveaux: string[] = [];
@@ -100,9 +101,9 @@ export function pasGrilleParDefaut(dessin: DessinSvg, ids: readonly string[]): {
 /** Duplique la selection en grille de `lignes` x `colonnes`, l'original en haut a gauche (au pas positif). */
 export function dupliquerEnGrille(dessin: DessinSvg, ids: readonly string[], r: ReglageGrille): ResultatRepetition {
   if (!entier(r.lignes) || !entier(r.colonnes) || r.lignes > REPETITION_MAX.cote || r.colonnes > REPETITION_MAX.cote) {
-    return refus(dessin, ids, 'Une grille compte de 1 à ' + REPETITION_MAX.cote + ' lignes et colonnes.');
+    return refus(dessin, ids, t('Une grille compte de 1 à {max} lignes et colonnes.', { max: REPETITION_MAX.cote }));
   }
-  if (!Number.isFinite(r.pasX) || !Number.isFinite(r.pasY)) return refus(dessin, ids, 'Donnez un pas lisible.');
+  if (!Number.isFinite(r.pasX) || !Number.isFinite(r.pasY)) return refus(dessin, ids, t('Donnez un pas lisible.'));
   return copierPar(dessin, ids, matricesGrille(r));
 }
 
@@ -141,12 +142,12 @@ export function matricesRadiales(r: ReglageRadial, depuis: readonly [number, num
 /** Repete la selection autour de `centre` : `exemplaires` en tout sur `angle` degres. */
 export function repetitionRadiale(dessin: DessinSvg, ids: readonly string[], r: ReglageRadial): ResultatRepetition {
   if (!entier(r.exemplaires) || r.exemplaires < 2 || r.exemplaires > REPETITION_MAX.radiale) {
-    return refus(dessin, ids, 'Une répétition radiale compte de 2 à ' + REPETITION_MAX.radiale + ' exemplaires.');
+    return refus(dessin, ids, t('Une répétition radiale compte de 2 à {max} exemplaires.', { max: REPETITION_MAX.radiale }));
   }
-  if (!Number.isFinite(r.angle) || r.angle === 0 || Math.abs(r.angle) > 360) return refus(dessin, ids, 'Donnez un angle entre 1 et 360 degrés.');
-  if (!r.centre.every(Number.isFinite)) return refus(dessin, ids, 'Donnez un centre lisible.');
+  if (!Number.isFinite(r.angle) || r.angle === 0 || Math.abs(r.angle) > 360) return refus(dessin, ids, t('Donnez un angle entre 1 et 360 degrés.'));
+  if (!r.centre.every(Number.isFinite)) return refus(dessin, ids, t('Donnez un centre lisible.'));
   const b = boiteDe(dessin, ids);
-  if (!b) return refus(dessin, ids, 'Choisissez d’abord une forme visible et déverrouillée à répéter.');
+  if (!b) return refus(dessin, ids, t('Choisissez d’abord une forme visible et déverrouillée à répéter.'));
   return copierPar(dessin, ids, matricesRadiales(r, [b.x + b.l / 2, b.y + b.h / 2]));
 }
 
@@ -172,11 +173,11 @@ export function axeParDefaut(dessin: DessinSvg, ids: readonly string[], sens: 'h
 
 /** Le miroir de la selection autour de l'axe : une copie retournee (l'original reste), ou la selection retournee en place. */
 export function symetrie(dessin: DessinSvg, ids: readonly string[], r: ReglageSymetrie): ResultatRepetition {
-  if (!Number.isFinite(r.axe)) return refus(dessin, ids, 'Donnez un axe lisible.');
+  if (!Number.isFinite(r.axe)) return refus(dessin, ids, t('Donnez un axe lisible.'));
   const m = matriceSymetrie(r.sens, r.axe);
   if (r.garder) return copierPar(dessin, ids, [m]);
   const choisies = aRepeter(dessin, ids);
-  if (!choisies.length) return refus(dessin, ids, 'Choisissez d’abord une forme visible et déverrouillée à retourner.');
+  if (!choisies.length) return refus(dessin, ids, t('Choisissez d’abord une forme visible et déverrouillée à retourner.'));
   const voulus = choisies.map(f => f.id);
   return { dessin: transformer(dessin, voulus, m), ids: voulus, copies: 0 };
 }

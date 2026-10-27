@@ -14,6 +14,7 @@ import type { Chemin, Commande } from './types.js';
 import { boiteChemin } from './geometrie.js';
 import { ellipse, etoile, polygone, rectangle } from './formes.js';
 import { au } from '../../util/tableaux.js';
+import { t } from '../../util/i18n.js';
 
 /** Les formes de la palette, dans l'ordre ou elle les range. */
 export const FORMES_DE_BASE = [
@@ -325,7 +326,13 @@ function normaliser(d: Chemin): Normalise | null {
 /** Un modele : le dessin normalise d'une forme de base pour des reglages donnes, et le nom a dire selon la boite. */
 interface Modele { readonly n: Normalise; readonly genre: (l: number, h: number) => string }
 
-const NOMS_POLYGONES: Readonly<Record<number, string>> = { 4: 'losange', 5: 'pentagone', 6: 'hexagone', 8: 'octogone' };
+/**
+ * Le nom d'une forme de la palette, dans la langue de l'interface (ADR-0042 : les noms des formes de base sont des donnees, traduites
+ * a l'affichage ; leur dictionnaire est celui du modele). Les noms composes ici (« polygone à 7 côtés ») ont le leur.
+ */
+const nomFiche = (forme: FormeDeBase): string => t(FICHES_FORMES[forme].nom);
+
+const NOMS_POLYGONES: Readonly<Record<number, () => string>> = { 4: () => nomFiche('losange'), 5: () => t('pentagone'), 6: () => t('hexagone'), 8: () => t('octogone') };
 const presque = (a: number, b: number): boolean => Math.abs(a - b) <= Math.max(a, b) * 0.01;
 
 let modeles: Map<string, Modele[]> | null = null;
@@ -334,31 +341,33 @@ let modeles: Map<string, Modele[]> | null = null;
 function lesModeles(): Map<string, Modele[]> {
   if (modeles) return modeles;
   const index = new Map<string, Modele[]>();
-  const ajouter = (forme: FormeDeBase, genre: string | ((l: number, h: number) => string), reglages: Partial<ParametresFormes> = {}) => {
+  // Le nom est une fonction, appelee a la reconnaissance : dit dans la langue de l'interface, pas dans celle du chargement.
+  const ajouter = (forme: FormeDeBase, genre: (l: number, h: number) => string, reglages: Partial<ParametresFormes> = {}) => {
     const n = normaliser(formeDeBase(forme, 0, 0, 1, 1, { ...PARAMETRES_FORMES_DEFAUT, ...reglages }));
     if (!n) return;
     const liste = index.get(n.signature) ?? [];
-    liste.push({ n, genre: typeof genre === 'string' ? () => genre : genre });
+    liste.push({ n, genre });
     index.set(n.signature, liste);
   };
-  ajouter('losange', 'losange');
-  ajouter('parallelogramme', 'parallélogramme');
-  ajouter('trapeze', 'trapèze');
-  for (let c = 5; c <= BORNES_FORMES.cotes[1]; c++) ajouter('polygone', NOMS_POLYGONES[c] ?? 'polygone à ' + c + ' côtés', { cotes: c });
-  ajouter('coeur', 'cœur');
-  for (const sens of ['droite', 'gauche', 'haut', 'bas'] as const) ajouter('fleche', 'flèche', { sens });
-  for (const sens of ['droite', 'gauche', 'haut', 'bas'] as const) ajouter('fleche', 'flèche double', { sens, pointe: 'double' });
-  ajouter('demi-cercle', (l, h) => (presque(l, 2 * h) ? 'demi-cercle' : 'demi-ellipse'));
-  ajouter('demi-cercle', (l, h) => (presque(l, h) ? 'quart de cercle' : 'quart d’ellipse'), { portion: 'quart' });
-  ajouter('goutte', 'goutte');
-  ajouter('lune', 'lune');
-  ajouter('nuage', 'nuage');
-  ajouter('bulle', 'bulle de dialogue');
-  ajouter('etiquette', 'étiquette');
-  for (let n = BORNES_FORMES.festons[0]; n <= BORNES_FORMES.festons[1]; n++) ajouter('badge', 'badge festonné', { festons: n });
-  ajouter('arc', 'arc');
-  for (let t = BORNES_FORMES.tours[0]; t <= BORNES_FORMES.tours[1]; t++) ajouter('spirale', 'spirale', { tours: t });
-  for (let o = BORNES_FORMES.ondulations[0]; o <= BORNES_FORMES.ondulations[1]; o++) ajouter('vague', 'vague', { ondulations: o });
+  const nomme = (forme: FormeDeBase, reglages: Partial<ParametresFormes> = {}) => ajouter(forme, () => nomFiche(forme), reglages);
+  nomme('losange');
+  nomme('parallelogramme');
+  nomme('trapeze');
+  for (let c = 5; c <= BORNES_FORMES.cotes[1]; c++) ajouter('polygone', NOMS_POLYGONES[c] ?? (() => t('polygone à {n} côtés', { n: c })), { cotes: c });
+  nomme('coeur');
+  for (const sens of ['droite', 'gauche', 'haut', 'bas'] as const) nomme('fleche', { sens });
+  for (const sens of ['droite', 'gauche', 'haut', 'bas'] as const) ajouter('fleche', () => t('flèche double'), { sens, pointe: 'double' });
+  ajouter('demi-cercle', (l, h) => (presque(l, 2 * h) ? nomFiche('demi-cercle') : t('demi-ellipse')));
+  ajouter('demi-cercle', (l, h) => (presque(l, h) ? t('quart de cercle') : t('quart d’ellipse')), { portion: 'quart' });
+  nomme('goutte');
+  nomme('lune');
+  nomme('nuage');
+  nomme('bulle');
+  nomme('etiquette');
+  for (let n = BORNES_FORMES.festons[0]; n <= BORNES_FORMES.festons[1]; n++) nomme('badge', { festons: n });
+  nomme('arc');
+  for (let tours = BORNES_FORMES.tours[0]; tours <= BORNES_FORMES.tours[1]; tours++) nomme('spirale', { tours });
+  for (let o = BORNES_FORMES.ondulations[0]; o <= BORNES_FORMES.ondulations[1]; o++) nomme('vague', { ondulations: o });
   modeles = index;
   return index;
 }
@@ -465,9 +474,9 @@ export function reconnaitreFormeDeBase(d: Chemin): string | null {
     }
   }
   const branches = branchesEtoile(d);
-  if (branches !== null) return branches === 5 ? 'étoile' : 'étoile à ' + branches + ' branches';
-  if (estCroix(d)) return 'croix';
-  if (estAnneau(d)) return 'anneau';
-  if (estRectangleArrondi(d)) return 'rectangle arrondi';
+  if (branches !== null) return branches === 5 ? nomFiche('etoile') : t('étoile à {n} branches', { n: branches });
+  if (estCroix(d)) return nomFiche('croix');
+  if (estAnneau(d)) return nomFiche('anneau');
+  if (estRectangleArrondi(d)) return nomFiche('rectangle-arrondi');
   return null;
 }

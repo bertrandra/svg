@@ -11,11 +11,12 @@
 import type { DessinSvg, Effets, Flou, OmbrePortee } from './types.js';
 import { unites, verrouilleEffectif } from './arbre.js';
 import { decalageMax, ecartMax } from './effets.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que disent les operations et l'interface des effets (au vouvoiement). */
+/** Ce que disent les operations et l'interface des effets (au vouvoiement) ; un accesseur, traduit a la lecture. */
 export const MSG_EFFETS_OPERATIONS = {
-  approche: 'Flou approché : la transformation déforme un flou inégal ; il devient uniforme, d’écart moyen.'
-} as const;
+  get approche(): string { return t('Flou approché : la transformation déforme un flou inégal ; il devient uniforme, d’écart moyen.'); }
+};
 
 /** Le plus petit ecart d'un flou : un millieme (un flou nul ne s'ecrit pas, et le projet le refuse). */
 export const ECART_FLOU_MIN = 0.001;

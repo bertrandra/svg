@@ -10,6 +10,7 @@ import type { ChoixProduction } from '../model/contextes.js';
 import { octetsDeposee, retenirFonteDuProjet } from '../io/polices.js';
 import { contientTexte, lettresDuSvg } from '../io/texteSvg.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
+import { t } from '../util/i18n.js';
 import type { EtatRendu } from '../zones/EditeurSvg.js';
 
 /** Le travail ouvert dans l'editeur : ce qu'il faut pour l'enregistrer, et ou (un projet neuf n'a ni identifiant ni revision). */
@@ -101,7 +102,7 @@ export function travailDuProjet(p: Projet, id: string, revision: number): { trav
 export async function travailDuSvg(nom: string, texte: string, nuancier: readonly TeinteProjet[], ignoresAvant: readonly string[] = [], modele: 'plat' | 'riche' = 'plat'): Promise<TravailOuvert | { erreur: string }> {
   const propre = nettoyerSvgNomme(texte);
   if (propre && 'erreur' in propre) return { erreur: propre.erreur };
-  if (!propre) return { erreur: 'Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.' };
+  if (!propre) return { erreur: t('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.') };
   let svg = propre.svg, ignores = [...ignoresAvant];
   if (contientTexte(svg)) {
     const r = await lettresDuSvg(svg, undefined, modele);

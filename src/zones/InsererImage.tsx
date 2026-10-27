@@ -12,15 +12,16 @@ import { groupesActifs } from './commandesGroupes.js';
 import { PHRASE_DEPOT_PAS_IMAGE, phraseImageRefusee } from './phrasesContenus.js';
 import type { ActionsEditeur } from './typesEditeur.js';
 import { dessinComplet } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 /** Les types que le choix de fichier propose (la verification decide sur les octets, pas sur le nom). */
 export const TYPES_IMAGES = 'image/png,image/jpeg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp';
 
 /** Un fichier choisi ou depose, insere ; trop lourd, il n'est pas lu (le refus de la lecture d'un SVG, mot pour mot). */
 export async function insererFichierImage(f: Blob, ac: Pick<ActionsEditeur, 'insererImage' | 'dire'>): Promise<boolean> {
-  if (f.size > IMAGE_OCTETS_MAX) { ac.dire(phraseImageRefusee(MSG_IMAGE_LOURDE)); return false; }
+  if (f.size > IMAGE_OCTETS_MAX) { ac.dire(phraseImageRefusee(t(MSG_IMAGE_LOURDE))); return false; }
   let donnees: string;
-  try { donnees = await donneesDuFichier(f); } catch { ac.dire(phraseImageRefusee(MSG_IMAGE_ILLISIBLE)); return false; }
+  try { donnees = await donneesDuFichier(f); } catch { ac.dire(phraseImageRefusee(t(MSG_IMAGE_ILLISIBLE))); return false; }
   return ac.insererImage(donnees);
 }
 
@@ -33,9 +34,9 @@ export function useInsertionImage(): { element: ElementMenu | null; entree: Reac
   const entree = useRef<HTMLInputElement>(null);
   if (!groupesActifs(dessinComplet(mo), ui.modele)) return { element: null, entree: null };
   return {
-    element: { id: 'inserer-image', libelle: 'Insérer une image…', icone: 'image', separateur: true, onClick: () => entree.current?.click() },
+    element: { id: 'inserer-image', libelle: t('Insérer une image…'), icone: 'image', separateur: true, onClick: () => entree.current?.click() },
     entree: (
-      <input ref={entree} type="file" accept={TYPES_IMAGES} hidden aria-label="Choisir une image à insérer" data-inserer-image=""
+      <input ref={entree} type="file" accept={TYPES_IMAGES} hidden aria-label={t('Choisir une image à insérer')} data-inserer-image=""
         onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void insererFichierImage(f, ac); }} />
     )
   };

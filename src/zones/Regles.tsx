@@ -9,6 +9,7 @@ import { useDessin, useInterface } from './contexteEditeur.js';
 import { useActionsRegles, useRegles, type RepereDesigne } from './contexteRegles.js';
 import { graduations, texteValeur } from './graduations.js';
 import { useTactile } from './Vue.js';
+import { t } from '../util/i18n.js';
 
 /** L'epaisseur d'une regle : la cible de 24 px a la souris, 40 au doigt (DESIGN.md). */
 export const epaisseurRegle = (tactile: boolean): number => (tactile ? 40 : 24);
@@ -140,8 +141,8 @@ export function Regles({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
       {/* La prise : ce que le clavier atteint et ce que lisent les lecteurs d'ecran, sans texte a elle ; la graduation se pose
           dessus (sans pointeur), pour que ses libelles aient la regle pour fond, et non un element qui les recouvre. */}
       <div className="regle-prise" role="button" tabIndex={0} onKeyDown={clavier(axe)}
-        aria-label={axe === 'h' ? 'Règle horizontale : glissez vers la toile pour tirer un repère horizontal, ou Entrée pour en poser un au milieu de la vue' : 'Règle verticale : glissez vers la toile pour tirer un repère vertical, ou Entrée pour en poser un au milieu de la vue'}
-        title={axe === 'h' ? 'Glissez vers la toile : un repère horizontal' : 'Glissez vers la toile : un repère vertical'} />
+        aria-label={axe === 'h' ? t('Règle horizontale : glissez vers la toile pour tirer un repère horizontal, ou Entrée pour en poser un au milieu de la vue') : t('Règle verticale : glissez vers la toile pour tirer un repère vertical, ou Entrée pour en poser un au milieu de la vue')}
+        title={axe === 'h' ? t('Glissez vers la toile : un repère horizontal') : t('Glissez vers la toile : un repère vertical')} />
       <Graduation axe={axe} longueur={Math.max(0, (axe === 'h' ? taille.l : taille.h) - e)} epaisseur={e} origine={(axe === 'h' ? vue.x : vue.y) - e} />
     </div>
   );
@@ -150,7 +151,7 @@ export function Regles({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
       {regle('h')}
       {regle('v')}
       {/* Le coin : l'unite des regles, ecrite une fois (vide pour les unites du plan). */}
-      <div className="regle-coin" style={{ width: e, height: e }} aria-hidden="true">{rg.unite.nom}</div>
+      <div className="regle-coin" style={{ width: e, height: e }} aria-hidden="true">{rg.unite.nom ? t(rg.unite.nom) : ''}</div>
       {etiquette}
     </>
   );

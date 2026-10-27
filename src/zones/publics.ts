@@ -8,6 +8,7 @@
 // production de l'ADR-0013). Choisir n'est jamais obligatoire : sans reponse, l'accueil est celui d'avant, question en tete.
 
 import { CHOIX_CRICUT_DEFAUT, NOMS_PROCEDE, type ChoixProduction, type UniteLongueur } from '../model/contextes.js';
+import { t } from '../util/i18n.js';
 import { insecables, pluriel } from '../util/texte.js';
 import type { NomIcone } from './icones.js';
 import { libelleSelecteur } from './parcoursCricut.js';
@@ -30,19 +31,24 @@ export interface DescriptionPublic {
   readonly phrase: string;
 }
 
-/** Les trois publics de premier rang (PRODUCT.md), dans l'ordre de la question : d'egale dignite, la meme forme pour chacun. */
+/**
+ * Les trois publics de premier rang (PRODUCT.md), dans l'ordre de la question : d'egale dignite, la meme forme pour chacun. Des
+ * donnees : le titre et la phrase se traduisent a l'affichage (`t(p.titre)`, `insecables(t(p.phrase))`, ADR-0042 §3), comme un
+ * nom de machine ; la phrase est la cle, telle qu'elle est ecrite ici, et la typographie francaise (espaces insecables) se pose
+ * apres la traduction, jamais avant : une cle aux insecables ne serait plus dans le dictionnaire.
+ */
 export const PUBLICS: readonly DescriptionPublic[] = [
   {
     id: 'machine', icone: 'machine', titre: 'Découper ou dessiner avec une machine',
-    phrase: insecables('Pour une Cricut : un fichier prêt pour Design Space, à la taille réelle, en découpe, au stylo ou en Print Then Cut.')
+    phrase: 'Pour une Cricut : un fichier prêt pour Design Space, à la taille réelle, en découpe, au stylo ou en Print Then Cut.'
   },
   {
     id: 'retouche', icone: 'palette', titre: 'Retoucher un dessin ou une image',
-    phrase: insecables('Ouvrir un SVG ou un PDF, convertir une image, changer les couleurs, puis récupérer un fichier propre.')
+    phrase: 'Ouvrir un SVG ou un PDF, convertir une image, changer les couleurs, puis récupérer un fichier propre.'
   },
   {
     id: 'integration', icone: 'code', titre: 'Intégrer l’éditeur à mon produit',
-    phrase: insecables('Un composant React ou une fonction ouvrir(), sans serveur : votre page reçoit le SVG retouché.')
+    phrase: 'Un composant React ou une fonction ouvrir(), sans serveur : votre page reçoit le SVG retouché.'
   }
 ];
 
@@ -87,8 +93,10 @@ export function productionDuPublic(p: ChoixPublic | null, unite: UniteLongueur):
 /** La phrase qui dit, sous le circuit de la machine, comment l'editeur s'ouvrira : le meme libelle que le selecteur de la barre. */
 export function phraseReglageMachine(c: ChoixProduction): string {
   if (c.contexte !== 'cricut') return '';
-  return insecables('L’éditeur s’ouvre réglé pour : ' + libelleSelecteur(c) + ', ' + NOMS_PROCEDE[c.procede].toLowerCase() + ', en '
-    + (c.unite === 'mm' ? 'millimètres' : 'pouces') + '. La machine se change dans la barre, à tout moment.');
+  // Le nom du procede est une donnee du modele : il se traduit a l'affichage (ADR-0042 §3).
+  return insecables(t('L’éditeur s’ouvre réglé pour : {machine}, {procede}, en {unite}. La machine se change dans la barre, à tout moment.', {
+    machine: libelleSelecteur(c), procede: t(NOMS_PROCEDE[c.procede]).toLowerCase(), unite: c.unite === 'mm' ? t('millimètres') : t('pouces')
+  }));
 }
 
 export interface EtapeCircuit {
@@ -113,38 +121,38 @@ export function circuitDu(p: ChoixPublic | null): Circuit {
   switch (p) {
     case 'machine':
       return {
-        titre: 'De la forme au fichier prêt pour Design Space',
+        titre: t('De la forme au fichier prêt pour Design Space'),
         etapes: [
-          etape('scene', 'Une forme ou une image', 'Prise dans la bibliothèque, ou une image convertie en vecteurs.'),
-          etape('machine', 'Préparée pour la machine', 'Le tapis à l’écran, la taille réelle, des corrections proposées et annulables.'),
-          etape('telecharger', 'Fichier prêt pour Design Space', 'Pour la découpe, le stylo ou Print Then Cut.')
+          etape('scene', t('Une forme ou une image'), t('Prise dans la bibliothèque, ou une image convertie en vecteurs.')),
+          etape('machine', t('Préparée pour la machine'), t('Le tapis à l’écran, la taille réelle, des corrections proposées et annulables.')),
+          etape('telecharger', t('Fichier prêt pour Design Space'), t('Pour la découpe, le stylo ou Print Then Cut.'))
         ]
       };
     case 'retouche':
       return {
-        titre: 'De votre dessin au fichier prêt',
+        titre: t('De votre dessin au fichier prêt'),
         etapes: [
-          etape('ouvrir', 'Un dessin ou une image', 'Un SVG, un PDF, ou une photo à convertir en vecteurs.'),
-          etape('palette', 'Retouché dans l’éditeur', 'Couleurs, formes, texte : chaque geste se défait.'),
-          etape('telecharger', 'Un fichier prêt pour l’écran', 'En SVG, PNG, PDF ou dans un autre format.')
+          etape('ouvrir', t('Un dessin ou une image'), t('Un SVG, un PDF, ou une photo à convertir en vecteurs.')),
+          etape('palette', t('Retouché dans l’éditeur'), t('Couleurs, formes, texte : chaque geste se défait.')),
+          etape('telecharger', t('Un fichier prêt pour l’écran'), t('En SVG, PNG, PDF ou dans un autre format.'))
         ]
       };
     case 'integration':
       return {
-        titre: 'Du SVG de votre page au SVG retouché',
+        titre: t('Du SVG de votre page au SVG retouché'),
         etapes: [
-          etape('code', 'Le SVG de votre page', 'Vous le donnez à ouvrir() ou au composant.'),
-          etape('palette', 'Retouché dans l’éditeur', 'En plein écran, par-dessus votre page.'),
-          etape('coche', 'Rendu à votre code', 'onEnregistrer reçoit le SVG propre.')
+          etape('code', t('Le SVG de votre page'), t('Vous le donnez à ouvrir() ou au composant.')),
+          etape('palette', t('Retouché dans l’éditeur'), t('En plein écran, par-dessus votre page.')),
+          etape('coche', t('Rendu à votre code'), t('onEnregistrer reçoit le SVG propre.'))
         ]
       };
     default:
       return {
-        titre: 'De l’image au fichier prêt',
+        titre: t('De l’image au fichier prêt'),
         etapes: [
-          etape('image', 'Une forme, un dessin ou une image', 'Prise dans la bibliothèque, ouverte, ou convertie en vecteurs.'),
-          etape('palette', 'Retouché ou préparé', 'Dans l’éditeur, comme dans un logiciel de dessin.'),
-          etape('telecharger', 'Un fichier prêt', 'Pour l’écran ou pour une machine de découpe.')
+          etape('image', t('Une forme, un dessin ou une image'), t('Prise dans la bibliothèque, ouverte, ou convertie en vecteurs.')),
+          etape('palette', t('Retouché ou préparé'), t('Dans l’éditeur, comme dans un logiciel de dessin.')),
+          etape('telecharger', t('Un fichier prêt'), t('Pour l’écran ou pour une machine de découpe.'))
         ]
       };
   }
@@ -154,10 +162,16 @@ export function circuitDu(p: ChoixPublic | null): Circuit {
 // L'embarquement montre aux integrateurs : ce que fait `ouvrir`, un extrait de code, et la demonstration qui l'execute.
 // ---------------------------------------------------------------------------------------------
 
-/** Ce que la demonstration passe a l'editeur, comme le ferait un hote : le meme objet ecrit l'extrait de code. */
-export const DEMO_HOTE = { nom: 'logo', libelleEnregistrer: 'Mettre à jour le logo' } as const;
+/**
+ * Ce que la demonstration passe a l'editeur, comme le ferait un hote : le meme objet ecrit l'extrait de code. Le libelle est un
+ * accesseur, traduit a la lecture (ADR-0042) : l'extrait montre alors le libelle dans la langue de la page, comme un hote l'ecrirait.
+ */
+export const DEMO_HOTE: { readonly nom: 'logo'; readonly libelleEnregistrer: string } = { nom: 'logo', get libelleEnregistrer() { return t('Mettre à jour le logo'); } };
 
-/** Les options principales de `ouvrir` (docs/integration.md) : un nom, ce qu'elle fait en une phrase. */
+/**
+ * Les options principales de `ouvrir` (docs/integration.md) : un nom, ce qu'elle fait en une phrase. Des donnees : la phrase est la
+ * cle, traduite a l'affichage (`insecables(t(phrase))`), comme celles des publics.
+ */
 export const OPTIONS_INTEGRATION: ReadonlyArray<readonly [string, string]> = [
   ['svg', 'Le texte du SVG à retoucher, tel quel.'],
   ['onEnregistrer', 'Reçoit le SVG retouché, déjà nettoyé, quand la personne valide.'],
@@ -165,7 +179,7 @@ export const OPTIONS_INTEGRATION: ReadonlyArray<readonly [string, string]> = [
   ['visite', 'La visite guidée de l’éditeur ; désactivée par défaut.'],
   ['stockage', 'Où garder les versions nommées : le vôtre, celui du navigateur, ou rien.'],
   ['baseAnnexes', 'Le dossier où trouver la bibliothèque et les fontes, chargées au premier besoin.']
-].map(([nom, phrase]) => [nom ?? '', insecables(phrase ?? '')] as const);
+];
 
 /**
  * L'extrait de code montre et copie : le bundle (le plus simple, docs/integration.md), avec les options de la demonstration. Du
@@ -199,4 +213,4 @@ export function lienGuide(depot: string | undefined): string {
 
 /** Ce que la page « hote » de la demonstration dit avoir recu : ce que `onEnregistrer` recevrait chez vous. */
 export const phraseRecu = (svg: string): string =>
-  insecables('Votre page a reçu le SVG retouché par onEnregistrer : ' + pluriel(svg.length, 'caractère') + ', déjà nettoyé.');
+  insecables(t('Votre page a reçu le SVG retouché par onEnregistrer : {caracteres}, déjà nettoyé.', { caracteres: pluriel(svg.length, 'caractère') }));

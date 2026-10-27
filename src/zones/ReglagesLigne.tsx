@@ -6,6 +6,7 @@
 import { PARAMETRES_LIGNE, poserLigne, retirerLigne, valeursLigneParDefaut, type MesureLigne, type ParametreLigne, type ReglagesLigne } from '../engine/lignemediane.js';
 import type { ReglageVecteurs } from '../engine/vectorisation.js';
 import { Icone } from './icones.js';
+import { t } from '../util/i18n.js';
 
 const arrondi = (v: number) => Math.round(v * 100) / 100;
 const parametre = (id: ParametreLigne['id']): ParametreLigne => PARAMETRES_LIGNE.find(p => p.id === id) ?? (PARAMETRES_LIGNE[0] as ParametreLigne);
@@ -23,12 +24,12 @@ function CurseurLigne({ id, v, mesure, poser }: Proprietes & { id: ParametreLign
   const touche = v.ligne?.[id] !== undefined, valeur = v.ligne?.[id] ?? defaut;
   const mettre = (r: ReglagesLigne | undefined) => poser(r ? { ...v, ligne: r } : { mode: v.mode, finesse: v.finesse });
   return (
-    <label className={'fin' + (touche ? ' touche' : '')} title={p.aide}>
-      <span className="fin-libelle">{p.libelle}</span>
-      <input type="range" min={p.min} max={p.max} step={p.pas} value={Math.min(p.max, Math.max(p.min, valeur))} aria-label={p.libelle}
+    <label className={'fin' + (touche ? ' touche' : '')} title={t(p.aide)}>
+      <span className="fin-libelle">{t(p.libelle)}</span>
+      <input type="range" min={p.min} max={p.max} step={p.pas} value={Math.min(p.max, Math.max(p.min, valeur))} aria-label={t(p.libelle)}
         onChange={e => mettre(poserLigne(v.ligne, id, Number(e.target.value), defaut))} />
       <output>{arrondi(valeur)}{p.unite ?? ''}</output>
-      <button type="button" className="icone-bouton petit" disabled={!touche} title={'Revenir à la valeur par défaut (' + arrondi(defaut) + ')'} aria-label={'Revenir à la valeur par défaut pour « ' + p.libelle + ' »'}
+      <button type="button" className="icone-bouton petit" disabled={!touche} title={t('Revenir à la valeur par défaut ({v})', { v: arrondi(defaut) })} aria-label={t('Revenir à la valeur par défaut pour « {libelle} »', { libelle: t(p.libelle) })}
         onClick={() => mettre(retirerLigne(v.ligne, id))}><Icone nom="annuler" taille={12} /></button>
     </label>
   );
@@ -46,16 +47,17 @@ export function ReglagesLignePanneau({ v, mesure, poser }: Proprietes) {
   const mettre = (r: ReglagesLigne | undefined) => poser(r ? { ...v, ligne: r } : { mode: v.mode, finesse: v.finesse });
   return (
     <div className="reglages-fins">
-      <p className="aide">Changer de grain remet ces réglages à leurs valeurs par défaut, mesurées sur l’image.</p>
+      <p className="aide">{t('Changer de grain remet ces réglages à leurs valeurs par défaut, mesurées sur l’image.')}</p>
       {(['seuil', 'taches', 'barbules', 'coupures'] as const).map(id => <CurseurLigne key={id} id={id} v={v} mesure={mesure} poser={poser} />)}
-      <label className={'champ-ligne' + (ligne.couleur ? ' touche' : '')} title="La couleur des lignes écrites : la couleur dominante du trait (noir pour un trait gris ou noir), ou noir">
-        <span>Couleur</span>
+      <label className={'champ-ligne' + (ligne.couleur ? ' touche' : '')} title={t('La couleur des lignes écrites : la couleur dominante du trait (noir pour un trait gris ou noir), ou noir')}>
+        <span>{t('Couleur')}</span>
         <select value={ligne.couleur ?? defauts.couleur} onChange={e => mettre(poserLigne(v.ligne, 'couleur', e.target.value === 'noir' ? 'noir' : 'trait', defauts.couleur))}>
-          <option value="trait">Celle du trait</option>
-          <option value="noir">Noir</option>
+          <option value="trait">{t('Celle du trait')}</option>
+          <option value="noir">{t('Noir')}</option>
         </select>
       </label>
-      <button type="button" className="discret" disabled={!fins} onClick={() => mettre(ligne.epaisseur !== undefined ? { epaisseur: ligne.epaisseur } : undefined)}>Revenir aux valeurs par défaut</button>
+      <button type="button" className="discret" disabled={!fins} onClick={() => mettre(ligne.epaisseur !== undefined ? { epaisseur: ligne.epaisseur } : undefined)}>{t('Revenir aux valeurs par défaut')}</button>
+
     </div>
   );
 }

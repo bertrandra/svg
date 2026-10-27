@@ -225,9 +225,9 @@ describe('la visite guidee', () => {
     await ouvrirExemple(page);
     expect(await bulle(page).count()).toBe(0);
     // Le menu Aide la rejoue toujours, a la premiere etape ; il donne aussi les raccourcis.
-    // Dans la page, il ouvre aussi les deux documentations livrees dans aide/.
+    // Dans la page, il ouvre aussi les deux documentations livrees dans aide/, et propose l'autre langue en dernier (ADR-0042).
     await ouvrirMenu(page, 'Aide');
-    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier', 'Guide de l’éditeur', 'La Cricut, c’est simple']);
+    expect(await textesDe(page.getByRole('menu', { name: 'Aide' }).getByRole('menuitem'))).toEqual(['Visite guidée', 'Raccourcis clavier', 'Guide de l’éditeur', 'La Cricut, c’est simple', 'Language: English']);
     await page.getByRole('menuitem', { name: 'Raccourcis clavier' }).click();
     const boite = page.getByRole('dialog', { name: 'Raccourcis clavier' });
     await boite.waitFor();

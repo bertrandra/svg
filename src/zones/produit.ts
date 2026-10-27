@@ -2,9 +2,11 @@
 // definissent a la compilation). Hors build (les tests, les sources importees telles quelles) elle n'existe pas : le
 // produit se dit alors en developpement, sans lever d'erreur.
 
+import { t } from '../util/i18n.js';
+
 declare const VERSION_PRODUIT: string | undefined;
 
-export const versionProduit = (): string => (typeof VERSION_PRODUIT === 'string' ? VERSION_PRODUIT : 'développement');
+export const versionProduit = (): string => (typeof VERSION_PRODUIT === 'string' ? VERSION_PRODUIT : t('développement'));
 
 declare const DEPOT_PRODUIT: string | undefined;
 

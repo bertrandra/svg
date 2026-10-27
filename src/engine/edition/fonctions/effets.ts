@@ -43,45 +43,48 @@ import {
   ALPHA, SOURCE, REFUS_IDIOMES, aplat, appliquerMatrice, arithmetique, avecIdiome, dans, decalage, flou, fusion, hors, matriceCouleurs, matriceDeTeinte, pile,
   reconnaitre, type EffetsBruts, type Idiome, type Image
 } from '../filtres.js';
+import { nombre as nombreDeLaLangue, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
 
-const nombreDit = (v: number): string => v.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+const nombreDit = (v: number): string => nombreDeLaLangue(v, 3);
+
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
 
 /** Ce que la lecture riche dit perdre (`ignores`, annexe 5 §1). */
 export const MSG_EFFETS = {
-  lineaire: 'un flou calculé en RVB linéaire se calcule en sRVB (différence légère sur les bords colorés)',
-  region: 'la région d’un filtre plus étroite que son effet : l’effet s’écrit en entier',
-  regionNeutre: 'la région d’un filtre sans effet plus étroite que la forme : la forme s’écrit entière',
-  anisotrope: 'un flou anisotrope sous une rotation ou un cisaillement : écart moyen',
-  ombreAnisotrope: 'une ombre au flou anisotrope ou déformé : écart moyen',
-  nombreux: 'les effets de plus de ' + NOEUDS_A_EFFET_MAX.toLocaleString('fr-FR') + ' formes ou groupes (les suivants sont ignorés)',
-  reference: 'les filtres url(#…) qui ne renvoient à aucun filtre (la forme est dessinée sans, comme le prévoit la spécification)',
-  illisible: 'un nombre illisible dans un filtre (sa valeur par défaut est prise, comme dans un navigateur)'
-} as const;
+  get lineaire(): string { return t('un flou calculé en RVB linéaire se calcule en sRVB (différence légère sur les bords colorés)'); },
+  get region(): string { return t('la région d’un filtre plus étroite que son effet : l’effet s’écrit en entier'); },
+  get regionNeutre(): string { return t('la région d’un filtre sans effet plus étroite que la forme : la forme s’écrit entière'); },
+  get anisotrope(): string { return t('un flou anisotrope sous une rotation ou un cisaillement : écart moyen'); },
+  get ombreAnisotrope(): string { return t('une ombre au flou anisotrope ou déformé : écart moyen'); },
+  get nombreux(): string { return t('les effets de plus de {n} formes ou groupes (les suivants sont ignorés)', { n: nombreDeLaLangue(NOEUDS_A_EFFET_MAX) }); },
+  get reference(): string { return t('les filtres url(#…) qui ne renvoient à aucun filtre (la forme est dessinée sans, comme le prévoit la spécification)'); },
+  get illisible(): string { return t('un nombre illisible dans un filtre (sa valeur par défaut est prise, comme dans un navigateur)'); }
+};
 
 /** L'ecart borne a `ECART_MAX` (le quart du plus grand cote du plan), et dit. */
-export const msgEcartBorne = (max: number): string => 'un flou ou une ombre dont l’écart dépassait la limite : borné à ' + nombreDit(max);
+export const msgEcartBorne = (max: number): string => t('un flou ou une ombre dont l’écart dépassait la limite : borné à {max}', { max: nombreDit(max) });
 /** Le decalage d'une ombre borne au plus grand cote du plan, et dit. */
-export const msgDecalageBorne = (max: number): string => 'une ombre dont le décalage dépassait la limite : borné à ' + nombreDit(max);
+export const msgDecalageBorne = (max: number): string => t('une ombre dont le décalage dépassait la limite : borné à {max}', { max: nombreDit(max) });
 
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … »). */
 export const REFUS_EFFETS = {
-  forme: 'un filtre qui n’est ni un flou ni une ombre portée',
-  css: 'un filtre CSS (blur(), drop-shadow()…)',
-  chaine: 'une chaîne de plusieurs filtres',
-  externe: 'un filtre qui renvoie à un fichier ou une adresse extérieurs',
-  heritage: 'un filtre qui hérite d’un autre (href)',
-  long: 'un filtre trop long (plus de 16 primitives)',
-  vide: 'un filtre sans primitive (la forme ne se dessinerait pas)',
-  regionVide: 'un filtre dont la région est vide (la forme ne se dessinerait pas)',
-  boite: 'un filtre en unités de boîte (primitiveUnits) sur un groupe ou un élément sans boîte'
-} as const;
+  get forme(): string { return t('un filtre qui n’est ni un flou ni une ombre portée'); },
+  get css(): string { return t('un filtre CSS (blur(), drop-shadow()…)'); },
+  get chaine(): string { return t('une chaîne de plusieurs filtres'); },
+  get externe(): string { return t('un filtre qui renvoie à un fichier ou une adresse extérieurs'); },
+  get heritage(): string { return t('un filtre qui hérite d’un autre (href)'); },
+  get long(): string { return t('un filtre trop long (plus de 16 primitives)'); },
+  get vide(): string { return t('un filtre sans primitive (la forme ne se dessinerait pas)'); },
+  get regionVide(): string { return t('un filtre dont la région est vide (la forme ne se dessinerait pas)'); },
+  get boite(): string { return t('un filtre en unités de boîte (primitiveUnits) sur un groupe ou un élément sans boîte'); }
+};
 
 /** Une primitive hors du sous-ensemble, nommee (annexe 4 B §3). */
-export const refusPrimitive = (nom: string): string => 'un filtre (' + nom.slice(0, 40) + ')';
+export const refusPrimitive = (nom: string): string => t('un filtre ({nom})', { nom: nom.slice(0, 40) });
 /** Une entree que le sous-ensemble ne lit pas (l'arriere-plan, la peinture). */
-export const refusEntree = (nom: string): string => 'un filtre qui emploie l’arrière-plan ou la peinture (' + nom + ')';
+export const refusEntree = (nom: string): string => t('un filtre qui emploie l’arrière-plan ou la peinture ({nom})', { nom });
 
 // ---------------------------------------------------------------- bornes de lecture
 
@@ -184,7 +187,7 @@ function lireFiltre(cible: Noeud, marche: Marche): FiltreLu | { readonly refus: 
   if (hrefDe(cible)?.trim()) return { refus: REFUS_EFFETS.heritage };
   const primitives: Noeud[] = [];
   for (const e of cible.enfants) {
-    if (ANIMATIONS.has(e.nom)) { marche.ignorer(MSG_ANIMATIONS); continue; }
+    if (ANIMATIONS.has(e.nom)) { marche.ignorer(t(MSG_ANIMATIONS)); continue; }
     // title, desc, metadata, ou un element sans rapport : un navigateur les ignore dans un filtre.
     if (e.nom.startsWith('fe')) primitives.push(e);
   }

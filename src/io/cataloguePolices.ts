@@ -3,6 +3,7 @@
 // l'hote, sous `baseAnnexes`). Il est valide entierement (model/cataloguePolices.ts) avant d'etre cru.
 
 import { validerCatalogue, type CataloguePolices } from '../model/cataloguePolices.js';
+import { t } from '../util/i18n.js';
 import { fabriquerChargeurAnnexe, navigateur, type Annexe } from './annexes.js';
 
 export const FICHIER_CATALOGUE = 'polices-catalogue.js';
@@ -10,8 +11,8 @@ export const FICHIER_CATALOGUE = 'polices-catalogue.js';
 const annexe: Annexe<CataloguePolices> = {
   fichier: FICHIER_CATALOGUE,
   globale: '__cataloguePolicesSvg',
-  contenu: 'l’index des polices',
-  consigne: 'lancez « npm run construire »',
+  get contenu() { return t('l’index des polices'); },
+  get consigne() { return t('lancez « npm run construire »'); },
   donnees: true,
   valider: v => { if (v === undefined) return undefined; const c = validerCatalogue(v); return 'erreur' in c ? undefined : c; }
 };

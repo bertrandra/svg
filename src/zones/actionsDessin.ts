@@ -7,6 +7,7 @@ import { appliquerBooleen } from '../engine/booleens.js';
 import { incliner, mettreALEchelle, tournerAutour } from '../engine/transformations.js';
 import { nettoyerSvg } from '../util/svg.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { phraseBooleen, sansDoublons, styleLigne } from './aidesEditeur.js';
 import type { EtatLu, Leviers } from './actions.js';
 import type { ActionsEditeur } from './typesEditeur.js';
@@ -35,7 +36,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       // nettoyerSvg ne rend jamais null pour un dessin sans forme visible (il reste un <svg> vide) : on le dit avant.
       // La marque du contexte de production (data-ed-*) suit l'ecriture ; en Generique, il n'y en a pas : memes octets qu'avant.
       const propre = dessin.formes.some(f => f.visible) ? nettoyerSvg(svgDocument(dessin, production)) : null;
-      if (!propre) { dire('Le dessin n’a plus de forme visible : rien à enregistrer.'); return false; }
+      if (!propre) { dire(t('Le dessin n’a plus de forme visible : rien à enregistrer.')); return false; }
       // L'etat du modele accompagne le SVG : un hote qui garde des projets (le site, ADR-0030) en ecrit le JSON natif.
       enregistrer(propre.svg, { dessin, production });
       return true;
@@ -51,7 +52,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       appliquer(() => r.dessin);
       choisir([r.id]);
       l.poserOutilBrut('selection');
-      dire('Tracé ajouté : ' + points.length + ' points.');
+      dire(t('Tracé ajouté : {n} points.', { n: points.length }));
     },
     insererForme: (svgForme: string, origine?: string) => {
       const { dessin, modele } = lire();
@@ -63,7 +64,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       appliquer(() => r.dessin);
       choisir(r.ids);
       l.poserOutil('selection');
-      dire('Forme insérée au centre : déplacez-la, redimensionnez-la, recolorez-la.');
+      dire(t('Forme insérée au centre : déplacez-la, redimensionnez-la, recolorez-la.'));
     },
     // Plusieurs formes d'un coup, chacune a sa place relative (0 a 1) dans le carre inscrit au plan.
     insererPlusieurs: elements => {
@@ -82,7 +83,8 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       appliquer(() => d);
       choisir(ids);
       l.poserOutil('selection');
-      dire(pluriel(ids.length, 'forme') + ' insérée' + (ids.length > 1 ? 's' : '') + '.');
+      const formes = pluriel(ids.length, 'forme');
+      dire(ids.length > 1 ? t('{formes} insérées.', { formes }) : t('{formes} insérée.', { formes }));
     },
     booleen: op => {
       const { dessin, sel, lisserBooleens } = lire();
@@ -92,7 +94,7 @@ export function actionsDessin(lire: () => EtatLu, l: Leviers): ActionsDessin {
       appliquer(() => r.dessin);
       choisir(r.id ? [r.id] : []);
       const resultat = r.id ? r.dessin.formes.find(f => f.id === r.id) : undefined;
-      if (!resultat) { dire('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.'); return false; }
+      if (!resultat) { dire(t('Il ne reste rien : les formes ont disparu. Ctrl+Z revient en arrière.')); return false; }
       const reunies = dessin.formes.filter(f => sel.includes(f.id) && f.visible && !f.verrouille).length;
       dire(avecVectorisation(phraseBooleen(op, reunies, resultat.d.filter(c => c.c !== 'Z').length, resultat.d.some(c => c.c === 'C')), dessin, sel));
       return true;

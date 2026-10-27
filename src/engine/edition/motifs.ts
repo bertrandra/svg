@@ -20,14 +20,15 @@ import { boiteVisuelle } from './etendueVisuelle.js';
 import { translation, unir } from './geometrie.js';
 import { transformerFeuille, transformerGroupe } from './transformation.js';
 import { couleurDeRepliMotif, TUILE_MIN } from './fonctions/motifs.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que dit l'operation quand elle ne s'applique pas (phrases de l'interface, au vouvoiement). */
+/** Ce que dit l'operation quand elle ne s'applique pas (phrases de l'interface, au vouvoiement) ; des accesseurs, traduits a la lecture. */
 export const MSG_MOTIF = {
-  selection: 'Choisissez au moins un élément visible et déverrouillé : il deviendra la tuile du motif.',
-  vide: 'La sélection ne laisse rien voir (ou presque) : elle ne peut pas servir de tuile.',
-  image: 'La sélection contient une image : une image ne se répète pas en motif ici.',
-  cible: 'La forme à peindre doit être une forme visible et déverrouillée, hors de la sélection, et pas une image.'
-} as const;
+  get selection(): string { return t('Choisissez au moins un élément visible et déverrouillé : il deviendra la tuile du motif.'); },
+  get vide(): string { return t('La sélection ne laisse rien voir (ou presque) : elle ne peut pas servir de tuile.'); },
+  get image(): string { return t('La sélection contient une image : une image ne se répète pas en motif ici.'); },
+  get cible(): string { return t('La forme à peindre doit être une forme visible et déverrouillée, hors de la sélection, et pas une image.'); }
+};
 
 const idDe = (n: NoeudArbre): string => (n.genre === 'feuille' ? n.forme.id : n.groupe.id);
 const debut = (n: NoeudArbre): number => (n.genre === 'feuille' ? n.index : n.debut);

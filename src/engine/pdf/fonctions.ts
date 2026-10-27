@@ -7,6 +7,7 @@ import { Lecteur } from './lexique.js';
 import { SyntaxePdf } from './limites.js';
 import { Mot, estDict, estFlux, estNombre, estTableau, type Dict, type ObjetPdf } from './objets.js';
 import type { DocumentPdf } from './structure.js';
+import { t } from '../../util/i18n.js';
 
 /** Une fonction : des entrees, des sorties ; null si elle ne se calcule pas. */
 export type Fonction = (entree: readonly number[]) => number[] | null;
@@ -102,11 +103,11 @@ type Programme = ReadonlyArray<number | string | Programme>;
 function lireProgramme(octets: Uint8Array): Programme | null {
   const l = new Lecteur(octets);
   const lire = (profondeur: number): Programme => {
-    if (profondeur > PROFONDEUR_MAX) throw new SyntaxePdf('une fonction PostScript trop imbriquée');
+    if (profondeur > PROFONDEUR_MAX) throw new SyntaxePdf(t('une fonction PostScript trop imbriquée'));
     const p: Array<number | string | Programme> = [];
     for (;;) {
       const j = l.jeton();
-      if (j === undefined) { if (profondeur > 0) throw new SyntaxePdf('une fonction PostScript jamais fermée'); return p; }
+      if (j === undefined) { if (profondeur > 0) throw new SyntaxePdf(t('une fonction PostScript jamais fermée')); return p; }
       if (j instanceof Mot) {
         if (j.v === '{') p.push(lire(profondeur + 1));
         else if (j.v === '}') return p;

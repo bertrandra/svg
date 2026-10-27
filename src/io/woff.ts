@@ -3,6 +3,7 @@
 // WOFF2, qu'on ne telecharge donc jamais). Chaque table compressee se decompresse par zlib (DecompressionStream, io/pdf.ts),
 // bornee a la taille que le repertoire annonce. Tout ce qui sort des bornes est refuse, jamais lu « au mieux ».
 
+import { t } from '../util/i18n.js';
 import { decompresserZlib } from './pdf.js';
 
 /** Les bornes d'un fichier WOFF : au-dela, ce n'est pas une fonte de texte qu'on telecharge pour composer. */
@@ -22,12 +23,12 @@ export function genreFonte(o: Uint8Array): 'woff' | 'woff2' | 'sfnt' | null {
 export async function enSfnt(o: Uint8Array): Promise<ArrayBuffer | { erreur: string }> {
   const genre = genreFonte(o);
   if (genre === 'sfnt') return o.slice().buffer;
-  if (genre === 'woff2') return { erreur: 'ce fichier est en WOFF2, que l’éditeur ne sait pas lire' };
-  if (genre !== 'woff') return { erreur: 'ce fichier n’est pas une fonte (ni WOFF, ni TTF, ni OTF)' };
+  if (genre === 'woff2') return { erreur: t('ce fichier est en WOFF2, que l’éditeur ne sait pas lire') };
+  if (genre !== 'woff') return { erreur: t('ce fichier n’est pas une fonte (ni WOFF, ni TTF, ni OTF)') };
   const v = new DataView(o.buffer, o.byteOffset, o.byteLength);
   try {
     const saveur = v.getUint32(4), n = v.getUint16(12), total = v.getUint32(16);
-    if (!SFNT.has(saveur) || n < 1 || n > LIMITES_WOFF.tables || total > LIMITES_WOFF.octets || 44 + n * 20 > o.length) return { erreur: 'en-tête WOFF invalide' };
+    if (!SFNT.has(saveur) || n < 1 || n > LIMITES_WOFF.tables || total > LIMITES_WOFF.octets || 44 + n * 20 > o.length) return { erreur: t('en-tête WOFF invalide') };
     const entrees: Array<{ etiquette: number; decalage: number; compresse: number; longueur: number; somme: number }> = [];
     for (let i = 0; i < n; i++) {
       const p = 44 + i * 20;
@@ -36,10 +37,10 @@ export async function enSfnt(o: Uint8Array): Promise<ArrayBuffer | { erreur: str
     const aligne = (x: number) => (x + 3) & ~3;
     let taille = 12 + n * 16;
     for (const e of entrees) {
-      if (e.decalage + e.compresse > o.length || e.compresse > e.longueur || e.longueur > LIMITES_WOFF.octets) return { erreur: 'table WOFF hors du fichier' };
+      if (e.decalage + e.compresse > o.length || e.compresse > e.longueur || e.longueur > LIMITES_WOFF.octets) return { erreur: t('table WOFF hors du fichier') };
       taille += aligne(e.longueur);
     }
-    if (taille > LIMITES_WOFF.octets) return { erreur: 'fonte WOFF trop grande' };
+    if (taille > LIMITES_WOFF.octets) return { erreur: t('fonte WOFF trop grande') };
     const sortie = new Uint8Array(taille), w = new DataView(sortie.buffer);
     // L'en-tete sfnt : le nombre de tables et les trois valeurs de recherche binaire que la norme en deduit.
     let puissance = 1, log = 0;
@@ -52,8 +53,8 @@ export async function enSfnt(o: Uint8Array): Promise<ArrayBuffer | { erreur: str
       let table: Uint8Array;
       if (e.compresse < e.longueur) {
         const d = await decompresserZlib(brut, e.longueur);
-        if (d === 'indisponible') return { erreur: 'ce navigateur ne sait pas décompresser une fonte WOFF (DecompressionStream manque)' };
-        if (typeof d === 'string' || d.length !== e.longueur) return { erreur: 'table WOFF illisible' };
+        if (d === 'indisponible') return { erreur: t('ce navigateur ne sait pas décompresser une fonte WOFF (DecompressionStream manque)') };
+        if (typeof d === 'string' || d.length !== e.longueur) return { erreur: t('table WOFF illisible') };
         table = d;
       } else table = brut;
       const r = 12 + i * 16;
@@ -63,6 +64,6 @@ export async function enSfnt(o: Uint8Array): Promise<ArrayBuffer | { erreur: str
     }
     return sortie.buffer;
   } catch {
-    return { erreur: 'fonte WOFF illisible' };
+    return { erreur: t('fonte WOFF illisible') };
   }
 }

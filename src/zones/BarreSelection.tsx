@@ -21,18 +21,20 @@ import { useElementsRepetition } from './menusOutilsPro.js';
 import { MenuNuancierSelection } from './SectionNuancier.js';
 import { useSectionNuancier } from './actionsNuancier.js';
 import { dessinComplet } from './lentille.js';
+import { t } from '../util/i18n.js';
 
-const ALIGNEMENTS_ICONES: ReadonlyArray<readonly [Alignement, NomIcone, string]> = [
-  ['gauche', 'aligner-gauche', 'Aligner à gauche'], ['centreH', 'aligner-centre-h', 'Centrer horizontalement'], ['droite', 'aligner-droite', 'Aligner à droite'],
-  ['haut', 'aligner-haut', 'Aligner en haut'], ['centreV', 'aligner-centre-v', 'Centrer verticalement'], ['bas', 'aligner-bas', 'Aligner en bas']
+// Des fonctions : les libelles se traduisent au rendu, une fois la langue posee (ADR-0042), jamais au chargement du module.
+const alignementsIcones = (): ReadonlyArray<readonly [Alignement, NomIcone, string]> => [
+  ['gauche', 'aligner-gauche', t('Aligner à gauche')], ['centreH', 'aligner-centre-h', t('Centrer horizontalement')], ['droite', 'aligner-droite', t('Aligner à droite')],
+  ['haut', 'aligner-haut', t('Aligner en haut')], ['centreV', 'aligner-centre-v', t('Centrer verticalement')], ['bas', 'aligner-bas', t('Aligner en bas')]
 ];
 /** L'ordre, son icone, son nom et son raccourci (l'infobulle les reunit, le menu les separe). */
-const ORDRES_ICONES: ReadonlyArray<readonly [Ordre, NomIcone, string, string]> = [
-  ['premier', 'premier-plan', 'Premier plan', 'Ctrl+Maj+]'], ['avant', 'avancer', 'Avancer', 'Ctrl+]'], ['arriere', 'reculer', 'Reculer', 'Ctrl+['], ['dernier', 'arriere-plan', 'Arrière-plan', 'Ctrl+Maj+[']
+const ordresIcones = (): ReadonlyArray<readonly [Ordre, NomIcone, string, string]> => [
+  ['premier', 'premier-plan', t('Premier plan'), t('Ctrl+Maj+]')], ['avant', 'avancer', t('Avancer'), 'Ctrl+]'], ['arriere', 'reculer', t('Reculer'), 'Ctrl+['], ['dernier', 'arriere-plan', t('Arrière-plan'), t('Ctrl+Maj+[')]
 ];
-export const BOOLEENS_ICONES: ReadonlyArray<readonly [Booleen, NomIcone, string]> = [
-  ['union', 'union', 'Union : réunir les formes en une seule'], ['soustraction', 'soustraction', 'Soustraction : la plus basse moins les autres'],
-  ['intersection', 'intersection', 'Intersection : ce que les formes ont en commun'], ['exclusion', 'exclusion', 'Exclusion : tout sauf les recouvrements']
+export const booleensIcones = (): ReadonlyArray<readonly [Booleen, NomIcone, string]> => [
+  ['union', 'union', t('Union : réunir les formes en une seule')], ['soustraction', 'soustraction', t('Soustraction : la plus basse moins les autres')],
+  ['intersection', 'intersection', t('Intersection : ce que les formes ont en commun')], ['exclusion', 'exclusion', t('Exclusion : tout sauf les recouvrements')]
 ];
 
 /** Les gestes de la rangee, une fois pour ses deux mises en page : chacun a son nom, son icone et ce qu'il fait. */
@@ -41,7 +43,7 @@ function useGestes() {
   const separable = !!formeSeule && sousChemins(formeSeule.d).length > 1;
   // Le modele riche (ADR-0012, etape 2) : Grouper et Degrouper rejoignent les formes, et prennent Ctrl+G a Combiner et Separer.
   const riche = groupesActifs(dessinComplet(mo), modele), degroupable = riche && aUnGroupe({ dessin, sel });
-  const surPlan = sel.length > 1 ? '' : ' (sur le plan)';
+  const surPlan = sel.length > 1 ? '' : t(' (sur le plan)');
   return {
     sel, ac, surPlan,
     aligner: (a: Alignement) => ac.faire(d => aligner(d, sel, a), phraseAlignement(a, sel.length)),
@@ -64,45 +66,45 @@ export const BarreSelection = memo(function BarreSelection() {
   return compacte ? <RangeeCompacte /> : <RangeeEntiere />;
 });
 
-export const libelleSelection = (n: number) => n + ' sélectionnée' + (n > 1 ? 's' : '');
+export const libelleSelection = (n: number) => (n > 1 ? t('{n} sélectionnées', { n }) : t('{n} sélectionnée', { n }));
 
 function RangeeEntiere() {
   const g = useGestes(), { sel, ac, surPlan } = g, repetition = useElementsRepetition();
   return (
-    <div className="editeur-barre-selection" role="toolbar" aria-label="Sélection">
+    <div className="editeur-barre-selection" role="toolbar" aria-label={t('Sélection')}>
       <span className="aide">{libelleSelection(sel.length)}</span>
       <OperationSelection />
       <DispositionSelection />
-      <div className="groupe" role="group" aria-label="Aligner">
-        {ALIGNEMENTS_ICONES.map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => g.aligner(a)} />)}
+      <div className="groupe" role="group" aria-label={t('Aligner')}>
+        {alignementsIcones().map(([a, icone, aide]) => <Bouton key={a} icone={icone} aide={aide + surPlan} onClick={() => g.aligner(a)} />)}
       </div>
-      <div className="groupe" role="group" aria-label="Transformer">
-        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => g.miroir('h')} />
-        <Bouton icone="miroir-v" aide="Miroir vertical" onClick={() => g.miroir('v')} />
-        <Bouton icone="rotation-gauche" aide="Tourner de 90° vers la gauche" onClick={() => g.tourner(-90)} />
-        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => g.tourner(90)} />
+      <div className="groupe" role="group" aria-label={t('Transformer')}>
+        <Bouton icone="miroir-h" aide={t('Miroir horizontal')} onClick={() => g.miroir('h')} />
+        <Bouton icone="miroir-v" aide={t('Miroir vertical')} onClick={() => g.miroir('v')} />
+        <Bouton icone="rotation-gauche" aide={t('Tourner de 90° vers la gauche')} onClick={() => g.tourner(-90)} />
+        <Bouton icone="rotation-droite" aide={t('Tourner de 90° vers la droite')} onClick={() => g.tourner(90)} />
         {/* Repeter la selection (ADR-0038) : grille, radiale, symetrie, chacune dans son panneau sur la toile. */}
-        <MenuDeroulant etiquette="Répéter : grille, radiale, symétrie" icone="repeter" chevron={false} elements={repetition} />
+        <MenuDeroulant etiquette={t('Répéter : grille, radiale, symétrie')} icone="repeter" chevron={false} elements={repetition} />
       </div>
-      <div className="groupe" role="group" aria-label="Empiler">
-        {ORDRES_ICONES.map(([o, icone, nom, raccourci]) => <Bouton key={o} icone={icone} aide={nom + ' (' + raccourci + ')'} onClick={() => g.empiler(o)} />)}
+      <div className="groupe" role="group" aria-label={t('Empiler')}>
+        {ordresIcones().map(([o, icone, nom, raccourci]) => <Bouton key={o} icone={icone} aide={nom + ' (' + raccourci + ')'} onClick={() => g.empiler(o)} />)}
       </div>
-      <div className="groupe" role="group" aria-label="Booléens">
-        {BOOLEENS_ICONES.map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => g.booleen(op)} />)}
+      <div className="groupe" role="group" aria-label={t('Booléens')}>
+        {booleensIcones().map(([op, icone, aide]) => <Bouton key={op} icone={icone} aide={aide} disabled={sel.length < 2} onClick={() => g.booleen(op)} />)}
       </div>
-      <div className="groupe" role="group" aria-label="Formes">
+      <div className="groupe" role="group" aria-label={t('Formes')}>
         {g.riche ? <>
-          <Bouton icone="grouper" aide="Grouper (Ctrl+G)" onClick={ac.grouper} />
-          <Bouton icone="degrouper" aide="Dégrouper (Ctrl+Maj+G)" disabled={!g.degroupable} onClick={ac.degrouper} />
+          <Bouton icone="grouper" aide={t('Grouper (Ctrl+G)')} onClick={ac.grouper} />
+          <Bouton icone="degrouper" aide={t('Dégrouper (Ctrl+Maj+G)')} disabled={!g.degroupable} onClick={ac.degrouper} />
         </> : null}
-        <Bouton icone="combiner" aide={g.riche ? 'Combiner en une forme' : 'Combiner en une forme (Ctrl+G)'} disabled={sel.length < 2} onClick={ac.combinerSelection} />
-        <Bouton icone="separer" aide={g.riche ? 'Séparer les tracés' : 'Séparer les tracés (Ctrl+Maj+G)'} disabled={!g.separable} onClick={ac.separerSelection} />
-        <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ac.dupliquerSelection} />
-        <Bouton icone="masquer" aide="Masquer" onClick={ac.masquerSelection} />
-        <Bouton icone="verrouiller" aide="Verrouiller" onClick={ac.verrouillerSelection} />
-        <Bouton icone="supprimer" aide="Supprimer (Suppr)" className="danger" onClick={ac.supprimerSelection} />
+        <Bouton icone="combiner" aide={g.riche ? t('Combiner en une forme') : t('Combiner en une forme (Ctrl+G)')} disabled={sel.length < 2} onClick={ac.combinerSelection} />
+        <Bouton icone="separer" aide={g.riche ? t('Séparer les tracés') : t('Séparer les tracés (Ctrl+Maj+G)')} disabled={!g.separable} onClick={ac.separerSelection} />
+        <Bouton icone="dupliquer" aide={t('Dupliquer (Ctrl+D)')} onClick={ac.dupliquerSelection} />
+        <Bouton icone="masquer" aide={t('Masquer')} onClick={ac.masquerSelection} />
+        <Bouton icone="verrouiller" aide={t('Verrouiller')} onClick={ac.verrouillerSelection} />
+        <Bouton icone="supprimer" aide={t('Supprimer (Suppr)')} className="danger" onClick={ac.supprimerSelection} />
       </div>
-      <div className="groupe" role="group" aria-label="Nuancier">
+      <div className="groupe" role="group" aria-label={t('Nuancier')}>
         <MenuNuancierSelection />
       </div>
     </div>
@@ -118,27 +120,27 @@ export function useSectionsSelection(complet: boolean): SectionMenu[] {
   const disposition = useSectionDisposition(), repetition = useElementsRepetition();
   const nuancier = useSectionNuancier();
   const transformer: ElementMenu[] = [
-    ...(complet ? [{ id: 'dupliquer', libelle: 'Dupliquer', icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: 'Miroir horizontal', icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
-    { id: 'miroir-v', libelle: 'Miroir vertical', icone: 'miroir-v', onClick: () => g.miroir('v') },
-    { id: 'rotation-gauche', libelle: 'Tourner de 90° vers la gauche', icone: 'rotation-gauche', onClick: () => g.tourner(-90) },
-    ...(complet ? [{ id: 'rotation-droite', libelle: 'Tourner de 90° vers la droite', icone: 'rotation-droite', onClick: () => g.tourner(90) } as const] : [])
+    ...(complet ? [{ id: 'dupliquer', libelle: t('Dupliquer'), icone: 'dupliquer', raccourci: 'Ctrl+D', onClick: ac.dupliquerSelection } as const, { id: 'miroir-h', libelle: t('Miroir horizontal'), icone: 'miroir-h', onClick: () => g.miroir('h') } as const] : []),
+    { id: 'miroir-v', libelle: t('Miroir vertical'), icone: 'miroir-v', onClick: () => g.miroir('v') },
+    { id: 'rotation-gauche', libelle: t('Tourner de 90° vers la gauche'), icone: 'rotation-gauche', onClick: () => g.tourner(-90) },
+    ...(complet ? [{ id: 'rotation-droite', libelle: t('Tourner de 90° vers la droite'), icone: 'rotation-droite', onClick: () => g.tourner(90) } as const] : [])
   ];
   return [
     ...(disposition ? [disposition] : []),
-    { id: 'transformer', titre: 'Transformer', elements: transformer },
-    { id: 'repeter', titre: 'Répéter', elements: repetition },
-    { id: 'aligner', titre: 'Aligner' + surPlan, elements: ALIGNEMENTS_ICONES.map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
-    { id: 'empiler', titre: 'Empiler', elements: ORDRES_ICONES.map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
-    { id: 'booleens', titre: 'Booléens', elements: BOOLEENS_ICONES.map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },
-    { id: 'formes', titre: 'Formes', elements: [
+    { id: 'transformer', titre: t('Transformer'), elements: transformer },
+    { id: 'repeter', titre: t('Répéter'), elements: repetition },
+    { id: 'aligner', titre: t('Aligner') + surPlan, elements: alignementsIcones().map(([a, icone, nom]): ElementMenu => ({ id: 'aligner-' + a, libelle: nom, icone, onClick: () => g.aligner(a) })) },
+    { id: 'empiler', titre: t('Empiler'), elements: ordresIcones().map(([o, icone, nom, raccourci]): ElementMenu => ({ id: 'ordre-' + o, libelle: nom, icone, raccourci, onClick: () => g.empiler(o) })) },
+    { id: 'booleens', titre: t('Booléens'), elements: booleensIcones().map(([op, icone, nom]): ElementMenu => ({ id: 'booleen-' + op, libelle: nom, icone, desactive: sel.length < 2, onClick: () => g.booleen(op) })) },
+    { id: 'formes', titre: t('Formes'), elements: [
       ...(g.riche ? [
-        { id: 'grouper', libelle: 'Grouper', icone: 'grouper', raccourci: 'Ctrl+G', onClick: ac.grouper },
-        { id: 'degrouper', libelle: 'Dégrouper', icone: 'degrouper', raccourci: 'Ctrl+Maj+G', desactive: !g.degroupable, onClick: ac.degrouper }
+        { id: 'grouper', libelle: t('Grouper'), icone: 'grouper', raccourci: 'Ctrl+G', onClick: ac.grouper },
+        { id: 'degrouper', libelle: t('Dégrouper'), icone: 'degrouper', raccourci: t('Ctrl+Maj+G'), desactive: !g.degroupable, onClick: ac.degrouper }
       ] satisfies ElementMenu[] : []),
-      { id: 'combiner', libelle: 'Combiner en une forme', icone: 'combiner', ...(g.riche ? {} : { raccourci: 'Ctrl+G' }), desactive: sel.length < 2, onClick: ac.combinerSelection },
-      { id: 'separer', libelle: 'Séparer les tracés', icone: 'separer', ...(g.riche ? {} : { raccourci: 'Ctrl+Maj+G' }), desactive: !g.separable, onClick: ac.separerSelection },
-      { id: 'masquer', libelle: 'Masquer', icone: 'masquer', onClick: ac.masquerSelection },
-      { id: 'verrouiller', libelle: 'Verrouiller', icone: 'verrouiller', onClick: ac.verrouillerSelection }
+      { id: 'combiner', libelle: t('Combiner en une forme'), icone: 'combiner', ...(g.riche ? {} : { raccourci: 'Ctrl+G' }), desactive: sel.length < 2, onClick: ac.combinerSelection },
+      { id: 'separer', libelle: t('Séparer les tracés'), icone: 'separer', ...(g.riche ? {} : { raccourci: t('Ctrl+Maj+G') }), desactive: !g.separable, onClick: ac.separerSelection },
+      { id: 'masquer', libelle: t('Masquer'), icone: 'masquer', onClick: ac.masquerSelection },
+      { id: 'verrouiller', libelle: t('Verrouiller'), icone: 'verrouiller', onClick: ac.verrouillerSelection }
     ] },
     nuancier
   ];
@@ -152,17 +154,17 @@ function RangeeCompacte() {
   const g = useGestes(), { sel, ac } = g;
   const sections = useSectionsSelection(false);
   return (
-    <div className="editeur-barre-selection compacte" role="toolbar" aria-label="Sélection">
+    <div className="editeur-barre-selection compacte" role="toolbar" aria-label={t('Sélection')}>
       <span className="aide">{libelleSelection(sel.length)}</span>
       <OperationSelection compacte />
-      <div className="groupe" role="group" aria-label="Gestes fréquents">
-        <Bouton icone="dupliquer" aide="Dupliquer (Ctrl+D)" onClick={ac.dupliquerSelection} />
-        <Bouton icone="miroir-h" aide="Miroir horizontal" onClick={() => g.miroir('h')} />
-        <Bouton icone="rotation-droite" aide="Tourner de 90° vers la droite" onClick={() => g.tourner(90)} />
-        <MenuDeroulant etiquette="Plus de gestes : aligner, empiler, booléens, combiner" icone="options" chevron={false} alignement="droite" sections={sections} />
+      <div className="groupe" role="group" aria-label={t('Gestes fréquents')}>
+        <Bouton icone="dupliquer" aide={t('Dupliquer (Ctrl+D)')} onClick={ac.dupliquerSelection} />
+        <Bouton icone="miroir-h" aide={t('Miroir horizontal')} onClick={() => g.miroir('h')} />
+        <Bouton icone="rotation-droite" aide={t('Tourner de 90° vers la droite')} onClick={() => g.tourner(90)} />
+        <MenuDeroulant etiquette={t('Plus de gestes : aligner, empiler, booléens, combiner')} icone="options" chevron={false} alignement="droite" sections={sections} />
       </div>
-      <div className="groupe" role="group" aria-label="Supprimer">
-        <Bouton icone="supprimer" aide="Supprimer (Suppr)" className="danger" onClick={ac.supprimerSelection} />
+      <div className="groupe" role="group" aria-label={t('Supprimer')}>
+        <Bouton icone="supprimer" aide={t('Supprimer (Suppr)')} className="danger" onClick={ac.supprimerSelection} />
       </div>
     </div>
   );

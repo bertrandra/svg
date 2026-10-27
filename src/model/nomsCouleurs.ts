@@ -7,6 +7,7 @@
 // vert vers 142, cyan vers 195, bleu vers 264, violet vers 305, magenta vers 328). Pur et deterministe.
 
 import { lireHex, versOklch } from '../util/couleur.js';
+import { t } from '../util/i18n.js';
 
 /** Les familles par teinte OKLCH : la borne haute (exclue) et le nom. Le rouge ferme le cercle. */
 const FAMILLES: ReadonlyArray<readonly [number, string]> = [
@@ -36,18 +37,20 @@ export function nomDeCouleur(hex: string): string {
   if (!rgb) return hex;
   const { l, c, h } = versOklch(rgb);
   if (c < 0.02) {
-    if (l < 0.25) return 'Noir';
-    if (l > 0.97) return 'Blanc';
-    return l < 0.45 ? 'Gris foncé' : l > 0.8 ? 'Gris clair' : 'Gris';
+    if (l < 0.25) return t('Noir');
+    if (l > 0.97) return t('Blanc');
+    return l < 0.45 ? t('Gris foncé') : l > 0.8 ? t('Gris clair') : t('Gris');
   }
   const nom = famille(l, c, h);
   // Les mots qui disent deja la clarte (brun, olive, rose, beige) ne prennent pas de nuance de plus.
   // Un jaune vif est clair par nature : il ne se dit « clair » que pale.
   const clair = l > 0.8 && !(nom === 'jaune' && c >= 0.15);
-  const nuance = nom === 'brun' || nom === 'olive' || nom === 'rose' || nom === 'beige' ? '' : l < 0.45 ? ' foncé' : clair ? ' clair' : '';
-  return majuscule(nom + nuance);
+  const sansNuance = nom === 'brun' || nom === 'olive' || nom === 'rose' || nom === 'beige';
+  // La nuance est un gabarit (ADR-0042) : l'anglais la met avant le nom (« dark blue »), le francais apres.
+  const dit = sansNuance ? t(nom) : l < 0.45 ? t('{nom} foncé', { nom: t(nom) }) : clair ? t('{nom} clair', { nom: t(nom) }) : t(nom);
+  return majuscule(dit);
 }
 
 /** Une opacite en pourcentage entier, telle qu'on la dit (« opacité 50 % ») ; vide pour une couleur pleine. */
 export const phraseOpacite = (opacite: number | undefined): string =>
-  opacite === undefined || opacite >= 1 ? '' : 'opacité ' + Math.round(opacite * 100) + ' %';
+  opacite === undefined || opacite >= 1 ? '' : t('opacité {n} %', { n: Math.round(opacite * 100) });

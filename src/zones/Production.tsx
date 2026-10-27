@@ -18,10 +18,12 @@ import { libelleSelecteur, phraseCouches } from './parcoursCricut.js';
 import { Repere } from './Repere.js';
 import { ReglagesTapis } from './ReglagesTapis.js';
 import { useActionsRegles, useRegles } from './contexteRegles.js';
+import { t } from '../util/i18n.js';
 
-const NOMS_GRAVITE: Readonly<Record<Gravite, string>> = { bloquant: 'Bloquant', 'a-corriger': 'À corriger', conseil: 'Conseil' };
+// Des fonctions, pas des constantes : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const nomsGravite = (): Readonly<Record<Gravite, string>> => ({ bloquant: t('Bloquant'), 'a-corriger': t('À corriger'), conseil: t('Conseil') });
 // Le millimetre d'abord : c'est l'unite par defaut d'une interface francaise ; le pouce (celle de Design Space) reste au choix.
-const UNITES: ReadonlyArray<readonly [UniteLongueur, string]> = [['mm', 'Millimètres'], ['in', 'Pouces']];
+const unites = (): ReadonlyArray<readonly [UniteLongueur, string]> => [['mm', t('Millimètres')], ['in', t('Pouces')]];
 const PROCEDES: readonly Procede[] = ['decoupe', 'imprimer-decouper', 'dessin-stylo'];
 
 /**
@@ -35,34 +37,34 @@ export function useRubriquesProduction(): SectionMenu[] {
     ({ id, libelle, radio: true, coche, desactive, onClick: () => { if (!coche) ac.poserProduction(choix); } });
   const cricut = c.contexte === 'cricut' ? c : null;
   const machines: SectionMenu = {
-    id: 'machine', titre: 'Machine',
+    id: 'machine', titre: t('Machine'),
     elements: [
-      radio('contexte-generique', 'Générique (aucune machine)', !cricut, CHOIX_GENERIQUE),
-      ...CRICUT.machines.map(m => radio('machine-' + m.id, 'Cricut ' + m.nom, cricut?.machine === m.id, cricut ? { ...cricut, machine: m.id } : choixCricut(stockage, m.id)))
+      radio('contexte-generique', t('Générique (aucune machine)'), !cricut, CHOIX_GENERIQUE),
+      ...CRICUT.machines.map(m => radio('machine-' + m.id, t('Cricut {nom}', { nom: m.nom }), cricut?.machine === m.id, cricut ? { ...cricut, machine: m.id } : choixCricut(stockage, m.id)))
     ]
   };
   if (!cricut) return [machines];
   const machine = CRICUT.machines.find(m => m.id === cricut.machine);
-  const bientot = CRICUT.materiaux.filter(m => !m.disponible).map(m => m.nom.toLowerCase());
+  const bientot = CRICUT.materiaux.filter(m => !m.disponible).map(m => t(m.nom).toLowerCase());
   return [
     machines,
-    { id: 'tapis', titre: 'Tapis', elements: (machine?.tapis ?? []).map(id => radio('tapis-' + id, CRICUT.tapis.find(t => t.id === id)?.nom ?? id, cricut.tapis === id, { ...cricut, tapis: id })) },
+    { id: 'tapis', titre: t('Tapis'), elements: (machine?.tapis ?? []).map(id => radio('tapis-' + id, t(CRICUT.tapis.find(x => x.id === id)?.nom ?? id), cricut.tapis === id, { ...cricut, tapis: id })) },
     {
-      id: 'materiau', titre: 'Matériau',
+      id: 'materiau', titre: t('Matériau'),
       elements: [
-        ...CRICUT.materiaux.filter(m => m.disponible).map(m => radio('materiau-' + m.id, m.nom, cricut.materiau === m.id, { ...cricut, materiau: m.id })),
-        ...(bientot.length ? [{ id: 'materiau-bientot', libelle: 'Bientôt : ' + bientot.join(', '), desactive: true } satisfies ElementMenu] : [])
+        ...CRICUT.materiaux.filter(m => m.disponible).map(m => radio('materiau-' + m.id, t(m.nom), cricut.materiau === m.id, { ...cricut, materiau: m.id })),
+        ...(bientot.length ? [{ id: 'materiau-bientot', libelle: t('Bientôt : {liste}', { liste: bientot.join(', ') }), desactive: true } satisfies ElementMenu] : [])
       ]
     },
     {
-      id: 'procede', titre: 'Procédé',
+      id: 'procede', titre: t('Procédé'),
       elements: [
-        ...PROCEDES.map(p => radio('procede-' + p, NOMS_PROCEDE[p], cricut.procede === p, { ...cricut, procede: p }, !machine?.procedes.includes(p))),
+        ...PROCEDES.map(p => radio('procede-' + p, t(NOMS_PROCEDE[p]), cricut.procede === p, { ...cricut, procede: p }, !machine?.procedes.includes(p))),
         // Les outils a venir (gravure, dorure) suivent la logique du stylo : annonces sur une ligne inactive, comme les materiaux.
-        { id: 'procede-bientot', libelle: 'Bientôt : ' + OUTILS_A_VENIR.map(o => o.nom).join(', '), desactive: true } satisfies ElementMenu
+        { id: 'procede-bientot', libelle: t('Bientôt : {liste}', { liste: OUTILS_A_VENIR.map(o => t(o.nom)).join(', ') }), desactive: true } satisfies ElementMenu
       ]
     },
-    { id: 'unite', titre: 'Unité', elements: UNITES.map(([u, nom]) => radio('unite-' + u, nom, cricut.unite === u, { ...cricut, unite: u })) }
+    { id: 'unite', titre: t('Unité'), elements: unites().map(([u, nom]) => radio('unite-' + u, nom, cricut.unite === u, { ...cricut, unite: u })) }
   ];
 }
 
@@ -74,9 +76,9 @@ export const SelecteurContexte = memo(function SelecteurContexte() {
   const { production, profil } = useInterface();
   const rubriques = useRubriquesProduction();
   const libelle = libelleSelecteur(production);
-  const titre = profil ? libelle + ', ' + profil.materiau.nom.toLowerCase() + ', en ' + (profil.unite === 'in' ? 'pouces' : 'millimètres') : 'Machine : Générique, le dessin n’est jugé pour aucune machine';
+  const titre = profil ? t('{libelle}, {materiau}, en {unite}', { libelle, materiau: t(profil.materiau.nom).toLowerCase(), unite: profil.unite === 'in' ? t('pouces') : t('millimètres') }) : t('Machine : Générique, le dessin n’est jugé pour aucune machine');
   return (
-    <div className="groupe production" role="group" aria-label="Machine de découpe">
+    <div className="groupe production" role="group" aria-label={t('Machine de découpe')}>
       <MenuDeroulant etiquette={titre} libelle={libelle} icone="machine" alignement="droite" sections={rubriques} className="selecteur-contexte" />
     </div>
   );
@@ -88,15 +90,15 @@ function LigneConstat({ c }: { c: Constat }) {
   const dit = /à vérifier|à tester/.test(c.message);
   return (
     <li className={'constat constat-' + c.gravite}>
-      <p>{c.message}{c.aVerifier && !dit ? <span className="a-verifier"> (à vérifier)</span> : null}</p>
+      <p>{c.message}{c.aVerifier && !dit ? <span className="a-verifier">{t(' (à vérifier)')}</span> : null}</p>
       {c.correction || c.formes.length || c.tapis ? (
         <div className="boutons">
           {/* Les liens des ilots (ADR-0040) suivent les reglages de la session ; « Régler les liens… » les montre, les formes choisies. */}
-          {c.correction ? <button type="button" onClick={() => (c.code === 'ilot' ? ac.ajouterLiens(rg.liens, c.formes) : ac.corrigerConstat(c.code))}>{LIBELLES_CORRECTION[c.correction]}</button> : null}
-          {c.code === 'ilot' ? <button type="button" onClick={() => { ac.choisir([...c.formes]); arg.ouvrir('liens'); }}>Régler les liens…</button> : null}
-          {(c.autres ?? []).map(k => <button key={k} type="button" onClick={() => ac.corrigerConstat(c.code, k)}>{LIBELLES_CORRECTION[k]}</button>)}
-          {c.tapis && production.contexte === 'cricut' ? <button type="button" onClick={() => ac.poserProduction({ ...production, tapis: c.tapis ?? production.tapis })}>Passer au {nomTapis(c.tapis)}</button> : null}
-          {c.formes.length ? <button type="button" className="discret" aria-label={'Choisir les formes en cause (' + pluriel(c.formes.length, 'forme') + ')'} onClick={() => { ac.choisir([...c.formes]); ac.dire(pluriel(c.formes.length, 'forme') + ' choisie' + (c.formes.length > 1 ? 's' : '') + '.'); }}>Choisir les formes</button> : null}
+          {c.correction ? <button type="button" onClick={() => (c.code === 'ilot' ? ac.ajouterLiens(rg.liens, c.formes) : ac.corrigerConstat(c.code))}>{t(LIBELLES_CORRECTION[c.correction])}</button> : null}
+          {c.code === 'ilot' ? <button type="button" onClick={() => { ac.choisir([...c.formes]); arg.ouvrir('liens'); }}>{t('Régler les liens…')}</button> : null}
+          {(c.autres ?? []).map(k => <button key={k} type="button" onClick={() => ac.corrigerConstat(c.code, k)}>{t(LIBELLES_CORRECTION[k])}</button>)}
+          {c.tapis && production.contexte === 'cricut' ? <button type="button" onClick={() => ac.poserProduction({ ...production, tapis: c.tapis ?? production.tapis })}>{t('Passer au {tapis}', { tapis: nomTapis(c.tapis) })}</button> : null}
+          {c.formes.length ? <button type="button" className="discret" aria-label={t('Choisir les formes en cause ({formes})', { formes: pluriel(c.formes.length, 'forme') })} onClick={() => { ac.choisir([...c.formes]); const formes = pluriel(c.formes.length, 'forme'); ac.dire(c.formes.length > 1 ? t('{formes} choisies.', { formes }) : t('{formes} choisie.', { formes })); }}>{t('Choisir les formes')}</button> : null}
         </div>
       ) : null}
     </li>
@@ -112,31 +114,31 @@ export function PanneauCricut({ nom }: { nom: string }) {
   if (!profil) return null;
   const constats = preparation?.constats ?? [];
   const ptc = profil.procede === 'imprimer-decouper', stylo = profil.procede === 'dessin-stylo';
-  const statut = !preparation ? 'analyse…' : constats.length ? pluriel(constats.length, 'constat') : 'prêt';
+  const statut = !preparation ? t('analyse…') : constats.length ? pluriel(constats.length, 'constat') : t('prêt');
   return (
     <div className="panneau-cricut">
-      <Section titre={ptc ? 'Prêt pour Print Then Cut' : stylo ? 'Prêt pour le stylo' : 'Prêt pour Cricut'} ouverte note={statut}>
-        <p className="aide">{profil.machine.nom} · {profil.tapis.nom} · {profil.materiau.nom}{ptc ? ' · Print Then Cut' : stylo ? ' · Dessin au stylo' : ''}</p>
-        <Repere id="cricut" titre="Ce panneau prépare la découpe">
-          Il vérifie le dessin pour votre machine : chaque constat dit ce qui se découperait mal et propose une correction, que Ctrl+Z annule. Le tapis s’affiche sous le dessin ; la machine découpe ce qui tient dans les pointillés.
+      <Section titre={ptc ? t('Prêt pour Print Then Cut') : stylo ? t('Prêt pour le stylo') : t('Prêt pour Cricut')} ouverte note={statut}>
+        <p className="aide">{t(profil.machine.nom)} · {t(profil.tapis.nom)} · {t(profil.materiau.nom)}{ptc ? ' · Print Then Cut' : stylo ? t(' · Dessin au stylo') : ''}</p>
+        <Repere id="cricut" titre={t('Ce panneau prépare la découpe')}>
+          {t('Il vérifie le dessin pour votre machine : chaque constat dit ce qui se découperait mal et propose une correction, que Ctrl+Z annule. Le tapis s’affiche sous le dessin ; la machine découpe ce qui tient dans les pointillés.')}
         </Repere>
         <ReglagesTapis />
         {preparation ? (
           <dl className="resume-cricut">
-            <dt>Taille finale</dt>
-            <dd>{preparation.taille ? texteTaille(preparation.taille.l, preparation.taille.h, profil.unite) : 'aucune forme'}</dd>
-            <dt>{ptc ? 'Couleurs' : stylo ? 'Stylos' : 'Couches'}</dt>
+            <dt>{t('Taille finale')}</dt>
+            <dd>{preparation.taille ? texteTaille(preparation.taille.l, preparation.taille.h, profil.unite) : t('aucune forme')}</dd>
+            <dt>{ptc ? t('Couleurs') : stylo ? t('Stylos') : t('Couches')}</dt>
             <dd>
-              {ptc ? pluriel(preparation.couches.length, 'couleur') + ', imprimées ensemble' : stylo ? pluriel(preparation.couches.length, 'couleur') + ' : ' + pluriel(preparation.couches.length, 'stylo') : phraseCouches(preparation.couches.length)}
+              {ptc ? t('{couleurs}, imprimées ensemble', { couleurs: pluriel(preparation.couches.length, 'couleur') }) : stylo ? t('{couleurs} : {stylos}', { couleurs: pluriel(preparation.couches.length, 'couleur'), stylos: pluriel(preparation.couches.length, 'stylo') }) : phraseCouches(preparation.couches.length)}
               <span className="pastilles" aria-hidden="true">{preparation.couches.slice(0, 12).map(x => <span key={x.couleur} className="pastille" style={{ background: x.couleur }} />)}</span>
             </dd>
             <ResumeOperations />
           </dl>
-        ) : <p className="aide" role="status">Analyse du dessin…</p>}
+        ) : <p className="aide" role="status">{t('Analyse du dessin…')}</p>}
         {preparation && !constats.length ? (
           <>
             <p className="pret">{phraseReste(0, profil.procede)}</p>
-            <p className="aide">Rien à corriger. {stylo ? '« Exporter pour le stylo » écrit les traits à dessiner, sans remplissage' : '« Exporter pour Cricut » écrit ' + (ptc ? 'l’image à imprimer et sa ligne de coupe' : 'le fichier à importer dans Design Space')}.</p>
+            <p className="aide">{t('Rien à corriger.')} {stylo ? t('« Exporter pour le stylo » écrit les traits à dessiner, sans remplissage.') : ptc ? t('« Exporter pour Cricut » écrit l’image à imprimer et sa ligne de coupe.') : t('« Exporter pour Cricut » écrit le fichier à importer dans Design Space.')}</p>
           </>
         ) : null}
         {GRAVITES.map(g => {
@@ -144,16 +146,16 @@ export function PanneauCricut({ nom }: { nom: string }) {
           return liste.length ? (
             <div key={g} className={'gravite gravite-' + g}>
               {/* Focalisable par programme : « Revoir », depuis la confirmation d'export, y mene. */}
-              <p className="titre-gravite" tabIndex={-1}>{NOMS_GRAVITE[g]} ({liste.length})</p>
+              <p className="titre-gravite" tabIndex={-1}>{nomsGravite()[g]} ({liste.length})</p>
               <ul className="constats">{liste.map(c => <LigneConstat key={c.code} c={c} />)}</ul>
             </div>
           ) : null;
         })}
         <ExportCricut nom={nom} />
         <details className="aide-cricut">
-          <summary>Couper, dessiner, rainer</summary>
-          {CRICUT.typesDeLigne.map(t => <p key={t} className="aide">{t}</p>)}
-          <p className="aide">Le SVG enregistré garde l’échelle de l’écran (96 unités par pouce) et le contexte ; pour Design Space, utilisez « Exporter pour Cricut », qui écrit la taille en {profil.unite === 'in' ? 'pouces' : 'millimètres'}.</p>
+          <summary>{t('Couper, dessiner, rainer')}</summary>
+          {CRICUT.typesDeLigne.map(ligne => <p key={ligne} className="aide">{t(ligne)}</p>)}
+          <p className="aide">{t('Le SVG enregistré garde l’échelle de l’écran (96 unités par pouce) et le contexte ; pour Design Space, utilisez « Exporter pour Cricut », qui écrit la taille en {unite}.', { unite: profil.unite === 'in' ? t('pouces') : t('millimètres') })}</p>
         </details>
       </Section>
     </div>
@@ -171,8 +173,9 @@ function ResumeOperations() {
   if (!n.decoupe || !n.ecriture) return null;
   return (
     <>
-      <dt>Opérations</dt>
-      <dd>{n.decoupe} à couper · {n.ecriture} à écrire : un fichier pour chaque</dd>
+      <dt>{t('Opérations')}</dt>
+      <dd>{t('{decoupe} à couper · {ecriture} à écrire : un fichier pour chaque', { decoupe: n.decoupe, ecriture: n.ecriture })}</dd>
+
     </>
   );
 }

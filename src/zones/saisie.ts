@@ -7,6 +7,7 @@ import type { ProfilProduction } from '../engine/preparation.js';
 import { BAS_CURSEUR, HAUT_CURSEUR, type PointTexte } from '../engine/texte/curseur.js';
 import { avecTrace, creerTexte, nouveauTexte, type PeintureTexte } from '../engine/texte/vivant.js';
 import type { Police } from '../io/polices.js';
+import { t } from '../util/i18n.js';
 import { appliquerChangement, contoursDe, policeDuTexte, type TraceTexte } from './actionsTexte.js';
 
 /**
@@ -71,16 +72,16 @@ export function frapper(d: DessinSvg, s: EtatFrappe, texte: string, police: Poli
 }
 
 /** Ce que dit la region vocale en ouvrant la saisie (une fois : elle ne lit pas chaque lettre). */
-export const PHRASE_DEBUT_SAISIE = 'Saisie du texte sur la toile : tapez votre texte. Entrée va à la ligne, Échap termine, Alt+F10 mène à la barre de texte.';
+export const PHRASE_DEBUT_SAISIE = t('Saisie du texte sur la toile : tapez votre texte. Entrée va à la ligne, Échap termine, Alt+F10 mène à la barre de texte.');
 
 /** La saisie se termine avant que les fontes soient la (le premier clic les charge) : ce qui est tape ne s'est pas compose. */
-export const PHRASE_POLICES_EN_CHARGEMENT = 'Les polices se chargeaient encore : le texte n’est pas ajouté. Recommencez dans un instant.';
+export const PHRASE_POLICES_EN_CHARGEMENT = t('Les polices se chargeaient encore : le texte n’est pas ajouté. Recommencez dans un instant.');
 
 const extrait = (v: string): string => { const u = v.replace(/\s*\n\s*/g, ' / '); return u.length > 40 ? u.slice(0, 39) + '…' : u; };
 
 /** La phrase de la fin de la saisie : ce qui est arrive au texte, et le geste qui le rouvre. */
 export function phraseFinSaisie(o: { readonly cree: boolean; readonly retire: boolean; readonly vide: boolean; readonly avant: string; readonly apres: string; readonly police: string }): string {
-  if (o.vide) return o.retire ? 'Texte vide : la forme est retirée. Ctrl+Z la rend.' : 'Texte vide : rien n’est ajouté.';
-  if (o.cree) return 'Texte ajouté en ' + o.police + ' : « ' + extrait(o.apres) + ' ». Il reste modifiable : double-clic ou Entrée.';
-  return o.apres === o.avant ? 'Texte inchangé.' : 'Texte modifié : « ' + extrait(o.apres) + ' ».';
+  if (o.vide) return o.retire ? t('Texte vide : la forme est retirée. Ctrl+Z la rend.') : t('Texte vide : rien n’est ajouté.');
+  if (o.cree) return t('Texte ajouté en {police} : « {extrait} ». Il reste modifiable : double-clic ou Entrée.', { police: o.police, extrait: extrait(o.apres) });
+  return o.apres === o.avant ? t('Texte inchangé.') : t('Texte modifié : « {extrait} ».', { extrait: extrait(o.apres) });
 }

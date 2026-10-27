@@ -6,6 +6,7 @@
 import { compterPoints, couleursProches, sousChemins, boiteAvecTrait, type Chemin, type DessinSvg, type Forme } from '../editionSvg.js';
 import { toleranceBooleen } from '../booleens.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 import { finesseDe, POINTS_MAX_MESURE } from './finesse.js';
 import { couchesDe, etendueVisible, formesPeintes, tientDans } from './mesures.js';
 import { silhouetteDe } from './silhouette.js';
@@ -29,23 +30,25 @@ export type CodeCorrection =
   | 'epaissir' | 'nettoyer' | 'percer' | 'trous-selon-sens' | 'souder'
   | 'garder-contour' | 'hachurer' | 'police-trait' | 'ecrire' | 'ramener-zone' | 'ajouter-liens';
 
+// Des accesseurs, pas des valeurs : la langue de l'interface est posee apres le chargement du module (ADR-0042), et chaque
+// lecture rend le libelle dans la langue du moment.
 export const LIBELLES_CORRECTION: Readonly<Record<CodeCorrection, string>> = {
-  'contour-en-forme': 'Contour en forme',
-  'rendre-opaque': 'Rendre opaque',
-  'ajuster-zone': 'Redimensionner à la zone utile',
-  fermer: 'Fermer les tracés',
-  'fusionner-nuances': 'Fusionner les nuances',
-  epaissir: 'Épaissir',
-  nettoyer: 'Nettoyer le tracé',
-  percer: 'Percer la forme du dessous',
-  'trous-selon-sens': 'Réécrire les trous',
-  souder: 'Souder',
-  'garder-contour': 'Garder le contour',
-  hachurer: 'Hachurer',
-  'police-trait': 'Police à trait unique',
-  ecrire: 'Écrire au stylo',
-  'ramener-zone': 'Ramener dans la zone utile',
-  'ajouter-liens': 'Ajouter des liens'
+  get 'contour-en-forme'() { return t('Contour en forme'); },
+  get 'rendre-opaque'() { return t('Rendre opaque'); },
+  get 'ajuster-zone'() { return t('Redimensionner à la zone utile'); },
+  get fermer() { return t('Fermer les tracés'); },
+  get 'fusionner-nuances'() { return t('Fusionner les nuances'); },
+  get epaissir() { return t('Épaissir'); },
+  get nettoyer() { return t('Nettoyer le tracé'); },
+  get percer() { return t('Percer la forme du dessous'); },
+  get 'trous-selon-sens'() { return t('Réécrire les trous'); },
+  get souder() { return t('Souder'); },
+  get 'garder-contour'() { return t('Garder le contour'); },
+  get hachurer() { return t('Hachurer'); },
+  get 'police-trait'() { return t('Police à trait unique'); },
+  get ecrire() { return t('Écrire au stylo'); },
+  get 'ramener-zone'() { return t('Ramener dans la zone utile'); },
+  get 'ajouter-liens'() { return t('Ajouter des liens'); }
 };
 
 export interface Constat {
@@ -72,7 +75,6 @@ export const FORMES_MAX_FINESSE = 300;
 const ORDRE: readonly CodeConstat[] = ['vide', 'decoupe-trait-ouvert', 'trait', 'opacite', 'piece-trop-grande', 'ptc-trop-grand', 'depassement', 'hors-tapis', 'trace-ouvert', 'lettres-chevauchent', 'nuances-proches', 'detail-fin', 'ilot', 'trop-de-noeuds', 'trou-superpose', 'pair-impair', 'analyse-limitee', 'stylo-plein', 'stylo-double-trait'];
 
 const ids = (formes: readonly Forme[]): string[] => formes.map(f => f.id);
-const accord = (n: number, un: string, plusieurs: string): string => (n > 1 ? plusieurs : un);
 const ouvert = (s: Chemin): boolean => s.length > 1 && !s.some(c => c.c === 'Z');
 
 /** Un trait d'epaisseur visible, que Design Space ne decoupera pas comme il se voit. */
@@ -82,20 +84,20 @@ export const estTransparente = (f: Forme): boolean => f.opacite < 1 || (f.rempli
 
 function constatTrait(peintes: readonly Forme[]): Constat | null {
   // Un trait ouvert sans fond a son propre constat (decoupe-trait-ouvert, ADR-0022), qui propose aussi le stylo.
-  const t = peintes.filter(f => aUnTrait(f) && !traitOuvert(f));
-  if (!t.length) return null;
+  const traits = peintes.filter(f => aUnTrait(f) && !traitOuvert(f));
+  if (!traits.length) return null;
   return {
-    code: 'trait', gravite: 'bloquant', formes: ids(t), correction: 'contour-en-forme',
-    message: (t.length > 1 ? t.length + ' formes ont un contour' : 'Une forme a un contour') + ' : Design Space découpe le tracé, pas l’épaisseur du trait. Transformez le contour en forme pour couper ce que vous voyez.'
+    code: 'trait', gravite: 'bloquant', formes: ids(traits), correction: 'contour-en-forme',
+    message: (traits.length > 1 ? t('{n} formes ont un contour : Design Space découpe le tracé, pas l’épaisseur du trait. Transformez le contour en forme pour couper ce que vous voyez.', { n: traits.length }) : t('Une forme a un contour : Design Space découpe le tracé, pas l’épaisseur du trait. Transformez le contour en forme pour couper ce que vous voyez.'))
   };
 }
 
 function constatOpacite(peintes: readonly Forme[]): Constat | null {
-  const t = peintes.filter(estTransparente);
-  if (!t.length) return null;
+  const transparentes = peintes.filter(estTransparente);
+  if (!transparentes.length) return null;
   return {
-    code: 'opacite', gravite: 'bloquant', formes: ids(t), correction: 'rendre-opaque',
-    message: (t.length > 1 ? t.length + ' formes sont transparentes' : 'Une forme est transparente') + ' : le papier est opaque, et Design Space ignore l’opacité. Rendez-' + accord(t.length, 'la', 'les') + ' opaque' + accord(t.length, '', 's') + '.'
+    code: 'opacite', gravite: 'bloquant', formes: ids(transparentes), correction: 'rendre-opaque',
+    message: (transparentes.length > 1 ? t('{n} formes sont transparentes : le papier est opaque, et Design Space ignore l’opacité. Rendez-les opaques.', { n: transparentes.length }) : t('Une forme est transparente : le papier est opaque, et Design Space ignore l’opacité. Rendez-la opaque.'))
   };
 }
 
@@ -114,7 +116,9 @@ function constatsTaille(peintes: readonly Forme[], dessin: DessinSvg, p: ProfilP
     const suggere = b ? tapisSuggere(p, b.l, b.h, true) : undefined;
     return [{
       code: 'piece-trop-grande', gravite: 'bloquant', formes: ids(grandes), correction: 'ajuster-zone', ...(suggere ? { tapis: suggere } : {}),
-      message: (grandes.length > 1 ? grandes.length + ' formes sont plus grandes' : 'Une forme est plus grande') + ' que la zone utile du ' + tapis.toLowerCase() + ' (' + zone + ')' + (b ? ' : ' + texteTaille(b.l, b.h, p.unite) + '.' : '.')
+      message: b
+        ? (grandes.length > 1 ? t('{n} formes sont plus grandes que la zone utile du {tapis} ({zone}) : {taille}.', { n: grandes.length, tapis: tapis.toLowerCase(), zone, taille: texteTaille(b.l, b.h, p.unite) }) : t('Une forme est plus grande que la zone utile du {tapis} ({zone}) : {taille}.', { tapis: tapis.toLowerCase(), zone, taille: texteTaille(b.l, b.h, p.unite) }))
+        : (grandes.length > 1 ? t('{n} formes sont plus grandes que la zone utile du {tapis} ({zone}).', { n: grandes.length, tapis: tapis.toLowerCase(), zone }) : t('Une forme est plus grande que la zone utile du {tapis} ({zone}).', { tapis: tapis.toLowerCase(), zone }))
     }];
   }
   // Sans recalage automatique (ADR-0039), le tapis est fixe : ce qui compte est que chaque forme tienne sur la feuille, dans la zone
@@ -125,7 +129,7 @@ function constatsTaille(peintes: readonly Forme[], dessin: DessinSvg, p: ProfilP
   const suggere = tapisSuggere(p, e.l, e.h, false);
   return [{
     code: 'depassement', gravite: 'a-corriger', formes: ids(peintes), correction: 'ajuster-zone', aVerifier: true, ...(suggere ? { tapis: suggere } : {}),
-    message: 'Le dessin mesure ' + texteTaille(e.l, e.h, p.unite) + ' : il dépasse la zone utile du ' + tapis.toLowerCase() + ' (' + zone + '). Chaque pièce y tient, mais Design Space devra les répartir sur le tapis (à vérifier).'
+    message: t('Le dessin mesure {taille} : il dépasse la zone utile du {tapis} ({zone}). Chaque pièce y tient, mais Design Space devra les répartir sur le tapis (à vérifier).', { taille: texteTaille(e.l, e.h, p.unite), tapis: tapis.toLowerCase(), zone })
   }];
 }
 
@@ -139,11 +143,12 @@ export const dansZone = (b: { readonly x: number; readonly y: number; readonly l
 function constatHorsTapis(peintes: readonly Forme[], zone: CadreTapis | null, p: ProfilProduction): Constat[] {
   const dehors = peintes.filter(f => { const b = boiteAvecTrait(f); return b !== null && (!zone || !dansZone(b, zone)); });
   if (!dehors.length) return [];
-  const ou = feuillePartielle(p) ? 'de la feuille posée sur le ' + p.tapis.nom.toLowerCase() : 'de la zone utile du ' + p.tapis.nom.toLowerCase() + ' (les pointillés)';
-  return [{
-    code: 'hors-tapis', gravite: 'a-corriger', formes: ids(dehors), correction: zone ? 'ramener-zone' : null, aVerifier: true,
-    message: (dehors.length > 1 ? dehors.length + ' formes sortent' : 'Une forme sort') + ' ' + ou + ' : la machine ne ' + accord(dehors.length, 'la', 'les') + ' couperait pas à cet endroit. Ramenez-' + accord(dehors.length, 'la', 'les') + (feuillePartielle(p) ? ' sur la feuille.' : ' sur le tapis.')
-  }];
+  const tapis = p.tapis.nom.toLowerCase();
+  // Quatre phrases entieres (feuille ou zone utile, une forme ou plusieurs) : l'accord et l'ordre des mots ne se traduisent pas par morceaux.
+  const message = feuillePartielle(p)
+    ? (dehors.length > 1 ? t('{n} formes sortent de la feuille posée sur le {tapis} : la machine ne les couperait pas à cet endroit. Ramenez-les sur la feuille.', { n: dehors.length, tapis }) : t('Une forme sort de la feuille posée sur le {tapis} : la machine ne la couperait pas à cet endroit. Ramenez-la sur la feuille.', { tapis }))
+    : (dehors.length > 1 ? t('{n} formes sortent de la zone utile du {tapis} (les pointillés) : la machine ne les couperait pas à cet endroit. Ramenez-les sur le tapis.', { n: dehors.length, tapis }) : t('Une forme sort de la zone utile du {tapis} (les pointillés) : la machine ne la couperait pas à cet endroit. Ramenez-la sur le tapis.', { tapis }));
+  return [{ code: 'hors-tapis', gravite: 'a-corriger', formes: ids(dehors), correction: zone ? 'ramener-zone' : null, aVerifier: true, message }];
 }
 
 function constatOuverts(peintes: readonly Forme[]): Constat | null {
@@ -151,15 +156,15 @@ function constatOuverts(peintes: readonly Forme[]): Constat | null {
   if (!o.length) return null;
   return {
     code: 'trace-ouvert', gravite: 'a-corriger', formes: ids(o), correction: 'fermer', aVerifier: true,
-    message: (o.length > 1 ? o.length + ' formes ont un tracé ouvert' : 'Une forme a un tracé ouvert') + ' : fermez-' + accord(o.length, 'le', 'les') + ' pour que la lame revienne à son point de départ.'
+    message: (o.length > 1 ? t('{n} formes ont un tracé ouvert : fermez-les pour que la lame revienne à son point de départ.', { n: o.length }) : t('Une forme a un tracé ouvert : fermez-le pour que la lame revienne à son point de départ.'))
   };
 }
 
 /** Un texte vivant dont des lettres se chevauchent (ADR-0022) : la lame couperait chacune a travers sa voisine. */
 function constatLettres(dessin: DessinSvg): Constat | null {
-  const t = textesQuiSeChevauchent(dessin);
-  if (!t.length) return null;
-  return { code: 'lettres-chevauchent', gravite: 'a-corriger', formes: ids(t), correction: 'souder', message: 'Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.' };
+  const textes = textesQuiSeChevauchent(dessin);
+  if (!textes.length) return null;
+  return { code: 'lettres-chevauchent', gravite: 'a-corriger', formes: ids(textes), correction: 'souder', message: t('Les lettres se chevauchent : soudez-les pour une découpe d’un seul tenant.') };
 }
 
 function constatNuances(dessin: DessinSvg, p: ProfilProduction): Constat | null {
@@ -172,7 +177,9 @@ function constatNuances(dessin: DessinSvg, p: ProfilProduction): Constat | null 
   const exemple = grappes[0];
   return {
     code: 'nuances-proches', gravite: 'a-corriger', formes: ids(formes), correction: 'fusionner-nuances',
-    message: 'Des couleurs presque égales font ' + pluriel(tapisDeTrop, 'tapis') + ' de trop' + (exemple ? ' (' + [exemple.cible, ...exemple.membres].join(' et ') + ')' : '') + ' : une couleur, un tapis. Fusionnez les nuances proches.'
+    message: exemple
+      ? t('Des couleurs presque égales font {tapis} de trop ({couleurs}) : une couleur, un tapis. Fusionnez les nuances proches.', { tapis: pluriel(tapisDeTrop, 'tapis'), couleurs: [exemple.cible, ...exemple.membres].join(t(' et ')) })
+      : t('Des couleurs presque égales font {tapis} de trop : une couleur, un tapis. Fusionnez les nuances proches.', { tapis: pluriel(tapisDeTrop, 'tapis') })
   };
 }
 
@@ -189,13 +196,13 @@ function constatsFinesse(peintes: readonly Forme[], dessin: DessinSvg, p: Profil
   if (fines.length) {
     r.push({
       code: 'detail-fin', gravite: 'a-corriger', formes: ids(fines), correction: 'epaissir', zones: zones.flat(),
-      message: (fines.length > 1 ? fines.length + ' formes ont des parties' : 'Une forme a des parties') + ' plus étroites que ' + texteMesure(p.detailMin, p.unite) + ' : la lame les déchirerait. Épaississez-' + accord(fines.length, 'la', 'les') + ', ou agrandissez le dessin.'
+      message: (fines.length > 1 ? t('{n} formes ont des parties plus étroites que {mesure} : la lame les déchirerait. Épaississez-les, ou agrandissez le dessin.', { n: fines.length, mesure: texteMesure(p.detailMin, p.unite) }) : t('Une forme a des parties plus étroites que {mesure} : la lame les déchirerait. Épaississez-la, ou agrandissez le dessin.', { mesure: texteMesure(p.detailMin, p.unite) }))
     });
   }
   if (mesurables.length < pleines.length) {
     r.push({
       code: 'analyse-limitee', gravite: 'conseil', formes: [], correction: null,
-      message: 'Les parties fines n’ont été mesurées que sur ' + mesurables.length + ' formes sur ' + pleines.length + ' : les plus chargées et les suivantes sont sautées.'
+      message: t('Les parties fines n’ont été mesurées que sur {n} formes sur {total} : les plus chargées et les suivantes sont sautées.', { n: mesurables.length, total: pleines.length })
     });
   }
   return r;
@@ -218,7 +225,8 @@ function constatIlots(coupees: readonly Forme[], dessin: DessinSvg, p: ProfilPro
   if (!avec.length) return null;
   return {
     code: 'ilot', gravite: 'a-corriger', formes: ids(avec), correction: 'ajouter-liens',
-    message: (avec.length > 1 ? 'Le centre de ' + avec.length + ' formes tombera' : 'Le centre de cette forme tombera') + ' à la découpe (' + pluriel(n, 'îlot') + ') : pour un pochoir, ajoutez des liens qui ' + accord(n, 'le', 'les') + ' retiennent à la feuille. Pour un autocollant, ' + accord(n, 'ce centre s’échenille', 'ces centres s’échenillent') + ' : ignorez ce constat.'
+    message: (avec.length > 1 ? t('Le centre de {n} formes tombera à la découpe ({ilots})', { n: avec.length, ilots: pluriel(n, 'îlot') }) : t('Le centre de cette forme tombera à la découpe ({ilots})', { ilots: pluriel(n, 'îlot') }))
+      + (n > 1 ? t(' : pour un pochoir, ajoutez des liens qui les retiennent à la feuille. Pour un autocollant, ces centres s’échenillent : ignorez ce constat.') : t(' : pour un pochoir, ajoutez des liens qui le retiennent à la feuille. Pour un autocollant, ce centre s’échenille : ignorez ce constat.'))
   };
 }
 
@@ -227,7 +235,7 @@ function constatNoeuds(peintes: readonly Forme[], p: ProfilProduction): Constat 
   if (!lourdes.length) return null;
   return {
     code: 'trop-de-noeuds', gravite: 'conseil', formes: ids(lourdes), correction: 'nettoyer', aVerifier: true,
-    message: (lourdes.length > 1 ? lourdes.length + ' formes ont' : 'Une forme a') + ' plus de ' + p.noeudsParForme + ' points : Design Space peine sur les tracés chargés. Nettoyez le tracé.'
+    message: (lourdes.length > 1 ? t('{n} formes ont plus de {points} points : Design Space peine sur les tracés chargés. Nettoyez le tracé.', { n: lourdes.length, points: p.noeudsParForme }) : t('Une forme a plus de {points} points : Design Space peine sur les tracés chargés. Nettoyez le tracé.', { points: p.noeudsParForme }))
   };
 }
 
@@ -237,7 +245,7 @@ function constatTrous(dessin: DessinSvg): Constat | null {
   const formes = new Set(paires.flat());
   return {
     code: 'trou-superpose', gravite: 'conseil', formes: dessin.formes.filter(f => formes.has(f.id)).map(f => f.id), correction: 'percer',
-    message: (paires.length > 1 ? paires.length + ' formes blanches sont posées' : 'Une forme blanche est posée') + ' sur une autre : Design Space ' + accord(paires.length, 'la', 'les') + ' découpera dans du papier blanc, pas comme un trou. Percez la forme du dessous.'
+    message: (paires.length > 1 ? t('{n} formes blanches sont posées sur une autre : Design Space les découpera dans du papier blanc, pas comme un trou. Percez la forme du dessous.', { n: paires.length }) : t('Une forme blanche est posée sur une autre : Design Space la découpera dans du papier blanc, pas comme un trou. Percez la forme du dessous.'))
   };
 }
 
@@ -246,7 +254,7 @@ function constatPairImpair(peintes: readonly Forme[]): Constat | null {
   if (!e.length) return null;
   return {
     code: 'pair-impair', gravite: 'conseil', formes: ids(e), correction: 'trous-selon-sens', aVerifier: true,
-    message: (e.length > 1 ? e.length + ' formes creusent leurs trous' : 'Une forme creuse ses trous') + ' en pair-impair : Design Space les lit-il comme le navigateur ? C’est à tester (témoin 2). Réécrire les trous selon le sens du tracé lève le doute.'
+    message: (e.length > 1 ? t('{n} formes creusent leurs trous en pair-impair : Design Space les lit-il comme le navigateur ? C’est à tester (témoin 2). Réécrire les trous selon le sens du tracé lève le doute.', { n: e.length }) : t('Une forme creuse ses trous en pair-impair : Design Space les lit-il comme le navigateur ? C’est à tester (témoin 2). Réécrire les trous selon le sens du tracé lève le doute.'))
   };
 }
 
@@ -259,7 +267,7 @@ function constatPrintThenCut(dessin: DessinSvg, p: ProfilProduction): Constat[] 
   if (tientDans(l, h, ptc.l, ptc.h, true)) return [];
   return [{
     code: 'ptc-trop-grand', gravite: 'bloquant', formes: ids(formesPeintes(dessin)), correction: 'ajuster-zone', aVerifier: true,
-    message: 'Avec son fond perdu, le dessin mesure ' + texteTaille(l, h, p.unite) + ' : Print Then Cut accepte au plus ' + texteTaille(ptc.l, ptc.h, p.unite) + ' (à vérifier).'
+    message: t('Avec son fond perdu, le dessin mesure {taille} : Print Then Cut accepte au plus {max} (à vérifier).', { taille: texteTaille(l, h, p.unite), max: texteTaille(ptc.l, ptc.h, p.unite) })
   }];
 }
 
@@ -268,6 +276,9 @@ function versConstat(c: ConstatTexte): Constat {
   const [premiere, ...autres] = c.corrections;
   return { code: c.code, gravite: c.gravite, message: c.message, formes: c.formes, correction: premiere ?? null, ...(autres.length ? { autres } : {}), ...(c.aVerifier ? { aVerifier: c.aVerifier } : {}) };
 }
+
+/** Le dessin sans forme visible : rien a juger, rien a exporter. */
+const constatVide = (): Constat => ({ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: t('Le dessin n’a aucune forme visible : rien à découper.') });
 
 /** Le trait ouvert en decoupe (bloquant) : le seul constat du texte qui empeche l'export. */
 const constatTraitOuvert = (dessin: DessinSvg): Constat | null => {
@@ -282,7 +293,7 @@ const constatTraitOuvert = (dessin: DessinSvg): Constat | null => {
  */
 export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Constat[] {
   const peintes = formesPeintes(dessin);
-  if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
+  if (!peintes.length) return [constatVide()];
   let r: Array<Constat | null>;
   if (p.procede === 'imprimer-decouper') r = [...constatPrintThenCut(dessin, p), constatNoeuds(peintes, p)];
   else {
@@ -301,7 +312,7 @@ export function constatsPreparation(dessin: DessinSvg, p: ProfilProduction): Con
 /** Les seuls constats qui empechent l'export, sans les mesures lourdes : ce que l'export verifie avant d'ecrire. */
 export function constatsBloquants(dessin: DessinSvg, p: ProfilProduction): Constat[] {
   const peintes = formesPeintes(dessin);
-  if (!peintes.length) return [{ code: 'vide', gravite: 'bloquant', formes: [], correction: null, message: 'Le dessin n’a aucune forme visible : rien à découper.' }];
+  if (!peintes.length) return [constatVide()];
   if (p.procede === 'imprimer-decouper') return constatPrintThenCut(dessin, p);
   const { decoupe } = partagerOperations(dessin, p.procede);
   const coupees = formesPeintes(decoupe);

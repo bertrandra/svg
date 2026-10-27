@@ -10,11 +10,13 @@ import { useActions, useDessin, useInterface } from './contexteEditeur.js';
 import { useActionsRegles } from './contexteRegles.js';
 import { arrondi } from './aidesEditeur.js';
 import { TITRE_FEUILLE } from './PanneauFeuille.js';
+import { t } from '../util/i18n.js';
 
 type Cote = 'x' | 'y' | 'l' | 'h';
-const COTES: ReadonlyArray<readonly [Cote, string, string]> = [
-  ['l', 'Largeur', 'La largeur de la feuille'], ['h', 'Hauteur', 'La hauteur de la feuille'],
-  ['x', 'Depuis la gauche', 'La distance du bord gauche du tapis au bord gauche de la feuille'], ['y', 'Depuis le haut', 'La distance du bord haut du tapis au bord haut de la feuille']
+// Les libelles se traduisent au rendu, pas au chargement du module : la langue n'est posee qu'ensuite.
+const cotes = (): ReadonlyArray<readonly [Cote, string, string]> => [
+  ['l', t('Largeur'), t('La largeur de la feuille')], ['h', t('Hauteur'), t('La hauteur de la feuille')],
+  ['x', t('Depuis la gauche'), t('La distance du bord gauche du tapis au bord gauche de la feuille')], ['y', t('Depuis le haut'), t('La distance du bord haut du tapis au bord haut de la feuille')]
 ];
 
 /** L'objet sans l'une de ses cles : un reglage revenu a son defaut ne s'ecrit plus (exactOptionalPropertyTypes). */
@@ -29,8 +31,7 @@ const textes = (p: ProfilProduction): Record<Cote, string> => ({
  * L'aide de la case : les deux comportements, quel que soit l'etat (on sait ce que cocher changerait avant de le faire), le defaut
  * d'abord.
  */
-export const AIDE_RECALAGE = 'Décochée (par défaut), le plan de travail est le tapis : les formes restent où vous les posez, et l’export garde leur place, pour une feuille posée n’importe où sur le tapis. '
-  + 'Cochée, le tapis suit le dessin : Design Space posera les formes dans le coin haut gauche du tapis.';
+export const aideRecalage = (): string => t('Décochée (par défaut), le plan de travail est le tapis : les formes restent où vous les posez, et l’export garde leur place, pour une feuille posée n’importe où sur le tapis. Cochée, le tapis suit le dessin : Design Space posera les formes dans le coin haut gauche du tapis.');
 
 export function ReglagesTapis() {
   const { production, profil } = useInterface(), { sel } = useDessin(), ac = useActions(), arg = useActionsRegles(), id = useId();
@@ -38,7 +39,7 @@ export function ReglagesTapis() {
   // Les champs suivent la feuille du profil (un autre tapis la ramene dessus) tant qu'on ne tape pas.
   useEffect(() => { poserSaisie(null); }, [profil]);
   if (!profil || production.contexte !== 'cricut' || !operationsApplicables(profil.procede)) return null;
-  const valeurs = saisie ?? textes(profil), u = NOMS_UNITE[profil.unite];
+  const valeurs = saisie ?? textes(profil), u = t(NOMS_UNITE[profil.unite]);
   const valider = () => {
     if (!saisie) return;
     const lu = (c: Cote): number => { const v = Number(saisie[c].trim().replace(',', '.')); return saisie[c].trim() !== '' && Number.isFinite(v) ? depuisUnite(v, profil.unite) : profil.feuille[c]; };
@@ -51,13 +52,13 @@ export function ReglagesTapis() {
   return (
     <div className="reglages-tapis">
       <label className="case">
-        <input type="checkbox" checked={profil.recalage} aria-describedby={id + '-recalage'} onChange={e => basculerRecalage(e.target.checked)} /> Recalage automatique
+        <input type="checkbox" checked={profil.recalage} aria-describedby={id + '-recalage'} onChange={e => basculerRecalage(e.target.checked)} /> {t('Recalage automatique')}
       </label>
-      <p className="aide" id={id + '-recalage'}>{AIDE_RECALAGE}</p>
+      <p className="aide" id={id + '-recalage'}>{aideRecalage()}</p>
       <fieldset className="champ-groupe feuille-tapis">
-        <legend>Feuille sur le tapis</legend>
+        <legend>{t('Feuille sur le tapis')}</legend>
         <div className="champs-feuille">
-          {COTES.map(([c, nom, aide]) => (
+          {cotes().map(([c, nom, aide]) => (
             <label key={c} className="champ-ligne nombre" title={aide}>
               <span>{nom}</span>
               <input type="text" inputMode="decimal" value={valeurs[c]} onChange={e => poserSaisie({ ...valeurs, [c]: e.target.value })} onBlur={valider} onKeyDown={touche} />
@@ -66,8 +67,8 @@ export function ReglagesTapis() {
           ))}
         </div>
         <div className="boutons">
-          <button type="button" disabled={!feuillePartielle(profil)} onClick={toutLeTapis}>Tapis entier</button>
-          <button type="button" disabled={!sel.length} title={sel.length ? undefined : 'Choisissez d’abord une forme'} onClick={() => arg.ouvrir('feuille')}>{TITRE_FEUILLE}…</button>
+          <button type="button" disabled={!feuillePartielle(profil)} onClick={toutLeTapis}>{t('Tapis entier')}</button>
+          <button type="button" disabled={!sel.length} title={sel.length ? undefined : t('Choisissez d’abord une forme')} onClick={() => arg.ouvrir('feuille')}>{t(TITRE_FEUILLE)}…</button>
         </div>
       </fieldset>
     </div>

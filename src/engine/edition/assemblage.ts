@@ -10,6 +10,7 @@ import { relierCopies } from './texteVivant.js';
 import { transformerFeuille } from './transformation.js';
 import { estPlat, feuillePlate, feuillesDe, verrouilleEffectif } from './arbre.js';
 import { collerContenu, insererContenu, MSG_MEME_PARENT } from './groupes.js';
+import { t } from '../../util/i18n.js';
 
 /**
  * Insere les formes visibles d'un autre dessin au premier plan, ramenees dans la boite cible en
@@ -44,7 +45,7 @@ export function combiner(dessin: DessinSvg, ids: readonly string[]): { dessin: D
   if (!estPlat(dessin)) {
     const feuilles = feuillesDe(dessin, ids).filter(id => !verrouilleEffectif(dessin, id));
     const parents = new Set(dessin.formes.filter(f => feuilles.includes(f.id)).map(f => f.parent));
-    if (feuilles.length > 1 && parents.size > 1) return { dessin, id: null, erreur: MSG_MEME_PARENT };
+    if (feuilles.length > 1 && parents.size > 1) return { dessin, id: null, erreur: t(MSG_MEME_PARENT) };
     return combinerFeuilles(dessin, feuilles);
   }
   return combinerFeuilles(dessin, ids);

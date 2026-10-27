@@ -15,6 +15,7 @@ import { lireTrait } from './trait.js';
 import { proprietesDe, type Analyse } from './cascade.js';
 import type { Proprietes } from './ignores.js';
 import { coordonneeSaine } from './limites.js';
+import { nombre, t } from '../../util/i18n.js';
 
 /** Les fontes que la lecture peut employer pour le texte, par identifiant (dist/polices.js) ; null pour une fonte non chargee. */
 export interface PolicesTexte { glyphes(id: IdPolice): Glyphes | null }
@@ -34,10 +35,11 @@ export interface ContexteTexte {
 /** Les caracteres de texte lus au plus dans un SVG : un texte de livre entier ; au-dela, des dizaines de milliers de formes. */
 export const CARACTERES_MAX = 100_000;
 
-export const MSG_TEXTPATH = 'le texte qui suit un chemin (<textPath>)';
-export const MSG_VERTICAL = 'le texte écrit verticalement (writing-mode)';
-export const MSG_SANS_GLYPHE = 'des caractères que la fonte de remplacement n’a pas';
-export const MSG_SANS_FONTE = 'du texte dont la fonte de remplacement n’est pas chargée';
+// Des cles, evaluees au chargement avant la langue (le francais) ; `t(MSG_X)` les traduit quand on les dit.
+export const MSG_TEXTPATH = t('le texte qui suit un chemin (<textPath>)');
+export const MSG_VERTICAL = t('le texte écrit verticalement (writing-mode)');
+export const MSG_SANS_GLYPHE = t('des caractères que la fonte de remplacement n’a pas');
+export const MSG_SANS_FONTE = t('du texte dont la fonte de remplacement n’est pas chargée');
 
 /** Un caractere a poser, avec ce que ses elements lui donnent : proprietes heritees, positions et rotation. */
 interface Caractere {
@@ -71,7 +73,7 @@ function caracteres(ctx: ContexteTexte, n: Noeud, h: Proprietes, pile: Listes[],
   pile.push(listesDe(n));
   for (const m of n.suite ?? []) {
     if (typeof m !== 'string') {
-      if (m.nom === 'textPath') { ctx.analyse.ignores.add(MSG_TEXTPATH); continue; }
+      if (m.nom === 'textPath') { ctx.analyse.ignores.add(t(MSG_TEXTPATH)); continue; }
       if (m.nom !== 'tspan' && m.nom !== 'a') continue;
       const pr = proprietesDe(ctx.analyse, m);
       if ((pr.display ?? '').trim() === 'none') continue;
@@ -102,10 +104,10 @@ const familles = (h: Proprietes): string => (h['font-family'] ?? '').trim() || '
 
 /** Lit un <text> en formes : `h` ses proprietes heritees (les siennes comprises), `m` sa matrice, `opacite` celle des groupes. */
 export function lireTexte(ctx: ContexteTexte, n: Noeud, h: Proprietes, m: Matrice, opacite: number): void {
-  if (/^(tb|tb-rl|vertical-rl|vertical-lr|sideways)/i.test((h['writing-mode'] ?? '').trim())) { ctx.analyse.ignores.add(MSG_VERTICAL); return; }
+  if (/^(tb|tb-rl|vertical-rl|vertical-lr|sideways)/i.test((h['writing-mode'] ?? '').trim())) { ctx.analyse.ignores.add(t(MSG_VERTICAL)); return; }
   const cs: Caractere[] = [];
   caracteres(ctx, n, h, [], cs);
-  if (ctx.caracteres > CARACTERES_MAX) { ctx.refus.add('trop de texte (plus de ' + CARACTERES_MAX.toLocaleString('fr-FR') + ' caractères)'); return; }
+  if (ctx.caracteres > CARACTERES_MAX) { ctx.refus.add(t('trop de texte (plus de {n} caractères)', { n: nombre(CARACTERES_MAX) })); return; }
   const lettres = sansBlancFinal(cs);
   // Les morceaux : un caractere a x ou y absolu en commence un nouveau ; text-anchor deplace chaque morceau entier.
   let cx = 0, cy = 0, precedent: { c: string; g: Glyphes } | null = null;
@@ -122,7 +124,7 @@ export function lireTexte(ctx: ContexteTexte, n: Noeud, h: Proprietes, m: Matric
     if (g && precedent && precedent.g === g) cx += g.crenage(precedent.c, k.c) * e;
     const morceau = morceaux[morceaux.length - 1];
     morceau?.poses.push({ k, x: cx, y: cy, g, r, taille });
-    if (!g) { ctx.analyse.ignores.add(MSG_SANS_FONTE); continue; }
+    if (!g) { ctx.analyse.ignores.add(t(MSG_SANS_FONTE)); continue; }
     if (k.c !== ' ') utilises.set(r.demandee + '>' + r.id + (r.penchee ? '/' : ''), r);
     cx += g.avance(k.c) * e + (Number.parseFloat(k.h['letter-spacing'] ?? '') || 0) + (k.c === ' ' ? Number.parseFloat(k.h['word-spacing'] ?? '') || 0 : 0);
     if (morceau) morceau.fin = cx;
@@ -147,17 +149,17 @@ function poserLettre(ctx: ContexteTexte, k: Caractere, g: Glyphes, r: Remplaceme
   const fond = peinture(h.fill, '#000000', courante), trait = peinture(h.stroke, null, courante);
   const { couleur: remplissage } = fond, { couleur: contour } = trait;
   if (!remplissage && !contour) return;
-  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) { ctx.refus.add('un dégradé ou un motif'); return; }
-  if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { ctx.refus.add('une peinture qui n’est pas une couleur lisible'); return; }
+  if ((remplissage && remplissage.startsWith('url(')) || (contour && contour.startsWith('url('))) { ctx.refus.add(t('un dégradé ou un motif')); return; }
+  if ((remplissage && !peintureSure(remplissage)) || (contour && !peintureSure(contour))) { ctx.refus.add(t('une peinture qui n’est pas une couleur lisible')); return; }
   let pose = multiplier(m, multiplier(translation(x, y), multiplier(rotation(k.r), [taille, 0, 0, taille, 0, 0])));
   if (r.penchee) pose = multiplier(pose, PENCHE);
   const epaisseur = contour ? lireEpaisseur(h['stroke-width']) * facteur(m) : 0;
   const { champs: styleTrait } = contour ? lireTrait(h, facteur(m)) : { champs: {} };
   const glyphe: GlypheAPoser = { cle: k.c, m: pose };
   const { formes, manquantes } = formesDeGlyphes([glyphe], sourceDeGlyphes(g), { remplissage, contour, epaisseur, ...styleTrait, ...lireOpacites(opacite, h, fond, trait) }, () => 'f' + (ctx.formes.length + 1));
-  if (manquantes) ctx.analyse.ignores.add(MSG_SANS_GLYPHE);
+  if (manquantes) ctx.analyse.ignores.add(t(MSG_SANS_GLYPHE));
   for (const f of formes) {
-    if (!f.d.every(c => c.p.every(coordonneeSaine))) { ctx.refus.add('des coordonnées démesurées'); return; }
+    if (!f.d.every(c => c.p.every(coordonneeSaine))) { ctx.refus.add(t('des coordonnées démesurées')); return; }
     ctx.formes.push(f);
   }
 }

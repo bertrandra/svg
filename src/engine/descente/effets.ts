@@ -6,11 +6,12 @@
 
 import { visibleEffectif, type DessinSvg, type Forme, type Groupe } from '../editionSvg.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
 /** La phrase d'une perte, au singulier ou au pluriel (formes et groupes visibles a effets) : elle s'ajoute au message de l'export. */
 export const perteEffets = (n: number): string =>
-  n === 1 ? 'le flou ou l’ombre portée d’une forme (ce format ne les porte pas : ils ne sont pas exportés)'
-    : 'le flou ou l’ombre portée de ' + n + ' formes ou groupes (ce format ne les porte pas : ils ne sont pas exportés)';
+  n === 1 ? t('le flou ou l’ombre portée d’une forme (ce format ne les porte pas : ils ne sont pas exportés)')
+    : t('le flou ou l’ombre portée de {n} formes ou groupes (ce format ne les porte pas : ils ne sont pas exportés)', { n });
 
 /** Le dessin sans effets, sur les feuilles et les groupes ; le meme dessin s'il n'en porte pas. */
 export function descendreEffets(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus?: readonly string[] } {

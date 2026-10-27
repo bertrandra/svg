@@ -11,6 +11,7 @@ import { estIdCatalogue, familleDe, famillesMontrees, filtrerParNom, trouverVari
 import { LICENCES_POLICES, type IdSourcePolices, type LicencePolice } from '../model/sourcesPolices.js';
 import { FAMILLES_LIVREES, baseDeGrasse, estPoliceLivree, type NaturePolice } from '../model/polices.js';
 import type { Police } from '../io/polices.js';
+import { t } from '../util/i18n.js';
 
 export type SourceLigne = IdSourcePolices | 'livree' | 'deposee';
 
@@ -24,9 +25,16 @@ export const cleFamille = (f: Pick<FamilleCatalogue, 'depot' | 'id'>): string =>
 
 export type IdGroupe = 'courante' | 'document' | 'favoris' | 'recentes' | 'livrees' | 'trait' | 'deposees' | 'catalogue';
 
+/** Les titres des groupes ; des accesseurs, pour que le titre se traduise a la lecture et non a l'import du module (ADR-0042). */
 export const TITRES_GROUPES: Readonly<Record<IdGroupe, string>> = {
-  courante: 'Police actuelle', document: 'Dans ce document', favoris: 'Favoris', recentes: 'Récentes', livrees: 'Livrées avec l’éditeur',
-  trait: 'Trait unique (stylo)', deposees: 'Vos polices', catalogue: 'Toutes les polices'
+  get courante() { return t('Police actuelle'); },
+  get document() { return t('Dans ce document'); },
+  get favoris() { return t('Favoris'); },
+  get recentes() { return t('Récentes'); },
+  get livrees() { return t('Livrées avec l’éditeur'); },
+  get trait() { return t('Trait unique (stylo)'); },
+  get deposees() { return t('Vos polices'); },
+  get catalogue() { return t('Toutes les polices'); }
 };
 
 /** Une ligne : une fonte deja lue, une famille de l'index (sa variante principale), ou une variante precise (document, recente). */
@@ -166,7 +174,7 @@ export function groupesListe(e: EntreesListe): GroupePolices[] {
   if (e.valeur) {
     const id = baseDeGrasse(e.valeur) ?? e.valeur;
     const l = ligneDId(id, polices, c);
-    courante.push(l ?? ligneAbsente(id, e.absente ?? 'Police absente'));
+    courante.push(l ?? ligneAbsente(id, e.absente ?? t('Police absente')));
   }
 
   const document: LignePolice[] = [];
@@ -229,18 +237,26 @@ const SOURCE_DITE_PAR_LE_GROUPE: ReadonlySet<IdGroupe> = new Set(['livrees', 'tr
 /** Le badge de source d'une ligne : rien quand le titre du groupe le dit deja, ni pour une police absente. */
 export function badgeSource(l: LignePolice, groupe: IdGroupe, etat: EtatLigne): string | null {
   if (SOURCE_DITE_PAR_LE_GROUPE.has(groupe) || etat === 'absente') return null;
-  return l.source === 'livree' ? 'Livrée' : l.source === 'deposee' ? 'Déposée' : COURTS_SOURCES[l.source];
+  return l.source === 'livree' ? t('Livrée') : l.source === 'deposee' ? t('Déposée') : COURTS_SOURCES[l.source];
 }
 
-const DIT_ETAT: Readonly<Record<EtatLigne, string | null>> = { locale: null, 'a-telecharger': 'à télécharger', 'en-cours': 'téléchargement en cours', absente: 'absente' };
+/** L'etat d'une ligne en mots, pour son nom accessible ; rien pour une police locale. */
+function ditEtat(etat: EtatLigne): string | null {
+  switch (etat) {
+    case 'locale': return null;
+    case 'a-telecharger': return t('à télécharger');
+    case 'en-cours': return t('téléchargement en cours');
+    case 'absente': return t('absente');
+  }
+}
 
 /**
  * Le nom accessible d'une ligne : le nom, ses badges en mots, puis son etat. La marque « à télécharger » est une icone pour l'oeil
  * et ces mots pour un lecteur d'ecran : elle ne tient ni a la seule couleur, ni a la seule image.
  */
 export function nomAccessibleLigne(l: LignePolice, groupe: IdGroupe, etat: EtatLigne): string {
-  const dit = DIT_ETAT[etat];
-  const morceaux = [l.nom, badgeSource(l, groupe, etat), l.nature === 'trait' ? 'trait unique' : null, l.licence?.badge ? l.licence.nom : null,
+  const dit = ditEtat(etat);
+  const morceaux = [l.nom, badgeSource(l, groupe, etat), l.nature === 'trait' ? t('trait unique') : null, l.licence?.badge ? l.licence.nom : null,
     dit && !(etat === 'absente' && /absente/i.test(l.nom)) ? dit : null];
   return morceaux.filter((m): m is string => !!m).join(', ');
 }

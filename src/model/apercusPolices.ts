@@ -8,6 +8,8 @@
 // longueur variable (un caractere de -15 a 15, deux jusqu'a 511), et la lettre de commande ne se repete pas. Le texte reste
 // du JSON sans echappement (ni guillemet, ni barre oblique inverse, ni chevron) : l'annexe se pose par une balise <script>.
 
+import { t } from '../util/i18n.js';
+
 /** Une commande d'un apercu, en absolu, coordonnees entieres (Y vers le bas, la ligne de base en y = 0). */
 export interface CommandeApercu { readonly c: 'M' | 'L' | 'Q' | 'C' | 'Z'; readonly p: readonly number[] }
 
@@ -135,23 +137,23 @@ const CLE = /^(?:fontsource|velvetyne|fontshare):[a-z0-9][a-z0-9-]{0,63}$/;
  * Un code se decode a l'affichage, et un code qui ne se decode pas laisse simplement la ligne a son nom ecrit.
  */
 export function validerApercus(v: unknown): AnnexeApercus | { erreur: string } {
-  if (typeof v !== 'object' || v === null || Array.isArray(v)) return { erreur: 'l’annexe des aperçus n’est pas un objet' };
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return { erreur: t('l’annexe des aperçus n’est pas un objet') };
   const o = v as Record<string, unknown>;
-  if (o.format !== 1) return { erreur: 'format d’aperçus inconnu' };
-  if (typeof o.instantane !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.instantane)) return { erreur: 'date d’instantané invalide' };
-  if (o.corps !== CADRE_APERCU.corps || o.haut !== CADRE_APERCU.haut || o.bas !== CADRE_APERCU.bas) return { erreur: 'cadre des aperçus différent de celui du programme' };
+  if (o.format !== 1) return { erreur: t('format d’aperçus inconnu') };
+  if (typeof o.instantane !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.instantane)) return { erreur: t('date d’instantané invalide') };
+  if (o.corps !== CADRE_APERCU.corps || o.haut !== CADRE_APERCU.haut || o.bas !== CADRE_APERCU.bas) return { erreur: t('cadre des aperçus différent de celui du programme') };
   const brut = o.apercus;
-  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return { erreur: 'aperçus absents' };
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) return { erreur: t('aperçus absents') };
   const cles = Object.keys(brut);
-  if (cles.length > LIMITES_APERCUS.entrees) return { erreur: 'trop d’aperçus' };
+  if (cles.length > LIMITES_APERCUS.entrees) return { erreur: t('trop d’aperçus') };
   const apercus = new Map<string, string>();
   let total = 0;
   for (const cle of cles) {
     const code = (brut as Record<string, unknown>)[cle];
-    if (!CLE.test(cle)) return { erreur: 'clé d’aperçu invalide (' + cle.slice(0, 40) + ')' };
-    if (typeof code !== 'string' || !code.length || code.length > LIMITES_APERCUS.code || !CODE.test(code)) return { erreur: cle + ' : aperçu invalide' };
+    if (!CLE.test(cle)) return { erreur: t('clé d’aperçu invalide ({cle})', { cle: cle.slice(0, 40) }) };
+    if (typeof code !== 'string' || !code.length || code.length > LIMITES_APERCUS.code || !CODE.test(code)) return { erreur: t('{cle} : aperçu invalide', { cle }) };
     total += code.length;
-    if (total > LIMITES_APERCUS.total) return { erreur: 'annexe des aperçus trop grosse' };
+    if (total > LIMITES_APERCUS.total) return { erreur: t('annexe des aperçus trop grosse') };
     apercus.set(cle, code);
   }
   return { format: 1, instantane: o.instantane, apercus };

@@ -13,6 +13,7 @@ import { aireSignee, aplatir, appliquerBooleen, cheminLisseDeRegion, regionDeChe
 import { decalerFormes, etendreTraits } from '../contours.js';
 import { aireDeRegion } from '../contour/region.js';
 import { pluriel } from '../../util/texte.js';
+import { t } from '../../util/i18n.js';
 import { nombreFr } from '../description.js';
 import type { Constat, CodeCorrection } from './constats.js';
 import { etendueVisible, formesPeintes } from './mesures.js';
@@ -25,7 +26,9 @@ import { ajouterLiens, LIENS_DEFAUT, type OptionsLiens } from './liens.js';
 
 export type ResultatCorrection = { readonly dessin: DessinSvg; readonly phrase: string } | { readonly erreur: string };
 
-const RIEN = 'Rien à corriger : le dessin a changé depuis le constat.';
+// Traduit a l'appel (ADR-0042) : la langue est posee apres le chargement du module.
+const RIEN = (): string => t('Rien à corriger : le dessin a changé depuis le constat.');
+
 
 /** Une forme en pair-impair reecrite selon le sens du trace : chaque boucle tourne selon sa profondeur, la courbe ne change pas. */
 function trousSelonSens(f: Forme, tolerance: number): Forme {
@@ -63,19 +66,20 @@ function ajusterZone(dessin: DessinSvg, p: ProfilProduction): ResultatCorrection
   let k: number, b: ReturnType<typeof etendueVisible>;
   if (ptc) {
     b = boiteDeRegion(silhouetteDe(dessin, toleranceBooleen(dessin)));
-    if (!b) return { erreur: RIEN };
+    if (!b) return { erreur: RIEN() };
     // Le fond perdu ne grandit pas avec le dessin : on le retire de la place disponible.
     const zl = ptc.l - 2 * ptc.fondPerdu, zh = ptc.h - 2 * ptc.fondPerdu;
     k = Math.max(facteurPour(b.l, b.h, zl, zh), facteurPour(b.l, b.h, zh, zl));
   } else {
     b = etendueVisible(dessin);
-    if (!b) return { erreur: RIEN };
+    if (!b) return { erreur: RIEN() };
     k = facteurPour(b.l, b.h, p.zoneUtile.l, p.zoneUtile.h);
   }
-  if (!(k > 0) || k >= 1 || !peintes.length) return { erreur: 'Le dessin tient déjà dans la zone utile.' };
+  if (!(k > 0) || k >= 1 || !peintes.length) return { erreur: t('Le dessin tient déjà dans la zone utile.') };
   const d = transformer(dessin, peintes.map(f => f.id), echelle(k, k, b.x, b.y));
   const e = etendueVisible(d);
-  return { dessin: d, phrase: 'Dessin réduit à ' + nombreFr(Math.round(k * 1000) / 10) + ' %' + (e ? ' : ' + texteTaille(e.l, e.h, p.unite) + '.' : '.') };
+  const p100 = nombreFr(Math.round(k * 1000) / 10);
+  return { dessin: d, phrase: e ? t('Dessin réduit à {p} % : {taille}.', { p: p100, taille: texteTaille(e.l, e.h, p.unite) }) : t('Dessin réduit à {p} %.', { p: p100 }) };
 }
 
 /** Le plus petit glissement qui ramene [a, a + l] dans [z, z + zl] ; 0 s'il y est, ou s'il est plus grand qu'elle. */
@@ -87,7 +91,7 @@ const glissement = (a: number, l: number, z: number, zl: number): number => (l >
  */
 function ramenerZone(dessin: DessinSvg, ids: readonly string[], p: ProfilProduction): ResultatCorrection {
   const z = regionDeCoupe(p, gabaritDuTapis(p, dessin, null)), voulus = new Set(ids);
-  if (!z) return { erreur: 'La feuille sort de la zone utile du tapis : replacez-la dans le panneau.' };
+  if (!z) return { erreur: t('La feuille sort de la zone utile du tapis : replacez-la dans le panneau.') };
   let d = dessin, n = 0;
   for (const f of dessin.formes) {
     if (!voulus.has(f.id) || f.verrouille) continue;
@@ -98,7 +102,7 @@ function ramenerZone(dessin: DessinSvg, ids: readonly string[], p: ProfilProduct
     d = deplacer(d, [f.id], dx, dy);
     n++;
   }
-  return n ? { dessin: d, phrase: pluriel(n, 'forme') + ' ramenée' + (n > 1 ? 's' : '') + ' sur la feuille, dans la zone utile du tapis.' } : { erreur: RIEN };
+  return n ? { dessin: d, phrase: (n > 1 ? t('{formes} ramenées sur la feuille, dans la zone utile du tapis.', { formes: pluriel(n, 'forme') }) : t('{formes} ramenée sur la feuille, dans la zone utile du tapis.', { formes: pluriel(n, 'forme') })) } : { erreur: RIEN() };
 }
 
 function fermer(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
@@ -107,7 +111,7 @@ function fermer(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
     const r = joindreExtremites(d, [id]);
     if (r.genre === 'ferme') { d = r.dessin; n++; }
   }
-  return n ? { dessin: d, phrase: pluriel(n, 'tracé') + ' fermé' + (n > 1 ? 's' : '') + '.' } : { erreur: RIEN };
+  return n ? { dessin: d, phrase: (n > 1 ? t('{traces} fermés.', { traces: pluriel(n, 'tracé') }) : t('{traces} fermé.', { traces: pluriel(n, 'tracé') })) } : { erreur: RIEN() };
 }
 
 function percer(dessin: DessinSvg): ResultatCorrection {
@@ -116,7 +120,7 @@ function percer(dessin: DessinSvg): ResultatCorrection {
     const r = appliquerBooleen(d, [base, blanche], 'soustraction', toleranceBooleen(d), { lisser: true });
     if (!r.erreur) { d = r.dessin; n++; }
   }
-  return n ? { dessin: d, phrase: pluriel(n, 'trou') + ' percé' + (n > 1 ? 's' : '') + ' : la forme blanche est devenue un vide.' } : { erreur: RIEN };
+  return n ? { dessin: d, phrase: (n > 1 ? t('{trous} percés : la forme blanche est devenue un vide.', { trous: pluriel(n, 'trou') }) : t('{trous} percé : la forme blanche est devenue un vide.', { trous: pluriel(n, 'trou') })) } : { erreur: RIEN() };
 }
 
 function trous(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
@@ -127,7 +131,7 @@ function trous(dessin: DessinSvg, ids: readonly string[]): ResultatCorrection {
     n++;
     return trousSelonSens(f, tolerance);
   });
-  return n ? { dessin: { ...dessin, formes }, phrase: pluriel(n, 'forme') + ' réécrite' + (n > 1 ? 's' : '') + ' selon le sens du tracé : les trous sont les mêmes.' } : { erreur: RIEN };
+  return n ? { dessin: { ...dessin, formes }, phrase: (n > 1 ? t('{formes} réécrites selon le sens du tracé : les trous sont les mêmes.', { formes: pluriel(n, 'forme') }) : t('{formes} réécrite selon le sens du tracé : les trous sont les mêmes.', { formes: pluriel(n, 'forme') })) } : { erreur: RIEN() };
 }
 
 /**
@@ -139,26 +143,26 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
   switch (code) {
     case 'contour-en-forme': {
       const r = etendreTraits(dessin, formes, { lisser: true });
-      return r.etendus ? { dessin: r.dessin, phrase: pluriel(r.etendus, 'contour') + ' transformé' + (r.etendus > 1 ? 's' : '') + ' en forme.' } : { erreur: r.erreur ?? RIEN };
+      return r.etendus ? { dessin: r.dessin, phrase: (r.etendus > 1 ? t('{contours} transformés en forme.', { contours: pluriel(r.etendus, 'contour') }) : t('{contours} transformé en forme.', { contours: pluriel(r.etendus, 'contour') })) } : { erreur: r.erreur ?? RIEN() };
     }
     case 'rendre-opaque': {
       const d = modifier(dessin, formes, { opacite: 1, opaciteRemplissage: 1, opaciteContour: 1 });
-      return d === dessin ? { erreur: RIEN } : { dessin: d, phrase: pluriel(formes.length, 'forme') + ' rendue' + (formes.length > 1 ? 's' : '') + ' opaque' + (formes.length > 1 ? 's' : '') + '.' };
+      return d === dessin ? { erreur: RIEN() } : { dessin: d, phrase: (formes.length > 1 ? t('{formes} rendues opaques.', { formes: pluriel(formes.length, 'forme') }) : t('{formes} rendue opaque.', { formes: pluriel(formes.length, 'forme') })) };
     }
     case 'ajuster-zone': return ajusterZone(dessin, p);
     case 'ramener-zone': return ramenerZone(dessin, formes, p);
     case 'fermer': return fermer(dessin, formes);
     case 'fusionner-nuances': {
       const r = fusionnerCouleursProches(dessin, p.fusionNuances, 'remplissage');
-      return r.fusionnees ? { dessin: r.dessin, phrase: pluriel(r.fusionnees, 'nuance') + ' fusionnée' + (r.fusionnees > 1 ? 's' : '') + ' : une couleur, un tapis.' } : { erreur: RIEN };
+      return r.fusionnees ? { dessin: r.dessin, phrase: (r.fusionnees > 1 ? t('{nuances} fusionnées : une couleur, un tapis.', { nuances: pluriel(r.fusionnees, 'nuance') }) : t('{nuances} fusionnée : une couleur, un tapis.', { nuances: pluriel(r.fusionnees, 'nuance') })) } : { erreur: RIEN() };
     }
     case 'epaissir': {
       const r = decalerFormes(dessin, formes, p.detailMin / 2, 'round', { lisser: true });
-      return r.decalees ? { dessin: r.dessin, phrase: pluriel(r.decalees, 'forme') + ' épaissie' + (r.decalees > 1 ? 's' : '') + ' de ' + texteMesure(p.detailMin / 2, p.unite) + ' de chaque côté.' } : { erreur: r.erreur ?? RIEN };
+      return r.decalees ? { dessin: r.dessin, phrase: (r.decalees > 1 ? t('{formes} épaissies de {mesure} de chaque côté.', { formes: pluriel(r.decalees, 'forme'), mesure: texteMesure(p.detailMin / 2, p.unite) }) : t('{formes} épaissie de {mesure} de chaque côté.', { formes: pluriel(r.decalees, 'forme'), mesure: texteMesure(p.detailMin / 2, p.unite) })) } : { erreur: r.erreur ?? RIEN() };
     }
     case 'nettoyer': {
       const r = simplifier(dessin, formes, p.toleranceNettoyage);
-      return r.retires ? { dessin: r.dessin, phrase: pluriel(r.retires, 'point') + ' retiré' + (r.retires > 1 ? 's' : '') + ' à ' + texteMesure(p.toleranceNettoyage, p.unite) + ' près.' } : { erreur: 'Aucun point à retirer à cette tolérance : les courbes restent telles quelles.' };
+      return r.retires ? { dessin: r.dessin, phrase: (r.retires > 1 ? t('{points} retirés à {mesure} près.', { points: pluriel(r.retires, 'point'), mesure: texteMesure(p.toleranceNettoyage, p.unite) }) : t('{points} retiré à {mesure} près.', { points: pluriel(r.retires, 'point'), mesure: texteMesure(p.toleranceNettoyage, p.unite) })) } : { erreur: t('Aucun point à retirer à cette tolérance : les courbes restent telles quelles.') };
     }
     case 'percer': return percer(dessin);
     case 'trous-selon-sens': return trous(dessin, formes);
@@ -170,14 +174,14 @@ export function corrigerPreparation(dessin: DessinSvg, code: CodeCorrection, con
     // Ecrire au stylo (ADR-0028) : ces formes passent parmi celles a ecrire, le reste du dessin garde la lame.
     case 'ecrire': {
       const r = poserOperation(dessin, formes, 'ecriture', p.procede);
-      return r.changees ? { dessin: r.dessin, phrase: r.phrase } : { erreur: RIEN };
+      return r.changees ? { dessin: r.dessin, phrase: r.phrase } : { erreur: RIEN() };
     }
     // Les liens des ilots (ADR-0040) : chaque ilot des formes en cause, en une fois ; les courbes rebaties comme les booleens.
     case 'ajouter-liens': {
       const r = ajouterLiens(dessin, formes, { ...liens, lisser: true }, p.procede);
-      return r.liens ? { dessin: r.dessin, phrase: r.phrase } : { erreur: r.ilots ? r.phrase : RIEN };
+      return r.liens ? { dessin: r.dessin, phrase: r.phrase } : { erreur: r.ilots ? r.phrase : RIEN() };
     }
     // Changer de police demande une fonte : l'interface la compose, pas le moteur.
-    case 'police-trait': return { erreur: 'Cette correction se fait dans l’éditeur.' };
+    case 'police-trait': return { erreur: t('Cette correction se fait dans l’éditeur.') };
   }
 }

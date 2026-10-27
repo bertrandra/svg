@@ -12,9 +12,13 @@ import { ancetres, arbreDe, normaliser, prochainNumero, renumeroterContenus, uni
 import { boiteForme, echelle, multiplier, translation, unir } from './geometrie.js';
 import { transformerFeuille, transformerGroupe } from './transformation.js';
 import { relierCopie } from './texteVivant.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce que dit `combiner` ou un booleen sur des feuilles de groupes differents (annexe 3 §2). */
-export const MSG_MEME_PARENT = 'Les formes à réunir doivent être dans le même groupe.';
+/**
+ * Ce que dit `combiner` ou un booleen sur des feuilles de groupes differents (annexe 3 §2). Une cle, evaluee au chargement avant la
+ * langue (le francais) : `t(MSG_MEME_PARENT)` la traduit quand on la dit.
+ */
+export const MSG_MEME_PARENT = t('Les formes à réunir doivent être dans le même groupe.');
 
 const aPropre = (o: object, cle: string): boolean => Object.prototype.hasOwnProperty.call(o, cle);
 

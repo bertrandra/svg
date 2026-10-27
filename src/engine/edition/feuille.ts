@@ -6,6 +6,7 @@ import { lireListeSelecteurs, type Selecteur } from './selecteurs.js';
 import {
   msgBlocArobase, MSG_FONT_FACE, MSG_IMBRIQUEES, MSG_IMPORT, MSG_KEYFRAMES, MSG_SELECTEUR_ILLISIBLE, reglePeint, textePeint
 } from './ignores.js';
+import { t } from '../../util/i18n.js';
 
 /** Une declaration `propriete: valeur [!important]`. La propriete est en minuscules, la valeur telle qu'ecrite. */
 export interface Declaration { readonly prop: string; readonly valeur: string; readonly important: boolean }
@@ -90,11 +91,11 @@ function accoladeFermante(t: string, ouvrante: number): number {
 
 /** L'effet d'une @-regle sur ce qu'on dit : null quand elle ne change aucun rendu. */
 function phraseArobase(nom: string, corps: string | null): string | null {
-  if (nom === 'import') return MSG_IMPORT;
+  if (nom === 'import') return t(MSG_IMPORT);
   if (corps === null) return null;
-  if (nom === 'font-face') return MSG_FONT_FACE;
+  if (nom === 'font-face') return t(MSG_FONT_FACE);
   if (!textePeint(corps)) return null;
-  return /keyframes$/.test(nom) ? MSG_KEYFRAMES : msgBlocArobase(nom);
+  return /keyframes$/.test(nom) ? t(MSG_KEYFRAMES) : msgBlocArobase(nom);
 }
 
 /**
@@ -117,32 +118,32 @@ function retirerCommentaires(t: string): string {
 
 /** Les regles d'un texte de feuille, dans l'ordre ; `depart` est le rang de la premiere. */
 export function lireFeuille(source: string, depart = 0): Feuille {
-  const t = retirerCommentaires(source);
+  const texte = retirerCommentaires(source);
   const regles: Regle[] = [], ignores = new Set<string>();
   let i = 0, ordre = depart;
   const dire = (m: string | null) => { if (m) ignores.add(m); };
-  while (i < t.length) {
-    const car = t.charAt(i);
+  while (i < texte.length) {
+    const car = texte.charAt(i);
     if (/\s/.test(car) || car === '}') { i++; continue; }
     if (car === '@') {
-      const nom = (/^@([\w-]+)/.exec(t.slice(i))?.[1] ?? '').toLowerCase();
-      const fin = chercherFin(t, i, true);
+      const nom = (/^@([\w-]+)/.exec(texte.slice(i))?.[1] ?? '').toLowerCase();
+      const fin = chercherFin(texte, i, true);
       if (fin < 0) { dire(phraseArobase(nom, null)); break; }
-      if (t.charAt(fin) === ';') { dire(phraseArobase(nom, null)); i = fin + 1; continue; }
-      const close = accoladeFermante(t, fin);
-      dire(phraseArobase(nom, t.slice(fin + 1, close)));
+      if (texte.charAt(fin) === ';') { dire(phraseArobase(nom, null)); i = fin + 1; continue; }
+      const close = accoladeFermante(texte, fin);
+      dire(phraseArobase(nom, texte.slice(fin + 1, close)));
       i = close + 1;
       continue;
     }
-    const ouvrante = chercherFin(t, i, false);
+    const ouvrante = chercherFin(texte, i, false);
     if (ouvrante < 0) break;
-    const prelude = t.slice(i, ouvrante), close = accoladeFermante(t, ouvrante), corps = t.slice(ouvrante + 1, close);
+    const prelude = texte.slice(i, ouvrante), close = accoladeFermante(texte, ouvrante), corps = texte.slice(ouvrante + 1, close);
     i = close + 1;
     const declarations = lireDeclarations(corps);
     const peint = reglePeint(declarations.map(d => d.prop));
     const liste = lireListeSelecteurs(prelude);
-    if (corps.includes('{') && textePeint(corps.slice(corps.indexOf('{')))) dire(MSG_IMBRIQUEES);
-    if (liste.invalide) { if (peint) dire(MSG_SELECTEUR_ILLISIBLE); continue; }
+    if (corps.includes('{') && textePeint(corps.slice(corps.indexOf('{')))) dire(t(MSG_IMBRIQUEES));
+    if (liste.invalide) { if (peint) dire(t(MSG_SELECTEUR_ILLISIBLE)); continue; }
     if (peint) liste.ignores.forEach(m => dire(m));
     for (const selecteur of liste.selecteurs) regles.push({ selecteur, declarations, ordre });
     ordre++;

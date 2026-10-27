@@ -6,6 +6,7 @@
 
 import { ecrireDessin, type Glyphes } from '../engine/editionSvg.js';
 import { FluxEnAttente, LIMITES_PDF, lirePdf, type Decompression, type LecturePdf, type PolicesPdf, type ResultatDecompression } from '../engine/lecturePdf.js';
+import { t } from '../util/i18n.js';
 import { fontesDeRemplacement } from './polices.js';
 import { lireFontePdf } from './policesPdf.js';
 
@@ -76,7 +77,7 @@ const OUTILS: OutilsPdf = { decompresser: decompresserZlib, remplacantes: fontes
  */
 export async function ouvrirPdf(octets: Uint8Array, page = 1, outils: Partial<OutilsPdf> = {}): Promise<PdfOuvert> {
   const o = { ...OUTILS, ...outils };
-  if (octets.length > LIMITES_PDF.octets) return { erreur: 'Ce PDF pèse plus de ' + LIMITES_PDF.octets / 1048576 + ' Mo : il est trop gros pour être lu ici.' };
+  if (octets.length > LIMITES_PDF.octets) return { erreur: t('Ce PDF pèse plus de {mo} Mo : il est trop gros pour être lu ici.', { mo: LIMITES_PDF.octets / 1048576 }) };
   const faits = new Map<number, ResultatDecompression>();
   let remplacantes: ReadonlyMap<string, Glyphes> | null = null;
   const polices: PolicesPdf = { lire: lireFontePdf, remplacement: id => remplacantes?.get(id) ?? null };
@@ -100,9 +101,9 @@ export async function ouvrirPdf(octets: Uint8Array, page = 1, outils: Partial<Ou
       }
       return 'erreur' in lu ? { erreur: lu.erreur, ...(lu.pages ? { pages: lu.pages } : {}) } : { svg: ecrireDessin(lu.dessin, 3), ignores: lu.ignores, pages: lu.pages, page: lu.page };
     }
-    return { erreur: 'Ce PDF demande trop de décompressions pour être lu ici.' };
+    return { erreur: t('Ce PDF demande trop de décompressions pour être lu ici.') };
   } catch {
     // Un defaut de la lecture elle-meme (jamais un fichier : ceux-la sont des refus nommes) ne doit pas laisser la page sans reponse.
-    return { erreur: 'Ce PDF ne se lit pas (erreur inattendue de la lecture) : signalez-le avec le fichier si vous le pouvez.' };
+    return { erreur: t('Ce PDF ne se lit pas (erreur inattendue de la lecture) : signalez-le avec le fichier si vous le pouvez.') };
   }
 }

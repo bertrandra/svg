@@ -12,6 +12,7 @@ import { nomDeForme, numeroDeForme } from '../engine/description.js';
 import { genreAffiche } from './aidesEditeur.js';
 import { au } from '../util/tableaux.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { useFenetre } from './Fenetre.js';
 import { ParCouleur } from './ParCouleur.js';
 import { useActions, useDessin, useInterface } from './contexteEditeur.js';
@@ -50,34 +51,40 @@ export const Calques = memo(function Calques() {
   }
   // Le navigateur ne doit pas ancrer le defilement sur une ligne : elle disparait quand la fenetre bouge, et il ramene la liste en arriere.
   return (
-    <aside className="editeur-calques" aria-label="Calques" tabIndex={-1} ref={racine} style={actif ? { overflowAnchor: 'none' } : undefined}>
-      <h3>Calques <span className="aide">{total}</span></h3>
+    <aside className="editeur-calques" aria-label={t('Calques')} tabIndex={-1} ref={racine} style={actif ? { overflowAnchor: 'none' } : undefined}>
+      <h3>{t('Calques')} <span className="aide">{total}</span></h3>
       <div className="calques-actions">
-        <BoutonRaison aide="Tout sélectionner (Ctrl+A)" raison={!choisissables.length ? 'Aucune forme à sélectionner' : sel.length === choisissables.length ? 'Toutes les formes sont déjà sélectionnées' : null}
-          onClick={() => { ac.choisir(choisissables); ac.poserPoint(null); }}>Tout</BoutonRaison>
-        <BoutonRaison aide="Ne rien sélectionner (Échap)" raison={sel.length ? null : 'Rien n’est sélectionné'}
-          onClick={() => { ac.choisir([]); ac.poserPoint(null); }}>Aucun</BoutonRaison>
-        <BoutonRaison aide="Inverser la sélection" raison={choisissables.length ? null : 'Aucune forme à inverser'}
-          onClick={() => { ac.choisir(choisissables.filter(id => !choisies.has(id))); ac.poserPoint(null); }}>Inverser</BoutonRaison>
-        <BoutonRaison aide="Afficher toutes les formes masquées" raison={masquees ? null : 'Aucune forme masquée'}
-          onClick={() => ac.faire(d => modifier(d, [...d.formes.filter(f => !f.visible).map(f => f.id), ...groupesMasques], { visible: true }), groupesMasques.length ? pluriel(masquees, 'élément') + ' affiché' + (masquees > 1 ? 's' : '') + '.' : pluriel(masquees, 'forme') + ' affichée' + (masquees > 1 ? 's' : '') + '.')}>Tout afficher</BoutonRaison>
+        <BoutonRaison aide={t('Tout sélectionner (Ctrl+A)')} raison={!choisissables.length ? t('Aucune forme à sélectionner') : sel.length === choisissables.length ? t('Toutes les formes sont déjà sélectionnées') : null}
+          onClick={() => { ac.choisir(choisissables); ac.poserPoint(null); }}>{t('Tout')}</BoutonRaison>
+        <BoutonRaison aide={t('Ne rien sélectionner (Échap)')} raison={sel.length ? null : t('Rien n’est sélectionné')}
+          onClick={() => { ac.choisir([]); ac.poserPoint(null); }}>{t('Aucun')}</BoutonRaison>
+        <BoutonRaison aide={t('Inverser la sélection')} raison={choisissables.length ? null : t('Aucune forme à inverser')}
+          onClick={() => { ac.choisir(choisissables.filter(id => !choisies.has(id))); ac.poserPoint(null); }}>{t('Inverser')}</BoutonRaison>
+        <BoutonRaison aide={t('Afficher toutes les formes masquées')} raison={masquees ? null : t('Aucune forme masquée')}
+          onClick={() => ac.faire(d => modifier(d, [...d.formes.filter(f => !f.visible).map(f => f.id), ...groupesMasques], { visible: true }), phraseAffiches(masquees, groupesMasques.length > 0))}>{t('Tout afficher')}</BoutonRaison>
       </div>
       {/* En contexte Cricut, ce que la machine fait de chaque forme vient d'abord : c'est ce qu'on regle avant d'exporter. */}
       {parOperation ? <GroupesOperations panneau={racine} /> : null}
       <ParCouleur />
       {!plat ? <ArbreCalques panneau={racine} /> : parOperation ? null : (
         <>
-          <h4>Formes</h4>
+          <h4>{t('Formes')}</h4>
           <ol ref={liste} style={actif ? { paddingTop: fenetre.haut, paddingBottom: fenetre.bas, boxSizing: 'border-box', minHeight: fenetre.hauteur, alignContent: 'start' } : undefined}>{lignes}</ol>
         </>
       )}
       {/* Une liste vide est un dessin qu'on a vide (le retour est a Ctrl+Z), ou un projet vierge du site (ADR-0030), qui n'a rien a defaire. */}
       {total ? null : mo.h.passe.length
-        ? <EtatVide genre="vide" titre="Toutes les formes ont été retirées.">Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>
-        : <EtatVide genre="premiere-fois" titre="Aucune forme pour l’instant.">Chaque forme tracée ou insérée aura sa ligne ici.</EtatVide>}
+        ? <EtatVide genre="vide" titre={t('Toutes les formes ont été retirées.')}>{t('Annuler (Ctrl+Z) les fait revenir ; chaque forme tracée ou insérée aura sa ligne ici.')}</EtatVide>
+        : <EtatVide genre="premiere-fois" titre={t('Aucune forme pour l’instant.')}>{t('Chaque forme tracée ou insérée aura sa ligne ici.')}</EtatVide>}
     </aside>
   );
 });
+
+/** Ce que dit « Tout afficher » : « 3 éléments affichés. » quand un groupe en etait, « 2 formes affichées. » sinon. */
+function phraseAffiches(n: number, avecGroupes: boolean): string {
+  if (avecGroupes) return n > 1 ? t('{n} affichés.', { n: pluriel(n, 'élément') }) : t('{n} affiché.', { n: pluriel(n, 'élément') });
+  return n > 1 ? t('{n} affichées.', { n: pluriel(n, 'forme') }) : t('{n} affichée.', { n: pluriel(n, 'forme') });
+}
 
 /**
  * Une ligne : le nom (qui choisit), masquer, verrouiller. Le nom visible est le genre de la forme suivi de son numero, et le nom
@@ -98,9 +105,9 @@ function LigneCalque({ sel, f, choisie, rang }: { sel: string[]; f: Forme; chois
         <span className="echantillon" style={{ background: f.remplissage ?? 'transparent', boxShadow: f.contour ? 'inset 0 0 0 2px ' + f.contour : undefined }} />
         <span className="calque-genre">{genreAffiche(f)}</span> <span className="calque-numero">{numeroDeForme(f)}</span>
       </button>
-      <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={(f.visible ? 'Masquer la forme ' : 'Afficher la forme ') + f.id.slice(1)}
+      <Bouton icone={f.visible ? 'oeil' : 'masquer'} className="calque-bascule" pressed={!f.visible} aide={f.visible ? t('Masquer la forme {n}', { n: f.id.slice(1) }) : t('Afficher la forme {n}', { n: f.id.slice(1) })}
         onClick={() => ac.appliquer(d => modifier(d, [f.id], { visible: !f.visible }))} />
-      <Bouton icone={f.verrouille ? 'verrouiller' : 'deverrouiller'} className="calque-bascule" pressed={f.verrouille} aide={(f.verrouille ? 'Déverrouiller la forme ' : 'Verrouiller la forme ') + f.id.slice(1)}
+      <Bouton icone={f.verrouille ? 'verrouiller' : 'deverrouiller'} className="calque-bascule" pressed={f.verrouille} aide={f.verrouille ? t('Déverrouiller la forme {n}', { n: f.id.slice(1) }) : t('Verrouiller la forme {n}', { n: f.id.slice(1) })}
         onClick={() => { ac.appliquer(d => modifier(d, [f.id], { verrouille: !f.verrouille })); if (!f.verrouille) ac.choisir(sel.filter(s => s !== f.id)); }} />
     </li>
   );

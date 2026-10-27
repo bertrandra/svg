@@ -13,10 +13,13 @@ import { lireValeur, texteValeur, type UniteRegle } from './graduations.js';
 import { Icone } from './icones.js';
 import { arrondi } from './aidesEditeur.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 
 type Mode = 'grille' | 'radiale' | 'symetrie';
-const MODES: ReadonlyArray<readonly [Mode, string]> = [['grille', 'Grille'], ['radiale', 'Radiale'], ['symetrie', 'Symétrie']];
-export const TITRES_REPETITION: Readonly<Record<Mode, string>> = { grille: 'Dupliquer en grille', radiale: 'Répétition radiale', symetrie: 'Symétrie' };
+// Une fonction, pas une constante : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const modes = (): ReadonlyArray<readonly [Mode, string]> => [['grille', t('Grille')], ['radiale', t('Radiale')], ['symetrie', t('Symétrie')]];
+// Les titres sont des cles (ADR-0042) : evalues au chargement, ils restent en francais, et qui les affiche les repasse par `t`.
+export const TITRES_REPETITION: Readonly<Record<Mode, string>> = { grille: t('Dupliquer en grille'), radiale: t('Répétition radiale'), symetrie: t('Symétrie') };
 
 const estMode = (p: PanneauOutils): p is Mode => p === 'grille' || p === 'radiale' || p === 'symetrie';
 
@@ -45,11 +48,11 @@ function calculer(mode: Mode, base: DessinSvg, ids: readonly string[], s: Saisie
 
 /** La phrase d'une repetition faite. */
 function phrase(mode: Mode, r: ResultatRepetition, s: Saisie): string {
-  if (mode === 'symetrie' && !s.garder) return 'Sélection retournée en miroir ' + (s.sens === 'h' ? 'horizontal' : 'vertical') + '.';
-  const copies = pluriel(r.copies, 'copie') + ' ' + (r.copies > 1 ? 'posées' : 'posée');
-  if (mode === 'grille') return 'Grille de ' + s.lignes.trim() + ' × ' + s.colonnes.trim() + ' : ' + copies + '.';
-  if (mode === 'radiale') return 'Répétition radiale de ' + s.exemplaires.trim() + ' exemplaires : ' + copies + '.';
-  return 'Reflet posé en miroir ' + (s.sens === 'h' ? 'horizontal' : 'vertical') + ', l’original gardé.';
+  if (mode === 'symetrie' && !s.garder) return s.sens === 'h' ? t('Sélection retournée en miroir horizontal.') : t('Sélection retournée en miroir vertical.');
+  const copies = r.copies > 1 ? t('{copies} posées', { copies: pluriel(r.copies, 'copie') }) : t('{copies} posée', { copies: pluriel(r.copies, 'copie') });
+  if (mode === 'grille') return t('Grille de {lignes} × {colonnes} : {copies}.', { lignes: s.lignes.trim(), colonnes: s.colonnes.trim(), copies });
+  if (mode === 'radiale') return t('Répétition radiale de {n} exemplaires : {copies}.', { n: s.exemplaires.trim(), copies });
+  return s.sens === 'h' ? t('Reflet posé en miroir horizontal, l’original gardé.') : t('Reflet posé en miroir vertical, l’original gardé.');
 }
 
 function Champ({ libelle, valeur, poser, unite, aide }: { libelle: string; valeur: string; poser: (t: string) => void; unite?: string; aide?: string }) {
@@ -86,7 +89,7 @@ function Repetition({ mode, svgRef }: { mode: Mode; svgRef: RefObject<SVGSVGElem
   const resultat = useMemo(() => (ids.length ? calculer(mode, base, ids, s, u) : null), [mode, base, ids, s, u]);
   const fermer = (garder: boolean) => {
     if (garder && resultat && !resultat.erreur) { ac.finir(); ac.choisir([...resultat.ids]); ac.dire(phrase(mode, resultat, s)); }
-    else { ac.annulerGeste(cle); if (ids.length) ac.dire('Répétition abandonnée.'); }
+    else { ac.annulerGeste(cle); if (ids.length) ac.dire(t('Répétition abandonnée.')); }
     arg.ouvrir(null);
     svgRef.current?.focus();
   };
@@ -103,80 +106,81 @@ function Repetition({ mode, svgRef }: { mode: Mode; svgRef: RefObject<SVGSVGElem
 
   const reperesAxe = (mo.dessin.reperes ? (s.sens === 'h' ? mo.dessin.reperes.v : mo.dessin.reperes.h) : []);
   let corps: ReactNode;
-  if (!ids.length) corps = <p className="aide">Choisissez d’abord une ou plusieurs formes : elles seront répétées.</p>;
+  if (!ids.length) corps = <p className="aide">{t('Choisissez d’abord une ou plusieurs formes : elles seront répétées.')}</p>;
   else if (mode === 'grille') {
     corps = (
       <div className="grille-2">
-        <Champ libelle="Lignes" valeur={s.lignes} poser={t => regler({ lignes: t })} />
-        <Champ libelle="Colonnes" valeur={s.colonnes} poser={t => regler({ colonnes: t })} />
-        <Champ libelle="Pas →" valeur={s.pasX} poser={t => regler({ pasX: t })} unite={u.nom} aide="D’une copie à la suivante, vers la droite (négatif : vers la gauche)" />
-        <Champ libelle="Pas ↓" valeur={s.pasY} poser={t => regler({ pasY: t })} unite={u.nom} aide="D’une copie à la suivante, vers le bas (négatif : vers le haut)" />
+        <Champ libelle={t('Lignes')} valeur={s.lignes} poser={v => regler({ lignes: v })} />
+        <Champ libelle={t('Colonnes')} valeur={s.colonnes} poser={v => regler({ colonnes: v })} />
+        <Champ libelle={t('Pas →')} valeur={s.pasX} poser={v => regler({ pasX: v })} unite={t(u.nom)} aide={t('D’une copie à la suivante, vers la droite (négatif : vers la gauche)')} />
+        <Champ libelle={t('Pas ↓')} valeur={s.pasY} poser={v => regler({ pasY: v })} unite={t(u.nom)} aide={t('D’une copie à la suivante, vers le bas (négatif : vers le haut)')} />
       </div>
     );
   } else if (mode === 'radiale') {
     corps = (
       <>
         <div className="grille-2">
-          <Champ libelle="Exemplaires" valeur={s.exemplaires} poser={t => regler({ exemplaires: t })} aide="L’original compris" />
-          <Champ libelle="Angle" valeur={s.angle} poser={t => regler({ angle: t })} unite="°" aide="L’angle couvert : 360 pour un tour complet" />
+          <Champ libelle={t('Exemplaires')} valeur={s.exemplaires} poser={v => regler({ exemplaires: v })} aide={t('L’original compris')} />
+          <Champ libelle={t('Angle')} valeur={s.angle} poser={v => regler({ angle: v })} unite="°" aide={t('L’angle couvert : 360 pour un tour complet')} />
         </div>
         <label className="champ-ligne">
-          <span>Centre</span>
+          <span>{t('Centre')}</span>
           <select value={s.centre} onChange={e => regler({ centre: e.target.value === 'selection' ? 'selection' : e.target.value === 'point' ? 'point' : 'plan' })}>
-            <option value="plan">Centre du plan</option>
-            <option value="selection">Centre de la sélection</option>
-            <option value="point">Point choisi</option>
+            <option value="plan">{t('Centre du plan')}</option>
+            <option value="selection">{t('Centre de la sélection')}</option>
+            <option value="point">{t('Point choisi')}</option>
           </select>
         </label>
         {s.centre === 'point' ? (
           <div className="grille-2">
-            <Champ libelle="X" valeur={s.cx} poser={t => regler({ cx: t })} unite={u.nom} />
-            <Champ libelle="Y" valeur={s.cy} poser={t => regler({ cy: t })} unite={u.nom} />
+            <Champ libelle="X" valeur={s.cx} poser={v => regler({ cx: v })} unite={t(u.nom)} />
+            <Champ libelle="Y" valeur={s.cy} poser={v => regler({ cy: v })} unite={t(u.nom)} />
           </div>
         ) : null}
-        <label className="case"><input type="checkbox" checked={s.orienter} onChange={e => regler({ orienter: e.target.checked })} /> Tourner chaque copie avec sa place</label>
+        <label className="case"><input type="checkbox" checked={s.orienter} onChange={e => regler({ orienter: e.target.checked })} /> {t('Tourner chaque copie avec sa place')}</label>
       </>
     );
   } else {
     corps = (
       <>
-        <div className="mini-onglets" role="group" aria-label="Sens du miroir">
+        <div className="mini-onglets" role="group" aria-label={t('Sens du miroir')}>
           {(['h', 'v'] as const).map(sens => (
             <button key={sens} type="button" aria-pressed={s.sens === sens} onClick={() => regler({ sens, axe: ecrire(axeParDefaut(base, ids, sens), u) })}>
-              <Icone nom={sens === 'h' ? 'miroir-h' : 'miroir-v'} /> {sens === 'h' ? 'Horizontal' : 'Vertical'}
+              <Icone nom={sens === 'h' ? 'miroir-h' : 'miroir-v'} /> {sens === 'h' ? t('Horizontal') : t('Vertical')}
             </button>
           ))}
         </div>
-        <Champ libelle={s.sens === 'h' ? 'Axe à x =' : 'Axe à y ='} valeur={s.axe} poser={t => regler({ axe: t })} unite={u.nom} aide="Par défaut, l’axe passe par le centre de la sélection" />
+        <Champ libelle={s.sens === 'h' ? t('Axe à x =') : t('Axe à y =')} valeur={s.axe} poser={v => regler({ axe: v })} unite={t(u.nom)} aide={t('Par défaut, l’axe passe par le centre de la sélection')} />
         {reperesAxe.length ? (
           <label className="champ-ligne">
-            <span>Sur un repère</span>
+            <span>{t('Sur un repère')}</span>
             <select value="" onChange={e => { if (e.target.value !== '') regler({ axe: ecrire(Number(e.target.value), u) }); }}>
-              <option value="">Choisir…</option>
-              {reperesAxe.map(v => <option key={v} value={v}>{(s.sens === 'h' ? 'Vertical à ' : 'Horizontal à ') + texteValeur(v, u)}</option>)}
+              <option value="">{t('Choisir…')}</option>
+              {reperesAxe.map(v => <option key={v} value={v}>{s.sens === 'h' ? t('Vertical à {v}', { v: texteValeur(v, u) }) : t('Horizontal à {v}', { v: texteValeur(v, u) })}</option>)}
             </select>
           </label>
         ) : null}
-        <label className="case"><input type="checkbox" checked={s.garder} onChange={e => regler({ garder: e.target.checked })} /> Garder l’original</label>
+        <label className="case"><input type="checkbox" checked={s.garder} onChange={e => regler({ garder: e.target.checked })} /> {t('Garder l’original')}</label>
       </>
     );
   }
-  const etat = !ids.length ? null : resultat?.erreur ? resultat.erreur : resultat ? (mode === 'symetrie' && !s.garder ? 'Aperçu : la sélection retournée.' : 'Aperçu : ' + pluriel(resultat.copies, 'copie') + '.') : null;
+  const etat = !ids.length ? null : resultat?.erreur ? resultat.erreur : resultat ? (mode === 'symetrie' && !s.garder ? t('Aperçu : la sélection retournée.') : t('Aperçu : {copies}.', { copies: pluriel(resultat.copies, 'copie') })) : null;
   return (
     <div className="panneau-flottant panneau-repetition" role="dialog" aria-labelledby={titre} ref={racine}
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermer(false); } }}>
       <div className="panneau-flottant-tete">
-        <h2 id={titre}>{TITRES_REPETITION[mode]}</h2>
-        <button type="button" className="icone-bouton" aria-label="Fermer sans appliquer" title="Fermer sans appliquer (Échap)" onClick={() => fermer(false)}><Icone nom="fermer" /></button>
+        <h2 id={titre}>{t(TITRES_REPETITION[mode])}</h2>
+        <button type="button" className="icone-bouton" aria-label={t('Fermer sans appliquer')} title={t('Fermer sans appliquer (Échap)')} onClick={() => fermer(false)}><Icone nom="fermer" /></button>
       </div>
-      <div className="mini-onglets onglets-repetition" role="group" aria-label="Répéter">
-        {MODES.map(([m, nom]) => <button key={m} type="button" aria-pressed={m === mode} onClick={() => arg.ouvrir(m)}>{nom}</button>)}
+      <div className="mini-onglets onglets-repetition" role="group" aria-label={t('Répéter')}>
+        {modes().map(([m, nom]) => <button key={m} type="button" aria-pressed={m === mode} onClick={() => arg.ouvrir(m)}>{nom}</button>)}
       </div>
       <div className="panneau-flottant-corps">{corps}</div>
       {etat ? <p className={'aide' + (resultat?.erreur ? ' erreur' : '')} role={resultat?.erreur ? 'alert' : undefined}>{etat}</p> : null}
       <div className="panneau-flottant-pied">
-        <button type="button" className="discret" onClick={() => fermer(false)}>Annuler</button>
-        <button type="button" disabled={!resultat || !!resultat.erreur} onClick={() => fermer(true)}>Appliquer</button>
+        <button type="button" className="discret" onClick={() => fermer(false)}>{t('Annuler')}</button>
+        <button type="button" disabled={!resultat || !!resultat.erreur} onClick={() => fermer(true)}>{t('Appliquer')}</button>
+
       </div>
     </div>
   );

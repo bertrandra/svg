@@ -12,6 +12,7 @@ import { decoderPng, fluxTelQuel, lirePng, tailleDecompressee, type Pixels } fro
 import { decoderGif } from '../engine/images/gif.js';
 import { lireJpeg } from '../engine/images/jpeg.js';
 import { natureDesOctets } from '../engine/natureOctets.js';
+import { t } from '../util/i18n.js';
 import { deflateZlib } from './deflate.js';
 
 /** Une image prete a ecrire : son flux, celui de son alpha s'il y en a un, ses dimensions et son orientation EXIF. */
@@ -40,13 +41,14 @@ export interface ImagesPdf {
 /** Un flux zlib a decompresser hors du coeur pur (`io`), et la taille exacte qu'il doit rendre. */
 export interface FluxADecompresser { readonly donnees: string; readonly flux: Uint8Array; readonly max: number }
 
+// Des phrases lues a l'export, jamais au chargement du module : le dictionnaire d'une autre langue n'est pas encore la (ADR-0042).
 export const MSG_IMAGES_PDF = {
-  webp: (n: number) => (n === 1 ? 'une image WebP (ce format ne la lit pas : elle n’est pas exportée)' : n + ' images WebP (ce format ne les lit pas : elles ne sont pas exportées)'),
-  illisible: (n: number) => (n === 1 ? 'une image illisible (elle n’est pas exportée)' : n + ' images illisibles (elles ne sont pas exportées)'),
-  jpeg: (n: number) => (n === 1 ? 'une image JPEG d’un codage que ce format ne lit pas (elle n’est pas exportée)' : n + ' images JPEG d’un codage que ce format ne lit pas (elles ne sont pas exportées)'),
-  anime: 'une image GIF animée (seule sa première image est exportée)',
-  cmjn: 'les images (gardées en RVB : ce format ne convertit pas leurs pixels en CMJN)',
-  luminance: 'une image JPEG dans un masque de luminance (sa luminance est calculée par le lecteur du PDF)'
+  webp: (n: number) => (n === 1 ? t('une image WebP (ce format ne la lit pas : elle n’est pas exportée)') : t('{n} images WebP (ce format ne les lit pas : elles ne sont pas exportées)', { n })),
+  illisible: (n: number) => (n === 1 ? t('une image illisible (elle n’est pas exportée)') : t('{n} images illisibles (elles ne sont pas exportées)', { n })),
+  jpeg: (n: number) => (n === 1 ? t('une image JPEG d’un codage que ce format ne lit pas (elle n’est pas exportée)') : t('{n} images JPEG d’un codage que ce format ne lit pas (elles ne sont pas exportées)', { n })),
+  get anime() { return t('une image GIF animée (seule sa première image est exportée)'); },
+  get cmjn() { return t('les images (gardées en RVB : ce format ne convertit pas leurs pixels en CMJN)'); },
+  get luminance() { return t('une image JPEG dans un masque de luminance (sa luminance est calculée par le lecteur du PDF)'); }
 } as const;
 
 /**

@@ -24,6 +24,7 @@ import { ancetres, NOM_GROUPE_MAX, verrouilleEffectif, visibleEffectif, type For
 import { nomDeForme, numeroDeForme, porteParGroupe } from '../engine/description.js';
 import { segmentsFenetre } from '../util/fenetre.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { genreAffiche } from './aidesEditeur.js';
 import { MenuDeroulant } from './commun/Menu.js';
 import { focusAuClavier } from './commun/focusClavier.js';
@@ -43,8 +44,10 @@ type Arret = 'aucun' | 'ligne' | 0 | 1;
 function nomDeLigneGroupe(g: Groupe, enfants: number): string {
   // Ce que le groupe porte (decoupe, masque, effets, opacite : ADR-0012, etape 8) suit le nombre d'elements, avant les etats.
   const porte = porteParGroupe(g);
-  return (g.nom ? 'Groupe « ' + g.nom + ' »' : nomDeGroupe(g)) + ', ' + pluriel(enfants, 'élément') + (porte.length ? ', ' + porte.join(', ') : '')
-    + (g.verrouille ? ', verrouillé' : '') + (g.visible ? '' : ', masqué');
+  const morceaux = [g.nom ? t('Groupe « {nom} »', { nom: g.nom }) : nomDeGroupe(g), pluriel(enfants, 'élément'), ...porte];
+  if (g.verrouille) morceaux.push(t('verrouillé'));
+  if (!g.visible) morceaux.push(t('masqué'));
+  return morceaux.join(', ');
 }
 
 export const ArbreCalques = memo(function ArbreCalques({ panneau }: { panneau: RefObject<HTMLElement | null> }) {
@@ -127,8 +130,8 @@ export const ArbreCalques = memo(function ArbreCalques({ panneau }: { panneau: R
   return (
     <>
       <div className="arbre-entete">
-        <h4 id={idTitre}>Formes et groupes</h4>
-        <MenuDeroulant etiquette="Déplacer vers… (Maj+F10 dans la liste)" libelle="Déplacer vers…" elements={v.elementsMenu()} alignement="droite" demandeOuverture={demandeMenu} className="deplacer-vers" />
+        <h4 id={idTitre}>{t('Formes et groupes')}</h4>
+        <MenuDeroulant etiquette={t('Déplacer vers… (Maj+F10 dans la liste)')} libelle={t('Déplacer vers…')} elements={v.elementsMenu()} alignement="droite" demandeOuverture={demandeMenu} className="deplacer-vers" />
       </div>
       <div role="treegrid" ref={f.liste} className="arbre-calques" aria-labelledby={idTitre} aria-multiselectable="true" aria-rowcount={total}
         onClick={souris.clic} onDoubleClick={souris.doubleClic} onKeyDown={gesteClavier(etat, v)} onFocus={souris.prendFocus} onBlur={souris.perdFocus}
@@ -173,8 +176,8 @@ interface ProprietesLigne {
 const LigneArbreCalque = memo(function LigneArbreCalque(p: ProprietesLigne) {
   const { id, forme: fo, groupe: g } = p;
   const visible = g ? g.visible : fo?.visible ?? true, verrouille = g ? g.verrouille : fo?.verrouille ?? false;
-  const nomG = g ? (g.nom ? '« ' + g.nom + ' »' : nomDeGroupe(g)) : '';
-  const quoi = g ? 'le groupe ' + nomG : 'la forme ' + (fo ? numeroDeForme(fo) : id);
+  const nomG = g ? (g.nom ? t('« {nom} »', { nom: g.nom }) : nomDeGroupe(g)) : '';
+  const quoi = g ? t('le groupe {nom}', { nom: nomG }) : t('la forme {numero}', { numero: fo ? numeroDeForme(fo) : id });
   // Une ligne masquee ou verrouillee montre toujours ses boutons : son etat se lit sur eux.
   const boutons = p.boutons || !visible || verrouille;
   const classe = 'calque-ligne' + (p.choisie ? ' choisi' : '') + (p.contexte ? ' contexte' : '') + (p.masquee ? ' estompee' : '') + (p.depot ? ' depot-' + p.depot : '');
@@ -185,22 +188,22 @@ const LigneArbreCalque = memo(function LigneArbreCalque(p: ProprietesLigne) {
       {/* Le retrait dit le niveau ; une variable d'espacement, multipliee, jamais une valeur ecrite. */}
       <div role="gridcell" className="calque-arbre-nom" style={p.niveau > 1 ? { paddingInlineStart: 'calc(var(--esp-l) * ' + (p.niveau - 1) + ')' } : undefined}>
         {g
-          ? <button type="button" tabIndex={-1} className="calque-chevron" data-action="deplier" aria-label={(p.deplie ? 'Replier le groupe ' : 'Déplier le groupe ') + nomG} title={(p.deplie ? 'Replier' : 'Déplier') + ' (Gauche, Droite)'} />
+          ? <button type="button" tabIndex={-1} className="calque-chevron" data-action="deplier" aria-label={p.deplie ? t('Replier le groupe {nom}', { nom: nomG }) : t('Déplier le groupe {nom}', { nom: nomG })} title={p.deplie ? t('Replier (Gauche, Droite)') : t('Déplier (Gauche, Droite)')} />
           : <span className="calque-chevron" aria-hidden="true" />}
         {fo ? <span className="echantillon" style={{ background: fo.remplissage ?? 'transparent', boxShadow: fo.contour ? 'inset 0 0 0 2px ' + fo.contour : undefined }} /> : null}
         {p.renomme && g
-          ? <input type="text" className="calque-renommer" aria-label={'Nouveau nom du groupe ' + nomG + ' (Entrée valide, Échap annule)'} defaultValue={g.nom ?? ''} placeholder={nomDeGroupe(g)} maxLength={NOM_GROUPE_MAX} autoFocus />
+          ? <input type="text" className="calque-renommer" aria-label={t('Nouveau nom du groupe {nom} (Entrée valide, Échap annule)', { nom: nomG })} defaultValue={g.nom ?? ''} placeholder={nomDeGroupe(g)} maxLength={NOM_GROUPE_MAX} autoFocus />
           : g
             ? <><span className="calque-genre">{g.nom ?? nomDeGroupe(g)}</span> <span className="calque-numero">{p.enfants}</span><PastillesGroupe groupe={g} /></>
             : fo ? <><span className="calque-genre">{genreAffiche(fo)}</span> <span className="calque-numero">{numeroDeForme(fo)}</span></> : null}
       </div>
       <div role="gridcell" className="calque-cellule-bascule">
         {boutons ? <button type="button" className="icone-bouton calque-bascule" data-action="visible" data-cellule="0" tabIndex={p.arret === 0 ? 0 : -1} aria-pressed={!visible}
-          aria-label={(visible ? 'Masquer ' : 'Afficher ') + quoi} title={(visible ? 'Masquer ' : 'Afficher ') + quoi}><Icone nom={visible ? 'oeil' : 'masquer'} /></button> : null}
+          aria-label={visible ? t('Masquer {quoi}', { quoi }) : t('Afficher {quoi}', { quoi })} title={visible ? t('Masquer {quoi}', { quoi }) : t('Afficher {quoi}', { quoi })}><Icone nom={visible ? 'oeil' : 'masquer'} /></button> : null}
       </div>
       <div role="gridcell" className="calque-cellule-bascule">
         {boutons ? <button type="button" className="icone-bouton calque-bascule" data-action="verrou" data-cellule="1" tabIndex={p.arret === 1 ? 0 : -1} aria-pressed={verrouille}
-          aria-label={(verrouille ? 'Déverrouiller ' : 'Verrouiller ') + quoi} title={(verrouille ? 'Déverrouiller ' : 'Verrouiller ') + quoi}><Icone nom={verrouille ? 'verrouiller' : 'deverrouiller'} /></button> : null}
+          aria-label={verrouille ? t('Déverrouiller {quoi}', { quoi }) : t('Verrouiller {quoi}', { quoi })} title={verrouille ? t('Déverrouiller {quoi}', { quoi }) : t('Verrouiller {quoi}', { quoi })}><Icone nom={verrouille ? 'verrouiller' : 'deverrouiller'} /></button> : null}
       </div>
     </div>
   );

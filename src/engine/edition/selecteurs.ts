@@ -8,6 +8,7 @@
 import type { Noeud } from '../../util/xml.js';
 import { au } from '../../util/tableaux.js';
 import { msgPseudo, MSG_FRERES, MSG_ESPACE_DE_NOMS } from './ignores.js';
+import { t } from '../../util/i18n.js';
 
 export type Lien = 'descendant' | 'enfant';
 type OperateurAttribut = '' | '=' | '~=' | '|=' | '^=' | '$=' | '*=';
@@ -98,7 +99,7 @@ function lireCompose(s: string): Pas<Compose> {
     const t = IDENT.exec(reste);
     if (t) { type = desechapper(t[0]); reste = reste.slice(t[0].length); lu = true; }
   }
-  if (reste.startsWith('|') && !reste.startsWith('|=')) return { ignore: MSG_ESPACE_DE_NOMS };
+  if (reste.startsWith('|') && !reste.startsWith('|=')) return { ignore: t(MSG_ESPACE_DE_NOMS) };
   for (;;) {
     const c = reste.charAt(0);
     if (c === '.' || c === '#') {
@@ -146,7 +147,7 @@ function lireSelecteur(texte: string): Selecteur | { ignore: string } | null {
     const apres = p.suite.trimStart(), blanc = apres.length !== p.suite.length;
     if (apres === '') break;
     const c = apres.charAt(0);
-    if (c === '+' || c === '~') return { ignore: MSG_FRERES };
+    if (c === '+' || c === '~') return { ignore: t(MSG_FRERES) };
     if (c === '>') { liens.push('enfant'); reste = apres.slice(1).trimStart(); } else if (blanc) { liens.push('descendant'); reste = apres; } else return null;
     if (reste === '') return null;
   }

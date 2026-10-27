@@ -1,0 +1,16 @@
+{
+  "des tableaux ou dictionnaires imbriqués sur plus de {n} niveaux": "arrays or dictionaries nested more than {n} levels deep",
+  "un caractère inattendu": "an unexpected character",
+  "un dictionnaire n’est jamais fermé": "a dictionary is never closed",
+  "un mot-clé dépasse 256 caractères": "a keyword exceeds 256 characters",
+  "un nom dépasse 1 024 caractères": "a name exceeds 1,024 characters",
+  "un tableau n’est jamais fermé": "an array is never closed",
+  "un « > » isolé": "a lone “>”",
+  "une chaîne de texte n’est jamais fermée": "a text string is never closed",
+  "une chaîne hexadécimale n’est jamais fermée": "a hexadecimal string is never closed",
+  "une chaîne hexadécimale porte un caractère étranger": "a hexadecimal string holds a foreign character",
+  "une clé de dictionnaire qui n’est pas un nom": "a dictionary key that is not a name",
+  "une « ) » isolée": "a lone “)”",
+  "« {mot} » comme valeur de dictionnaire": "“{mot}” as a dictionary value",
+  "« {mot} » dans un tableau": "“{mot}” inside an array"
+}

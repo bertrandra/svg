@@ -21,9 +21,10 @@ import { ATTRIBUT_MODELE, VERSION_MODELE } from './ecritureRiche.js';
 import { ignoresDeFusion } from './fusion.js';
 import { normaliser } from './arbre.js';
 import { ATTRIBUT_REPERES, lireReperes } from './reperes.js';
+import { nombre, t } from '../../util/i18n.js';
 
-/** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038). */
-export const MSG_REPERES_ILLISIBLES = 'les repères du document (illisibles)';
+/** Ce que la lecture dit d'un attribut de reperes qu'elle ne sait pas lire (ADR-0038) : une cle (le francais au chargement), traduite par `t` quand on la dit. */
+export const MSG_REPERES_ILLISIBLES = t('les repères du document (illisibles)');
 
 /**
  * Un dessin lu, avec ce que la lecture a laisse tomber sans refuser (voir `ignores.ts`) : vide quand rien ne s'est perdu.
@@ -65,7 +66,7 @@ const AUCUNE: readonly Fonctionnalite[] = [];
 function refusDuMarqueur(attributs: Readonly<Record<string, string>>): string | null {
   const m = /^\s*(\d{1,9})\s*$/.exec(attributs[ATTRIBUT_MODELE] ?? '');
   const v = m ? Number(m[1]) : 0;
-  return v > VERSION_MODELE ? 'Ce fichier vient d’une version plus récente de l’éditeur (modèle ' + v + ') : mettez l’éditeur à jour pour l’ouvrir.' : null;
+  return v > VERSION_MODELE ? t('Ce fichier vient d’une version plus récente de l’éditeur (modèle {v}) : mettez l’éditeur à jour pour l’ouvrir.', { v }) : null;
 }
 
 /** Le dessin d'un SVG et ce qu'il a fallu laisser tomber, ou ce qui empeche de l'editer. Ne leve jamais : un texte hostile est un refus nomme. */
@@ -79,7 +80,7 @@ export function lireDessinAvec(svg: string, options: OptionsLecture, fonctions: 
     return lireDessinSansFiltre(svg, options, fonctions);
   } catch (e) {
     // Dernier filet : une pile de fonctions recursives qui deborde malgre les bornes se dit, elle ne fait pas planter la page.
-    if (e instanceof RangeError) return { erreur: 'Ce SVG est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.' };
+    if (e instanceof RangeError) return { erreur: t('Ce SVG est trop complexe pour être lu (imbrication trop profonde) : simplifiez-le dans votre logiciel.') };
     throw e;
   }
 }
@@ -88,14 +89,14 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   const doc = analyserXml(svg);
   if ('erreur' in doc) return { erreur: phraseErreurXml(doc.erreur) };
   const racine = doc.racine.enfants.find(e => e.nom === 'svg');
-  if (!racine) return { erreur: 'Ce SVG ne se lit pas.' };
+  if (!racine) return { erreur: t('Ce SVG ne se lit pas.') };
   const plan = planDe(racine.attributs);
   const marqueur = refusDuMarqueur(racine.attributs);
   if (marqueur) return { erreur: marqueur };
-  if (!plan) return { erreur: 'Ce SVG n’a ni viewBox ni dimensions.' };
-  if (!plan.every(coordonneeSaine)) return { erreur: 'Ce SVG a un plan de travail démesuré (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ') : corrigez son viewBox.' };
+  if (!plan) return { erreur: t('Ce SVG n’a ni viewBox ni dimensions.') };
+  if (!plan.every(coordonneeSaine)) return { erreur: t('Ce SVG a un plan de travail démesuré (au-delà de ± {max}) : corrigez son viewBox.', { max: nombre(COORDONNEE_MAX) }) };
   // L'ecriture garde le millieme : un plan plus petit s'ecrirait « width="0" », que plus rien ne relit.
-  if (plan[2] < 0.001 || plan[3] < 0.001) return { erreur: 'Ce SVG a un plan de travail trop petit (moins de 0,001 unité) : corrigez son viewBox.' };
+  if (plan[2] < 0.001 || plan[3] < 0.001) return { erreur: t('Ce SVG a un plan de travail trop petit (moins de 0,001 unité) : corrigez son viewBox.') };
   const analyse = analyser(racine);
   const formesLues: Forme[] = [], refus = new Set<string>();
   const texte: ContexteTexte | null = options.polices ? { analyse, polices: options.polices, formes: formesLues, refus, remplacements: new Map(), caracteres: 0 } : null;
@@ -107,23 +108,23 @@ function lireDessinSansFiltre(svg: string, options: OptionsLecture, fonctions: r
   // il n'y a pas de groupe a composer : voir lireOpacites). Masque, decoupe et filtre se refusent comme ailleurs.
   const prRacine = proprietesDe(analyse, racine);
   // Une prise que le mode riche lit sur une feuille ou un groupe ne se lit pas sur la racine : refusee comme en plat (etape 7).
-  const refusRacine = refusDe(prRacine, prisesDe(fonctions)) ?? refusHorsFeuille(prRacine, 'posé sur tout le dessin');
+  const refusRacine = refusDe(prRacine, prisesDe(fonctions)) ?? refusHorsFeuille(prRacine, t('posé sur tout le dessin'));
   if (refusRacine) p.refus.add(refusRacine);
   for (const msg of ignoresDeFusion(prRacine, racine)) analyse.ignores.add(msg);
   const ctx = { m: IDENTITE, heritees: heriter({}, prRacine), opacite: lireOpacite(prRacine.opacity), profondeur: 0 };
   racine.enfants.forEach(e => visiter(p, e, ctx));
   if (analyse.effort.depasse) {
-    return { erreur: 'Ce SVG a trop de règles de style (' + analyse.regles.length.toLocaleString('fr-FR') + ') pour ses éléments (plus de ' + (CONFRONTATIONS_MAX / 1e6).toLocaleString('fr-FR') + ' millions de confrontations) : simplifiez-le dans votre logiciel.' };
+    return { erreur: t('Ce SVG a trop de règles de style ({n}) pour ses éléments (plus de {max} millions de confrontations) : simplifiez-le dans votre logiciel.', { n: nombre(analyse.regles.length), max: nombre(CONFRONTATIONS_MAX / 1e6) }) };
   }
-  if (p.refus.size) return { erreur: 'Ce SVG contient ' + [...p.refus].join(', ') + ' : il ne s’édite pas ici. Vectorisez l’image, ou simplifiez-le dans votre logiciel.' };
+  if (p.refus.size) return { erreur: t('Ce SVG contient {liste} : il ne s’édite pas ici. Vectorisez l’image, ou simplifiez-le dans votre logiciel.', { liste: [...p.refus].join(', ') }) };
   // Une forme sans aucune commande (chemin vide, nombre illisible) ne se dessine pas : un SVG qui n'en a que de telles formes est vide.
   const formes = resoudreLiens(p.formes, p.liens ?? []).filter(f => f.d.length > 0);
-  if (!formes.length) return { erreur: 'Ce SVG ne contient aucune forme à éditer.' };
+  if (!formes.length) return { erreur: t('Ce SVG ne contient aucune forme à éditer.') };
   const production = lireProduction(racine.attributs);
   // Les reperes du document (ADR-0038) : un attribut de la racine ; illisible, il est laisse de cote, et c'est dit.
   const texteReperes = racine.attributs[ATTRIBUT_REPERES];
   const reperes = texteReperes === undefined ? null : lireReperes(texteReperes);
-  const perdus = texteReperes !== undefined && texteReperes.trim() !== '' && !reperes ? [MSG_REPERES_ILLISIBLES] : [];
+  const perdus = texteReperes !== undefined && texteReperes.trim() !== '' && !reperes ? [t(MSG_REPERES_ILLISIBLES)] : [];
   const lu: DessinSvg = { vb: plan, formes, ...(reperes ? { reperes } : {}) };
   // Les groupes du mode riche : un groupe dont aucune feuille n'a ete gardee part (en cascade), la table vide aussi (arbre.ts).
   const dessin: DessinSvg = groupesLus?.size ? normaliser({ ...lu, groupes: Object.fromEntries(groupesLus) }) : lu;

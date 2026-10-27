@@ -10,6 +10,7 @@
 import { memo } from 'react';
 import { modifier, remplacerCouleurSur, type GroupeCouleur, type SurCouleur } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { Bouton } from './commun/Bouton.js';
 import { MenuDeroulant, type ElementMenu } from './commun/Menu.js';
 import { estHex } from './aidesEditeur.js';
@@ -33,10 +34,8 @@ export interface ActionsLigne {
   supprimer: (g: GroupeCouleur) => void;
 }
 
-const accord = (n: number) => (n > 1 ? 's' : '');
-
 /** Ce que « Fond » ou « Trait » change, pour les messages : rien de plus quand on lit les deux. */
-export const precisionSur = (sur: SurCouleur): string => (sur === 'remplissage' ? ' (fond)' : sur === 'contour' ? ' (trait)' : '');
+export const precisionSur = (sur: SurCouleur): string => (sur === 'remplissage' ? t(' (fond)') : sur === 'contour' ? t(' (trait)') : '');
 
 interface Proprietes {
   g: GroupeCouleur;
@@ -55,41 +54,50 @@ export const LigneCouleur = memo(function LigneCouleur({ g, choisie, sur, nuanci
   const toutesMasquees = g.visibles === 0, toutesVerrouillees = g.verrouillees === g.ids.length;
   const nom = g.couleur.toUpperCase();
   const basculerVisible = () => {
-    ac.faire(d => modifier(d, g.ids, { visible: toutesMasquees }), pluriel(g.ids.length, 'forme') + (toutesMasquees ? ' affichée' : ' masquée') + accord(g.ids.length) + ' (' + nom + ').');
+    const formes = pluriel(g.ids.length, 'forme'), plusieurs = g.ids.length > 1;
+    const dit = toutesMasquees
+      ? (plusieurs ? t('{formes} affichées ({nom}).', { formes, nom }) : t('{formes} affichée ({nom}).', { formes, nom }))
+      : (plusieurs ? t('{formes} masquées ({nom}).', { formes, nom }) : t('{formes} masquée ({nom}).', { formes, nom }));
+    ac.faire(d => modifier(d, g.ids, { visible: toutesMasquees }), dit);
     if (!toutesMasquees) actions.horsSelection(g.ids);
   };
   const basculerVerrou = () => {
-    ac.faire(d => modifier(d, g.ids, { verrouille: !toutesVerrouillees }), pluriel(g.ids.length, 'forme') + (toutesVerrouillees ? ' déverrouillée' : ' verrouillée') + accord(g.ids.length) + ' (' + nom + ').');
+    const formes = pluriel(g.ids.length, 'forme'), plusieurs = g.ids.length > 1;
+    const dit = toutesVerrouillees
+      ? (plusieurs ? t('{formes} déverrouillées ({nom}).', { formes, nom }) : t('{formes} déverrouillée ({nom}).', { formes, nom }))
+      : (plusieurs ? t('{formes} verrouillées ({nom}).', { formes, nom }) : t('{formes} verrouillée ({nom}).', { formes, nom }));
+    ac.faire(d => modifier(d, g.ids, { verrouille: !toutesVerrouillees }), dit);
     if (!toutesVerrouillees) actions.horsSelection(g.ids);
   };
   // Le nuancier de la page : un clic remplace la couleur partout, en une entree d'historique.
-  const duNuancier: ElementMenu[] = nuancier.map((t, i) => ({
-    id: 'nuancier-' + t.hex, libelle: 'Remplacer par ' + t.nom + (t.nom === t.hex ? '' : ' (' + t.hex.toUpperCase() + ')'), pastille: t.hex, separateur: i === 0, desactive: t.hex === g.couleur,
-    onClick: () => ac.faire(d => remplacerCouleurSur(d, g.couleur, t.hex, sur), nom + ' remplacée par ' + t.hex.toUpperCase() + precisionSur(sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.')
+  const duNuancier: ElementMenu[] = nuancier.map((te, i) => ({
+    id: 'nuancier-' + te.hex, libelle: t('Remplacer par {teinte}', { teinte: t(te.nom) + (te.nom === te.hex ? '' : ' (' + te.hex.toUpperCase() + ')') }), pastille: te.hex, separateur: i === 0, desactive: te.hex === g.couleur,
+    onClick: () => ac.faire(d => remplacerCouleurSur(d, g.couleur, te.hex, sur), t('{de} remplacée par {vers}{sur} : {formes}.', { de: nom, vers: te.hex.toUpperCase(), sur: precisionSur(sur), formes: pluriel(g.ids.length, 'forme') }))
   }));
   const elements: ElementMenu[] = [
-    { id: 'ajouter', libelle: 'Ajouter à la sélection', icone: 'ajouter', desactive: !g.libres.length, onClick: () => actions.choisir(g, true) },
-    { id: 'proches', libelle: 'Sélectionner les nuances proches', icone: 'palette', onClick: () => actions.nuancesProches(g) },
-    { id: 'isoler', libelle: 'N’afficher que cette couleur', icone: 'oeil', onClick: () => actions.isoler(g) },
-    { id: 'combiner', libelle: 'Combiner en une forme', icone: 'combiner', desactive: g.libres.length < 2, onClick: () => actions.combiner(g) },
+    { id: 'ajouter', libelle: t('Ajouter à la sélection'), icone: 'ajouter', desactive: !g.libres.length, onClick: () => actions.choisir(g, true) },
+    { id: 'proches', libelle: t('Sélectionner les nuances proches'), icone: 'palette', onClick: () => actions.nuancesProches(g) },
+    { id: 'isoler', libelle: t('N’afficher que cette couleur'), icone: 'oeil', onClick: () => actions.isoler(g) },
+    { id: 'combiner', libelle: t('Combiner en une forme'), icone: 'combiner', desactive: g.libres.length < 2, onClick: () => actions.combiner(g) },
     ...duNuancier,
-    { id: 'supprimer', libelle: 'Supprimer ces formes (' + g.libres.length + ')', icone: 'supprimer', danger: true, separateur: true, desactive: !g.libres.length, onClick: () => actions.supprimer(g) }
+    { id: 'supprimer', libelle: t('Supprimer ces formes ({n})', { n: g.libres.length }), icone: 'supprimer', danger: true, separateur: true, desactive: !g.libres.length, onClick: () => actions.supprimer(g) }
   ];
-  const cible = sur === 'remplissage' ? 'le fond' : sur === 'contour' ? 'le trait' : 'le fond et le trait';
+  const cible = sur === 'remplissage' ? t('le fond') : sur === 'contour' ? t('le trait') : t('le fond et le trait');
   return (
     <li className={(choisie ? 'choisi' : '') + (toutesMasquees ? ' attenue' : '')} aria-posinset={taille ? rang : undefined} aria-setsize={taille || undefined}>
       {estHex(g.couleur) ? (
-        <input type="color" className="recolorer" aria-label={'Changer la couleur ' + nom} title={'Changer ' + nom + ' pour ' + pluriel(g.ids.length, 'forme') + ' : ' + cible}
+        <input type="color" className="recolorer" aria-label={t('Changer la couleur {nom}', { nom })} title={t('Changer {nom} pour {formes} : {cible}', { nom, formes: pluriel(g.ids.length, 'forme'), cible })}
           value={g.couleur} onClick={actions.debuterRecolorer} onChange={e => actions.recolorer(g, e.target.value)} onBlur={actions.finirRecolorer} />
       ) : null}
-      <button type="button" className="couleur-choix" title={'Choisir les formes ' + nom + ' (Maj : ajouter à la sélection)'} onClick={e => actions.choisir(g, e.shiftKey)}>
+      <button type="button" className="couleur-choix" title={t('Choisir les formes {nom} (Maj : ajouter à la sélection)', { nom })} onClick={e => actions.choisir(g, e.shiftKey)}>
         <span className="echantillon" style={{ background: g.couleur }} />
         <code>{nom}</code>
-        <span className="aide">{g.ids.length}{g.visibles < g.ids.length ? ' · ' + (g.ids.length - g.visibles) + ' masquée' + accord(g.ids.length - g.visibles) : ''}</span>
+        <span className="aide">{g.ids.length}{g.visibles < g.ids.length ? ' · ' + pluriel(g.ids.length - g.visibles, 'masquée') : ''}</span>
       </button>
-      <Bouton icone={toutesMasquees ? 'masquer' : 'oeil'} aide={(toutesMasquees ? 'Afficher' : 'Masquer') + ' les formes ' + nom} pressed={toutesMasquees} onClick={basculerVisible} />
-      <Bouton icone={toutesVerrouillees ? 'verrouiller' : 'deverrouiller'} aide={(toutesVerrouillees ? 'Déverrouiller' : 'Verrouiller') + ' les formes ' + nom} pressed={toutesVerrouillees} onClick={basculerVerrou} />
-      <MenuDeroulant etiquette={'Autres actions sur ' + nom} icone="options" chevron={false} alignement="gauche" elements={elements} />
+      <Bouton icone={toutesMasquees ? 'masquer' : 'oeil'} aide={toutesMasquees ? t('Afficher les formes {nom}', { nom }) : t('Masquer les formes {nom}', { nom })} pressed={toutesMasquees} onClick={basculerVisible} />
+      <Bouton icone={toutesVerrouillees ? 'verrouiller' : 'deverrouiller'} aide={toutesVerrouillees ? t('Déverrouiller les formes {nom}', { nom }) : t('Verrouiller les formes {nom}', { nom })} pressed={toutesVerrouillees} onClick={basculerVerrou} />
+      <MenuDeroulant etiquette={t('Autres actions sur {nom}', { nom })} icone="options" chevron={false} alignement="gauche" elements={elements} />
+
     </li>
   );
 });

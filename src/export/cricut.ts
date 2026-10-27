@@ -8,6 +8,7 @@
 import { marquerProduction, type Forme } from '../engine/editionSvg.js';
 import type { DessinPlat } from '../engine/aplatir.js';
 import { constatsBloquants, marqueDeProfil, partagerOperations, versUnite, type Constat, type ProfilProduction } from '../engine/preparation.js';
+import { t } from '../util/i18n.js';
 import { svgExporte } from './svgs.js';
 import { avecReperage, cadresReperage, couleursDistinctes } from './reperage.js';
 
@@ -26,7 +27,7 @@ export function pleine(f: Forme): Forme {
 }
 
 /** La phrase d'un refus : ce qui bloque, dans l'ordre du panneau. */
-export const phraseRefus = (constats: readonly Constat[]): string => 'Corrigez d’abord, dans le panneau « Prêt pour Cricut » : ' + constats.map(c => c.message).join(' ');
+export const phraseRefus = (constats: readonly Constat[]): string => t('Corrigez d’abord, dans le panneau « Prêt pour Cricut » : {constats}', { constats: constats.map(c => c.message).join(' ') });
 
 /**
  * Le SVG de decoupe pour ce profil, ou le refus et ses raisons. Seules les formes a couper s'y ecrivent (ADR-0028 : leur operation,

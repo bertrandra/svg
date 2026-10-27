@@ -4,6 +4,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ActionsEditeur, EtatInterface, ModeleDessin } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 const ContexteDessin = createContext<ModeleDessin | null>(null);
 const ContexteActions = createContext<ActionsEditeur | null>(null);
@@ -11,7 +12,7 @@ const ContexteInterface = createContext<EtatInterface | null>(null);
 
 /** Hors d'un editeur, un crochet ne peut rien rendre de sense : on le dit plutot que de rendre `undefined`. */
 function exiger<T>(valeur: T | null, nom: string): T {
-  if (valeur === null) throw new Error(nom + ' : appelé hors d’un éditeur (FournisseurEditeur).');
+  if (valeur === null) throw new Error(t('{nom} : appelé hors d’un éditeur (FournisseurEditeur).', { nom }));
   return valeur;
 }
 

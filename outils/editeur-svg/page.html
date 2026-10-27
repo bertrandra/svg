@@ -212,6 +212,8 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
 .tete p, .pied p, .bibliotheque > p.aide, .voie-panneau p.aide { max-width: 34em; }
 .pied p { margin: 0; }
 .pied .discret { margin-left: calc(-1 * var(--esp-l) - 1px); }
+/* Le selecteur de langue (ADR-0042) : un champ a sa taille, pas une ligne entiere. */
+.pied .choix-langue select { width: auto; display: inline-block; margin-left: var(--esp-xs); }
 /*STYLE_EDITEUR*/
 </style>
 
@@ -219,4 +221,17 @@ section h2 { font-size: var(--texte-titre); margin: 0 0 var(--esp-m); }
      paragraphe au demarrage, il ne reste a l'ecran que si rien ne tourne. -->
 <div id="editeur"><main class="accueil"><p class="message">Chargement de l’éditeur… Si ce message reste affiché, JavaScript est désactivé ou ce navigateur est trop ancien :
   utilisez une version récente de Chrome, Edge, Firefox ou Safari (iOS 16.4 et plus).</p></main></div>
+<!-- L'amorce de la langue (ADR-0042) : si la personne a choisi l'anglais (reglage svg.langue, ecrit par la page elle-meme), le
+     dictionnaire langue-en.js se charge AVANT le moteur, par un script classique ecrit pendant l'analyse : il s'execute avant le
+     script suivant, en file:// aussi, et les textes que le moteur evalue au chargement de ses modules sont deja en anglais. Sans
+     reglage, sans stockage, ou en francais, rien ne se charge ; si l'annexe manque, le moteur le dit et reste en francais. -->
+<script>
+try {
+  var reglageLangue = JSON.parse(localStorage.getItem('svg.langue') || 'null');
+  if (reglageLangue && reglageLangue.langue === 'en') {
+    window.__langueSvgLangue = 'en';
+    document.write('<script src="langue-en.js"><\/script>');
+  }
+} catch (e) { /* un stockage refuse (navigation privee, file:// chez certains) : la page reste en francais */ }
+</script>
 <script>/*MOTEUR*/</script>

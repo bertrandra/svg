@@ -38,8 +38,14 @@ function lireTrace(d: string): Array<{ c: 'M' | 'L' | 'C' | 'Q'; p: number[] }> 
   return out;
 }
 
-/** L'apostrophe typographique n'a pas de glyphe dans ces polices : elle s'ecrit avec l'apostrophe droite, qui en a un. */
-const EQUIVALENTS: Readonly<Record<string, string>> = { '’': "'", '‘': "'", '‚': ',', ' ': ' ', ' ': ' ' };
+/**
+ * L'apostrophe typographique (U+2019) n'a pas de glyphe dans ces polices : elle s'ecrit avec l'apostrophe droite, qui en a un ; de
+ * meme les guillemets simples et les espaces insecables. Les caracteres sont donnes par leur code : ce sont des donnees, pas un
+ * texte de l'interface, et le compte des textes francais hors `t` ne doit pas les voir (ADR-0042).
+ */
+const EQUIVALENTS: Readonly<Record<string, string>> = Object.fromEntries(
+  ([[0x2019, "'"], [0x2018, "'"], [0x201a, ','], [0x00a0, ' '], [0x202f, ' ']] as const).map(([code, remplacant]) => [String.fromCharCode(code), remplacant])
+);
 
 /** L'interface `Glyphes` d'une fonte a trait : contours ouverts, avances de la police, aucun crenage. */
 export function glyphesTrait(donnees: DonneesTrait): Glyphes {

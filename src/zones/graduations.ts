@@ -5,6 +5,7 @@
 import { depuisUnite, versUnite } from '../engine/preparation.js';
 import { nombreFr } from '../engine/description.js';
 import { NOMS_UNITE, type UniteLongueur } from '../model/contextes.js';
+import { t } from '../util/i18n.js';
 
 /** L'unite des regles, des reperes et de leurs champs : ce qu'on lit, et les conversions avec les unites du plan. */
 export interface UniteRegle {
@@ -16,12 +17,10 @@ export interface UniteRegle {
   readonly depuis: (valeur: number) => number;
 }
 
-const PLAN: UniteRegle = { nom: '', long: 'unités', vers: v => v, depuis: v => v };
-
-/** L'unite du moment : celle du profil de production, sinon celle du plan. */
+/** L'unite du moment : celle du profil de production, sinon celle du plan. Les noms se traduisent a l'appel (ADR-0042). */
 export function uniteRegle(unite: UniteLongueur | null): UniteRegle {
-  if (!unite) return PLAN;
-  return { nom: NOMS_UNITE[unite], long: unite === 'in' ? 'pouces' : 'millimètres', vers: v => versUnite(v, unite), depuis: v => depuisUnite(v, unite) };
+  if (!unite) return { nom: '', long: t('unités'), vers: v => v, depuis: v => v };
+  return { nom: t(NOMS_UNITE[unite]), long: unite === 'in' ? t('pouces') : t('millimètres'), vers: v => versUnite(v, unite), depuis: v => depuisUnite(v, unite) };
 }
 
 /** Une valeur du plan dite dans l'unite : « 25,4 mm », « 120 ». */

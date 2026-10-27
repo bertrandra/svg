@@ -10,6 +10,7 @@
 // d'hier retrouve ses fichiers.
 
 import { empreinteTexte } from '../util/empreinte.js';
+import { t } from '../util/i18n.js';
 import { SERVEURS_POLICES, estLicenceAdmise, rangSource, sourcePolices, type IdDepot, type IdLicencePolice, type IdServeur, type IdSourcePolices } from './sourcesPolices.js';
 
 export type CategoriePolice = 'lineale' | 'empattements' | 'affiche' | 'manuscrite' | 'chasse-fixe' | 'autre';
@@ -209,37 +210,37 @@ export function familleDe(c: CataloguePolices, id: string): FamilleCatalogue | n
 // --- Validation : l'index vient d'un fichier, on ne le croit pas sur parole ---
 
 function validerVariante(v: unknown, depot: IdDepot): string | null {
-  if (!Array.isArray(v) || v.length < 4 || v.length > 6) return 'une variante n’est pas un tableau de 4 à 6 valeurs';
+  if (!Array.isArray(v) || v.length < 4 || v.length > 6) return t('une variante n’est pas un tableau de 4 à 6 valeurs');
   const [poids, italique, latin, ext, chemin, libelle] = v as unknown[];
-  if (typeof poids !== 'number' || !Number.isInteger(poids) || poids < 1 || poids > 1000) return 'graisse invalide';
-  if (italique !== 0 && italique !== 1) return 'style invalide';
-  if (typeof latin !== 'string' || !SHA256_B64.test(latin)) return 'empreinte sha256 invalide';
-  if (ext !== null && (typeof ext !== 'string' || !SHA256_B64.test(ext))) return 'empreinte latin-ext invalide';
+  if (typeof poids !== 'number' || !Number.isInteger(poids) || poids < 1 || poids > 1000) return t('graisse invalide');
+  if (italique !== 0 && italique !== 1) return t('style invalide');
+  if (typeof latin !== 'string' || !SHA256_B64.test(latin)) return t('empreinte sha256 invalide');
+  if (ext !== null && (typeof ext !== 'string' || !SHA256_B64.test(ext))) return t('empreinte latin-ext invalide');
   const motif = CHEMIN[depot];
-  if (motif ? typeof chemin !== 'string' || !motif.test(chemin) || chemin.includes('..') : chemin !== undefined && chemin !== null) return 'chemin de fichier invalide';
-  if (libelle !== undefined && (typeof libelle !== 'string' || !LIBELLE.test(libelle))) return 'libellé invalide';
+  if (motif ? typeof chemin !== 'string' || !motif.test(chemin) || chemin.includes('..') : chemin !== undefined && chemin !== null) return t('chemin de fichier invalide');
+  if (libelle !== undefined && (typeof libelle !== 'string' || !LIBELLE.test(libelle))) return t('libellé invalide');
   return null;
 }
 
 /** Le premier defaut d'une famille, ou null. */
 export function defautFamille(f: unknown): string | null {
-  if (typeof f !== 'object' || f === null) return 'une famille n’est pas un objet';
+  if (typeof f !== 'object' || f === null) return t('une famille n’est pas un objet');
   const o = f as Record<string, unknown>;
   const nom = typeof o.id === 'string' ? o.id : '?';
-  if (typeof o.id !== 'string' || !SLUG.test(o.id)) return 'identifiant de famille invalide (' + nom.slice(0, 40) + ')';
-  if (typeof o.nom !== 'string' || !o.nom.trim() || o.nom.length > LIMITES_CATALOGUE.nom || /[\p{Cc}<>&"]/u.test(o.nom)) return nom + ' : nom invalide';
-  if (o.depot !== 'fontsource' && o.depot !== 'velvetyne' && o.depot !== 'fontshare') return nom + ' : dépôt inconnu';
+  if (typeof o.id !== 'string' || !SLUG.test(o.id)) return t('identifiant de famille invalide ({nom})', { nom: nom.slice(0, 40) });
+  if (typeof o.nom !== 'string' || !o.nom.trim() || o.nom.length > LIMITES_CATALOGUE.nom || /[\p{Cc}<>&"]/u.test(o.nom)) return t('{nom} : nom invalide', { nom });
+  if (o.depot !== 'fontsource' && o.depot !== 'velvetyne' && o.depot !== 'fontshare') return t('{nom} : dépôt inconnu', { nom });
   const source = typeof o.source === 'string' ? sourcePolices(o.source) : undefined;
-  if (!source) return nom + ' : source absente du registre';
-  if (source.depot !== o.depot) return nom + ' : la source ' + source.id + ' ne sert pas le dépôt ' + String(o.depot);
-  if (!estLicenceAdmise(o.licence)) return nom + ' : licence hors de la liste blanche (' + String(o.licence).slice(0, 30) + ')';
-  if (!source.licences.includes(o.licence)) return nom + ' : licence ' + o.licence + ' non déclarée par la source ' + source.id;
-  if (typeof o.categorie !== 'string' || !(CATEGORIES as readonly string[]).includes(o.categorie)) return nom + ' : catégorie inconnue';
-  if (typeof o.version !== 'string' || !VERSION[o.depot].test(o.version)) return nom + ' : version non épinglée';
-  if (!Array.isArray(o.ecritures) || !o.ecritures.every(e => typeof e === 'string' && ECRITURE.test(e))) return nom + ' : écritures invalides';
-  if (o.depot === 'velvetyne' ? typeof o.projet !== 'string' || !/^\d{1,12}$/.test(o.projet) : o.projet !== undefined) return nom + ' : projet invalide';
-  if (!Array.isArray(o.variantes) || !o.variantes.length || o.variantes.length > LIMITES_CATALOGUE.variantes) return nom + ' : variantes absentes ou trop nombreuses';
-  for (const v of o.variantes) { const d = validerVariante(v, o.depot); if (d) return nom + ' : ' + d; }
+  if (!source) return t('{nom} : source absente du registre', { nom });
+  if (source.depot !== o.depot) return t('{nom} : la source {source} ne sert pas le dépôt {depot}', { nom, source: source.id, depot: String(o.depot) });
+  if (!estLicenceAdmise(o.licence)) return t('{nom} : licence hors de la liste blanche ({licence})', { nom, licence: String(o.licence).slice(0, 30) });
+  if (!source.licences.includes(o.licence)) return t('{nom} : licence {licence} non déclarée par la source {source}', { nom, licence: o.licence, source: source.id });
+  if (typeof o.categorie !== 'string' || !(CATEGORIES as readonly string[]).includes(o.categorie)) return t('{nom} : catégorie inconnue', { nom });
+  if (typeof o.version !== 'string' || !VERSION[o.depot].test(o.version)) return t('{nom} : version non épinglée', { nom });
+  if (!Array.isArray(o.ecritures) || !o.ecritures.every(e => typeof e === 'string' && ECRITURE.test(e))) return t('{nom} : écritures invalides', { nom });
+  if (o.depot === 'velvetyne' ? typeof o.projet !== 'string' || !/^\d{1,12}$/.test(o.projet) : o.projet !== undefined) return t('{nom} : projet invalide', { nom });
+  if (!Array.isArray(o.variantes) || !o.variantes.length || o.variantes.length > LIMITES_CATALOGUE.variantes) return t('{nom} : variantes absentes ou trop nombreuses', { nom });
+  for (const v of o.variantes) { const d = validerVariante(v, o.depot); if (d) return t('{nom} : {defaut}', { nom, defaut: d }); }
   return null;
 }
 
@@ -249,12 +250,12 @@ export function defautFamille(f: unknown): string | null {
  * rendraient un texte ambigu).
  */
 export function validerCatalogue(v: unknown): CataloguePolices | { erreur: string } {
-  if (typeof v !== 'object' || v === null) return { erreur: 'l’index des polices n’est pas un objet' };
+  if (typeof v !== 'object' || v === null) return { erreur: t('l’index des polices n’est pas un objet') };
   const o = v as Record<string, unknown>;
-  if (o.format !== 1) return { erreur: 'format d’index inconnu' };
-  if (typeof o.instantane !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.instantane)) return { erreur: 'date d’instantané invalide' };
-  if (!Array.isArray(o.familles) || !Array.isArray(o.anciennes)) return { erreur: 'familles absentes' };
-  if (o.familles.length + o.anciennes.length > LIMITES_CATALOGUE.familles) return { erreur: 'trop de familles' };
+  if (o.format !== 1) return { erreur: t('format d’index inconnu') };
+  if (typeof o.instantane !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.instantane)) return { erreur: t('date d’instantané invalide') };
+  if (!Array.isArray(o.familles) || !Array.isArray(o.anciennes)) return { erreur: t('familles absentes') };
+  if (o.familles.length + o.anciennes.length > LIMITES_CATALOGUE.familles) return { erreur: t('trop de familles') };
   const vus = new Set<string>();
   for (const f of o.familles as unknown[]) {
     const d = defautFamille(f);
@@ -262,11 +263,11 @@ export function validerCatalogue(v: unknown): CataloguePolices | { erreur: strin
     const fam = f as FamilleCatalogue;
     for (const variante of fam.variantes) {
       const id = idVariante(fam, variante);
-      if (vus.has(id)) return { erreur: fam.id + ' : identifiant de variante en double (' + id + ')' };
+      if (vus.has(id)) return { erreur: t('{nom} : identifiant de variante en double ({id})', { nom: fam.id, id }) };
       vus.add(id);
     }
   }
-  for (const f of o.anciennes as unknown[]) { const d = defautFamille(f); if (d) return { erreur: 'ancienne version : ' + d }; }
+  for (const f of o.anciennes as unknown[]) { const d = defautFamille(f); if (d) return { erreur: t('ancienne version : {defaut}', { defaut: d }) }; }
   return v as CataloguePolices;
 }
 

@@ -20,7 +20,7 @@ les fontes et le bundle. `npm run embarquer` ne refait que le bundle.
 
 ## 1. L’iframe de la page entière
 
-On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`, `polices-catalogue.js`, `polices-apercus.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte d’elle-même : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les annexes, au premier besoin. La page propose les polices libres téléchargeables (ADR-0025) : une police du catalogue ne se télécharge qu’au moment où la personne la choisit, auprès des serveurs nommés dans « Les serveurs de polices ».
+On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `bibliotheque.js`, `polices.js`, `polices-catalogue.js`, `polices-apercus.js`, `langue-en.js`) dans le même dossier, et on l’encadre. La page ne contacte aucun autre hôte d’elle-même : ses polices d’interface sont dans le fichier (voir « Les fontes » plus bas), et ses seules requêtes sont les annexes, au premier besoin. La page propose les polices libres téléchargeables (ADR-0025) : une police du catalogue ne se télécharge qu’au moment où la personne la choisit, auprès des serveurs nommés dans « Les serveurs de polices ».
 
 ```html
 <iframe src="/svg/editeur-svg.html" title="Éditeur SVG" style="width: 100%; height: 720px; border: 0"
@@ -35,6 +35,10 @@ On sert `dist/editeur-svg.html` avec ses fichiers annexes (`vtracer.js`, `biblio
   copie du code). Si votre page doit recevoir le SVG, prenez le bundle.
 - `vtracer.js` (traceur, 877 Ko), `bibliotheque.js` et `polices.js` doivent être servis **à côté de `editeur-svg.html`** : la page les
   cherche par leur nom nu, chacun au premier besoin (une vectorisation, la bibliothèque, l’outil Texte).
+- La page est en **français par défaut** (ADR-0042) ; la personne choisit « English » au pied de l’accueil ou au menu Aide de
+  l’éditeur (réglage `svg.langue` gardé dans le stockage de la page, puis la page se recharge). Le dictionnaire anglais est l’annexe
+  `langue-en.js`, chargée seulement quand la langue vaut `en`, **avant le moteur** (un script d’amorce en tête de la page lit le
+  réglage et écrit la balise) ; sans elle, la page reste en français et le dit.
 - La page lit en **modèle riche** (ADR-0012, étape 14) : un SVG à groupes, à dégradés, à découpes… s’ouvre et se réécrit avec ses
   groupes et ses définitions. La personne revient à plat par la case « Groupes, dégradés, effets » du menu Édition (gardée dans le
   stockage de la page). Si vous comptez sur des SVG réécrits à plat, prenez le bundle, qui reste à plat par défaut (voir « Le modèle »).
@@ -115,13 +119,14 @@ fois : un second `ouvrir` pendant qu’un éditeur est ouvert lève une erreur.
 | `stockage` | `{ lire, ecrire, retirer }`, `false` ou `null` | le `localStorage` de votre page | Où l’éditeur garde les versions nommées (voir « Stockage » plus bas). `false` ou `null` : rien n’est gardé nulle part |
 | `visite` | `boolean` | `false` | L’accueil guidé (ADR-0019) : la visite de l’éditeur en cinq étapes s’ouvre d’elle-même à la première ouverture (puis se rejoue du menu Aide), et les repères de première rencontre s’affichent. Le dessin se récupère alors par « Enregistrer ». Ce qui a été vu se garde dans `stockage` (clé `svg.guide`) ; sans stockage, une fois par chargement de la page |
 | `modele` | `'plat'` ou `'riche'` | `'plat'` | Le modèle de lecture (ADR-0012), fixé pour toute l’édition : la personne ne le change pas, le menu Édition n’a pas la case du modèle. `'plat'` est le contrat d’avant : les groupes se fondent, dégradé, motif, découpe, masque, filtre et image sont refusés en le nommant, et un SVG réécrit aujourd’hui l’est à l’identique demain. `'riche'` les garde et les réécrit (voir « Le modèle : plat ou riche ») |
+| `langue` | `'fr'` ou `'en'` | `'fr'` | La langue de l’interface (ADR-0042). `'en'` charge le dictionnaire `langue-en.js` sous `baseAnnexes` **avant** d’afficher l’éditeur, et pose `lang="en"` sur votre document ; s’il manque, l’éditeur reste en français et le dit dans la console. Sans l’option, l’éditeur est en français et ne touche pas au `lang` de votre page ; la racine de l’éditeur porte toujours son propre `lang`. **Pour un anglais complet, amorcez avant le bundle** (voir « La langue : l’amorce ») |
 | `policesEnLigne` | `boolean` | `false` | Les polices libres téléchargeables (ADR-0025) : l’outil Texte propose « Toutes les polices » (plus de 2 000 familles libres, recherche, filtres, favoris, polices du document). Une police se télécharge **seulement quand la personne la choisit** (ouvrir la liste, chercher, voir les aperçus ne fait partir aucune requête) ; chaque fichier est vérifié par son empreinte sha256 avant d’être lu. Faux ou absent : aucune requête, seules les dix fontes de `polices.js` se proposent. Vrai demande de servir aussi `polices-catalogue.js` (et, facultatif, `polices-apercus.js`) sous `baseAnnexes`, et d’autoriser les serveurs de polices dans votre politique de sécurité (voir « Les serveurs de polices ») |
 
 La poignée rendue : `fermer()` ferme l’éditeur sans rien enregistrer et sans confirmation ; un second
 appel est sans effet.
 
 Une option qui ne convient pas lève un `TypeError` (en français) : `onEnregistrer` manquante, `svg` qui
-n’est pas un texte, `modele` qui n’est ni `'plat'` ni `'riche'`, etc. Un SVG que l’éditeur refuse (à plat : image, dégradé, masque,
+n’est pas un texte, `modele` qui n’est ni `'plat'` ni `'riche'`, `langue` qui n’est ni `'fr'` ni `'en'`, etc. Un SVG que l’éditeur refuse (à plat : image, dégradé, masque,
 découpe, filtre ; dans les deux modèles : un cycle de `<use>` ou un renvoi externe, un filtre hors du flou et de l’ombre…) ne lève
 rien : l’éditeur s’ouvre sur un message qui nomme le refus, avec un bouton « Fermer » (et `onFermer` est appelée). Pour le savoir
 avant, demandez `estEditable`.
@@ -211,6 +216,7 @@ rattrapée par l’éditeur.
 | `polices.js` | 2,7 Mo (1,2 Mo compressé) | si vous gardez l’outil Texte, ou si votre `svg` peut contenir du texte | Dix fontes libres (OFL, dont une à trait unique), chargées quand la personne ouvre l’outil Texte (ou retape un texte vivant), ou à l’ouverture d’un `svg` qui porte un `<text>` quand vous donnez `baseAnnexes` : ses lettres deviennent des formes (une police absente est remplacée, et l’éditeur le dit). Sans `baseAnnexes` (et sans `polices.js` déjà posé dans la page), ou si le fichier manque, un tel `svg` reste refusé comme avant (« Ce SVG contient du texte… ») : aucune requête n’est tentée pour rien |
 | `polices-catalogue.js` | 1,4 Mo (0,7 Mo compressé) | seulement avec `policesEnLigne: true` | L’index des polices libres téléchargeables : noms, catégories, licences, versions épinglées et empreintes sha256. **Il ne contient aucune fonte.** Chargé quand la personne ouvre « Toutes les polices » (ou rouvre un texte composé dans une police du catalogue). Sans lui, le panneau le dit et propose les fontes livrées |
 | `polices-apercus.js` | 1,9 Mo (0,64 Mo compressé) | facultatif, avec `policesEnLigne: true` | Les aperçus des polices du catalogue (ADR-0026) : le nom de chaque famille dessiné dans sa propre fonte, en contours, dans un codage compact. **Il ne contient aucune fonte** ni aucune autre lettre. Chargé quand la personne ouvre « Toutes les polices », pour que la liste montre l’allure de chaque police sans rien télécharger. Sans lui, le panneau le dit et écrit les noms dans la police de l’interface ; les fontes livrées et celles déjà téléchargées se dessinent toujours |
+| `langue-en.js` | 280 Ko (90 Ko compressé) | seulement avec `langue: 'en'` | Le dictionnaire anglais de l’interface (ADR-0042) : `window.__langueSvg_en`, la phrase française vers sa traduction. Chargé avant l’affichage de l’éditeur quand la langue vaut `en`, jamais sinon ; **à charger vous-même avant le bundle**, avec `window.__langueSvgLangue = 'en'`, pour que tout soit traduit (voir « La langue : l’amorce »). Sans lui, l’éditeur reste en français et le dit dans la console |
 | `MENTIONS.txt` | 18 Ko | **toujours, avec le bundle** | Le copyright et la licence de chaque composant tiers redistribué (voir « Attribution et licences ») |
 
 - **`vtracer.js` n’est pas nécessaire** : l’éditeur retouche un SVG, il ne vectorise pas, et rien dans
@@ -240,6 +246,29 @@ rattrapée par l’éditeur.
   dans `MENTIONS.txt`. Voir « Attribution et licences » ci-dessous.
 - Servez les `.js` avec un type `text/javascript` ; la compression (gzip, brotli) divise les annexes par
   deux et demi.
+
+### La langue : l’amorce
+
+Avec `ouvrir({ langue: 'en' })` seul, l’éditeur charge `langue-en.js` **après** le bundle, puis s’affiche : tout ce qu’il rend
+ensuite est en anglais, mais les quelques textes que le bundle fixe au chargement de ses modules (des constantes) restent en
+français. Pour un anglais complet, **amorcez la langue avant le bundle** : posez `window.__langueSvgLangue = 'en'` et chargez
+`langue-en.js` par une balise `<script>` classique placée **avant** `editeur-svg-embarque.js`. Le cœur lit ces deux globales à
+son initialisation (`src/util/i18n.ts`) et pose la langue avant d’évaluer quoi que ce soit ; `ouvrir({ langue: 'en' })` reste
+nécessaire (il pose `lang` et sert de voie tardive si l’amorce manque), et ne recharge rien.
+
+```html
+<script>window.__langueSvgLangue = 'en';</script>
+<script src="/static/svg/langue-en.js"></script>
+<script src="/static/svg/editeur-svg-embarque.js"></script>
+<script>
+  EditeurSvg.ouvrir({ svg: monSvg, langue: 'en', baseAnnexes: '/static/svg/', onEnregistrer: function (svg) { /* … */ } });
+</script>
+```
+
+Si votre politique de sécurité n’admet aucun script en ligne, servez un script qui pose les deux globales d’un coup
+(`window.__langueSvgLangue="en";window.__langueSvg_en={…};` : c’est ce que fait le site PHP, par `api.php?r=langue&l=en`). En
+français, n’amorcez rien : il n’y a pas de dictionnaire. C’est la seule lecture d’une globale par le cœur de l’éditeur, et une
+globale absente ou mal formée ne change rien.
 
 ### L’isolation du CSS
 
@@ -501,6 +530,7 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
 | `actionsHote?` | `{ id, libelle, faire(etat) }[]` | Des gestes ajoutés au menu Fichier après le geste de fin (« Enregistrer sous… » sur le site PHP) ; chacun reçoit l’état du moment |
 | `modele?` | `'plat' \| 'riche'` | Le modèle de lecture (voir « Le modèle : plat ou riche »), **fixé** : la case du menu Édition disparaît. Absent : le réglage gardé dans `stockage` (clé `svg.modele`, la case du menu Édition), et sans réglage `modeleParDefaut` |
 | `modeleParDefaut?` | `'plat' \| 'riche'` | Le modèle quand ni `modele` ni le stockage n’en donnent un. **Absent : `'plat'`** ; la page autonome et le site PHP passent `'riche'` (`MODELE_PAGE`, `src/zones/modele.ts`). `BoutonEditerSvg` ne le passe pas |
+| `langue?` | `'fr' \| 'en'` | La langue de l’interface (ADR-0042), posée **avant le premier rendu**. Donnée, le composant prépare la langue lui-même (`preparerLangue`, `src/io/langue.ts` : le dictionnaire `langue-en.js` se charge sous la base des annexes, `lang` du document posé) et ne dessine rien avant ; si vous avez déjà appelé `preparerLangue(langue)` avant de monter, il s’affiche tout de suite. **Absent : la langue courante**, `fr` tant que personne n’en a posé une autre |
 
 À savoir, côté React :
 
@@ -511,6 +541,11 @@ import { EditeurSvg, type ProprietesEditeur } from './svg/src/zones/EditeurSvg.j
   (`src/util/cssPortee.ts`) avant de les poser, ou choisissez le bundle (2).
 - **Les fichiers annexes** : `bibliotheque.js` et `polices.js` à côté de la page, ou
   `definirBaseAnnexes('/static/svg/')` (`src/io/annexes.ts`) avant le premier chargement.
+- **La langue** (ADR-0042) : `await preparerLangue('en')` (`src/io/langue.ts`) avant de monter le composant, ou la propriété
+  `langue` ; et, pour que les constantes de module soient traduites aussi, l’amorce d’avant le code (`window.__langueSvgLangue = 'en'`
+  et `langue-en.js` chargé avant votre bundle, voir « La langue : l’amorce »). Tout texte de l’interface passe par `t('…')`
+  (`src/util/i18n.ts`) : en français, la clé elle-même ; en anglais, l’entrée du dictionnaire. Les nombres et dates suivent la locale de la langue (`nombre`, `locale`). Pour proposer le changement de langue dans
+  le menu Aide, posez `definirChangementLangue(l => …)` (`src/zones/langue.ts`) ; sans lui, le menu n’en parle pas.
 - **vtracer** : rien à configurer. `EditeurSvg` importe `io/image.ts` (l’export PNG), qui connaît le
   chargeur du traceur ; celui-ci ne pose une balise `<script>` vers `vtracer.js` que si une vectorisation
   est demandée, ce que l’éditeur ne fait jamais. Le WebAssembly n’entre pas dans votre bundle.

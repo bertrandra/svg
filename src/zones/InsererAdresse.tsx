@@ -15,15 +15,17 @@ import type { Modele } from './typesEditeur.js';
 import { useFocusDialogue } from './focusEditeur.js';
 import { ChampAdresse, texteDuSvg, useTelechargement, type Recu } from './OuvrirAdresse.js';
 import { estImage } from '../engine/natureOctets.js';
+import { t } from '../util/i18n.js';
 
-export const PHRASE_IMAGE_EDITEUR = 'C’est une image : l’éditeur ne garde que des formes vectorielles. Fermez l’éditeur, puis ouvrez cette adresse dans « Convertir une image », qui la vectorise.';
+// La cle francaise (le module se charge avant la langue, `t` y rend la cle) : le refus la repasse par `t` au moment de le dire.
+export const PHRASE_IMAGE_EDITEUR = t('C’est une image : l’éditeur ne garde que des formes vectorielles. Fermez l’éditeur, puis ouvrez cette adresse dans « Convertir une image », qui la vectorise.');
 
 /**
  * Le texte SVG a inserer, tire d'un fichier recu ; ou la phrase du refus. Le texte d'un SVG devient des lettres, comme a l'ouverture.
  * `modele` : celui de l'editeur (ADR-0012, annexe 5 §3), dans lequel `insererForme` le lira.
  */
 export async function svgAInserer(r: Recu, modele: Modele = 'plat'): Promise<{ svg: string } | { erreur: string }> {
-  if (estImage(r.nature)) return { erreur: PHRASE_IMAGE_EDITEUR };
+  if (estImage(r.nature)) return { erreur: t(PHRASE_IMAGE_EDITEUR) };
   let texte: string;
   if (r.nature === 'pdf') {
     const lu = await ouvrirPdf(r.octets, 1);
@@ -34,7 +36,7 @@ export async function svgAInserer(r: Recu, modele: Modele = 'plat'): Promise<{ s
   }
   const propre = nettoyerSvgNomme(texte);
   if (propre && 'erreur' in propre) return { erreur: propre.erreur };
-  if (!propre) return { erreur: 'Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.' };
+  if (!propre) return { erreur: t('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.') };
   let svg = propre.svg;
   if (contientTexte(svg)) {
     const lettres = await lettresDuSvg(svg, undefined, modele);
@@ -52,7 +54,7 @@ export function BoiteInsererAdresse({ fermer }: { fermer: () => void }) {
   const voile = useRef<HTMLDivElement>(null), champ = useRef<HTMLInputElement>(null), titre = useId();
   const [message, poserMessage] = useState('');
   const [lecture, poserLecture] = useState(false);
-  const t = useTelechargement(r => {
+  const telechargement = useTelechargement(r => {
     poserLecture(true);
     void svgAInserer(r, modele).then(x => {
       poserLecture(false);
@@ -65,12 +67,12 @@ export function BoiteInsererAdresse({ fermer }: { fermer: () => void }) {
   return createPortal(
     <div className="credits-voile" ref={voile}>
       <div className="credits-dialogue inserer-adresse" role="dialog" aria-modal="true" aria-labelledby={titre} aria-busy={lecture}>
-        <h2 id={titre}>Insérer depuis une adresse</h2>
-        <ChampAdresse t={t} champ={champ} aide="Un SVG, ou la première page d’un PDF, inséré au centre du plan." />
+        <h2 id={titre}>{t('Insérer depuis une adresse')}</h2>
+        <ChampAdresse t={telechargement} champ={champ} aide={t('Un SVG, ou la première page d’un PDF, inséré au centre du plan.')} />
         {message ? <p className="message" role="alert">{message}</p> : null}
-        {lecture ? <p className="aide" role="status">Lecture du fichier…</p> : null}
+        {lecture ? <p className="aide" role="status">{t('Lecture du fichier…')}</p> : null}
         <div className="actions">
-          <button type="button" onClick={fermer}>Fermer</button>
+          <button type="button" onClick={fermer}>{t('Fermer')}</button>
         </div>
       </div>
     </div>,

@@ -19,9 +19,12 @@ import { FournisseurReperes, useReperes, type OptionsGuide } from './contexteGui
 import { dateCourte, garderBrouillon, lireBrouillon, oublierBrouillon, type Brouillon } from './session.js';
 import { stockageNavigateur } from '../io/stockage.js';
 import { statistiques } from '../engine/editionSvg.js';
-import { insecables, nomDeFichier } from '../util/texte.js';
+import { insecables, nomDeFichier, pluriel } from '../util/texte.js';
 import { lireDessinMemo } from './lecture.js';
 import { garderModele, MODELE_PAGE, modeleRetenu, refusAvecRepli, refusModele } from './modele.js';
+import { avertissementLangue } from '../io/langue.js';
+import { estLangue, LANGUES, langue, t } from '../util/i18n.js';
+import { changementLangue, NOMS_LANGUES } from './langue.js';
 import type { Modele } from './typesEditeur.js';
 import { nettoyerSvgNomme } from '../util/svg.js';
 import { DialogueCredits } from './Credits.js';
@@ -50,12 +53,12 @@ export const EXEMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240
 
 export const NUANCIER_EXEMPLE = 'Rouge #c81e28\nBleu #1428a0\nEncre #15181d\nBlanc #ffffff';
 
-/** Chaque voie : son icone, son titre, son aide. Leur ordre vient du public (publics.ts, ordreDesVoies). */
-const VOIES: Readonly<Record<Voie, readonly [NomIcone, string, string]>> = {
-  svg: ['ouvrir', 'Ouvrir un SVG ou un PDF', 'Un fichier SVG ou PDF, du code collé, ou l’exemple'],
-  image: ['image', 'Convertir une image', 'PNG, JPG… en vecteurs, fond détouré'],
-  formes: ['scene', 'Bibliothèque', 'Plus de 4 000 formes par événement']
-};
+/** Chaque voie : son icone, son titre, son aide. Leur ordre vient du public (publics.ts, ordreDesVoies). Une fonction : les textes se traduisent au rendu, apres que la langue est posee (ADR-0042). */
+const voies = (): Readonly<Record<Voie, readonly [NomIcone, string, string]>> => ({
+  svg: ['ouvrir', t('Ouvrir un SVG ou un PDF'), t('Un fichier SVG ou PDF, du code collé, ou l’exemple')],
+  image: ['image', t('Convertir une image'), t('PNG, JPG… en vecteurs, fond détouré')],
+  formes: ['scene', t('Bibliothèque'), t('Plus de 4 000 formes par événement')]
+});
 
 // La page est ce qui connait le magasin : le brouillon et les versions de l'editeur vont dans le navigateur.
 const STOCKAGE = stockageNavigateur();
@@ -81,7 +84,8 @@ function Accueil() {
   // Un fichier ouvert depuis une adresse (ADR-0036) va a la voie de sa nature, decidee sur ses octets.
   const reception = useReception(poserVoie);
   // Un message a un ton : un avertissement (ambre, par defaut) ou une information (neutre), qui ne se ressemblent pas.
-  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: '', ton: 'alerte' });
+  // Au depart, ce que la langue n'a pas pu faire (ADR-0042 : l'annexe du dictionnaire manque), dit une fois.
+  const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>(() => ({ texte: avertissementLangue() ?? '', ton: 'alerte' }));
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
   const informer = useCallback((texte: string) => poserMessage({ texte, ton: 'info' }), []);
   const [credits, poserCredits] = useState(false);
@@ -130,11 +134,11 @@ function Accueil() {
   const ouvrir = (nom: string, texte: string, ignores: readonly string[] = [], production: ChoixProduction | null = depart()) => {
     const propre = nettoyerSvgNomme(texte);
     if (propre && 'erreur' in propre) { dire(propre.erreur); return; }
-    if (!propre) { dire('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.'); return; }
+    if (!propre) { dire(t('Ce contenu n’est pas un SVG lisible : il lui faut une balise <svg> avec un viewBox ou des dimensions.')); return; }
     // Du texte : ses lettres deviennent des formes avec les fontes de la page, chargees a la demande (ADR-0020).
     // Le modele de lecture (ADR-0012, annexe 5 §3) : le reglage garde, celui que l'editeur reprendra a l'ouverture.
     const modele = modeleDeLaPage();
-    if (contientTexte(propre.svg)) { dire('Lecture du texte…', 'info'); void lettresDuSvg(propre.svg, undefined, modele).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
+    if (contientTexte(propre.svg)) { dire(t('Lecture du texte…'), 'info'); void lettresDuSvg(propre.svg, undefined, modele).then(r => ('erreur' in r ? dire(r.erreur) : ouvrir(nom, r.svg, [...ignores, ...r.ignores], production))); return; }
     const lu = lireDessinMemo(propre.svg, modele);
     if ('erreur' in lu) { dire(refusAvecRepli(propre.svg, lu.erreur, modele)); return; }
     poserFichier({ nom: sansExtension(nom), svg: propre.svg, ignores, ...(production ? { production } : {}) });
@@ -152,8 +156,8 @@ function Accueil() {
   return (
     <main className="accueil">
       <header className="tete">
-        <h1>Éditeur SVG</h1>
-        <p>Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un fichier propre, pour l’écran ou pour une machine de découpe. Rien ne quitte votre navigateur.</p>
+        <h1>{t('Éditeur SVG')}</h1>
+        <p>{t('Ouvrez un dessin vectoriel, convertissez une image, ou prenez une forme dans la bibliothèque ; retouchez en plein écran comme dans un logiciel de dessin, et récupérez un fichier propre, pour l’écran ou pour une machine de découpe. Rien ne quitte votre navigateur.')}</p>
       </header>
 
       {message.texte ? <Message ton={message.ton}>{message.texte}</Message> : null}
@@ -186,19 +190,20 @@ function Accueil() {
       <NuancierPage texte={nuancierTexte} poserTexte={poserNuancierTexte} teintes={nuancier.length} />
 
       <footer className="pied">
-        <p className="aide">Les formes de la bibliothèque viennent de <a href="https://game-icons.net" rel="noreferrer">game-icons.net</a> et de ses contributeurs (licence <a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>) ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.</p>
-        <p className="aide"><button type="button" className="discret" onClick={() => poserCredits(true)}>À propos et crédits</button></p>
+        <p className="aide">{t('Les formes de la bibliothèque viennent de ')}<a href="https://game-icons.net" rel="noreferrer">game-icons.net</a>{t(' et de ses contributeurs (licence ')}<a href="https://creativecommons.org/licenses/by/3.0/" rel="noreferrer">CC BY 3.0</a>{t(') ; la vectorisation emploie vtracer (Vision Cortex). Tout se calcule dans votre navigateur.')}</p>
+        <p className="aide"><button type="button" className="discret" onClick={() => poserCredits(true)}>{t('À propos et crédits')}</button></p>
+        <ChoixLangue />
       </footer>
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
 
       {fichier && edition ? (
         <EditeurSvg svg={fichier.svg} titre={fichier.nom + '.svg'} nom={fichier.nom} nuancier={nuancier} bibliotheque="a-charger" brouillon={garder} stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE} guide={guide} ignores={fichier.ignores}
-          production={fichier.production} libelleEnregistrer="Terminer" fermerSansModification policesEnLigne
+          production={fichier.production} libelleEnregistrer={t('Terminer')} fermerSansModification policesEnLigne
           fermer={() => { poserEdition(false); demanderVisite(false); }}
           enregistrer={s => {
             // Le dessin rendu porte sa marque s'il a ete prepare : la reprise de l'edition la relit, le depart ne sert plus.
             poserFichier({ nom: fichier.nom, svg: s }); garderBrouillon(STOCKAGE, fichier.nom, s, Date.now()); poserEdition(false); demanderVisite(false);
-            dire('Dessin prêt : téléchargez-le en SVG, ou choisissez un autre format.', 'info');
+            dire(t('Dessin prêt : téléchargez-le en SVG, ou choisissez un autre format.'), 'info');
             poserRetour(n => n + 1);
           }} />
       ) : null}
@@ -214,20 +219,36 @@ function Accueil() {
 }
 
 /**
+ * Le selecteur de langue de l'accueil (ADR-0042) : « Français / English », discret, au pied. Choisir ecrit le reglage et recharge la
+ * page, par le geste que demarrer.tsx a pose ; sans geste pose (un hote), rien. Le nom de chaque langue est dans sa langue.
+ */
+function ChoixLangue() {
+  const changer = changementLangue();
+  if (!changer) return null;
+  return (
+    <p className="aide choix-langue">
+      <label>{t('Langue')} <select value={langue()} onChange={e => { if (estLangue(e.target.value)) changer(e.target.value); }}>
+        {LANGUES.map(l => <option key={l} value={l} lang={l}>{NOMS_LANGUES[l]}</option>)}
+      </select></label>
+    </p>
+  );
+}
+
+/**
  * Le bandeau de reprise (un dessin etait en cours) : reprendre ou oublier le brouillon. Un brouillon ecrit en modele riche ne se reprend pas
  * a plat (ADR-0012, annexe 5 §3) : le bandeau le dit, et propose d'activer le modele riche pour le reprendre ; rien n'est efface.
  */
 function RepriseBrouillon({ brouillon, reprendre, oublier }: { brouillon: Brouillon; reprendre: () => void; oublier: () => void }) {
   const refus = refusModele(brouillon.svg, modeleDeLaPage(), 'brouillon');
   return (
-    <section className="reprise" aria-label="Reprendre">
-      <p>Un dessin était en cours : <strong>{brouillon.nom}.svg</strong>, modifié le {dateCourte(brouillon.quand)}.</p>
+    <section className="reprise" aria-label={t('Reprendre')}>
+      <p>{t('Un dessin était en cours : ')}<strong>{brouillon.nom}.svg</strong>{t(', modifié le {date}.', { date: dateCourte(brouillon.quand) })}</p>
       {refus ? <p className="aide">{refus}</p> : null}
       <div className="actions">
         {refus
-          ? <button type="button" className="primaire" onClick={() => { garderModele(STOCKAGE, 'riche'); reprendre(); }}>Activer le modèle riche et reprendre</button>
-          : <button type="button" className="primaire" onClick={reprendre}>Reprendre</button>}
-        <button type="button" className="discret" onClick={oublier}>Oublier</button>
+          ? <button type="button" className="primaire" onClick={() => { garderModele(STOCKAGE, 'riche'); reprendre(); }}>{t('Activer le modèle riche et reprendre')}</button>
+          : <button type="button" className="primaire" onClick={reprendre}>{t('Reprendre')}</button>}
+        <button type="button" className="discret" onClick={oublier}>{t('Oublier')}</button>
       </div>
     </section>
   );
@@ -237,11 +258,11 @@ function RepriseBrouillon({ brouillon, reprendre, oublier }: { brouillon: Brouil
 function NuancierPage({ texte, poserTexte, teintes }: { texte: string; poserTexte: (t: string) => void; teintes: number }) {
   return (
     <details className="nuancier-page">
-      <summary>Nuancier proposé dans l’éditeur <span className="aide">{teintes} teinte{teintes > 1 ? 's' : ''}</span></summary>
+      <summary>{t('Nuancier proposé dans l’éditeur')} <span className="aide">{pluriel(teintes, 'teinte')}</span></summary>
       <label className="champ">
-        <span className="aide">Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.</span>
+        <span className="aide">{t('Une teinte par ligne, « Nom #rrggbb ». Ces couleurs sont proposées pour remplir, contourer et recolorer.')}</span>
         <textarea rows={5} value={texte} spellCheck={false} onChange={e => poserTexte(e.target.value)} />
-        <span className="aide">{teintes ? teintes + ' teinte' + (teintes > 1 ? 's' : '') + ' lue' + (teintes > 1 ? 's' : '') : 'Aucune teinte lue. Écrivez une teinte par ligne, par exemple « Rouge #c81e28 » ; sans teinte, l’éditeur ne propose que le sélecteur de couleur.'}</span>
+        <span className="aide">{teintes > 1 ? t('{n} lues', { n: pluriel(teintes, 'teinte') }) : teintes ? t('{n} lue', { n: pluriel(teintes, 'teinte') }) : t('Aucune teinte lue. Écrivez une teinte par ligne, par exemple « Rouge #c81e28 » ; sans teinte, l’éditeur ne propose que le sélecteur de couleur.')}</span>
       </label>
     </details>
   );
@@ -256,17 +277,17 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
     return 'erreur' in lu ? null : statistiques(lu.dessin);
   }, [fichier]);
   return (
-    <section className="resultat" aria-label="Dessin courant">
-      <img className="apercu" alt={'Aperçu de ' + fichier.nom} src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fichier.svg)} />
+    <section className="resultat" aria-label={t('Dessin courant')}>
+      <img className="apercu" alt={t('Aperçu de {nom}', { nom: fichier.nom })} src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fichier.svg)} />
       <div className="fiche">
         <h2>{fichier.nom}.svg</h2>
-        {stats ? <p className="aide">{stats.formes} forme{stats.formes > 1 ? 's' : ''} · {stats.points} points · {Math.max(1, Math.round(stats.octets / 1024))} Ko</p> : null}
+        {stats ? <p className="aide">{t('{formes} · {points} points · {ko} Ko', { formes: pluriel(stats.formes, 'forme'), points: stats.points, ko: Math.max(1, Math.round(stats.octets / 1024)) })}</p> : null}
         {/* Le geste du moment : recuperer le fichier. Reprendre l'edition et les autres formats restent a portee, en secondaires. */}
         <div className="actions">
-          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer, modeleDeLaPage())}>Télécharger le SVG</button>
-          <button type="button" onClick={reprendre}>Reprendre l’édition</button>
+          <button type="button" className="primaire" ref={telecharger} onClick={() => telechargerSvgPage(fichier.svg, fichier.nom, informer, modeleDeLaPage())}>{t('Télécharger le SVG')}</button>
+          <button type="button" onClick={reprendre}>{t('Reprendre l’édition')}</button>
           <MenuAutresFormats svg={fichier.svg} nom={fichier.nom} dire={informer} modele={modeleDeLaPage()} />
-          <button type="button" className="discret" onClick={fermer}>Fermer</button>
+          <button type="button" className="discret" onClick={fermer}>{t('Fermer')}</button>
         </div>
       </div>
     </section>
@@ -280,10 +301,10 @@ function FicheResultat({ fichier, telecharger, informer, reprendre, fermer }: {
  */
 export function Voies({ ordre, voie, poserVoie, children }: { ordre: readonly Voie[]; voie: Voie; poserVoie: (v: Voie) => void; children: Readonly<Record<Voie, ReactNode>> }) {
   return (
-    <section className="voies" aria-label="Par où commencer">
-      <div className="voies-choix" role="tablist" aria-label="Point de départ">
+    <section className="voies" aria-label={t('Par où commencer')}>
+      <div className="voies-choix" role="tablist" aria-label={t('Point de départ')}>
         {ordre.map((id, i) => {
-          const [icone, titre, aide] = VOIES[id];
+          const [icone, titre, aide] = voies()[id];
           return (
             <button key={id} type="button" role="tab" id={'voie-' + id} aria-selected={voie === id} aria-controls={'panneau-' + id} tabIndex={voie === id ? 0 : -1} className="voie"
               onClick={() => poserVoie(id)}
@@ -318,8 +339,8 @@ function Invitation({ essayer }: { essayer: () => void }) {
   if (memoire.visite) return null;
   return (
     <p className="invitation">
-      <span>{insecables('Première fois ? Essayez avec notre exemple : changez une couleur en une minute.')}</span>
-      <button type="button" className="discret" onClick={essayer}>Essayer avec la visite guidée</button>
+      <span>{insecables(t('Première fois ? Essayez avec notre exemple : changez une couleur en une minute.'))}</span>
+      <button type="button" className="discret" onClick={essayer}>{t('Essayer avec la visite guidée')}</button>
     </p>
   );
 }
@@ -351,28 +372,28 @@ export function OuvrirSvg({ ouvrir, dire, essayer, invitation, reception }: { ou
     if (/<svg[\s>]/i.test(t)) ouvrir('dessin', t);
   };
   return (
-    <section className="ouvrir" aria-label="Ouvrir un SVG ou un PDF">
-      <h2 className="sr-only">Ouvrir un SVG ou un PDF</h2>
+    <section className="ouvrir" aria-label={t('Ouvrir un SVG ou un PDF')}>
+      <h2 className="sr-only">{t('Ouvrir un SVG ou un PDF')}</h2>
       <div className={'depot' + (survol ? ' survol' : '')} onDragOver={e => { e.preventDefault(); poserSurvol(true); }} onDragLeave={() => poserSurvol(false)} onDrop={deposer}>
-        <p>Déposez un fichier SVG ou PDF ici, ou</p>
+        <p>{t('Déposez un fichier SVG ou PDF ici, ou')}</p>
         <div className="actions">
-          <button type="button" className={pdf.choix ? undefined : 'primaire'} onClick={() => entree.current?.click()}>Choisir un fichier…</button>
-          <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>Ouvrir l’exemple</button>
+          <button type="button" className={pdf.choix ? undefined : 'primaire'} onClick={() => entree.current?.click()}>{t('Choisir un fichier…')}</button>
+          <button type="button" onClick={() => ouvrir('exemple', EXEMPLE)}>{t('Ouvrir l’exemple')}</button>
         </div>
         <input ref={entree} type="file" accept=".svg,image/svg+xml,.pdf,application/pdf" hidden onChange={e => { ouvrirFichier(e.target.files?.[0]); e.target.value = ''; }} />
         {invitation ? <Invitation essayer={essayer} /> : null}
       </div>
-      {reception ? <ChampAdresse t={adresse} aide="Un SVG, un PDF ou une image PNG, JPEG, GIF, WebP ou BMP." /> : null}
+      {reception ? <ChampAdresse t={adresse} aide={t('Un SVG, un PDF ou une image PNG, JPEG, GIF, WebP ou BMP.')} /> : null}
       <ChoixPagePdf pdf={pdf} />
       <label className="champ">
-        <span>Ou collez le code d’un SVG</span>
+        <span>{t('Ou collez le code d’un SVG')}</span>
         <textarea rows={4} value={code} spellCheck={false} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;>…</svg>" onChange={e => poserCode(e.target.value)}
           onPaste={e => {
             // Une adresse collee seule, a la place d'un code : coller est le geste qui demande le fichier, comme « Ouvrir ».
             const texte = e.clipboardData.getData('text/plain');
             if (reception && adressesPermises() && estAdresseSeule(texte)) { e.preventDefault(); adresse.lancer(texte.trim()); }
           }} />
-        <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>Ouvrir ce code</button>
+        <button type="button" className="discret" disabled={!code.trim()} onClick={() => ouvrir('dessin', code)}>{t('Ouvrir ce code')}</button>
       </label>
     </section>
   );

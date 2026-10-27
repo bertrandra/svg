@@ -6,6 +6,8 @@ s'embarque aussi comme composant React dans un autre produit.
 
 ## Ce que fait la page
 
+- **En français, et en anglais** : l'interface est en français par défaut ; « English » au pied de l'accueil ou au menu Aide la
+  passe en anglais (réglage gardé dans le navigateur, dictionnaire `langue-en.js` chargé à la demande ; ADR-0042, traduction en cours).
 - **Un accueil par public** : « Pour quoi dessinez-vous ? » (machine de découpe, retouche, intégration), facultatif et retenu ; chaque public voit son circuit jusqu’au fichier prêt, les voies dans son ordre, l’éditeur réglé pour une Cricut (Maker, découpe, millimètres) ou, pour les intégrateurs, l’embarquement expliqué et essayé comme un hôte (ADR-0024).
 - **Ouvrir un SVG ou un PDF** : un fichier déposé ou choisi, un code SVG collé, ou l'exemple ; d'un PDF, les tracés et le texte de la première page (ou de celle qu'on choisit) deviennent des formes, et ce qui n'est pas repris est dit (ADR-0020).
 - **Convertir une image en SVG** : PNG, JPG, GIF ou WebP, affiché dès le dépôt, fond détouré
@@ -116,7 +118,7 @@ Prérequis : Node 20 ou plus.
 ```bash
 npm ci
 npm run verifier     # typecheck + lint + cliquet + tests : ce que lance la CI
-npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
+npm run construire   # dist/editeur-svg.html (la page), dist/vtracer.js, dist/bibliotheque.js, dist/polices.js, dist/polices-catalogue.js, dist/polices-apercus.js, dist/langue-en.js, dist/editeur-svg-embarque.js, dist/php/ (le site PHP)
 npm run test:php     # les tests du site PHP (PHP 8.1+, cURL), sans dépendance
 npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|webkit pour les autres), après construire
 ```
@@ -135,6 +137,8 @@ npm run e2e          # les tests de navigateur (Chromium ; NAVIGATEUR=firefox|we
 | `npm run e2e` | Plus de 270 tests de navigateur (Playwright dans vitest) sur la page construite ; `NAVIGATEUR` = `chromium` (défaut), `firefox` ou `webkit` ; `CHROMIUM_PATH` facultatif, pour Chromium seul ; hors `npm test`. Navigateurs promis : [`docs/navigateurs.md`](docs/navigateurs.md) ; vérification à la main : [`docs/verification-manuelle.md`](docs/verification-manuelle.md) |
 | `npm run bibliotheque` | La bibliothèque seule : `dist/bibliotheque.js` et une annexe par source libre, `dist/bibliotheque-<source>.js` |
 | `npm run polices` | Les dix fontes seules, `dist/polices.js`, et l'index des polices téléchargeables, `dist/polices-catalogue.js` (tiré de l'instantané commis `data/catalogue-polices.json`, sans réseau), et ses aperçus, `dist/polices-apercus.js` (tirés de `data/apercus-polices.json`) |
+| `npm run langues` | Le dictionnaire anglais seul : `dist/langue-en.js`, fusion de `src/i18n/en/*.json` (ADR-0042) ; `node scripts/langues.mjs --trier` range les clés |
+| `npm run i18n:restes` | Les textes français encore hors de `t('…')`, par fichier (`npm run i18n:restes -- src/zones` : le détail) ; le plafond est `tests/fixtures/i18n/restes.json` |
 | `node scripts/catalogue-polices.mjs` | À la main seulement : rafraîchit l'instantané `data/catalogue-polices.json` depuis Fontsource, jsDelivr, GitLab et Fontshare (`NODE_USE_ENV_PROXY=1` derrière un proxy) ; une version remplacée passe dans `anciennes`, pour qu'un dessin d'hier se recompose (ADR-0025) |
 | `node scripts/apercus-polices.mjs` | À la main seulement, après l'index : redessine `data/apercus-polices.json`, le nom de chaque famille dans sa propre fonte (chaque fichier vérifié par l'empreinte de l'index ; `APERCUS_CACHE=<dossier>` garde les fichiers téléchargés) (ADR-0026) |
 
@@ -145,21 +149,24 @@ d'elle, ils se chargent à la demande (au premier tracé, à l'ouverture de la b
 ## Le site PHP
 
 Une autre cible, à côté de la page autonome (qui ne change pas) : `npm run construire` écrit aussi `dist/php/`, un site PHP où l’on
-retrouve ses **projets** d’une session à l’autre, derrière un **mot de passe** (ADR-0030). Un projet n’est pas le SVG mais le JSON
+retrouve ses **projets** d’une session à l’autre, avec un **compte** (ADR-0030, ADR-0041). Un projet n’est pas le SVG mais le JSON
 natif du modèle, avec tout ce qu’il faut pour le rouvrir à l’identique (formes, textes vivants, opérations Cricut, contexte de
 production, nuancier, fonte déposée, image source) ; le SVG reste un export.
 
-- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : la connexion, puis l’écran
-  « Projets » ; `api.php` : projets, données, polices) ; `data/` est dedans, refusé au Web par son `.htaccess` (`data/pwd`,
-  `data/projets`, `data/json`, `data/font`), ou à côté de `public/` pour qui a la main sur le serveur.
-- Le mot de passe se choisit dans la page à la première visite, ou par un fichier `data/password` (converti en empreinte, puis
-  supprimé), ou par `php inc/mot-de-passe.php` ; seule son empreinte est gardée.
+- `public/` est le seul dossier à envoyer (par FTP, sans réglage) et la racine web (`index.php` : installation, connexion,
+  inscription, puis l’écran « Projets » ; `api.php` : projets, compte, administration, données, polices) ; `data/` est dedans,
+  refusé au Web par son `.htaccess`, et porte tout le reste : le code (`data/inc/`), les réglages (`data/config/config.json`), les
+  comptes, les sessions, les projets (un dossier par compte), les JSON et les fontes ; ou à côté de `public/` pour qui a la main
+  sur le serveur.
+- Des comptes : l’administrateur se crée à la première visite (ou par `php data/inc/compte.php --admin`) ; une personne s’inscrit,
+  confirme son adresse par mail, puis un administrateur l’approuve (écran « Comptes ») ; mot de passe oublié par mail ; chaque
+  compte a sa langue (français, anglais) ; les mots de passe ne sont gardés qu’en empreinte.
 - « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
   Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
 - Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
   est téléchargée et vérifiée par le serveur, puis gardée dans `data/font`.
 
-Installation sur un hébergeur (où poser `public/` et `data/`, droits, mot de passe, HTTPS, mise à jour) :
+Installation sur un hébergeur (où poser `public/` et `data/`, droits, comptes, courrier, HTTPS, mise à jour) :
 [`docs/deploiement-php.md`](docs/deploiement-php.md) ; sécurité : [`docs/securite.md`](docs/securite.md), § 9.
 
 ## Embarquer l'éditeur
@@ -201,7 +208,7 @@ rien changer. Il passe `modele: 'riche'` pour garder groupes, dégradés, décou
 | `src/export/` | Le PDF vectoriel, le SVG de découpe, l'export pour Cricut et Print Then Cut. Pur |
 | `src/io/` | Ce qui touche au navigateur : décoder une image, rendre un PNG, appeler vtracer (WASM), charger la bibliothèque et les fontes, télécharger, copier ; le seul réseau (`policesEnLigne.ts`, et `serveur.ts` pour le site PHP) |
 | `src/site/` | Le site PHP (ADR-0030) : un hôte de l’éditeur, l’écran « Projets », le projet composé depuis l’état de l’éditeur |
-| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `config.php`, `inc/`), `data/.htaccess`, `public/inc/mot-de-passe.php` ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
+| `outils/site-php/` | Le PHP du site : `public/` (`index.php`, `api.php`, `.htaccess` : trois lignes) et `data/` (`.htaccess`, `inc/` : tout le code, dont `compte.php` en ligne de commande et `serveur-local.php` pour `php -S`) ; `scripts/site-php.mjs` l’assemble dans `dist/php/` |
 | `tests/php/` | Les tests du site PHP, sans dépendance (`npm run test:php`) |
 | `src/zones/` | `EditeurSvg.tsx` (le composant) et ses trois contextes (`contexteEditeur.tsx`), les barres (`BarreOutils`, `BarreSelection`, `MenusBarre`), les panneaux (`Calques`, `Inspecteur`, `PanneauDessin`, `ParCouleur`, `Texte`, `Palettes`, `Versions`, `Exporter`), `commun/` (`Bouton`, `Menu`, `Section`), `Vectoriser.tsx`, `Bibliotheque.tsx`, `Application.tsx` (la page) |
 | `bibliotheque/` | `corrections.json` : les corrections de nom et de classement posées à la main, appliquées à la construction |

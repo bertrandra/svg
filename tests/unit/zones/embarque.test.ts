@@ -43,6 +43,12 @@ describe('verifierOptions', () => {
     expect(verifierOptions({ svg: SVG, onEnregistrer: ok, fermerApresEnregistrer: 'oui' })).toMatch(/« fermerApresEnregistrer »/);
   });
 
+  // ADR-0042 : la langue est fr ou en, fr par defaut ; toute autre valeur est refusee en la nommant, en francais.
+  it('accepte « langue » fr, en ou absente, et refuse tout le reste', () => {
+    for (const v of ['fr', 'en', undefined]) expect(verifierOptions({ svg: SVG, onEnregistrer: ok, langue: v }), String(v)).toBeNull();
+    for (const v of ['de', 'EN', 'en-US', '', 1, true, null, {}]) expect(verifierOptions({ svg: SVG, onEnregistrer: ok, langue: v }), String(v)).toBe('L’option « langue » doit être « fr » (par défaut) ou « en ».');
+  });
+
   // ADR-0025 : les polices en ligne ne s'ouvrent que sur un vrai booleen ; absente, l'option vaut faux (aucune requete).
   it('accepte « policesEnLigne » vrai, faux ou absent, et refuse tout le reste', () => {
     for (const v of [true, false, undefined]) expect(verifierOptions({ svg: SVG, onEnregistrer: ok, policesEnLigne: v }), String(v)).toBeNull();

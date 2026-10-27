@@ -15,6 +15,8 @@
 import { LIMITE_MITRE_DEFAUT, boiteAvecTrait, depart, opaciteDuContour, opaciteDuRemplissage, pointillesEcrits, unir, type Boite, type Chemin, type Forme } from '../engine/editionSvg.js';
 import type { DessinPlat } from '../engine/aplatir.js';
 import { lireHex, superposer, versCmjnNaif, type Rgb } from '../util/couleur.js';
+import { t } from '../util/i18n.js';
+import { pluriel } from '../util/texte.js';
 import { PT_PAR_POUCE, poucesParUnite, type Taille } from './dimensions.js';
 
 export interface OptionsEps {
@@ -118,10 +120,12 @@ export function ecrireEps(dessin: DessinPlat, options: OptionsEps = {}): Resulta
   const corps = peintes.map(f => ecrireForme(f, ctx, X, Y));
   const avertissements: string[] = [];
   if (ctx.translucides) {
-    const n = ctx.translucides, s = n > 1 ? 's' : '';
-    avertissements.push(n + ' forme' + s + ' translucide' + s + ' : l’EPS ne représente pas l’opacité, ' + (ctx.aplatir ? 'elle est aplatie sur du blanc (un recouvrement ne se voit plus à travers).' : 'elle est ignorée (la forme est peinte pleinement opaque).'));
+    const formes = pluriel(ctx.translucides, 'forme translucide');
+    avertissements.push(ctx.aplatir
+      ? t('{formes} : l’EPS ne représente pas l’opacité, elle est aplatie sur du blanc (un recouvrement ne se voit plus à travers).', { formes })
+      : t('{formes} : l’EPS ne représente pas l’opacité, elle est ignorée (la forme est peinte pleinement opaque).', { formes }));
   }
-  if (ctx.cmjn) avertissements.push('CMJN naïf, sans profil ICC : une indication de saturation, pas une séparation. Pour l’imprimeur, convertissez avec son profil.');
+  if (ctx.cmjn) avertissements.push(t('CMJN naïf, sans profil ICC : une indication de saturation, pas une séparation. Pour l’imprimeur, convertissez avec son profil.'));
   const entete = [
     '%!PS-Adobe-3.0 EPSF-3.0',
     '%%Creator: svg',

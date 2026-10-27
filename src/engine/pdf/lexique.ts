@@ -1,10 +1,12 @@
 // Le decoupage d'un PDF en jetons, puis en objets (ISO 32000-1, 7.2 et 7.3), sur des octets : un PDF est un fichier binaire.
 // Un balayage lineaire ecrit a la main, comme `util/xml.ts` : chaque octet est lu une fois, l'imbrication des tableaux et des
-// dictionnaires est bornee, et un texte casse leve `SyntaxePdf` (que la lecture rattrape et nomme), jamais autre chose.
+// dictionnaires est bornee, et un texte casse leve `SyntaxePdf` (que la lecture rattrape et nomme), jamais autre chose. Le message
+// d'une `SyntaxePdf` est un texte pour la personne (« Ce PDF ne se lit pas : {raison}. ») : il passe par `t` (ADR-0042).
 // Le meme lecteur sert a la structure du fichier (ou `12 0 R` est un renvoi) et aux flux de contenu (ou il n'y en a pas).
 
 import { LIMITES_PDF, SyntaxePdf } from './limites.js';
 import { Mot, type Chaine, type Dict, type ObjetPdf } from './objets.js';
+import { t } from '../../util/i18n.js';
 
 const BLANC = new Uint8Array(256);
 for (const c of [0, 9, 10, 12, 13, 32]) BLANC[c] = 1;
@@ -61,10 +63,10 @@ export class Lecteur {
     if (c === 62) {
       if (o[this.pos + 1] === 62) { this.pos += 2; return mot('>>'); }
       this.pos++;
-      throw new SyntaxePdf('un « > » isolé');
+      throw new SyntaxePdf(t('un « > » isolé'));
     }
     if (c === 91 || c === 93 || c === 123 || c === 125) { this.pos++; return mot(String.fromCharCode(c)); }
-    if (c === 41) { this.pos++; throw new SyntaxePdf('une « ) » isolée'); }
+    if (c === 41) { this.pos++; throw new SyntaxePdf(t('une « ) » isolée')); }
     return this.motCle();
   }
 
@@ -102,7 +104,7 @@ export class Lecteur {
       }
       s += String.fromCharCode(c);
       this.pos++;
-      if (this.pos - debut > 1024) throw new SyntaxePdf('un nom dépasse 1 024 caractères');
+      if (this.pos - debut > 1024) throw new SyntaxePdf(t('un nom dépasse 1 024 caractères'));
     }
     return s;
   }
@@ -129,7 +131,7 @@ export class Lecteur {
       // Par paquets : String.fromCharCode(...t) deborde la pile au-dela de quelques dizaines de milliers d'arguments.
       if (codes.length >= 8192) { morceaux += String.fromCharCode(...codes); codes.length = 0; }
     }
-    throw new SyntaxePdf('une chaîne de texte n’est jamais fermée');
+    throw new SyntaxePdf(t('une chaîne de texte n’est jamais fermée'));
   }
 
   private chaineHexa(): Chaine {
@@ -143,18 +145,18 @@ export class Lecteur {
         return { t: 'chaine', v: morceaux + String.fromCharCode(...codes) };
       }
       const v = hex(c);
-      if (v < 0) { if (BLANC[c] === 1) continue; throw new SyntaxePdf('une chaîne hexadécimale porte un caractère étranger'); }
+      if (v < 0) { if (BLANC[c] === 1) continue; throw new SyntaxePdf(t('une chaîne hexadécimale porte un caractère étranger')); }
       if (moitie < 0) moitie = v; else { codes.push(moitie * 16 + v); moitie = -1; }
       if (codes.length >= 8192) { morceaux += String.fromCharCode(...codes); codes.length = 0; }
     }
-    throw new SyntaxePdf('une chaîne hexadécimale n’est jamais fermée');
+    throw new SyntaxePdf(t('une chaîne hexadécimale n’est jamais fermée'));
   }
 
   private motCle(): Mot {
     const o = this.octets, debut = this.pos;
     while (this.pos < this.fin && !finitJeton(o[this.pos] ?? 0)) this.pos++;
-    if (this.pos === debut) { this.pos++; throw new SyntaxePdf('un caractère inattendu'); }
-    if (this.pos - debut > 256) throw new SyntaxePdf('un mot-clé dépasse 256 caractères');
+    if (this.pos === debut) { this.pos++; throw new SyntaxePdf(t('un caractère inattendu')); }
+    if (this.pos - debut > 256) throw new SyntaxePdf(t('un mot-clé dépasse 256 caractères'));
     let s = '';
     for (let i = debut; i < this.pos; i++) s += String.fromCharCode(o[i] ?? 0);
     return mot(s);
@@ -191,20 +193,20 @@ export function lireObjet(l: Lecteur, renvois: boolean, profondeur = 0): ObjetPd
 }
 
 function verifierProfondeur(profondeur: number): void {
-  if (profondeur > LIMITES_PDF.imbrication) throw new SyntaxePdf('des tableaux ou dictionnaires imbriqués sur plus de ' + LIMITES_PDF.imbrication + ' niveaux');
+  if (profondeur > LIMITES_PDF.imbrication) throw new SyntaxePdf(t('des tableaux ou dictionnaires imbriqués sur plus de {n} niveaux', { n: LIMITES_PDF.imbrication }));
 }
 
 function lireTableau(l: Lecteur, renvois: boolean, profondeur: number): ObjetPdf[] {
   verifierProfondeur(profondeur);
-  const t: ObjetPdf[] = [];
+  const tableau: ObjetPdf[] = [];
   for (;;) {
     const o = lireObjet(l, renvois, profondeur);
-    if (o === undefined) throw new SyntaxePdf('un tableau n’est jamais fermé');
+    if (o === undefined) throw new SyntaxePdf(t('un tableau n’est jamais fermé'));
     if (o instanceof Mot) {
-      if (o.v === ']') return t;
-      throw new SyntaxePdf('« ' + o.v.slice(0, 20) + ' » dans un tableau');
+      if (o.v === ']') return tableau;
+      throw new SyntaxePdf(t('« {mot} » dans un tableau', { mot: o.v.slice(0, 20) }));
     }
-    t.push(o);
+    tableau.push(o);
   }
 }
 
@@ -214,13 +216,13 @@ function lireDict(l: Lecteur, renvois: boolean, profondeur: number): Dict {
   for (;;) {
     const cle = lireObjet(l, renvois, profondeur);
     if (cle instanceof Mot && cle.v === '>>') return d;
-    if (typeof cle !== 'string') throw new SyntaxePdf(cle === undefined ? 'un dictionnaire n’est jamais fermé' : 'une clé de dictionnaire qui n’est pas un nom');
+    if (typeof cle !== 'string') throw new SyntaxePdf(cle === undefined ? t('un dictionnaire n’est jamais fermé') : t('une clé de dictionnaire qui n’est pas un nom'));
     const v = lireObjet(l, renvois, profondeur);
-    if (v === undefined) throw new SyntaxePdf('un dictionnaire n’est jamais fermé');
+    if (v === undefined) throw new SyntaxePdf(t('un dictionnaire n’est jamais fermé'));
     if (v instanceof Mot) {
       // Une cle sans valeur avant la fermeture : les lecteurs courants l'oublient, on fait de meme.
       if (v.v === '>>') return d;
-      throw new SyntaxePdf('« ' + v.v.slice(0, 20) + ' » comme valeur de dictionnaire');
+      throw new SyntaxePdf(t('« {mot} » comme valeur de dictionnaire', { mot: v.v.slice(0, 20) }));
     }
     // Une valeur nulle equivaut a une cle absente (7.3.7).
     if (v !== null) d.set(cle, v);

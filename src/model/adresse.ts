@@ -2,6 +2,7 @@
 // tire. Pur : aucune requete ici ; le reseau vit dans io/adresse.ts (page autonome) et io/serveur.ts (site PHP), et la decision du
 // type de fichier se prend sur les octets recus (engine/natureOctets.ts), jamais sur l'adresse.
 
+import { t } from '../util/i18n.js';
 import { nomDeFichier } from '../util/texte.js';
 
 /** Une adresse plus longue n'est pas une adresse de fichier qu'on tape : on la refuse avant toute requete. */
@@ -34,19 +35,19 @@ export const estAdresseSeule = (texte: string): boolean => /^https?:\/\/[^\s<>"]
  */
 export function validerAdresse(texte: string, options: OptionsAdresse = {}): AdresseValide | { readonly erreur: string } {
   const brut = texte.trim();
-  if (!brut) return { erreur: 'Saisissez l’adresse d’un fichier, par exemple « https://exemple.fr/dessin.svg ».' };
-  if (brut.length > LONGUEUR_ADRESSE_MAX) return { erreur: 'Cette adresse dépasse ' + LONGUEUR_ADRESSE_MAX + ' caractères : ce n’est pas une adresse de fichier qui s’ouvre ici.' };
+  if (!brut) return { erreur: t('Saisissez l’adresse d’un fichier, par exemple « https://exemple.fr/dessin.svg ».') };
+  if (brut.length > LONGUEUR_ADRESSE_MAX) return { erreur: t('Cette adresse dépasse {max} caractères : ce n’est pas une adresse de fichier qui s’ouvre ici.', { max: LONGUEUR_ADRESSE_MAX }) };
   // Un schema autre que http(s) (« file: », « data: », « javascript: »…) est refuse en le nommant ; sans schema, https.
   const schema = /^([a-z][a-z0-9+.-]*):/i.exec(brut)?.[1]?.toLowerCase();
   const explicite = schema !== undefined && (schema === 'http' || schema === 'https' || SCHEMAS_REFUSES.has(schema) || brut.slice(schema.length + 1).startsWith('//'));
-  if (explicite && schema !== 'http' && schema !== 'https') return { erreur: 'Seules les adresses web « https:// » s’ouvrent ici (« ' + schema + ': » est refusé).' };
+  if (explicite && schema !== 'http' && schema !== 'https') return { erreur: t('Seules les adresses web « https:// » s’ouvrent ici (« {schema}: » est refusé).', { schema }) };
   const avecSchema = explicite ? brut : 'https://' + brut;
   let u: URL;
-  try { u = new URL(avecSchema); } catch { return { erreur: 'Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».' }; }
-  if (u.protocol === 'http:' && !options.http) return { erreur: 'Cette adresse commence par « http:// » : seules les adresses « https:// » s’ouvrent ici, parce qu’un fichier envoyé en clair peut être modifié en chemin. Essayez la même adresse en « https:// ».' };
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return { erreur: 'Seules les adresses web « https:// » s’ouvrent ici (« ' + u.protocol + ' » est refusé).' };
-  if (!u.hostname) return { erreur: 'Cette adresse n’a pas de nom de serveur : elle doit ressembler à « https://exemple.fr/dessin.svg ».' };
-  if (u.username || u.password) return { erreur: 'Cette adresse porte un identifiant ou un mot de passe : elle ne s’ouvre pas ici, pour ne pas les envoyer. Téléchargez le fichier, puis ouvrez-le.' };
+  try { u = new URL(avecSchema); } catch { return { erreur: t('Cette adresse n’est pas valide : elle doit ressembler à « https://exemple.fr/dessin.svg ».') }; }
+  if (u.protocol === 'http:' && !options.http) return { erreur: t('Cette adresse commence par « http:// » : seules les adresses « https:// » s’ouvrent ici, parce qu’un fichier envoyé en clair peut être modifié en chemin. Essayez la même adresse en « https:// ».') };
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return { erreur: t('Seules les adresses web « https:// » s’ouvrent ici (« {schema} » est refusé).', { schema: u.protocol }) };
+  if (!u.hostname) return { erreur: t('Cette adresse n’a pas de nom de serveur : elle doit ressembler à « https://exemple.fr/dessin.svg ».') };
+  if (u.username || u.password) return { erreur: t('Cette adresse porte un identifiant ou un mot de passe : elle ne s’ouvre pas ici, pour ne pas les envoyer. Téléchargez le fichier, puis ouvrez-le.') };
   u.hash = '';
   return { url: u.href, hote: u.hostname };
 }

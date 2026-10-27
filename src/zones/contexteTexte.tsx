@@ -15,6 +15,7 @@ import type { CataloguePolices, VariantePolice } from '../model/cataloguePolices
 import type { AnnexeApercus } from '../model/apercusPolices.js';
 import type { ModeVectorisation } from '../engine/texte/vectoriser.js';
 import { useStockage } from './contexteStockage.js';
+import { t } from '../util/i18n.js';
 
 /** Les cles des conforts du stockage : favoris (des familles ou des fontes) et polices recentes (des identifiants de police). */
 export const CLE_FAVORIS = 'svg.polices.favoris';
@@ -108,7 +109,7 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
   const retenir = useCallback((p: Police) => { retenirDeposee(p); void rafraichir(); }, [rafraichir]);
   const telecharger = useCallback(async (v: VariantePolice): Promise<ResultatTelechargement> => {
     // L'option de l'hote, pas un accord de la personne : sans elle, aucune requete.
-    if (!enLigne) return { erreur: 'Les polices en ligne ne sont pas permises dans cet éditeur.' };
+    if (!enLigne) return { erreur: t('Les polices en ligne ne sont pas permises dans cet éditeur.') };
     const r = await telechargerVariante(v, { cache: cacheNavigateur() });
     if ('erreur' in r) return r;
     await rafraichir();
@@ -140,8 +141,8 @@ export function FournisseurTexte({ children }: { children: ReactNode }) {
 
 const HORS: EtatTexte & { demander: () => void } = {
   mode: null, poserMode: () => undefined,
-  polices: null, erreurPolices: '', deposer: () => Promise.resolve({ erreur: 'Aucun éditeur.' }), retenir: () => undefined, demander: () => undefined,
-  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', telecharger: () => Promise.resolve({ erreur: 'Aucun éditeur.' }),
+  polices: null, erreurPolices: '', deposer: () => Promise.resolve({ erreur: t('Aucun éditeur.') }), retenir: () => undefined, demander: () => undefined,
+  enLigne: false, catalogue: null, erreurCatalogue: '', chargerCatalogue: () => undefined, apercus: null, erreurApercus: '', telecharger: () => Promise.resolve({ erreur: t('Aucun éditeur.') }),
   favoris: [], basculerFavori: () => undefined, recentes: [], noterRecente: () => undefined
 };
 

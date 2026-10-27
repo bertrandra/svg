@@ -7,9 +7,11 @@ import { useMemo, useState, type KeyboardEvent } from 'react';
 import type { Evenement, FamilleEvenement } from '../model/bibliotheque.js';
 import { evenementsProches, ordreCalendrier } from '../model/recherche.js';
 import { focusAuClavier } from './commun/focusClavier.js';
+import { t } from '../util/i18n.js';
 
-const MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-const FAMILLES: ReadonlyArray<readonly [FamilleEvenement, string]> = [['calendrier', 'Calendrier'], ['vie', 'Événements de la vie'], ['categorie', 'Catégories']];
+// Des fonctions, pas des constantes : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const nomsMois = (): readonly string[] => ['', t('janvier'), t('février'), t('mars'), t('avril'), t('mai'), t('juin'), t('juillet'), t('août'), t('septembre'), t('octobre'), t('novembre'), t('décembre')];
+const familles = (): ReadonlyArray<readonly [FamilleEvenement, string]> => [['calendrier', t('Calendrier')], ['vie', t('Événements de la vie')], ['categorie', t('Catégories')]];
 /** Combien d'evenements proches montrer replie : assez pour la saison, pas assez pour faire un mur. */
 const PROCHES = 6;
 
@@ -40,14 +42,14 @@ export function PastillesEvenements({ evenements, valeur, poser, mois, compact =
   const choisi = valeur === null ? undefined : evenements.find(ev => ev.id === valeur);
   // L'evenement choisi reste visible replie, meme loin dans l'annee.
   const replies = choisi && !proches.includes(choisi) ? [...proches, choisi] : proches;
-  const groupes = useMemo(() => FAMILLES.map(([f, titre]) => [titre, f === 'calendrier' ? ordreCalendrier(evenements, mois) : evenements.filter(ev => ev.famille === f)] as const)
+  const groupes = useMemo(() => familles().map(([f, titre]) => [titre, f === 'calendrier' ? ordreCalendrier(evenements, mois) : evenements.filter(ev => ev.famille === f)] as const)
     .filter(([, liste]) => liste.length), [evenements, mois]);
   const pastille = (ev: Evenement | null) => (
     <button key={ev?.id ?? '*'} type="button" className="pastille-evenement" aria-pressed={(ev?.id ?? null) === valeur}
-      title={ev?.mois ? ev.nom + ' · ' + MOIS[ev.mois] : undefined} onClick={() => poser(ev?.id ?? null)}>{ev ? ev.nom : 'Tous'}</button>
+      title={ev?.mois ? t('{nom} · {mois}', { nom: t(ev.nom), mois: nomsMois()[ev.mois] ?? '' }) : undefined} onClick={() => poser(ev?.id ?? null)}>{ev ? t(ev.nom) : t('Tous')}</button>
   );
   return (
-    <div className={'pastilles-evenements' + (tout ? ' depliees' : '') + (compact ? ' compact' : '')} role="group" aria-label="Événement" onKeyDown={deplacer}>
+    <div className={'pastilles-evenements' + (tout ? ' depliees' : '') + (compact ? ' compact' : '')} role="group" aria-label={t('Événement')} onKeyDown={deplacer}>
       <div className="pastilles">
         {pastille(null)}
         {tout ? null : replies.map(pastille)}
@@ -59,8 +61,9 @@ export function PastillesEvenements({ evenements, valeur, poser, mois, compact =
         </div>
       )) : null}
       {evenements.length > replies.length ? (
-        <button type="button" className="discret pastilles-plus" aria-expanded={tout} onClick={() => poserTout(t => !t)}>
-          {tout ? 'Moins d’événements' : 'Plus d’événements (' + evenements.length + ')'}
+        <button type="button" className="discret pastilles-plus" aria-expanded={tout} onClick={() => poserTout(x => !x)}>
+          {tout ? t('Moins d’événements') : t('Plus d’événements ({n})', { n: evenements.length })}
+
         </button>
       ) : null}
     </div>

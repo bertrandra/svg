@@ -15,6 +15,7 @@ import { copierSvg, exporterDecoupe, exporterDxf, exporterEps, exporterPdf, expo
 import { OptionsExportPanneau } from './OptionsExport.js';
 import { optionsModele } from './modele.js';
 import type { Modele } from './typesEditeur.js';
+import { t } from '../util/i18n.js';
 
 interface Proprietes {
   svg: string; dessin?: DessinSvg; nom: string; dire: (t: string) => void;
@@ -58,21 +59,21 @@ export function ListeFormats({ svg, dessin, nom, dire, modele }: Proprietes) {
   const c: ContexteExport = { ...contexteExport(svg, dessin, nom, dire, options, modele), couleurDecoupe, largeurPng };
   const vect = !c.lu;
   return (
-    <div className="contenu-export" role="group" aria-label="Autres formats">
-      <LigneFormat libelle="PDF vectoriel" aide="un document à imprimer ou à envoyer, net à toute taille" desactive={vect} onClick={() => exporterPdf(c)} />
-      <LigneFormat libelle="PNG" aide="une image pour un site ou un message, fond transparent" onClick={() => exporterPng(c)}>
-        <select aria-label="Largeur du PNG" value={largeurPng} onChange={e => { session.largeurPng = Number(e.target.value); poserLargeurPng(Number(e.target.value)); }}>
+    <div className="contenu-export" role="group" aria-label={t('Autres formats')}>
+      <LigneFormat libelle={t('PDF vectoriel')} aide={t('un document à imprimer ou à envoyer, net à toute taille')} desactive={vect} onClick={() => exporterPdf(c)} />
+      <LigneFormat libelle="PNG" aide={t('une image pour un site ou un message, fond transparent')} onClick={() => exporterPng(c)}>
+        <select aria-label={t('Largeur du PNG')} value={largeurPng} onChange={e => { session.largeurPng = Number(e.target.value); poserLargeurPng(Number(e.target.value)); }}>
           {LARGEURS_PNG.map(l => <option key={l} value={l}>{l} px</option>)}
         </select>
       </LigneFormat>
-      <LigneFormat libelle="JPEG" aide="une image légère, sur un fond uni, même largeur" onClick={() => exporterRaster(c, 'image/jpeg')} />
-      <LigneFormat libelle="WebP" aide="une image légère pour un site, fond transparent" onClick={() => exporterRaster(c, 'image/webp')} />
-      <LigneFormat libelle="EPS" aide="pour un imprimeur ou un ancien logiciel de mise en page" desactive={vect} onClick={() => exporterEps(c)} />
-      <LigneFormat libelle="DXF" aide="pour une découpeuse laser ou un logiciel de dessin technique" desactive={vect} onClick={() => exporterDxf(c)} />
-      <LigneFormat libelle="SVG de découpe" aide="les contours seuls, en trait de 0,25 mm, pour une machine qui suit un trait" desactive={vect} onClick={() => exporterDecoupe(c)}>
-        <input type="color" aria-label="Couleur du trait de découpe" value={couleurDecoupe} onChange={e => { session.couleurDecoupe = e.target.value; poserCouleurDecoupe(e.target.value); }} />
+      <LigneFormat libelle="JPEG" aide={t('une image légère, sur un fond uni, même largeur')} onClick={() => exporterRaster(c, 'image/jpeg')} />
+      <LigneFormat libelle="WebP" aide={t('une image légère pour un site, fond transparent')} onClick={() => exporterRaster(c, 'image/webp')} />
+      <LigneFormat libelle="EPS" aide={t('pour un imprimeur ou un ancien logiciel de mise en page')} desactive={vect} onClick={() => exporterEps(c)} />
+      <LigneFormat libelle="DXF" aide={t('pour une découpeuse laser ou un logiciel de dessin technique')} desactive={vect} onClick={() => exporterDxf(c)} />
+      <LigneFormat libelle={t('SVG de découpe')} aide={t('les contours seuls, en trait de 0,25 mm, pour une machine qui suit un trait')} desactive={vect} onClick={() => exporterDecoupe(c)}>
+        <input type="color" aria-label={t('Couleur du trait de découpe')} value={couleurDecoupe} onChange={e => { session.couleurDecoupe = e.target.value; poserCouleurDecoupe(e.target.value); }} />
       </LigneFormat>
-      <LigneFormat libelle="Copier le code SVG" aide="pour le coller dans une page web ou un autre outil" onClick={() => copierSvg(c)} />
+      <LigneFormat libelle={t('Copier le code SVG')} aide={t('pour le coller dans une page web ou un autre outil')} onClick={() => copierSvg(c)} />
       <OptionsExportPanneau o={options} poser={poser} dessin={c.lu} />
     </div>
   );
@@ -85,5 +86,5 @@ export function telechargerSvgPage(svg: string, nom: string, dire: (t: string) =
 
 /** « Autres formats » de la fiche de la page : un menu dont le contenu est la liste des formats. */
 export function MenuAutresFormats(p: Proprietes) {
-  return <MenuDeroulant etiquette="Autres formats : PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, code" libelle="Autres formats" icone="exporter" enfants={<ListeFormats {...p} />} />;
+  return <MenuDeroulant etiquette={t('Autres formats : PDF, PNG, JPEG, WebP, EPS, DXF, SVG de découpe, code')} libelle={t('Autres formats')} icone="exporter" enfants={<ListeFormats {...p} />} />;
 }

@@ -7,6 +7,8 @@
 // le presse-papiers, localStorage, `inert`, color-mix...) se contourne et n'a pas a bloquer : voir le
 // tableau de docs/navigateurs.md, qui dit pour chacune ce que la page fait sans elle.
 
+import { t } from './i18n.js';
+
 /** Le moment ou une capacite devient indispensable : au demarrage, des qu'on lit une image, ou des qu'on la vectorise. */
 export type Besoin = 'demarrage' | 'image' | 'vectorisation';
 
@@ -15,17 +17,20 @@ export type IdCapacite = 'objectHasOwn' | 'pointeurs' | 'blob' | 'canvas' | 'web
 export interface Capacite {
   readonly id: IdCapacite;
   readonly besoin: Besoin;
-  /** Ce qui manque, en une expression qui suit « il lui manque » (texte d'interface, avec accents). */
+  /** Ce qui manque, en une expression qui suit « il lui manque » (texte d'interface, avec accents, dans la langue de l'interface). */
   readonly manque: string;
 }
 
-/** Les capacites exigees, dans l'ordre ou on les dit. */
+/**
+ * Les capacites exigees, dans l'ordre ou on les dit. Ce qui manque se lit par un accesseur qui appelle `t` au moment de le dire,
+ * jamais au chargement du module : le dictionnaire d'une autre langue n'est pas encore la (ADR-0042).
+ */
 export const CAPACITES: readonly Capacite[] = [
-  { id: 'objectHasOwn', besoin: 'demarrage', manque: 'la lecture des noms de couleur (Object.hasOwn)' },
-  { id: 'pointeurs', besoin: 'demarrage', manque: 'les évènements de pointeur (souris, stylet et doigt)' },
-  { id: 'blob', besoin: 'demarrage', manque: 'les fichiers en mémoire (Blob et URL.createObjectURL)' },
-  { id: 'canvas', besoin: 'image', manque: 'le dessin 2D du navigateur (canvas), qui lit les pixels d’une image' },
-  { id: 'webassembly', besoin: 'vectorisation', manque: 'WebAssembly, qui fait tourner le traceur' }
+  { id: 'objectHasOwn', besoin: 'demarrage', get manque() { return t('la lecture des noms de couleur (Object.hasOwn)'); } },
+  { id: 'pointeurs', besoin: 'demarrage', get manque() { return t('les évènements de pointeur (souris, stylet et doigt)'); } },
+  { id: 'blob', besoin: 'demarrage', get manque() { return t('les fichiers en mémoire (Blob et URL.createObjectURL)'); } },
+  { id: 'canvas', besoin: 'image', get manque() { return t('le dessin 2D du navigateur (canvas), qui lit les pixels d’une image'); } },
+  { id: 'webassembly', besoin: 'vectorisation', get manque() { return t('WebAssembly, qui fait tourner le traceur'); } }
 ];
 
 /** Ce que la sonde a vu : vrai quand la capacite est la. */
@@ -44,7 +49,6 @@ export function manquantes(sonde: Sonde, besoin: Besoin): readonly Capacite[] {
 /** Le texte a montrer pour une liste non vide de capacites manquantes. */
 export function phraseManquantes(liste: readonly Capacite[]): string {
   const noms = liste.map(c => c.manque);
-  const dit = noms.length > 1 ? noms.slice(0, -1).join(', ') + ' et ' + noms.slice(-1).join('') : noms.join('');
-  return 'Ce navigateur ne sait pas faire ce que l’éditeur lui demande : il lui manque ' + dit + '. '
-    + 'Mettez-le à jour, ou ouvrez cette page dans une version récente de Chrome, Edge, Firefox ou Safari (iOS 16.4 et plus).';
+  const dit = noms.length > 1 ? t('{debut} et {dernier}', { debut: noms.slice(0, -1).join(', '), dernier: noms.slice(-1).join('') }) : noms.join('');
+  return t('Ce navigateur ne sait pas faire ce que l’éditeur lui demande : il lui manque {manque}. Mettez-le à jour, ou ouvrez cette page dans une version récente de Chrome, Edge, Firefox ou Safari (iOS 16.4 et plus).', { manque: dit });
 }

@@ -5,6 +5,7 @@
 
 import { parse, type Font } from 'opentype.js';
 import type { Glyphes } from '../engine/texte.js';
+import { t } from '../util/i18n.js';
 import { annexePosee, fabriquerChargeurAnnexe, memoiserSucces, navigateur, type Annexe } from './annexes.js';
 import { lireCrenageGpos } from './crenageGpos.js';
 import { lireLigaturesGsub } from './ligaturesGsub.js';
@@ -25,8 +26,8 @@ export const FICHIER_POLICES = 'polices.js';
 const annexe: Annexe<PoliceEmbarquee[]> = {
   fichier: FICHIER_POLICES,
   globale: '__policesSvg',
-  contenu: 'les polices',
-  consigne: 'lancez « npm run construire »',
+  get contenu() { return t('les polices'); },
+  get consigne() { return t('lancez « npm run construire »'); },
   donnees: true,
   valider: v => (Array.isArray(v) ? v as PoliceEmbarquee[] : undefined)
 };
@@ -107,7 +108,7 @@ export async function policeDeposee(fichier: File): Promise<Police | { erreur: s
   // L'identifiant d'une fonte deposee est son empreinte (`u-…`) : un texte vivant le garde, jamais le fichier (ADR-0022).
   const p = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), nom, octets);
   if (p) garderOctets(p.id, octets);
-  return p ?? { erreur: 'Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.' };
+  return p ?? { erreur: t('Cette fonte ne se lit pas : déposez un fichier TTF ou OTF.') };
 }
 
 /** Une police de cet appareil, telle que le navigateur la decrit (Local Font Access) ; ses octets ne se lisent qu'au choix. */
@@ -125,12 +126,12 @@ export function policesAppareilDisponibles(): boolean {
  * le fichier est lu sur place, comme une fonte deposee, et n'est jamais ecrit (ADR-0022, ADR-0025).
  */
 export async function policesDeLAppareil(): Promise<PoliceAppareil[] | { erreur: string }> {
-  if (!policesAppareilDisponibles()) return { erreur: 'Ce navigateur ne donne pas accès aux polices de l’appareil : déposez plutôt un fichier TTF ou OTF.' };
+  if (!policesAppareilDisponibles()) return { erreur: t('Ce navigateur ne donne pas accès aux polices de l’appareil : déposez plutôt un fichier TTF ou OTF.') };
   try {
     const liste = await (window as unknown as { queryLocalFonts: () => Promise<DonneesFonteAppareil[]> }).queryLocalFonts();
     return liste.slice(0, 5000).map(f => ({ nom: String(f.fullName).slice(0, 60), lire: async () => (await f.blob()).arrayBuffer() }));
   } catch {
-    return { erreur: 'Le navigateur a refusé l’accès aux polices de l’appareil.' };
+    return { erreur: t('Le navigateur a refusé l’accès aux polices de l’appareil.') };
   }
 }
 
@@ -140,9 +141,9 @@ export async function lirePoliceAppareil(p: PoliceAppareil): Promise<Police | { 
     const octets = await p.lire();
     const lue = lirePolice('u-' + empreinteOctets(new Uint8Array(octets)), p.nom, octets);
     if (lue) garderOctets(lue.id, octets);
-    return lue ?? { erreur: 'Cette police de l’appareil ne se lit pas (format non pris en charge).' };
+    return lue ?? { erreur: t('Cette police de l’appareil ne se lit pas (format non pris en charge).') };
   } catch {
-    return { erreur: 'Cette police de l’appareil ne se lit pas.' };
+    return { erreur: t('Cette police de l’appareil ne se lit pas.') };
   }
 }
 

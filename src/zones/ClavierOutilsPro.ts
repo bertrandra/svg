@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import { pasDeplacement } from '../engine/navigation.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 import { nomRepere, useActionsRegles, useRegles } from './contexteRegles.js';
+import { t } from '../util/i18n.js';
 
 /**
  * La touche point-virgule, sur tout clavier : son caractere, ou sa place (QWERTY, et Option sur Mac qui en change le caractere),
@@ -45,7 +46,7 @@ export function useClavierOutilsPro(): void {
       // Les touches d'un repere choisi ne valent que sur la toile (ou sans focus) : ailleurs, elles sont au controle qui l'a.
       if (!choisi || mod || !(cible === null || cible === document.body || cible.closest('.editeur-svg-toile'))) return;
       if (e.key === 'Delete' || e.key === 'Backspace') { prendre(() => arg.supprimer(choisi)); return; }
-      if (e.key === 'Escape') { prendre(() => { arg.choisir(null); ac.annoncer('Repère rendu.'); }); return; }
+      if (e.key === 'Escape') { prendre(() => { arg.choisir(null); ac.annoncer(t('Repère rendu.')); }); return; }
       if (e.key === 'Enter') { prendre(() => arg.ouvrir('reperes', choisi)); return; }
       const sens = choisi.axe === 'h' ? { ArrowUp: -1, ArrowDown: 1 } : { ArrowLeft: -1, ArrowRight: 1 };
       const k = (sens as Record<string, number | undefined>)[e.key];

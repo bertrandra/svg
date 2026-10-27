@@ -1,20 +1,35 @@
 // Les petites aides de texte que plusieurs couches partagent.
 
+import { langue, t, traduction } from './i18n.js';
+
 /**
  * Un mot au pluriel : un « s » de plus, sauf aux mots deja termines par s, x ou z, qui ne changent pas (« tapis »,
  * « prix », « nez »). Une expression de plusieurs mots s'accorde mot a mot (« petite forme », « petites formes ») :
  * c'est le cas de nos libelles, un nom et son adjectif. Les pluriels irreguliers (-al, -eau) n'y sont pas : aucun
- * libelle de l'interface n'en emploie, et une regle de plus serait une regle a tenir.
+ * libelle de l'interface n'en emploie, et une regle de plus serait une regle a tenir ; `pluriel` les recoit entiers.
+ * La regle vaut aussi pour l'anglais courant (ADR-0042) ; une exception (« copy », « copies ») se donne au dictionnaire.
  */
 export const auPluriel = (mot: string): string => mot.split(' ').map(m => (m === '' || /[sxz]$/i.test(m) ? m : m + 's')).join(' ');
 
-/** « 1 forme », « 3 formes », « 2 tapis » : le nombre, un blanc, le mot, accorde en nombre au-dela de un. */
-export const pluriel = (n: number, mot: string): string => n + ' ' + (n > 1 ? auPluriel(mot) : mot);
+/**
+ * « 1 forme », « 3 formes », « 2 tapis » : le nombre, un blanc, le mot, accorde en nombre au-dela de un. Un pluriel irregulier se
+ * donne entier : `pluriel(n, 'cheval', 'chevaux')`. Le mot passe par `t` (ADR-0042) : dans une autre langue, le singulier est
+ * son entree du dictionnaire, et le pluriel l'entree de la forme plurielle francaise (« copies » : « copies ») quand le
+ * dictionnaire la donne, sinon la regle d'`auPluriel` sur le singulier traduit (« shape », « shapes »).
+ */
+export function pluriel(n: number, mot: string, plurielIrregulier?: string): string {
+  if (n <= 1) return n + ' ' + t(mot);
+  const forme = plurielIrregulier ?? auPluriel(mot);
+  // Un mot invariable en francais (« tapis ») ne l'est pas forcement ailleurs : son entree est celle du singulier, pas d'un pluriel.
+  const traduite = forme === mot ? undefined : traduction(forme);
+  return n + ' ' + (traduite ?? (langue() === 'fr' ? forme : auPluriel(t(mot))));
+}
 
 /**
  * Les verbes de la souris, dits au doigt : une aide qui dit « Cliquez » a quelqu'un qui touche l'ecran le fait chercher
  * un geste qu'il n'a pas. Les remplacements vont du plus long au plus court, pour que « double-cliquez » ne devienne
  * pas « double-touchez ». Glisser, maintenir et choisir valent pour les deux : ils restent. Sans doigt, la phrase est rendue telle quelle.
+ * La phrase arrive deja traduite (ADR-0042) : les paires anglaises suivent les francaises, chacune ne touche que sa langue.
  */
 const AU_DOIGT: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bDouble-cliquez\b/g, 'Touchez deux fois'],
@@ -23,7 +38,13 @@ const AU_DOIGT: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bUn clic\b/g, 'Un appui'],
   [/\bun clic\b/g, 'un appui'],
   [/\bCliquez\b/g, 'Touchez'],
-  [/\bcliquez\b/g, 'touchez']
+  [/\bcliquez\b/g, 'touchez'],
+  [/\bDouble-click\b/g, 'Double-tap'],
+  [/\bdouble-click\b/g, 'double-tap'],
+  [/\bA click\b/g, 'A tap'],
+  [/\ba click\b/g, 'a tap'],
+  [/\bClick\b/g, 'Tap'],
+  [/\bclick\b/g, 'tap']
 ];
 
 export function selonSaisie(phrase: string, doigt: boolean): string {
@@ -59,9 +80,10 @@ export function distanceEdition(a: string, b: string, plafond = 2): number {
 
 /**
  * La typographie francaise : une espace insecable avant « ; : ? ! » et le guillemet fermant, apres le guillemet ouvrant. Sans elle,
- * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne.
+ * une ligne etroite (une bulle sur un telephone) commence par « ; » ou laisse un « « » seul en fin de ligne. Les remplacements ne
+ * portent que l'espace insecable : ce sont des caracteres, pas un texte de l'interface (ADR-0042). Une phrase anglaise n'en a aucun.
  */
-export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/« /g, '« ');
+export const insecables = (t: string): string => t.replace(/ ([;:?!»])/g, ' $1').replace(/(«) /g, '$1\u00a0');
 
 /** La longueur d'un nom de fichier propose : au-dela, un nom de forme n'est plus un nom, et certains systemes coupent. */
 const LONGUEUR_NOM_FICHIER = 80;

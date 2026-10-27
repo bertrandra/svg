@@ -7,6 +7,7 @@
 
 import { BORNES_PROJET, lireProjet, type Projet } from '../model/projet.js';
 import type { PoliceEmbarquee } from './polices.js';
+import { t } from '../util/i18n.js';
 import { DELAI_MS, lireFluxBorne, OCTETS_MAX, PHRASES_TELECHARGEMENT, type CodeTelechargement, type Telechargement } from './adresse.js';
 
 /** Ce que le serveur dit d'un projet enregistre, sans l'ouvrir : de quoi le lister. */
@@ -21,6 +22,57 @@ export interface MetaProjet {
   /** Vrai quand le serveur garde une vignette (un SVG, servi comme image) de ce projet. */
   readonly vignette: boolean;
 }
+
+// Les comptes du site (ADR-0041) : la personne connectee, son profil, et l'administration (comptes, reglages, courrier). Les
+// formes viennent du contrat de l'API ; comme une fiche de projet, un compte lu n'est cru que s'il a exactement la bonne forme.
+
+export type Langue = 'fr' | 'en';
+export type RoleCompte = 'admin' | 'utilisateur';
+/** Les etats d'un compte (ADR-0041 §2) : seul `actif` se connecte. */
+export type EtatCompte = 'a-confirmer' | 'en-attente' | 'actif' | 'refuse' | 'suspendu';
+
+/** La personne connectee, telle que la page la donne (`data-compte`) et que `r=compte` la rend. */
+export interface Compte {
+  readonly id: string;
+  readonly nom: string;
+  readonly email: string;
+  readonly langue: Langue;
+  readonly role: RoleCompte;
+}
+
+/** Un compte vu par un administrateur (`r=comptes`) : son etat, ses dates, le nombre de ses projets. */
+export interface FicheCompte extends Compte {
+  readonly etat: EtatCompte;
+  readonly creeLe: string;
+  readonly confirmeLe?: string;
+  readonly approuveLe?: string;
+  readonly derniereConnexion?: string;
+  readonly projets: number;
+}
+
+/** Ce que la page dit du site (`data-site`) : son nom, sa langue, si les inscriptions sont ouvertes. */
+export interface InfosSite { readonly nom: string; readonly langue: Langue; readonly inscriptions: boolean }
+
+/** Ce que `r=compte` rend : la personne, le site, et pour un administrateur le nombre de demandes en attente. */
+export interface SessionCompte { readonly compte: Compte; readonly site: InfosSite; readonly enAttente: number | null }
+
+export type ModeCourrier = 'mail' | 'smtp' | 'fichier';
+export type SecuriteSmtp = 'starttls' | 'ssl' | 'aucune';
+
+/** Les reglages du site (ADR-0041 §7), sans le mot de passe SMTP, que l'API ne rend jamais : `smtpMotDePassePose` dit s'il existe. */
+export interface Reglages {
+  readonly site: { readonly nom: string; readonly langue: Langue; readonly adresse: string };
+  readonly inscriptions: { readonly ouvertes: boolean };
+  readonly courrier: {
+    readonly expediteur: string; readonly nom: string; readonly mode: ModeCourrier;
+    readonly smtp: { readonly hote: string; readonly port: number; readonly securite: SecuriteSmtp; readonly utilisateur: string };
+  };
+  readonly sessions: { readonly inactivite: number };
+  readonly smtpMotDePassePose: boolean;
+}
+
+/** Les gestes d'un administrateur sur un compte : la route est `compte-<action>`. */
+export type ActionCompte = 'approuver' | 'refuser' | 'suspendre' | 'reactiver' | 'supprimer' | 'promouvoir' | 'retrograder' | 'renvoyer' | 'email' | 'creer';
 
 /** Un resultat du serveur : la valeur, ou un code et la phrase a dire. `code` vaut `session` quand il faut se reconnecter. */
 export type Reponse<T> = { readonly ok: true; readonly valeur: T } | { readonly ok: false; readonly code: string; readonly message: string; readonly meta?: MetaProjet };
@@ -56,20 +108,49 @@ export interface Serveur {
    * refus (adresse privee, schema ou port interdit, trop gros, delai…). Une ecriture : POST, jeton CSRF.
    */
   readonly telechargerAdresse: (url: string, signal: AbortSignal) => Promise<Telechargement>;
+
+  // Les comptes (ADR-0041). Toute ecriture : POST, JSON, jeton CSRF, comme les projets.
+  /** La personne connectee, le site, et le nombre de demandes en attente pour un administrateur. */
+  readonly compte: () => Promise<Reponse<SessionCompte>>;
+  /** Change le nom ou la langue de la personne connectee ; rend le compte tel que le serveur le garde. */
+  readonly profil: (p: { readonly nom?: string; readonly langue?: Langue }) => Promise<Reponse<Compte>>;
+  /** Change le mot de passe : l'ancien est verifie par le serveur, qui ferme les autres sessions. */
+  readonly motDePasse: (ancien: string, nouveau: string) => Promise<Reponse<null>>;
+  readonly deconnexion: () => Promise<Reponse<null>>;
+  /** Tous les comptes (administrateur seulement) ; une fiche mal formee est ecartee, les autres servent. */
+  readonly comptes: () => Promise<Reponse<readonly FicheCompte[]>>;
+  /**
+   * Un geste sur un compte (administrateur) : `compte-<action>&id=…`, le corps selon le geste (`{ raison? }` pour refuser, `{ email }`
+   * pour l'adresse, `{ email, nom, langue, motDePasse }` pour creer, sans id). Rend la fiche quand le serveur la donne, null sinon.
+   */
+  readonly actionCompte: (action: ActionCompte, id: string | null, corps?: Record<string, unknown>) => Promise<Reponse<FicheCompte | null>>;
+  readonly reglages: () => Promise<Reponse<Reglages>>;
+  /** Ecrit les reglages ; un mot de passe SMTP vide laisse celui du serveur. */
+  readonly poserReglages: (r: Reglages, smtpMotDePasse: string) => Promise<Reponse<Reglages>>;
+  /** Un mail d'essai, a l'adresse donnee ou a celle de la personne connectee. */
+  readonly courrierEssai: (destinataire?: string) => Promise<Reponse<null>>;
 }
 
-const MESSAGES: Readonly<Record<string, string>> = {
-  session: 'Votre session a expiré : reconnectez-vous dans un autre onglet, puis enregistrez de nouveau ici (le travail ouvert reste dans cet onglet).',
-  reseau: 'Le serveur ne répond pas : vérifiez la connexion, puis réessayez.',
-  conflit: 'Ce projet a été enregistré ailleurs (un autre onglet ?) depuis que vous l’avez ouvert : « Enregistrer sous… » le garde sous un autre nom, sans rien écraser.',
-  introuvable: 'Ce projet n’existe plus sur le serveur.',
-  trop_gros: 'Ce projet dépasse la taille que le serveur accepte.',
-  invalide: 'Le serveur a refusé ce projet : il ne le reconnaît pas comme un projet de l’éditeur.',
-  csrf: 'La page est trop ancienne pour écrire sur le serveur : rechargez-la, puis réessayez.',
-  serveur: 'Le serveur a rencontré une erreur. Réessayez ; si elle persiste, l’administrateur la trouvera dans son journal.'
+// Les phrases de chaque code, lues au moment de l'echec, jamais au chargement du module (le dictionnaire d'une autre langue n'est
+// pas encore la, ADR-0042). Les comptes (ADR-0041) : le serveur dit sa phrase ; celles-ci servent s'il n'en donne pas.
+const MESSAGES: Readonly<Record<string, () => string>> = {
+  session: () => t('Votre session a expiré : reconnectez-vous dans un autre onglet, puis enregistrez de nouveau ici (le travail ouvert reste dans cet onglet).'),
+  reseau: () => t('Le serveur ne répond pas : vérifiez la connexion, puis réessayez.'),
+  conflit: () => t('Ce projet a été enregistré ailleurs (un autre onglet ?) depuis que vous l’avez ouvert : « Enregistrer sous… » le garde sous un autre nom, sans rien écraser.'),
+  introuvable: () => t('Ce projet n’existe plus sur le serveur.'),
+  trop_gros: () => t('Ce projet dépasse la taille que le serveur accepte.'),
+  invalide: () => t('Le serveur a refusé ce projet : il ne le reconnaît pas comme un projet de l’éditeur.'),
+  csrf: () => t('La page est trop ancienne pour écrire sur le serveur : rechargez-la, puis réessayez.'),
+  serveur: () => t('Le serveur a rencontré une erreur. Réessayez ; si elle persiste, l’administrateur la trouvera dans son journal.'),
+  role: () => t('Cette action est réservée à un administrateur.'),
+  existe: () => t('Un compte porte déjà cette adresse.'),
+  'dernier-admin': () => t('Ce compte est le dernier administrateur actif : il ne peut être ni rétrogradé, ni suspendu, ni supprimé.'),
+  'soi-meme': () => t('Vous ne pouvez pas faire cela sur votre propre compte.'),
+  courrier: () => t('Le mail n’a pas pu partir : vérifiez les réglages du courrier.'),
+  limite: () => t('Trop de tentatives : patientez quelques minutes, puis réessayez.')
 };
 
-const echec = <T>(code: string, message?: string, meta?: MetaProjet): Reponse<T> => ({ ok: false, code, message: message || MESSAGES[code] || MESSAGES['serveur'] || '', ...(meta ? { meta } : {}) });
+const echec = <T>(code: string, message?: string, meta?: MetaProjet): Reponse<T> => ({ ok: false, code, message: message || (MESSAGES[code] ?? MESSAGES['serveur'])?.() || '', ...(meta ? { meta } : {}) });
 
 const estObjet = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 
@@ -81,6 +162,97 @@ export function lireMeta(x: unknown): MetaProjet | null {
   if (typeof creeLe !== 'string' || typeof modifieLe !== 'string' || creeLe.length > 40 || modifieLe.length > 40) return null;
   if (typeof revision !== 'number' || !Number.isInteger(revision) || revision < 1 || typeof taille !== 'number' || !(taille >= 0)) return null;
   return { id, nom, creeLe, modifieLe, revision, taille, vignette: vignette === true };
+}
+
+const LANGUES: readonly Langue[] = ['fr', 'en'];
+const ROLES: readonly RoleCompte[] = ['admin', 'utilisateur'];
+const ETATS: readonly EtatCompte[] = ['a-confirmer', 'en-attente', 'actif', 'refuse', 'suspendu'];
+const MODES: readonly ModeCourrier[] = ['mail', 'smtp', 'fichier'];
+const SECURITES: readonly SecuriteSmtp[] = ['starttls', 'ssl', 'aucune'];
+const parmi = <T extends string>(liste: readonly T[], x: unknown): x is T => typeof x === 'string' && (liste as readonly string[]).includes(x);
+const texte = (x: unknown, max: number): string | null => (typeof x === 'string' && x.length <= max ? x : null);
+/** Une date ISO facultative : absente ou vide, undefined ; d'une autre forme, null (la fiche est refusee). */
+const dateFacultative = (x: unknown): string | null | undefined => (x === undefined || x === null || x === '' ? undefined : texte(x, 40));
+
+/** La personne connectee lue de la page ou du serveur, ou null : on ne croit que des champs de la bonne forme (ADR-0041 §2). */
+export function lireCompte(x: unknown): Compte | null {
+  if (!estObjet(x)) return null;
+  const id = texte(x['id'], 16), nom = texte(x['nom'], 120), email = texte(x['email'], 254);
+  if (id === null || !/^[a-f0-9]{16}$/.test(id) || nom === null || email === null) return null;
+  if (!parmi(LANGUES, x['langue']) || !parmi(ROLES, x['role'])) return null;
+  return { id, nom, email, langue: x['langue'], role: x['role'] };
+}
+
+/** Une fiche de la liste des comptes, ou null. */
+export function lireFiche(x: unknown): FicheCompte | null {
+  const c = lireCompte(x);
+  if (!c || !estObjet(x)) return null;
+  const creeLe = texte(x['creeLe'], 40), projets = x['projets'];
+  const confirmeLe = dateFacultative(x['confirmeLe']), approuveLe = dateFacultative(x['approuveLe']), derniereConnexion = dateFacultative(x['derniereConnexion']);
+  if (!parmi(ETATS, x['etat']) || creeLe === null || confirmeLe === null || approuveLe === null || derniereConnexion === null) return null;
+  if (typeof projets !== 'number' || !Number.isInteger(projets) || projets < 0) return null;
+  return {
+    ...c, etat: x['etat'], creeLe, projets,
+    ...(confirmeLe !== undefined ? { confirmeLe } : {}), ...(approuveLe !== undefined ? { approuveLe } : {}), ...(derniereConnexion !== undefined ? { derniereConnexion } : {})
+  };
+}
+
+/** Ce que la page dit du site, ou null. */
+export function lireSite(x: unknown): InfosSite | null {
+  if (!estObjet(x)) return null;
+  const nom = texte(x['nom'], 120);
+  if (nom === null || !parmi(LANGUES, x['langue']) || typeof x['inscriptions'] !== 'boolean') return null;
+  return { nom, langue: x['langue'], inscriptions: x['inscriptions'] };
+}
+
+/**
+ * Les reglages par defaut (ADR-0041 §7) : ce que vaut un fichier absent, et ce que prend un champ qui manque ou n'a pas la bonne forme.
+ * Les deux noms sont des textes d'interface, lus par un accesseur au moment ou l'on en a besoin (ADR-0042).
+ */
+export const REGLAGES_PAR_DEFAUT: Reglages = {
+  site: { get nom() { return t('Éditeur SVG'); }, langue: 'fr', adresse: '' },
+  inscriptions: { ouvertes: true },
+  courrier: { expediteur: '', get nom() { return t('Éditeur SVG'); }, mode: 'mail', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '' } },
+  sessions: { inactivite: 7200 },
+  smtpMotDePassePose: false
+};
+
+/**
+ * Les reglages lus du serveur : chaque champ pris s'il a la bonne forme, son defaut sinon, comme `config_valide` cote PHP. Null
+ * seulement si la reponse n'est pas un objet : un reglage absent n'empeche pas d'ouvrir l'ecran, qui montre alors le defaut.
+ */
+export function lireReglages(x: unknown): Reglages | null {
+  if (!estObjet(x)) return null;
+  const D = REGLAGES_PAR_DEFAUT;
+  const site = estObjet(x['site']) ? x['site'] : {}, inscriptions = estObjet(x['inscriptions']) ? x['inscriptions'] : {};
+  const courrier = estObjet(x['courrier']) ? x['courrier'] : {}, smtp = estObjet(courrier['smtp']) ? courrier['smtp'] : {}, sessions = estObjet(x['sessions']) ? x['sessions'] : {};
+  const port = smtp['port'], inactivite = sessions['inactivite'];
+  return {
+    site: { nom: texte(site['nom'], 120) ?? D.site.nom, langue: parmi(LANGUES, site['langue']) ? site['langue'] : D.site.langue, adresse: texte(site['adresse'], 2048) ?? D.site.adresse },
+    inscriptions: { ouvertes: typeof inscriptions['ouvertes'] === 'boolean' ? inscriptions['ouvertes'] : D.inscriptions.ouvertes },
+    courrier: {
+      expediteur: texte(courrier['expediteur'], 254) ?? D.courrier.expediteur, nom: texte(courrier['nom'], 120) ?? D.courrier.nom,
+      mode: parmi(MODES, courrier['mode']) ? courrier['mode'] : D.courrier.mode,
+      smtp: {
+        hote: texte(smtp['hote'], 253) ?? D.courrier.smtp.hote,
+        port: typeof port === 'number' && Number.isInteger(port) && port >= 1 && port <= 65535 ? port : D.courrier.smtp.port,
+        securite: parmi(SECURITES, smtp['securite']) ? smtp['securite'] : D.courrier.smtp.securite,
+        utilisateur: texte(smtp['utilisateur'], 254) ?? D.courrier.smtp.utilisateur
+      }
+    },
+    sessions: { inactivite: typeof inactivite === 'number' && Number.isInteger(inactivite) && inactivite > 0 ? inactivite : D.sessions.inactivite },
+    smtpMotDePassePose: x['smtpMotDePassePose'] === true
+  };
+}
+
+/**
+ * La reponse de `r=reglages` (lecture ou ecriture) : les reglages sous `reglages`, `smtpMotDePassePose` a cote (le mot de passe SMTP
+ * n'en sort jamais, ADR-0041 §7). Null si la reponse n'a pas cette forme (`{ ok: true }` seul, par exemple).
+ */
+function reglagesRecus(corps: unknown): Reglages | null {
+  if (!estObjet(corps) || !estObjet(corps['reglages'])) return null;
+  const lu = lireReglages(corps['reglages']);
+  return lu ? { ...lu, smtpMotDePassePose: corps['smtpMotDePassePose'] === true } : null;
 }
 
 /** Le texte d'une reponse, borne : un serveur qui enverrait davantage n'est pas lu. */
@@ -108,6 +280,74 @@ const base64 = (o: Uint8Array): string => {
   for (let i = 0; i < o.length; i += 0x8000) t += String.fromCharCode(...o.subarray(i, i + 0x8000));
   return btoa(t);
 };
+
+type Requete = Promise<Reponse<{ corps: unknown; reponse: Response }>>;
+/** Ce dont les routes ont besoin : une lecture, une ecriture (qui reprend le jeton), et l'init d'une ecriture JSON. */
+interface Outils {
+  readonly demander: (parametres: Record<string, string>) => Requete;
+  readonly ecrire: (parametres: Record<string, string>, init: () => RequestInit) => Requete;
+  readonly ecriture: (corps: unknown) => () => RequestInit;
+}
+
+/** Une reponse `{ ok: true }` : rien a lire. */
+const rien = (r: Awaited<Requete>): Reponse<null> => (r.ok ? { ok: true, valeur: null } : r);
+/** Un champ d'une reponse objet, lu par `lire` ; une reponse sans lui ou mal formee est une erreur du serveur. */
+function champ<T>(r: Awaited<Requete>, nom: string, lire: (x: unknown) => T | null): Reponse<T> {
+  if (!r.ok) return r;
+  const v = estObjet(r.valeur.corps) ? lire(r.valeur.corps[nom]) : null;
+  return v === null ? echec('serveur') : { ok: true, valeur: v };
+}
+
+/** Les routes des comptes (ADR-0041), a part de `creerServeur` pour que chaque fonction reste lisible. */
+function routesComptes({ demander, ecrire, ecriture }: Outils): Pick<Serveur, 'compte' | 'profil' | 'motDePasse' | 'deconnexion' | 'comptes' | 'actionCompte' | 'reglages' | 'poserReglages' | 'courrierEssai'> {
+  return {
+    compte: async () => {
+      const r = await demander({ r: 'compte' });
+      if (!r.ok) return r;
+      const corps = estObjet(r.valeur.corps) ? r.valeur.corps : {};
+      const compte = lireCompte(corps['compte']), site = lireSite(corps['site']);
+      if (!compte || !site) return echec('serveur');
+      const admin = estObjet(corps['admin']) ? corps['admin']['enAttente'] : undefined;
+      return { ok: true, valeur: { compte, site, enAttente: typeof admin === 'number' && admin >= 0 ? Math.floor(admin) : null } };
+    },
+    profil: async p => champ(await ecrire({ r: 'profil' }, ecriture(p)), 'compte', lireCompte),
+    motDePasse: async (ancien, nouveau) => rien(await ecrire({ r: 'mot-de-passe' }, ecriture({ ancien, nouveau }))),
+    deconnexion: async () => rien(await ecrire({ r: 'deconnexion' }, ecriture({}))),
+    comptes: async () => {
+      const r = await demander({ r: 'comptes' });
+      if (!r.ok) return r;
+      const liste = estObjet(r.valeur.corps) && Array.isArray(r.valeur.corps['comptes']) ? r.valeur.corps['comptes'] as unknown[] : null;
+      return liste ? { ok: true, valeur: liste.map(lireFiche).filter((c): c is FicheCompte => c !== null) } : echec('serveur');
+    },
+    actionCompte: async (action, id, corps = {}) => {
+      const r = await ecrire(id ? { r: 'compte-' + action, id } : { r: 'compte-' + action }, ecriture(corps));
+      if (!r.ok) return r;
+      // `{ compte }` quand le serveur rend la fiche, `{ ok: true }` quand il n'y a plus rien a montrer (supprime).
+      return { ok: true, valeur: estObjet(r.valeur.corps) ? lireFiche(r.valeur.corps['compte']) : null };
+    },
+    reglages: async () => {
+      const r = await demander({ r: 'reglages' });
+      if (!r.ok) return r;
+      const lu = reglagesRecus(r.valeur.corps);
+      return lu ? { ok: true, valeur: lu } : echec('serveur');
+    },
+    poserReglages: async (reglages, smtpMotDePasse) => {
+      // Le mot de passe SMTP ne part que tape : vide, le serveur garde le sien (ADR-0041 §7). `smtpMotDePassePose` est au serveur.
+      const corps = {
+        reglages: {
+          site: reglages.site, inscriptions: reglages.inscriptions, sessions: reglages.sessions,
+          courrier: { ...reglages.courrier, smtp: { ...reglages.courrier.smtp, ...(smtpMotDePasse ? { motDePasse: smtpMotDePasse } : {}) } }
+        }
+      };
+      const r = await ecrire({ r: 'reglages' }, ecriture(corps));
+      if (!r.ok) return r;
+      // Le serveur rend les reglages relus ; s'il ne rend que `{ ok: true }`, ceux qu'on a envoyes, le mot de passe pose s'il vient de l'etre.
+      const lu = reglagesRecus(r.valeur.corps);
+      return { ok: true, valeur: lu ?? { ...reglages, smtpMotDePassePose: reglages.smtpMotDePassePose || smtpMotDePasse !== '' } };
+    },
+    courrierEssai: async destinataire => rien(await ecrire({ r: 'courrier-essai' }, ecriture(destinataire ? { destinataire } : {})))
+  };
+}
 
 export function creerServeur(options: OptionsServeur): Serveur {
   const chercher = options.chercher ?? ((url: string, init: RequestInit) => fetch(url, init));
@@ -207,10 +447,10 @@ export function creerServeur(options: OptionsServeur): Serveur {
           if (neuf) { csrf = neuf; continue; }
         }
         if (code === 'session') return { erreur: PHRASES_TELECHARGEMENT.session, code: 'session' };
-        const message = estObjet(corps) && typeof corps['message'] === 'string' ? corps['message'].slice(0, 400) : MESSAGES['serveur'] ?? '';
+        const message = estObjet(corps) && typeof corps['message'] === 'string' ? corps['message'].slice(0, 400) : MESSAGES['serveur']?.() ?? '';
         return { erreur: message, code: CODES_ADRESSE[code] ?? 'refuse' };
       }
-      return { erreur: MESSAGES['csrf'] ?? '', code: 'refuse' };
+      return { erreur: MESSAGES['csrf']?.() ?? '', code: 'refuse' };
     } finally {
       clearTimeout(minuteur);
       signal.removeEventListener('abort', relayer);
@@ -219,6 +459,7 @@ export function creerServeur(options: OptionsServeur): Serveur {
 
   return {
     telechargerAdresse,
+    ...routesComptes({ demander: p => demander(p), ecrire, ecriture: corps => ecriture(corps) }),
     lister: async () => {
       const r = await demander({ r: 'projets' });
       if (!r.ok) return r;

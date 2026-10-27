@@ -9,8 +9,11 @@ import { proposer, texteOctets } from '../io/fichiers.js';
 import type { Traitement } from '../io/image.js';
 import { convertirLot, sansExtension, type EtatLot, type ImageDuLot } from '../io/lot.js';
 import { EtatVide } from './commun/EtatVide.js';
+import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 
-const LIBELLES: Record<EtatLot, string> = { attente: 'En attente', encours: 'En cours…', ok: 'Terminée', erreur: 'Échec', annule: 'Annulée' };
+// Une fonction, pas une constante : les libelles se traduisent au rendu, quand le dictionnaire de la langue est pose (ADR-0042).
+const libelles = (): Record<EtatLot, string> => ({ attente: t('En attente'), encours: t('En cours…'), ok: t('Terminée'), erreur: t('Échec'), annule: t('Annulée') });
 
 interface Proprietes {
   fichiers: readonly File[];
@@ -27,16 +30,19 @@ export function LotImages({ fichiers, traitement, ouvrir, fermer }: Proprietes) 
   // Un numéro par lancement : une liste qui revient d'un lot remplacé est jetée.
   const lancement = useRef(0);
 
-  const lancer = useCallback((t: Traitement) => {
+  const lancer = useCallback((tr: Traitement) => {
     const mien = ++lancement.current;
     annule.current = false;
     poserEnCours(true);
     dire('');
-    void convertirLot(fichiers, t, l => { if (mien === lancement.current) poserListe(l); }, () => annule.current || mien !== lancement.current).then(fin => {
+    void convertirLot(fichiers, tr, l => { if (mien === lancement.current) poserListe(l); }, () => annule.current || mien !== lancement.current).then(fin => {
       if (mien !== lancement.current) return;
       poserEnCours(false);
       const ok = fin.filter(i => i.etat === 'ok').length;
-      dire(annule.current ? 'Lot annulé : ' + ok + ' image' + (ok > 1 ? 's' : '') + ' convertie' + (ok > 1 ? 's' : '') + ' sur ' + fin.length + '.' : ok + ' image' + (ok > 1 ? 's' : '') + ' convertie' + (ok > 1 ? 's' : '') + ' sur ' + fin.length + '.');
+      const v = { n: ok, total: fin.length };
+      dire(annule.current
+        ? (ok > 1 ? t('Lot annulé : {n} images converties sur {total}.', v) : t('Lot annulé : {n} image convertie sur {total}.', v))
+        : (ok > 1 ? t('{n} images converties sur {total}.', v) : t('{n} image convertie sur {total}.', v)));
     });
   }, [fichiers]);
 
@@ -55,37 +61,38 @@ export function LotImages({ fichiers, traitement, ouvrir, fermer }: Proprietes) 
       const zip = ecrireZip(reussies.map((i, k) => ({ nom: noms[k] ?? 'image.svg', donnees: texteOctets(i.resultat?.svg ?? '') })));
       void proposer('images-svg.zip', new Blob([zip as BlobPart], { type: 'application/zip' })).then(dire);
     } catch (e) {
-      dire(e instanceof ErreurZip ? e.message : 'L’archive n’a pas pu être écrite.');
+      dire(e instanceof ErreurZip ? e.message : t('L’archive n’a pas pu être écrite.'));
     }
   };
   return (
-    <section className="lot" aria-label="Conversion par lot">
-      <h3>Lot de {fichiers.length} images <span className="aide">{faites} sur {liste.length || fichiers.length}</span></h3>
-      <progress max={liste.length || fichiers.length} value={faites} aria-label="Avancement du lot" />
+    <section className="lot" aria-label={t('Conversion par lot')}>
+      <h3>{t('Lot de {n} images', { n: fichiers.length })} <span className="aide">{t('{faites} sur {total}', { faites, total: liste.length || fichiers.length })}</span></h3>
+      <progress max={liste.length || fichiers.length} value={faites} aria-label={t('Avancement du lot')} />
       <ul>
         {liste.map(i => (
           <li key={i.id} className={'lot-' + i.etat}>
             <span className="lot-nom">{i.nom}</span>
-            <span className="lot-etat" data-etat={i.etat}>{LIBELLES[i.etat]}{i.etat === 'ok' && i.resultat ? ' · ' + (i.resultat.traces !== null ? i.resultat.traces + ' tracé' + (i.resultat.traces > 1 ? 's' : '') + ' · ' : '') + Math.max(1, Math.round(i.resultat.svg.length / 1024)) + ' Ko' : ''}{i.etat === 'erreur' && i.erreur ? ' : ' + i.erreur : ''}</span>
+            <span className="lot-etat" data-etat={i.etat}>{libelles()[i.etat]}{i.etat === 'ok' && i.resultat ? ' · ' + (i.resultat.traces !== null ? pluriel(i.resultat.traces, 'tracé') + ' · ' : '') + t('{n} Ko', { n: Math.max(1, Math.round(i.resultat.svg.length / 1024)) }) : ''}{i.etat === 'erreur' && i.erreur ? t(' : {erreur}', { erreur: i.erreur }) : ''}</span>
             {i.etat === 'ok' && i.resultat ? (
               <span className="actions">
-                <button type="button" className="discret" disabled={i.resultat.traces === null} title={i.resultat.traces === null ? 'Une image gardée telle quelle ne s’édite pas : vectorisez-la.' : undefined}
-                  aria-label={'Ouvrir ' + i.nom + ' dans l’éditeur'} onClick={() => ouvrir(sansExtension(i.nom), i.resultat?.svg ?? '')}>Ouvrir</button>
-                <button type="button" className="discret" aria-label={'Télécharger le SVG de ' + i.nom}
-                  onClick={() => { void proposer(sansExtension(i.nom) + '.svg', texteOctets(i.resultat?.svg ?? '')).then(dire); }}>Télécharger</button>
+                <button type="button" className="discret" disabled={i.resultat.traces === null} title={i.resultat.traces === null ? t('Une image gardée telle quelle ne s’édite pas : vectorisez-la.') : undefined}
+                  aria-label={t('Ouvrir {nom} dans l’éditeur', { nom: i.nom })} onClick={() => ouvrir(sansExtension(i.nom), i.resultat?.svg ?? '')}>{t('Ouvrir')}</button>
+                <button type="button" className="discret" aria-label={t('Télécharger le SVG de {nom}', { nom: i.nom })}
+                  onClick={() => { void proposer(sansExtension(i.nom) + '.svg', texteOctets(i.resultat?.svg ?? '')).then(dire); }}>{t('Télécharger')}</button>
               </span>
             ) : null}
           </li>
         ))}
       </ul>
       {!enCours && liste.length && !reussies.length ? (
-        <EtatVide genre="aucun-resultat" titre="Aucune image n’a été convertie.">Chaque ligne dit pourquoi. Déposez d’autres images, ou changez un réglage plus haut puis « Refaire avec les réglages actuels ».</EtatVide>
+        <EtatVide genre="aucun-resultat" titre={t('Aucune image n’a été convertie.')}>{t('Chaque ligne dit pourquoi. Déposez d’autres images, ou changez un réglage plus haut puis « Refaire avec les réglages actuels ».')}</EtatVide>
       ) : null}
       <div className="actions">
-        {enCours ? <button type="button" onClick={() => { annule.current = true; dire('Annulation après l’image en cours…'); }}>Annuler le lot</button> : null}
-        <button type="button" className={enCours ? 'discret' : 'primaire'} disabled={enCours || reussies.length === 0} onClick={telecharger}>Télécharger tout (ZIP)</button>
-        <button type="button" className="discret" disabled={enCours} onClick={() => lancer(traitement)} title="Reconvertit toutes les images avec les réglages affichés maintenant">Refaire avec les réglages actuels</button>
-        <button type="button" className="discret" disabled={enCours} onClick={fermer}>Fermer le lot</button>
+        {enCours ? <button type="button" onClick={() => { annule.current = true; dire(t('Annulation après l’image en cours…')); }}>{t('Annuler le lot')}</button> : null}
+        <button type="button" className={enCours ? 'discret' : 'primaire'} disabled={enCours || reussies.length === 0} onClick={telecharger}>{t('Télécharger tout (ZIP)')}</button>
+        <button type="button" className="discret" disabled={enCours} onClick={() => lancer(traitement)} title={t('Reconvertit toutes les images avec les réglages affichés maintenant')}>{t('Refaire avec les réglages actuels')}</button>
+        <button type="button" className="discret" disabled={enCours} onClick={fermer}>{t('Fermer le lot')}</button>
+
       </div>
       <span className="aide" role="status">{dit}</span>
     </section>

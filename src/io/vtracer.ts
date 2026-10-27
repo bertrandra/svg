@@ -5,6 +5,7 @@
 // et l'image reste une image.
 
 import type { Traceur } from '../engine/vectorisation.js';
+import { t } from '../util/i18n.js';
 import {
   fabriquerChargeurAnnexe, memoiserSucces, messageIntrouvable as messageAnnexeIntrouvable, navigateur,
   type Amenees, type Annexe, type Chargeur
@@ -20,8 +21,8 @@ export type FabriqueTraceur = () => Promise<Traceur>;
 const annexe: Annexe<FabriqueTraceur> = {
   fichier: FICHIER_VTRACER,
   globale: '__vtracerSvg',
-  contenu: 'le traceur : reconstruisez-le avec « npm run construire »',
-  consigne: 'placez « ' + FICHIER_VTRACER + ' » dans le même dossier que la page (il se construit avec « npm run construire »)',
+  get contenu() { return t('le traceur : reconstruisez-le avec « npm run construire »'); },
+  get consigne() { return t('placez « {fichier} » dans le même dossier que la page (il se construit avec « npm run construire »)', { fichier: FICHIER_VTRACER }); },
   valider: v => (typeof v === 'function' ? v as FabriqueTraceur : undefined)
 };
 
@@ -38,7 +39,7 @@ export function fabriquerChargeur(a: Amenees): Chargeur<Traceur> {
   const fichier = fabriquerChargeurAnnexe(annexe, a);
   return memoiserSucces(async () => {
     const fabrique = await fichier.charger();
-    try { return await fabrique(); } catch (e) { throw new Error('Le traceur ne démarre pas dans ce navigateur (' + raison(e) + ').'); }
+    try { return await fabrique(); } catch (e) { throw new Error(t('Le traceur ne démarre pas dans ce navigateur ({raison}).', { raison: raison(e) })); }
   });
 }
 

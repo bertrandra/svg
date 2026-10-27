@@ -14,6 +14,7 @@ import { deplacerReticule, directionDe, pasReticule, type PointPlan } from '../e
 import { appliquerZone, noeudsDansZone, type EffetZone, type Zone } from '../engine/selection.js';
 import { nombreFr } from '../engine/description.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { phraseCoinOppose, phraseReticule } from './annonces.js';
 import { phraseZone } from './commandesSelection.js';
 import { zoneDe } from './GesteZone.js';
@@ -28,7 +29,7 @@ const dansLaZone = (c: ContexteToile, z: Zone): string[] => noeudsDansZone(c.m.d
 function aPrendre(c: ContexteToile, outil: OutilZone, points: readonly PointPlan[]): string {
   const z = zoneDe(outil, points);
   const n = z ? dansLaZone(c, z).length : 0;
-  return n ? ' ' + pluriel(n, 'forme') + ' à prendre.' : ' Aucune forme à prendre.';
+  return ' ' + (n ? t('{n} à prendre.', { n: pluriel(n, 'forme') }) : t('Aucune forme à prendre.'));
 }
 
 /** Prend les formes de la zone, selon l'effet, et le dit ; la trace est oubliee, le reticule reste. */
@@ -43,7 +44,7 @@ function prendre(c: ContexteToile, outil: OutilZone, points: readonly PointPlan[
 
 /** Le premier coin du cadre vient d'etre pose. */
 const phrasePremierCoinCadre = (p: PointPlan): string =>
-  'Premier coin du cadre posé à ' + nombreFr(p[0]) + ', ' + nombreFr(p[1]) + '. Flèches : déplacer l’autre coin. Entrée : prendre les formes du cadre ; Maj et Entrée : les ajouter. Échap : annuler.';
+  t('Premier coin du cadre posé à {x}, {y}. Flèches : déplacer l’autre coin. Entrée : prendre les formes du cadre ; Maj et Entrée : les ajouter. Échap : annuler.', { x: nombreFr(p[0]), y: nombreFr(p[1]) });
 
 /** Les touches du cadre et du lasso. Vrai quand la touche est traitee ; `depart` dit ou le reticule apparait. */
 export function toucheZone(c: ContexteToile, e: KeyboardEvent, depart: () => PointPlan): boolean {
@@ -58,7 +59,7 @@ export function toucheZone(c: ContexteToile, e: KeyboardEvent, depart: () => Poi
     else ac.annoncer(phraseReticule(q));
     return true;
   }
-  if (e.key === 'Escape' && trace.length) { ac.poserTrace([]); ac.dire(outil === 'cadre' ? 'Premier coin annulé : l’outil reste pris.' : 'Lasso abandonné : l’outil reste pris.'); return true; }
+  if (e.key === 'Escape' && trace.length) { ac.poserTrace([]); ac.dire(outil === 'cadre' ? t('Premier coin annulé : l’outil reste pris.') : t('Lasso abandonné : l’outil reste pris.')); return true; }
   const p = u.curseur ?? depart(), effet: EffetZone = e.shiftKey ? 'ajouter' : 'remplacer';
   if (outil === 'cadre') {
     if (e.key !== ' ' && e.key !== 'Enter') return false;
@@ -70,15 +71,15 @@ export function toucheZone(c: ContexteToile, e: KeyboardEvent, depart: () => Poi
   if (e.key === ' ') {
     ac.poserTrace([...trace, p]);
     ac.poserCurseur(p);
-    ac.annoncer('Point ' + (trace.length + 1) + ' du lasso posé. ' + phraseReticule(p) + (trace.length + 1 < 3 ? ' Il en faut trois pour fermer.' : ' Entrée ferme le lasso.'));
+    ac.annoncer(t('Point {n} du lasso posé.', { n: trace.length + 1 }) + ' ' + phraseReticule(p) + ' ' + (trace.length + 1 < 3 ? t('Il en faut trois pour fermer.') : t('Entrée ferme le lasso.')));
     return true;
   }
-  if (e.key === 'Backspace' && trace.length) { ac.poserTrace(trace.slice(0, -1)); ac.annoncer(pluriel(trace.length - 1, 'point') + ' dans le lasso.'); return true; }
+  if (e.key === 'Backspace' && trace.length) { ac.poserTrace(trace.slice(0, -1)); ac.annoncer(t('{n} dans le lasso.', { n: pluriel(trace.length - 1, 'point') })); return true; }
   if (e.key !== 'Enter') return false;
   // Le reticule compte comme dernier point s'il a bouge depuis le dernier point pose.
   const dernier = trace[trace.length - 1];
   const points = u.curseur && (!dernier || dernier[0] !== u.curseur[0] || dernier[1] !== u.curseur[1]) ? [...trace, u.curseur] : [...trace];
-  if (points.length < 3) { ac.annoncer('Posez au moins trois points (Espace) avant de fermer le lasso.'); return true; }
+  if (points.length < 3) { ac.annoncer(t('Posez au moins trois points (Espace) avant de fermer le lasso.')); return true; }
   prendre(c, outil, points, effet);
   return true;
 }

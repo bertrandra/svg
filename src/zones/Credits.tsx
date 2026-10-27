@@ -13,6 +13,7 @@ import { SOURCE_PAR_DEFAUT, sourceFormes } from '../model/sourcesFormes.js';
 const PAQUET_PAR_DEFAUT = sourceFormes(SOURCE_PAR_DEFAUT)?.paquet;
 import { useFocusDialogue } from './focusEditeur.js';
 import { versionProduit } from './produit.js';
+import { t } from '../util/i18n.js';
 
 const Lien = ({ href, children }: { href: string; children: string }) => <a href={href} target="_blank" rel="noreferrer noopener">{children}</a>;
 
@@ -36,15 +37,14 @@ export interface PoliceCreditee { readonly nom: string; readonly source: string;
 function PolicesTelechargees({ polices }: { polices: readonly PoliceCreditee[] }) {
   return (
     <section className="credits-section">
-      <h3>Polices téléchargées employées dans ce dessin</h3>
+      <h3>{t('Polices téléchargées employées dans ce dessin')}</h3>
       <ul>
         {polices.map(p => (
-          <li key={p.nom}>{p.nom}{p.source ? ' · ' + p.source : ''}{p.licence ? <> · <Lien href={p.licence.url}>{p.licence.nom}</Lien></> : ' · licence : voir l’index des polices'}</li>
+          <li key={p.nom}>{p.nom}{p.source ? ' · ' + p.source : ''}{p.licence ? <> · <Lien href={p.licence.url}>{p.licence.nom}</Lien></> : ' · ' + t('licence : voir l’index des polices')}</li>
         ))}
       </ul>
       <p className="aide">
-        Ces polices ne sont pas livrées avec l’éditeur : vous les avez téléchargées depuis leur source. Le dessin enregistré n’en contient
-        que les contours des lettres, jamais le fichier de la police.
+        {t('Ces polices ne sont pas livrées avec l’éditeur : vous les avez téléchargées depuis leur source. Le dessin enregistré n’en contient que les contours des lettres, jamais le fichier de la police.')}
       </p>
     </section>
   );
@@ -55,32 +55,27 @@ export function ContenuCredits({ polices = [] }: { polices?: readonly PoliceCred
   const source = SOURCES_ORIGINE[0];
   return (
     <>
-      <p>Éditeur SVG, version {versionProduit()}. Tout se calcule dans votre navigateur.</p>
+      <p>{t('Éditeur SVG, version {version}. Tout se calcule dans votre navigateur.', { version: versionProduit() })}</p>
       {source ? (
         <section className="credits-section">
-          <h3>Formes de la bibliothèque</h3>
+          <h3>{t('Formes de la bibliothèque')}</h3>
           <p>
-            Les formes de la bibliothèque par défaut viennent de <Lien href={source.url}>{source.nom}</Lien>, sous licence{' '}
-            <Lien href={source.urlLicence}>{source.licence}</Lien> : vous pouvez les utiliser, y compris dans un
-            produit commercial, à condition d’en créditer la source. Vous les recolorez, les redimensionnez et les assemblez
-            librement ; ces changements sont des modifications au sens de la licence.
+            {t('Les formes de la bibliothèque par défaut viennent de ')}<Lien href={source.url}>{source.nom}</Lien>{t(', sous licence')}{' '}
+            <Lien href={source.urlLicence}>{source.licence}</Lien>{t(' : vous pouvez les utiliser, y compris dans un produit commercial, à condition d’en créditer la source. Vous les recolorez, les redimensionnez et les assemblez librement ; ces changements sont des modifications au sens de la licence.')}
           </p>
           <p>
-            Un SVG enregistré ou exporté qui contient de ces formes porte leur mention dans son élément <code>&lt;metadata&gt;</code>,
-            et un PDF dans ses informations. Conservez-la en publiant le dessin. Un PNG ne peut pas la porter : citez alors la source à côté de l’image.
+            {t('Un SVG enregistré ou exporté qui contient de ces formes porte leur mention dans son élément ')}<code>&lt;metadata&gt;</code>{t(', et un PDF dans ses informations. Conservez-la en publiant le dessin. Un PNG ne peut pas la porter : citez alors la source à côté de l’image.')}
           </p>
         </section>
       ) : null}
-      <Liste titre="Autres bibliothèques de formes (chargées à la demande)" composants={composantsDe('forme').filter(c => c.paquet !== PAQUET_PAR_DEFAUT)} />
+      <Liste titre={t('Autres bibliothèques de formes (chargées à la demande)')} composants={composantsDe('forme').filter(c => c.paquet !== PAQUET_PAR_DEFAUT)} />
       <p className="aide">
-        Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention dans chaque dessin : un SVG qui contient une de leurs formes
-        garde seulement son origine (par exemple <code>mdi:heart</code>), sans élément <code>&lt;metadata&gt;</code>. Leur notice et le texte
-        de leur licence accompagnent l’éditeur dans MENTIONS.txt.
+        {t('Leurs licences (MIT, ISC, Apache 2.0) ne demandent pas de mention dans chaque dessin : un SVG qui contient une de leurs formes garde seulement son origine (par exemple ')}<code>mdi:heart</code>{t('), sans élément ')}<code>&lt;metadata&gt;</code>{t('. Leur notice et le texte de leur licence accompagnent l’éditeur dans MENTIONS.txt.')}
       </p>
-      <Liste titre="Fontes" composants={composantsDe('fonte')} />
+      <Liste titre={t('Fontes')} composants={composantsDe('fonte')} />
       {polices.length ? <PolicesTelechargees polices={polices} /> : null}
-      <Liste titre="Logiciels" composants={composantsDe('logiciel')} />
-      <p className="aide">Le texte complet de chaque licence est dans le fichier MENTIONS.txt, livré avec l’éditeur.</p>
+      <Liste titre={t('Logiciels')} composants={composantsDe('logiciel')} />
+      <p className="aide">{t('Le texte complet de chaque licence est dans le fichier MENTIONS.txt, livré avec l’éditeur.')}</p>
     </>
   );
 }
@@ -95,9 +90,9 @@ export function DialogueCredits({ fermer, conteneur, polices }: { fermer: () => 
   return createPortal(
     <div className="credits-voile" ref={voile}>
       <div className="credits-dialogue" role="dialog" aria-modal="true" aria-labelledby={idTitre} tabIndex={-1} ref={boite}>
-        <h2 id={idTitre}>À propos et crédits</h2>
+        <h2 id={idTitre}>{t('À propos et crédits')}</h2>
         <ContenuCredits {...(polices ? { polices } : {})} />
-        <div className="actions"><button type="button" className="primaire" onClick={fermer}>Fermer</button></div>
+        <div className="actions"><button type="button" className="primaire" onClick={fermer}>{t('Fermer')}</button></div>
       </div>
     </div>,
     conteneur

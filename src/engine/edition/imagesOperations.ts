@@ -8,6 +8,7 @@ import type { DessinSvg, Forme, ImageIntegree } from './types.js';
 import { parcourirContenus } from './arbre.js';
 import { ajouterForme } from './formes.js';
 import { IMAGES_OCTETS_MAX, MSG_IMAGE_PETITE, MSG_IMAGES_LOURDES, rectangleImage, verifierDonneesImage, type DonneesVerifiees } from './fonctions/images.js';
+import { t } from '../../util/i18n.js';
 
 /** Les octets d'une image `data:…;base64,…` d'apres la longueur de son base64 (sans le decoder). */
 function octetsDe(donnees: string): number {
@@ -44,12 +45,12 @@ export function insererImage(d: DessinSvg, donnees: string, centre: { readonly x
   { readonly dessin: DessinSvg; readonly id: string; readonly verifiee: DonneesVerifiees } | { readonly refus: string } {
   const v = verifierDonneesImage(donnees);
   if ('refus' in v) return v;
-  if (octetsImages(d) + v.octets > IMAGES_OCTETS_MAX) return { refus: MSG_IMAGES_LOURDES };
+  if (octetsImages(d) + v.octets > IMAGES_OCTETS_MAX) return { refus: t(MSG_IMAGES_LOURDES) };
   const image: ImageIntegree = { donnees: v.donnees, ...cadreImage(d.vb, v.l, v.h, centre) };
-  if (!(image.l > 0) || !(image.h > 0)) return { refus: MSG_IMAGE_PETITE };
+  if (!(image.l > 0) || !(image.h > 0)) return { refus: t(MSG_IMAGE_PETITE) };
   // La forme passe par `ajouterForme` (son numero, sa place dans le groupe du contexte), puis devient la feuille image.
   const r = ajouterForme(d, rectangleImage(image), { remplissage: null, contour: null, epaisseur: 0 }, 'nonzero', parent);
-  if (r.id === null) return { refus: MSG_IMAGE_PETITE };
+  if (r.id === null) return { refus: t(MSG_IMAGE_PETITE) };
   const id = r.id;
   const formes = r.dessin.formes.map((f): Forme => (f.id === id ? { ...f, remplissage: null, contour: null, epaisseur: 0, image } : f));
   return { dessin: { ...r.dessin, formes }, id, verifiee: v };

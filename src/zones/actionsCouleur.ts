@@ -9,6 +9,7 @@ import {
   visibilitesConformes, visibilitesDe, type DessinSvg, type GroupeCouleur, type SurCouleur, type Visibilites
 } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { precisionSur, type ActionsLigne } from './LigneCouleur.js';
 import { useActions, useDessin } from './contexteEditeur.js';
 
@@ -23,7 +24,6 @@ interface GesteCouleur { cle: string; base: DessinSvg; de: string; sur: SurCoule
 /** La ligne qu'on recolore change de couleur donc de cle : on lui garde sa cle d'avant le temps du geste. */
 export interface SuiviCouleur { cle: string; vers: string }
 
-const accord = (n: number) => (n > 1 ? 's' : '');
 const nom = (c: string) => c.toUpperCase();
 
 export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: readonly GroupeCouleur[]) {
@@ -43,13 +43,13 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
   useEffect(() => { if (isolement && !isolementTient && !peutRetablir && isolement.quitteSur !== dessin) poserIsolement(null); }, [isolement, isolementTient, peutRetablir, dessin]);
 
   const choisirIds = (ids: string[], message: string) => {
-    if (!ids.length) { ac.dire('Aucune forme à choisir : elles sont masquées ou verrouillées.'); return; }
+    if (!ids.length) { ac.dire(t('Aucune forme à choisir : elles sont masquées ou verrouillées.')); return; }
     ac.choisir(ids);
     ac.poserPoint(null);
     ac.dire(message);
   };
   const choisir = (g: GroupeCouleur, ajout: boolean) => {
-    if (!g.libres.length) { ac.dire('Les formes ' + nom(g.couleur) + ' sont masquées ou verrouillées.'); return; }
+    if (!g.libres.length) { ac.dire(t('Les formes {couleur} sont masquées ou verrouillées.', { couleur: nom(g.couleur) })); return; }
     ac.choisir(ajout ? [...new Set([...sel, ...g.libres])] : g.libres);
     ac.poserPoint(null);
     poserRangee(g.couleur);
@@ -61,7 +61,7 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
     // Un second isolement garde la visibilite d'avant le premier : c'est elle qu'on veut retrouver.
     const avant = isolementTient && isolement ? isolement.avant : visibilitesDe(dessin);
     const siens = new Set(g.ids);
-    ac.faire(() => r, 'Seules les formes ' + nom(g.couleur) + ' restent affichées.');
+    ac.faire(() => r, t('Seules les formes {couleur} restent affichées.', { couleur: nom(g.couleur) }));
     ac.choisir(sel.filter(id => siens.has(id)));
     if (r !== dessin) poserIsolement({ avant, apres: visibilitesDe(r), quitteSur: null });
   };
@@ -69,7 +69,7 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
     if (!isolement) return;
     const r = restaurerVisibilites(dessin, isolement.avant);
     const visibles = new Set(r.formes.filter(f => f.visible).map(f => f.id));
-    ac.faire(() => r, 'Affichage d’avant l’isolement rétabli.');
+    ac.faire(() => r, t('Affichage d’avant l’isolement rétabli.'));
     ac.choisir(sel.filter(id => visibles.has(id)));
     poserIsolement({ ...isolement, quitteSur: r });
   };
@@ -78,11 +78,12 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
     geste.current = x;
     ac.appliquer(() => remplacerCouleurSur(x.base, x.de, vers, x.sur), x.cle);
     poserSuivi({ cle: suivi && suivi.vers === g.couleur ? suivi.cle : g.couleur, vers });
-    ac.dire(nom(x.de) + ' remplacée par ' + nom(vers) + precisionSur(x.sur) + ' : ' + pluriel(g.ids.length, 'forme') + '.');
+    ac.dire(t('{de} remplacée par {vers}{precision} : {formes}.', { de: nom(x.de), vers: nom(vers), precision: precisionSur(x.sur), formes: pluriel(g.ids.length, 'forme') }));
   };
   const nuancesProchesDe = (couleur: string) => {
     const ids = idsDeNuancesProches(dessin, couleur, tolerance / 100, sur);
-    choisirIds(ids, pluriel(ids.length, 'forme') + ' de nuance proche de ' + nom(couleur) + ' (tolérance ' + tolerance + ') choisie' + (ids.length > 1 ? 's' : '') + '.');
+    const v = { formes: pluriel(ids.length, 'forme'), couleur: nom(couleur), tolerance };
+    choisirIds(ids, ids.length > 1 ? t('{formes} de nuance proche de {couleur} (tolérance {tolerance}) choisies.', v) : t('{formes} de nuance proche de {couleur} (tolérance {tolerance}) choisie.', v));
     poserRangee(couleur);
   };
   const combinerCouleur = (g: GroupeCouleur) => {
@@ -90,21 +91,28 @@ export function useActionsCouleur(sur: SurCouleur, tolerance: number, groupes: r
     if (!r.id) return;
     ac.appliquer(() => r.dessin);
     ac.choisir([r.id]);
-    ac.dire(pluriel(g.libres.length, 'forme') + ' combinée' + accord(g.libres.length) + ' en une (' + nom(g.couleur) + ').');
+    const v = { formes: pluriel(g.libres.length, 'forme'), couleur: nom(g.couleur) };
+    ac.dire(g.libres.length > 1 ? t('{formes} combinées en une ({couleur}).', v) : t('{formes} combinée en une ({couleur}).', v));
   };
   const supprimerCouleur = (g: GroupeCouleur) => {
     const siens = new Set(g.libres);
-    ac.faire(d => supprimer(d, g.libres), pluriel(g.libres.length, 'forme') + ' ' + nom(g.couleur) + ' supprimée' + accord(g.libres.length) + '.');
+    const v = { formes: pluriel(g.libres.length, 'forme'), couleur: nom(g.couleur) };
+    ac.faire(d => supprimer(d, g.libres), g.libres.length > 1 ? t('{formes} {couleur} supprimées.', v) : t('{formes} {couleur} supprimée.', v));
     ac.choisir(sel.filter(id => !siens.has(id)));
   };
   const fusionner = () => {
     const r = fusionnerCouleursProches(dessin, tolerance / 100, sur);
     if (!r.formes) {
-      ac.dire(r.conservees ? 'Ces nuances sont sur des formes verrouillées : déverrouillez-les pour les fusionner.' : 'Aucune nuance proche à cette tolérance.');
+      ac.dire(r.conservees ? t('Ces nuances sont sur des formes verrouillées : déverrouillez-les pour les fusionner.') : t('Aucune nuance proche à cette tolérance.'));
       return;
     }
-    const gardees = r.conservees ? ', ' + pluriel(r.conservees, 'couleur') + ' gardée' + (r.conservees > 1 ? 's' : '') + ' par des formes verrouillées' : '';
-    ac.faire(() => r.dessin, pluriel(r.fusionnees, 'couleur') + ' fusionnée' + (r.fusionnees > 1 ? 's' : '') + precisionSur(sur) + ' : ' + pluriel(r.formes, 'forme') + ' recolorée' + (r.formes > 1 ? 's' : '') + gardees + '.');
+    // Chaque morceau s'accorde en nombre a part, puis la phrase les assemble : le francais reste celui d'avant, mot pour mot.
+    const conservees = pluriel(r.conservees, 'couleur');
+    const gardees = r.conservees ? (r.conservees > 1 ? t(', {couleurs} gardées par des formes verrouillées', { couleurs: conservees }) : t(', {couleurs} gardée par des formes verrouillées', { couleurs: conservees })) : '';
+    const couleurs = pluriel(r.fusionnees, 'couleur'), formes = pluriel(r.formes, 'forme');
+    const fusionnees = r.fusionnees > 1 ? t('{couleurs} fusionnées', { couleurs }) : t('{couleurs} fusionnée', { couleurs });
+    const recolorees = r.formes > 1 ? t('{formes} recolorées', { formes }) : t('{formes} recolorée', { formes });
+    ac.faire(() => r.dessin, t('{fusionnees}{precision} : {recolorees}{gardees}.', { fusionnees, precision: precisionSur(sur), recolorees, gardees }));
   };
 
   // Les verbes que les lignes recoivent : le meme objet pendant toute la vie de la section, qui appelle les

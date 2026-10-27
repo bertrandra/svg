@@ -14,6 +14,7 @@ import { regionDeChemin, toleranceBooleen } from '../booleens.js';
 import type { Chemin, Commande, DessinSvg, Forme } from '../edition/types.js';
 import { LIMITE_MITRE_DEFAUT } from '../edition/trait.js';
 import { nombreFr } from '../description.js';
+import { t } from '../../util/i18n.js';
 import { anneauxDeTrait, type Jonction, type ReglageBord } from './epaissir.js';
 import { polyligneDAnneau, polylignesDeChemin, type Polyligne, type Pt } from './polylignes.js';
 import { cheminDeRegionChoisie, unirAnneaux } from './region.js';
@@ -54,7 +55,8 @@ function bordsDe(region: MultiPolygon): Polyligne[] {
   return lignes;
 }
 
-const MSG_OUVERT_NEGATIF = 'Un tracé ouvert n’a pas d’intérieur : décalez-le vers l’extérieur (distance positive).';
+// Traduit a l'appel (ADR-0042) : la langue est posee apres le chargement du module.
+const MSG_OUVERT_NEGATIF = (): string => t('Un tracé ouvert n’a pas d’intérieur : décalez-le vers l’extérieur (distance positive).');
 
 /** Le trace d'un bord : l'union des anneaux de ses polylignes. */
 const traceDe = (lignes: readonly Polyligne[], r: ReglageBord): MultiPolygon => unirAnneaux(lignes.flatMap(l => anneauxDeTrait(l, r)));
@@ -67,7 +69,7 @@ function decalerUneFois(d: Chemin, distance: number, jonction: Jonction, o: Opti
   const region = fermes.length ? regionDeChemin(fermes, o.regle ?? 'nonzero', tolerance) : [];
   const reglage: ReglageBord = { demi: h, bout: 'round', jonction, limite: o.limite ?? LIMITE_MITRE_DEFAUT, tolerance };
   const lignesOuvertes = ouverts.flatMap(s => polylignesDeChemin(s, tolerance));
-  if (distance < 0 && !fermes.length) return { erreur: MSG_OUVERT_NEGATIF };
+  if (distance < 0 && !fermes.length) return { erreur: MSG_OUVERT_NEGATIF() };
   let resultat: MultiPolygon;
   if (distance > 0) {
     const bord = traceDe([...bordsDe(region), ...lignesOuvertes], reglage);
@@ -80,7 +82,7 @@ function decalerUneFois(d: Chemin, distance: number, jonction: Jonction, o: Opti
   // En decalage rentrant, les sous-chemins ouverts n'ont pas de sens : ils restent tels quels.
   const conserves = distance < 0 ? ouverts.flat() : [];
   const chemin = [...cheminDeRegionChoisie(resultat, lisser, tolerance), ...conserves];
-  if (!chemin.length) return { erreur: 'Le décalage de ' + nombreFr(distance) + ' dépasse la forme : il ne reste rien.', vide: true };
+  if (!chemin.length) return { erreur: t('Le décalage de {distance} dépasse la forme : il ne reste rien.', { distance: nombreFr(distance) }), vide: true };
   return { chemin };
 }
 
@@ -96,7 +98,7 @@ export function decaler(d: Chemin, distance: number, jonction: Jonction, options
       return decalerUneFois(d, distance, jonction, options, base * facteur);
     } catch { /* un autre aplatissement defait souvent l'incidence qui a fait echouer le balayage */ }
   }
-  return { erreur: 'Le tracé est trop enchevêtré pour être décalé : simplifiez-le, puis recommencez.' };
+  return { erreur: t('Le tracé est trop enchevêtré pour être décalé : simplifiez-le, puis recommencez.') };
 }
 
 export interface ResultatDecalageFormes {

@@ -25,7 +25,7 @@ import {
 } from '../engine/navigation.js';
 import { au } from '../util/tableaux.js';
 import { FORMES } from './aidesEditeur.js';
-import { phraseCoinOppose, phrasePremierCoin, phraseReticule, phraseSelection, PHRASE_COIN_ANNULE, PHRASE_COINS_TROP_PROCHES } from './annonces.js';
+import { phraseCoinAnnule, phraseCoinOppose, phraseCoinsTropProches, phrasePremierCoin, phraseReticule, phraseSelection } from './annonces.js';
 import { basculerCurseur, etendreSelection } from './ClavierSelection.js';
 import { ajouterTracee, formeTracee } from './Gestes.js';
 import { toucheZone } from './ClavierZone.js';
@@ -35,6 +35,7 @@ import type { ActionsEditeur, EtatInterface, ModeleDessin, OutilForme } from './
 import type { EtatSaisie } from './contexteSaisie.js';
 import { lentilleDe, niveauEdition } from './lentille.js';
 import { RAISONS_LENTILLE } from './phrasesContenus.js';
+import { t } from '../util/i18n.js';
 
 export interface ContexteToile { m: ModeleDessin; u: EtatInterface; ac: ActionsEditeur; toile: RefObject<HTMLDivElement | null>; sx?: EtatSaisie }
 
@@ -57,7 +58,7 @@ function tabuler({ m, u, ac }: ContexteToile, sens: Sens): boolean {
 /** PageSuiv et PageReg : la forme suivante ou precedente, en boucle, meme sans rien de choisi. */
 function changerForme({ m, u, ac }: ContexteToile, sens: Sens): boolean {
   const id = formeVoisine(m.dessin, m.sel, sens, true, niveauEdition(u.contexte));
-  if (id === null) { ac.annoncer('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.'); return true; }
+  if (id === null) { ac.annoncer(t('Aucune forme à choisir : elles sont toutes masquées ou verrouillées.')); return true; }
   ac.choisir([id]);
   ac.poserPoint(null);
   return true;
@@ -82,7 +83,7 @@ function poserTrace(c: ContexteToile, d: Commande[]): void {
   ac.finir();
   ac.choisir([r.id]);
   ac.poserOutil('selection');
-  ac.annoncer(phraseSelection(r.dessin, [r.id], true) + ' Alt et flèches la redimensionnent, Ctrl et flèches la tournent.');
+  ac.annoncer(phraseSelection(r.dessin, [r.id], true) + ' ' + t('Alt et flèches la redimensionnent, Ctrl et flèches la tournent.'));
 }
 
 /**
@@ -107,7 +108,7 @@ function deuxCoins(c: ContexteToile): boolean {
     ac.dire(phrasePremierCoin(p));
     return true;
   }
-  if (!coinsPosables(u.outil === 'ligne', premier, p, coteMinimal(m.dessin.vb))) { ac.annoncer(PHRASE_COINS_TROP_PROCHES); return true; }
+  if (!coinsPosables(u.outil === 'ligne', premier, p, coteMinimal(m.dessin.vb))) { ac.annoncer(phraseCoinsTropProches()); return true; }
   const outil = u.outil as OutilForme;
   poserTrace(c, formeTracee(outil, premier[0], premier[1], p[0], p[1], false, u.parametres));
   return true;
@@ -118,7 +119,7 @@ function plume(c: ContexteToile, e: KeyboardEvent): boolean {
   const { u, ac } = c;
   if (e.key !== 'Enter') return false;
   if (e.shiftKey) {
-    if (u.trace.length < 2) ac.annoncer('Il faut au moins deux points pour terminer le tracé.');
+    if (u.trace.length < 2) ac.annoncer(t('Il faut au moins deux points pour terminer le tracé.'));
     else ac.finirTrace(true);
     return true;
   }
@@ -126,7 +127,7 @@ function plume(c: ContexteToile, e: KeyboardEvent): boolean {
   const p = u.curseur ?? departReticule(c);
   ac.poserTrace([...u.trace, p]);
   ac.poserCurseur(p);
-  ac.annoncer('Point ' + (u.trace.length + 1) + ' posé. ' + phraseReticule(p));
+  ac.annoncer(t('Point {n} posé.', { n: u.trace.length + 1 }) + ' ' + phraseReticule(p));
   return true;
 }
 
@@ -148,7 +149,7 @@ function reticule(c: ContexteToile, e: KeyboardEvent): boolean {
     return true;
   }
   if (u.outil === 'plume') return plume(c, e);
-  if (e.key === 'Escape' && premier) { ac.poserTrace([]); ac.dire(PHRASE_COIN_ANNULE); return true; }
+  if (e.key === 'Escape' && premier) { ac.poserTrace([]); ac.dire(phraseCoinAnnule()); return true; }
   if (e.key === ' ' || (e.key === 'Enter' && (e.shiftKey || premier))) return deuxCoins(c);
   if (e.key !== 'Enter') return false;
   poserForme(c, u.curseur ?? departReticule(c));

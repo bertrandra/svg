@@ -5,6 +5,35 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ## [Non publié]
 
+### Ajouté
+
+- **L’éditeur entier en anglais** (ADR-0042, après le socle ci-dessous). Chaque texte d’interface de `src/` passe par `t()` : menus,
+  barres, panneaux, boîtes, annonces de la région vocale, raccourcis dits en toutes lettres (`Maj` → `Shift`, `Échap` → `Esc`),
+  messages du moteur (refus de lecture, constats de préparation, pertes à l’export, lecture PDF), textes du site (projets, profil,
+  comptes, réglages) et mode d’emploi de l’archive Cricut (`LISEZMOI.txt`, identique à l’octet en français). Les données s’affichent
+  traduites sans changer dans les fichiers : événements et catégories de la bibliothèque, machines, tapis, matières, procédés, unités,
+  formes de base, noms de couleurs, publics de l’accueil ; une forme de la bibliothèque prend en anglais les mots de son identifiant
+  d’origine (`nomAffiche`). Les tables de libellés évaluées au chargement sont devenues des fonctions ou des accesseurs, pour lire la
+  langue au moment de l’affichage. Dictionnaires par lot dans `src/i18n/en/` (3 285 clés, une seule traduction par clé, un glossaire
+  commun : shape, path, layer, canvas, artboard, swatches, fill, stroke, mat, sheet, blade, pen, bridge, island…), fusionnés en
+  l’annexe `langue-en.js` (276 Ko, chargée seulement en anglais). Le français rendu est identique au caractère près : les tests
+  d’avant ne changent pas ; le cliquet des textes français hors `t()` tombe à zéro, hors fichiers de données et d’octets écrits
+  (`tests/fixtures/i18n/exclus.json`).
+
+- **Le socle de l'interface en français et en anglais** (ADR-0042). `src/util/i18n.ts` : `t('phrase française', { valeurs })`, la
+  phrase française pour clé, l'entrée du dictionnaire anglais en anglais, la clé sinon ; `pluriel(n, mot, plurielIrrégulier ?)`
+  passe le mot par `t` ; `nombre`, `locale` et `dateCourte` suivent la langue (les `toLocaleString('fr-FR')` épars y passent).
+  Les dictionnaires vivent dans `src/i18n/en/<dossier>.json` (clés triées, une traduction par clé), fusionnés par `npm run langues`
+  en une annexe `dist/langue-en.js` (et `data/json/langue-en.json` pour le site), chargée **seulement quand la langue vaut `en`**,
+  avant le premier rendu ; si elle manque, l'interface reste en français et le dit une fois. Le réglage `svg.langue` (`fr` par
+  défaut) se choisit au pied de l'accueil (« Français / English ») et à la fin du menu Aide de l'éditeur (« Language: English » /
+  « Langue : français ») : la page écrit le réglage et se recharge, `<html lang>` suit. Chez un hôte : l'option `langue` d'`EditeurSvg.ouvrir`
+  (validée : « fr » par défaut ou « en ») et la propriété `langue` du composant ; `preparerLangue` (`src/io/langue.ts`) pour un hôte
+  React ou le site. `tests/unit/i18n/couverture.test.ts` exige une traduction pour chaque clé de `t` et de `pluriel`, aucune clé
+  orpheline, les mêmes `{valeurs}`, et tient le cliquet des textes français hors `t` (`tests/fixtures/i18n/restes.json`, qui ne fait
+  que baisser ; `npm run i18n:restes` les liste). Seuls le titre et le chapeau de l'accueil, le sélecteur et les mots de `pluriel`
+  sont traduits pour l'instant : les textes de l'éditeur arrivent par vagues.
+
 ### Version majeure : des octets écrits changent
 
 - **Cricut : le tapis fixe par défaut** (ADR-0039, révision du 26 octobre 2026 ; décision du propriétaire : « le tapis est fixe dès
@@ -90,6 +119,14 @@ empreintes.
   dans `/Subject`, le SVG de découpe dans un commentaire, et seulement s'il y a une forme créditée.
 
 ### Modifié
+
+- **Mettre à jour un site PHP d’avant demande de recréer un administrateur** (ADR-0041) : le **mot de passe unique disparaît**
+  (`data/pwd`, `data/password`, `data/connexions.json`, `inc/mot-de-passe.php` n’existent plus), ainsi que `config.php`,
+  `public/inc/` et `DATA_DIR` (le code est dans `data/inc/`, les constantes avancées dans `data/config/config.local.php`). À la
+  première visite après la mise à jour, la page demande de créer le compte administrateur : les projets existants lui sont
+  rattachés, puis chacun crée son compte. Le routeur de `php -S` devient `data/inc/serveur-local.php` ; la vérification que `data/`
+  ne se lit pas par HTTP porte sur `data/config/config.json`. `scripts/site-php.mjs` reprend l’annexe facultative `langue-en` quand
+  elle est construite.
 
 - **Le menu Aide devient une icône**, un point d’interrogation à droite de la barre, juste avant Fichier (là où l’on cherche l’aide
   d’habitude) ; il garde la visite guidée et les raccourcis, et ouvre désormais les deux documentations. Sur un téléphone, l’Aide
@@ -314,6 +351,54 @@ empreintes.
 - Un menu déroulant ne se ferme plus quand un défilement ne déplace pas son bouton.
 
 ### Ajouté
+
+- **Le menu du profil** (ADR-0041 §5) : en haut à droite de « Mes projets », un rond aux initiales du nom (`Compte : <nom>`)
+  ouvre un menu : le nom et l’adresse en tête, « Mon profil… », pour un administrateur « Comptes » (avec le nombre de demandes en
+  attente, en pastille sur l’icône et dans le libellé) et « Réglages du site… », puis « Se déconnecter », qui soumet le même
+  formulaire POST sous jeton CSRF qu’avant. La page donne la personne et le site en JSON (`data-compte`, `data-site` sur `#site`),
+  lus sans lever ; un attribut illisible ouvre l’application sans le menu, avec la déconnexion d’avant, et le dit.
+  « Mon profil » est une boîte modale (Échap ferme, le focus revient) : le nom (120 caractères), la langue (Français / English ;
+  la page se recharge quand elle change), le mot de passe (l’actuel, le nouveau deux fois, dix caractères au moins, chaque
+  erreur liée à son champ), chaque formulaire avec son propre retour. `src/site/MenuProfil.tsx`, `src/site/Profil.tsx`,
+  `src/site/Formulaire.tsx` ; la part pure dans `src/site/comptesSite.ts` (initiales, validations), testée dans
+  `tests/unit/site/`. `MenuDeroulant` accepte un contenu de bouton (`contenu`) et un en-tête hors menu (`entete`).
+- **L’écran Comptes** (ADR-0041 §5, administrateur) : un écran à la place de « Mes projets » (« ← Mes projets » y ramène), trois
+  onglets au clavier (En attente, Actifs, Autres, chacun avec son nombre et son état vide), une ligne par compte (nom, adresse,
+  langue, rôle, dates, nombre de projets). Approuver est la seule action pleine ; Refuser (avec une raison d’une ligne),
+  Suspendre, Nommer ou retirer l’administration, Changer l’adresse et Supprimer se confirment dans la ligne, jamais dans une
+  fenêtre du navigateur ; Réactiver et Renvoyer le mail partent au clic. Les gestes qu’on ne fait pas sur soi-même ni sur le
+  dernier administrateur actif sont grisés avec leur raison, et le refus du serveur se montre en clair. « Créer un compte… »
+  (adresse, nom, langue, mot de passe provisoire) ouvre un compte actif d’emblée. `src/site/Comptes.tsx` ; classement, gestes
+  par état et raisons dans `src/site/comptesSite.ts`.
+- **Réglages du site** (ADR-0041 §7, administrateur) : le formulaire de `data/config/config.json` : nom du site, langue par
+  défaut, adresse du site, inscriptions ouvertes, courrier (expéditeur, nom, mode mail / SMTP / fichier, serveur, port, sécurité,
+  utilisateur, mot de passe laissé vide pour ne pas le changer, jamais renvoyé par le serveur), « Envoyer un mail d’essai » vers
+  l’adresse de son choix, « Enregistrer ». `src/site/Reglages.tsx`.
+- **Le client de l’API du site** (`io/serveur.ts`) connaît les routes des comptes : `compte`, `profil`, `motDePasse`,
+  `deconnexion`, `comptes`, `actionCompte`, `reglages`, `poserReglages`, `courrierEssai`, avec des lecteurs qui ne croient que des
+  champs de la bonne forme (`lireCompte`, `lireFiche`, `lireSite`, `lireReglages` : chaque réglage à son défaut) ; les codes de
+  refus (`role`, `existe`, `dernier-admin`, `soi-meme`, `courrier`, `limite`) ont une phrase de repli. Testé dans
+  `tests/unit/io/serveur.test.ts`.
+- **Les comptes du site PHP** (ADR-0041). Le site n’a plus un mot de passe partagé mais **des comptes** : l’administrateur se crée à
+  la première visite (adresse, nom, mot de passe, langue, nom du site, adresse d’expédition des mails ; ou en ligne de commande,
+  `php data/inc/compte.php --admin`), une personne **s’inscrit**, **confirme son adresse** par le lien reçu (48 h), puis un
+  **administrateur l’approuve** (ou la refuse, avec une raison), prévenu par mail, et la personne l’est aussi ; **mot de passe
+  oublié** par un lien d’une heure, à usage unique ; profil (nom, langue, mot de passe) ; chaque compte a **ses projets**
+  (`data/projets/<compte>/`, sa corbeille dedans), un identifiant d’un autre compte est introuvable. L’API d’administration
+  (`comptes`, `compte-approuver|refuser|suspendre|reactiver|promouvoir|retrograder|renvoyer|email|supprimer|creer`, `reglages`,
+  `courrier-essai`) relit le rôle à chaque requête et refuse de retirer le dernier administrateur actif ou soi-même ; supprimer un
+  compte emporte ses projets dans `data/projets/corbeille-comptes/`. Les **sessions** sont des jetons aléatoires en fichier (cookie
+  `svg_session`, nouveau jeton à la connexion, état et rôle relus à chaque requête : un compte suspendu ou au mot de passe changé perd
+  ses autres sessions à leur requête suivante). Les **réglages** vivent dans `data/config/config.json` (nom et langue du site,
+  inscriptions ouvertes, courrier : `mail`, `smtp` ou `fichier`), validés champ par champ, modifiables dans « Réglages du site »
+  avec « Envoyer un mail d’essai » ; le **client SMTP** minimal fait STARTTLS ou SSL, AUTH PLAIN ou LOGIN, et n’envoie rien en clair si
+  STARTTLS est refusé. Les **pages d’avant la connexion et les mails** existent en français et en anglais (`t()` côté serveur,
+  sélecteur FR / EN par cookie, la langue du compte ensuite, un mail dans la langue de son destinataire). La limitation des essais
+  compte par client **et** par compte, les demandes de mail par client. `public/` ne garde que `index.php`, `api.php`, `.htaccess`,
+  `assets/`, `aide/`, `MENTIONS.txt` et `data/` : **tout le code PHP vit dans `data/inc/`**, jamais servi. Tests : `tests/php/`
+  (comptes, installation et migration, jetons, sessions, limitation, configuration, courrier en mode fichier, SMTP contre un faux
+  serveur local avec certificat auto-signé, couverture du dictionnaire anglais ; par HTTP, le circuit entier et l’API
+  d’administration), `docs/deploiement-php.md` et `docs/securite.md` § 9.
 
 - **Deux documentations dans le menu Aide** : « Guide de l’éditeur » (seize fonctions en six chapitres, chacune en une capture
   et quelques étapes, avec un sommaire qui suit la lecture, Précédent / Suivant, et un tiroir au téléphone) et « La Cricut, c’est

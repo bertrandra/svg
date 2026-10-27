@@ -7,9 +7,13 @@
 
 import { visibleEffectif, type DessinSvg, type Groupe } from '../editionSvg.js';
 import type { RegleDescente } from '../aplatir.js';
+import { t } from '../../util/i18n.js';
 
-/** Ce qui se dit a l'export (« Approché par ce format : … »). */
-export const MSG_DESCENTE_MASQUES = 'les masques d’opacité (ignorés : ce qu’ils masquaient est exporté entier)';
+/**
+ * Ce qui se dit a l'export (« Approché par ce format : … »). La constante est la cle (evaluee au chargement, avant la langue : le
+ * francais) ; `t(MSG_DESCENTE_MASQUES)` la traduit quand on la dit.
+ */
+export const MSG_DESCENTE_MASQUES = t('les masques d’opacité (ignorés : ce qu’ils masquaient est exporté entier)');
 
 /** Le dessin sans masques ; le meme objet s'il n'en porte pas. La perte n'est dite que pour un groupe masque qui s'exporte. */
 export function descendreMasques(d: DessinSvg): { readonly dessin: DessinSvg; readonly pertes: readonly string[]; readonly perdus?: readonly string[] } {
@@ -25,7 +29,7 @@ export function descendreMasques(d: DessinSvg): { readonly dessin: DessinSvg; re
     void _m;
     groupes[id] = reste;
   }
-  const p = vu ? [MSG_DESCENTE_MASQUES] : [];
+  const p = vu ? [t(MSG_DESCENTE_MASQUES)] : [];
   return { dessin: { ...d, groupes }, pertes: p, perdus: p };
 }
 

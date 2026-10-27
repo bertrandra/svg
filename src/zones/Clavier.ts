@@ -20,6 +20,7 @@ import type { ActionsEditeur, EtatInterface, ModeleDessin, Outil } from './types
 import { toucheSelection } from './commandesSelection.js';
 import { ctrlG } from './commandesGroupes.js';
 import { niveauEdition } from './lentille.js';
+import { t } from '../util/i18n.js';
 
 const RACCOURCIS_OUTILS: Record<string, Outil> = { v: 'selection', a: 'points', h: 'main', r: 'rectangle', e: 'ellipse', s: 'etoile', l: 'ligne', p: 'plume', t: 'texte', b: 'cadre', q: 'lasso' };
 
@@ -38,27 +39,27 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       // Une touche qu'un controle a deja prise (une fleche qui ouvre un menu) n'est plus celle de la toile.
       if (e.defaultPrevented) return;
       const cible = e.target as HTMLElement | null;
-      const mod = e.ctrlKey || e.metaKey, t = e.key.toLowerCase();
-      if (mod && t === 'z') { e.preventDefault(); if (e.shiftKey) ac.refaire(); else ac.defaire(); return; }
-      if (mod && t === 'y') { e.preventDefault(); ac.refaire(); return; }
+      const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+      if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) ac.refaire(); else ac.defaire(); return; }
+      if (mod && k === 'y') { e.preventDefault(); ac.refaire(); return; }
       // Ctrl+S garde le travail (le brouillon) et le dit ; il ne ferme jamais l'editeur : fermer reste un geste a part (le bouton de
       // fin, Echap). Il fermait la page sur sa fiche, et l'habitude de Ctrl+S toutes les minutes ejectait de l'editeur.
-      if (mod && t === 's') { e.preventDefault(); ac.garderBrouillon(); return; }
+      if (mod && k === 's') { e.preventDefault(); ac.garderBrouillon(); return; }
       if (cible && /^(INPUT|SELECT|TEXTAREA)$/.test(cible.tagName)) { if (e.key === 'Escape') cible.blur(); return; }
       // Un menu ouvert garde ses fleches : elles le parcourent, elles ne deplacent pas la selection derriere lui.
       if (cible?.closest('.menu-panneau') && e.key !== 'Escape') return;
       // La bulle de la visite garde ses touches (Tab, Entree, Echap) : une fleche n'y deplace pas la forme choisie derriere elle.
       if (cible?.closest('.bulle-visite')) return;
       // Ctrl+A : tout ce qu'on peut choisir, au niveau du contexte d'edition sur un dessin riche (ADR-0012, annexe 6 §2).
-      if (mod && t === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, niveauEdition(u.contexte))); return; }
-      if (mod && t === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
-      if (mod && t === 'c') { e.preventDefault(); ac.copierSelection(); return; }
-      if (mod && t === 'x') { e.preventDefault(); ac.couperSelection(); return; }
-      if (mod && t === 'v') { e.preventDefault(); ac.collerPresse(); return; }
+      if (mod && k === 'a') { e.preventDefault(); ac.choisir(noeudsChoisissables(m.dessin, niveauEdition(u.contexte))); return; }
+      if (mod && k === 'd') { e.preventDefault(); ac.dupliquerSelection(); return; }
+      if (mod && k === 'c') { e.preventDefault(); ac.copierSelection(); return; }
+      if (mod && k === 'x') { e.preventDefault(); ac.couperSelection(); return; }
+      if (mod && k === 'v') { e.preventDefault(); ac.collerPresse(); return; }
       // Ctrl+Maj+O : vectoriser le texte choisi, dans le mode du moment (ADR-0022 ; le raccourci des logiciels de dessin).
-      if (mod && e.shiftKey && t === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
+      if (mod && e.shiftKey && k === 'o') { e.preventDefault(); void a.vectoriser(a.mode); return; }
       // Ctrl+G et Ctrl+Maj+G : grouper et degrouper en modele riche, combiner et separer a plat (annexe 9, question 1).
-      if (mod && t === 'g') { e.preventDefault(); ctrlG(m, u, ac, e.shiftKey); return; }
+      if (mod && k === 'g') { e.preventDefault(); ctrlG(m, u, ac, e.shiftKey); return; }
       if (mod && (e.key === ']' || e.key === '[') && m.sel.length) { e.preventDefault(); empiler(ac, m.dessin, m.sel, e.key === ']' ? (e.shiftKey ? 'premier' : 'avant') : e.shiftKey ? 'dernier' : 'arriere'); return; }
       if (cible?.closest('.editeur-svg-toile') && toucheToile(e, { m, u, ac, toile, sx: x })) { e.preventDefault(); return; }
       if (u.outil === 'plume' && u.trace.length) {
@@ -79,23 +80,23 @@ export function useClavier(toile: RefObject<HTMLDivElement | null>) {
       // En contexte Cricut qui coupe ou ecrit (ADR-0028) : Maj+X range la selection a couper, Maj+E a ecrire, Maj+O montre ou retire
       // l'apercu de la machine. Ailleurs ces touches gardent leur sens (Maj+E reste l'ellipse, Maj+O la vue contours).
       if (e.shiftKey && !e.altKey && u.profil && operationsApplicables(u.profil.procede)) {
-        if (t === 'x' || t === 'e') { e.preventDefault(); ac.poserOperation(t === 'x' ? 'decoupe' : 'ecriture'); return; }
-        if (t === 'o') { e.preventDefault(); ac.poserApercuMachine(a => !a); return; }
+        if (k === 'x' || k === 'e') { e.preventDefault(); ac.poserOperation(k === 'x' ? 'decoupe' : 'ecriture'); return; }
+        if (k === 'o') { e.preventDefault(); ac.poserApercuMachine(a => !a); return; }
       }
-      const outil = RACCOURCIS_OUTILS[t];
+      const outil = RACCOURCIS_OUTILS[k];
       if (outil) ac.poserOutil(outil);
       // F ouvre la palette des formes de la barre (ADR-0033), le focus sur la forme courante : fleches, puis Entree.
-      else if (t === 'f' && !e.shiftKey && !e.altKey) { e.preventDefault(); ac.ouvrirFormes(); }
-      else if (t === 'o') ac.poserContours(v => !v);
-      else if (t === 'g') ac.poserGrille(!u.grille);
-      else if (t === 'm') ac.poserAimants(!u.aimants);
-      else if (t === 'z') ac.zoomerSelection();
-      else if (t === 'c') ac.choisirMemeCouleur();
-      else if (t === '+' || t === '=') u.vues.zoomer(1.25);
-      else if (t === '-') u.vues.zoomer(0.8);
-      else if (t === '0') ac.ajuster();
-      else if (t === 'd') ac.ajusterAuDessin();
-      else if (t === '1') u.vues.centrer100();
+      else if (k === 'f' && !e.shiftKey && !e.altKey) { e.preventDefault(); ac.ouvrirFormes(); }
+      else if (k === 'o') ac.poserContours(v => !v);
+      else if (k === 'g') ac.poserGrille(!u.grille);
+      else if (k === 'm') ac.poserAimants(!u.aimants);
+      else if (k === 'z') ac.zoomerSelection();
+      else if (k === 'c') ac.choisirMemeCouleur();
+      else if (k === '+' || k === '=') u.vues.zoomer(1.25);
+      else if (k === '-') u.vues.zoomer(0.8);
+      else if (k === '0') ac.ajuster();
+      else if (k === 'd') ac.ajusterAuDessin();
+      else if (k === '1') u.vues.centrer100();
     };
     window.addEventListener('keydown', touche);
     return () => window.removeEventListener('keydown', touche);
@@ -139,7 +140,7 @@ function etirer(m: ModeleDessin, ac: ActionsEditeur, direction: Direction, fort:
   if (!b) return;
   const ref = ac.proportionsDe(m.sel, b), pas = pasDeplacement(vb, fort), min = coteMinimal(vb);
   const cible = ref ? boiteRedimensionneeProportionnelle(b, direction, pas, min, ref) : boiteRedimensionnee(b, direction, pas, min);
-  if (cible === b) { ac.annoncer('Taille minimale atteinte.'); return; }
+  if (cible === b) { ac.annoncer(t('Taille minimale atteinte.')); return; }
   const apres = redimensionner(m.dessin, m.sel, cible);
   ac.appliquer(() => apres);
   ac.annoncer(phraseTaille(apres, m.sel));

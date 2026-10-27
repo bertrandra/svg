@@ -9,13 +9,14 @@ import { nuancierDuDessin, teintesDImage } from '../engine/nuancier.js';
 import type { TeinteDessin } from '../model/nuancier.js';
 import type { ImageConvertie } from '../io/image.js';
 import { nomDeTeinte } from './actionsNuancier.js';
+import { t } from '../util/i18n.js';
 
 function Rangee({ titre, note, teintes }: { titre: string; note: string; teintes: readonly TeinteDessin[] }) {
   return (
     <div className="nuancier-image-rangee">
       <p className="nuancier-image-titre">{titre} <span className="aide">{note}</span></p>
       <ul className="nuancier-image-teintes" aria-label={titre}>
-        {teintes.map(t => <li key={t.hex}><span className="echantillon" role="img" aria-label={nomDeTeinte(t)} title={nomDeTeinte(t)} style={{ background: t.hex }} /></li>)}
+        {teintes.map(te => <li key={te.hex}><span className="echantillon" role="img" aria-label={nomDeTeinte(te)} title={nomDeTeinte(te)} style={{ background: te.hex }} /></li>)}
       </ul>
     </div>
   );
@@ -34,8 +35,9 @@ export const NuancierImage = memo(function NuancierImage({ resultat }: { resulta
   const aplats = resultat.traitement.vecteurs?.mode === 'aplats';
   return (
     <div className="nuancier-image">
-      {image.length ? <Rangee titre="Nuancier de l’image" note={image.length + ' · couleurs dominantes' + (aplats ? ', données au traceur' : '')} teintes={image} /> : null}
-      {trace.length ? <Rangee titre="Couleurs du tracé" note={trace.length + ' · le nuancier proposé dans l’éditeur'} teintes={trace} /> : null}
+      {image.length ? <Rangee titre={t('Nuancier de l’image')} note={t('{n} · couleurs dominantes', { n: image.length }) + (aplats ? t(', données au traceur') : '')} teintes={image} /> : null}
+      {trace.length ? <Rangee titre={t('Couleurs du tracé')} note={t('{n} · le nuancier proposé dans l’éditeur', { n: trace.length })} teintes={trace} /> : null}
+
     </div>
   );
 });

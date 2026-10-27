@@ -1,5 +1,6 @@
 <?php
-// Les reponses de l'API (ADR-0030) : du JSON, jamais mis en cache, et une erreur toujours avec son code et sa phrase en francais.
+// Les reponses de l'API (ADR-0030) : du JSON, jamais mis en cache, et une erreur toujours avec son code et sa phrase, dans la langue
+// de la session.
 
 declare(strict_types=1);
 
@@ -22,7 +23,7 @@ function repondre_erreur(int $statut, string $code, string $message, array $extr
     repondre_json($statut, ['erreur' => $code, 'message' => $message] + $extra);
 }
 
-/** Le resultat d'une operation sur un projet (projets.php) : sa fiche, ou son erreur avec son statut. */
+/** Le resultat d'une operation (projets, comptes) : son contenu, ou son erreur avec son statut. */
 function repondre_resultat(array $r): never
 {
     if (isset($r['statut'])) {
@@ -31,8 +32,8 @@ function repondre_resultat(array $r): never
     repondre_json(200, $r);
 }
 
-/** Sert un fichier avec son ETag : un 304 quand le navigateur l'a deja. */
-function servir_fichier(string $chemin, string $type, string $etag, string $cache, array $entetes = []): never
+/** Les en-tetes d'une reponse a ETag, puis un 304 (et rien d'autre) quand le navigateur a deja cette version. */
+function entetes_etag(string $etag, string $cache, array $entetes): void
 {
     header('ETag: ' . $etag);
     header('Cache-Control: ' . $cache);
@@ -45,8 +46,24 @@ function servir_fichier(string $chemin, string $type, string $etag, string $cach
         http_response_code(304);
         exit;
     }
+}
+
+/** Sert un fichier avec son ETag : un 304 quand le navigateur l'a deja. */
+function servir_fichier(string $chemin, string $type, string $etag, string $cache, array $entetes = []): never
+{
+    entetes_etag($etag, $cache, $entetes);
     header('Content-Type: ' . $type);
     header('Content-Length: ' . (string) filesize($chemin));
     readfile($chemin);
+    exit;
+}
+
+/** Sert un texte calcule (le script d'une langue) avec son ETag : un 304 quand le navigateur l'a deja. */
+function servir_texte(string $contenu, string $type, string $etag, string $cache): never
+{
+    entetes_etag($etag, $cache, []);
+    header('Content-Type: ' . $type);
+    header('Content-Length: ' . (string) strlen($contenu));
+    echo $contenu;
     exit;
 }

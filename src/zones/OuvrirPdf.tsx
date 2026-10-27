@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fichierPdf, ouvrirPdf } from '../io/pdf.js';
+import { nombre, t } from '../util/i18n.js';
 
 /** Ouvrir un SVG dans l'editeur, avec ce que la lecture du document d'origine n'a pas repris. */
 export type OuvrirDessin = (nom: string, svg: string, ignores?: readonly string[]) => void;
@@ -29,14 +30,14 @@ export function usePdf(ouvrir: OuvrirDessin, dire: (message: string) => void) {
 
   const lirePage = async (pdf: Omit<PdfChoisi, 'pages' | 'page'>, page: number, premiere: boolean): Promise<void> => {
     poserLecture(true);
-    dire('Lecture de « ' + pdf.nom + ' »…');
+    dire(t('Lecture de « {nom} »…', { nom: pdf.nom }));
     const r = await ouvrirPdf(pdf.octets, page);
     poserLecture(false);
     const pages = 'erreur' in r ? r.pages ?? 0 : r.pages;
     // Plusieurs pages a la premiere lecture : on propose de choisir, sans rien ouvrir (la premiere est choisie d'avance).
     if (premiere && pages > 1) {
       poserChoix({ ...pdf, pages, page: 1 });
-      dire('« ' + pdf.nom + ' » compte ' + pages.toLocaleString('fr-FR') + ' pages : choisissez celle à ouvrir.');
+      dire(t('« {nom} » compte {pages} pages : choisissez celle à ouvrir.', { nom: pdf.nom, pages: nombre(pages) }));
       return;
     }
     if (pages <= 1) poserChoix(null);
@@ -51,11 +52,11 @@ export function usePdf(ouvrir: OuvrirDessin, dire: (message: string) => void) {
     ouvrirFichier(f: File): void {
       void f.arrayBuffer()
         .then(b => lirePage({ nom: f.name, octets: new Uint8Array(b) }, 1, true))
-        .catch(() => { poserLecture(false); dire('Ce fichier ne se lit pas : le navigateur n’a pas pu l’ouvrir.'); });
+        .catch(() => { poserLecture(false); dire(t('Ce fichier ne se lit pas : le navigateur n’a pas pu l’ouvrir.')); });
     },
     /** Lit les octets d'un PDF deja recus (ouvert depuis une adresse, ADR-0036) : la meme lecture qu'un fichier. */
     ouvrirOctets(nom: string, octets: Uint8Array): void {
-      void lirePage({ nom, octets }, 1, true).catch(() => { poserLecture(false); dire('Ce PDF ne se lit pas.'); });
+      void lirePage({ nom, octets }, 1, true).catch(() => { poserLecture(false); dire(t('Ce PDF ne se lit pas.')); });
     },
     choisir(page: number): void { if (choix) poserChoix({ ...choix, page }); },
     ouvrirChoix(): void { if (choix) void lirePage(choix, choix.page, false); },
@@ -73,23 +74,24 @@ export function ChoixPagePdf({ pdf }: { pdf: ReturnType<typeof usePdf> }) {
   if (!choix) return null;
   const { pages, page, nom } = choix;
   return (
-    <section className="reprise choix-page" aria-label="Page du PDF à ouvrir" aria-busy={pdf.lecture}>
-      <p><strong className="nom-fichier">{nom}</strong> compte {pages.toLocaleString('fr-FR')} pages.</p>
+    <section className="reprise choix-page" aria-label={t('Page du PDF à ouvrir')} aria-busy={pdf.lecture}>
+      <p><strong className="nom-fichier">{nom}</strong> {t('compte {pages} pages.', { pages: nombre(pages) })}</p>
       <label className="champ-ligne">
-        <span>Page</span>
+        <span>{t('Page')}</span>
         {pages <= PAGES_EN_LISTE ? (
           <select ref={champ} value={page} onChange={e => pdf.choisir(Number(e.target.value))}>
-            {Array.from({ length: pages }, (_, i) => <option key={i} value={i + 1}>{'Page ' + (i + 1) + ' sur ' + pages}</option>)}
+            {Array.from({ length: pages }, (_, i) => <option key={i} value={i + 1}>{t('Page {n} sur {total}', { n: i + 1, total: pages })}</option>)}
           </select>
         ) : (
           <input ref={champ} type="number" min={1} max={pages} step={1} value={page} aria-describedby="choix-page-total"
             onChange={e => { const v = Math.round(Number(e.target.value)); if (v >= 1 && v <= pages) pdf.choisir(v); }} />
         )}
-        {pages > PAGES_EN_LISTE ? <span id="choix-page-total">sur {pages.toLocaleString('fr-FR')}</span> : null}
+        {pages > PAGES_EN_LISTE ? <span id="choix-page-total">{t('sur {total}', { total: nombre(pages) })}</span> : null}
       </label>
       <div className="actions">
-        <button type="button" className="primaire" disabled={pdf.lecture} onClick={pdf.ouvrirChoix}>Ouvrir la page</button>
-        <button type="button" className="discret" onClick={pdf.annuler}>Annuler</button>
+        <button type="button" className="primaire" disabled={pdf.lecture} onClick={pdf.ouvrirChoix}>{t('Ouvrir la page')}</button>
+        <button type="button" className="discret" onClick={pdf.annuler}>{t('Annuler')}</button>
+
       </div>
     </section>
   );

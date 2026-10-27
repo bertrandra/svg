@@ -31,20 +31,23 @@ import { lireTexte, nomGroupeTexte } from '../texteSvg.js';
 import { COORDONNEE_MAX, coordonneeSaine } from '../limites.js';
 import { lireReference, NOEUDS_DEFS_MAX } from '../resolution.js';
 import { boiteDescendants, etatContenus, placeVide, poserBoiteConnue, reserverGroupe } from '../contenus.js';
-import { GROUPES_MAX, MSG_GROUPES_NOMBREUX, MSG_GROUPES_PROFONDS, nomDuGroupe, profondeurDans } from './groupes.js';
+import { GROUPES_MAX, msgGroupesNombreux, msgGroupesProfonds, nomDuGroupe, profondeurDans } from './groupes.js';
 import { feuilleDeDecoupe, REFUS_DECOUPES } from './decoupes.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 // ---------------------------------------------------------------- phrases
+
+// Les phrases sont des accesseurs : traduites (et leurs nombres formates) dans la langue de l'interface au moment ou on les lit.
 
 /** Ce que la lecture riche refuse en le nommant (apres « Ce SVG contient … »). */
 export const REFUS_IMBRICATIONS = {
   /** Sans polices, un <text> est refuse comme en mode plat (la phrase de `parcours.ts`, a l'identique). */
-  texte: 'du texte (vectorisez-le dans votre logiciel)',
+  get texte(): string { return t('du texte (vectorisez-le dans votre logiciel)'); },
   /** Sans table des groupes (une liste de fonctionnalites donnee par un test), un <svg> imbrique reste refuse comme en mode plat. */
-  svg: 'un SVG imbriqué',
-  longueur: 'un SVG imbriqué dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage',
-  demesure: 'des coordonnées démesurées (au-delà de ± ' + COORDONNEE_MAX.toLocaleString('fr-FR') + ')'
-} as const;
+  get svg(): string { return t('un SVG imbriqué'); },
+  get longueur(): string { return t('un SVG imbriqué dont une longueur (x, y, width, height) n’est ni un nombre, ni des pixels, ni un pourcentage'); },
+  get demesure(): string { return t('des coordonnées démesurées (au-delà de ± {max})', { max: nombre(COORDONNEE_MAX) }); }
+};
 
 /** Ce que la lecture riche dit (`ignores`) : ce que les navigateurs ne rendent pas tous pareil. */
 export const MSG_IMBRICATIONS = {
@@ -53,13 +56,13 @@ export const MSG_IMBRICATIONS = {
    * et la fenetre rogne le contenu avant le filtre ; Chromium et WebKit posent la decoupe dans le repere de son viewBox, et Chromium
    * floute le contenu avant de le rogner. La lecture suit Firefox (la lettre de CSS Masking), et le dit.
    */
-  prises: 'les découpes, masques et filtres posés sur un SVG imbriqué (les navigateurs ne les placent pas tous pareil : lus dans le repère où il est posé, sur son contenu rogné à sa fenêtre)',
+  get prises(): string { return t('les découpes, masques et filtres posés sur un SVG imbriqué (les navigateurs ne les placent pas tous pareil : lus dans le repère où il est posé, sur son contenu rogné à sa fenêtre)'); },
   /**
    * Un navigateur mesure la boite d'un texte sur les cellules de ses glyphes (avance, hauteur de la fonte) ; la lecture n'a que les
    * contours des lettres de la fonte de remplacement : une decoupe ou un contenu de masque en unites de boite s'y place a peu pres.
    */
-  boiteTexte: 'les découpes et masques en unités de boîte posés sur un texte (mesurés sur le contour de ses lettres, pas sur les cellules de la fonte)'
-} as const;
+  get boiteTexte(): string { return t('les découpes et masques en unités de boîte posés sur un texte (mesurés sur le contour de ses lettres, pas sur les cellules de la fonte)'); }
+};
 
 // ---------------------------------------------------------------- un groupe neuf
 
@@ -77,8 +80,8 @@ function porteUnePrise(pr: Proprietes): boolean {
  * puis ce que les fonctionnalites y lisent (decoupe, masque, filtre poses sur `n`). null si les bornes des groupes le refusent.
  */
 function ouvrirGroupe(table: Map<string, Groupe>, n: Noeud, pret: Pret, marche: Marche, nom: string | undefined): Groupe | null {
-  if (table.size >= GROUPES_MAX) { marche.refuser(MSG_GROUPES_NOMBREUX); return null; }
-  if (profondeurDans(table, pret.parent) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(MSG_GROUPES_PROFONDS); return null; }
+  if (table.size >= GROUPES_MAX) { marche.refuser(msgGroupesNombreux()); return null; }
+  if (profondeurDans(table, pret.parent) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(msgGroupesProfonds()); return null; }
   const id = 'g' + (table.size + 1);
   const opacite = arrondirOpacite(pret.pr.opacity !== undefined ? lireOpacite(pret.pr.opacity) : 1);
   const lu: Groupe = {
@@ -146,7 +149,7 @@ function lireTexteEnGroupe(n: Noeud, pret: Pret, marche: Marche): void {
   const avant = p.formes.length;
   if (!table || (dansDecoupe && !prise)) {
     // Sans table, aucune fonctionnalite ne porterait la prise : refusee en disant ou elle est posee, comme avant l'etape 13c.
-    const refus = prise ? refusHorsFeuille(pret.pr, 'posé sur un texte') : null;
+    const refus = prise ? refusHorsFeuille(pret.pr, t('posé sur un texte')) : null;
     if (refus) { marche.refuser(refus); return; }
     lireTexte(texte, n, pret.heritees, pret.m, pret.opacite);
     if (pret.parent !== undefined) for (let i = avant; i < p.formes.length; i++) { const f = p.formes[i]; if (f) p.formes[i] = { ...f, parent: pret.parent }; }
@@ -242,8 +245,8 @@ function lireSvgImbrique(n: Noeud, pret: Pret, marche: Marche): void {
     const decoupe = { contenu: { formes: [feuilleDeDecoupe(idFeuille, fenetre, 'nonzero')] } };
     if (g.decoupe || g.masque || g.effets) {
       // Ce que porte le <svg> s'applique a son contenu deja rogne par la fenetre : la fenetre passe a un groupe interieur.
-      if (table.size >= GROUPES_MAX) { marche.refuser(MSG_GROUPES_NOMBREUX); return; }
-      if (profondeurDans(table, g.id) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(MSG_GROUPES_PROFONDS); return; }
+      if (table.size >= GROUPES_MAX) { marche.refuser(msgGroupesNombreux()); return; }
+      if (profondeurDans(table, g.id) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(msgGroupesProfonds()); return; }
       const id = reserverGroupe(table, etat);
       table.set(id, { id, parent: g.id, visible: true, verrouille: false, decoupe });
       etat.places.delete(id);

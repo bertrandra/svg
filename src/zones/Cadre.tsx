@@ -24,6 +24,8 @@ import { BulleVisite, LienVisite } from './BulleVisite.js';
 import { FournisseurMenusOuverts } from './commun/Menu.js';
 import { FORMES, nomOutilForme, phraseAbandon } from './aidesEditeur.js';
 import { pluriel, selonSaisie } from '../util/texte.js';
+import { t } from '../util/i18n.js';
+import { libelleSelection } from './BarreSelection.js';
 import type { Outil, OutilForme, Tiroir } from './typesEditeur.js';
 import { LIBELLES_ENREGISTREMENT } from './enregistrement.js';
 import { FournisseurRegles } from './contexteRegles.js';
@@ -46,7 +48,7 @@ function Raccourcis({ toile }: { toile: RefObject<HTMLDivElement | null> }) {
  * qu'un bouton n'est pas) ; le clic est retenu pour ne pas changer l'adresse de la page d'hote.
  */
 function LienToile({ svgRef, idToile }: { svgRef: RefObject<SVGSVGElement | null>; idToile: string }) {
-  return <a className="saut" href={'#' + idToile} onClick={e => { e.preventDefault(); svgRef.current?.focus(); }}>Aller à la toile</a>;
+  return <a className="saut" href={'#' + idToile} onClick={e => { e.preventDefault(); svgRef.current?.focus(); }}>{t('Aller à la toile')}</a>;
 }
 
 /**
@@ -62,7 +64,7 @@ function Rangee() {
 function PanneauLateral({ nom }: { nom: string }) {
   const { sel } = useDessin(), { outil } = useInterface();
   return (
-    <aside className="editeur-inspecteur" aria-label="Inspecteur" tabIndex={-1}>
+    <aside className="editeur-inspecteur" aria-label={t('Inspecteur')} tabIndex={-1}>
       {/* Le panneau de production (ADR-0013) vient d'abord, avec ou sans selection : il juge le dessin entier. */}
       <PanneauCricut nom={nom} />
       {sel.length && !FORMES.has(outil) && outil !== 'plume' && outil !== 'texte' ? <Inspecteur /> : <PanneauDessin />}
@@ -92,13 +94,13 @@ function ConfirmerAbandon() {
   if (!quitter) return null;
   const n = h.passe.length;
   return (
-    <div className="editeur-confirmer" role="alertdialog" aria-label="Abandonner les modifications" aria-describedby={idMessage} ref={racine}>
+    <div className="editeur-confirmer" role="alertdialog" aria-label={t('Abandonner les modifications')} aria-describedby={idMessage} ref={racine}>
       {/* Chez un hote qui garde des projets, le compte depuis l'ouverture ne dit pas ce qui reste a enregistrer : une phrase generale. */}
-      <span id={idMessage}>{enregistrement ? 'Abandonner les modifications non enregistrées ?' : phraseAbandon(n)}</span>
-      <button type="button" onClick={ac.fermer}>Abandonner</button>
+      <span id={idMessage}>{enregistrement ? t('Abandonner les modifications non enregistrées ?') : phraseAbandon(n)}</span>
+      <button type="button" onClick={ac.fermer}>{t('Abandonner')}</button>
       {/* Le troisieme choix : garder et fermer, sous le libelle du geste de fin (« Terminer » dans la page). */}
       <button type="button" onClick={ac.enregistrerEtFermer}>{fin.libelle}</button>
-      <button type="button" className="primaire" onClick={ac.continuerEdition}>Continuer l’édition</button>
+      <button type="button" className="primaire" onClick={ac.continuerEdition}>{t('Continuer l’édition')}</button>
     </div>
   );
 }
@@ -111,10 +113,14 @@ function Voile() {
 
 function etatParDefaut(outil: Outil, nTrace: number, nSel: number, regle: RegleZone, verrouProportions: boolean): string {
   if (estOutilZone(outil)) return etatOutilZone(outil, regle, nTrace);
-  if (outil === 'plume') return nTrace ? nTrace + ' point' + (nTrace > 1 ? 's' : '') + ' · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.' : 'Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.';
-  if (FORMES.has(outil)) return nomOutilForme(outil as OutilForme) + ' : glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée · F : autres formes.';
-  if (nSel) return nSel + ' sélectionnée' + (nSel > 1 ? 's' : '') + (outil === 'selection' ? ' · glissez pour déplacer, les coins pour redimensionner (Maj : ' + (verrouProportions ? 'librement' : 'proportions') + ')' : '');
-  return 'Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.';
+  if (outil === 'plume') return nTrace ? t('{n} · Entrée ou double-clic ferme le tracé, Retour arrière retire le dernier point, Échap abandonne.', { n: pluriel(nTrace, 'point') }) : t('Plume : cliquez les points du tracé, ou au clavier : flèches puis Entrée.');
+  if (FORMES.has(outil)) return t('{nom} : glissez sur la toile pour tracer (Maj : proportions), ou au clavier : flèches puis Entrée · F : autres formes.', { nom: nomOutilForme(outil as OutilForme) });
+  if (nSel) {
+    const compte = libelleSelection(nSel);
+    if (outil !== 'selection') return compte;
+    return verrouProportions ? t('{compte} · glissez pour déplacer, les coins pour redimensionner (Maj : librement)', { compte }) : t('{compte} · glissez pour déplacer, les coins pour redimensionner (Maj : proportions)', { compte });
+  }
+  return t('Cliquez une forme, ou tracez un cadre pour en choisir plusieurs ; au clavier, Page suivante choisit la première.');
 }
 
 function BarreEtat() {
@@ -123,8 +129,8 @@ function BarreEtat() {
   return (
     <footer className="editeur-etat">
       <span className="tiroirs">
-        <Bouton icone="panneau-gauche" aide="Calques" pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
-        <Bouton icone="panneau-droit" aide="Inspecteur" pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
+        <Bouton icone="panneau-gauche" aide={t('Calques')} pressed={tiroir === 'calques'} onClick={() => ac.poserTiroir(tiroir === 'calques' ? null : 'calques')} />
+        <Bouton icone="panneau-droit" aide={t('Inspecteur')} pressed={tiroir === 'inspecteur'} onClick={() => ac.poserTiroir(tiroir === 'inspecteur' ? null : 'inspecteur')} />
       </span>
       {/* Le fil d'Ariane, seulement dans un groupe (ADR-0012, annexe 6 §2) : il vient avant le message, qui peut passer a la ligne. */}
       <FilAriane />
@@ -132,7 +138,7 @@ function BarreEtat() {
       <span className="espace" />
       <span className="compte-modifications">{pluriel(h.passe.length, 'modification')}</span>
       {/* L'etat que l'hote annonce (le site, ADR-0030) : pas une region vocale, la phrase qui l'accompagne passe par la region unique. */}
-      {enregistrement ? <span className="etat-enregistrement" data-etat={enregistrement.etat}>{LIBELLES_ENREGISTREMENT[enregistrement.etat]}</span> : null}
+      {enregistrement ? <span className="etat-enregistrement" data-etat={enregistrement.etat}>{t(LIBELLES_ENREGISTREMENT[enregistrement.etat])}</span> : null}
       {telephone ? <BoutonEnregistrer /> : null}
     </footer>
   );
@@ -155,7 +161,7 @@ function useFocusTiroir(cadre: RefObject<HTMLDivElement | null>, tiroir: Tiroir)
     if (tiroir) { racine.querySelector<HTMLElement>(tiroir === 'calques' ? '.editeur-calques' : '.editeur-inspecteur')?.focus({ preventScroll: true }); return; }
     const actif = document.activeElement;
     const dansLeTiroir = !!actif && !!actif.closest('.editeur-calques, .editeur-inspecteur');
-    if (actif === document.body || actif === null || dansLeTiroir) racine.querySelector<HTMLElement>('.editeur-etat button[aria-label="' + (precedent === 'calques' ? 'Calques' : 'Inspecteur') + '"]')?.focus();
+    if (actif === document.body || actif === null || dansLeTiroir) racine.querySelector<HTMLElement>('.editeur-etat button[aria-label="' + (precedent === 'calques' ? t('Calques') : t('Inspecteur')) + '"]')?.focus();
   }, [cadre, tiroir]);
 }
 

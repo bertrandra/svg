@@ -104,6 +104,12 @@ export interface OptionsSession {
    * stockage a lui seul, qu'un rechargement perd (annexe 8 §0, « Ce que le paquet 2-D a pose »). Demande `naviguer` (le defaut).
    */
   modele?: 'plat' | 'riche';
+  /**
+   * La langue de l'interface (ADR-0042), posee par la page une fois chargee (`svg.langue`), puis la page rechargee : elle ne lit le
+   * reglage qu'au demarrage. Comme `modele`, jamais par un script d'amorce. Sans l'option, la page est en francais, comme pour tous
+   * les tests d'avant. Demande `naviguer` (le defaut).
+   */
+  langue?: 'fr' | 'en';
 }
 
 /**
@@ -169,6 +175,11 @@ export function pilote(reglages: OptionsPilote = {}) {
       if (options.modele) {
         if (options.naviguer === false) throw new Error('l’option « modele » se pose sur la page chargée : elle demande « naviguer ».');
         await page.evaluate(m => { localStorage.setItem('svg.modele', JSON.stringify({ modele: m })); }, options.modele);
+      }
+      if (options.langue) {
+        if (options.naviguer === false) throw new Error('l’option « langue » se pose sur la page chargée : elle demande « naviguer ».');
+        await page.evaluate(l => { localStorage.setItem('svg.langue', JSON.stringify({ langue: l })); }, options.langue);
+        await page.reload();
       }
       return session;
     }
@@ -275,7 +286,8 @@ export async function textesDe(l: Locator): Promise<string[]> {
 
 /** Ouvre le dessin d'exemple de la page d'accueil et attend l'editeur. */
 export async function ouvrirExemple(page: Page, tactile = false): Promise<void> {
-  const bouton = page.getByRole('button', { name: 'Ouvrir l’exemple' });
+  // Le bouton dans la langue de la page (ADR-0042) : francais par defaut, anglais quand une session a pose `langue: 'en'`.
+  const bouton = page.getByRole('button', { name: /^(?:Ouvrir l’exemple|Open the example)$/ });
   if (tactile) await bouton.tap(); else await bouton.click();
   await page.locator('.editeur-cadre').waitFor();
 }

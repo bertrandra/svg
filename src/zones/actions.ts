@@ -6,6 +6,7 @@ import type { ChoixProduction } from '../model/contextes.js';
 import type { RefObject } from 'react';
 import { coller, combiner, dupliquer, idsMemeCouleur, modifier, separer, supprimer, supprimerAncre, type DessinSvg, type Forme, type Style } from '../engine/editionSvg.js';
 import { pluriel } from '../util/texte.js';
+import { t } from '../util/i18n.js';
 import { actionsDessin } from './actionsDessin.js';
 import { phraseCombinaison, phraseDuplication, phraseMasquage, phraseVerrouillage } from './phrasesSelection.js';
 import type { ActionsEditeur, EtatRendu, Modele, Outil, Point, Vues } from './typesEditeur.js';
@@ -62,7 +63,8 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       }
       if (!sel.length) return;
       appliquer(d => supprimer(d, sel));
-      dire(pluriel(sel.length, 'forme') + ' supprimée' + (sel.length > 1 ? 's' : '') + '.');
+      const formes = pluriel(sel.length, 'forme');
+      dire(sel.length > 1 ? t('{formes} supprimées.', { formes }) : t('{formes} supprimée.', { formes }));
       choisir([]);
     },
     dupliquerSelection: () => {
@@ -77,7 +79,8 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       const c = choisiesDe(lire());
       if (!c.length) return;
       l.poserPresse(c);
-      dire(pluriel(c.length, 'forme') + ' copiée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+      const formes = pluriel(c.length, 'forme');
+      dire(c.length > 1 ? t('{formes} copiées : Ctrl+V colle.', { formes }) : t('{formes} copiée : Ctrl+V colle.', { formes }));
     },
     couperSelection: () => {
       const e = lire(), c = choisiesDe(e);
@@ -85,7 +88,8 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       l.poserPresse(c);
       appliquer(d => supprimer(d, e.sel));
       choisir([]);
-      dire(pluriel(c.length, 'forme') + ' coupée' + (c.length > 1 ? 's' : '') + ' : Ctrl+V colle.');
+      const formes = pluriel(c.length, 'forme');
+      dire(c.length > 1 ? t('{formes} coupées : Ctrl+V colle.', { formes }) : t('{formes} coupée : Ctrl+V colle.', { formes }));
     },
     collerPresse: () => {
       const { dessin, presse } = lire();
@@ -94,12 +98,13 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       appliquer(() => r.dessin);
       choisir(r.ids);
       l.poserOutil('selection');
-      dire(pluriel(r.ids.length, 'forme') + ' collée' + (r.ids.length > 1 ? 's' : '') + '.');
+      const formes = pluriel(r.ids.length, 'forme');
+      dire(r.ids.length > 1 ? t('{formes} collées.', { formes }) : t('{formes} collée.', { formes }));
     },
     combinerSelection: () => {
       const { dessin, sel } = lire();
       const r = combiner(dessin, sel);
-      if (!r.id) { dire('Choisissez au moins deux formes déverrouillées à combiner.'); return; }
+      if (!r.id) { dire(t('Choisissez au moins deux formes déverrouillées à combiner.')); return; }
       appliquer(() => r.dessin);
       choisir([r.id]);
       // Le moteur laisse de cote les formes verrouillees : la phrase compte ce qui a vraiment ete reuni.
@@ -107,12 +112,12 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
     },
     separerSelection: () => {
       const { dessin, formeSeule } = lire();
-      if (!formeSeule) { dire('Choisissez une seule forme à séparer.'); return; }
+      if (!formeSeule) { dire(t('Choisissez une seule forme à séparer.')); return; }
       const r = separer(dessin, formeSeule.id);
-      if (r.ids.length < 2) { dire('Cette forme n’a qu’un seul tracé : rien à séparer.'); return; }
+      if (r.ids.length < 2) { dire(t('Cette forme n’a qu’un seul tracé : rien à séparer.')); return; }
       appliquer(() => r.dessin);
       choisir(r.ids);
-      dire(avecVectorisation('Forme séparée en ' + pluriel(r.ids.length, 'tracé') + '.', dessin, [formeSeule.id]));
+      dire(avecVectorisation(t('Forme séparée en {traces}.', { traces: pluriel(r.ids.length, 'tracé') }), dessin, [formeSeule.id]));
     },
     masquerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { visible: false })); choisir([]); dire(phraseMasquage(sel.length)); } },
     verrouillerSelection: () => { const { sel } = lire(); if (sel.length) { appliquer(d => modifier(d, sel, { verrouille: true })); choisir([]); dire(phraseVerrouillage(sel.length)); } },
@@ -121,11 +126,11 @@ function actionsSelection(lire: () => EtatLu, l: Leviers): ActionsSelection {
       const modele = sel[0] ? dessin.formes.find(f => f.id === sel[0]) : undefined;
       if (!modele) return;
       const couleur = modele.remplissage ?? modele.contour;
-      if (!couleur) { dire('Cette forme n’a ni remplissage ni contour : pas de couleur à retrouver.'); return; }
+      if (!couleur) { dire(t('Cette forme n’a ni remplissage ni contour : pas de couleur à retrouver.')); return; }
       const ids = idsMemeCouleur(dessin, modele.id);
       choisir(ids);
       l.poserPoint(null);
-      dire(ids.length > 1 ? pluriel(ids.length, 'forme') + ' de même couleur ' + couleur.toUpperCase() + ' choisie' + (ids.length > 1 ? 's' : '') + '.' : 'Aucune autre forme n’a la couleur ' + couleur.toUpperCase() + '.');
+      dire(ids.length > 1 ? t('{formes} de même couleur {couleur} choisies.', { formes: pluriel(ids.length, 'forme'), couleur: couleur.toUpperCase() }) : t('Aucune autre forme n’a la couleur {couleur}.', { couleur: couleur.toUpperCase() }));
     }
   };
 }

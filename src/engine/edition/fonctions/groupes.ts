@@ -16,6 +16,7 @@ import { PROFONDEUR_GROUPES_MAX } from '../arbre.js';
 import { arrondirOpacite, lireOpacite } from '../opacites.js';
 import { decoderTexte, encoderTexte } from '../texteVivant.js';
 import { nb } from '../chemins.js';
+import { nombre, t } from '../../../util/i18n.js';
 
 /** Le nombre de groupes qu'un dessin lu peut porter (annexe 5 §2) : au-dela, la lecture refuse en le nommant. */
 export const GROUPES_MAX = 20_000;
@@ -24,8 +25,12 @@ export const NOM_GROUPE_MAX = 200;
 /** L'attribut du nom d'un groupe, encode en pourcentage. */
 export const ATTRIBUT_NOM = 'data-ed-nom';
 
-export const MSG_GROUPES_PROFONDS = 'des groupes emboîtés sur plus de ' + PROFONDEUR_GROUPES_MAX + ' niveaux';
-export const MSG_GROUPES_NOMBREUX = 'des groupes trop nombreux (plus de ' + GROUPES_MAX.toLocaleString('fr-FR') + ')';
+/** Les deux refus des groupes, dits dans la langue de l'interface au moment du refus (leur nombre formate avec). */
+export const msgGroupesProfonds = (): string => t('des groupes emboîtés sur plus de {n} niveaux', { n: PROFONDEUR_GROUPES_MAX });
+export const msgGroupesNombreux = (): string => t('des groupes trop nombreux (plus de {n})', { n: nombre(GROUPES_MAX) });
+/** Les memes phrases, figees au chargement (avant la langue : en francais) : ce qu'un hote ou un test lisent par leur nom d'avant. */
+export const MSG_GROUPES_PROFONDS = msgGroupesProfonds();
+export const MSG_GROUPES_NOMBREUX = msgGroupesNombreux();
 
 /**
  * Le nom d'un groupe lu : celui que l'editeur a ecrit (`data-ed-nom`, decode), le calque d'Inkscape (`inkscape:label`), le nom de
@@ -52,8 +57,8 @@ function lireGroupe(n: Noeud, pret: Pret, marche: Marche): void {
   const table = marche.parcours.groupes;
   // Sans table (une liste de fonctionnalites donnee par un test, sans la lecture riche), le groupe se fond comme avant.
   if (!table) { marche.enfants(n, pret); return; }
-  if (table.size >= GROUPES_MAX) { marche.refuser(MSG_GROUPES_NOMBREUX); return; }
-  if (profondeurDans(table, pret.parent) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(MSG_GROUPES_PROFONDS); return; }
+  if (table.size >= GROUPES_MAX) { marche.refuser(msgGroupesNombreux()); return; }
+  if (profondeurDans(table, pret.parent) >= PROFONDEUR_GROUPES_MAX) { marche.refuser(msgGroupesProfonds()); return; }
   const id = 'g' + (table.size + 1), nom = nomDuGroupe(n.attributs);
   const opacite = arrondirOpacite(pret.pr.opacity !== undefined ? lireOpacite(pret.pr.opacity) : 1);
   const lu: Groupe = {
