@@ -129,6 +129,13 @@ empreintes.
 
 ### Modifié
 
+- **On reste connecté 30 jours sur le site, même après avoir fermé le navigateur** (ADR-0041 §3, demande du 27 octobre 2026). La
+  session expirait après 2 h sans échange avec le serveur, et travailler dans l’éditeur n’en fait aucun : on pouvait être déconnecté
+  en pleine retouche, et fermer le navigateur déconnectait. Le délai par défaut passe à 30 jours, chaque visite le repousse, et le
+  cookie de connexion vit aussi longtemps (plus un jour, pour que la page dise encore « Votre session a expiré » ensuite). « Réglages
+  du site » propose la durée (2 h, 8 h, 1 jour, 7 jours, 30 jours) ; un site déjà installé garde la sienne (2 h) jusqu’à ce que
+  l’administrateur la change là. Sur un ordinateur partagé, « Se déconnecter » efface le cookie.
+
 - **Mettre à jour un site PHP d’avant demande de recréer un administrateur** (ADR-0041) : le **mot de passe unique disparaît**
   (`data/pwd`, `data/password`, `data/connexions.json`, `inc/mot-de-passe.php` n’existent plus), ainsi que `config.php`,
   `public/inc/` et `DATA_DIR` (le code est dans `data/inc/`, les constantes avancées dans `data/config/config.local.php`). À la

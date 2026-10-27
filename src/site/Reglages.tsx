@@ -1,6 +1,6 @@
 // « Réglages du site » (ADR-0041 §7), pour un administrateur : le formulaire de config.json, a la place de « Mes projets ». Le nom, la
-// langue par defaut et l'adresse du site, les inscriptions, le courrier (expediteur, mode mail / SMTP, le serveur SMTP) ; le mot de
-// passe SMTP ne revient jamais du serveur : laisse vide, il ne change pas. « Envoyer un mail d'essai » dit si le courrier part,
+// langue par defaut et l'adresse du site, les inscriptions, la duree de connexion, le courrier (expediteur, mode mail / SMTP, le
+// serveur SMTP) ; le mot de passe SMTP ne revient jamais du serveur : laisse vide, il ne change pas. « Envoyer un mail d'essai » dit si le courrier part,
 // « Enregistrer » est la seule action pleine (ADR-0006).
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
@@ -16,6 +16,8 @@ const modes = (): readonly [ModeCourrier, string, string][] => [
   ['smtp', t('Un serveur SMTP'), t('Le serveur de votre hébergeur ou d’un service d’envoi, avec un compte.')],
   ['fichier', t('Aucun envoi : chaque message est écrit dans data/journal/courrier/'), t('Pour essayer le site sans courrier ; l’inscription en libre-service ne fonctionne pas.')]
 ];
+/** Les durees proposees pour rester connecte, en secondes ; une autre valeur de config.json s'ajoute a la liste telle quelle. */
+const durees = (): readonly [number, string][] => [[7200, t('2 heures')], [28800, t('8 heures')], [86400, t('1 jour')], [7 * 86400, t('7 jours')], [30 * 86400, t('30 jours')]];
 const securites = (): readonly [SecuriteSmtp, string][] => [['starttls', t('STARTTLS (port 587, le plus courant)')], ['ssl', t('SSL implicite (port 465)')], ['aucune', t('Aucune (réseau local seulement)')]];
 
 /** Le choix du mode de courrier : des boutons radio, chacun avec une ligne d'explication. */
@@ -50,6 +52,22 @@ function ChampsSmtp({ r, poser, erreurs, motDePasse, poserMotDePasse }: { r: Reg
       <Champ libelle={t('Utilisateur')} valeur={smtp.utilisateur} poser={v => poserSmtp({ utilisateur: v })} autoComplete="off" />
       <Champ libelle={t('Mot de passe SMTP')} type="password" valeur={motDePasse} poser={poserMotDePasse} autoComplete="new-password"
         aide={r.smtpMotDePassePose ? t('Un mot de passe est enregistré ; laissez vide pour le garder.') : t('Aucun mot de passe enregistré.')} />
+    </div>
+  );
+}
+
+/** Combien de temps une personne reste connectee sans revenir : le reglage `sessions.inactivite`, aussi l'echeance du cookie. */
+function ChoixDuree({ valeur, poser }: { valeur: number; poser: (v: number) => void }) {
+  const id = useId(), idAide = useId();
+  const liste = durees(), connue = liste.some(([v]) => v === valeur);
+  return (
+    <div className="champ-site">
+      <label htmlFor={id}>{t('Rester connecté sans revenir pendant')}</label>
+      <select id={id} value={valeur} aria-describedby={idAide} onChange={e => poser(Number(e.target.value))}>
+        {connue ? null : <option value={valeur}>{t('{n} secondes', { n: valeur })}</option>}
+        {liste.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <p id={idAide} className="aide">{t('Chaque visite repousse l’échéance ; passé ce délai sans venir, il faut se reconnecter. Fermer le navigateur ne déconnecte pas : sur un ordinateur partagé, « Se déconnecter » dans le menu du compte.')}</p>
     </div>
   );
 }
@@ -115,6 +133,7 @@ export function EcranReglages({ serveur, moi, retour }: Proprietes) {
             aide={t('Sert aux liens des mails (https://exemple.org/svg/) ; vide, l’adresse de la page sert.')} />
           <Case libelle={t('Inscriptions ouvertes')} coche={r.inscriptions.ouvertes} poser={v => poserReglages({ ...r, inscriptions: { ouvertes: v } })}
             aide={t('Décochée, la page de connexion ne propose plus de s’inscrire ; vous créez les comptes dans l’écran Comptes.')} />
+          <ChoixDuree valeur={r.sessions.inactivite} poser={v => poserReglages({ ...r, sessions: { inactivite: v } })} />
           <h2>{t('Courrier')}</h2>
           <Champ libelle={t('Adresse d’expédition')} type="email" valeur={r.courrier.expediteur} poser={v => poserReglages({ ...r, courrier: { ...r.courrier, expediteur: v } })} autoComplete="off" erreur={erreurs.expediteur} />
           <Champ libelle={t('Nom de l’expéditeur')} valeur={r.courrier.nom} poser={v => poserReglages({ ...r, courrier: { ...r.courrier, nom: v } })} maxLength={NOM_MAX} autoComplete="off" />

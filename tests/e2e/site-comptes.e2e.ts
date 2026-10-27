@@ -458,7 +458,7 @@ describe('les comptes du site PHP', () => {
     expect(readdirSync(s.donnees('projets/' + s.idDuCompte('eli@exemple.org')))).toContain(idEli + '.json');
   });
 
-  it('les reglages du site : config.json charge, SMTP et son port, enregistrer relit le disque, mot de passe vide inchange, mail d essai, inscriptions fermees', async () => {
+  it('les reglages du site : config.json charge, SMTP et son port, duree de connexion, enregistrer relit le disque, mot de passe vide inchange, mail d essai, inscriptions fermees', async () => {
     s.oublierEssais();
     writeFileSync(s.donnees('config/config.json'), JSON.stringify(CONFIG_ESSAI));
     const { page } = await s.ouvrirSite(navigateur);
@@ -472,6 +472,7 @@ describe('les comptes du site PHP', () => {
       expect(await page.getByLabel('Nom du site', { exact: true }).inputValue()).toBe('Éditeur SVG');
       expect(await page.getByRole('radio', { name: 'Français' }).isChecked()).toBe(true);
       expect(await page.getByLabel('Inscriptions ouvertes').isChecked()).toBe(true);
+      expect(await page.getByLabel('Rester connecté sans revenir pendant').inputValue()).toBe('7200');
       expect(await page.getByLabel('Adresse d’expédition').inputValue()).toBe('no-reply@exemple.org');
       expect(await page.getByRole('radio', { name: /^Aucun envoi/ }).isChecked()).toBe(true);
       expect(await page.locator('.champs-smtp').count()).toBe(0);
@@ -499,9 +500,10 @@ describe('les comptes du site PHP', () => {
       await page.getByLabel('Nom du site', { exact: true }).fill('Atelier d’essai');
       await page.getByRole('radio', { name: 'English' }).check();
       await page.getByLabel('Inscriptions ouvertes').uncheck();
+      await page.getByLabel('Rester connecté sans revenir pendant').selectOption({ label: '30 jours' });
       await page.getByRole('button', { name: 'Enregistrer' }).click();
       await attend(() => message(page)).toBe('Réglages enregistrés.');
-      expect(config()).toMatchObject({ site: { nom: 'Atelier d’essai', langue: 'en' }, inscriptions: { ouvertes: false }, courrier: { mode: 'smtp', smtp: { hote: 'smtp.exemple.org', port: 2525, securite: 'ssl', utilisateur: 'robot', motDePasse: 'le secret smtp' } } });
+      expect(config()).toMatchObject({ site: { nom: 'Atelier d’essai', langue: 'en' }, inscriptions: { ouvertes: false }, sessions: { inactivite: 2592000 }, courrier: { mode: 'smtp', smtp: { hote: 'smtp.exemple.org', port: 2525, securite: 'ssl', utilisateur: 'robot', motDePasse: 'le secret smtp' } } });
       expect(await page.getByLabel('Mot de passe SMTP', { exact: true }).inputValue()).toBe('');
       expect(await erreurDuChamp(page, 'Mot de passe SMTP')).toEqual({ invalide: false, texte: 'Un mot de passe est enregistré ; laissez vide pour le garder.' });
       // Rouvert, l'ecran montre ce qui est sur le disque, jamais le mot de passe.
@@ -511,6 +513,7 @@ describe('les comptes du site PHP', () => {
       expect(await page.getByLabel('Nom du site', { exact: true }).inputValue()).toBe('Atelier d’essai');
       expect(await page.getByRole('radio', { name: 'English' }).isChecked()).toBe(true);
       expect(await page.getByLabel('Inscriptions ouvertes').isChecked()).toBe(false);
+      expect(await page.getByLabel('Rester connecté sans revenir pendant').inputValue()).toBe('2592000');
       expect(await page.getByLabel('Port', { exact: true }).inputValue()).toBe('2525');
       expect(await page.getByLabel('Mot de passe SMTP', { exact: true }).inputValue()).toBe('');
       // Retour au mode fichier et au francais, le mot de passe laisse vide : il reste sur le disque.

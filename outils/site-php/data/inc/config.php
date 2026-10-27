@@ -22,8 +22,9 @@ if (is_file(DATA_DIR . '/config/config.local.php')) {
     require DATA_DIR . '/config/config.local.php';
 }
 
-// La session expire apres ce temps sans aucune requete (en secondes) ; config.json (sessions.inactivite) a le dernier mot.
-defined('SESSION_INACTIVITE') || define('SESSION_INACTIVITE', 2 * 3600);
+// La session expire apres ce temps sans aucune requete (en secondes : 30 jours) ; config.json (sessions.inactivite) a le dernier mot,
+// et « Reglages du site » le change. Le cookie d'une session connectee vit aussi longtemps : fermer le navigateur ne deconnecte pas.
+defined('SESSION_INACTIVITE') || define('SESSION_INACTIVITE', 30 * 86400);
 
 // Les essais de connexion libres par client et par compte, puis le delai double a chaque echec, jusqu'a ce plafond (en secondes).
 defined('CONNEXION_ESSAIS_LIBRES') || define('CONNEXION_ESSAIS_LIBRES', 3);

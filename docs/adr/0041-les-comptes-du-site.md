@@ -69,7 +69,10 @@ un administrateur, changer un mot de passe, en ligne de commande). Le routeur `s
 
 Plus de session PHP native. `data/sessions/<sha256(jeton)>.json` : `{ "compte", "creeLe", "vu", "csrf", "marque" }`. Le cookie
 `svg_session` porte le jeton (32 octets, 64 hex), `HttpOnly`, `SameSite=Strict`, `Secure` en HTTPS, chemin du script. Une session
-expire après `SESSION_INACTIVITE` sans requête (2 h) ; le ménage se fait une fois sur cent requêtes. `marque` est un condensé de
+expire après `SESSION_INACTIVITE` sans requête (2 h à l’origine ; **30 jours depuis le 27 octobre 2026**, à la demande du
+propriétaire, réglable dans « Réglages du site ») ; le ménage se fait une fois sur cent requêtes. Le cookie d’une session connectée
+porte la même échéance plus un jour, repoussée à chaque requête : fermer le navigateur ne déconnecte plus, et le jour de marge laisse
+le serveur dire « Votre session a expiré » ; celui d’une session anonyme reste un cookie de session du navigateur. `marque` est un condensé de
 l’empreinte du mot de passe du compte : changer le mot de passe ferme toutes ses sessions, sauf celle qui le change (rouverte).
 Le jeton CSRF reste celui d’avant (64 hex, en-tête `X-CSRF` ou champ `csrf`, comparé en temps constant). Un visiteur non connecté a
 aussi une session (anonyme : `compte` vide), pour que les formulaires portent un jeton CSRF ; elle devient connectée à la connexion
