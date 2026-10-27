@@ -10,12 +10,24 @@
 //                                              nouveau trop court : 400 `invalide`, le message dit lequel)
 //   POST api.php?r=deconnexion                 → { ok }
 //   GET  api.php?r=projets                     la liste des fiches du compte
-//   GET  api.php?r=projet&id=…                 le projet (ETag : sa revision)
+//   GET  api.php?r=projet&id=…[&de=…]          le projet (ETag : sa revision) ; avec `de`, celui d'un autre compte qui le partage
 //   POST api.php?r=enregistrer[&id=…]          { projet, vignette? } ; par-dessus un projet : If-Match "<revision>"
 //   POST api.php?r=renommer&id=…               { nom }
-//   POST api.php?r=dupliquer&id=…
-//   POST api.php?r=supprimer&id=…              a la corbeille du compte
-//   GET  api.php?r=vignette&id=…               le SVG de la liste, servi comme une image inerte
+//   POST api.php?r=dupliquer&id=…[&de=…]       avec `de` : une copie, dans ses projets, d'un projet partage avec soi
+//   POST api.php?r=supprimer&id=…              a la corbeille du compte (ses partages en lecture disparaissent)
+//   GET  api.php?r=vignette&id=…[&de=…]        le SVG de la liste, servi comme une image inerte
+//
+//   Le partage (ADR-0043) : toute ecriture vise un projet du compte connecte ; `de` ne sert qu'a lire, et seulement si
+//   data/partages.json porte l'entree exacte (titulaire, projet, soi) — sinon 404 `introuvable`, comme un projet qui n'existe pas.
+//   GET  api.php?r=recus                       { projets: [fiche + proprietaire {id, nom} + partageLe] } : partages avec soi
+//   GET  api.php?r=partages&id=…               { partages: [{id, nom, email, le}] } : avec qui ce projet est partage en lecture
+//   POST api.php?r=partager&id=…               { email } → { partages, courrier } (mail a la personne ; `courrier` faux s'il n'est
+//                                              pas parti) ; deja partage : 409 `existe`
+//   POST api.php?r=retirer-partage&id=…        { compte } → { partages }
+//   POST api.php?r=envoyer&id=…                { email } → { ok, destinataire {nom}, courrier } : une copie dans ses projets (mail)
+//   POST api.php?r=quitter-partage&id=…&de=…   → { ok } : ne plus voir un projet partage avec soi
+//   L'adresse du destinataire : un compte actif autre que soi (400 `invalide`, 404 `introuvable`, 409 `soi-meme`) ; les adresses
+//   inconnues se comptent par compte (429 `limite`).
 //   GET  api.php?r=json&f=…                    une annexe de donnees
 //   GET  api.php?r=langue&l=en                 le dictionnaire de l'interface en script d'amorce (ETag, une heure en cache prive ; l autre qu'une
 //                                              langue traduite : 400 `invalide` ; dictionnaire non livre : 404 `introuvable`)
@@ -87,6 +99,35 @@ function id_demande(): string
         repondre_erreur(400, 'invalide', t('Identifiant invalide.'));
     }
     return $id;
+}
+
+/**
+ * Le titulaire d'un projet partage demande en lecture (`de`), ou null pour un projet du compte connecte. Le seul droit est l'entree
+ * exacte de data/partages.json : sans elle, le projet est « introuvable », comme s'il n'existait pas (ADR-0043).
+ */
+function titulaire_demande(array $moi, string $id): ?string
+{
+    $de = $_GET['de'] ?? null;
+    if ($de === null || $de === $moi['id']) {
+        return null;
+    }
+    if (!id_valide($de)) {
+        repondre_erreur(400, 'invalide', t('Identifiant invalide.'));
+    }
+    if (!partage_existe($de, $id, $moi['id']) || lire_compte($de) === null) {
+        repondre_erreur(404, 'introuvable', t('Ce projet n’existe plus sur le serveur.'));
+    }
+    return $de;
+}
+
+/** Un projet du compte connecte, ou 404 : on ne partage et on n'envoie que ses propres projets. */
+function exiger_projet(string $id): array
+{
+    $meta = lire_meta($id);
+    if ($meta === null) {
+        repondre_erreur(404, 'introuvable', t('Ce projet n’existe plus sur le serveur.'));
+    }
+    return $meta;
 }
 
 /** Le compte connecte doit etre administrateur : son role se relit dans son fichier, jamais dans la session. */
@@ -320,6 +361,10 @@ function entree_api(): never
             repondre_json(200, ['projets' => lister_projets()]);
         case 'projet':
             $id = id_demande();
+            $de = titulaire_demande($compte, $id);
+            if ($de !== null) {
+                definir_compte_projets($de);
+            }
             $meta = lire_meta($id);
             if ($meta === null || !is_file(chemin_projet($id, '.json'))) {
                 repondre_erreur(404, 'introuvable', t('Ce projet n’existe plus sur le serveur.'));
@@ -336,12 +381,18 @@ function entree_api(): never
             repondre_resultat(renommer_projet(id_demande(), $corps->nom ?? ''));
         case 'dupliquer':
             corps_ecriture($csrfValide, 8192);
-            repondre_resultat(dupliquer_projet(id_demande()));
+            $id = id_demande();
+            $de = titulaire_demande($compte, $id);
+            repondre_resultat($de === null ? dupliquer_projet($id) : copier_projet($de, $id, $compte['id'], fn(string $nom): string => $nom . ' ' . t('(copie)')));
         case 'supprimer':
             corps_ecriture($csrfValide, 8192);
             repondre_resultat(supprimer_projet(id_demande()));
         case 'vignette':
             $id = id_demande();
+            $de = titulaire_demande($compte, $id);
+            if ($de !== null) {
+                definir_compte_projets($de);
+            }
             $svg = chemin_projet($id, '.svg');
             if (!is_file($svg)) {
                 repondre_erreur(404, 'introuvable', t('Ce projet n’a pas de vignette.'));
@@ -351,6 +402,41 @@ function entree_api(): never
                 "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox",
                 'Content-Disposition: inline; filename="vignette.svg"',
             ]);
+        case 'recus':
+            repondre_json(200, ['projets' => projets_recus($compte['id'])]);
+        case 'partages':
+            $id = id_demande();
+            exiger_projet($id);
+            repondre_json(200, ['partages' => personnes_du_partage($compte['id'], $id)]);
+        case 'partager':
+        case 'envoyer':
+            $corps = corps_ecriture($csrfValide, 8192);
+            $id = id_demande();
+            exiger_projet($id);
+            $d = destinataire_du_partage($corps->email ?? null, $compte);
+            if (!isset($d['compte'])) {
+                repondre_resultat($d);
+            }
+            repondre_resultat($route === 'partager' ? partager_en_lecture($id, $compte, $d['compte']) : envoyer_copie($id, $compte, $d['compte']));
+        case 'retirer-partage':
+            $corps = corps_ecriture($csrfValide, 8192);
+            $id = id_demande();
+            exiger_projet($id);
+            $autre = $corps->compte ?? null;
+            if (!id_compte_valide($autre) || !retirer_partage($compte['id'], $id, $autre)) {
+                repondre_erreur(404, 'introuvable', t('Ce partage n’existe plus.'));
+            }
+            journaliser('partages', 'retire projet=' . $id . ' de=' . $compte['id'] . ' a=' . $autre);
+            repondre_json(200, ['partages' => personnes_du_partage($compte['id'], $id)]);
+        case 'quitter-partage':
+            corps_ecriture($csrfValide, 8192);
+            $id = id_demande();
+            $de = $_GET['de'] ?? null;
+            if (!id_valide($de) || !retirer_partage($de, $id, $compte['id'])) {
+                repondre_erreur(404, 'introuvable', t('Ce partage n’existe plus.'));
+            }
+            journaliser('partages', 'quitte projet=' . $id . ' de=' . $de . ' a=' . $compte['id']);
+            repondre_json(200, ['ok' => true]);
         case 'json':
             servir_json($_GET['f'] ?? null);
         case 'langue':

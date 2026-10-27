@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REGLAGES_PAR_DEFAUT, creerServeur, lireCompte, lireFiche, lireMeta, lireReglages, lireSite, type Reglages } from '../../../src/io/serveur.js';
+import { REGLAGES_PAR_DEFAUT, creerServeur, lireCompte, lireFiche, lireMeta, lirePartage, lireRecu, lireReglages, lireSite, type Reglages } from '../../../src/io/serveur.js';
 import { FORMAT_PROJET, VERSION_PROJET, type Projet } from '../../../src/model/projet.js';
 
 // Le client de l'API du site (ADR-0030) : jamais d'exception, toujours un code et une phrase ; le jeton CSRF sur chaque ecriture,
@@ -227,6 +227,77 @@ describe('les comptes du site (ADR-0041)', () => {
     expect(appels.map(a => [a.url, JSON.parse(String(a.init.body))])).toEqual([['api.php?r=courrier-essai', {}], ['api.php?r=courrier-essai', { destinataire: 'b@exemple.org' }]]);
     const echec = await faux(() => json(502, { erreur: 'courrier', message: 'SMTP : connexion refusée.' })).serveur.courrierEssai();
     expect(echec).toEqual({ ok: false, code: 'courrier', message: 'SMTP : connexion refusée.' });
+  });
+});
+
+describe('le partage des projets (ADR-0043)', () => {
+  const TITULAIRE = { id: 'fedcba9876543210', nom: 'Titulaire' };
+  const PERSONNE = { id: '1111111111111111', nom: 'Lecteur', email: 'lecteur@exemple.org', le: '2026-10-27T10:00:00Z' };
+
+  it('une fiche dit sa provenance et ses partages ; une valeur d une autre forme est ignoree, la fiche sert quand meme', () => {
+    expect(lireMeta({ ...META, recuDe: 'Anne', partages: 2 })).toEqual({ ...META, recuDe: 'Anne', partages: 2 });
+    expect(lireMeta({ ...META, recuDe: 42, partages: -1 })).toEqual(META);
+    expect(lireMeta({ ...META, recuDe: 'x'.repeat(121), partages: 1.5 })).toEqual(META);
+  });
+
+  it('un projet recu a un titulaire sur ; sa provenance et ses partages ne passent pas', () => {
+    expect(lireRecu({ ...META, recuDe: 'Anne', partages: 3, proprietaire: TITULAIRE })).toEqual({ ...META, proprietaire: TITULAIRE });
+    expect(lireRecu({ ...META, proprietaire: { id: '../x', nom: 'T' } })).toBeNull();
+    expect(lireRecu({ ...META, proprietaire: { id: TITULAIRE.id } })).toBeNull();
+    expect(lireRecu(META)).toBeNull();
+    expect(lirePartage(PERSONNE)).toEqual(PERSONNE);
+    expect(lirePartage({ ...PERSONNE, id: 'nope' })).toBeNull();
+  });
+
+  it('lit les projets recus en ecartant les fiches mal formees ; leur projet et leur vignette se demandent chez le titulaire', async () => {
+    const recu = { ...META, proprietaire: TITULAIRE };
+    const { serveur, appels } = faux(a => (a.url.includes('r=recus') ? json(200, { projets: [recu, { ...META }] }) : json(200, PROJET, { ETag: '"3"' })));
+    expect(await serveur.recus()).toEqual({ ok: true, valeur: [recu] });
+    expect(appels[0]?.url).toBe('api.php?r=recus');
+    await serveur.ouvrir(META.id, TITULAIRE.id);
+    expect(appels[1]?.url).toBe('api.php?r=projet&id=0123456789abcdef&de=fedcba9876543210');
+    expect(serveur.adresseVignette(recu)).toBe('api.php?r=vignette&id=0123456789abcdef&de=fedcba9876543210&v=3');
+    expect(serveur.adresseVignette(META)).toBe('api.php?r=vignette&id=0123456789abcdef&v=3');
+  });
+
+  it('partage, retire, envoie une copie, copie un projet recu, quitte un partage : par POST avec le jeton', async () => {
+    const { serveur, appels } = faux(a => {
+      if (a.url.includes('r=partager')) return json(200, { partages: [PERSONNE, { id: 'x' }], courrier: true });
+      if (a.url.includes('r=retirer-partage')) return json(200, { partages: [] });
+      if (a.url.includes('r=envoyer')) return json(200, { ok: true, destinataire: { nom: 'Lecteur' }, courrier: false });
+      if (a.url.includes('r=dupliquer')) return json(200, { meta: META });
+      if (a.url.includes('r=partages')) return json(200, { partages: [PERSONNE] });
+      return json(200, { ok: true });
+    });
+    expect(await serveur.partages(META.id)).toEqual({ ok: true, valeur: [PERSONNE] });
+    expect(await serveur.partager(META.id, 'lecteur@exemple.org')).toEqual({ ok: true, valeur: { partages: [PERSONNE], courrier: true } });
+    expect(await serveur.retirerPartage(META.id, PERSONNE.id)).toEqual({ ok: true, valeur: [] });
+    expect(await serveur.envoyerCopie(META.id, 'lecteur@exemple.org')).toEqual({ ok: true, valeur: { nom: 'Lecteur', courrier: false } });
+    expect(await serveur.dupliquer(META.id, TITULAIRE.id)).toEqual({ ok: true, valeur: META });
+    expect(await serveur.quitterPartage(META.id, TITULAIRE.id)).toEqual({ ok: true, valeur: null });
+    expect(appels.map(a => a.url)).toEqual([
+      'api.php?r=partages&id=0123456789abcdef',
+      'api.php?r=partager&id=0123456789abcdef',
+      'api.php?r=retirer-partage&id=0123456789abcdef',
+      'api.php?r=envoyer&id=0123456789abcdef',
+      'api.php?r=dupliquer&id=0123456789abcdef&de=fedcba9876543210',
+      'api.php?r=quitter-partage&id=0123456789abcdef&de=fedcba9876543210'
+    ]);
+    for (const a of appels.slice(1)) {
+      expect(a.init.method).toBe('POST');
+      expect((a.init.headers as Record<string, string>)['X-CSRF']).toBe('jeton');
+    }
+    expect(JSON.parse(String(appels[1]?.init.body))).toEqual({ email: 'lecteur@exemple.org' });
+    expect(JSON.parse(String(appels[2]?.init.body))).toEqual({ compte: PERSONNE.id });
+  });
+
+  it('dit le refus du serveur avec sa phrase (adresse inconnue, deja partage, limite)', async () => {
+    const r = await faux(() => json(404, { erreur: 'introuvable', message: 'Aucun compte actif ne porte cette adresse sur ce site.' })).serveur.partager(META.id, 'x@exemple.org');
+    expect(r).toEqual({ ok: false, code: 'introuvable', message: 'Aucun compte actif ne porte cette adresse sur ce site.' });
+    const deja = await faux(() => json(409, { erreur: 'existe', message: 'Ce projet est déjà partagé avec Lecteur.' })).serveur.partager(META.id, 'x@exemple.org');
+    expect(deja.ok ? '' : deja.message).toBe('Ce projet est déjà partagé avec Lecteur.');
+    const illisible = await faux(() => json(200, { ok: true })).serveur.envoyerCopie(META.id, 'x@exemple.org');
+    expect(illisible.ok ? '' : illisible.code).toBe('serveur');
   });
 });
 

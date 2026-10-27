@@ -65,6 +65,10 @@ const TRADUCTIONS_EN = [
     'Réinitialiser votre mot de passe — {site}' => 'Reset your password — {site}',
     'Ce message d’essai confirme que {site} peut envoyer du courrier.' => 'This test message confirms that {site} can send mail.',
     'Message d’essai — {site}' => 'Test message — {site}',
+    '{personne} vous a envoyé une copie du projet « {projet} ». Elle est dans vos projets sur {site} : elle vous appartient, vous pouvez la modifier sans rien changer à l’original.' => '{personne} has sent you a copy of the project “{projet}”. It is in your projects on {site}: it is yours, you can change it without altering the original.',
+    '{personne} vous envoie « {projet} » — {site}' => '{personne} sends you “{projet}” — {site}',
+    '{personne} partage avec vous le projet « {projet} », en lecture. Vous le trouverez sur {site}, sous « Partagés avec moi » : vous pouvez l’ouvrir, le télécharger ou en garder une copie dans vos projets.' => '{personne} shares the project “{projet}” with you, read-only. You will find it on {site}, under “Shared with me”: you can open it, download it or keep a copy in your projects.',
+    '{personne} partage « {projet} » avec vous — {site}' => '{personne} shares “{projet}” with you — {site}',
     // entree-api.php
     'Cette route n’accepte que POST.' => 'This route only accepts POST.',
     'Requête refusée : rechargez la page, puis réessayez.' => 'Request refused: reload the page, then try again.',
@@ -167,6 +171,12 @@ const TRADUCTIONS_EN = [
     'Cette empreinte de police est mal formée.' => 'This font fingerprint is malformed.',
     'Cette police n’est pas dans l’index du site : le serveur ne la télécharge pas.' => 'This font is not in the site index: the server does not download it.',
     'Le site n’a pas pu télécharger cette police depuis sa source (ou le fichier reçu n’avait pas l’empreinte attendue).' => 'The site could not download this font from its source (or the file received did not have the expected fingerprint).',
+    'Ce partage n’existe plus.' => 'This share no longer exists.',
+    // partages.php
+    'Aucun compte actif ne porte cette adresse sur ce site.' => 'No active account uses this address on this site.',
+    'C’est votre propre adresse.' => 'This is your own address.',
+    'Ce projet est déjà partagé avec {nom}.' => 'This project is already shared with {nom}.',
+    'Ce projet est déjà partagé avec {n} personnes : retirez-en une avant d’en ajouter.' => 'This project is already shared with {n} people: remove one before adding another.',
     // projets.php
     'Sans titre' => 'Untitled',
     'ce n’est pas un objet JSON' => 'it is not a JSON object',

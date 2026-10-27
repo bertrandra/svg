@@ -831,6 +831,114 @@ test('un autre compte ne voit pas ces projets ; supprimer un compte emporte ses 
     supprimer_compte($autre['id']);
 });
 
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Le partage des projets (ADR-0043)
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+test('data/partages.json se relit valide : une entree mal formee est ecartee, un fichier illisible ne donne aucun droit', function (): void {
+    $a = str_repeat('a', 16);
+    $b = str_repeat('b', 16);
+    $p = str_repeat('c', 16);
+    egal([], lire_partages(), 'sans fichier, aucun partage');
+    $bonne = ['proprietaire' => $a, 'projet' => $p, 'destinataire' => $b, 'le' => '2026-10-27T10:00:00Z'];
+    file_put_contents(chemin_partages(), json_encode(['format' => FORMAT_PARTAGES, 'version' => 1, 'partages' => [
+        $bonne,
+        $bonne,
+        ['proprietaire' => $a, 'projet' => $p, 'destinataire' => $a, 'le' => '2026-10-27T10:00:00Z'],
+        ['proprietaire' => '../x', 'projet' => $p, 'destinataire' => $b, 'le' => '2026-10-27T10:00:00Z'],
+        ['proprietaire' => $a, 'projet' => $p, 'destinataire' => $b, 'le' => 'hier'],
+        $bonne + ['role' => 'admin'],
+        'texte',
+    ]]));
+    egal([$bonne], lire_partages(), 'une seule entree juste, sans double ni champ de plus');
+    egal(true, partage_existe($a, $p, $b));
+    egal(false, partage_existe($b, $p, $a), 'le sens compte');
+    foreach (['{', json_encode(['format' => 'autre', 'version' => 1, 'partages' => [$bonne]]), json_encode(['format' => FORMAT_PARTAGES, 'version' => 2, 'partages' => [$bonne]])] as $abime) {
+        file_put_contents(chemin_partages(), $abime);
+        egal([], lire_partages(), 'illisible : ' . substr($abime, 0, 40));
+        egal(false, partage_existe($a, $p, $b));
+    }
+    @unlink(chemin_partages());
+});
+
+test('partager en lecture, envoyer une copie : droits exacts, mails, provenance ; supprimer le projet ou un compte retire les partages', function (): void {
+    $titulaire = compte_actif('titulaire@exemple.org', 'Titulaire');
+    $lecteur = compte_actif('lecteur@exemple.org', 'Lecteur', 'un mot de passe correct', 'en');
+    definir_compte_projets($titulaire['id']);
+    $m = enregistrer_projet(null, projet('Affiche'), null, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0L1 1"/></svg>')['meta'];
+
+    // L'adresse : un compte actif autre que soi.
+    egal('invalide', destinataire_du_partage('pas une adresse', $titulaire)['erreur'] ?? null);
+    egal('introuvable', destinataire_du_partage('personne@exemple.org', $titulaire)['erreur'] ?? null);
+    egal('soi-meme', destinataire_du_partage('Titulaire@Exemple.org', $titulaire)['erreur'] ?? null);
+    egal($lecteur['id'], destinataire_du_partage(' LECTEUR@exemple.org ', $titulaire)['compte']['id'] ?? null);
+    $suspendu = compte_actif('suspendu@exemple.org');
+    modifier_compte($suspendu['id'], ['etat' => 'suspendu']);
+    egal('introuvable', destinataire_du_partage('suspendu@exemple.org', $titulaire)['erreur'] ?? null, 'un compte suspendu ne recoit rien');
+
+    // En lecture : une entree, un mail dans la langue du lecteur, la fiche dit le nombre de partages.
+    $r = partager_en_lecture($m['id'], $titulaire, $lecteur);
+    egal(true, $r['courrier']);
+    egal([['id' => $lecteur['id'], 'nom' => 'Lecteur', 'email' => 'lecteur@exemple.org']], array_map(fn(array $x): array => array_diff_key($x, ['le' => 1]), $r['partages']));
+    egal('existe', partager_en_lecture($m['id'], $titulaire, $lecteur)['erreur'] ?? null, 'pas deux fois');
+    $mail = dernier_mail(DATA_DIR, 'lecteur@exemple.org');
+    egal('Titulaire shares “Affiche” with you — Site d’essai', $mail['sujet'] ?? null);
+    contient('under “Shared with me”', $mail['corps'] ?? '');
+    egal(1, lister_projets()[0]['partages'] ?? null);
+    egal(true, partage_existe($titulaire['id'], $m['id'], $lecteur['id']));
+
+    // Le lecteur voit le projet dans ses recus, avec son titulaire ; ses propres projets n'en disent rien.
+    definir_compte_projets($lecteur['id']);
+    egal([], lister_projets());
+    $recus = projets_recus($lecteur['id']);
+    egal(1, count($recus));
+    egal(['id' => $titulaire['id'], 'nom' => 'Titulaire'], $recus[0]['proprietaire']);
+    egal('Affiche', $recus[0]['nom']);
+    egal($lecteur['id'], compte_projets(), 'lire les recus rend la main au compte connecte');
+
+    // Une copie depuis le partage : dans les projets du lecteur, sans lien avec l'original.
+    $copie = copier_projet($titulaire['id'], $m['id'], $lecteur['id'], fn(string $n): string => $n . ' ' . t('(copie)'))['meta'];
+    egal('Affiche (copie)', $copie['nom']);
+    egal(1, $copie['revision']);
+    egal(true, $copie['vignette'], 'la vignette suit');
+    egal($copie['id'], lister_projets()[0]['id']);
+    egal(true, is_file(donnees('projets/' . $lecteur['id'] . '/' . $copie['id'] . '.json')));
+
+    // Envoyer une copie : chez le lecteur, avec la provenance, gardee apres un renommage ou un enregistrement.
+    definir_compte_projets($titulaire['id']);
+    $r = envoyer_copie($m['id'], $titulaire, $lecteur);
+    egal(['ok' => true, 'destinataire' => ['nom' => 'Lecteur'], 'courrier' => true], $r);
+    egal('Titulaire sends you “Affiche” — Site d’essai', dernier_mail(DATA_DIR, 'lecteur@exemple.org')['sujet'] ?? null);
+    definir_compte_projets($lecteur['id']);
+    $envoyee = array_values(array_filter(lister_projets(), fn(array $x): bool => isset($x['recuDe'])));
+    egal(1, count($envoyee));
+    egal(['Affiche', 'Titulaire'], [$envoyee[0]['nom'], $envoyee[0]['recuDe']]);
+    egal('Titulaire', renommer_projet($envoyee[0]['id'], 'Mon affiche')['meta']['recuDe'] ?? null);
+    egal('Titulaire', enregistrer_projet($envoyee[0]['id'], projet('Mon affiche'), 2, null)['meta']['recuDe'] ?? null);
+    egal(404, envoyer_copie(str_repeat('0', 16), $lecteur, $titulaire)['statut'] ?? null, 'on n envoie que ses propres projets');
+
+    // Le titulaire retire le partage, puis le remet ; mettre le projet a la corbeille l'efface.
+    egal(true, retirer_partage($titulaire['id'], $m['id'], $lecteur['id']));
+    egal(false, retirer_partage($titulaire['id'], $m['id'], $lecteur['id']));
+    egal([], projets_recus($lecteur['id']));
+    definir_compte_projets($titulaire['id']);
+    egal('ajoute', ajouter_partage($titulaire['id'], $m['id'], $lecteur['id']));
+    supprimer_projet($m['id']);
+    egal([], partages_du_projet($titulaire['id'], $m['id']), 'un projet a la corbeille n est plus partage');
+
+    // Supprimer un compte retire ce qu'il partage et ce qu'il recoit.
+    $m2 = enregistrer_projet(null, projet('Autre'), null, null)['meta'];
+    ajouter_partage($titulaire['id'], $m2['id'], $lecteur['id']);
+    definir_compte_projets($lecteur['id']);
+    $m3 = enregistrer_projet(null, projet('Du lecteur'), null, null)['meta'];
+    ajouter_partage($lecteur['id'], $m3['id'], $titulaire['id']);
+    egal(2, count(lire_partages()));
+    supprimer_compte($lecteur['id']);
+    egal([], lire_partages());
+    supprimer_compte($titulaire['id']);
+    supprimer_compte($suspendu['id']);
+});
+
 test('data/.htaccess se reecrit s il manque, a l identique de celui que livre le build', function (): void {
     $f = donnees('.htaccess');
     egal(file_get_contents(dirname(__DIR__, 2) . '/outils/site-php/data/.htaccess'), HTACCESS_DONNEES, 'la constante et le fichier livre');

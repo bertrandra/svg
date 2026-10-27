@@ -715,7 +715,7 @@ test('une configuration illisible vaut les defauts, le site marche, et l API le 
 
 test('toute route de l API exige la session', function () use ($url): void {
     $c = new Client($url);
-    foreach (['compte', 'comptes', 'reglages', 'projets', 'projet&id=0123456789abcdef', 'json&f=bibliotheque', 'fonte&f=inter.ttf', 'police&sha=' . urlencode(str_repeat('A', 43) . '='), 'vignette&id=0123456789abcdef', 'inconnue'] as $r) {
+    foreach (['compte', 'comptes', 'reglages', 'projets', 'projet&id=0123456789abcdef', 'json&f=bibliotheque', 'fonte&f=inter.ttf', 'police&sha=' . urlencode(str_repeat('A', 43) . '='), 'vignette&id=0123456789abcdef', 'recus', 'partages&id=0123456789abcdef', 'projet&id=0123456789abcdef&de=fedcba9876543210', 'inconnue'] as $r) {
         [$statut, , $corps] = $c->get('api.php?r=' . $r);
         egal(401, $statut, $r);
         egal('session', json_de($corps)['erreur'] ?? null, $r);
@@ -723,6 +723,9 @@ test('toute route de l API exige la session', function () use ($url): void {
     [$statut] = $c->ecrire('api.php?r=enregistrer', ['projet' => projet_json()], 'x');
     egal(401, $statut);
     egal(401, $c->ecrire('api.php?r=compte-approuver&id=0123456789abcdef', new stdClass(), 'x')[0]);
+    foreach (['partager', 'envoyer', 'retirer-partage', 'quitter-partage'] as $r) {
+        egal(401, $c->ecrire('api.php?r=' . $r . '&id=0123456789abcdef&de=fedcba9876543210', ['email' => 'a@exemple.org'], 'x')[0], $r);
+    }
 });
 
 test('une ecriture exige POST, du JSON, le jeton CSRF de la session, et pas un autre site', function () use ($url): void {
@@ -800,6 +803,102 @@ test('les projets sont bornes au compte : ceux d un autre sont introuvables, et 
     $comptes = json_de($a->get('api.php?r=comptes')[2])['comptes'];
     $fiches = array_column($comptes, 'projets', 'id');
     affirmer($fiches[$idA] >= 1 && $fiches[$idB] === 0, 'le nombre de projets : ' . json_encode($fiches));
+});
+
+test('partager en lecture par l API : le lecteur lit, voit la vignette, copie chez lui, n ecrit jamais ; retirer ferme l acces', function () use ($url, $data): void {
+    creer_utilisateur($url, 'titulaire@exemple.org', 'Titulaire');
+    creer_utilisateur($url, 'lecteur@exemple.org', 'Lecteur', 'le mot de passe de la personne', 'en');
+    creer_utilisateur($url, 'tiers@exemple.org', 'Tiers');
+    [$t, $csrfT] = connecte($url, 'titulaire@exemple.org', 'le mot de passe de la personne');
+    [$l, $csrfL] = connecte($url, 'lecteur@exemple.org', 'le mot de passe de la personne');
+    [$x, $csrfX] = connecte($url, 'tiers@exemple.org', 'le mot de passe de la personne');
+    $idT = json_de($t->get('api.php?r=compte')[2])['compte']['id'];
+    $idL = json_de($l->get('api.php?r=compte')[2])['compte']['id'];
+    $vignette = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0L1 1"/></svg>';
+    $m = json_de($t->ecrire('api.php?r=enregistrer', ['projet' => projet_json('Plan partagé'), 'vignette' => $vignette], $csrfT)[2])['meta'];
+
+    // Partager : l'adresse est jugee, un mail part dans la langue du lecteur.
+    egal(400, $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'pas une adresse'], $csrfT)[0]);
+    [$statut, , $corps] = $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'inconnu@exemple.org'], $csrfT);
+    egal([404, 'introuvable'], [$statut, json_de($corps)['erreur'] ?? null]);
+    egal('soi-meme', json_de($t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'titulaire@exemple.org'], $csrfT)[2])['erreur'] ?? null);
+    egal(404, $x->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], $csrfX)[0], 'on ne partage que ses propres projets');
+    egal(403, $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], 'faux')[0], 'CSRF');
+    [$statut, , $corps] = $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'Lecteur@Exemple.org'], $csrfT);
+    egal(200, $statut, $corps);
+    egal(true, json_de($corps)['courrier']);
+    egal([$idL], array_column(json_de($corps)['partages'], 'id'));
+    egal(409, $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], $csrfT)[0], 'deja partage');
+    egal('Titulaire shares “Plan partagé” with you — Site d’essai', dernier_mail($data, 'lecteur@exemple.org')['sujet'] ?? null);
+    egal([$idL], array_column(json_de($t->get('api.php?r=partages&id=' . $m['id'])[2])['partages'], 'id'));
+    egal(404, $x->get('api.php?r=partages&id=' . $m['id'])[0]);
+    $fiche = array_values(array_filter(json_de($t->get('api.php?r=projets')[2])['projets'], fn(array $f): bool => $f['id'] === $m['id']))[0];
+    egal(1, $fiche['partages']);
+
+    // Le lecteur : ses recus, le projet et sa vignette par `de`, une copie chez lui.
+    $recus = json_de($l->get('api.php?r=recus')[2])['projets'];
+    egal([[$m['id'], 'Plan partagé', $idT, 'Titulaire']], array_map(fn(array $r): array => [$r['id'], $r['nom'], $r['proprietaire']['id'], $r['proprietaire']['nom']], $recus));
+    egal([], json_de($l->get('api.php?r=projets')[2])['projets'], 'pas dans ses projets');
+    [$statut, $entetes, $corps] = $l->get('api.php?r=projet&id=' . $m['id'] . '&de=' . $idT);
+    egal(200, $statut);
+    egal('Plan partagé', json_de($corps)['nom']);
+    contient('"' . $m['revision'] . '"', $entetes['etag'] ?? '');
+    egal(200, $l->get('api.php?r=vignette&id=' . $m['id'] . '&de=' . $idT)[0]);
+    egal(404, $l->get('api.php?r=projet&id=' . $m['id'])[0], 'sans de, introuvable');
+    egal(404, $x->get('api.php?r=projet&id=' . $m['id'] . '&de=' . $idT)[0], 'un tiers ne lit rien, meme avec de');
+    egal(404, $x->get('api.php?r=vignette&id=' . $m['id'] . '&de=' . $idT)[0]);
+    egal(400, $l->get('api.php?r=projet&id=' . $m['id'] . '&de=../x')[0]);
+    // Aucune ecriture ne prend `de` : elles visent toujours les projets du lecteur, ou le projet est introuvable.
+    egal(404, $l->ecrire('api.php?r=enregistrer&id=' . $m['id'] . '&de=' . $idT, ['projet' => projet_json('Pirate')], $csrfL, ['If-Match: "1"'])[0]);
+    egal(404, $l->ecrire('api.php?r=renommer&id=' . $m['id'] . '&de=' . $idT, ['nom' => 'Pirate'], $csrfL)[0]);
+    egal(404, $l->ecrire('api.php?r=supprimer&id=' . $m['id'] . '&de=' . $idT, new stdClass(), $csrfL)[0]);
+    egal(404, $l->ecrire('api.php?r=partager&id=' . $m['id'] . '&de=' . $idT, ['email' => 'tiers@exemple.org'], $csrfL)[0]);
+    egal(404, $l->ecrire('api.php?r=envoyer&id=' . $m['id'] . '&de=' . $idT, ['email' => 'tiers@exemple.org'], $csrfL)[0]);
+    egal(404, $l->ecrire('api.php?r=retirer-partage&id=' . $m['id'] . '&de=' . $idT, ['compte' => $idL], $csrfL)[0]);
+    egal('Plan partagé', json_de($t->get('api.php?r=projet&id=' . $m['id'])[2])['nom'], 'rien n a bouge');
+    [$statut, , $corps] = $l->ecrire('api.php?r=dupliquer&id=' . $m['id'] . '&de=' . $idT, new stdClass(), $csrfL);
+    egal(200, $statut, $corps);
+    $copie = json_de($corps)['meta'];
+    egal('Plan partagé (copy)', $copie['nom'], 'dans la langue du lecteur');
+    egal([$copie['id']], array_column(json_de($l->get('api.php?r=projets')[2])['projets'], 'id'));
+    egal(true, is_file($data . '/projets/' . $idL . '/' . $copie['id'] . '.json'));
+
+    // Le titulaire retire le partage : plus rien ne se lit ; la copie du lecteur reste la sienne.
+    [$statut, , $corps] = $t->ecrire('api.php?r=retirer-partage&id=' . $m['id'], ['compte' => $idL], $csrfT);
+    egal(200, $statut, $corps);
+    egal([], json_de($corps)['partages']);
+    egal(404, $t->ecrire('api.php?r=retirer-partage&id=' . $m['id'], ['compte' => $idL], $csrfT)[0]);
+    egal([], json_de($l->get('api.php?r=recus')[2])['projets']);
+    egal(404, $l->get('api.php?r=projet&id=' . $m['id'] . '&de=' . $idT)[0]);
+    egal(200, $l->get('api.php?r=projet&id=' . $copie['id'])[0]);
+
+    // Le lecteur quitte un partage ; la corbeille du titulaire efface les siens.
+    $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], $csrfT);
+    egal(200, $l->ecrire('api.php?r=quitter-partage&id=' . $m['id'] . '&de=' . $idT, new stdClass(), $csrfL)[0]);
+    egal(404, $l->ecrire('api.php?r=quitter-partage&id=' . $m['id'] . '&de=' . $idT, new stdClass(), $csrfL)[0]);
+    egal([], json_de($t->get('api.php?r=partages&id=' . $m['id'])[2])['partages']);
+    $t->ecrire('api.php?r=partager&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], $csrfT);
+    egal(200, $t->ecrire('api.php?r=supprimer&id=' . $m['id'], new stdClass(), $csrfT)[0]);
+    egal([], json_de($l->get('api.php?r=recus')[2])['projets']);
+    $partages = json_decode((string) file_get_contents($data . '/partages.json'), true);
+    egal([], array_values(array_filter($partages['partages'], fn(array $p): bool => $p['projet'] === $m['id'])));
+});
+
+test('envoyer une copie par l API : elle arrive dans les projets de l autre, avec sa provenance et un mail ; l original ne bouge pas', function () use ($url, $data): void {
+    [$t, $csrfT] = connecte($url, 'titulaire@exemple.org', 'le mot de passe de la personne');
+    [$l] = connecte($url, 'lecteur@exemple.org', 'le mot de passe de la personne');
+    $m = json_de($t->ecrire('api.php?r=enregistrer', ['projet' => projet_json('Carte de vœux')], $csrfT)[2])['meta'];
+    egal(404, $t->ecrire('api.php?r=envoyer&id=' . $m['id'], ['email' => 'inconnu@exemple.org'], $csrfT)[0]);
+    [$statut, , $corps] = $t->ecrire('api.php?r=envoyer&id=' . $m['id'], ['email' => 'lecteur@exemple.org'], $csrfT);
+    egal(200, $statut, $corps);
+    egal(['ok' => true, 'destinataire' => ['nom' => 'Lecteur'], 'courrier' => true], json_de($corps));
+    egal('Titulaire sends you “Carte de vœux” — Site d’essai', dernier_mail($data, 'lecteur@exemple.org')['sujet'] ?? null);
+    $recue = array_values(array_filter(json_de($l->get('api.php?r=projets')[2])['projets'], fn(array $f): bool => ($f['recuDe'] ?? '') === 'Titulaire'));
+    egal(1, count($recue));
+    egal(['Carte de vœux', 1], [$recue[0]['nom'], $recue[0]['revision']]);
+    affirmer($recue[0]['id'] !== $m['id'], 'un identifiant neuf');
+    egal([], json_de($l->get('api.php?r=recus')[2])['projets'], 'une copie n est pas un partage');
+    egal('Carte de vœux', json_de($t->get('api.php?r=projet&id=' . $m['id'])[2])['nom'] ?? null, 'l original reste chez son titulaire');
 });
 
 test('supprimer un compte emporte ses projets dans corbeille-comptes, ferme sa session ; il ne se connecte plus', function () use ($url, $data): void {

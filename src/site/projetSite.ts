@@ -28,6 +28,11 @@ export interface TravailOuvert {
   readonly modifieLe?: string | undefined;
   /** Ce que la lecture d'un SVG d'origine a laisse tomber, dit a l'ouverture. */
   readonly ignores?: readonly string[] | undefined;
+  /**
+   * Un projet qu'un autre compte partage en lecture (ADR-0043) : `id` et `revision` sont les siens, chez son titulaire, et rien ne
+   * s'y ecrit ; « Enregistrer » en fait un projet neuf de la personne connectee, puis le travail devient le sien.
+   */
+  readonly lecture?: { readonly titulaire: string } | undefined;
 }
 
 const base64 = (o: Uint8Array): string => {

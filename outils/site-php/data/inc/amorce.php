@@ -216,6 +216,7 @@ require_once __DIR__ . '/jetons.php';
 require_once __DIR__ . '/courrier.php';
 require_once __DIR__ . '/limitation.php';
 require_once __DIR__ . '/projets.php';
+require_once __DIR__ . '/partages.php';
 require_once __DIR__ . '/polices.php';
 require_once __DIR__ . '/adresse.php';
 require_once __DIR__ . '/pages.php';

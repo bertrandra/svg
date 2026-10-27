@@ -1,7 +1,8 @@
 # ADR-0041 — Les comptes du site : inscription confirmée puis approuvée, sessions par jeton, projets par personne
 
 **Date :** 26 octobre 2026
-**Statut :** acceptée (révise l’ADR-0030 §1, §2 et §4 ; le projet JSON, les polices, l’ouverture depuis une adresse ne changent pas)
+**Statut :** acceptée (révise l’ADR-0030 §1, §2 et §4 ; le projet JSON, les polices, l’ouverture depuis une adresse ne changent pas ;
+complétée par l’ADR-0043, le partage des projets)
 
 ## Contexte
 
