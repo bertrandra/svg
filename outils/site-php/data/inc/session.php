@@ -3,7 +3,8 @@
 // `svg_session` (HttpOnly, SameSite=Strict, Secure en HTTPS, chemin du script), un fichier data/sessions/<sha256(jeton)>.json
 // { compte, creeLe, vu, csrf, marque, avis? }. Un visiteur non connecte a aussi une session (anonyme, `compte` vide) pour que les
 // formulaires portent un jeton CSRF ; la connexion en ouvre une nouvelle (nouveau jeton, nouveau CSRF : pas de fixation). Une session
-// expire apres `sessions.inactivite` sans requete ; `marque` est un condense de l'empreinte du mot de passe : la changer ferme les
+// expire apres `sessions.inactivite` sans requete (30 jours par defaut) ; le cookie d'une session connectee porte la meme echeance,
+// repoussee a chaque requete, pour que fermer le navigateur ne deconnecte pas (celui d'une session anonyme meurt avec le navigateur) ; `marque` est un condense de l'empreinte du mot de passe : la changer ferme les
 // autres sessions du compte ; un compte suspendu ou supprime perd ses sessions a la requete suivante. Le menage se fait une fois sur
 // cent requetes. Le jeton CSRF (64 hex, en-tete X-CSRF ou champ csrf) se compare en temps constant.
 
@@ -70,9 +71,15 @@ function ecrire_session(array $s): void
     ecrire_atomique(chemin_session($jeton), json_encode($s, JSON_UNESCAPED_SLASHES), 0640);
 }
 
-function poser_cookie_session(string $jeton): void
+/**
+ * Le cookie de la session ; `$connectee` : il survit a la fermeture du navigateur, un jour de plus que l'echeance d'inactivite. Ce jour
+ * de marge laisse le serveur voir la session expiree et le dire (« Votre session a expiré ») ; sans lui, le navigateur aurait deja
+ * jete le cookie et la page de connexion s'afficherait sans raison.
+ */
+function poser_cookie_session(string $jeton, bool $connectee = false): void
 {
-    setcookie(COOKIE_SESSION, $jeton, ['expires' => 0, 'path' => chemin_cookie(), 'secure' => est_https(), 'httponly' => true, 'samesite' => 'Strict']);
+    $expire = $connectee ? time() + inactivite_session() + 86400 : 0;
+    setcookie(COOKIE_SESSION, $jeton, ['expires' => $expire, 'path' => chemin_cookie(), 'secure' => est_https(), 'httponly' => true, 'samesite' => 'Strict']);
     $_COOKIE[COOKIE_SESSION] = $jeton;
 }
 
@@ -85,7 +92,7 @@ function creer_session(string $compteId = '', string $marque = '', ?string $avis
         $s['avis'] = $avis;
     }
     ecrire_session($s);
-    poser_cookie_session($jeton);
+    poser_cookie_session($jeton, $compteId !== '');
     session_courante($s);
     return $s;
 }
@@ -131,6 +138,10 @@ function demarrer_session(): void
     }
     $s['vu'] = $maintenant;
     ecrire_session($s);
+    // L'echeance du cookie suit l'activite, comme celle du fichier : 30 jours apres la derniere visite, pas apres la connexion.
+    if ($s['compte'] !== '') {
+        poser_cookie_session($jeton, true);
+    }
     session_courante($s);
 }
 

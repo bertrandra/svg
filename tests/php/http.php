@@ -225,7 +225,7 @@ test('sans aucun compte, la page cree l administrateur : CSRF exige, saisies jug
 // La connexion
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-test('la page de connexion : en-tetes de securite, cookie HttpOnly et SameSite=Strict, les champs, les liens, aucune erreur PHP', function () use ($url): void {
+test('la page de connexion : en-tetes de securite, cookie HttpOnly et SameSite=Strict (de session), les champs, les liens, aucune erreur PHP', function () use ($url): void {
     [$statut, $h, $page] = (new Client($url))->get('index.php');
     egal(200, $statut);
     contient("default-src 'none'", $h['content-security-policy'] ?? '');
@@ -236,6 +236,7 @@ test('la page de connexion : en-tetes de securite, cookie HttpOnly et SameSite=S
     egal(false, isset($h['x-powered-by']), 'pas de X-Powered-By');
     contient('HttpOnly', $h['set-cookie'] ?? '');
     contient('SameSite=Strict', $h['set-cookie'] ?? '');
+    egal(false, (bool) preg_match('/expires=|max-age=/i', $h['set-cookie'] ?? ''), 'le cookie d une session anonyme meurt avec le navigateur');
     contient('<html lang="fr">', $page);
     contient('<h1>Site d’essai</h1>', $page);
     contient('<label class="champ" for="email">', $page);
@@ -246,7 +247,7 @@ test('la page de connexion : en-tetes de securite, cookie HttpOnly et SameSite=S
     egal(false, (bool) preg_match('/Warning|Notice|Fatal|Deprecated/', $page), 'aucune erreur PHP affichee');
 });
 
-test('un mauvais mot de passe ou une adresse inconnue sont refuses de la meme facon ; le bon ouvre une nouvelle session et l application', function () use ($url): void {
+test('un mauvais mot de passe ou une adresse inconnue sont refuses de la meme facon ; le bon ouvre une nouvelle session (cookie a echeance glissante) et l application', function () use ($url): void {
     $c = new Client($url);
     $avant = $c->jeton();
     [$statut, , $page] = $c->formulaire('index.php', ['action' => 'connexion', 'csrf' => $avant, 'email' => ADMIN_EMAIL, 'mot_de_passe' => 'faux']);
@@ -260,6 +261,10 @@ test('un mauvais mot de passe ou une adresse inconnue sont refuses de la meme fa
     [$statut, $h] = $c->connecter(ADMIN_EMAIL, MOT);
     egal(303, $statut);
     contient('svg_session=', $h['set-cookie'] ?? '', 'un nouvel identifiant de session');
+    // Connecte, le cookie survit a la fermeture du navigateur : l'echeance d'inactivite (ici 7 200 s) et un jour de marge pour que le
+    // serveur dise « session expirée », repoussee a chaque requete.
+    contient('Max-Age=93600', $h['set-cookie'] ?? '', 'un cookie qui survit au navigateur');
+    contient('Max-Age=93600', $c->get('api.php?r=compte')[1]['set-cookie'] ?? '', 'l echeance suit l activite');
     [, , $app] = $c->get('index.php');
     contient('<div id="site" data-csrf="', $app);
     contient('data-site="', $app);

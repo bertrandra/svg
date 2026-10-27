@@ -184,7 +184,7 @@ fichier absent ou illisible vaut les valeurs par défaut, un champ mal formé va
   "inscriptions": { "ouvertes": true },
   "courrier": { "expediteur": "no-reply@exemple.org", "nom": "Éditeur SVG", "mode": "mail",
                 "smtp": { "hote": "", "port": 587, "securite": "starttls", "utilisateur": "", "motDePasse": "" } },
-  "sessions": { "inactivite": 7200 } }
+  "sessions": { "inactivite": 2592000 } }
 ```
 
 | Réglage | Rôle |
@@ -195,7 +195,7 @@ fichier absent ou illisible vaut les valeurs par défaut, un champ mal formé va
 | `courrier.expediteur`, `courrier.nom` | L’adresse et le nom d’expédition des mails |
 | `courrier.mode` | `mail` (la fonction de l’hébergeur), `smtp` (le serveur réglé dessous), `fichier` (rien ne part : chaque message s’écrit dans `data/journal/courrier/`, pour un essai) |
 | `courrier.smtp.*` | Hôte, port, sécurité (`starttls`, `ssl` implicite, `aucune`), utilisateur et mot de passe (AUTH PLAIN ou LOGIN) ; le mot de passe n’est jamais renvoyé par l’API, et le formulaire le laisse vide pour « inchangé » |
-| `sessions.inactivite` | Secondes sans requête avant que la session expire (7 200 : deux heures) |
+| `sessions.inactivite` | Secondes sans visite avant que la session expire (2 592 000 : trente jours ; « Réglages du site » propose 2 h, 8 h, 1 jour, 7 jours, 30 jours). Le cookie de connexion vit aussi longtemps (plus un jour) et chaque visite repousse l’échéance : fermer le navigateur ne déconnecte pas ; sur un ordinateur partagé, « Se déconnecter » |
 
 ### Le courrier
 
@@ -211,7 +211,7 @@ jour) ; chaque constante non définie prend la valeur de `data/inc/config.php` :
 
 | Constante | Défaut | Rôle |
 |---|---|---|
-| `SESSION_INACTIVITE` | `7200` | Le défaut de `sessions.inactivite` quand config.json ne le dit pas |
+| `SESSION_INACTIVITE` | `2592000` | Le défaut de `sessions.inactivite` quand config.json ne le dit pas (30 jours) |
 | `CONNEXION_ESSAIS_LIBRES` | `3` | Échecs d’un même client ou sur un même compte avant le premier délai |
 | `CONNEXION_DELAI_MAX` | `900` | Le délai maximal entre deux essais (il double : 2, 4, 8 s…) |
 | `COURRIER_DEMANDES_LIBRES` | `5` | Demandes de mail (inscription, renvoi, mot de passe oublié) libres par client avant le même délai |

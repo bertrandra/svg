@@ -268,7 +268,7 @@ export const REGLAGES_PAR_DEFAUT: Reglages = {
   site: { get nom() { return t('Éditeur SVG'); }, langue: 'fr', adresse: '' },
   inscriptions: { ouvertes: true },
   courrier: { expediteur: '', get nom() { return t('Éditeur SVG'); }, mode: 'mail', smtp: { hote: '', port: 587, securite: 'starttls', utilisateur: '' } },
-  sessions: { inactivite: 7200 },
+  sessions: { inactivite: 30 * 86400 },
   smtpMotDePassePose: false
 };
 

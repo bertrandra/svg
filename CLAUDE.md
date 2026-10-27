@@ -151,7 +151,9 @@ npm run test:php     # les tests du site PHP (tests/php/)
   visite tant qu'aucun compte n'existe (ou `php data/inc/compte.php --admin [--stdin]` : adresse, nom, mot de passe, langue, une par
   ligne), reprend les projets d'un site d'avant et supprime `data/pwd`, `data/password`, `data/connexions.json` : le mot de passe unique
   n'existe plus ; les sessions sont des jetons en fichier (`data/sessions/<sha256>.json`, cookie `svg_session`, anonyme pour le CSRF
-  des formulaires, nouveau jeton à la connexion, marque de l'empreinte, état et rôle relus à chaque requête) ; les jetons des mails
+  des formulaires, nouveau jeton à la connexion, marque de l'empreinte, état et rôle relus à chaque requête ; `sessions.inactivite`
+  vaut 30 jours par défaut, réglable dans « Réglages du site », et le cookie d'une session connectée porte cette échéance plus un jour,
+  repoussée à chaque requête : fermer le navigateur ne déconnecte pas, le jour de marge laisse dire « session expirée ») ; les jetons des mails
   (`data/jetons/`, confirmation 48 h, réinitialisation 1 h à usage unique) sont rangés hachés ; le courrier part par `mail`, `smtp`
   (client minimal : STARTTLS ou SSL, AUTH PLAIN ou LOGIN, délais, rien en clair si STARTTLS est refusé) ou `fichier` (tests :
   `data/journal/courrier/*.eml`) ; les pages d'avant la connexion et les mails passent par `t()` (`langues.php`, dictionnaire
