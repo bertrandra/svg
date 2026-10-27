@@ -163,6 +163,8 @@ production, nuancier, fonte déposée, image source) ; le SVG reste un export.
   compte a sa langue (français, anglais) ; les mots de passe ne sont gardés qu’en empreinte.
 - « Enregistrer » et Ctrl+S écrivent le projet sans fermer, « Enregistrer sous… » le garde sous un autre nom, l’état « Enregistré /
   Modifications non enregistrées » est dans la barre d’état ; deux onglets ne s’écrasent pas (révision).
+- Un projet se partage avec un autre compte (ADR-0043) : « Envoyer une copie » (elle lui appartient) ou « Partager en lecture » (il
+  apparaît sous « Partagés avec moi », s’ouvre et se copie, sans jamais s’écrire chez son titulaire) ; un mail prévient la personne.
 - Le navigateur ne contacte que le site : les bibliothèques et l’index des polices viennent de `data/json`, une police du catalogue
   est téléchargée et vérifiée par le serveur, puis gardée dans `data/font`.
 

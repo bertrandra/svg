@@ -7,6 +7,15 @@ versions SemVer : un SVG réécrit différemment pour une entrée inchangée est
 
 ### Ajouté
 
+- **Partager un projet avec un autre compte du site** (ADR-0043). Dans la ligne d’un projet, « Partager » ouvre un panneau (au
+  clavier, Échap le ferme) : l’adresse d’une personne qui a un compte, puis « Envoyer une copie » (le projet est recopié dans ses
+  projets, à elle désormais ; la ligne dit « Reçu de … ») ou « Partager en lecture » (elle le voit sous « Partagés avec moi », l’ouvre,
+  le télécharge ou en garde une copie, sans jamais l’écrire ; vous voyez avec qui il est partagé et le retirez d’un geste). Chaque
+  geste prévient la personne par mail, dans sa langue. Un projet reçu s’ouvre en lecture : une fois modifié, « Enregistrer une
+  copie » garde votre version dans vos projets. Les droits de lecture vivent dans `data/partages.json`, validé à chaque requête (un
+  fichier abîmé n’accorde rien) ; aucune écriture de l’API ne vise un projet d’un autre compte ; la corbeille d’un projet ou la
+  suppression d’un compte retirent ses partages ; une adresse inconnue se compte (pas d’annuaire à faire défiler).
+
 - **L’éditeur entier en anglais** (ADR-0042, après le socle ci-dessous). Chaque texte d’interface de `src/` passe par `t()` : menus,
   barres, panneaux, boîtes, annonces de la région vocale, raccourcis dits en toutes lettres (`Maj` → `Shift`, `Échap` → `Esc`),
   messages du moteur (refus de lecture, constats de préparation, pertes à l’export, lecture PDF), textes du site (projets, profil,

@@ -45,6 +45,7 @@ dist/php/
       json/              ← les bibliothèques, l’index et les aperçus des polices, la liste des fontes, le dictionnaire anglais
       font/              ← les dix fontes livrées ; font/catalogue/ : les polices que le serveur a téléchargées
       projets/           ← un dossier par compte (sa corbeille dedans) ; projets/corbeille-comptes/ : ceux des comptes supprimés
+      partages.json      ← les projets partagés en lecture (titulaire, projet, destinataire), écrit au premier partage
       journal/           ← erreurs.log, connexions.log, comptes.log, courrier.log ; courrier/ : les mails en mode « fichier »
 ```
 
@@ -157,6 +158,10 @@ mot de passe d’un compte. L’outil ne s’exécute qu’en ligne de commande 
 - **Une personne** s’inscrit (adresse, nom, mot de passe, langue), confirme son adresse par le lien reçu (48 h), puis attend
   l’approbation d’un administrateur, prévenu par mail ; approuvée, elle est prévenue et se connecte. Ses projets sont les siens :
   `data/projets/<compte>/`, un administrateur n’en voit que le nombre.
+- **Partager un projet** (ADR-0043) : « Partager » dans la ligne d’un projet, l’adresse d’une personne qui a un compte actif, puis
+  « Envoyer une copie » (le projet est recopié dans ses projets) ou « Partager en lecture » (elle le voit sous « Partagés avec moi »,
+  sans pouvoir l’écrire). Elle reçoit un mail. Les partages en lecture vivent dans `data/partages.json` ; un projet mis à la corbeille
+  ou un compte supprimé perdent les leurs. Supprimer ce fichier retire tous les partages en lecture (les copies envoyées restent).
 - **Le mot de passe** : dix caractères au moins, gardé en empreinte seulement (argon2id, ou bcrypt si PHP n’a pas argon2). Oublié :
   « Mot de passe oublié ? » envoie un lien d’une heure, à usage unique. Changé (profil, lien, ligne de commande) : les autres sessions
   du compte se ferment à leur requête suivante.
@@ -287,7 +292,8 @@ récente est refusé en le disant, jamais lu « au mieux ».
 
 ## Sauvegarder
 
-Tout l’état du site est dans `data/` : sauvegardez `data/comptes/`, `data/config/` et `data/projets/` (et `data/secret`), par exemple
+Tout l’état du site est dans `data/` : sauvegardez `data/comptes/`, `data/config/`, `data/projets/` et `data/partages.json` (et
+`data/secret`), par exemple
 en téléchargeant `data/` par FTP. Un projet est un fichier JSON autonome (`<id>.json`) ; `<id>.meta.json` porte son nom et ses dates.
 La corbeille d’un compte (`data/projets/<compte>/corbeille/`) garde ses projets supprimés, horodatés : pour en reprendre un, remettez
 ses trois fichiers dans `data/projets/<compte>/` sans le préfixe de date. Un compte supprimé est entier dans

@@ -21,7 +21,19 @@ export interface MetaProjet {
   readonly taille: number;
   /** Vrai quand le serveur garde une vignette (un SVG, servi comme image) de ce projet. */
   readonly vignette: boolean;
+  /** Le nom de la personne qui a envoye cette copie (ADR-0043), absent pour un projet fait ici. */
+  readonly recuDe?: string;
+  /** Avec combien de personnes ce projet est partage en lecture ; absent s'il ne l'est avec personne. */
+  readonly partages?: number;
 }
+
+/** Un projet d'un autre compte, partage en lecture avec la personne connectee (ADR-0043) : sa fiche et son titulaire. */
+export interface ProjetRecu extends MetaProjet {
+  readonly proprietaire: { readonly id: string; readonly nom: string };
+}
+
+/** Une personne avec qui un projet est partage en lecture, telle que son titulaire la voit. */
+export interface Partage { readonly id: string; readonly nom: string; readonly email: string; readonly le: string }
 
 // Les comptes du site (ADR-0041) : la personne connectee, son profil, et l'administration (comptes, reglages, courrier). Les
 // formes viennent du contrat de l'API ; comme une fiche de projet, un compte lu n'est cru que s'il a exactement la bonne forme.
@@ -91,18 +103,33 @@ export interface OptionsServeur {
 
 export interface Serveur {
   readonly lister: () => Promise<Reponse<readonly MetaProjet[]>>;
-  readonly ouvrir: (id: string) => Promise<Reponse<ProjetOuvert>>;
+  /** Ouvre un projet : de la personne connectee, ou partage par le compte `de` (ADR-0043). */
+  readonly ouvrir: (id: string, de?: string) => Promise<Reponse<ProjetOuvert>>;
   /** Enregistre : un nouveau projet sans `id`, sinon par-dessus la revision `revision` (refuse si le serveur en a une autre). */
   readonly enregistrer: (projet: Projet, cible: { readonly id: string; readonly revision: number } | null, vignette: string | null) => Promise<Reponse<MetaProjet>>;
   readonly renommer: (id: string, nom: string) => Promise<Reponse<MetaProjet>>;
-  readonly dupliquer: (id: string) => Promise<Reponse<MetaProjet>>;
+  /** Une copie dans ses projets : d'un des siens, ou d'un projet que le compte `de` partage avec soi. */
+  readonly dupliquer: (id: string, de?: string) => Promise<Reponse<MetaProjet>>;
   readonly supprimer: (id: string) => Promise<Reponse<null>>;
   /** Une annexe de donnees en JSON (`bibliotheque`, `polices-catalogue`…), undefined si elle manque ; `polices` amene aussi les fichiers. */
   readonly donnees: (nom: string) => Promise<unknown>;
   /** L'adresse d'une police du catalogue chez le serveur, par l'empreinte sha256 de son fichier. */
   readonly adressePolice: (empreinte: string) => string;
-  /** L'adresse de la vignette d'un projet (une image SVG), a sa revision pour que le cache suive. */
-  readonly adresseVignette: (m: MetaProjet) => string;
+  /** L'adresse de la vignette d'un projet (une image SVG), a sa revision pour que le cache suive ; d'un projet recu, chez son titulaire. */
+  readonly adresseVignette: (m: MetaProjet | ProjetRecu) => string;
+
+  // Le partage (ADR-0043) : on ne partage et on n'envoie que ses propres projets ; un projet recu se lit, ne s'ecrit jamais.
+  /** Les projets que d'autres comptes partagent en lecture avec la personne connectee. */
+  readonly recus: () => Promise<Reponse<readonly ProjetRecu[]>>;
+  /** Les personnes avec qui un de ses projets est partage. */
+  readonly partages: (id: string) => Promise<Reponse<readonly Partage[]>>;
+  /** Partage un de ses projets en lecture avec le compte de cette adresse ; `courrier` faux si le mail n'est pas parti. */
+  readonly partager: (id: string, email: string) => Promise<Reponse<{ readonly partages: readonly Partage[]; readonly courrier: boolean }>>;
+  readonly retirerPartage: (id: string, compte: string) => Promise<Reponse<readonly Partage[]>>;
+  /** Envoie une copie d'un de ses projets au compte de cette adresse, qui en devient le titulaire. */
+  readonly envoyerCopie: (id: string, email: string) => Promise<Reponse<{ readonly nom: string; readonly courrier: boolean }>>;
+  /** Ne plus voir un projet partage avec soi. */
+  readonly quitterPartage: (id: string, de: string) => Promise<Reponse<null>>;
   /**
    * Un fichier a une adresse, que le serveur va chercher a la place du navigateur (ADR-0036) : ses octets bruts, ou la phrase du
    * refus (adresse privee, schema ou port interdit, trop gros, delai…). Une ecriture : POST, jeton CSRF.
@@ -147,7 +174,8 @@ const MESSAGES: Readonly<Record<string, () => string>> = {
   'dernier-admin': () => t('Ce compte est le dernier administrateur actif : il ne peut être ni rétrogradé, ni suspendu, ni supprimé.'),
   'soi-meme': () => t('Vous ne pouvez pas faire cela sur votre propre compte.'),
   courrier: () => t('Le mail n’a pas pu partir : vérifiez les réglages du courrier.'),
-  limite: () => t('Trop de tentatives : patientez quelques minutes, puis réessayez.')
+  limite: () => t('Trop de tentatives : patientez quelques minutes, puis réessayez.'),
+  etat: () => t('Cette action ne vaut pas dans l’état actuel.')
 };
 
 const echec = <T>(code: string, message?: string, meta?: MetaProjet): Reponse<T> => ({ ok: false, code, message: message || (MESSAGES[code] ?? MESSAGES['serveur'])?.() || '', ...(meta ? { meta } : {}) });
@@ -161,8 +189,35 @@ export function lireMeta(x: unknown): MetaProjet | null {
   if (typeof id !== 'string' || !/^[a-f0-9]{16}$/.test(id) || typeof nom !== 'string' || nom.length > BORNES_PROJET.nom * 2) return null;
   if (typeof creeLe !== 'string' || typeof modifieLe !== 'string' || creeLe.length > 40 || modifieLe.length > 40) return null;
   if (typeof revision !== 'number' || !Number.isInteger(revision) || revision < 1 || typeof taille !== 'number' || !(taille >= 0)) return null;
-  return { id, nom, creeLe, modifieLe, revision, taille, vignette: vignette === true };
+  // Deux champs facultatifs (ADR-0043) : une valeur d'une autre forme est ignoree, la fiche sert quand meme.
+  const recuDe = texte(x['recuDe'], 120), partages = x['partages'];
+  return {
+    id, nom, creeLe, modifieLe, revision, taille, vignette: vignette === true,
+    ...(recuDe ? { recuDe } : {}), ...(typeof partages === 'number' && Number.isInteger(partages) && partages > 0 ? { partages } : {})
+  };
 }
+
+const ID = /^[a-f0-9]{16}$/;
+
+/** Un projet recu, ou null : une fiche juste et un titulaire (identifiant sur, nom borne). */
+export function lireRecu(x: unknown): ProjetRecu | null {
+  const m = lireMeta(x);
+  if (!m || !estObjet(x) || !estObjet(x['proprietaire'])) return null;
+  const id = texte(x['proprietaire']['id'], 16), nom = texte(x['proprietaire']['nom'], 120);
+  if (id === null || !ID.test(id) || nom === null) return null;
+  // Ni la provenance ni les partages du titulaire ne regardent le lecteur : seuls les champs de la fiche passent.
+  return { id: m.id, nom: m.nom, creeLe: m.creeLe, modifieLe: m.modifieLe, revision: m.revision, taille: m.taille, vignette: m.vignette, proprietaire: { id, nom } };
+}
+
+/** Une personne d'un partage, ou null. */
+export function lirePartage(x: unknown): Partage | null {
+  if (!estObjet(x)) return null;
+  const id = texte(x['id'], 16), nom = texte(x['nom'], 120), email = texte(x['email'], 254), le = texte(x['le'], 40);
+  return id !== null && ID.test(id) && nom !== null && email !== null && le !== null ? { id, nom, email, le } : null;
+}
+
+/** Une liste lue element par element : un element mal forme est ecarte, les autres servent ; null si ce n'est pas une liste. */
+const liste = <T>(x: unknown, lire: (e: unknown) => T | null): T[] | null => (Array.isArray(x) ? x.map(lire).filter((e): e is T => e !== null) : null);
 
 const LANGUES: readonly Langue[] = ['fr', 'en'];
 const ROLES: readonly RoleCompte[] = ['admin', 'utilisateur'];
@@ -349,6 +404,28 @@ function routesComptes({ demander, ecrire, ecriture }: Outils): Pick<Serveur, 'c
   };
 }
 
+/** Les routes du partage (ADR-0043). */
+function routesPartage({ demander, ecrire, ecriture }: Outils): Pick<Serveur, 'recus' | 'partages' | 'partager' | 'retirerPartage' | 'envoyerCopie' | 'quitterPartage'> {
+  const personnes = (x: unknown) => liste(x, lirePartage);
+  return {
+    recus: async () => champ(await demander({ r: 'recus' }), 'projets', x => liste(x, lireRecu)),
+    partages: async id => champ(await demander({ r: 'partages', id }), 'partages', personnes),
+    partager: async (id, email) => {
+      const r = await ecrire({ r: 'partager', id }, ecriture({ email }));
+      const p = champ(r, 'partages', personnes);
+      return p.ok && r.ok ? { ok: true, valeur: { partages: p.valeur, courrier: estObjet(r.valeur.corps) && r.valeur.corps['courrier'] === true } } : p.ok ? echec('serveur') : p;
+    },
+    retirerPartage: async (id, compte) => champ(await ecrire({ r: 'retirer-partage', id }, ecriture({ compte })), 'partages', personnes),
+    envoyerCopie: async (id, email) => {
+      const r = await ecrire({ r: 'envoyer', id }, ecriture({ email }));
+      if (!r.ok) return r;
+      const corps = estObjet(r.valeur.corps) ? r.valeur.corps : {}, d = estObjet(corps['destinataire']) ? texte(corps['destinataire']['nom'], 120) : null;
+      return d === null ? echec('serveur') : { ok: true, valeur: { nom: d, courrier: corps['courrier'] === true } };
+    },
+    quitterPartage: async (id, de) => rien(await ecrire({ r: 'quitter-partage', id, de }, ecriture({})))
+  };
+}
+
 export function creerServeur(options: OptionsServeur): Serveur {
   const chercher = options.chercher ?? ((url: string, init: RequestInit) => fetch(url, init));
   // Le jeton change a chaque connexion : apres une reconnexion dans un autre onglet, celui de la page est perime. Une ecriture
@@ -467,8 +544,8 @@ export function creerServeur(options: OptionsServeur): Serveur {
       if (!liste) return echec('serveur');
       return { ok: true, valeur: liste.map(lireMeta).filter((m): m is MetaProjet => m !== null) };
     },
-    ouvrir: async id => {
-      const r = await demander({ r: 'projet', id }, lecture, BORNES_PROJET.octets);
+    ouvrir: async (id, de) => {
+      const r = await demander(de ? { r: 'projet', id, de } : { r: 'projet', id }, lecture, BORNES_PROJET.octets);
       if (!r.ok) return r;
       // Un serveur qui compresse la reponse (nginx en gzip ou brotli) affaiblit l'ETag : `W/"3"`. La revision y est la meme.
       const revision = Number(/^(?:W\/)?"?(\d+)"?$/.exec(r.valeur.reponse.headers.get('etag') ?? '')?.[1] ?? NaN);
@@ -481,7 +558,7 @@ export function creerServeur(options: OptionsServeur): Serveur {
       ecriture({ projet, ...(vignette ? { vignette } : {}) }, cible ? { 'If-Match': '"' + cible.revision + '"' } : {})
     ),
     renommer: (id, nom) => meta({ r: 'renommer', id }, ecriture({ nom })),
-    dupliquer: id => meta({ r: 'dupliquer', id }, ecriture({})),
+    dupliquer: (id, de) => meta(de ? { r: 'dupliquer', id, de } : { r: 'dupliquer', id }, ecriture({})),
     supprimer: async id => {
       const r = await ecrire({ r: 'supprimer', id }, ecriture({}));
       return r.ok ? { ok: true, valeur: null } : r;
@@ -492,6 +569,7 @@ export function creerServeur(options: OptionsServeur): Serveur {
       return r.ok ? r.valeur.corps : undefined;
     },
     adressePolice: empreinte => url({ r: 'police', sha: empreinte }),
-    adresseVignette: m => url({ r: 'vignette', id: m.id, v: String(m.revision) })
+    adresseVignette: m => url({ r: 'vignette', id: m.id, ...('proprietaire' in m ? { de: m.proprietaire.id } : {}), v: String(m.revision) }),
+    ...routesPartage({ demander: p => demander(p), ecrire, ecriture: corps => ecriture(corps) })
   };
 }

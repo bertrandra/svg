@@ -160,6 +160,15 @@ npm run test:php     # les tests du site PHP (tests/php/)
   introuvable ; la limitation compte par client et par compte (`data/essais.json`), les demandes de mail par client ; l'API admin
   (`comptes`, `compte-*`, `reglages`, `courrier-essai`) refuse `dernier-admin` et `soi-meme` ; les erreurs sont `{erreur, message}`,
   codes en tête d'`entree-api.php` ; un vecteur nouveau entre dans `tests/php/` (unitaires, HTTP, faux SMTP).
+- **Un projet se partage par une copie ou en lecture, jamais en écriture** (ADR-0043) : « Partager » s'ouvre dans la ligne
+  (`site/Partage.tsx`) ; « Envoyer une copie » recopie le projet chez l'autre compte (`copier_projet`, identifiant neuf, `recuDe` dans
+  la fiche, gardé ensuite), « Partager en lecture » pose une entrée dans `data/partages.json` (seule source des droits, validée à chaque
+  requête par `partage_valide`, un fichier abîmé n'accorde rien, sous verrou), lue sous « Partagés avec moi » (`site/PartagesRecus.tsx`) ;
+  le destinataire est un compte actif autre que soi trouvé par son adresse, aucune liste des comptes n'est montrée, une adresse
+  inconnue se compte (`mp` + compte) ; `de` ne sert qu'aux lectures (`projet`, `vignette`, `dupliquer`) et exige l'entrée exacte, sinon
+  404 ; aucune écriture ne prend `de` ; lire chez un autre compte passe par `sous_compte_projets` ; la corbeille d'un projet et la
+  suppression d'un compte retirent ses partages ; un projet reçu s'ouvre avec `lecture` (« Enregistrer une copie » en fait un projet
+  neuf de la personne, l'éditeur n'en sait rien) ; un mail à chaque geste (`mail_copie`, `mail_partage`).
 - **Ouvrir depuis une adresse, le type sur les octets** (ADR-0036) : rien ne part sans « Ouvrir », un lien glissé ou une adresse
   collée seule ; le champ n'existe que si l'hôte pose `definirOuvertureAdresse` (page, site ; jamais l'embarquement) ; https
   seulement (`model/adresse.ts`) ; la nature se lit sur les octets (`engine/natureOctets.ts`), puis la lecture d'un fichier

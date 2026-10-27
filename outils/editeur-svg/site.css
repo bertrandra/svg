@@ -35,6 +35,16 @@
 .projet-renommer { display: grid; gap: var(--esp-s); }
 .projet-renommer label { font-size: var(--texte-compact); font-weight: 600; }
 .projet-supprimer { display: grid; gap: var(--esp-s); border-left: 2px solid var(--filet-fort); padding-left: var(--esp-m); }
+/* Le panneau « Partager » (ADR-0043) : sous la ligne entiere, un filet a gauche comme la confirmation de suppression. */
+.projet-partager { grid-column: 1 / -1; display: grid; gap: var(--esp-s); border-left: 2px solid var(--filet-fort); padding-left: var(--esp-m); max-width: 40rem; }
+.projet-partager-adresse { display: grid; gap: var(--esp-s); }
+.projet-partager-adresse input { width: 100%; min-width: 0; }
+.projet-partager label, .projet-partager h4 { margin: 0; font-size: var(--texte-compact); font-weight: 600; }
+.projet-partager p { margin: 0; }
+.liste-partages { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2xs); }
+.liste-partages li { display: flex; flex-wrap: wrap; gap: var(--esp-m); align-items: center; justify-content: space-between; }
+.partage-personne { overflow-wrap: anywhere; }
+.projets-recus > p { margin: 0; }
 @media (max-width: 640px) {
   .projet { grid-template-columns: var(--esp-3xl) minmax(0, 1fr); }
   .projet-actions { grid-column: 1 / -1; justify-content: flex-start; }

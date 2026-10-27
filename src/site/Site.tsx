@@ -12,7 +12,7 @@ import { planDOuverture } from '../engine/preparation.js';
 import { nomDeProjet, type TeinteProjet } from '../model/projet.js';
 import { CHOIX_GENERIQUE } from '../model/contextes.js';
 import { stockageNavigateur } from '../io/stockage.js';
-import type { Compte, InfosSite, MetaProjet, Serveur } from '../io/serveur.js';
+import type { Compte, InfosSite, MetaProjet, ProjetRecu, Serveur } from '../io/serveur.js';
 import { EditeurSvg, type ActionHote, type EtatEnregistrement, type EtatRendu } from '../zones/EditeurSvg.js';
 import { EXEMPLE, NUANCIER_EXEMPLE, OuvrirSvg, Voies } from '../zones/Application.js';
 import { SectionBibliotheque } from '../zones/Bibliotheque.js';
@@ -33,6 +33,7 @@ import { t } from '../util/i18n.js';
 import type { Voie } from '../zones/publics.js';
 import { EcranProjets, type GestesProjets } from './Projets.js';
 import { EcransCompte } from './EcransCompte.js';
+import { gestesDuServeur } from './gestesProjets.js';
 import { imageSource, memeEtat, projetAEnregistrer, travailDuProjet, travailDuSvg, type TravailOuvert } from './projetSite.js';
 
 const STOCKAGE = stockageNavigateur();
@@ -122,6 +123,7 @@ export function Site(p: ProprietesSite) {
 
 function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const [projets, poserProjets] = useState<readonly MetaProjet[] | null>(null);
+  const [recus, poserRecus] = useState<readonly ProjetRecu[]>([]);
   const [message, poserMessage] = useState<{ texte: string; ton: TonMessage }>({ texte: avertissement ?? '', ton: 'alerte' });
   const dire = useCallback((texte: string, ton: TonMessage = 'alerte') => poserMessage({ texte, ton }), []);
   const [edition, poserEdition] = useState<Edition | null>(null);
@@ -137,10 +139,12 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const image = useRef<{ nom: string; fichier: File } | null>(null);
 
   const recharger = useCallback(async () => {
-    const r = await serveur.lister();
+    const [r, partages] = await Promise.all([serveur.lister(), serveur.recus()]);
     // Sur l'ecran des projets, rien n'est ouvert : une session expiree ramene a la connexion, qui le dit.
     if (!r.ok && r.code === 'session' && !travail.current) { window.location.reload(); return; }
     if (r.ok) poserProjets(r.valeur); else { poserProjets(p => p ?? []); dire(r.message); }
+    // Les projets recus (ADR-0043) : une liste qui ne vient pas laisse la section absente, ses propres projets servent quand meme.
+    poserRecus(partages.ok ? partages.valeur : []);
   }, [serveur, dire]);
   useEffect(() => { void recharger(); }, [recharger]);
 
@@ -185,7 +189,9 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
     if (!ouvert || enCours.current) return;
     enCours.current = true;
     poserEnregistrement({ etat: 'en-cours' });
-    const nom = nomNeuf ?? ouvert.nom, neuf = nomNeuf !== null || !ouvert.id || ouvert.revision === null;
+    // Un projet recu en lecture (ADR-0043) ne s'ecrit jamais chez son titulaire : il devient un projet neuf de la personne.
+    const nom = nomNeuf ?? (ouvert.lecture ? t('{nom} (copie)', { nom: ouvert.nom }) : ouvert.nom);
+    const neuf = nomNeuf !== null || ouvert.lecture !== undefined || !ouvert.id || ouvert.revision === null;
     const projet = projetAEnregistrer(neuf ? { ...ouvert, creeLe: undefined, modifieLe: undefined } : ouvert, etat, nom);
     const svg = ecrireDessin(etat.dessin, 3);
     const r = await serveur.enregistrer(projet, neuf || !ouvert.id || ouvert.revision === null ? null : { id: ouvert.id, revision: ouvert.revision }, svg.length <= VIGNETTE_MAX ? svg : null);
@@ -197,7 +203,7 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
     }
     const m = r.valeur;
     reference.current = etat;
-    poserEdition(e => (e ? { ...e, travail: { ...e.travail, id: m.id, revision: m.revision, nom: m.nom, creeLe: m.creeLe, modifieLe: m.modifieLe, polices: projet.ressources.polices } } : e));
+    poserEdition(e => (e ? { ...e, travail: { ...e.travail, id: m.id, revision: m.revision, nom: m.nom, creeLe: m.creeLe, modifieLe: m.modifieLe, polices: projet.ressources.polices, lecture: undefined } } : e));
     poserEnregistrement({ etat: memeEtat(courant.current, etat) ? 'enregistre' : 'modifie', message: t('Projet « {nom} » enregistré.', { nom: m.nom }) });
     if (fermerApres.current) fermerEdition();
   }, [serveur, fermerEdition]);
@@ -232,22 +238,7 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const gestes = useMemo<GestesProjets>(() => ({
     ouvrir: m => { void ouvrirProjet(m); },
     nouveau: () => { image.current = null; ouvrirTravail(vierge()); },
-    renommer: async (m, nom) => {
-      const r = await serveur.renommer(m.id, nom);
-      if (!r.ok) { dire(r.message); return false; }
-      dire(t('Projet renommé : « {nom} ».', { nom: r.valeur.nom }), 'info'); await recharger(); return true;
-    },
-    dupliquer: async m => {
-      const r = await serveur.dupliquer(m.id);
-      if (!r.ok) { dire(r.message); return false; }
-      dire(t('Copie créée : « {nom} ».', { nom: r.valeur.nom }), 'info'); await recharger(); return true;
-    },
-    supprimer: async m => {
-      const r = await serveur.supprimer(m.id);
-      if (!r.ok) { dire(r.message); return false; }
-      dire(t('Projet « {nom} » mis à la corbeille.', { nom: m.nom }), 'info'); await recharger(); return true;
-    },
-    vignette: m => serveur.adresseVignette(m)
+    ...gestesDuServeur({ serveur, dire, recharger, ouvrirTravail, poserEnregistrement })
   }), [serveur, dire, recharger, ouvrirProjet, ouvrirTravail]);
 
   const voies = <VoiesDuSite ouvrirSvg={ouvrirSvg} image={image} dire={dire} />;
@@ -256,11 +247,11 @@ function Hote({ serveur, csrf, compte, avertissement }: ProprietesSite) {
   const ouvert = edition?.travail;
   return (
     <>
-      <EcransCompte serveur={serveur} csrf={csrf} compte={compte} projets={menu => <EcranProjets projets={projets} message={message} gestes={gestes} csrf={csrf} menu={menu} voies={voies} pied={pied} />} />
+      <EcransCompte serveur={serveur} csrf={csrf} compte={compte} projets={menu => <EcranProjets projets={projets} recus={recus} message={message} gestes={gestes} csrf={csrf} menu={menu} voies={voies} pied={pied} />} />
       {credits ? <DialogueCredits fermer={() => poserCredits(false)} conteneur={document.body} /> : null}
       {edition && ouvert ? (
         <EditeurSvg key={edition.cle} svg="" dessin={ouvert.dessin} titre={ouvert.nom} nom={nomDeFichier(ouvert.nom, 'projet')} nuancier={ouvert.nuancier} bibliotheque="a-charger" stockage={STOCKAGE} modeleParDefaut={MODELE_PAGE}
-          guide={GUIDE} ignores={ouvert.ignores} production={ouvert.production} libelleEnregistrer={t('Enregistrer')} policesEnLigne
+          guide={GUIDE} ignores={ouvert.ignores} production={ouvert.production} libelleEnregistrer={ouvert.lecture ? t('Enregistrer une copie') : t('Enregistrer')} policesEnLigne
           enregistrement={enregistrement} changement={changement} ctrlSEnregistre actionsHote={actionsHote}
           fermer={fermer} enregistrer={(_svg, etat) => { void enregistrer(etat); }} />
       ) : null}

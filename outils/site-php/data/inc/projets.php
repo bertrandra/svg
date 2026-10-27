@@ -5,6 +5,7 @@
 // L'identifiant sur le disque est tire au hasard (16 chiffres hexadecimaux) : un nom affiche n'est jamais un chemin. Chaque
 // ecriture passe sous un verrou (`flock`) et d'un seul geste (un fichier temporaire puis `rename`) ; ecraser un projet demande la
 // revision qu'on a ouverte, pour ne pas ecraser le travail d'un autre onglet. Supprimer met le projet dans la corbeille du compte.
+// Un projet partage en lecture (ADR-0043) se lit depuis un autre compte par `sous_compte_projets`, apres le controle de partages.php.
 
 declare(strict_types=1);
 
@@ -40,6 +41,21 @@ function definir_compte_projets(string $compteId): void
         if (!is_dir($d) && !@mkdir($d, 0750, true) && !is_dir($d)) {
             throw new RuntimeException('dossier des projets du compte impossible');
         }
+    }
+}
+
+/**
+ * Execute `$faire` avec les projets d'un autre compte poses (ADR-0043 : lire un projet partage, ecrire une copie chez son
+ * destinataire), puis rend la main au compte d'avant, meme sur une exception. Le controle d'acces est a l'appelant.
+ */
+function sous_compte_projets(string $compteId, callable $faire): mixed
+{
+    $avant = compte_projets();
+    definir_compte_projets($compteId);
+    try {
+        return $faire();
+    } finally {
+        compte_projets($avant);
     }
 }
 
@@ -190,18 +206,28 @@ function lire_meta(string $id): ?array
     if (!is_array($m) || ($m['id'] ?? null) !== $id || !is_string($m['nom'] ?? null) || !is_int($m['revision'] ?? null) || !is_string($m['creeLe'] ?? null) || !is_string($m['modifieLe'] ?? null)) {
         return null;
     }
-    return ['id' => $id, 'nom' => $m['nom'], 'creeLe' => $m['creeLe'], 'modifieLe' => $m['modifieLe'], 'revision' => $m['revision'], 'taille' => (int) ($m['taille'] ?? 0), 'vignette' => is_file(chemin_projet($id, '.svg'))];
+    $meta = ['id' => $id, 'nom' => $m['nom'], 'creeLe' => $m['creeLe'], 'modifieLe' => $m['modifieLe'], 'revision' => $m['revision'], 'taille' => (int) ($m['taille'] ?? 0), 'vignette' => is_file(chemin_projet($id, '.svg'))];
+    // Le nom de la personne qui a envoye cette copie (ADR-0043), garde tant que le projet vit.
+    $recuDe = isset($m['recuDe']) ? nom_compte_propre($m['recuDe']) : null;
+    return $recuDe === null ? $meta : $meta + ['recuDe' => $recuDe];
 }
 
-/** Les fiches de tous les projets, le plus recemment modifie d'abord. */
+/** La provenance d'une fiche, a reporter sur la suivante : un projet recu le reste apres un enregistrement ou un renommage. */
+function provenance(array $meta): array
+{
+    return isset($meta['recuDe']) ? ['recuDe' => $meta['recuDe']] : [];
+}
+
+/** Les fiches de tous les projets, le plus recemment modifie d'abord ; un projet partage en lecture dit avec combien de personnes. */
 function lister_projets(): array
 {
     $liste = [];
+    $partages = nombre_partages_par_projet(compte_projets());
     foreach (scandir(dossier_projets()) ?: [] as $nom) {
         if (preg_match('/^([a-f0-9]{16})\.meta\.json$/', $nom, $m) === 1) {
             $meta = lire_meta($m[1]);
             if ($meta !== null) {
-                $liste[] = $meta;
+                $liste[] = isset($partages[$m[1]]) ? $meta + ['partages' => $partages[$m[1]]] : $meta;
             }
         }
     }
@@ -266,7 +292,7 @@ function enregistrer_projet(?string $id, mixed $projet, ?int $attendue, mixed $v
             }
         }
         $nom = nom_propre($projet->nom);
-        $meta = ['id' => $id, 'nom' => $nom, 'creeLe' => $meta['creeLe'], 'modifieLe' => $maintenant, 'revision' => $meta['revision'] + 1];
+        $meta = ['id' => $id, 'nom' => $nom, 'creeLe' => $meta['creeLe'], 'modifieLe' => $maintenant, 'revision' => $meta['revision'] + 1] + provenance($meta);
         try {
             return ['meta' => ecrire_projet($id, projet_ordonne($projet, $nom, $meta['creeLe'], $maintenant), $meta, $vignette)];
         } catch (LengthException) {
@@ -300,27 +326,48 @@ function renommer_projet(string $id, mixed $nomBrut): array
         }
         $nom = nom_propre($nomBrut);
         $maintenant = maintenant_iso();
-        $meta = ['id' => $id, 'nom' => $nom, 'creeLe' => $meta['creeLe'], 'modifieLe' => $maintenant, 'revision' => $meta['revision'] + 1];
+        $meta = ['id' => $id, 'nom' => $nom, 'creeLe' => $meta['creeLe'], 'modifieLe' => $maintenant, 'revision' => $meta['revision'] + 1] + provenance($meta);
         return ['meta' => ecrire_projet($id, projet_ordonne($projet, $nom, $meta['creeLe'], $maintenant), $meta, null, true)];
     });
 }
 
-function dupliquer_projet(string $id): array
+/**
+ * Copie un projet du compte `$source` dans celui de `$cible` (le meme pour « Dupliquer ») : un identifiant neuf, le nom que rend
+ * `$nommer` depuis celui de la fiche, des dates neuves, la revision 1, la vignette avec ; `$recuDe` pose la provenance d'une copie
+ * envoyee (ADR-0043). La lecture se fait sous le verrou de la source, l'ecriture sous celui de la cible, l'un apres l'autre (jamais
+ * l'un dans l'autre). Le controle d'acces est a l'appelant. Rend ['meta' => fiche de la copie] ou un refus nomme.
+ */
+function copier_projet(string $source, string $id, string $cible, callable $nommer, ?string $recuDe = null): array
 {
-    return avec_verrou(function () use ($id): array {
+    $lu = sous_compte_projets($source, fn(): ?array => avec_verrou(function () use ($id): ?array {
         $meta = lire_meta($id);
         $projet = $meta === null ? null : lire_projet($id);
         if ($meta === null || $projet === null) {
-            return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
+            return null;
         }
-        $neuf = nouvel_id();
-        $nom = nom_propre($meta['nom'] . ' ' . t('(copie)'));
-        $maintenant = maintenant_iso();
         $svg = chemin_projet($id, '.svg');
-        $vignette = is_file($svg) ? (string) file_get_contents($svg) : null;
-        $copie = ['id' => $neuf, 'nom' => $nom, 'creeLe' => $maintenant, 'modifieLe' => $maintenant, 'revision' => 1];
-        return ['meta' => ecrire_projet($neuf, projet_ordonne($projet, $nom, $maintenant, $maintenant), $copie, $vignette)];
-    });
+        return ['meta' => $meta, 'projet' => $projet, 'vignette' => is_file($svg) ? (string) file_get_contents($svg) : null];
+    }));
+    if ($lu === null) {
+        return ['statut' => 404, 'erreur' => 'introuvable', 'message' => t('Ce projet n’existe plus sur le serveur.')];
+    }
+    return sous_compte_projets($cible, fn(): array => avec_verrou(function () use ($lu, $nommer, $recuDe): array {
+        $neuf = nouvel_id();
+        $nom = nom_propre($nommer($lu['meta']['nom']));
+        $maintenant = maintenant_iso();
+        $copie = ['id' => $neuf, 'nom' => $nom, 'creeLe' => $maintenant, 'modifieLe' => $maintenant, 'revision' => 1] + ($recuDe === null ? [] : ['recuDe' => $recuDe]);
+        try {
+            return ['meta' => ecrire_projet($neuf, projet_ordonne($lu['projet'], $nom, $maintenant, $maintenant), $copie, $lu['vignette'])];
+        } catch (LengthException) {
+            return ['statut' => 413, 'erreur' => 'trop_gros', 'message' => t('Ce projet dépasse la taille que le serveur accepte.')];
+        }
+    }));
+}
+
+function dupliquer_projet(string $id): array
+{
+    $moi = compte_projets();
+    return copier_projet($moi, $id, $moi, fn(string $nom): string => $nom . ' ' . t('(copie)'));
 }
 
 /** Met le projet a la corbeille du compte (data/projets/<compte>/corbeille), horodate : rien n'est efface du disque. */
@@ -338,6 +385,8 @@ function supprimer_projet(string $id): array
                 throw new RuntimeException('corbeille impossible pour ' . $id);
             }
         }
+        // Un projet a la corbeille n'est plus partage : le reprendre ne rend pas ses partages (ADR-0043).
+        retirer_partages_du_projet(compte_projets(), $id);
         return ['ok' => true];
     });
 }

@@ -441,7 +441,8 @@ function compte_public(array $c, bool $complet = false): array
 
 /**
  * Supprime un compte : son dossier de projets entier part dans data/projets/corbeille-comptes/<horodatage>-<id>/ (le fichier du
- * compte dedans, `compte.json`), ses sessions et ses jetons sont effaces. Rend vrai si le compte existait.
+ * compte dedans, `compte.json`), ses sessions, ses jetons et ses partages (donnes et recus, ADR-0043) sont effaces. Rend vrai si le
+ * compte existait.
  */
 function supprimer_compte(string $id): bool
 {
@@ -468,6 +469,7 @@ function supprimer_compte(string $id): bool
         }
         fermer_sessions_du_compte($id);
         supprimer_jetons_du_compte($id);
+        retirer_partages_du_compte($id);
         journaliser('comptes', 'supprime id=' . $id);
         return true;
     });

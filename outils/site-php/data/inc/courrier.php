@@ -291,3 +291,27 @@ function mail_essai(string $a, string $langue): ?string
     $corps = t('Ce message d’essai confirme que {site} peut envoyer du courrier.', ['site' => reglage('site.nom')], $langue) . signature_mail($langue);
     return envoyer_courrier($a, t('Message d’essai — {site}', ['site' => reglage('site.nom')], $langue), $corps);
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Les mails du partage (ADR-0043), dans la langue du destinataire.
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+/** Le mail a la personne qui recoit une copie : elle est deja dans ses projets. */
+function mail_copie(array $destinataire, array $expediteur, string $projet): ?string
+{
+    $l = $destinataire['langue'];
+    $corps = t('Bonjour {nom},', ['nom' => $destinataire['nom']], $l) . "\n\n"
+        . t('{personne} vous a envoyé une copie du projet « {projet} ». Elle est dans vos projets sur {site} : elle vous appartient, vous pouvez la modifier sans rien changer à l’original.', ['personne' => $expediteur['nom'], 'projet' => $projet, 'site' => reglage('site.nom')], $l) . "\n\n" . adresse_site()
+        . signature_mail($l);
+    return envoyer_courrier($destinataire['email'], t('{personne} vous envoie « {projet} » — {site}', ['personne' => $expediteur['nom'], 'projet' => $projet, 'site' => reglage('site.nom')], $l), $corps);
+}
+
+/** Le mail a la personne avec qui un projet est partage en lecture. */
+function mail_partage(array $destinataire, array $proprietaire, string $projet): ?string
+{
+    $l = $destinataire['langue'];
+    $corps = t('Bonjour {nom},', ['nom' => $destinataire['nom']], $l) . "\n\n"
+        . t('{personne} partage avec vous le projet « {projet} », en lecture. Vous le trouverez sur {site}, sous « Partagés avec moi » : vous pouvez l’ouvrir, le télécharger ou en garder une copie dans vos projets.', ['personne' => $proprietaire['nom'], 'projet' => $projet, 'site' => reglage('site.nom')], $l) . "\n\n" . adresse_site()
+        . signature_mail($l);
+    return envoyer_courrier($destinataire['email'], t('{personne} partage « {projet} » avec vous — {site}', ['personne' => $proprietaire['nom'], 'projet' => $projet, 'site' => reglage('site.nom')], $l), $corps);
+}
